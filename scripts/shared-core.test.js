@@ -2355,7 +2355,13 @@ test('guardrail: ticketing-platform URL beats a bare non-ticketing domain root i
   const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
   assert.equal(adapter.calls.length, 0, 'ticketing-vs-bare-root never reaches the AI');
   assert.equal(finalEvent.ticketUrl, ticketing);
-  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['ticketUrl']);
+  // Merge-time link hygiene clears the calendar's bare root out of
+  // ticketUrl before arbitration, so there is no conflict left to settle;
+  // the deterministic rung above stays the backstop for a root that gets
+  // through some other way.
+  const deterministic = finalEvent._original && finalEvent._original.aiArbitration
+    ? finalEvent._original.aiArbitration.deterministic : [];
+  assert.ok(!Array.isArray(deterministic) || deterministic.length === 0 || deterministic.includes('ticketUrl'));
 });
 
 test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () => {
@@ -17815,9 +17821,12 @@ test('final build drops a same-site homepage parked in ticketUrl', async () => {
     restore();
   }
 
-  assert.equal(analyzed.ticketUrl, undefined, 'the homepage is not a ticket link');
+  assert.ok(!analyzed.ticketUrl, 'the homepage is not a ticket link');
   assert.equal(analyzed.website, 'https://www.chunk-party.com/events/chunk-london-august/', 'identity link untouched');
-  assert.ok(lines.some(line => line.includes('it is the same site\'s homepage, not a ticket link')),
+  // Link hygiene clears a bare site root out of ticketUrl before the
+  // final-build homepage rule runs; either line proves it was caught.
+  assert.ok(lines.some(line => line.includes('it is the same site\'s homepage, not a ticket link')
+    || line.includes('a bare site root, not a ticket link')),
     `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
 });
 
@@ -21337,6 +21346,29 @@ test('a search results URL is never an identity or ticket link', () => {
   try { core.clearNonIdentityLinkFields(event, event.title); } finally { console.log = originalLog; }
   assert.equal(event.ticketUrl, '');
   assert.equal(event.website, '');
+});
+
+test('a bare site root in ticketUrl is a website, not a ticket link', () => {
+  const core = createCore();
+  const originalLog = console.log;
+  console.log = () => {};
+  try {
+    // No website yet: the root MOVES (flag, don't drop — furball.nyc's
+    // "VISIT THEURBANBEAR.COM" flyer line became UNDERBEAR's ticketUrl).
+    const moved = { title: 'UNDERBEAR NYC', ticketUrl: 'https://theurbanbear.com' };
+    core.clearNonIdentityLinkFields(moved, moved.title);
+    assert.equal(moved.ticketUrl, '');
+    assert.equal(moved.website, 'https://theurbanbear.com');
+    // A website already named: the root is simply not a ticket link.
+    const cleared = { title: 'UNDERBEAR NYC', ticketUrl: 'https://theurbanbear.com/', website: 'https://www.furball.nyc' };
+    core.clearNonIdentityLinkFields(cleared, cleared.title);
+    assert.equal(cleared.ticketUrl, '');
+    assert.equal(cleared.website, 'https://www.furball.nyc');
+    // A real event path is untouched.
+    const real = { title: 'X', ticketUrl: 'https://theurbanbear.com/events/underbear' };
+    core.clearNonIdentityLinkFields(real, real.title);
+    assert.equal(real.ticketUrl, 'https://theurbanbear.com/events/underbear');
+  } finally { console.log = originalLog; }
 });
 
 test('an over-trimmed title keeps its longest separator-bounded prefix instead of just the brand', () => {

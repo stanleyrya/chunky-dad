@@ -5367,6 +5367,21 @@ class SharedCore {
                 // (sickening.events/events?q=goldiloxx shipped as a ticketUrl,
                 // run 20260910-215043).
                 reason = 'a search/listing page';
+            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)) {
+                // A bare site root is a website, never a ticket link (furball
+                // .nyc: "VISIT THEURBANBEAR.COM" on the flyer became UNDERBEAR's
+                // ticketUrl). Flag, don't drop: it moves to an empty website.
+                if (!(typeof event.website === 'string' && event.website.trim())) {
+                    event.website = value;
+                    console.log(`🔗 LINKS: moved ${value} from ticketUrl to website for "${label}" — a bare site root is a website, not a ticket link`);
+                } else {
+                    reason = 'a bare site root, not a ticket link';
+                }
+                if (!reason) {
+                    event[field] = '';
+                    cleared.push(field);
+                    continue;
+                }
             }
             if (!reason) continue;
             event[field] = '';

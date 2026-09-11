@@ -1904,10 +1904,24 @@ class AiWebParser {
                 cityConfig: cityConfig
             }
         });
-        const event = this.normalizeAiEvent(validationResult.event, parserConfig, promptHtmlData, cityConfig, promptFields);
+        let event = this.normalizeAiEvent(validationResult.event, parserConfig, promptHtmlData, cityConfig, promptFields);
         if (!event || !event.title || !event.startDate) {
-            console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
-            return null;
+            // A compact listing row ("10/10 FURBALL Boston - Legacy") states
+            // its date, name and venue in one line with no prose to reason
+            // over; when the model returns nothing for it, the row itself is
+            // the extraction. furball.nyc's ticker lost Boston this way
+            // (title returned, startdate null on both passes).
+            const compactRow = this.readCompactListingRow(promptHtmlData);
+            const rowEvent = compactRow
+                ? this.normalizeAiEvent({ ...compactRow }, parserConfig, promptHtmlData, cityConfig, promptFields)
+                : null;
+            if (rowEvent && rowEvent.title && rowEvent.startDate) {
+                console.log(`🤖 AI Web: Compact listing row read as the event: "${compactRow.title}" on ${compactRow.startDate}${compactRow.bar ? ` at ${compactRow.bar}` : ''}`);
+                event = rowEvent;
+            } else {
+                console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
+                return null;
+            }
         }
         // Venue-hours notice guard (runs 20260724-161423 / 20260725-170031:
         // massive.club's "Hours … Tuesday Closed …" block became a segment,
@@ -2320,6 +2334,82 @@ class AiWebParser {
     // not a detection, so a month name only counts as strippable with an
     // adjacent day/year number. A bare-month line ("Pride March") matches
     // nothing here and falls through to the caller's existing skip.
+    // A segment that is ONE compact listing row, parsed without a model:
+    // leading date token, then the name, then an optional " - VENUE" /
+    // " @ VENUE" tail. Returns {title, startDate, bar} or null.
+    readCompactListingRow(htmlData) {
+        const source = htmlData && typeof htmlData.segmentText === 'string' && htmlData.segmentText.trim()
+            ? htmlData.segmentText
+            : (htmlData && typeof htmlData.html === 'string' ? htmlData.html.replace(/<[^>]+>/g, '\n') : '');
+        const lines = String(source || '').split('\n')
+            .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
+            .filter(line => line && !/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(line));
+        if (lines.length !== 1 || !this.isCompactEventLine(lines[0])) return null;
+        const line = lines[0];
+        const dateToken = line.match(new RegExp('^(?:(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat(?:ur)?|sun)(?:day)?\\.?,?\\s+)?('
+            + '(?:0?[1-9]|1[0-2])[\\/.-](?:0?[1-9]|[12]\\d|3[01])(?:[\\/.-](?:\\d{2}|\\d{4}))?'
+            + '|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?'
+            + ')\\b[\\s\\-–—:|,.]*(.+)$', 'i'));
+        if (!dateToken) return null;
+        const rest = this.normalizeWhitespace(dateToken[2]);
+        const venueSplit = rest.match(/^(.+?)\s+(?:[-–—@|]|at)\s+(.+)$/i);
+        const title = this.normalizeWhitespace(venueSplit ? venueSplit[1] : rest);
+        const bar = this.normalizeWhitespace(venueSplit ? venueSplit[2] : '');
+        if (!/[a-z]{3}/i.test(title) || this.isTimeOnlyLineText(title)) return null;
+        const startDate = this.compactListingDateToIso(dateToken[1]);
+        if (!startDate) return null;
+        return { title, startDate, bar };
+    }
+
+    // "10/10", "Oct 3", "September 5, 2026" → YYYY-MM-DD, the form the
+    // extraction contract hands normalizeAiEvent. A year-less row is the
+    // next occurrence of that day: this year, or next year once this
+    // year's is more than a month gone (a ticker lists what is coming).
+    compactListingDateToIso(token) {
+        const text = this.normalizeWhitespace(token);
+        const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        let month = 0;
+        let day = 0;
+        let year = 0;
+        const numeric = text.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2}|\d{4}))?$/);
+        const named = text.match(/^([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$/i);
+        if (numeric) {
+            month = Number(numeric[1]);
+            day = Number(numeric[2]);
+            year = numeric[3] ? Number(numeric[3].length === 2 ? `20${numeric[3]}` : numeric[3]) : 0;
+        } else if (named) {
+            month = months.indexOf(named[1].slice(0, 3).toLowerCase()) + 1;
+            day = Number(named[2]);
+            year = named[3] ? Number(named[3]) : 0;
+        } else {
+            return '';
+        }
+        if (!(month >= 1 && month <= 12 && day >= 1 && day <= 31)) return '';
+        if (!year) {
+            const now = new Date();
+            year = now.getFullYear();
+            const candidate = new Date(Date.UTC(year, month - 1, day));
+            if (candidate.getTime() < now.getTime() - 31 * 24 * 60 * 60 * 1000) year += 1;
+        }
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${year}-${pad(month)}-${pad(day)}`;
+    }
+
+    // "UNDERBEAR NYC - ROCKBAR" with bar "Rockbar" → "UNDERBEAR NYC": the
+    // listing row's own venue tail is not part of the name once the venue
+    // is known. Only an exact (case/punctuation-insensitive) match strips.
+    stripTrailingVenueFromTitle(title, bar) {
+        const value = this.normalizeWhitespace(title);
+        const venue = this.normalizeWhitespace(bar);
+        if (!value || !venue) return value;
+        const fold = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const match = value.match(/^(.+?)\s+(?:[-–—@|]|at)\s+(.+)$/i);
+        if (!match) return value;
+        if (fold(match[2]) !== fold(venue)) return value;
+        const head = this.normalizeWhitespace(match[1]);
+        return /[a-z]{3}/i.test(head) ? head : value;
+    }
+
     deriveListingTitleSpanFromDatedLine(value) {
         const line = this.normalizeWhitespace(value);
         if (!line) return '';
@@ -2520,6 +2610,7 @@ class AiWebParser {
             new Set((Array.isArray(segment.lines) ? segment.lines : []).map(lineKey).filter(Boolean)));
 
         const unclaimed = [];
+        const unclaimedCompact = [];
         let claimedCount = 0;
         for (const window of flatSegments) {
             const lines = Array.isArray(window.lines) ? window.lines : [];
@@ -2548,9 +2639,30 @@ class AiWebParser {
             // than that is the flat splitter fusing neighbours, never a card
             // the structured path missed.
             if (this.countMultiEventDateSignals(lines) > 2) continue;
+            // Compact-only windows are handled from the corpus below.
+            if (lines.every(line => this.isCompactEventLine(line))) continue;
             unclaimed.push(window);
         }
-        if (unclaimed.length === 0) return structured;
+        // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
+        // listings and are read straight from the corpus, one window each:
+        // the flat splitter fuses them with whatever prose follows and drops
+        // the ones shorter than its segment minimum, so a site-wide ticker
+        // (furball.nyc's header: six rows, three with no card anywhere else)
+        // never reached this audit as windows of its own.
+        const seenCompactKeys = new Set();
+        for (const rawLine of this.extractBodyParts(html, this.extractionLimits.multiEventScanLineLimit)) {
+            const line = this.normalizeWhitespace(rawLine);
+            if (!this.isCompactEventLine(line)) continue;
+            const key = lineKey(line);
+            if (!key || seenCompactKeys.has(key)) continue;
+            seenCompactKeys.add(key);
+            if (structuredKeySets.some(keySet => keySet.has(key))) continue;
+            unclaimedCompact.push({
+                lines: [line],
+                html: this.extractRawHtmlForMultiEventSegment(html, [line]) || line
+            });
+        }
+        if (unclaimed.length === 0 && unclaimedCompact.length === 0) return structured;
 
         // A second opinion only counts when it mostly agrees. The audit
         // exists for a FEW cards dropped from an otherwise right
@@ -2562,10 +2674,17 @@ class AiWebParser {
         // the finding, so say it, loudly, and let the structured result
         // stand.
         const additionCap = Math.max(3, structured.length);
-        if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
-            console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing; this page's segmentation needs a look`);
-            return structured;
+        let additions = unclaimedCompact.slice(0, 24);
+        if (unclaimed.length > 0) {
+            if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
+                console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing from it; this page's segmentation needs a look`);
+            } else {
+                additions = additions.concat(unclaimed);
+            }
         }
+        if (additions.length === 0) return structured;
+        unclaimed.length = 0;
+        unclaimed.push(...additions);
 
         console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding text window(s): ${unclaimed.map(window => `"${this.deriveSegmentListingTitle(window)}"`).join(', ')}`);
 
@@ -4194,13 +4313,19 @@ class AiWebParser {
             .map(record => record.url)
             .filter(Boolean);
     }
+    // Leading noise ends at the first strong title OR the first compact
+    // event line: "9/18 FURBALL Dallas - Dallas Eagle" is a listing, not
+    // chrome, however early on the page it sits. furball.nyc's site-wide
+    // ticker (six dated rows above the first card) was trimmed away here on
+    // every run, and the three rows with no card were never extracted.
     trimLeadingMultiEventNoise(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
             .filter(Boolean);
-        const firstStrongTitleIndex = normalizedLines.findIndex(line => this.isStrongMultiEventTitleLine(line));
-        return firstStrongTitleIndex > 0
-            ? normalizedLines.slice(firstStrongTitleIndex)
+        const firstContentIndex = normalizedLines.findIndex(line =>
+            this.isStrongMultiEventTitleLine(line) || this.isCompactEventLine(line));
+        return firstContentIndex > 0
+            ? normalizedLines.slice(firstContentIndex)
             : normalizedLines;
     }
     // A call-to-action ends a listing only when it FOLLOWS the listing's
@@ -17178,6 +17303,13 @@ TEXT:
                 title = strippedTitle;
             }
         }
+        if (title && bar) {
+            const withoutVenue = this.stripTrailingVenueFromTitle(title, bar);
+            if (withoutVenue !== title) {
+                console.log(`🤖 AI Web: Stripping venue tail from title "${title}" → "${withoutVenue}" (bar is "${bar}")`);
+                title = withoutVenue;
+            }
+        }
         // Site-tagline backstop (the primary guard runs at pass-result time in
         // rejectBrandLikePassFields): an AI-extracted description that exactly
         // equals the site's own JSON-LD WebSite.description is the site blurb,
@@ -22900,8 +23032,25 @@ TEXT:
             // never content (sickening.events' organizer dropdown put
             // "Wickedly Twisted Entertainment" — one of ~120 <option>s — up as
             // an event title, run 20260910-215043).
-            text = text.replace(/<(nav|header|footer|aside|noscript|form|button|select)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
-            text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
+            // Chrome that LISTS events is a listing: a header/nav block keeps
+            // exactly its date-led listing rows ("9/18 FURBALL Dallas - Dallas
+            // Eagle") and sheds the rest. furball.nyc's site-wide ticker sits
+            // in the Wix SITE_HEADER and was blanked here on every run — three
+            // of its six rows have no card anywhere else on the site. (The
+            // class/id rule below matches lazily to the first closing tag, so
+            // a block may hold a single row of a longer ticker: one is enough.)
+            const keepListingLines = (block) => {
+                const lines = String(block || '')
+                    .replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ')
+                    .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/span)\b[^>]*>/gi, '\n')
+                    .replace(/<[^>]+>/g, ' ')
+                    .split('\n')
+                    .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
+                    .filter(line => line && this.isCompactEventLine(line) && this.readCompactListingRow({ segmentText: line }));
+                return lines.length > 0 ? `\n${lines.join('\n')}\n` : ' ';
+            };
+            text = text.replace(/<(nav|header|footer|aside|noscript|form|button|select)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, (block) => keepListingLines(block));
+            text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, (block) => keepListingLines(block));
             text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
             text = text.replace(/<[^>]+>/g, ' ');
 

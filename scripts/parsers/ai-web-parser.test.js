@@ -16332,6 +16332,67 @@ test('a call-to-action ABOVE a card\'s text is chrome, not the card\'s end', () 
   assert.deepEqual(parser.trimLinesAfterTerminalCallToAction(['GET YOUR TICKETS HERE', 'more text']), ['GET YOUR TICKETS HERE']);
 });
 
+test('a header ticker that lists events keeps exactly its listing rows through chrome stripping', () => {
+  const parser = createParser();
+  const html = `<html><body>
+    <div id="SITE_HEADER" class="site-header"><nav><a href="/">Home</a><a href="/about">About</a></nav>
+      <div data-mesh-id="SITE_HEADERinlineContent"><p>9/5 FURBALL NOLA - Santos Bar</p><p>10/3 FURBALL DC - ICON</p><p>10/16 UNDERBEAR NYC - ROCKBAR</p><p>Follow us</p></div>
+    </div>
+    <div id="main"><h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p></div>
+    <footer class="footer"><p>Rated 4.5 out of 5 stars</p><p>Rated 4.4 out of 5 stars</p><p>© Furball</p></footer>
+  </body></html>`;
+  const lines = parser.extractBodyParts(html, 200).map(line => parser.normalizeWhitespace(line));
+  assert.deepEqual(lines.filter(line => /^\d{1,2}\/\d{1,2} /.test(line)),
+    ['9/5 FURBALL NOLA - Santos Bar', '10/3 FURBALL DC - ICON', '10/16 UNDERBEAR NYC - ROCKBAR']);
+  assert.equal(lines.some(line => /Home|About|Follow us/.test(line)), false, 'the rest of the chrome is still gone');
+  assert.equal(lines.some(line => /Rated 4\.5/.test(line)), false, 'a star rating is not a date-led listing row');
+  // A lone dated line in chrome ("Est. 5/1") is not a listing.
+  const single = parser.extractBodyParts('<html><body><header><p>Open since 5/1 every weekend night</p></header><p>Body</p></body></html>', 50)
+    .map(line => parser.normalizeWhitespace(line));
+  assert.equal(single.some(line => /Open since/.test(line)), false);
+});
+
+test('coverage audit: compact listing rows become one window each, straight from the corpus', () => {
+  const parser = createParser();
+  const html = `<html><body>
+    <div data-mesh-id="SITE_HEADERinlineContent"><p>9/5 FURBALL NOLA - Santos Bar</p><p>10/3 FURBALL DC - ICON</p><p>10/16 UNDERBEAR NYC - ROCKBAR</p></div>
+    <h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p>
+  </body></html>`;
+  const nola = { lines: ['FURBALL NOLA', 'Southern Decadence', 'September 5, 2026', 'Santos Bar - New Orleans, LA'], html: '' };
+  const covered = parser.coverUnclaimedDatedWindows(html, [nola]);
+  assert.deepEqual(covered.map(s => s.lines.join(' | ')).sort(), [
+    '10/16 UNDERBEAR NYC - ROCKBAR',
+    '10/3 FURBALL DC - ICON',
+    '9/5 FURBALL NOLA - Santos Bar',
+    'FURBALL NOLA | Southern Decadence | September 5, 2026 | Santos Bar - New Orleans, LA'
+  ]);
+  // The short row ("10/3 FURBALL DC - ICON", 22 chars) is below the flat
+  // splitter's segment floor and the last row would have fused with the
+  // tagline below it — both are windows of their own here.
+});
+
+test('a compact listing row is read without a model when extraction returns no date', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: '10/10 FURBALL Boston - Legacy' }),
+    { title: 'FURBALL Boston', startDate: `${new Date().getFullYear() + (Date.now() > Date.UTC(new Date().getFullYear(), 10, 10) ? 1 : 0)}-10-10`, bar: 'Legacy' });
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: 'Sat, Oct 3 FURBALL DC @ ICON' }).title, 'FURBALL DC');
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar' }),
+    { title: 'FURBALL NOLA', startDate: '2026-09-05', bar: 'Santos Bar' });
+  assert.equal(parser.readCompactListingRow({ segmentText: '10/16 UNDERBEAR NYC - ROCKBAR\nwhere bears dance' }), null, 'two lines is not a row');
+  assert.equal(parser.readCompactListingRow({ segmentText: 'Rated 4.5 out of 5 stars' }), null, 'not date-led');
+  assert.equal(parser.compactListingDateToIso('1/15/27'), '2027-01-15');
+  assert.equal(parser.compactListingDateToIso('13/40'), '');
+});
+
+test('a title ending in the resolved bar loses that venue tail', () => {
+  const parser = createParser();
+  assert.equal(parser.stripTrailingVenueFromTitle('UNDERBEAR NYC - ROCKBAR', 'Rockbar'), 'UNDERBEAR NYC');
+  assert.equal(parser.stripTrailingVenueFromTitle('FURBALL DC @ ICON', 'ICON'), 'FURBALL DC');
+  assert.equal(parser.stripTrailingVenueFromTitle('CHUNK - Portland', 'Eagle Portland'), 'CHUNK - Portland', 'a tail that is not the bar stays');
+  assert.equal(parser.stripTrailingVenueFromTitle('The Eagle - Eagle', 'Eagle'), 'The Eagle');
+  assert.equal(parser.stripTrailingVenueFromTitle('DJ - Eagle', 'Eagle'), 'DJ - Eagle', 'a head with no real word is not a title');
+});
+
 test('coverage audit: a dated card the structured path dropped gets its window from the page text', () => {
   const parser = createParser();
   const card = (id, title, date, venue) => `
