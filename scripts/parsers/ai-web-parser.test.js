@@ -16685,3 +16685,23 @@ test('a JSON API row with only a slug gets its page link by VERIFIED fetch, neve
   await parser.resolveJsonApiSlugLinks(other, 'https://api.redeyetickets.example/api/v1/events/search?q=goldiloxx', wrong);
   assert.equal(other[0].ticketUrl, '', 'three shapes tried, none named this event → nothing adopted');
 });
+
+test('an event page with exactly one outbound ticketing-platform event link has told us its ticket link', () => {
+  const parser = createParser();
+  const page = (links) => ({ url: 'https://bearracuda.example/events/denver17/', html: `<html><body><h1>Bearracuda Denver</h1>${links.map(l => `<a href="${l}">Tickets</a>`).join('')}<a href="https://bearracuda.example/">Home</a><a href="https://www.instagram.com/bearracuda">IG</a></body></html>` });
+  const one = { title: 'BEARRACUDA: Denver 17' };
+  parser.adoptPageTicketLink(one, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(one.ticketUrl, 'https://www.ticketmaster.com/event/1E006505BDFCE369');
+  const two = { title: 'X' };
+  parser.adoptPageTicketLink(two, page(['https://www.ticketmaster.com/event/1E006505BDFCE369', 'https://www.eventbrite.com/e/other-party-123']));
+  assert.equal(two.ticketUrl, undefined, 'two different platform links → ambiguous, nothing adopted');
+  const root = { title: 'X', ticketUrl: 'https://bearracuda.example' };
+  parser.adoptPageTicketLink(root, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(root.ticketUrl, 'https://www.ticketmaster.com/event/1E006505BDFCE369', 'a bare site root is not a ticket link and gives way');
+  const kept = { title: 'X', ticketUrl: 'https://sickening.events/e/real' };
+  parser.adoptPageTicketLink(kept, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(kept.ticketUrl, 'https://sickening.events/e/real', 'fill-only-empty');
+  const homeOnly = { title: 'X' };
+  parser.adoptPageTicketLink(homeOnly, page(['https://www.ticketmaster.com/']));
+  assert.equal(homeOnly.ticketUrl, undefined, 'a platform homepage is not an event link');
+});

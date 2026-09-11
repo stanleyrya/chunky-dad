@@ -1602,8 +1602,47 @@ class AiWebParser {
             // ensureSinglePageImageCoverage (single-page sibling of the
             // multi-event segment top-up).
             await this.ensureSinglePageImageCoverage(event, htmlData, parserConfig, ocrResults, httpAdapter);
+            this.adoptPageTicketLink(event, htmlData);
         }
         return event ? [event] : [];
+    }
+
+    // An event page that links to exactly ONE event on a ticketing platform
+    // has told us its ticket link — no model answer, no fetch needed. Fills an
+    // empty ticketUrl only. bearracuda.com/events/denver17/ (run
+    // 20260910-215043): the page links its Ticketmaster listing, our fetch of
+    // Ticketmaster is bot-walled, the model cited nothing, and the homepage
+    // was parked as the ticket link. The link is for humans; the wall is ours.
+    adoptPageTicketLink(event, htmlData) {
+        if (!event || typeof event !== 'object') return;
+        // A bare domain root ("https://bearracuda.com") is a site, not a
+        // ticket link — the model offers it when the page's real ticket link
+        // is an href it cannot see. Treated as empty.
+        const existing = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+        if (existing && !/^https?:\/\/[^/?#]+\/?$/i.test(existing)) return;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (!html) return;
+        const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || [])[1];
+        const pageDomain = pageHost ? pageHost.toLowerCase().replace(/^www\./, '') : '';
+        const isPlatformHost = (host) => this.core && typeof this.core.isKnownTicketingPlatformHost === 'function'
+            ? this.core.isKnownTicketingPlatformHost(host)
+            : false;
+        const isEventDetail = (url) => /^https?:\/\/[^/?#]+\/(?:events?|e|shows?|tickets?)\/[^/?#]+/i.test(url);
+        const candidates = new Set();
+        for (const raw of this.extractUrlCandidatesFromRawHtml(html)) {
+            const url = this.normalizeHttpUrlValue(String(raw || ''));
+            if (!url) continue;
+            const host = (url.match(/^https?:\/\/([^/?#]+)/i) || [])[1];
+            if (!host) continue;
+            const domain = host.toLowerCase().replace(/^www\./, '');
+            if (domain === pageDomain || !isPlatformHost(domain) || !isEventDetail(url)) continue;
+            candidates.add(url.split('#')[0]);
+        }
+        if (candidates.size !== 1) return;
+        const [ticketUrl] = candidates;
+        event.ticketUrl = ticketUrl;
+        console.log(`🔗 LINKS: "${event.title || 'event'}" ticketUrl ← ${ticketUrl} (the page's one outbound ticketing-platform event link${existing ? `; replaces the bare site root ${existing}` : ''})`);
     }
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
