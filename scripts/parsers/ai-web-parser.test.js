@@ -16607,3 +16607,101 @@ test('DICE widget: rows become events — venue, address, pin, price in minor un
   assert.equal(welly.ticketUrl, 'https://dukeofwellington.example/beefmince');
   assert.equal(welly.cover, '20 EUR');
 });
+
+test('Wix listing rows lend their artwork to an imageless event, and never replace an image the event has', () => {
+  const parser = createParser();
+  const node = { title: 'CHUNK CHICAGO presents NEW YEARS EVE 2026', slug: 'chunk-chicago-presents-new-years-eve-2026',
+    scheduling: { config: { startDate: '2026-01-01T03:00:00.000Z', endDate: '2026-01-01T09:00:00.000Z', timeZoneId: 'America/Chicago' } },
+    location: { address: '3702 N Halsted St, Chicago, IL', coordinates: { lat: 41.9493756, lng: -87.64979 } },
+    mainImage: { id: '42b6cb_73cd~mv2.jpg', url: 'https://static.wixstatic.com/media/42b6cb_73cd~mv2.jpg', width: 4112, height: 3300 } };
+  const record = parser.buildWixServerEventRecord(node, []);
+  assert.equal(record.image, 'https://static.wixstatic.com/media/42b6cb_73cd~mv2.jpg');
+  const bare = { title: 'CHUNK CHICAGO presents NEW YEARS EVE 2026', startDate: new Date('2026-01-01T03:00:00.000Z') };
+  const { filled } = parser.fillEventFromWixServerRecord(bare, record, null);
+  assert.ok(filled.includes('image'));
+  assert.equal(bare.image, record.image);
+  assert.equal(bare.imageSource, 'json-api');
+  const owned = { title: 'X', image: 'https://own.example/flyer.jpg' };
+  parser.fillEventFromWixServerRecord(owned, record, null);
+  assert.equal(owned.image, 'https://own.example/flyer.jpg', 'fill-only-empty');
+});
+
+// ---------------------------------------------------------------------------
+// "SAFEST TEN" AUDIT — run 20260910-215043 field defects, one rule each.
+// ---------------------------------------------------------------------------
+
+test('a page\'s own hyperlinks are evidence for URL-valued fields', () => {
+  const parser = createParser();
+  const html = '<html><body><h1>Bearracuda Seattle</h1><p>Saturday September 12, 2026 at Massive.</p><a href="https://sickening.events/e/bearracuda-seattle-7days">GET TICKETS</a></body></html>';
+  const context = parser.buildAiEvidenceContext({ html, url: 'https://bearracuda.example/events/7days/' }, {});
+  assert.equal(parser.hasUrlEvidence(context, 'https://sickening.events/e/bearracuda-seattle-7days'), true, 'an href the page carries corroborates the model\'s ticketUrl');
+  assert.equal(parser.hasUrlEvidence(context, 'https://sickening.events/e/some-other-party'), false, 'a link the page does not carry is still uncorroborated');
+});
+
+test('a prize is not a price: an amount the page states only as a prize is dropped from cover', () => {
+  const parser = createParser();
+  const html = '<html><body><p>Doors 9pm. Tickets $20 advance, $25 no costume.</p><p>For the first time, a silent costume contest with $500 IN CASH PRIZES.</p></body></html>';
+  assert.equal(parser.coverAmountReadsAsPrize('$500', { html }), true);
+  assert.equal(parser.coverAmountReadsAsPrize('$20', { html }), false);
+  assert.equal(parser.coverAmountReadsAsPrize('$20-$25', { html }), false);
+  assert.equal(parser.coverAmountReadsAsPrize('$500', { html: '<p>$500 raffle prize</p><p>Cover $500 at the door</p>' }), false, 'stated as a price anywhere → it stands');
+  const originalLog = console.log;
+  console.log = () => {};
+  let normalized;
+  try { normalized = parser.normalizeAiEvent({ title: 'Bearracuda Portland', cover: '$500', bar: 'Nova PDX', startDate: '2026-10-10' }, {}, { html, url: 'https://bearracuda.example/events/portlandoct/' }); }
+  finally { console.log = originalLog; }
+  assert.ok(!normalized.cover, 'the prize never reaches the event');
+});
+
+test('an <option> list is form chrome, never page content', () => {
+  const parser = createParser();
+  const html = '<html><body><h1>GOLDILOXX Chicago</h1><select name="organizer"><option>Under The Wig Productions</option><option>Wickedly Twisted Entertainment</option><option>YAS EVENTS</option></select><p>Saturday September 19</p></body></html>';
+  const text = parser.extractBodyParts(html).join(' | ');
+  assert.ok(text.includes('GOLDILOXX Chicago') && text.includes('Saturday September 19'));
+  assert.ok(!text.includes('Wickedly Twisted Entertainment'), 'dropdown options are not lines');
+});
+
+test('a JSON API row with only a slug gets its page link by VERIFIED fetch, never by assumption', async () => {
+  const parser = createParser();
+  const payload = { data: [{ name: 'GOLDILOXX SINGLET NITE', slug: 'goldiloxx-singlet-nite', first_performance_start_at: '2026-09-27T01:00:00Z', venue: 'Red Eye NY' }] };
+  const events = parser.extractEventsFromJsonApiPayload(payload, 'https://api.redeyetickets.example/api/v1/events/search?q=goldiloxx');
+  assert.equal(events.length, 1);
+  assert.equal(events[0]._jsonApiSlug, 'goldiloxx-singlet-nite');
+  assert.equal(events[0].ticketUrl, '', 'no link is fabricated from the slug');
+  const fetched = [];
+  const answering = 'https://redeyetickets.example/events/goldiloxx-singlet-nite';
+  const httpAdapter = { fetchData: async (url) => {
+    fetched.push(url);
+    if (url === answering) return { html: '<html><head><title>GOLDILOXX SINGLET NITE - Red Eye NY</title></head><body></body></html>', url, statusCode: 200, headers: {} };
+    throw new Error(`HTTP 404: ${url}`);
+  } };
+  await parser.resolveJsonApiSlugLinks(events, 'https://api.redeyetickets.example/api/v1/events/search?q=goldiloxx', httpAdapter);
+  assert.equal(events[0].ticketUrl, answering, 'the page answered for this event by name');
+  assert.deepEqual(fetched, [answering], 'first shape answered — no further probes');
+
+  // A page that answers for a DIFFERENT event is not adopted.
+  const other = parser.extractEventsFromJsonApiPayload(payload, 'https://api.redeyetickets.example/api/v1/events/search?q=goldiloxx');
+  const wrong = { fetchData: async (url) => ({ html: '<html><head><title>Some Other Party</title></head></html>', url, statusCode: 200, headers: {} }) };
+  await parser.resolveJsonApiSlugLinks(other, 'https://api.redeyetickets.example/api/v1/events/search?q=goldiloxx', wrong);
+  assert.equal(other[0].ticketUrl, '', 'three shapes tried, none named this event → nothing adopted');
+});
+
+test('an event page with exactly one outbound ticketing-platform event link has told us its ticket link', () => {
+  const parser = createParser();
+  const page = (links) => ({ url: 'https://bearracuda.example/events/denver17/', html: `<html><body><h1>Bearracuda Denver</h1>${links.map(l => `<a href="${l}">Tickets</a>`).join('')}<a href="https://bearracuda.example/">Home</a><a href="https://www.instagram.com/bearracuda">IG</a></body></html>` });
+  const one = { title: 'BEARRACUDA: Denver 17' };
+  parser.adoptPageTicketLink(one, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(one.ticketUrl, 'https://www.ticketmaster.com/event/1E006505BDFCE369');
+  const two = { title: 'X' };
+  parser.adoptPageTicketLink(two, page(['https://www.ticketmaster.com/event/1E006505BDFCE369', 'https://www.eventbrite.com/e/other-party-123']));
+  assert.equal(two.ticketUrl, undefined, 'two different platform links → ambiguous, nothing adopted');
+  const root = { title: 'X', ticketUrl: 'https://bearracuda.example' };
+  parser.adoptPageTicketLink(root, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(root.ticketUrl, 'https://www.ticketmaster.com/event/1E006505BDFCE369', 'a bare site root is not a ticket link and gives way');
+  const kept = { title: 'X', ticketUrl: 'https://sickening.events/e/real' };
+  parser.adoptPageTicketLink(kept, page(['https://www.ticketmaster.com/event/1E006505BDFCE369']));
+  assert.equal(kept.ticketUrl, 'https://sickening.events/e/real', 'fill-only-empty');
+  const homeOnly = { title: 'X' };
+  parser.adoptPageTicketLink(homeOnly, page(['https://www.ticketmaster.com/']));
+  assert.equal(homeOnly.ticketUrl, undefined, 'a platform homepage is not an event link');
+});

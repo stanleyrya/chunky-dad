@@ -1157,6 +1157,7 @@ class AiWebParser {
             // JSON that arrived through a SPA data door carries context the
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
+            await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
             const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address);
             // Elfsight rows carry no venue of their own — the widget IS the
             // venue's own calendar on the venue's own page, so bar/address come
@@ -1601,8 +1602,47 @@ class AiWebParser {
             // ensureSinglePageImageCoverage (single-page sibling of the
             // multi-event segment top-up).
             await this.ensureSinglePageImageCoverage(event, htmlData, parserConfig, ocrResults, httpAdapter);
+            this.adoptPageTicketLink(event, htmlData);
         }
         return event ? [event] : [];
+    }
+
+    // An event page that links to exactly ONE event on a ticketing platform
+    // has told us its ticket link — no model answer, no fetch needed. Fills an
+    // empty ticketUrl only. bearracuda.com/events/denver17/ (run
+    // 20260910-215043): the page links its Ticketmaster listing, our fetch of
+    // Ticketmaster is bot-walled, the model cited nothing, and the homepage
+    // was parked as the ticket link. The link is for humans; the wall is ours.
+    adoptPageTicketLink(event, htmlData) {
+        if (!event || typeof event !== 'object') return;
+        // A bare domain root ("https://bearracuda.com") is a site, not a
+        // ticket link — the model offers it when the page's real ticket link
+        // is an href it cannot see. Treated as empty.
+        const existing = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+        if (existing && !/^https?:\/\/[^/?#]+\/?$/i.test(existing)) return;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (!html) return;
+        const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || [])[1];
+        const pageDomain = pageHost ? pageHost.toLowerCase().replace(/^www\./, '') : '';
+        const isPlatformHost = (host) => this.core && typeof this.core.isKnownTicketingPlatformHost === 'function'
+            ? this.core.isKnownTicketingPlatformHost(host)
+            : false;
+        const isEventDetail = (url) => /^https?:\/\/[^/?#]+\/(?:events?|e|shows?|tickets?)\/[^/?#]+/i.test(url);
+        const candidates = new Set();
+        for (const raw of this.extractUrlCandidatesFromRawHtml(html)) {
+            const url = this.normalizeHttpUrlValue(String(raw || ''));
+            if (!url) continue;
+            const host = (url.match(/^https?:\/\/([^/?#]+)/i) || [])[1];
+            if (!host) continue;
+            const domain = host.toLowerCase().replace(/^www\./, '');
+            if (domain === pageDomain || !isPlatformHost(domain) || !isEventDetail(url)) continue;
+            candidates.add(url.split('#')[0]);
+        }
+        if (candidates.size !== 1) return;
+        const [ticketUrl] = candidates;
+        event.ticketUrl = ticketUrl;
+        console.log(`🔗 LINKS: "${event.title || 'event'}" ticketUrl ← ${ticketUrl} (the page's one outbound ticketing-platform event link${existing ? `; replaces the bare site root ${existing}` : ''})`);
     }
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
@@ -8279,7 +8319,13 @@ class AiWebParser {
             endDateUtc: this.parseWixExactInstant(scheduling.endDate),
             address: clean(location.address) || clean(fullAddress.formattedAddress) || null,
             city: clean(fullAddress.city).toLowerCase() || null,
-            cover: this.formatWixTicketPriceRange(tickets)
+            cover: this.formatWixTicketPriceRange(tickets),
+            // The listing's own artwork (mainImage): a card read from a text
+            // window on the homepage has no image of its own, while the
+            // warmup row beside it names the flyer (CHUNK NYE, run
+            // 20260910-131740: pin and city filled, no image — the record
+            // never carried it).
+            image: this.normalizeHttpUrlValue(clean(node.mainImage && typeof node.mainImage === 'object' ? node.mainImage.url : '')) || null
         };
         return Object.values(record).some(value => value !== null) ? record : null;
     }
@@ -8674,6 +8720,77 @@ class AiWebParser {
         }
     }
 
+    // Does the page state this cover amount only as a prize? Every mention
+    // of the amount in the page text is read; if any sits in ticket/cover/
+    // door wording the amount is a price and stands. Only when ALL mentions
+    // sit in prize/raffle wording is the cover rejected.
+    coverAmountReadsAsPrize(cover, htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return false;
+        const amounts = String(cover || '').match(/\d+(?:\.\d+)?/g) || [];
+        if (amounts.length === 0) return false;
+        const text = this.extractBodyParts(html).join(' ');
+        if (!text) return false;
+        const priceWords = /\b(cover|tickets?|admission|entry|door|advance|presale|adv\.?|price|cost)\b/i;
+        const prizeWords = /\b(prizes?|giveaway|raffle|jackpot|winner|win)\b/i;
+        // Sentence-level: the sentence that states the amount decides.
+        const sentences = text.split(/(?<=[.!?])\s+|\n+/);
+        let mentions = 0;
+        let prizeOnly = 0;
+        for (const amount of amounts) {
+            const pattern = new RegExp(`(?:^|[^\\d.])[$€£]?\\s?${amount.replace('.', '\\.')}(?![\\d])`);
+            for (const sentence of sentences) {
+                if (!pattern.test(sentence)) continue;
+                mentions++;
+                if (prizeWords.test(sentence) && !priceWords.test(sentence)) prizeOnly++;
+            }
+        }
+        return mentions > 0 && prizeOnly === mentions;
+    }
+
+    // A JSON API row that names its event by slug but publishes no page link
+    // (redeyetickets: `slug` only — "never fabricate a URL from a slug" still
+    // holds, so nothing is assumed). Candidate public URLs on the API's own
+    // registrable domain are FETCHED and adopted only when the page answers
+    // for this event by name: verified, not fabricated. Bounded — three
+    // shapes per event, six fetches per page.
+    async resolveJsonApiSlugLinks(events, sourceUrl, httpAdapter) {
+        if (!Array.isArray(events) || events.length === 0 || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i);
+        if (!hostMatch) return;
+        const domain = this.core && typeof this.core.getRegistrableDomainFromHost === 'function'
+            ? this.core.getRegistrableDomainFromHost(hostMatch[1])
+            : hostMatch[1].replace(/^(?:api|www)\./i, '');
+        if (!domain) return;
+        let budget = 6;
+        for (const event of events) {
+            const slug = typeof event._jsonApiSlug === 'string' ? event._jsonApiSlug.trim() : '';
+            if (!slug || event.ticketUrl || budget <= 0) continue;
+            const wanted = this.normalizeEvidenceText(event.title || '');
+            if (!wanted) continue;
+            for (const shape of ['events', 'event', 'e']) {
+                if (budget <= 0) break;
+                const candidate = `https://${domain}/${shape}/${encodeURIComponent(slug)}`;
+                budget--;
+                let body = '';
+                try {
+                    const response = await httpAdapter.fetchData(candidate);
+                    body = response && typeof response.html === 'string' ? response.html : '';
+                } catch (_) {
+                    continue;
+                }
+                if (!body) continue;
+                const pageTitle = this.normalizeEvidenceText((body.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '');
+                const named = this.extractEventsFromJsonLd(body, candidate, null).some(found => this.normalizeEvidenceText(found && found.title) === wanted)
+                    || (pageTitle && pageTitle.includes(wanted));
+                if (!named) continue;
+                event.ticketUrl = candidate;
+                console.log(`🔗 LINKS: "${event.title}" ticketUrl ← ${candidate} (the API named only a slug; the page answered for this event by name)`);
+                break;
+            }
+        }
+    }
+
     // Context a SPA data door carries that its JSON payload does not (see
     // SharedCore.resolveSpaDataDoor): the human page the door was found
     // behind IS the ticket page, and the app bundle that named the door may
@@ -8868,6 +8985,12 @@ class AiWebParser {
         // venue-site identity pass never overrides it (internal field).
         if (event.bar) {
             event._barFromJsonLd = true;
+        }
+        // The row's own slug, kept for verified link resolution
+        // (resolveJsonApiSlugLinks). Internal field, never serialized.
+        const slugValue = firstValue(/^(slug|perm_name|permalink)$/, isNonEmptyString);
+        if (slugValue && !/^https?:\/\//i.test(slugValue) && !/[\s/]/.test(slugValue.trim())) {
+            event._jsonApiSlug = slugValue.trim();
         }
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
@@ -9133,6 +9256,11 @@ class AiWebParser {
         };
         fill('location', record.coordinates);
         fill('timezone', record.timezone);
+        if (record.image && isEmpty(event.image)) {
+            event.image = record.image;
+            event.imageSource = 'json-api';
+            filled.push('image');
+        }
         // Cover exception to fill-only-empty: a cover flagged _coverFromJsonLdOffers
         // came from the SAME Wix system as the warmup blob, just at lower fidelity —
         // JSON-LD offers only publish fee-inclusive totals while the warmup tickets
@@ -14493,7 +14621,18 @@ TEXT:
                 return true;
             })
             .join('\n\n');
-        const raw = sectionText || this.cleanHtml(html, aiConfig) || html;
+        // The page's own hyperlinks are evidence too: an href is never
+        // visible as text, so a ticket link the model read off the page
+        // ("GET TICKETS" → sickening.events/e/…) failed corroboration and was
+        // dropped — bearracuda.com run 20260910-131740, all seven event pages,
+        // which is why every event shipped with the homepage as its ticket
+        // link. Capped and appended AFTER the text so nothing else moves.
+        const pageLinks = this.extractUrlCandidatesFromRawHtml(html)
+            .map(candidate => this.normalizeHttpUrlValue(String(candidate || '')))
+            .filter(Boolean)
+            .slice(0, 300);
+        const rawText = sectionText || this.cleanHtml(html, aiConfig) || html;
+        const raw = pageLinks.length > 0 ? `${rawText}\n\nPAGE_LINKS:\n${pageLinks.join('\n')}` : rawText;
         const normalized = this.normalizeEvidenceText(raw);
         const compact = normalized.replace(/[^a-z0-9]+/g, '');
         return {
@@ -17178,11 +17317,19 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['image', 'img'], aiEvent),
             ''
         ));
-        const cover = this.firstNonEmpty(
+        let cover = this.firstNonEmpty(
             aiEvent.cover,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['cover'], aiEvent),
             ''
         );
+        // A prize is not a price: "$500 IN CASH PRIZES" (bearracuda.com
+        // Portland Oct, run 20260910-215043) shipped as the cover. When every
+        // place the page states the amount is prize/raffle wording with no
+        // ticket/cover/door wording beside it, the cover is dropped.
+        if (cover && cover === aiEvent.cover && this.coverAmountReadsAsPrize(cover, htmlData)) {
+            console.log(`🤖 AI Web: Dropping cover "${cover}" — the page states that amount as a prize, not a price`);
+            cover = '';
+        }
         const shortName = this.firstNonEmpty(
             aiEvent.shortName,
             aiEvent.short,
@@ -22749,7 +22896,11 @@ TEXT:
             text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
             text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
             text = text.replace(/<!--[\s\S]*?-->/g, ' ');
-            text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
+            // <select> joins the form-chrome list: an option list is a control,
+            // never content (sickening.events' organizer dropdown put
+            // "Wickedly Twisted Entertainment" — one of ~120 <option>s — up as
+            // an event title, run 20260910-215043).
+            text = text.replace(/<(nav|header|footer|aside|noscript|form|button|select)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
             text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
             text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
             text = text.replace(/<[^>]+>/g, ' ');
