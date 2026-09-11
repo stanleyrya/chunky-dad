@@ -31,7 +31,20 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'spa-data-door-2026-09';
+const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// Well-known machine-feed paths probed on a configured root's own host
+// (after whatever the page advertises). Platform conventions, not sites.
+const MACHINE_DOOR_WELL_KNOWN_PATHS = [
+    '/feed.json',
+    '/events.json',
+    '/events/feed.json',
+    '/feed.ics',
+    '/calendar.ics',
+    '/events.ics',
+    '/events/?ical=1',
+    '/wp-json/tribe/events/v1/events?per_page=50',
+    '/wp-json/wp/v2/events?per_page=100'
+];
 // Stored-pin vs fresh-geocode divergence (km) that warrants human review.
 // Fresh geocodes are grade-gated and cross-checked (normalizers.js), so
 // sub-km disagreement is meaningful. Shared by the merge-time STEP 3c flag
@@ -6828,9 +6841,17 @@ class SharedCore {
                 // A JavaScript shell has its content behind the API its own
                 // bundle calls — find that door and read through it, or fall
                 // through with the shell untouched (see resolveSpaDataDoor).
-                const htmlData = shouldUseInlineInput
+                const spaResolvedHtmlData = shouldUseInlineInput
                     ? fetchedHtmlData
                     : await this.resolveSpaDataDoor(fetchedHtmlData, url, httpAdapter, displayAdapter);
+                // A configured root that advertises or serves a machine
+                // door (a JSON or iCalendar feed) is read through it — the
+                // feed is the site's own complete statement of its events
+                // (see resolveMachineDoor). Nothing per site: what the page
+                // links to, plus a short well-known list, scored by content.
+                const htmlData = shouldUseInlineInput || currentDepth !== 0
+                    ? spaResolvedHtmlData
+                    : await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter);
 
                 // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
                 // (absence is what signals adaptive to parsers); numeric mode passes
@@ -12426,6 +12447,209 @@ class SharedCore {
         }
         await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl}: no endpoint answered with events (probed ${probes.length}: ${probes.map(probe => probe.template).filter((template, index, all) => all.indexOf(template) === index).join(', ')}) — leaving it`);
         return htmlData;
+    }
+
+    // === Machine-door discovery ===
+    // A configured root may publish its events as a machine feed: a JSON
+    // feed or an iCalendar the page links to (<link rel="alternate">,
+    // .ics/.json hrefs, webcal:, ?ical=1), or one at a well-known path
+    // (/feed.json, /feed.ics, the WordPress events REST route…). The feed is
+    // read instead of the page when it answers with at least as many
+    // event-shaped records as the page's own structured data — never
+    // fewer, so a partial feed never replaces a fuller page. iCalendar
+    // answers are converted to feed rows so one JSON pathway reads both.
+    // Probes that answer nothing are dead ends (retried on the next
+    // capability bump); an adopted door is remembered per host for the run.
+    // thebearcalendar.com/events/ links /feed.ics and serves /feed.json:
+    // 70 rows in one read, where the HTML hub out-links its crawl budget.
+    async resolveMachineDoor(htmlData, pageUrl, httpAdapter, displayAdapter) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return htmlData;
+        if (htmlData.dataDoor || htmlData.machineDoor) return htmlData;
+        const head = html.trim().slice(0, 64);
+        if (head[0] === '{' || head[0] === '[' || /^BEGIN:VCALENDAR/i.test(head)) return htmlData;
+        const log = displayAdapter && typeof displayAdapter.logInfo === 'function'
+            ? (message) => displayAdapter.logInfo(message)
+            : async () => {};
+        const parts = this.parseUrl(pageUrl);
+        const hostKey = parts ? String(parts.host || '').toLowerCase().replace(/^www\./, '') : '';
+        if (!this.machineDoorsByHost) this.machineDoorsByHost = new Map();
+        const remembered = hostKey ? this.machineDoorsByHost.get(hostKey) : null;
+        const candidates = remembered
+            ? [remembered]
+            : this.filterKnownDeadEndUrls(this.collectMachineDoorCandidates(html, pageUrl));
+        if (candidates.length === 0) return htmlData;
+        const pageEventCount = this.extractJsonLdEventNodes(html).length;
+        const tried = [];
+        const answered = [];
+        for (const candidate of candidates.slice(0, 8)) {
+            let body = '';
+            let statusCode = null;
+            try {
+                const response = await httpAdapter.fetchData(candidate, { headers: { Accept: 'application/json, text/calendar, application/feed+json, */*' } });
+                body = response && typeof response.html === 'string' ? response.html : '';
+                statusCode = response && Number.isFinite(Number(response.statusCode)) ? Number(response.statusCode) : null;
+            } catch (error) {
+                this.recordDeadEndNetworkFailure({ url: candidate, currentDepth: 1 });
+                tried.push(`${candidate} (${error && error.message ? error.message : 'error'})`);
+                continue;
+            }
+            const door = this.readMachineDoorBody(body, candidate);
+            if (!door || door.count < 2 || door.count < pageEventCount) {
+                if (statusCode !== null && statusCode >= 400) {
+                    this.recordDeadEndFetchFailure({ url: candidate, currentDepth: 1, statusCode });
+                } else {
+                    this.recordDeadEndObservation({ url: candidate, currentDepth: 1, parseResult: { events: [], additionalLinks: [] }, pageClassification: 'unknown' });
+                }
+                tried.push(`${candidate} (${door ? `${door.count} event(s)` : 'not a feed'})`);
+                continue;
+            }
+            answered.push({ candidate, door });
+            if (remembered) break;
+        }
+        if (answered.length === 0) {
+            await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl}: no feed answered with events (probed ${tried.length}: ${tried.join(', ')}) — reading the page`);
+            return htmlData;
+        }
+        // The fullest door wins: most records, then the richest rows (a
+        // site's JSON feed states ticket links, images and cities its
+        // iCalendar twin folds into free text).
+        const kindRank = (door) => (door.kind === 'json' ? 1 : 0);
+        answered.sort((a, b) => (b.door.count - a.door.count) || (b.door.richness - a.door.richness) || (kindRank(b.door) - kindRank(a.door)));
+        const { candidate, door } = answered[0];
+        if (hostKey) this.machineDoorsByHost.set(hostKey, candidate);
+        const others = answered.slice(1).map(entry => `${entry.candidate} (${entry.door.count} ${entry.door.kind}, ${entry.door.richness} field(s)/row)`);
+        await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl} → ${candidate} answered with ${door.count} ${door.kind} event record(s), ${door.richness} field(s)/row${pageEventCount ? ` (page's own structured data: ${pageEventCount})` : ''}${others.length ? `; also answered: ${others.join(', ')}` : ''} — reading the page through it`);
+        return {
+            ...htmlData,
+            url: candidate,
+            html: door.body,
+            machineDoor: { doorUrl: candidate, pageUrl, kind: door.kind, count: door.count }
+        };
+    }
+
+    // Average number of non-empty fields over a feed's first rows — the
+    // richness tiebreak between doors answering the same count.
+    machineDoorRowRichness(rows) {
+        const sample = (Array.isArray(rows) ? rows : []).slice(0, 5);
+        if (sample.length === 0) return 0;
+        const filled = (row) => Object.values(row && typeof row === 'object' ? row : {})
+            .filter(value => value !== null && value !== undefined && value !== '' && value !== false && !(Array.isArray(value) && value.length === 0)).length;
+        return Math.round(sample.reduce((sum, row) => sum + filled(row), 0) / sample.length);
+    }
+
+    // Candidate door URLs for a page: advertised feeds first (typed links,
+    // .ics/.json hrefs, webcal:, calendar-export params), then well-known
+    // paths on the page's own host. Same-host only; the page itself never.
+    collectMachineDoorCandidates(html, pageUrl) {
+        const parts = this.parseUrl(pageUrl);
+        if (!parts) return [];
+        const origin = `${parts.protocol || 'https:'}//${parts.host}`;
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const pageHost = String(parts.host || '').toLowerCase().replace(/^www\./, '');
+        const seen = new Set();
+        const ordered = [];
+        const add = (raw) => {
+            const trimmed = String(raw || '').replace(/&amp;/gi, '&').trim();
+            if (!trimmed) return;
+            const resolved = /^webcal:\/\//i.test(trimmed) ? trimmed.replace(/^webcal:\/\//i, 'https://') : this.normalizeUrl(trimmed, pageUrl);
+            if (!resolved || !/^https?:\/\//i.test(resolved)) return;
+            const host = (resolved.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            if (host !== pageHost) return;
+            const key = this.getUrlDedupeKey(resolved);
+            if (!key || key === pageKey || seen.has(key)) return;
+            seen.add(key);
+            ordered.push(resolved);
+        };
+        const source = String(html || '');
+        const typedLink = /<link\b[^>]*rel\s*=\s*["'][^"']*alternate[^"']*["'][^>]*>/gi;
+        let match;
+        while ((match = typedLink.exec(source)) !== null) {
+            const tag = match[0];
+            if (!/type\s*=\s*["'](?:application\/(?:feed\+)?json|text\/calendar)["']/i.test(tag)) continue;
+            const href = tag.match(/href\s*=\s*["']([^"']+)["']/i);
+            if (href) add(href[1]);
+        }
+        for (const entry of this.detectIcsFeedLinks(source, pageUrl)) add(entry.fetchUrl);
+        const hrefs = /href\s*=\s*["']([^"']+)["']/gi;
+        while ((match = hrefs.exec(source)) !== null) {
+            const value = match[1].replace(/&amp;/gi, '&');
+            const lower = value.toLowerCase();
+            const path = lower.split(/[?#]/)[0];
+            if (path.endsWith('.json') || path.endsWith('.ics') || /[?&](?:format=json|ical=1|outlook-ical=1)\b/.test(lower)) add(value);
+        }
+        // Well-known paths only on a hint: the page advertises a feed (so
+        // the site publishes feeds — its JSON twin is worth one request
+        // each), or carries WordPress markers (its events REST routes). A
+        // page with no hint is read as a page; no blind probing.
+        const advertised = ordered.length > 0;
+        const wordpress = /\/wp-(?:content|json|includes)\//i.test(source);
+        for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+            const isWordPressRoute = wellKnown.startsWith('/wp-json/') || wellKnown.includes('?ical=1');
+            if ((advertised && !isWordPressRoute) || (wordpress && isWordPressRoute)) add(`${origin}${wellKnown}`);
+        }
+        return ordered;
+    }
+
+    // A fetched door body as feed rows: JSON with event-shaped objects is
+    // passed through as it is; an iCalendar becomes { events: [rows] } in
+    // the vocabulary the JSON-API reader already maps (title, start, end,
+    // venue, address, url, description, rrule, timezone). Null when the
+    // body is neither.
+    readMachineDoorBody(body, doorUrl) {
+        const text = typeof body === 'string' ? body.trim() : '';
+        if (!text) return null;
+        if (text[0] === '{' || text[0] === '[') {
+            const count = this.countJsonApiEventObjects(text);
+            let rows = [];
+            try {
+                const parsed = JSON.parse(text);
+                const isRowArray = (value) => Array.isArray(value) && value.length > 0 && value.every(item => item && typeof item === 'object' && !Array.isArray(item));
+                rows = isRowArray(parsed) ? parsed : (Object.values(parsed || {}).find(isRowArray) || []);
+            } catch (_) {
+                rows = [];
+            }
+            return { kind: 'json', count, richness: this.machineDoorRowRichness(rows), body: text };
+        }
+        if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) return null;
+        const records = SharedCore.parsePublishedCalendarIcs(text) || [];
+        const rows = records.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
+        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows), body: JSON.stringify({ events: rows }) };
+    }
+
+    icsRecordToFeedRow(record, doorUrl) {
+        if (!record || !record.start) return null;
+        const pad = (value) => String(value).padStart(2, '0');
+        const wallIso = (entry) => `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}T${pad(entry.wall.hour)}:${pad(entry.wall.minute)}:${pad(entry.wall.second)}`;
+        const iso = (entry) => {
+            if (!entry || !entry.wall) return '';
+            if (entry.isDateOnly) return `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}`;
+            // Floating (no TZID, no Z) is the venue's wall clock: no offset.
+            if (!entry.tzid) return wallIso(entry);
+            return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+        };
+        const start = iso(record.start);
+        if (!start) return null;
+        const location = String(record.location || '').trim();
+        // "Stonewall Hotel, Sydney, Australia": the venue is the leading
+        // segment when it is not itself a street line; the rest is the place.
+        const segments = location.split(',').map(part => part.trim()).filter(Boolean);
+        const leadingIsVenue = segments.length > 1 && !/\d/.test(segments[0]);
+        const row = {
+            uid: record.uid || '',
+            title: record.summary || '',
+            description: record.description || '',
+            start,
+            end: iso(record.end),
+            url: record.url || '',
+            venue: leadingIsVenue ? segments[0] : '',
+            address: leadingIsVenue ? segments.slice(1).join(', ') : location,
+            all_day: Boolean(record.isAllDay)
+        };
+        if (record.rrule) row.rrule = record.rrule;
+        const tzid = record.start.tzid;
+        if (tzid && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
+        return row;
     }
 
     // Crawl-queue guard: obvious static assets are never pages, so the crawl

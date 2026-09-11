@@ -21361,6 +21361,90 @@ test('an event page follows its outbound ticketing-platform link even when the m
     'a platform homepage is not a ticket link');
 });
 
+// ---------------------------------------------------------------------------
+// MACHINE-DOOR DISCOVERY (thebearcalendar.com/events/ links /feed.ics and
+// serves /feed.json; run 20260911 read 8 of 70 events through the HTML hub).
+// ---------------------------------------------------------------------------
+
+function doorStubAdapter(bodies) {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      async fetchData(url) {
+        fetched.push(url);
+        const body = bodies[url];
+        if (body === undefined) return { html: '<html><body>Not found</body></html>', url, statusCode: 404, headers: {} };
+        return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+const DOOR_LISTING_HTML = '<html><head><link rel="alternate" type="text/calendar" href="/feed.ics"></head><body><a href="/feed.ics">Subscribe</a><article>Bear Night · Sep 12</article><article>Cub Social · Sep 19</article></body></html>';
+const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20260912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20260919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
+const DOOR_JSON = { events: [
+  { title: 'Bear Night', start: '2026-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
+  { title: 'Cub Social', start: '2026-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
+] };
+
+test('machine door: a root that advertises a feed is read through the fullest door that answers', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter } = doorStubAdapter({ 'https://door.example/feed.ics': DOOR_ICS, 'https://door.example/feed.json': DOOR_JSON });
+  const page = { html: DOOR_LISTING_HTML, url: 'https://door.example/events/', statusCode: 200, headers: {} };
+  const out = await core.resolveMachineDoor(page, 'https://door.example/events/', httpAdapter, display);
+  assert.equal(out.url, 'https://door.example/feed.json', 'both answered with 2; the JSON rows are richer');
+  assert.deepEqual(JSON.parse(out.html), DOOR_JSON);
+  assert.equal(out.machineDoor.kind, 'json');
+  assert.ok(fetched.includes('https://door.example/feed.ics') && fetched.includes('https://door.example/feed.json'));
+  assert.ok(!fetched.some(url => url.includes('/wp-json/')), 'no WordPress routes without WordPress markers');
+  assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR') && line.includes('feed.json') && line.includes('also answered')));
+  // Remembered for the host: the next root on this host asks the door only.
+  const again = doorStubAdapter({ 'https://door.example/feed.json': DOOR_JSON });
+  const out2 = await core.resolveMachineDoor({ ...page, url: 'https://door.example/calendar/' }, 'https://door.example/calendar/', again.httpAdapter, display);
+  assert.deepEqual(again.fetched, ['https://door.example/feed.json']);
+  assert.equal(out2.url, 'https://door.example/feed.json');
+});
+
+test('machine door: an iCalendar-only site becomes feed rows — floating times as wall clock, venue and place from LOCATION, rules kept', async () => {
+  const core = createCore();
+  const { httpAdapter } = doorStubAdapter({ 'https://door.example/feed.ics': DOOR_ICS });
+  const out = await core.resolveMachineDoor({ html: DOOR_LISTING_HTML, url: 'https://door.example/events/' }, 'https://door.example/events/', httpAdapter, createDisplayAdapterStub());
+  assert.equal(out.machineDoor.kind, 'ics');
+  const rows = JSON.parse(out.html).events;
+  assert.equal(rows.length, 2);
+  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2026-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
+  assert.equal(rows[1].start, '2026-09-19', 'a date-only start');
+  assert.equal(rows[1].rrule, 'FREQ=WEEKLY;BYDAY=SA');
+  assert.equal(rows[1].all_day, true);
+});
+
+test('machine door: no hint → no probing; a hinted door that fails is a dead end and the page is read', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const quiet = doorStubAdapter({});
+  const plain = { html: '<html><body><article>Bear Night · Sep 12</article></body></html>', url: 'https://plain.example/events/' };
+  const same = await core.resolveMachineDoor(plain, 'https://plain.example/events/', quiet.httpAdapter, display);
+  assert.equal(same, plain, 'untouched');
+  assert.deepEqual(quiet.fetched, [], 'nothing probed without a hint');
+
+  const wp = doorStubAdapter({});
+  const wpPage = { html: '<html><head><link rel="stylesheet" href="/wp-content/themes/x/style.css"></head><body>Sep 12 Bear Night</body></html>', url: 'https://wp.example/events/' };
+  const stillPage = await core.resolveMachineDoor(wpPage, 'https://wp.example/events/', wp.httpAdapter, display);
+  assert.equal(stillPage, wpPage);
+  assert.ok(wp.fetched.every(url => url.includes('/wp-json/') || url.includes('ical=1')), 'WordPress markers probe only the WordPress routes');
+  assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR') && line.includes('no feed answered')));
+
+  // A feed that answers with FEWER events than the page's own structured
+  // data is not adopted.
+  const jsonLdPage = { html: '<html><head><link rel="alternate" type="application/json" href="/feed.json"></head><body>'
+    + ['A', 'B', 'C'].map(n => `<script type="application/ld+json">{"@type":"Event","name":"${n}","startDate":"2026-09-12T21:00:00"}</script>`).join('') + '</body></html>', url: 'https://partial.example/' };
+  const partial = doorStubAdapter({ 'https://partial.example/feed.json': { events: [{ title: 'A', start: '2026-09-12T21:00:00' }, { title: 'B', start: '2026-09-13T21:00:00' }] } });
+  const kept = await core.resolveMachineDoor(jsonLdPage, 'https://partial.example/', partial.httpAdapter, display);
+  assert.equal(kept, jsonLdPage, 'two feed rows do not replace three structured events');
+});
+
 test('a search results URL is never an identity or ticket link', () => {
   const core = createCore();
   assert.equal(core.isSearchListingUrl('https://sickening.events/events?q=goldiloxx'), true);
