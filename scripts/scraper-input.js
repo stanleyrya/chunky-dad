@@ -240,14 +240,17 @@ const scraperConfig = {
     {
       name: "The Bear Calendar",
       automationEnabled: false,
-      // Aggregator (Astro, server-rendered; ~52 events). Per-event pages carry
-      // complete JSON-LD; offers.url IS the original ticketing/promoter URL.
+      // Aggregator (Astro). Its feed.json is the whole upcoming set in one
+      // read: title, venue, city/country, ticket_url (the original
+      // ticketing/promoter link), website_url, image, price, rrule. The
+      // HTML listing links more event pages than a crawl budget covers and
+      // its filter chips precede the cards. The feed labels local wall-clock
+      // times "UTC" — the JSON-API reader verifies that against the site's
+      // own event page and reads them as local time (🕒 FEED CLOCK).
       // First-run verification: Megawoof/Twisted Bear dupes must dedup via
       // ticket-url identity; websites must be original URLs, never this host.
-      urls: ["https://thebearcalendar.com/events/"],
+      urls: ["https://thebearcalendar.com/feed.json"],
       alwaysBear: true,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 60,
     },
     {
       name: "Thotyssey",

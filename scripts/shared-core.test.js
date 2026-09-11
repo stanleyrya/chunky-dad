@@ -463,6 +463,32 @@ test('classifyPageWithSignal reports which tier decided', () => {
     { pattern: 'x\\.example/hub', classification: 'link-aggregator' }
   ]);
   assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub', jsonLdHtml), { classification: 'link-aggregator', signal: 'url-rule' });
+  // A raw JSON body with event objects is classified by its content even
+  // under a host-wide URL rule — the rule describes the site's HTML pages
+  // (thebearcalendar.com/feed.json under the /events/ hub rule, run 20260911).
+  const feed = JSON.stringify({ events: [{ title: 'A', start: '2026-09-12T19:00:00' }, { title: 'B', start: '2026-09-13T19:00:00' }] });
+  assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub/feed.json', feed), { classification: 'multi-event-page', signal: 'json-api' });
+});
+
+test('festival context never overrides a record whose own address names another place', () => {
+  const core = new SharedCore({ nyc: { timezone: 'America/New_York', patterns: ['nyc', 'new york'] } }, { eventSchema: EventSchema });
+  const festival = { key: 'urban-bear-nyc', name: 'Urban Bear NYC', cityKey: 'nyc', nextDates: { start: '2026-09-17', end: '2026-09-20' } };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let sydney, blank, local;
+  try {
+    sydney = { title: 'Bear Pride 2026: Bearmuda Mingles', city: 'unknown', address: 'Sydney, NSW' };
+    core.applyCuratedFestivalContext(sydney, festival);
+    blank = { title: 'Underwear Party', city: '' };
+    core.applyCuratedFestivalContext(blank, festival);
+    local = { title: 'Opening Night', city: 'unknown', address: '185 Christopher St, New York, NY' };
+    core.applyCuratedFestivalContext(local, festival);
+  } finally { console.log = originalLog; }
+  assert.equal(sydney.city, 'unknown', 'a stated other place is not blank');
+  assert.ok(lines.some(line => line.includes('NOT given city nyc')));
+  assert.equal(blank.city, 'nyc', 'a truly blank place still inherits');
+  assert.equal(local.city, 'nyc', 'an address in the festival city inherits');
+  assert.equal(core.textMentionsCity('Sydney, NSW', 'nyc'), false);
+  assert.equal(core.textMentionsCity('Brooklyn, New York, NY', 'nyc'), true);
 });
 
 // Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide

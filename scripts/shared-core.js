@@ -618,6 +618,18 @@ class SharedCore {
     // 'heuristic', 'none') so callers can treat text-heuristic results as weak and
     // optionally re-check them with AI.
     classifyPageWithSignal(url, html) {
+        // 0. A raw JSON body with event-shaped objects is classified by what
+        //    it holds. URL rules describe a site's HTML pages — a host-wide
+        //    "link-aggregator" rule written for thebearcalendar.com/events/
+        //    also caught thebearcalendar.com/feed.json, and its 70 events
+        //    bypassed the structured route (run 20260911: 10 extracted by
+        //    AI from linearized JSON, the rest lost).
+        if (html) {
+            const jsonApiEventCount = this.countJsonApiEventObjects(html);
+            if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
+            if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
+        }
+
         // 1. URL pattern rules (deterministic, no HTML needed)
         const ruleClassification = this.classifyUrlByRules(url);
         if (ruleClassification) {
@@ -632,16 +644,6 @@ class SharedCore {
             const jsonLdEventCount = this.extractJsonLdEventNodes(html).length;
             if (jsonLdEventCount === 1) return { classification: 'event-page', signal: 'json-ld' };
             if (jsonLdEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-ld' };
-        }
-
-        // 2.5 Raw JSON API bodies (deterministic). A body that IS a JSON document
-        //     with recognizable event-shaped objects classifies by object count —
-        //     month-name heuristics and the AI second opinion are meaningless on a
-        //     payload that contains no prose.
-        if (html) {
-            const jsonApiEventCount = this.countJsonApiEventObjects(html);
-            if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
-            if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
         }
 
         // 3. HTML heuristics for unknown URLs
@@ -5263,7 +5265,10 @@ class SharedCore {
         const classifications = urlClassifications && typeof urlClassifications === 'object' ? urlClassifications : {};
         const aggregatorHosts = new Set();
         for (const url of Object.keys(classifications)) {
-            if (classifications[url] !== 'link-aggregator') continue;
+            // A root read as a machine feed classifies by its content
+            // (multi-event-page), but the host is still the aggregator the
+            // config's URL rules say it is — the pointer rule keys on that.
+            if (classifications[url] !== 'link-aggregator' && this.classifyUrlByRules(url) !== 'link-aggregator') continue;
             const host = this.getHostFromUrl(url).toLowerCase().replace(/^www\./, '');
             if (host) aggregatorHosts.add(host);
         }
@@ -14147,6 +14152,19 @@ class SharedCore {
         return null;
     }
 
+    // TRUE when the text names the configured city (key or any of its
+    // patterns, whole-word, case-folded).
+    textMentionsCity(text, cityKey) {
+        const folded = ` ${String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+        if (!folded.trim() || !cityKey) return false;
+        const config = this.cities && this.cities[cityKey] ? this.cities[cityKey] : null;
+        const names = [String(cityKey)].concat(config && Array.isArray(config.patterns) ? config.patterns : []);
+        return names.some(name => {
+            const needle = ` ${String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+            return needle.trim() !== '' && folded.includes(needle);
+        });
+    }
+
     // The host a record was extracted from (venue-site stamp first, then the
     // source page URL) — '' when neither survives.
     getFestivalSourceHost(event) {
@@ -14209,7 +14227,17 @@ class SharedCore {
         };
         const eventCity = String(event.city || '').trim().toLowerCase();
         const cityIsBlank = !eventCity || eventCity === 'unknown';
-        if (context.cityKey && cityIsBlank) {
+        // A blank city is not a blank PLACE: a record whose address names a
+        // locality the festival's city patterns do not match is somewhere
+        // else (thebearcalendar.com/feed.json, run 20260911: "Bear Pride
+        // 2026: Bearmuda Mingles" in Sydney inherited nyc from Urban Bear
+        // NYC because Sydney is not a configured city and the aggregator
+        // host had matched the umbrella). The address is the evidence; the
+        // festival window is not.
+        const statedPlace = String(event.address || '').trim();
+        if (context.cityKey && cityIsBlank && statedPlace && !this.textMentionsCity(statedPlace, context.cityKey)) {
+            console.log(`🎪 FESTIVAL: "${event.title || 'Unknown'}" NOT given city ${context.cityKey} from "${context.name}" — its own address "${statedPlace}" names another place`);
+        } else if (context.cityKey && cityIsBlank) {
             event.city = context.cityKey;
             event._citySource = 'curated-festival';
             context.inheritedCity = true;

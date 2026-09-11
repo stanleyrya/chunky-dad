@@ -7757,6 +7757,128 @@ test('detectJsonApiPayload ignores HTML and malformed JSON; the JSON-LD fast pat
   assert.equal(result.extractionSummary.source, 'jsonld');
 });
 
+// ---------------------------------------------------------------------------
+// AGGREGATOR FEEDS (thebearcalendar.com/feed.json, run 20260911): rows with
+// city/country keys and no address, ticket_url after the row's own url,
+// website_url, RRULE text, and wall-clock times labelled "+00:00".
+// ---------------------------------------------------------------------------
+
+const FEED_CITY_CONFIG = {
+  sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+};
+
+test('a feed row names its city without an address, keeps ticket over its own url, and carries its website', () => {
+  const parser = createParser();
+  const row = {
+    slug: 'bear-pool-party-2026', title: 'BEAR POOL PARTY', url: 'https://thebearcalendar.example/events/bear-pool-party-2026/',
+    start: '2026-09-10T00:00:00', end: '2026-09-10T23:59:59', all_day: true,
+    venue: null, city: 'Sitges', region: 'Catalonia', country: 'Spain',
+    ticket_url: 'https://sitgespoolparty.example/event/september-10th', website_url: 'https://www.sitgespoolparty.example',
+    image: 'https://cdn.example/pool.jpg'
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(event.city, 'sitges', 'city from the row\'s own city/region/country keys');
+  assert.equal(event.timezone, 'Europe/Madrid');
+  assert.equal(event.ticketUrl, 'https://sitgespoolparty.example/event/september-10th', 'the key that says ticket wins over the row\'s own url');
+  assert.equal(event.website, 'https://www.sitgespoolparty.example/');
+  assert.equal(event._jsonApiSlug, undefined, 'a row that names its own page never gets slug-guessed');
+
+  const ownPageOnly = parser.buildEventFromJsonApiObject({ title: 'Saturday Bears', url: 'https://thebearcalendar.example/events/saturday-bears/', start: '2026-09-12T10:00:00', city: 'Portland' },
+    'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(ownPageOnly.ticketUrl, '', 'a url on the feed\'s own host is the row\'s page, not a ticket link');
+  assert.equal(ownPageOnly.city, 'portland');
+});
+
+test('a feed row with an RRULE becomes its next dated occurrences, never the series start', () => {
+  const parser = createParser();
+  const day = 24 * 60 * 60 * 1000;
+  // A weekly Friday series whose stated start is five weeks ago.
+  const start = new Date(Date.now() - 35 * day);
+  const friday = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - ((start.getUTCDay() + 2) % 7), 19, 0, 0));
+  const events = parser.extractEventsFromJsonApiPayload({
+    events: [{ title: 'Furry Friday', start: friday.toISOString().replace(/\.\d{3}Z$/, ''), end: new Date(friday.getTime() + 4 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, ''), rrule: 'FREQ=WEEKLY;BYDAY=FR', city: 'Portland' }]
+  }, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(events.length, 6, 'capped occurrences inside the horizon');
+  assert.ok(events.every(e => e.startDate.getTime() >= Date.now() - day), 'no occurrence in the past');
+  assert.ok(events.every(e => e.startDate.getUTCDay() === 5 && e.startDate.getUTCHours() === 19), 'each on a Friday at the series\' wall-clock hour');
+  assert.equal(events[0].endDate.getTime() - events[0].startDate.getTime(), 4 * 60 * 60 * 1000, 'duration carried');
+  assert.equal(events[0]._jsonApiRrule, undefined);
+  // A rule the expander does not know leaves the row dated as stated.
+  const odd = parser.extractEventsFromJsonApiPayload({ events: [{ title: 'X', start: friday.toISOString(), rrule: 'FREQ=YEARLY;BYMONTH=6' }] }, 'https://f.example/feed.json', null);
+  assert.equal(odd.length, 1);
+});
+
+function feedStubAdapter(pages) {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      async fetchData(url) {
+        fetched.push(url);
+        const body = pages[url];
+        if (body === undefined) throw new Error(`no page for ${url}`);
+        return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+test('a paged feed is read past its first page: explicit next links, then hasNext with a start cursor, to the horizon', async () => {
+  const parser = createParser();
+  const day = 24 * 60 * 60 * 1000;
+  const at = (days) => ({ millis: Date.now() + days * day, tzid: 'America/New_York' });
+  const source = 'https://tockify.example/api/ngevent?max=2&calname=x&tags=bears';
+  // Tockify ids are composite objects — a String()-ed id would make every
+  // row "[object Object]" and fold the whole second page (run 20260911).
+  const eid = (uid) => ({ uid: String(uid), seq: 0, tid: uid });
+  const p1 = { events: [{ eid: eid(1), content: { summary: 'A' }, when: { start: at(1) } }, { eid: eid(2), content: { summary: 'B' }, when: { start: at(3) } }], metaData: { hasNext: true } };
+  const p2 = { events: [{ eid: eid(2), content: { summary: 'B' }, when: { start: at(3) } }, { eid: eid(3), content: { summary: 'C' }, when: { start: at(5) } }], metaData: { hasNext: true } };
+  const p3 = { events: [{ eid: eid(4), content: { summary: 'D' }, when: { start: at(200) } }], metaData: { hasNext: true } };
+  const p4 = { events: [{ eid: eid(5), content: { summary: 'E' }, when: { start: at(300) } }], metaData: { hasNext: false } };
+  const { fetched, httpAdapter } = feedStubAdapter({
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p1.events[1].when.start.millis + 1}`]: p2,
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p2.events[1].when.start.millis + 1}`]: p3,
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p3.events[0].when.start.millis + 1}`]: p4
+  });
+  const merged = await parser.collectJsonApiContinuation(JSON.parse(JSON.stringify(p1)), source, httpAdapter);
+  assert.deepEqual(merged.events.map(e => e.eid.uid), ['1', '2', '3', '4'], 'pages merged, the boundary repeat folded');
+  assert.equal(fetched.length, 2, 'page 3 already crossed the horizon — page 4 never requested');
+
+  // An explicit next link is followed as given, relative links resolved.
+  const linked = feedStubAdapter({ 'https://api.example/events?page=2': { data: [{ id: 'y', name: 'Y', start_date: new Date(Date.now() + 2 * day).toISOString() }], links: { next: null } } });
+  const out = await parser.collectJsonApiContinuation({ data: [{ id: 'x', name: 'X', start_date: new Date(Date.now() + day).toISOString() }], links: { next: '/events?page=2' } }, 'https://api.example/events', linked.httpAdapter);
+  assert.deepEqual(out.data.map(e => e.id), ['x', 'y']);
+  // No signal of more → nothing fetched.
+  const quiet = feedStubAdapter({});
+  await parser.collectJsonApiContinuation({ data: [{ id: 'x', name: 'X', start_date: '2026-09-20T20:00:00Z' }] }, 'https://api.example/events', quiet.httpAdapter);
+  assert.deepEqual(quiet.fetched, []);
+});
+
+test('a feed whose "UTC" times are the venue\'s wall clock is corrected against its own event page', async () => {
+  const parser = createParser();
+  const source = 'https://thebearcalendar.example/feed.json';
+  const row = { title: 'Bear Pride: Bearmuda Mingles', url: 'https://thebearcalendar.example/events/bearmuda/', start: '2026-09-10T19:00:00+00:00', end: '2026-09-10T22:00:00+00:00', tz: 'UTC', city: 'Sydney' };
+  const page = '<script type="application/ld+json">{"@type":"Event","name":"Bear Pride: Bearmuda Mingles","startDate":"2026-09-10T19:00:00"}</script>';
+  const { fetched, httpAdapter } = feedStubAdapter({ 'https://thebearcalendar.example/events/bearmuda/': page });
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let payload;
+  try { payload = await parser.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(row)), { title: 'Other', url: 'https://thebearcalendar.example/events/other/', start: '2026-09-12T20:00:00+00:00', tz: 'UTC' }] }, source, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched, ['https://thebearcalendar.example/events/bearmuda/'], 'one page checked');
+  assert.equal(payload.events[0].start, '2026-09-10T19:00:00', 'label stripped → wall clock');
+  assert.equal(payload.events[0].end, '2026-09-10T22:00:00');
+  assert.equal(payload.events[0].tz, undefined);
+  assert.equal(payload.events[1].start, '2026-09-12T20:00:00', 'every row follows the verdict');
+  assert.ok(lines.some(line => line.includes('FEED CLOCK') && line.includes('labels wall-clock times as UTC')));
+
+  // A feed whose page agrees the instant is UTC keeps its instants.
+  const honest = feedStubAdapter({ 'https://h.example/events/x/': '<script type="application/ld+json">{"@type":"Event","name":"X","startDate":"2026-09-11T05:00:00+10:00"}</script>' });
+  console.log = () => {};
+  let kept;
+  try { kept = await parser.reconcileJsonApiUtcLabels({ events: [{ title: 'X', url: 'https://h.example/events/x/', start: '2026-09-10T19:00:00+00:00' }] }, 'https://h.example/feed.json', honest.httpAdapter); } finally { console.log = originalLog; }
+  assert.equal(kept.events[0].start, '2026-09-10T19:00:00+00:00');
+});
+
 test('buildEventFromJsonApiObject strips HTML from descriptions and never invents ticket URLs from slugs', () => {
   const parser = createParser();
   const event = parser.buildEventFromJsonApiObject({

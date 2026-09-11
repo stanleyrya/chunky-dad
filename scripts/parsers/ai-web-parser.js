@@ -202,6 +202,13 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 // am") carry a date signal on every one of those lines. Segment discovery
 // therefore opened a NEW segment on each of them — 16 segments for ~7 real
 // listings, every window straddling two events — and
+// Paged JSON feeds are read to this horizon (days ahead) and at most this
+// many pages past the first — the same 90-day window the source
+// expectations document.
+const JSON_API_FEED_HORIZON_DAYS = 90;
+const JSON_API_FEED_MAX_PAGES = 6;
+const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+
 // deriveListingTitleSpanFromDatedLine handed the bare LABEL back as the
 // page's own listing title, so "Start from" (x3) and "End at" (x2) shipped as
 // calendar events.
@@ -1070,7 +1077,15 @@ class AiWebParser {
             // html for EVERY downstream consumer (additional-URL harvest, OCR
             // image harvest, prompt sections, verbatim evidence gate) so the
             // HTML-oriented machinery sees real lines instead of an opaque blob.
-            const jsonApiPayload = this.detectJsonApiPayload(htmlData && htmlData.html ? htmlData.html : '');
+            let jsonApiPayload = this.detectJsonApiPayload(htmlData && htmlData.html ? htmlData.html : '');
+            if (jsonApiPayload !== null) {
+                // A feed that says it has more (links.next, a hasNext flag)
+                // is read to the horizon, not to its page size; and a feed
+                // whose "UTC" instants are really the venue's wall clock is
+                // corrected against the site's own event page first.
+                jsonApiPayload = await this.collectJsonApiContinuation(jsonApiPayload, sourceUrl, httpAdapter);
+                jsonApiPayload = await this.reconcileJsonApiUtcLabels(jsonApiPayload, sourceUrl, httpAdapter);
+            }
             const jsonApiCandidates = jsonApiPayload !== null
                 ? this.collectJsonApiEventCandidates(jsonApiPayload)
                 : [];
@@ -1167,7 +1182,10 @@ class AiWebParser {
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
-            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address);
+            // A stated city is place evidence too: an aggregator row with no
+            // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
+            // in that city, not an incomplete record.
+            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
             // Elfsight rows carry no venue of their own — the widget IS the
             // venue's own calendar on the venue's own page, so bar/address come
             // from the site the same way they do for any venue-role parser.
@@ -8949,6 +8967,190 @@ class AiWebParser {
     // Generic recognizer over a parsed JSON API payload — the JSON-API
     // counterpart of extractEventsFromJsonLd (same dedupe key, same defensive
     // posture: any failure returns [] and the AI pathway takes over).
+    // The payload's row array and its key: data/events/items/results, the
+    // first array of objects (feeds name it differently; the candidate
+    // collector accepts the same set).
+    findJsonApiRowArray(payload) {
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+        for (const key of Object.keys(payload)) {
+            if (!/^(data|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
+            if (Array.isArray(payload[key]) && payload[key].every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+                return { key, rows: payload[key] };
+            }
+        }
+        return null;
+    }
+
+    // Start instant (ms) of a row, through the same resolver the builder
+    // uses; null when the row states none.
+    jsonApiRowStartMillis(row) {
+        const view = this.unwrapJsonApiCandidate(row);
+        for (const key of Object.keys(view)) {
+            const candidate = this.jsonApiStartDateFromEntry(key, view[key]);
+            if (candidate && candidate.date) return candidate.date.getTime();
+        }
+        return null;
+    }
+
+    // A paged feed is read past its first page: an explicit next link
+    // (links.next / next / nextPageUrl / pagination.next…) is followed as
+    // given; a hasNext-style flag with no link continues from the last
+    // row's own start instant (the `startms` cursor of epoch-millis
+    // calendars — tockify.com/api/ngevent serves 100 rows per request with
+    // metaData.hasNext, and run 20260911 read one page: ~3 weeks of a
+    // 3-month calendar). Reading stops at the horizon (rows starting more
+    // than JSON_API_FEED_HORIZON_DAYS out), at a page that adds nothing,
+    // or after JSON_API_FEED_MAX_PAGES extra pages. Rows merge into the
+    // first page's own row array, de-duplicated by id, so every consumer
+    // sees one payload.
+    async collectJsonApiContinuation(payload, sourceUrl, httpAdapter) {
+        if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
+        const rowArray = this.findJsonApiRowArray(payload);
+        if (!rowArray || rowArray.rows.length === 0) return payload;
+        const horizonMillis = Date.now() + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+        // Ids may be composite objects (Tockify eid: { uid, seq, tid }) —
+        // serialized, never String()-ed into "[object Object]".
+        const rowKey = (row) => {
+            const view = this.unwrapJsonApiCandidate(row);
+            const id = row.eid || row.id || row.uid || view.id || view.uid;
+            if (id === undefined || id === null || id === '') return JSON.stringify(row);
+            return typeof id === 'object' ? JSON.stringify(id) : String(id);
+        };
+        const seen = new Set(rowArray.rows.map(rowKey));
+        let current = payload;
+        let pagesRead = 0;
+        let added = 0;
+        for (let page = 0; page < JSON_API_FEED_MAX_PAGES; page++) {
+            const currentRows = this.findJsonApiRowArray(current);
+            const lastRow = currentRows && currentRows.rows.length > 0 ? currentRows.rows[currentRows.rows.length - 1] : null;
+            const lastStart = lastRow ? this.jsonApiRowStartMillis(lastRow) : null;
+            if (lastStart !== null && lastStart > horizonMillis) break;
+            const nextUrl = this.resolveJsonApiNextPageUrl(current, sourceUrl, lastStart);
+            if (!nextUrl) break;
+            let nextPayload = null;
+            try {
+                const response = await httpAdapter.fetchData(nextUrl, { headers: { Accept: 'application/json, text/plain, */*' } });
+                const body = response && typeof response.html === 'string' ? response.html : '';
+                nextPayload = this.detectJsonApiPayload(body);
+            } catch (error) {
+                console.warn(`📄 FEED PAGES: ${nextUrl} could not be read (${error.message}) — ${rowArray.rows.length} row(s) kept`);
+                break;
+            }
+            const nextRows = this.findJsonApiRowArray(nextPayload);
+            if (!nextRows || nextRows.rows.length === 0) break;
+            pagesRead++;
+            let addedHere = 0;
+            for (const row of nextRows.rows) {
+                const key = rowKey(row);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                rowArray.rows.push(row);
+                addedHere++;
+            }
+            added += addedHere;
+            if (addedHere === 0) break;
+            current = nextPayload;
+        }
+        if (pagesRead > 0) {
+            console.log(`📄 FEED PAGES: ${sourceUrl} continued for ${pagesRead} more page(s) — ${added} row(s) added, ${rowArray.rows.length} in all (horizon ${JSON_API_FEED_HORIZON_DAYS} days)`);
+        }
+        return payload;
+    }
+
+    resolveJsonApiNextPageUrl(payload, sourceUrl, lastStartMillis) {
+        if (!payload || typeof payload !== 'object') return '';
+        const absolute = (value) => {
+            if (typeof value !== 'string' || !value.trim()) return '';
+            const trimmed = value.trim();
+            if (/^https?:\/\//i.test(trimmed)) return trimmed;
+            const origin = (String(sourceUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+            return origin && trimmed.startsWith('/') ? `${origin}${trimmed}` : '';
+        };
+        const containers = [payload, payload.links, payload.pagination, payload.meta, payload.metaData, payload.meta_data]
+            .filter(value => value && typeof value === 'object' && !Array.isArray(value));
+        for (const container of containers) {
+            for (const key of Object.keys(container)) {
+                if (!/^(next|next_url|next_page|next_page_url|next_link)$/.test(this.normalizeJsonApiKey(key))) continue;
+                const link = absolute(container[key]);
+                if (link && link !== sourceUrl) return link;
+            }
+        }
+        // A "there is more" flag with no link: continue from the last start.
+        const hasMore = containers.some(container => Object.keys(container).some(key =>
+            /^(has_next|has_more|has_next_page)$/.test(this.normalizeJsonApiKey(key)) && container[key] === true));
+        if (!hasMore || lastStartMillis === null || !Number.isFinite(lastStartMillis)) return '';
+        const match = String(sourceUrl || '').match(/^(https?:\/\/[^?#]+)(\?[^#]*)?/i);
+        if (!match) return '';
+        const query = (match[2] ? match[2].slice(1) : '').split('&').filter(part => part && !/^startms=/i.test(part));
+        query.push(`startms=${lastStartMillis + 1}`);
+        return `${match[1]}?${query.join('&')}`;
+    }
+
+    // A feed whose timed rows carry a UTC label ("…T19:00:00+00:00",
+    // tz "UTC") but whose own event page prints the same digits as a
+    // wall-clock time (JSON-LD startDate with no offset) is labelling the
+    // venue's local time as UTC — thebearcalendar.com/feed.json does this
+    // for every city it lists, so a 7pm Sydney party would land at 5am.
+    // ONE row is checked against the site's own page; on a match every
+    // row's UTC label is stripped, and the offset-less values then follow
+    // the wall-clock path (city → timezone). Verdict cached per host.
+    async reconcileJsonApiUtcLabels(payload, sourceUrl, httpAdapter) {
+        if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
+        const rowArray = this.findJsonApiRowArray(payload);
+        if (!rowArray || rowArray.rows.length === 0) return payload;
+        const utcPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)$/;
+        const dateKey = (key) => /(^|_)(start|end)(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
+        const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const sample = rowArray.rows.find(row => {
+            const view = this.unwrapJsonApiCandidate(row);
+            const start = view.start || view.start_date || view.startDate || view.starts_at;
+            const pageUrl = typeof view.url === 'string' ? view.url : '';
+            const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            return typeof start === 'string' && utcPattern.test(start) && !/T00:00/.test(start) && pageHost && pageHost === sourceHost;
+        });
+        if (!sample) return payload;
+        if (!this.jsonApiUtcLabelVerdicts) this.jsonApiUtcLabelVerdicts = new Map();
+        let verdict = this.jsonApiUtcLabelVerdicts.get(sourceHost);
+        if (verdict === undefined) {
+            const view = this.unwrapJsonApiCandidate(sample);
+            const feedStart = String(view.start || view.start_date || view.startDate || view.starts_at);
+            const digits = feedStart.match(utcPattern);
+            verdict = false;
+            try {
+                const response = await httpAdapter.fetchData(view.url);
+                const html = response && typeof response.html === 'string' ? response.html : '';
+                const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+                const wallClock = pageStarts.find(value => new RegExp(`^${digits[1]}T${digits[2]}(?::\\d{2})?$`).test(value.trim()));
+                if (wallClock) {
+                    verdict = true;
+                    console.log(`🕒 FEED CLOCK: ${sourceUrl} labels wall-clock times as UTC — "${view.title || view.name || view.url}" is ${feedStart} in the feed and ${wallClock} (no offset) on its own page; reading every row as local time`);
+                } else if (pageStarts.length > 0) {
+                    console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels agree with its own page (${feedStart} vs ${pageStarts[0]}) — instants kept`);
+                }
+            } catch (error) {
+                console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's UTC labels (${error.message}) — instants kept`);
+            }
+            this.jsonApiUtcLabelVerdicts.set(sourceHost, verdict);
+        }
+        if (!verdict) return payload;
+        for (const row of rowArray.rows) {
+            const targets = [row, this.unwrapJsonApiCandidate(row)];
+            for (const target of targets) {
+                if (!target || typeof target !== 'object') continue;
+                for (const key of Object.keys(target)) {
+                    const value = target[key];
+                    if (dateKey(key) && typeof value === 'string' && utcPattern.test(value)) {
+                        target[key] = value.replace(/(?:Z|\+00:00)$/, '');
+                    }
+                    if (/^(tz|time_?zone)$/.test(this.normalizeJsonApiKey(key)) && /^(utc|z|\+00:00|etc\/utc)$/i.test(String(value || '').trim())) {
+                        delete target[key];
+                    }
+                }
+            }
+        }
+        return payload;
+    }
+
     extractEventsFromJsonApiPayload(parsed, sourceUrl, cityConfig = null) {
         try {
             const candidates = this.collectJsonApiEventCandidates(parsed);
@@ -8958,10 +9160,12 @@ class AiWebParser {
                 for (const entry of this.expandJsonApiPerformances(candidate)) {
                     const event = this.buildEventFromJsonApiObject(entry, sourceUrl, cityConfig);
                     if (!event) continue;
-                    const key = `${event.title.toLowerCase()}|${event.startDate.toISOString()}`;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-                    events.push(event);
+                    for (const occurrence of this.expandJsonApiSeriesRow(event)) {
+                        const key = `${occurrence.title.toLowerCase()}|${occurrence.startDate.toISOString()}`;
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        events.push(occurrence);
+                    }
                 }
             }
             return events;
@@ -8969,6 +9173,51 @@ class AiWebParser {
             console.warn(`🤖 AI Web: JSON API structured extraction failed: ${error.message}`);
             return [];
         }
+    }
+
+    // A feed row that states a recurrence rule dates its SERIES (start = the
+    // first occurrence, weeks or months ago — thebearcalendar.com/feed.json
+    // "Manbears Social", start 2026-08-08, FREQ=MONTHLY;BYDAY=2SA). The
+    // scraper never writes a series; it writes the dated occurrences the
+    // rule yields from now to the feed horizon (at most
+    // JSON_API_SERIES_MAX_OCCURRENCES), each a copy of the row with the
+    // occurrence's own start (end shifted by the row's duration). A rule the
+    // expander does not support leaves the row as it is.
+    expandJsonApiSeriesRow(event) {
+        const rrule = event && typeof event._jsonApiRrule === 'string' ? event._jsonApiRrule : '';
+        if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
+        const expander = this.core && this.core.constructor && typeof this.core.constructor.expandRruleOccurrencesInWindow === 'function'
+            ? this.core.constructor.expandRruleOccurrencesInWindow.bind(this.core.constructor)
+            : null;
+        if (!expander) return [event];
+        const now = Date.now();
+        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+        let occurrences = null;
+        try {
+            occurrences = expander(rrule, event.startDate, windowStart, windowEnd);
+        } catch (_) {
+            occurrences = null;
+        }
+        if (!Array.isArray(occurrences)) return [event];
+        const starts = occurrences
+            .map(entry => (entry instanceof Date ? entry : (entry && entry.date instanceof Date ? entry.date : (entry && entry.start instanceof Date ? entry.start : null))))
+            .filter(date => date && !Number.isNaN(date.getTime()))
+            .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
+        if (starts.length === 0) {
+            console.log(`🔁 SERIES: "${event.title}" (${rrule}) has no occurrence in the next ${JSON_API_FEED_HORIZON_DAYS} days — row kept as dated`);
+            return [event];
+        }
+        const durationMs = event.endDate instanceof Date && !Number.isNaN(event.endDate.getTime())
+            ? event.endDate.getTime() - event.startDate.getTime()
+            : 0;
+        console.log(`🔁 SERIES: "${event.title}" (${rrule}) → ${starts.length} dated occurrence(s) from ${starts[0].toISOString().slice(0, 10)}; the series row itself (${event.startDate.toISOString().slice(0, 10)}) is not an event`);
+        return starts.map(start => {
+            const copy = { ...event, startDate: start };
+            copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
+            delete copy._jsonApiRrule;
+            return copy;
+        });
     }
 
     // Generic price harvest from an event-like JSON API object (run
@@ -9265,8 +9514,31 @@ class AiWebParser {
         // Ticket link: absolute http(s) only, image-ish keys excluded (a
         // flyer_url must never become the ticketUrl). Slugs and other relative
         // fragments never qualify — no public URL is ever fabricated.
-        const rawTicketUrl = firstValue(/(^|_)(ticket|url|link|website)/, isHttpString, imageKeyPattern);
+        // A key that SAYS ticket wins over a generic url/link key whatever
+        // the payload's key order (thebearcalendar.com/feed.json lists
+        // `url` — its own event page — before `ticket_url`).
+        const websiteKeyPattern = /^(website|website_url|homepage|home_page|site_url|organizer_url)$/;
+        // A generic url/link on the feed's OWN host is the row's page on the
+        // feed site (an aggregator's copy), never a ticket link — the ticket
+        // link leads off-host or is not stated.
+        const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const isOffHostHttpString = (value) => {
+            if (!isHttpString(value)) return false;
+            const host = (value.trim().match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            return !sourceHost || (host !== sourceHost && !host.endsWith(`.${sourceHost}`));
+        };
+        const rawTicketUrl = firstValue(/(^|_)ticket/, isHttpString, imageKeyPattern)
+            || firstValue(/(^|_)(url|link|website)/, isOffHostHttpString, new RegExp(`${imageKeyPattern.source}|${websiteKeyPattern.source}`));
         const ticketUrl = rawTicketUrl ? (this.normalizeHttpUrlValue(rawTicketUrl) || '') : '';
+        // The payload's own website key is the event's identity site (the
+        // promoter's or venue's, never the feed host) — url and website are
+        // one field, so both carry it.
+        const rawWebsite = firstValue(websiteKeyPattern, isHttpString);
+        const website = rawWebsite ? (this.normalizeHttpUrlValue(rawWebsite) || '') : '';
+        // The row's own page on the feed host (a `url` key pointing at the
+        // source site): the API named its page, so no slug guessing later.
+        const ownPageUrl = firstValue(/^(url|link|permalink_url|page_url)$/,
+            (value) => isHttpString(value) && !isOffHostHttpString(value));
 
         // The json-api route by definition fetched a machine endpoint — the
         // body parsed as JSON, which no human event page ever does — so the
@@ -9287,7 +9559,8 @@ class AiWebParser {
             endDate: end.date || null,
             bar,
             address,
-            url: '',
+            url: website,
+            website,
             ticketUrl,
             image,
             source: this.config.source
@@ -9301,9 +9574,14 @@ class AiWebParser {
         // The row's own slug, kept for verified link resolution
         // (resolveJsonApiSlugLinks). Internal field, never serialized.
         const slugValue = firstValue(/^(slug|perm_name|permalink)$/, isNonEmptyString);
-        if (slugValue && !/^https?:\/\//i.test(slugValue) && !/[\s/]/.test(slugValue.trim())) {
+        if (slugValue && !/^https?:\/\//i.test(slugValue) && !/[\s/]/.test(slugValue.trim()) && !ownPageUrl) {
             event._jsonApiSlug = slugValue.trim();
         }
+        // Recurrence, when the row states one (RRULE text): expanded to dated
+        // occurrences by extractEventsFromJsonApiPayload. Internal field.
+        const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
+            (value) => typeof value === 'string' && /^(RRULE:)?FREQ=/i.test(value.trim()));
+        if (rruleValue) event._jsonApiRrule = rruleValue.trim();
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
         if (event.image) {
@@ -9330,8 +9608,17 @@ class AiWebParser {
             // when.start.tzid) — same authority as a payload timezone key.
             event.timezone = start.timezone;
         }
-        if (address && cityConfig) {
-            const cityKey = this.findCityKeyInText(address, cityConfig);
+        // City from the address, else from the payload's own city/region/
+        // country keys ("Sydney, NSW, Australia") — an aggregator row names
+        // its city without an address.
+        const placeText = [
+            clean(firstValue(/(^|_)(city|locality|town)$/, isNonEmptyString)),
+            clean(firstValue(/(^|_)(region|state|province)$/, isNonEmptyString)),
+            clean(firstValue(/(^|_)country$/, isNonEmptyString))
+        ].filter(Boolean).join(', ');
+        if (cityConfig) {
+            const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
+                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '');
             if (cityKey) {
                 event.city = cityKey;
                 if (!event.timezone) {
