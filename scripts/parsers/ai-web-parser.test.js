@@ -13106,7 +13106,7 @@ test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwo
   const httpAdapter = { async fetchData(url) { fetched.push(url); return { html: pages[url] || '', url, statusCode: pages[url] ? 200 : 404, headers: {} }; } };
   const originalLog = console.log; console.log = () => {};
   try { await parser.enrichMecOccurrencesFromEventPages(rows, httpAdapter); } finally { console.log = originalLog; }
-  assert.deepEqual(fetched.sort(), ['https://venue.example/events/cubscout/?occurrence=2026-10-04', 'https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page (CUBSCOUT is timed but has no artwork)');
+  assert.deepEqual(fetched.sort(), ['https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page; the timed CUBSCOUT page is never fetched');
   const busts = rows.filter(r => r.title === 'SUNDAY BEER BUST').map(r => [r.startDate.toISOString(), r.endDate && r.endDate.toISOString()]);
   assert.deepEqual(busts, [['2026-10-04T16:00:00.000Z', '2026-10-04T20:00:00.000Z'], ['2026-10-11T16:00:00.000Z', '2026-10-11T20:00:00.000Z']], 'both occurrences of the page carry its wall clock');
   assert.equal(rows.find(r => r.title === 'SUNDAY BEER BUST').description, 'Beer & bears', 'the grid\'s own copy stands; the page fills blanks only');

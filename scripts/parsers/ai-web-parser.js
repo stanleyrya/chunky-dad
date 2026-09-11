@@ -5661,12 +5661,16 @@ class AiWebParser {
             if (!byPath.has(path)) byPath.set(path, []);
             byPath.get(path).push(event);
         }
-        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate) || !event.image));
+        // Only listings that state no time: a grid that prints times (cells)
+        // gets its artwork from the crawl's own budget — reading every page
+        // for pictures alone fanned out into 60 requests and a firewall
+        // block (thedallaseagle.com, run 20260911).
+        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate)));
         if (needing.length === 0) return;
         let pagesRead = 0;
         let timed = 0;
         for (const [path, group] of needing.slice(0, MEC_EVENT_PAGE_ENRICH_CAP)) {
-            const sample = group.find(event => this.isMidnightWallClock(event.startDate) || !event.image) || group[0];
+            const sample = group.find(event => this.isMidnightWallClock(event.startDate)) || group[0];
             let html = '';
             try {
                 const response = await httpAdapter.fetchData(sample.url);
@@ -5704,7 +5708,7 @@ class AiWebParser {
                 if (description && !event.description) event.description = description;
             }
         }
-        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} listing(s) lacking a time or artwork — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap not read)` : ''}`);
+        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} un-timed listing(s) — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap not read)` : ''}`);
     }
 
     isMidnightWallClock(date) {
