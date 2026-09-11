@@ -45,5 +45,15 @@
     "paletteSource": "flyer",
     "palette": "#03030d:29:3 #141422:23:3 #432c2a:15:3 #d4d426:3:18 #3744a2:3:15",
     "accent": "#d4d426"
+  },
+  {
+    "slug": "furball-dallas-underwear-gear-party-featuring-dj-gsp-56af9376",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0d0a1b:28:4 #020102:20:1 #331c2a:19:4 #bf6739:9:13 #cac40e:6:17",
+    "accent": "#cac40e"
   }
 ]

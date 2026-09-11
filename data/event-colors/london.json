@@ -71,6 +71,10 @@
   },
   {
     "slug": "boatmince-0cb7b5c0",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#1bc5ea:57:13 #f5f5ed:14:1 #246af5:13:22 #19748a:2:9",
     "accent": "#1bc5ea"

@@ -11,9 +11,13 @@
   },
   {
     "slug": "bearracuda-folsom-street-horse-meat-disco-6bcb20fd",
-    "url": "https://bearracuda.com/",
+    "url": "https://bearracuda.com/events/flsm/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#231432:24:6 #0b030b:17:3 #452c49:15:6 #a735a4:6:20",
+    "accent": "#a735a4"
   },
   {
     "slug": "bearracuda-sf-20-year-anniversary-4ae69009",
