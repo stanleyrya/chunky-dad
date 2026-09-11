@@ -208,6 +208,8 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 const JSON_API_FEED_HORIZON_DAYS = 90;
 const JSON_API_FEED_MAX_PAGES = 6;
 const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// Distinct MEC event pages read per grid for their wall-clock times.
+const MEC_EVENT_PAGE_ENRICH_CAP = 60;
 
 // deriveListingTitleSpanFromDatedLine handed the bare LABEL back as the
 // page's own listing title, so "Start from" (x3) and "End at" (x2) shipped as
@@ -1139,6 +1141,7 @@ class AiWebParser {
             const mecEvents = this.collectMecGridEvents(html, monthFeedSources, sourceUrl, cityConfig);
             if (mecEvents.length > 0) {
                 console.log(`📆 MEC GRID: built ${mecEvents.length} dated occurrence(s) from ${1 + monthFeedSources.length} month grid(s) for ${sourceUrl}`);
+                await this.enrichMecOccurrencesFromEventPages(mecEvents, httpAdapter);
             }
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
@@ -5635,6 +5638,100 @@ class AiWebParser {
         return rows;
     }
 
+    // A side-list grid states no times: each occurrence's own event page
+    // does (JSON-LD with the wall clock, plus artwork and copy). One fetch
+    // per distinct page — page-cached, so repeat runs cost nothing — and
+    // the wall clock applies to EVERY occurrence of that page in the grid
+    // (a series page is one document for all its dates). Cells that
+    // already state a time are left as the grid printed them.
+    async enrichMecOccurrencesFromEventPages(mecEvents, httpAdapter) {
+        if (!Array.isArray(mecEvents) || mecEvents.length === 0 || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const pathOf = (url) => String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+        const byPath = new Map();
+        for (const event of mecEvents) {
+            const path = pathOf(event.url);
+            if (!path) continue;
+            if (!byPath.has(path)) byPath.set(path, []);
+            byPath.get(path).push(event);
+        }
+        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate)));
+        if (needing.length === 0) return;
+        let pagesRead = 0;
+        let timed = 0;
+        for (const [path, group] of needing.slice(0, MEC_EVENT_PAGE_ENRICH_CAP)) {
+            const sample = group.find(event => this.isMidnightWallClock(event.startDate)) || group[0];
+            let html = '';
+            try {
+                const response = await httpAdapter.fetchData(sample.url);
+                html = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            if (!html) continue;
+            pagesRead++;
+            const node = this.findJsonLdEventNodeForPage(html, path, sample.title);
+            if (!node) continue;
+            const clock = (value) => {
+                const match = String(value || '').match(/T(\d{2}):(\d{2})/);
+                return match ? { hour: Number(match[1]), minute: Number(match[2]) } : null;
+            };
+            const start = clock(node.startDate);
+            const end = clock(node.endDate);
+            const image = this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || '';
+            const description = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(this.decodeBasicEntities(String(node.description || '')))).replace(/&amp;/gi, '&'));
+            for (const event of group) {
+                if (start && this.isMidnightWallClock(event.startDate)) {
+                    const day = event.startDate;
+                    event.startDate = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), start.hour, start.minute));
+                    if (end) {
+                        let endDate = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), end.hour, end.minute));
+                        if (endDate.getTime() <= event.startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                        event.endDate = endDate;
+                    }
+                    timed++;
+                }
+                if (image && !event.image) {
+                    event.image = image;
+                    event.imageSource = 'json-ld';
+                }
+                if (description && !event.description) event.description = description;
+            }
+        }
+        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} un-timed listing(s) — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap left un-timed)` : ''}`);
+    }
+
+    isMidnightWallClock(date) {
+        return date instanceof Date && !Number.isNaN(date.getTime()) && date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+    }
+
+    // The page's own JSON-LD Event for this page: the node whose url path is
+    // the page path, else the one named like the listing, else the only one.
+    findJsonLdEventNodeForPage(html, path, title) {
+        const nodes = [];
+        const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+        let block;
+        while ((block = blockPattern.exec(String(html || ''))) !== null) {
+            let parsed = null;
+            try {
+                parsed = JSON.parse(block[1]);
+            } catch (_) {
+                continue;
+            }
+            const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed['@graph']) ? parsed['@graph'] : [parsed]);
+            for (const node of list) {
+                if (node && typeof node === 'object' && /event/i.test(String(node['@type'] || '')) && node.startDate) nodes.push(node);
+            }
+        }
+        if (nodes.length === 0) return null;
+        const pathOf = (url) => String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+        const byPath = nodes.find(node => pathOf(node.url) === path);
+        if (byPath) return byPath;
+        const wanted = this.normalizeEvidenceText(title || '');
+        const byName = wanted ? nodes.find(node => this.normalizeEvidenceText(String(node.name || '')) === wanted) : null;
+        if (byName) return byName;
+        return nodes.length === 1 ? nodes[0] : null;
+    }
+
     // One grid occurrence → an event: the cell's date, the tooltip's time
     // range ("7:00 pm - 9:00 pm", an end before the start rolls to the next
     // day), the page link as the event's own page.
@@ -5727,9 +5824,12 @@ class AiWebParser {
         const configured = parserConfig && parserConfig.calendarLookaheadMonths !== undefined
             ? parserConfig.calendarLookaheadMonths
             : (this.config ? this.config.calendarLookaheadMonths : undefined);
+        // Three months by default: the source expectations document a
+        // 90-day window, and the Eagles' December singles sat one month
+        // past the old two (run 20260911-053318).
         const value = Number(configured);
-        if (!Number.isFinite(value)) return 2;
-        return Math.max(0, Math.min(3, Math.floor(value)));
+        if (!Number.isFinite(value)) return 3;
+        return Math.max(0, Math.min(4, Math.floor(value)));
     }
 
     /**

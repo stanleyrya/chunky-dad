@@ -13094,6 +13094,29 @@ test('MEC grid reader: a side-list grid yields one event per JSON-LD occurrence 
   assert.equal(rows[0].description, 'Beer & bears', 'double-escaped description decoded and stripped');
 });
 
+test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwork and copy from their own event page, once per page', async () => {
+  const parser = createParser();
+  const rows = parser.readMecGridSideList(MEC_SIDE_LIST_GRID, 'https://venue.example/calendar/', null);
+  rows.push(parser.buildMecOccurrenceEvent({ title: 'SUNDAY BEER BUST', href: 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-11', day: '20261011', timeText: '' }, 'https://venue.example/calendar/'));
+  const fetched = [];
+  const pages = {
+    'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04': '<html><script type="application/ld+json">{"@type":"Event","name":"SUNDAY BEER BUST","url":"https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04","startDate":"2026-10-04T16:00:00-07:00","endDate":"2026-10-04T20:00:00-07:00","description":"Beer bust copy"}</script><script type="application/ld+json">{"@type":"Event","name":"OTHER","url":"https://venue.example/events/other/","startDate":"2026-10-05T21:00:00-07:00"}</script></html>',
+    'https://venue.example/events/hump-night/?occurrence=2026-10-07': '<html><script type="application/ld+json">{"@type":"Event","name":"HUMP NIGHT","url":"https://venue.example/events/hump-night/","startDate":"2026-10-07T21:00:00-07:00","endDate":"2026-10-08T02:00:00-07:00","image":"https://venue.example/hump.jpg"}</script></html>'
+  };
+  const httpAdapter = { async fetchData(url) { fetched.push(url); return { html: pages[url] || '', url, statusCode: pages[url] ? 200 : 404, headers: {} }; } };
+  const originalLog = console.log; console.log = () => {};
+  try { await parser.enrichMecOccurrencesFromEventPages(rows, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched.sort(), ['https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page; the timed CUBSCOUT page is never fetched');
+  const busts = rows.filter(r => r.title === 'SUNDAY BEER BUST').map(r => [r.startDate.toISOString(), r.endDate && r.endDate.toISOString()]);
+  assert.deepEqual(busts, [['2026-10-04T16:00:00.000Z', '2026-10-04T20:00:00.000Z'], ['2026-10-11T16:00:00.000Z', '2026-10-11T20:00:00.000Z']], 'both occurrences of the page carry its wall clock');
+  assert.equal(rows.find(r => r.title === 'SUNDAY BEER BUST').description, 'Beer & bears', 'the grid\'s own copy stands; the page fills blanks only');
+  const hump = rows.find(r => r.title === 'HUMP NIGHT');
+  assert.equal(hump.startDate.toISOString(), '2026-10-07T21:00:00.000Z');
+  assert.equal(hump.endDate.toISOString(), '2026-10-08T02:00:00.000Z', 'past-midnight end');
+  assert.equal(hump.image, 'https://venue.example/hump.jpg');
+  assert.equal(rows.find(r => r.title === 'CUBSCOUT').startDate.toISOString(), '2026-10-04T21:00:00.000Z', 'a timed row is untouched');
+});
+
 test('MEC grid reader: the page\'s own month plus the replayed feeds, de-duplicated per page+day; only on a MEC page', () => {
   const parser = createParser();
   const page = `${MEC_MONTH_GRID_PAGE_HTML}${MEC_CELLS_GRID}`;
@@ -13115,7 +13138,7 @@ test('a MEC month-grid page replays its own admin-ajax month feed and harvests n
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
 
-  assert.equal(postCalls.length, 2, 'default lookahead is exactly TWO future months');
+  assert.equal(postCalls.length, 3, 'default lookahead is exactly THREE future months');
   assert.equal(postCalls[0].url, 'https://venue.example/wp-admin/admin-ajax.php');
   assert.equal(postCalls[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
   assert.ok(postCalls[0].body.startsWith('action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&'),
@@ -13151,7 +13174,7 @@ test('the month-feed POST body carries the page\'s atts blob verbatim and a stab
   await parser.parseEvents(
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
-  assert.equal(postCalls.length, 2);
+  assert.equal(postCalls.length, 3);
   assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
     `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
   assert.equal(postCalls[0].options.cacheUrl,
@@ -13181,10 +13204,10 @@ test('a failed month-feed POST degrades like any failed crawled page: logged, ru
     'the page\'s own discovery must be untouched by the month-feed failure');
 });
 
-test('calendarLookaheadMonths is clamped 0..3 and 0 disables the feed', async () => {
+test('calendarLookaheadMonths is clamped 0..4 and 0 disables the feed', async () => {
   const parser = createParser();
-  assert.equal(parser.resolveCalendarLookaheadMonths({}), 2, 'default: current + 2 months — one month of observations is provably one short for cadence derivation (Dallas GEAR NIGHT)');
-  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 3);
+  assert.equal(parser.resolveCalendarLookaheadMonths({}), 3, 'default: current + 3 months — the 90-day expectations window (the Eagles\' December singles sat one month past two)');
+  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 4);
   assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: -2 }), 0);
   let posts = 0;
   const stubAdapter = { postForm: async () => { posts++; return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } };
