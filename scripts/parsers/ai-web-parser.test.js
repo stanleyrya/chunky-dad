@@ -7757,6 +7757,128 @@ test('detectJsonApiPayload ignores HTML and malformed JSON; the JSON-LD fast pat
   assert.equal(result.extractionSummary.source, 'jsonld');
 });
 
+// ---------------------------------------------------------------------------
+// AGGREGATOR FEEDS (thebearcalendar.com/feed.json, run 20260911): rows with
+// city/country keys and no address, ticket_url after the row's own url,
+// website_url, RRULE text, and wall-clock times labelled "+00:00".
+// ---------------------------------------------------------------------------
+
+const FEED_CITY_CONFIG = {
+  sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+};
+
+test('a feed row names its city without an address, keeps ticket over its own url, and carries its website', () => {
+  const parser = createParser();
+  const row = {
+    slug: 'bear-pool-party-2026', title: 'BEAR POOL PARTY', url: 'https://thebearcalendar.example/events/bear-pool-party-2026/',
+    start: '2026-09-10T00:00:00', end: '2026-09-10T23:59:59', all_day: true,
+    venue: null, city: 'Sitges', region: 'Catalonia', country: 'Spain',
+    ticket_url: 'https://sitgespoolparty.example/event/september-10th', website_url: 'https://www.sitgespoolparty.example',
+    image: 'https://cdn.example/pool.jpg'
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(event.city, 'sitges', 'city from the row\'s own city/region/country keys');
+  assert.equal(event.timezone, 'Europe/Madrid');
+  assert.equal(event.ticketUrl, 'https://sitgespoolparty.example/event/september-10th', 'the key that says ticket wins over the row\'s own url');
+  assert.equal(event.website, 'https://www.sitgespoolparty.example/');
+  assert.equal(event._jsonApiSlug, undefined, 'a row that names its own page never gets slug-guessed');
+
+  const ownPageOnly = parser.buildEventFromJsonApiObject({ title: 'Saturday Bears', url: 'https://thebearcalendar.example/events/saturday-bears/', start: '2026-09-12T10:00:00', city: 'Portland' },
+    'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(ownPageOnly.ticketUrl, '', 'a url on the feed\'s own host is the row\'s page, not a ticket link');
+  assert.equal(ownPageOnly.city, 'portland');
+});
+
+test('a feed row with an RRULE becomes its next dated occurrences, never the series start', () => {
+  const parser = createParser();
+  const day = 24 * 60 * 60 * 1000;
+  // A weekly Friday series whose stated start is five weeks ago.
+  const start = new Date(Date.now() - 35 * day);
+  const friday = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - ((start.getUTCDay() + 2) % 7), 19, 0, 0));
+  const events = parser.extractEventsFromJsonApiPayload({
+    events: [{ title: 'Furry Friday', start: friday.toISOString().replace(/\.\d{3}Z$/, ''), end: new Date(friday.getTime() + 4 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, ''), rrule: 'FREQ=WEEKLY;BYDAY=FR', city: 'Portland' }]
+  }, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(events.length, 6, 'capped occurrences inside the horizon');
+  assert.ok(events.every(e => e.startDate.getTime() >= Date.now() - day), 'no occurrence in the past');
+  assert.ok(events.every(e => e.startDate.getUTCDay() === 5 && e.startDate.getUTCHours() === 19), 'each on a Friday at the series\' wall-clock hour');
+  assert.equal(events[0].endDate.getTime() - events[0].startDate.getTime(), 4 * 60 * 60 * 1000, 'duration carried');
+  assert.equal(events[0]._jsonApiRrule, undefined);
+  // A rule the expander does not know leaves the row dated as stated.
+  const odd = parser.extractEventsFromJsonApiPayload({ events: [{ title: 'X', start: friday.toISOString(), rrule: 'FREQ=YEARLY;BYMONTH=6' }] }, 'https://f.example/feed.json', null);
+  assert.equal(odd.length, 1);
+});
+
+function feedStubAdapter(pages) {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      async fetchData(url) {
+        fetched.push(url);
+        const body = pages[url];
+        if (body === undefined) throw new Error(`no page for ${url}`);
+        return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+test('a paged feed is read past its first page: explicit next links, then hasNext with a start cursor, to the horizon', async () => {
+  const parser = createParser();
+  const day = 24 * 60 * 60 * 1000;
+  const at = (days) => ({ millis: Date.now() + days * day, tzid: 'America/New_York' });
+  const source = 'https://tockify.example/api/ngevent?max=2&calname=x&tags=bears';
+  // Tockify ids are composite objects — a String()-ed id would make every
+  // row "[object Object]" and fold the whole second page (run 20260911).
+  const eid = (uid) => ({ uid: String(uid), seq: 0, tid: uid });
+  const p1 = { events: [{ eid: eid(1), content: { summary: 'A' }, when: { start: at(1) } }, { eid: eid(2), content: { summary: 'B' }, when: { start: at(3) } }], metaData: { hasNext: true } };
+  const p2 = { events: [{ eid: eid(2), content: { summary: 'B' }, when: { start: at(3) } }, { eid: eid(3), content: { summary: 'C' }, when: { start: at(5) } }], metaData: { hasNext: true } };
+  const p3 = { events: [{ eid: eid(4), content: { summary: 'D' }, when: { start: at(200) } }], metaData: { hasNext: true } };
+  const p4 = { events: [{ eid: eid(5), content: { summary: 'E' }, when: { start: at(300) } }], metaData: { hasNext: false } };
+  const { fetched, httpAdapter } = feedStubAdapter({
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p1.events[1].when.start.millis + 1}`]: p2,
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p2.events[1].when.start.millis + 1}`]: p3,
+    [`https://tockify.example/api/ngevent?max=2&calname=x&tags=bears&startms=${p3.events[0].when.start.millis + 1}`]: p4
+  });
+  const merged = await parser.collectJsonApiContinuation(JSON.parse(JSON.stringify(p1)), source, httpAdapter);
+  assert.deepEqual(merged.events.map(e => e.eid.uid), ['1', '2', '3', '4'], 'pages merged, the boundary repeat folded');
+  assert.equal(fetched.length, 2, 'page 3 already crossed the horizon — page 4 never requested');
+
+  // An explicit next link is followed as given, relative links resolved.
+  const linked = feedStubAdapter({ 'https://api.example/events?page=2': { data: [{ id: 'y', name: 'Y', start_date: new Date(Date.now() + 2 * day).toISOString() }], links: { next: null } } });
+  const out = await parser.collectJsonApiContinuation({ data: [{ id: 'x', name: 'X', start_date: new Date(Date.now() + day).toISOString() }], links: { next: '/events?page=2' } }, 'https://api.example/events', linked.httpAdapter);
+  assert.deepEqual(out.data.map(e => e.id), ['x', 'y']);
+  // No signal of more → nothing fetched.
+  const quiet = feedStubAdapter({});
+  await parser.collectJsonApiContinuation({ data: [{ id: 'x', name: 'X', start_date: '2026-09-20T20:00:00Z' }] }, 'https://api.example/events', quiet.httpAdapter);
+  assert.deepEqual(quiet.fetched, []);
+});
+
+test('a feed whose "UTC" times are the venue\'s wall clock is corrected against its own event page', async () => {
+  const parser = createParser();
+  const source = 'https://thebearcalendar.example/feed.json';
+  const row = { title: 'Bear Pride: Bearmuda Mingles', url: 'https://thebearcalendar.example/events/bearmuda/', start: '2026-09-10T19:00:00+00:00', end: '2026-09-10T22:00:00+00:00', tz: 'UTC', city: 'Sydney' };
+  const page = '<script type="application/ld+json">{"@type":"Event","name":"Bear Pride: Bearmuda Mingles","startDate":"2026-09-10T19:00:00"}</script>';
+  const { fetched, httpAdapter } = feedStubAdapter({ 'https://thebearcalendar.example/events/bearmuda/': page });
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let payload;
+  try { payload = await parser.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(row)), { title: 'Other', url: 'https://thebearcalendar.example/events/other/', start: '2026-09-12T20:00:00+00:00', tz: 'UTC' }] }, source, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched, ['https://thebearcalendar.example/events/bearmuda/'], 'one page checked');
+  assert.equal(payload.events[0].start, '2026-09-10T19:00:00', 'label stripped → wall clock');
+  assert.equal(payload.events[0].end, '2026-09-10T22:00:00');
+  assert.equal(payload.events[0].tz, undefined);
+  assert.equal(payload.events[1].start, '2026-09-12T20:00:00', 'every row follows the verdict');
+  assert.ok(lines.some(line => line.includes('FEED CLOCK') && line.includes('labels wall-clock times as UTC')));
+
+  // A feed whose page agrees the instant is UTC keeps its instants.
+  const honest = feedStubAdapter({ 'https://h.example/events/x/': '<script type="application/ld+json">{"@type":"Event","name":"X","startDate":"2026-09-11T05:00:00+10:00"}</script>' });
+  console.log = () => {};
+  let kept;
+  try { kept = await parser.reconcileJsonApiUtcLabels({ events: [{ title: 'X', url: 'https://h.example/events/x/', start: '2026-09-10T19:00:00+00:00' }] }, 'https://h.example/feed.json', honest.httpAdapter); } finally { console.log = originalLog; }
+  assert.equal(kept.events[0].start, '2026-09-10T19:00:00+00:00');
+});
+
 test('buildEventFromJsonApiObject strips HTML from descriptions and never invents ticket URLs from slugs', () => {
   const parser = createParser();
   const event = parser.buildEventFromJsonApiObject({
@@ -16332,6 +16454,67 @@ test('a call-to-action ABOVE a card\'s text is chrome, not the card\'s end', () 
   assert.deepEqual(parser.trimLinesAfterTerminalCallToAction(['GET YOUR TICKETS HERE', 'more text']), ['GET YOUR TICKETS HERE']);
 });
 
+test('a header ticker that lists events keeps exactly its listing rows through chrome stripping', () => {
+  const parser = createParser();
+  const html = `<html><body>
+    <div id="SITE_HEADER" class="site-header"><nav><a href="/">Home</a><a href="/about">About</a></nav>
+      <div data-mesh-id="SITE_HEADERinlineContent"><p>9/5 FURBALL NOLA - Santos Bar</p><p>10/3 FURBALL DC - ICON</p><p>10/16 UNDERBEAR NYC - ROCKBAR</p><p>Follow us</p></div>
+    </div>
+    <div id="main"><h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p></div>
+    <footer class="footer"><p>Rated 4.5 out of 5 stars</p><p>Rated 4.4 out of 5 stars</p><p>© Furball</p></footer>
+  </body></html>`;
+  const lines = parser.extractBodyParts(html, 200).map(line => parser.normalizeWhitespace(line));
+  assert.deepEqual(lines.filter(line => /^\d{1,2}\/\d{1,2} /.test(line)),
+    ['9/5 FURBALL NOLA - Santos Bar', '10/3 FURBALL DC - ICON', '10/16 UNDERBEAR NYC - ROCKBAR']);
+  assert.equal(lines.some(line => /Home|About|Follow us/.test(line)), false, 'the rest of the chrome is still gone');
+  assert.equal(lines.some(line => /Rated 4\.5/.test(line)), false, 'a star rating is not a date-led listing row');
+  // A lone dated line in chrome ("Est. 5/1") is not a listing.
+  const single = parser.extractBodyParts('<html><body><header><p>Open since 5/1 every weekend night</p></header><p>Body</p></body></html>', 50)
+    .map(line => parser.normalizeWhitespace(line));
+  assert.equal(single.some(line => /Open since/.test(line)), false);
+});
+
+test('coverage audit: compact listing rows become one window each, straight from the corpus', () => {
+  const parser = createParser();
+  const html = `<html><body>
+    <div data-mesh-id="SITE_HEADERinlineContent"><p>9/5 FURBALL NOLA - Santos Bar</p><p>10/3 FURBALL DC - ICON</p><p>10/16 UNDERBEAR NYC - ROCKBAR</p></div>
+    <h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p>
+  </body></html>`;
+  const nola = { lines: ['FURBALL NOLA', 'Southern Decadence', 'September 5, 2026', 'Santos Bar - New Orleans, LA'], html: '' };
+  const covered = parser.coverUnclaimedDatedWindows(html, [nola]);
+  assert.deepEqual(covered.map(s => s.lines.join(' | ')).sort(), [
+    '10/16 UNDERBEAR NYC - ROCKBAR',
+    '10/3 FURBALL DC - ICON',
+    '9/5 FURBALL NOLA - Santos Bar',
+    'FURBALL NOLA | Southern Decadence | September 5, 2026 | Santos Bar - New Orleans, LA'
+  ]);
+  // The short row ("10/3 FURBALL DC - ICON", 22 chars) is below the flat
+  // splitter's segment floor and the last row would have fused with the
+  // tagline below it — both are windows of their own here.
+});
+
+test('a compact listing row is read without a model when extraction returns no date', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: '10/10 FURBALL Boston - Legacy' }),
+    { title: 'FURBALL Boston', startDate: `${new Date().getFullYear() + (Date.now() > Date.UTC(new Date().getFullYear(), 10, 10) ? 1 : 0)}-10-10`, bar: 'Legacy' });
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: 'Sat, Oct 3 FURBALL DC @ ICON' }).title, 'FURBALL DC');
+  assert.deepEqual(parser.readCompactListingRow({ segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar' }),
+    { title: 'FURBALL NOLA', startDate: '2026-09-05', bar: 'Santos Bar' });
+  assert.equal(parser.readCompactListingRow({ segmentText: '10/16 UNDERBEAR NYC - ROCKBAR\nwhere bears dance' }), null, 'two lines is not a row');
+  assert.equal(parser.readCompactListingRow({ segmentText: 'Rated 4.5 out of 5 stars' }), null, 'not date-led');
+  assert.equal(parser.compactListingDateToIso('1/15/27'), '2027-01-15');
+  assert.equal(parser.compactListingDateToIso('13/40'), '');
+});
+
+test('a title ending in the resolved bar loses that venue tail', () => {
+  const parser = createParser();
+  assert.equal(parser.stripTrailingVenueFromTitle('UNDERBEAR NYC - ROCKBAR', 'Rockbar'), 'UNDERBEAR NYC');
+  assert.equal(parser.stripTrailingVenueFromTitle('FURBALL DC @ ICON', 'ICON'), 'FURBALL DC');
+  assert.equal(parser.stripTrailingVenueFromTitle('CHUNK - Portland', 'Eagle Portland'), 'CHUNK - Portland', 'a tail that is not the bar stays');
+  assert.equal(parser.stripTrailingVenueFromTitle('The Eagle - Eagle', 'Eagle'), 'The Eagle');
+  assert.equal(parser.stripTrailingVenueFromTitle('DJ - Eagle', 'Eagle'), 'DJ - Eagle', 'a head with no real word is not a title');
+});
+
 test('coverage audit: a dated card the structured path dropped gets its window from the page text', () => {
   const parser = createParser();
   const card = (id, title, date, venue) => `
@@ -16510,6 +16693,102 @@ test('a navigation label is not an event name: "NEXT (UK):" leaves the title mis
   }
   const normalized = parser.normalizeAiEvent({ title: 'NEXT (UK):', bar: 'The RVT', startDate: '2026-09-19' }, {}, { html: '', url: 'https://beefmince.example/events' });
   assert.ok(!normalized || !normalized.title, 'a record whose only name is a signpost has no title');
+});
+
+// ---------------------------------------------------------------------------
+// SQUARESPACE EVENT COLLECTION (www.3dollarbillbk.com/rsvp: 52 upcoming cards
+// that fragment into time lines in both segmentation tiers; the listing's
+// JSON twin at ?format=json is the cards, complete).
+// ---------------------------------------------------------------------------
+
+const SQUARESPACE_LISTING_HTML = '<html><head><script>Static.SQUARESPACE_CONTEXT = {"rollups":{}};</script></head>'
+  + '<body class="collection-type-events view-list"><div class="eventlist eventlist--upcoming"><article class="eventlist-event">'
+  + '<a class="eventlist-title-link" href="/rsvp/2026/9/12/bear-tea">Bear Tea</a><time>6:00 PM</time><a class="eventlist-button" href="/rsvp/2026/9/12/bear-tea">View Event →</a></article></div></body></html>';
+const SQUARESPACE_TWIN = {
+  collection: { typeName: 'events', title: 'Events', fullUrl: '/rsvp' },
+  pagination: { nextPage: true, nextPageUrl: '/rsvp?offset=1786487921414' },
+  upcoming: [
+    { id: 'a1', title: 'Bear Tea', startDate: 1789250400000, endDate: 1789264800000, fullUrl: '/rsvp/2026/9/12/bear-tea', urlId: '2026/9/12/bear-tea',
+      assetUrl: 'https://images.squarespace-cdn.example/content/v1/abc/bear-tea.png', excerpt: '',
+      body: '<div class="sqs-block"><p><a href="https://www.eventim.us/event/Bear-Tea/701137?afflky=3Do">Get Tickets Here!</a></p><style>#block-yui_3 { padding: 0 }</style><p>Bears, cubs and otters — a Saturday tea dance.</p></div>',
+      location: { mapLat: 40.7084094, mapLng: -73.9383118, markerLat: 40.7084094, markerLng: -73.9383118, addressTitle: '3 Dollar Bill', addressLine1: '260 Meserole Street', addressLine2: 'Brooklyn, NY, 11206', addressCountry: 'United States' } },
+    { id: 'a2', title: 'WANTED', startDate: 1789264800000, endDate: 1789200000000, fullUrl: '/rsvp/2026/9/11/wanted',
+      body: '<p><a href="https://www.instagram.com/wantedbk">Follow</a> <a href="https://www.3dollarbillbk.com/rsvp">All events</a> <a href="https://tickets.example/wanted">Buy tickets</a> <a href="https://tickets.example/wanted">RSVP</a></p>',
+      location: { addressTitle: '9 BOB NOTE', addressLine1: '270 Meserole Street', addressLine2: 'Brooklyn, NY, 11206' } },
+    { id: 'a3', title: 'No date', fullUrl: '/rsvp/no-date' }
+  ],
+  past: [
+    { id: 'p1', title: 'Bear Tea', startDate: 1789250400000, fullUrl: '/rsvp/2026/9/12/bear-tea' },
+    { id: 'p2', title: 'GraveSTONED', startDate: 1786500000000, fullUrl: '/rsvp/2026/8/11/gravestoned', body: '<p><a href="https://a.example/x">Tickets</a> <a href="https://b.example/y">Tickets</a></p>', location: { addressTitle: '260 Meserole Street', addressLine1: '260 Meserole Street' } }
+  ]
+};
+
+function squarespaceStubAdapter(twin = SQUARESPACE_TWIN) {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      async fetchData(url, options) {
+        fetched.push({ url, headers: (options && options.headers) || {} });
+        return { html: typeof twin === 'string' ? twin : JSON.stringify(twin), url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+test('Squarespace collection: the listing\'s JSON twin is read on the configured page only, and only when the page is an event collection', async () => {
+  const parser = createParser();
+  const config = { urls: ['https://www.3dollarbillbk.example/rsvp'] };
+  const { fetched, httpAdapter } = squarespaceStubAdapter();
+  const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, httpAdapter);
+  assert.equal(fetched[0].url, 'https://www.3dollarbillbk.example/rsvp?format=json');
+  assert.deepEqual(rows.map(row => row.id), ['a1', 'a2', 'p2'], 'dated items from upcoming[] and past[], the undated one and the repeat skipped');
+
+  const elsewhere = squarespaceStubAdapter();
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp/2026/9/12/bear-tea' }, config, elsewhere.httpAdapter), []);
+  assert.deepEqual(elsewhere.fetched, [], 'an event page is not the entry page — nothing fetched');
+
+  const notCollection = squarespaceStubAdapter();
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: '<html><script>Static.SQUARESPACE_CONTEXT = {};</script><body class="collection-type-page">About us</body></html>', url: 'https://www.3dollarbillbk.example/rsvp' }, config, notCollection.httpAdapter), []);
+  assert.deepEqual(notCollection.fetched, [], 'a Squarespace page that is not an event collection has no twin to read');
+
+  const otherPlatform = squarespaceStubAdapter();
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: '<html><body class="collection-type-events"><div class="eventlist"></div></body></html>', url: 'https://www.3dollarbillbk.example/rsvp' }, config, otherPlatform.httpAdapter), []);
+  assert.deepEqual(otherPlatform.fetched, [], 'the events class alone, without the platform context, is not the platform');
+
+  const blogTwin = squarespaceStubAdapter({ collection: { typeName: 'blog' }, items: [{ id: 'b', title: 'Post', startDate: 1789250400000 }] });
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, blogTwin.httpAdapter), [], 'a non-events collection is not read');
+
+  assert.equal(parser.buildSquarespaceJsonTwinUrl('https://site.example/rsvp?view=list#top'), 'https://site.example/rsvp?view=list&format=json');
+  assert.equal(parser.buildSquarespaceJsonTwinUrl('https://site.example/rsvp?format=ical'), '', 'already a formatted twin');
+});
+
+test('Squarespace collection: items become events — instant dates, venue, address, pin, event page, artwork, the body\'s own ticket link', () => {
+  const parser = createParser();
+  const build = (item) => parser.buildEventFromSquarespaceItem(item, 'https://www.3dollarbillbk.example/rsvp');
+  const tea = build(SQUARESPACE_TWIN.upcoming[0]);
+  assert.equal(tea.title, 'Bear Tea');
+  assert.equal(tea.startDate.toISOString(), '2026-09-12T22:00:00.000Z');
+  assert.equal(tea.endDate.toISOString(), '2026-09-13T02:00:00.000Z');
+  assert.equal(tea.bar, '3 Dollar Bill');
+  assert.equal(tea.address, '260 Meserole Street, Brooklyn, NY, 11206');
+  assert.equal(tea.location, '40.7084094, -73.9383118');
+  assert.equal(tea.website, 'https://www.3dollarbillbk.example/rsvp/2026/9/12/bear-tea');
+  assert.equal(tea.image, 'https://images.squarespace-cdn.example/content/v1/abc/bear-tea.png');
+  assert.equal(tea.imageSource, 'json-api');
+  assert.equal(tea.ticketUrl, 'https://www.eventim.us/event/Bear-Tea/701137?afflky=3Do', 'a ticketing-platform link in the body');
+  assert.equal(tea.description, 'Get Tickets Here! Bears, cubs and otters — a Saturday tea dance.', 'style blocks are not copy');
+  assert.equal(tea.source, 'squarespace');
+
+  const wanted = build(SQUARESPACE_TWIN.upcoming[1]);
+  assert.equal(wanted.endDate, null, 'an end before the start is not an end');
+  assert.equal(wanted.bar, '9 BOB NOTE');
+  assert.equal(wanted.ticketUrl, 'https://tickets.example/wanted', 'social and same-site links skipped; one distinct CTA link adopted');
+
+  assert.equal(build(SQUARESPACE_TWIN.upcoming[2]), null, 'no start, no event');
+  const grave = build(SQUARESPACE_TWIN.past[1]);
+  assert.equal(grave.bar, '', 'a venue name that is the street address is not a bar');
+  assert.equal(grave.ticketUrl, undefined, 'two different CTA links → none guessed');
 });
 
 // ---------------------------------------------------------------------------

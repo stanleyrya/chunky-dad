@@ -31,7 +31,20 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'spa-data-door-2026-09';
+const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// Well-known machine-feed paths probed on a configured root's own host
+// (after whatever the page advertises). Platform conventions, not sites.
+const MACHINE_DOOR_WELL_KNOWN_PATHS = [
+    '/feed.json',
+    '/events.json',
+    '/events/feed.json',
+    '/feed.ics',
+    '/calendar.ics',
+    '/events.ics',
+    '/events/?ical=1',
+    '/wp-json/tribe/events/v1/events?per_page=50',
+    '/wp-json/wp/v2/events?per_page=100'
+];
 // Stored-pin vs fresh-geocode divergence (km) that warrants human review.
 // Fresh geocodes are grade-gated and cross-checked (normalizers.js), so
 // sub-km disagreement is meaningful. Shared by the merge-time STEP 3c flag
@@ -618,6 +631,18 @@ class SharedCore {
     // 'heuristic', 'none') so callers can treat text-heuristic results as weak and
     // optionally re-check them with AI.
     classifyPageWithSignal(url, html) {
+        // 0. A raw JSON body with event-shaped objects is classified by what
+        //    it holds. URL rules describe a site's HTML pages — a host-wide
+        //    "link-aggregator" rule written for thebearcalendar.com/events/
+        //    also caught thebearcalendar.com/feed.json, and its 70 events
+        //    bypassed the structured route (run 20260911: 10 extracted by
+        //    AI from linearized JSON, the rest lost).
+        if (html) {
+            const jsonApiEventCount = this.countJsonApiEventObjects(html);
+            if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
+            if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
+        }
+
         // 1. URL pattern rules (deterministic, no HTML needed)
         const ruleClassification = this.classifyUrlByRules(url);
         if (ruleClassification) {
@@ -632,16 +657,6 @@ class SharedCore {
             const jsonLdEventCount = this.extractJsonLdEventNodes(html).length;
             if (jsonLdEventCount === 1) return { classification: 'event-page', signal: 'json-ld' };
             if (jsonLdEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-ld' };
-        }
-
-        // 2.5 Raw JSON API bodies (deterministic). A body that IS a JSON document
-        //     with recognizable event-shaped objects classifies by object count —
-        //     month-name heuristics and the AI second opinion are meaningless on a
-        //     payload that contains no prose.
-        if (html) {
-            const jsonApiEventCount = this.countJsonApiEventObjects(html);
-            if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
-            if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
         }
 
         // 3. HTML heuristics for unknown URLs
@@ -5263,7 +5278,10 @@ class SharedCore {
         const classifications = urlClassifications && typeof urlClassifications === 'object' ? urlClassifications : {};
         const aggregatorHosts = new Set();
         for (const url of Object.keys(classifications)) {
-            if (classifications[url] !== 'link-aggregator') continue;
+            // A root read as a machine feed classifies by its content
+            // (multi-event-page), but the host is still the aggregator the
+            // config's URL rules say it is — the pointer rule keys on that.
+            if (classifications[url] !== 'link-aggregator' && this.classifyUrlByRules(url) !== 'link-aggregator') continue;
             const host = this.getHostFromUrl(url).toLowerCase().replace(/^www\./, '');
             if (host) aggregatorHosts.add(host);
         }
@@ -5367,6 +5385,21 @@ class SharedCore {
                 // (sickening.events/events?q=goldiloxx shipped as a ticketUrl,
                 // run 20260910-215043).
                 reason = 'a search/listing page';
+            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)) {
+                // A bare site root is a website, never a ticket link (furball
+                // .nyc: "VISIT THEURBANBEAR.COM" on the flyer became UNDERBEAR's
+                // ticketUrl). Flag, don't drop: it moves to an empty website.
+                if (!(typeof event.website === 'string' && event.website.trim())) {
+                    event.website = value;
+                    console.log(`🔗 LINKS: moved ${value} from ticketUrl to website for "${label}" — a bare site root is a website, not a ticket link`);
+                } else {
+                    reason = 'a bare site root, not a ticket link';
+                }
+                if (!reason) {
+                    event[field] = '';
+                    cleared.push(field);
+                    continue;
+                }
             }
             if (!reason) continue;
             event[field] = '';
@@ -6808,9 +6841,17 @@ class SharedCore {
                 // A JavaScript shell has its content behind the API its own
                 // bundle calls — find that door and read through it, or fall
                 // through with the shell untouched (see resolveSpaDataDoor).
-                const htmlData = shouldUseInlineInput
+                const spaResolvedHtmlData = shouldUseInlineInput
                     ? fetchedHtmlData
                     : await this.resolveSpaDataDoor(fetchedHtmlData, url, httpAdapter, displayAdapter);
+                // A configured root that advertises or serves a machine
+                // door (a JSON or iCalendar feed) is read through it — the
+                // feed is the site's own complete statement of its events
+                // (see resolveMachineDoor). Nothing per site: what the page
+                // links to, plus a short well-known list, scored by content.
+                const htmlData = shouldUseInlineInput || currentDepth !== 0
+                    ? spaResolvedHtmlData
+                    : await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter);
 
                 // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
                 // (absence is what signals adaptive to parsers); numeric mode passes
@@ -9436,6 +9477,19 @@ class SharedCore {
     // check so BOTH routes (range, raw text) are enforced by the same code.
     // Longest prefix of `value` that ends just before a separator (" - ",
     // " / ", " | ", ": ", ", ", " – ") and fits maxChars; '' when none does.
+    stripDanglingTrimTail(value) {
+        let text = String(value || '').trim();
+        for (let round = 0; round < 3; round++) {
+            const next = text
+                .replace(/[\s,;:\-–—&+\/|]+$/u, '')
+                .replace(/\s+(?:and|or|with|feat\.?|featuring|presents?|plus|vs\.?|x)$/iu, '')
+                .trim();
+            if (next === text) break;
+            text = next;
+        }
+        return text || String(value || '').trim();
+    }
+
     longestSeparatorBoundedPrefix(value, maxChars) {
         const text = String(value || '').trim();
         if (!text || text.length <= maxChars) return '';
@@ -9514,9 +9568,19 @@ class SharedCore {
                     : (answerEntry.range !== undefined ? answerEntry.range : answerEntry.keep))
                 : answerEntry;
             const rangeValue = this.resolveTrimPartRange(entry.value, entry.maxChars, rawAnswer);
-            const answer = rangeValue !== null
+            let answer = rangeValue !== null
                 ? rangeValue
                 : String(rawAnswer === null || rawAnswer === undefined ? '' : rawAnswer).trim();
+            // A cut that lands on a separator or a conjunction leaves a
+            // dangling tail ("ButtTootKing 2026: Lydia B Kollins, Suzie
+            // Toot," — run 20260911, the model cut before "and Kori King").
+            // The tail is dropped; what remains is still the model's own
+            // verbatim substring, one token shorter.
+            const tidied = this.stripDanglingTrimTail(answer);
+            if (tidied !== answer) {
+                console.log(`✂️ TRIM: "${title}" — ${entry.field} answer "${answer}" ends on a separator — using "${tidied}"`);
+                answer = tidied;
+            }
             // Over-trim report (titles, LOG-ONLY): a verbatim answer under 40%
             // of the limit while a separator-bounded prefix of the original
             // fits is usually the model keeping the brand and dropping the
@@ -12385,6 +12449,209 @@ class SharedCore {
         return htmlData;
     }
 
+    // === Machine-door discovery ===
+    // A configured root may publish its events as a machine feed: a JSON
+    // feed or an iCalendar the page links to (<link rel="alternate">,
+    // .ics/.json hrefs, webcal:, ?ical=1), or one at a well-known path
+    // (/feed.json, /feed.ics, the WordPress events REST route…). The feed is
+    // read instead of the page when it answers with at least as many
+    // event-shaped records as the page's own structured data — never
+    // fewer, so a partial feed never replaces a fuller page. iCalendar
+    // answers are converted to feed rows so one JSON pathway reads both.
+    // Probes that answer nothing are dead ends (retried on the next
+    // capability bump); an adopted door is remembered per host for the run.
+    // thebearcalendar.com/events/ links /feed.ics and serves /feed.json:
+    // 70 rows in one read, where the HTML hub out-links its crawl budget.
+    async resolveMachineDoor(htmlData, pageUrl, httpAdapter, displayAdapter) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return htmlData;
+        if (htmlData.dataDoor || htmlData.machineDoor) return htmlData;
+        const head = html.trim().slice(0, 64);
+        if (head[0] === '{' || head[0] === '[' || /^BEGIN:VCALENDAR/i.test(head)) return htmlData;
+        const log = displayAdapter && typeof displayAdapter.logInfo === 'function'
+            ? (message) => displayAdapter.logInfo(message)
+            : async () => {};
+        const parts = this.parseUrl(pageUrl);
+        const hostKey = parts ? String(parts.host || '').toLowerCase().replace(/^www\./, '') : '';
+        if (!this.machineDoorsByHost) this.machineDoorsByHost = new Map();
+        const remembered = hostKey ? this.machineDoorsByHost.get(hostKey) : null;
+        const candidates = remembered
+            ? [remembered]
+            : this.filterKnownDeadEndUrls(this.collectMachineDoorCandidates(html, pageUrl));
+        if (candidates.length === 0) return htmlData;
+        const pageEventCount = this.extractJsonLdEventNodes(html).length;
+        const tried = [];
+        const answered = [];
+        for (const candidate of candidates.slice(0, 8)) {
+            let body = '';
+            let statusCode = null;
+            try {
+                const response = await httpAdapter.fetchData(candidate, { headers: { Accept: 'application/json, text/calendar, application/feed+json, */*' } });
+                body = response && typeof response.html === 'string' ? response.html : '';
+                statusCode = response && Number.isFinite(Number(response.statusCode)) ? Number(response.statusCode) : null;
+            } catch (error) {
+                this.recordDeadEndNetworkFailure({ url: candidate, currentDepth: 1 });
+                tried.push(`${candidate} (${error && error.message ? error.message : 'error'})`);
+                continue;
+            }
+            const door = this.readMachineDoorBody(body, candidate);
+            if (!door || door.count < 2 || door.count < pageEventCount) {
+                if (statusCode !== null && statusCode >= 400) {
+                    this.recordDeadEndFetchFailure({ url: candidate, currentDepth: 1, statusCode });
+                } else {
+                    this.recordDeadEndObservation({ url: candidate, currentDepth: 1, parseResult: { events: [], additionalLinks: [] }, pageClassification: 'unknown' });
+                }
+                tried.push(`${candidate} (${door ? `${door.count} event(s)` : 'not a feed'})`);
+                continue;
+            }
+            answered.push({ candidate, door });
+            if (remembered) break;
+        }
+        if (answered.length === 0) {
+            await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl}: no feed answered with events (probed ${tried.length}: ${tried.join(', ')}) — reading the page`);
+            return htmlData;
+        }
+        // The fullest door wins: most records, then the richest rows (a
+        // site's JSON feed states ticket links, images and cities its
+        // iCalendar twin folds into free text).
+        const kindRank = (door) => (door.kind === 'json' ? 1 : 0);
+        answered.sort((a, b) => (b.door.count - a.door.count) || (b.door.richness - a.door.richness) || (kindRank(b.door) - kindRank(a.door)));
+        const { candidate, door } = answered[0];
+        if (hostKey) this.machineDoorsByHost.set(hostKey, candidate);
+        const others = answered.slice(1).map(entry => `${entry.candidate} (${entry.door.count} ${entry.door.kind}, ${entry.door.richness} field(s)/row)`);
+        await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl} → ${candidate} answered with ${door.count} ${door.kind} event record(s), ${door.richness} field(s)/row${pageEventCount ? ` (page's own structured data: ${pageEventCount})` : ''}${others.length ? `; also answered: ${others.join(', ')}` : ''} — reading the page through it`);
+        return {
+            ...htmlData,
+            url: candidate,
+            html: door.body,
+            machineDoor: { doorUrl: candidate, pageUrl, kind: door.kind, count: door.count }
+        };
+    }
+
+    // Average number of non-empty fields over a feed's first rows — the
+    // richness tiebreak between doors answering the same count.
+    machineDoorRowRichness(rows) {
+        const sample = (Array.isArray(rows) ? rows : []).slice(0, 5);
+        if (sample.length === 0) return 0;
+        const filled = (row) => Object.values(row && typeof row === 'object' ? row : {})
+            .filter(value => value !== null && value !== undefined && value !== '' && value !== false && !(Array.isArray(value) && value.length === 0)).length;
+        return Math.round(sample.reduce((sum, row) => sum + filled(row), 0) / sample.length);
+    }
+
+    // Candidate door URLs for a page: advertised feeds first (typed links,
+    // .ics/.json hrefs, webcal:, calendar-export params), then well-known
+    // paths on the page's own host. Same-host only; the page itself never.
+    collectMachineDoorCandidates(html, pageUrl) {
+        const parts = this.parseUrl(pageUrl);
+        if (!parts) return [];
+        const origin = `${parts.protocol || 'https:'}//${parts.host}`;
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const pageHost = String(parts.host || '').toLowerCase().replace(/^www\./, '');
+        const seen = new Set();
+        const ordered = [];
+        const add = (raw) => {
+            const trimmed = String(raw || '').replace(/&amp;/gi, '&').trim();
+            if (!trimmed) return;
+            const resolved = /^webcal:\/\//i.test(trimmed) ? trimmed.replace(/^webcal:\/\//i, 'https://') : this.normalizeUrl(trimmed, pageUrl);
+            if (!resolved || !/^https?:\/\//i.test(resolved)) return;
+            const host = (resolved.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            if (host !== pageHost) return;
+            const key = this.getUrlDedupeKey(resolved);
+            if (!key || key === pageKey || seen.has(key)) return;
+            seen.add(key);
+            ordered.push(resolved);
+        };
+        const source = String(html || '');
+        const typedLink = /<link\b[^>]*rel\s*=\s*["'][^"']*alternate[^"']*["'][^>]*>/gi;
+        let match;
+        while ((match = typedLink.exec(source)) !== null) {
+            const tag = match[0];
+            if (!/type\s*=\s*["'](?:application\/(?:feed\+)?json|text\/calendar)["']/i.test(tag)) continue;
+            const href = tag.match(/href\s*=\s*["']([^"']+)["']/i);
+            if (href) add(href[1]);
+        }
+        for (const entry of this.detectIcsFeedLinks(source, pageUrl)) add(entry.fetchUrl);
+        const hrefs = /href\s*=\s*["']([^"']+)["']/gi;
+        while ((match = hrefs.exec(source)) !== null) {
+            const value = match[1].replace(/&amp;/gi, '&');
+            const lower = value.toLowerCase();
+            const path = lower.split(/[?#]/)[0];
+            if (path.endsWith('.json') || path.endsWith('.ics') || /[?&](?:format=json|ical=1|outlook-ical=1)\b/.test(lower)) add(value);
+        }
+        // Well-known paths only on a hint: the page advertises a feed (so
+        // the site publishes feeds — its JSON twin is worth one request
+        // each), or carries WordPress markers (its events REST routes). A
+        // page with no hint is read as a page; no blind probing.
+        const advertised = ordered.length > 0;
+        const wordpress = /\/wp-(?:content|json|includes)\//i.test(source);
+        for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+            const isWordPressRoute = wellKnown.startsWith('/wp-json/') || wellKnown.includes('?ical=1');
+            if ((advertised && !isWordPressRoute) || (wordpress && isWordPressRoute)) add(`${origin}${wellKnown}`);
+        }
+        return ordered;
+    }
+
+    // A fetched door body as feed rows: JSON with event-shaped objects is
+    // passed through as it is; an iCalendar becomes { events: [rows] } in
+    // the vocabulary the JSON-API reader already maps (title, start, end,
+    // venue, address, url, description, rrule, timezone). Null when the
+    // body is neither.
+    readMachineDoorBody(body, doorUrl) {
+        const text = typeof body === 'string' ? body.trim() : '';
+        if (!text) return null;
+        if (text[0] === '{' || text[0] === '[') {
+            const count = this.countJsonApiEventObjects(text);
+            let rows = [];
+            try {
+                const parsed = JSON.parse(text);
+                const isRowArray = (value) => Array.isArray(value) && value.length > 0 && value.every(item => item && typeof item === 'object' && !Array.isArray(item));
+                rows = isRowArray(parsed) ? parsed : (Object.values(parsed || {}).find(isRowArray) || []);
+            } catch (_) {
+                rows = [];
+            }
+            return { kind: 'json', count, richness: this.machineDoorRowRichness(rows), body: text };
+        }
+        if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) return null;
+        const records = SharedCore.parsePublishedCalendarIcs(text) || [];
+        const rows = records.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
+        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows), body: JSON.stringify({ events: rows }) };
+    }
+
+    icsRecordToFeedRow(record, doorUrl) {
+        if (!record || !record.start) return null;
+        const pad = (value) => String(value).padStart(2, '0');
+        const wallIso = (entry) => `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}T${pad(entry.wall.hour)}:${pad(entry.wall.minute)}:${pad(entry.wall.second)}`;
+        const iso = (entry) => {
+            if (!entry || !entry.wall) return '';
+            if (entry.isDateOnly) return `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}`;
+            // Floating (no TZID, no Z) is the venue's wall clock: no offset.
+            if (!entry.tzid) return wallIso(entry);
+            return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+        };
+        const start = iso(record.start);
+        if (!start) return null;
+        const location = String(record.location || '').trim();
+        // "Stonewall Hotel, Sydney, Australia": the venue is the leading
+        // segment when it is not itself a street line; the rest is the place.
+        const segments = location.split(',').map(part => part.trim()).filter(Boolean);
+        const leadingIsVenue = segments.length > 1 && !/\d/.test(segments[0]);
+        const row = {
+            uid: record.uid || '',
+            title: record.summary || '',
+            description: record.description || '',
+            start,
+            end: iso(record.end),
+            url: record.url || '',
+            venue: leadingIsVenue ? segments[0] : '',
+            address: leadingIsVenue ? segments.slice(1).join(', ') : location,
+            all_day: Boolean(record.isAllDay)
+        };
+        if (record.rrule) row.rrule = record.rrule;
+        const tzid = record.start.tzid;
+        if (tzid && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
+        return row;
+    }
+
     // Crawl-queue guard: obvious static assets are never pages, so the crawl
     // loop must never fetch them. URL discovery (ai-web-parser validateEventUrl)
     // already rejects these, but a candidate whose entity-mangled tail hides the
@@ -14109,6 +14376,19 @@ class SharedCore {
         return null;
     }
 
+    // TRUE when the text names the configured city (key or any of its
+    // patterns, whole-word, case-folded).
+    textMentionsCity(text, cityKey) {
+        const folded = ` ${String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+        if (!folded.trim() || !cityKey) return false;
+        const config = this.cities && this.cities[cityKey] ? this.cities[cityKey] : null;
+        const names = [String(cityKey)].concat(config && Array.isArray(config.patterns) ? config.patterns : []);
+        return names.some(name => {
+            const needle = ` ${String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+            return needle.trim() !== '' && folded.includes(needle);
+        });
+    }
+
     // The host a record was extracted from (venue-site stamp first, then the
     // source page URL) — '' when neither survives.
     getFestivalSourceHost(event) {
@@ -14171,7 +14451,17 @@ class SharedCore {
         };
         const eventCity = String(event.city || '').trim().toLowerCase();
         const cityIsBlank = !eventCity || eventCity === 'unknown';
-        if (context.cityKey && cityIsBlank) {
+        // A blank city is not a blank PLACE: a record whose address names a
+        // locality the festival's city patterns do not match is somewhere
+        // else (thebearcalendar.com/feed.json, run 20260911: "Bear Pride
+        // 2026: Bearmuda Mingles" in Sydney inherited nyc from Urban Bear
+        // NYC because Sydney is not a configured city and the aggregator
+        // host had matched the umbrella). The address is the evidence; the
+        // festival window is not.
+        const statedPlace = String(event.address || '').trim();
+        if (context.cityKey && cityIsBlank && statedPlace && !this.textMentionsCity(statedPlace, context.cityKey)) {
+            console.log(`🎪 FESTIVAL: "${event.title || 'Unknown'}" NOT given city ${context.cityKey} from "${context.name}" — its own address "${statedPlace}" names another place`);
+        } else if (context.cityKey && cityIsBlank) {
             event.city = context.cityKey;
             event._citySource = 'curated-festival';
             context.inheritedCity = true;
@@ -17353,10 +17643,26 @@ class SharedCore {
         // the enrich child carrying the ticket link and price was dropped as
         // a sibling. Within 15 minutes, both times real (never the midnight
         // missing-time placeholder), positive place agreement on both sides.
+        // Fails closed on any POSITIVE contradiction: a multi-room venue
+        // geocodes every room to one pin (www.3dollarbillbk.com: "WANTED" at
+        // 9 Bob Note, 270 Meserole, and "Dolly Disco" at 3 Dollar Bill, 260
+        // Meserole, same 10pm start, one pin — twelve real events folded in
+        // run 20260911), so agreeing coordinates never outrank two different
+        // bar names, two different street addresses, or two different
+        // ticket links. The name rung below still meets those pairs.
+        // …and the two records must be RELATED beyond the slot: one was
+        // reached through the other's own link (a listing stub and the
+        // ticket page it points at), or their names share a distinctive
+        // word / differ by an OCR slip. Two unrelated names in one slot at
+        // one venue are two rooms (tockify thotyssey feed, run 20260911:
+        // "PANTHEON: A Classic Queer Dance Party" folded into "Goldiloxx:
+        // Bear Tea at 3 Dollar Bill" — same building, same 4pm).
         if (this.areDatesEqual(incoming.startDate, existing.startDate, 15)
             && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
             && (incoming.bar || incoming.address) && (existing.bar || existing.address)
-            && this.areIdentityPlacesSimilar(incoming, existing)) {
+            && this.areIdentityPlacesSimilar(incoming, existing)
+            && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)
+            && (this.recordsShareLinkLineage(newEvent, existingEvent) || this.namesHaveAffinity(newEvent, existingEvent))) {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -17557,6 +17863,92 @@ class SharedCore {
     // Positive evidence that two records describe DIFFERENT events: both carry place
     // information and the places do not match. Used to veto key-collision merges —
     // a missing venue on either side stays inconclusive (returns false).
+    // TRUE when one record was scraped from a page the other links to (its
+    // ticketUrl / website / url): the listing stub and its own ticket page.
+    recordsShareLinkLineage(eventA, eventB) {
+        const key = (url) => {
+            if (typeof url !== 'string' || !url.trim()) return '';
+            const match = url.trim().split('?')[0].match(/^https?:\/\/([^/?#]+)(\/[^#]*)?/i);
+            return match ? `${match[1].toLowerCase().replace(/^www\./, '')}${(match[2] || '/').replace(/\/+$/, '') || '/'}` : '';
+        };
+        const linksOf = (event) => [event && event.ticketUrl, event && event.website, event && event.url].map(key).filter(Boolean);
+        const sourceA = key(eventA && eventA._sourcePageUrl);
+        const sourceB = key(eventB && eventB._sourcePageUrl);
+        return Boolean((sourceA && linksOf(eventB).includes(sourceA)) || (sourceB && linksOf(eventA).includes(sourceB)));
+    }
+
+    // TRUE when the two names share a distinctive word (5+ letters, not
+    // generic event vocabulary) or a pair of such words one OCR slip apart
+    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
+    namesHaveAffinity(eventA, eventB) {
+        const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
+            'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
+        const tokens = (event) => {
+            const names = [event && event.title, event && event.shortName, event && event.name].filter(value => typeof value === 'string');
+            const out = new Set();
+            for (const name of names) {
+                const lower = this.decodeBasicHtmlEntities(name).toLowerCase();
+                for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word)) out.add(word);
+                }
+                // The whole name squashed: an OCR slip that inserts
+                // punctuation ("GOLDII.OXX") splits the word it misread.
+                const squashed = lower.replace(/[^a-z0-9]+/g, '');
+                if (squashed.length >= 6) out.add(squashed);
+            }
+            return [...out];
+        };
+        const a = tokens(eventA);
+        const b = tokens(eventB);
+        if (a.length === 0 || b.length === 0) return false;
+        const within = (x, y, max) => {
+            if (Math.abs(x.length - y.length) > max) return false;
+            const prev = Array.from({ length: y.length + 1 }, (_, i) => i);
+            for (let i = 1; i <= x.length; i++) {
+                let last = prev[0];
+                prev[0] = i;
+                for (let j = 1; j <= y.length; j++) {
+                    const temp = prev[j];
+                    prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, last + (x[i - 1] === y[j - 1] ? 0 : 1));
+                    last = temp;
+                }
+            }
+            return prev[y.length] <= max;
+        };
+        return a.some(x => b.some(y => x === y || (x.length >= 6 && y.length >= 6 && within(x, y, 1))));
+    }
+
+    // TRUE when both records state a place/ticket fact and the facts differ:
+    // two bar names that are not the same bar, two street addresses (both
+    // numbered) that are not the same street address, or two ticket links
+    // on different event paths. Absent or one-sided evidence is not a
+    // contradiction.
+    haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null) {
+        const barA = this.normalizeIdentityText(shapeA.bar);
+        const barB = this.normalizeIdentityText(shapeB.bar);
+        if (barA && barB && barA !== barB
+            && !(barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))) {
+            return true;
+        }
+        // The street LINE only ("722 East Burnside Street"): the locality
+        // and region spellings after it vary between records of one place.
+        const streetLine = (address) => this.normalizeIdentityText(String(address || '').split(',')[0]);
+        const streetA = streetLine(shapeA.address);
+        const streetB = streetLine(shapeB.address);
+        if (/\d/.test(streetA) && /\d/.test(streetB) && streetA !== streetB
+            && !(streetA.includes(streetB) || streetB.includes(streetA))) {
+            return true;
+        }
+        const ticketKey = (url) => {
+            const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
+            return match ? `${match[1].replace(/^www\./i, '')}${match[2].replace(/\/+$/, '')}`.toLowerCase() : '';
+        };
+        const ticketA = ticketKey(eventA && eventA.ticketUrl);
+        const ticketB = ticketKey(eventB && eventB.ticketUrl);
+        if (ticketA && ticketB && ticketA !== ticketB) return true;
+        return false;
+    }
+
     areEventsDistinctByPlace(eventA, eventB) {
         const shapeA = this.buildIdentityComparisonShape(eventA);
         const shapeB = this.buildIdentityComparisonShape(eventB);

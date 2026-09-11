@@ -463,6 +463,32 @@ test('classifyPageWithSignal reports which tier decided', () => {
     { pattern: 'x\\.example/hub', classification: 'link-aggregator' }
   ]);
   assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub', jsonLdHtml), { classification: 'link-aggregator', signal: 'url-rule' });
+  // A raw JSON body with event objects is classified by its content even
+  // under a host-wide URL rule — the rule describes the site's HTML pages
+  // (thebearcalendar.com/feed.json under the /events/ hub rule, run 20260911).
+  const feed = JSON.stringify({ events: [{ title: 'A', start: '2026-09-12T19:00:00' }, { title: 'B', start: '2026-09-13T19:00:00' }] });
+  assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub/feed.json', feed), { classification: 'multi-event-page', signal: 'json-api' });
+});
+
+test('festival context never overrides a record whose own address names another place', () => {
+  const core = new SharedCore({ nyc: { timezone: 'America/New_York', patterns: ['nyc', 'new york'] } }, { eventSchema: EventSchema });
+  const festival = { key: 'urban-bear-nyc', name: 'Urban Bear NYC', cityKey: 'nyc', nextDates: { start: '2026-09-17', end: '2026-09-20' } };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let sydney, blank, local;
+  try {
+    sydney = { title: 'Bear Pride 2026: Bearmuda Mingles', city: 'unknown', address: 'Sydney, NSW' };
+    core.applyCuratedFestivalContext(sydney, festival);
+    blank = { title: 'Underwear Party', city: '' };
+    core.applyCuratedFestivalContext(blank, festival);
+    local = { title: 'Opening Night', city: 'unknown', address: '185 Christopher St, New York, NY' };
+    core.applyCuratedFestivalContext(local, festival);
+  } finally { console.log = originalLog; }
+  assert.equal(sydney.city, 'unknown', 'a stated other place is not blank');
+  assert.ok(lines.some(line => line.includes('NOT given city nyc')));
+  assert.equal(blank.city, 'nyc', 'a truly blank place still inherits');
+  assert.equal(local.city, 'nyc', 'an address in the festival city inherits');
+  assert.equal(core.textMentionsCity('Sydney, NSW', 'nyc'), false);
+  assert.equal(core.textMentionsCity('Brooklyn, New York, NY', 'nyc'), true);
 });
 
 // Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide
@@ -2355,7 +2381,13 @@ test('guardrail: ticketing-platform URL beats a bare non-ticketing domain root i
   const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
   assert.equal(adapter.calls.length, 0, 'ticketing-vs-bare-root never reaches the AI');
   assert.equal(finalEvent.ticketUrl, ticketing);
-  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['ticketUrl']);
+  // Merge-time link hygiene clears the calendar's bare root out of
+  // ticketUrl before arbitration, so there is no conflict left to settle;
+  // the deterministic rung above stays the backstop for a root that gets
+  // through some other way.
+  const deterministic = finalEvent._original && finalEvent._original.aiArbitration
+    ? finalEvent._original.aiArbitration.deterministic : [];
+  assert.ok(!Array.isArray(deterministic) || deterministic.length === 0 || deterministic.includes('ticketUrl'));
 });
 
 test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () => {
@@ -17815,9 +17847,12 @@ test('final build drops a same-site homepage parked in ticketUrl', async () => {
     restore();
   }
 
-  assert.equal(analyzed.ticketUrl, undefined, 'the homepage is not a ticket link');
+  assert.ok(!analyzed.ticketUrl, 'the homepage is not a ticket link');
   assert.equal(analyzed.website, 'https://www.chunk-party.com/events/chunk-london-august/', 'identity link untouched');
-  assert.ok(lines.some(line => line.includes('it is the same site\'s homepage, not a ticket link')),
+  // Link hygiene clears a bare site root out of ticketUrl before the
+  // final-build homepage rule runs; either line proves it was caught.
+  assert.ok(lines.some(line => line.includes('it is the same site\'s homepage, not a ticket link')
+    || line.includes('a bare site root, not a ticket link')),
     `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
 });
 
@@ -21326,6 +21361,90 @@ test('an event page follows its outbound ticketing-platform link even when the m
     'a platform homepage is not a ticket link');
 });
 
+// ---------------------------------------------------------------------------
+// MACHINE-DOOR DISCOVERY (thebearcalendar.com/events/ links /feed.ics and
+// serves /feed.json; run 20260911 read 8 of 70 events through the HTML hub).
+// ---------------------------------------------------------------------------
+
+function doorStubAdapter(bodies) {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      async fetchData(url) {
+        fetched.push(url);
+        const body = bodies[url];
+        if (body === undefined) return { html: '<html><body>Not found</body></html>', url, statusCode: 404, headers: {} };
+        return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+const DOOR_LISTING_HTML = '<html><head><link rel="alternate" type="text/calendar" href="/feed.ics"></head><body><a href="/feed.ics">Subscribe</a><article>Bear Night · Sep 12</article><article>Cub Social · Sep 19</article></body></html>';
+const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20260912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20260919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
+const DOOR_JSON = { events: [
+  { title: 'Bear Night', start: '2026-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
+  { title: 'Cub Social', start: '2026-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
+] };
+
+test('machine door: a root that advertises a feed is read through the fullest door that answers', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter } = doorStubAdapter({ 'https://door.example/feed.ics': DOOR_ICS, 'https://door.example/feed.json': DOOR_JSON });
+  const page = { html: DOOR_LISTING_HTML, url: 'https://door.example/events/', statusCode: 200, headers: {} };
+  const out = await core.resolveMachineDoor(page, 'https://door.example/events/', httpAdapter, display);
+  assert.equal(out.url, 'https://door.example/feed.json', 'both answered with 2; the JSON rows are richer');
+  assert.deepEqual(JSON.parse(out.html), DOOR_JSON);
+  assert.equal(out.machineDoor.kind, 'json');
+  assert.ok(fetched.includes('https://door.example/feed.ics') && fetched.includes('https://door.example/feed.json'));
+  assert.ok(!fetched.some(url => url.includes('/wp-json/')), 'no WordPress routes without WordPress markers');
+  assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR') && line.includes('feed.json') && line.includes('also answered')));
+  // Remembered for the host: the next root on this host asks the door only.
+  const again = doorStubAdapter({ 'https://door.example/feed.json': DOOR_JSON });
+  const out2 = await core.resolveMachineDoor({ ...page, url: 'https://door.example/calendar/' }, 'https://door.example/calendar/', again.httpAdapter, display);
+  assert.deepEqual(again.fetched, ['https://door.example/feed.json']);
+  assert.equal(out2.url, 'https://door.example/feed.json');
+});
+
+test('machine door: an iCalendar-only site becomes feed rows — floating times as wall clock, venue and place from LOCATION, rules kept', async () => {
+  const core = createCore();
+  const { httpAdapter } = doorStubAdapter({ 'https://door.example/feed.ics': DOOR_ICS });
+  const out = await core.resolveMachineDoor({ html: DOOR_LISTING_HTML, url: 'https://door.example/events/' }, 'https://door.example/events/', httpAdapter, createDisplayAdapterStub());
+  assert.equal(out.machineDoor.kind, 'ics');
+  const rows = JSON.parse(out.html).events;
+  assert.equal(rows.length, 2);
+  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2026-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
+  assert.equal(rows[1].start, '2026-09-19', 'a date-only start');
+  assert.equal(rows[1].rrule, 'FREQ=WEEKLY;BYDAY=SA');
+  assert.equal(rows[1].all_day, true);
+});
+
+test('machine door: no hint → no probing; a hinted door that fails is a dead end and the page is read', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const quiet = doorStubAdapter({});
+  const plain = { html: '<html><body><article>Bear Night · Sep 12</article></body></html>', url: 'https://plain.example/events/' };
+  const same = await core.resolveMachineDoor(plain, 'https://plain.example/events/', quiet.httpAdapter, display);
+  assert.equal(same, plain, 'untouched');
+  assert.deepEqual(quiet.fetched, [], 'nothing probed without a hint');
+
+  const wp = doorStubAdapter({});
+  const wpPage = { html: '<html><head><link rel="stylesheet" href="/wp-content/themes/x/style.css"></head><body>Sep 12 Bear Night</body></html>', url: 'https://wp.example/events/' };
+  const stillPage = await core.resolveMachineDoor(wpPage, 'https://wp.example/events/', wp.httpAdapter, display);
+  assert.equal(stillPage, wpPage);
+  assert.ok(wp.fetched.every(url => url.includes('/wp-json/') || url.includes('ical=1')), 'WordPress markers probe only the WordPress routes');
+  assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR') && line.includes('no feed answered')));
+
+  // A feed that answers with FEWER events than the page's own structured
+  // data is not adopted.
+  const jsonLdPage = { html: '<html><head><link rel="alternate" type="application/json" href="/feed.json"></head><body>'
+    + ['A', 'B', 'C'].map(n => `<script type="application/ld+json">{"@type":"Event","name":"${n}","startDate":"2026-09-12T21:00:00"}</script>`).join('') + '</body></html>', url: 'https://partial.example/' };
+  const partial = doorStubAdapter({ 'https://partial.example/feed.json': { events: [{ title: 'A', start: '2026-09-12T21:00:00' }, { title: 'B', start: '2026-09-13T21:00:00' }] } });
+  const kept = await core.resolveMachineDoor(jsonLdPage, 'https://partial.example/', partial.httpAdapter, display);
+  assert.equal(kept, jsonLdPage, 'two feed rows do not replace three structured events');
+});
+
 test('a search results URL is never an identity or ticket link', () => {
   const core = createCore();
   assert.equal(core.isSearchListingUrl('https://sickening.events/events?q=goldiloxx'), true);
@@ -21337,6 +21456,39 @@ test('a search results URL is never an identity or ticket link', () => {
   try { core.clearNonIdentityLinkFields(event, event.title); } finally { console.log = originalLog; }
   assert.equal(event.ticketUrl, '');
   assert.equal(event.website, '');
+});
+
+test('a bare site root in ticketUrl is a website, not a ticket link', () => {
+  const core = createCore();
+  const originalLog = console.log;
+  console.log = () => {};
+  try {
+    // No website yet: the root MOVES (flag, don't drop — furball.nyc's
+    // "VISIT THEURBANBEAR.COM" flyer line became UNDERBEAR's ticketUrl).
+    const moved = { title: 'UNDERBEAR NYC', ticketUrl: 'https://theurbanbear.com' };
+    core.clearNonIdentityLinkFields(moved, moved.title);
+    assert.equal(moved.ticketUrl, '');
+    assert.equal(moved.website, 'https://theurbanbear.com');
+    // A website already named: the root is simply not a ticket link.
+    const cleared = { title: 'UNDERBEAR NYC', ticketUrl: 'https://theurbanbear.com/', website: 'https://www.furball.nyc' };
+    core.clearNonIdentityLinkFields(cleared, cleared.title);
+    assert.equal(cleared.ticketUrl, '');
+    assert.equal(cleared.website, 'https://www.furball.nyc');
+    // A real event path is untouched.
+    const real = { title: 'X', ticketUrl: 'https://theurbanbear.com/events/underbear' };
+    core.clearNonIdentityLinkFields(real, real.title);
+    assert.equal(real.ticketUrl, 'https://theurbanbear.com/events/underbear');
+  } finally { console.log = originalLog; }
+});
+
+test('a trim answer that ends on a separator or conjunction loses that dangling tail', () => {
+  const core = createCore();
+  assert.equal(core.stripDanglingTrimTail('ButtTootKing 2026: Lydia B Kollins, Suzie Toot,'), 'ButtTootKing 2026: Lydia B Kollins, Suzie Toot');
+  assert.equal(core.stripDanglingTrimTail('MEGAWOOF - SAN FRANCISCO -'), 'MEGAWOOF - SAN FRANCISCO');
+  assert.equal(core.stripDanglingTrimTail('Bear Night with'), 'Bear Night');
+  assert.equal(core.stripDanglingTrimTail('Bear Night feat.'), 'Bear Night');
+  assert.equal(core.stripDanglingTrimTail('Clean Title'), 'Clean Title');
+  assert.equal(core.stripDanglingTrimTail('X'), 'X', 'never emptied');
 });
 
 test('an over-trimmed title keeps its longest separator-bounded prefix instead of just the brand', () => {
@@ -21376,6 +21528,29 @@ test('same venue at the same start instant is one event, whatever each record ca
   const garbled = { title: 'GOLDII.OXX', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
   const clean = { title: 'GOLDILOXX Chicago', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
   assert.equal(core.getSameEventIdentitySignal(garbled, clean), 'place-exact-start');
+  // Two rooms of one venue complex, one shared pin (Squarespace geocodes
+  // every room to the building), same 10pm start: two events. Different
+  // bar names, different street numbers, different ticket links — any one
+  // of those contradictions fails the rung closed.
+  const wanted = { title: 'WANTED', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '9 BOB NOTE', address: '270 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://wl.eventim.us/event/WANTED/700522?afflky=9BobNote' };
+  const dolly = { title: 'Dolly Disco', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://eventim.us/wafform.aspx?_act=eventdashboard&_pky=704326' };
+  assert.equal(core.getSameEventIdentitySignal(wanted, dolly), null, 'shared pin never outranks two different rooms');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '', address: '' }, { ...dolly, bar: '', address: '' }), null, 'two different ticket links alone contradict');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null, 'same bar, different street numbers still contradict');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null,
+    'one-sided place evidence is no contradiction, but "WANTED" and "Dolly Disco" are unrelated names — two rooms, not one party');
+  // Same building, same 4pm, unrelated names, no links at all (tockify
+  // thotyssey feed): two events.
+  const tea = { title: 'Goldiloxx: Bear Tea at 3 Dollar Bill', startDate: at('2026-09-12T20:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn' };
+  const pantheon = { title: 'PANTHEON: A Classic Queer Dance Party', startDate: at('2026-09-12T20:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn' };
+  assert.equal(core.getSameEventIdentitySignal(pantheon, tea), null);
+  // A listing stub and the ticket page reached through its own link are one
+  // event whatever the page calls it.
+  const stub = { title: 'October', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://tickets.example/e/pdx-oct' };
+  const child = { title: 'Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', _sourcePageUrl: 'https://tickets.example/e/pdx-oct' };
+  assert.equal(core.getSameEventIdentitySignal(child, stub), 'place-exact-start');
+  assert.equal(core.namesHaveAffinity({ title: 'GOLDII.OXX' }, { title: 'GOLDILOXX Chicago' }), true);
+  assert.equal(core.namesHaveAffinity({ title: 'Bear Party Saturday' }, { title: 'Bear Night Saturday' }), false, 'generic words are not affinity');
   // Hours apart at one venue on one night are two events (the Montréal case).
   const early = { title: 'Concours PUP Montréal', startDate: at('2026-08-29T22:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
   const late = { title: 'KINK Playground', startDate: at('2026-08-30T02:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
