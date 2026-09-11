@@ -1133,6 +1133,13 @@ class AiWebParser {
                 console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
             }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
+            // The month grids ARE the listing: every occurrence, dated, with
+            // its page — read deterministically (see collectMecGridEvents)
+            // instead of hoping the crawl budget reaches each cell's link.
+            const mecEvents = this.collectMecGridEvents(html, monthFeedSources, sourceUrl, cityConfig);
+            if (mecEvents.length > 0) {
+                console.log(`📆 MEC GRID: built ${mecEvents.length} dated occurrence(s) from ${1 + monthFeedSources.length} month grid(s) for ${sourceUrl}`);
+            }
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
                 // Report-only cadence evidence from the page grid + month
@@ -1197,20 +1204,27 @@ class AiWebParser {
             // A Squarespace collection outranks the listing's own JSON-LD:
             // the page marks up only a LocalBusiness (never the cards), and
             // the collection is the cards, complete, with a pin per event.
+            // A month grid outranks the page's own JSON-LD when it lists
+            // more: a MEC listing page marks up its featured/upcoming subset
+            // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
-                : (completeJsonLdEvents.length > 0
-                    ? 'jsonld'
-                    : (completeJsonApiEvents.length > 0
-                        ? 'json-api'
-                        : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))));
+                : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
+                    ? 'mec'
+                    : (completeJsonLdEvents.length > 0
+                        ? 'jsonld'
+                        : (completeJsonApiEvents.length > 0
+                            ? 'json-api'
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
-                : (structuredSource === 'jsonld'
-                    ? completeJsonLdEvents
-                    : (structuredSource === 'json-api'
-                        ? completeJsonApiEvents
-                        : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)));
+                : (structuredSource === 'mec'
+                    ? mecEvents
+                    : (structuredSource === 'jsonld'
+                        ? completeJsonLdEvents
+                        : (structuredSource === 'json-api'
+                            ? completeJsonApiEvents
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1228,6 +1242,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the DICE event-list widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'squarespace') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Squarespace event collection — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'mec') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
@@ -5516,6 +5532,158 @@ class AiWebParser {
      * (fail open: no feed, page behaves exactly as before).
      * Pure string/regex work — no URL global (iOS JavaScriptCore).
      */
+    // Every dated occurrence a MEC month grid publishes, from the page's
+    // active month and the replayed month feeds. Two grid skins exist:
+    //   - cells: <dt class="mec-calendar-day" data-mec-cell="YYYYMMDD"> with
+    //     one tooltip anchor per event (title, page link) and a tooltip
+    //     body carrying the time range and a description
+    //     (thedallaseagle.com — 153 occurrences over four months);
+    //   - side list: <div class="mec-calendar-events-sec" data-mec-cell=…>
+    //     with one JSON-LD Event per occurrence (name, ?occurrence= page
+    //     link, image; date only — the time lives on the event page)
+    //     (eaglela.com — 166 occurrences over four months).
+    // Times are the venue's wall clock (anchored as UTC and flagged for the
+    // normalizer's city re-anchoring, like every offset-less date). The
+    // crawl that follows enriches what its budget reaches; the grid is what
+    // makes the rest exist at all (run 20260911-053318: 15 links followed
+    // of 118 the grids offered — Dallas Eagle 41 records for 153 dates).
+    collectMecGridEvents(html, monthFeedSources, sourceUrl, cityConfig = null) {
+        if (!html || !this.detectMecMonthlyView(html)) return [];
+        const grids = [String(html)].concat((Array.isArray(monthFeedSources) ? monthFeedSources : [])
+            .map(feed => (feed && typeof feed.html === 'string' ? feed.html : ''))
+            .filter(Boolean));
+        const events = [];
+        const seen = new Set();
+        const push = (event) => {
+            if (!event || !event.title || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+            const key = `${(event.url || event.title).toLowerCase()}|${event.startDate.toISOString().slice(0, 10)}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            events.push(event);
+        };
+        for (const grid of grids) {
+            for (const row of this.readMecGridCells(grid, sourceUrl)) push(row);
+            for (const row of this.readMecGridSideList(grid, sourceUrl, cityConfig)) push(row);
+        }
+        return events;
+    }
+
+    readMecGridCells(grid, sourceUrl) {
+        const rows = [];
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const cellPattern = /<dt\b[^>]*class="[^"]*mec-calendar-day\b[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<dt\b[^>]*class="[^"]*mec-calendar-day\b|<\/dl>)/gi;
+        let cell;
+        while ((cell = cellPattern.exec(grid)) !== null) {
+            const day = cell[1];
+            const body = cell[2];
+            const anchorPattern = /<a\b[^>]*class="[^"]*mec-monthly-tooltip[^"]*"[^>]*data-tooltip-content="#([^"]+)"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+            let anchor;
+            while ((anchor = anchorPattern.exec(body)) !== null) {
+                const tooltipId = anchor[1];
+                const href = this.normalizeHttpUrlValue(this.decodeBasicEntities(anchor[2]).trim()) || '';
+                const title = clean(anchor[3]);
+                if (!title || !href) continue;
+                const tooltipMatch = body.match(new RegExp(`<div\\s+id="${tooltipId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>([\\s\\S]*?)<span class="mec-wrap">`, 'i'));
+                const tooltip = tooltipMatch ? tooltipMatch[1] : '';
+                const timeMatch = tooltip.match(/class="[^"]*mec-tooltip-event-time[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>\s*)*<div class="mec-event-detail"/i)
+                    || tooltip.match(/class="[^"]*mec-tooltip-event-time[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+                const timeText = timeMatch ? clean(timeMatch[1]) : '';
+                const descMatch = tooltip.match(/class="mec-tooltip-event-desc"[^>]*>([\s\S]*?)<\/div>/i);
+                const event = this.buildMecOccurrenceEvent({
+                    title, href, day, timeText, description: descMatch ? clean(descMatch[1]) : ''
+                }, sourceUrl);
+                if (event) rows.push(event);
+            }
+        }
+        return rows;
+    }
+
+    readMecGridSideList(grid, sourceUrl, cityConfig) {
+        const rows = [];
+        const sectionPattern = /<div\b[^>]*class="[^"]*mec-calendar-events-sec[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*mec-calendar-events-sec\b|$)/gi;
+        let section;
+        while ((section = sectionPattern.exec(grid)) !== null) {
+            const day = section[1];
+            const body = section[2];
+            const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+            let block;
+            while ((block = blockPattern.exec(body)) !== null) {
+                let node = null;
+                try {
+                    node = JSON.parse(block[1]);
+                } catch (_) {
+                    continue;
+                }
+                if (!node || typeof node !== 'object' || !/event/i.test(String(node['@type'] || ''))) continue;
+                const href = this.normalizeHttpUrlValue(String(node.url || '').trim()) || '';
+                const cleanText = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+                const title = cleanText(node.name);
+                if (!title || !href) continue;
+                const startText = String(node.startDate || '');
+                const timeMatch = startText.match(/T(\d{2}:\d{2})/);
+                // The description arrives HTML-escaped inside the JSON
+                // ("&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;"): decode, strip, decode again.
+                const event = this.buildMecOccurrenceEvent({
+                    title, href, day,
+                    timeText: timeMatch ? timeMatch[1] : '',
+                    description: cleanText(this.decodeBasicEntities(String(node.description || '')).replace(/&amp;/gi, '&')),
+                    image: this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || ''
+                }, sourceUrl);
+                if (event) rows.push(event);
+            }
+        }
+        return rows;
+    }
+
+    // One grid occurrence → an event: the cell's date, the tooltip's time
+    // range ("7:00 pm - 9:00 pm", an end before the start rolls to the next
+    // day), the page link as the event's own page.
+    buildMecOccurrenceEvent({ title, href, day, timeText, description, image }, sourceUrl) {
+        const match = String(day || '').match(/^(\d{4})(\d{2})(\d{2})$/);
+        if (!match) return null;
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const date = Number(match[3]);
+        const parseClock = (text) => {
+            const clock = String(text || '').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+            if (!clock) return null;
+            let hour = Number(clock[1]);
+            const minute = Number(clock[2] || 0);
+            const meridiem = clock[3] ? clock[3].toLowerCase() : '';
+            if (meridiem === 'pm' && hour < 12) hour += 12;
+            if (meridiem === 'am' && hour === 12) hour = 0;
+            return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? { hour, minute } : null;
+        };
+        const range = String(timeText || '').split(/\s*[-–—]\s*/);
+        const start = parseClock(range[0]);
+        const end = range.length > 1 ? parseClock(range[1]) : null;
+        const startDate = new Date(Date.UTC(year, month - 1, date, start ? start.hour : 0, start ? start.minute : 0));
+        if (Number.isNaN(startDate.getTime())) return null;
+        let endDate = null;
+        if (start && end) {
+            endDate = new Date(Date.UTC(year, month - 1, date, end.hour, end.minute));
+            if (endDate.getTime() <= startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+        }
+        const event = {
+            title,
+            description: description || '',
+            startDate,
+            endDate,
+            timezone: null,
+            bar: '',
+            address: '',
+            url: href,
+            website: href,
+            source: 'mec',
+            _timezoneUnresolved: true
+        };
+        if (image) {
+            event.image = image;
+            event.imageSource = 'json-ld';
+        }
+        return event;
+    }
+
     detectMecMonthlyView(html) {
         const text = String(html || '');
         if (!/data-mec-cell=|mec-load-month/.test(text)) return null;
@@ -9098,6 +9266,7 @@ class AiWebParser {
         if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
         const rowArray = this.findJsonApiRowArray(payload);
         if (!rowArray || rowArray.rows.length === 0) return payload;
+        await this.reconcileJsonApiTimezoneKeys(rowArray.rows, sourceUrl, httpAdapter);
         const utcPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)$/;
         const dateKey = (key) => /(^|_)(start|end)(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
         const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
@@ -9149,6 +9318,89 @@ class AiWebParser {
             }
         }
         return payload;
+    }
+
+    // A feed whose rows state a wall clock plus a timezone key is checked
+    // ONCE against the site's own event page: when the page's JSON-LD
+    // prints the same wall-clock digits with an explicit offset that the
+    // feed's zone does not have at that instant, the feed's zone is the
+    // site's misconfiguration (WordPress "UTC-4" → TZID=America/Halifax
+    // on bearitmtl.com: every event an hour early) and the timezone keys
+    // are dropped so the city's zone anchors the wall clock instead.
+    async reconcileJsonApiTimezoneKeys(rows, sourceUrl, httpAdapter) {
+        const wallPattern = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?$/;
+        const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const startOf = (view) => view.start || view.start_date || view.startDate || view.starts_at;
+        const zoneOf = (view) => view.timezone || view.time_zone || view.tz;
+        const sample = rows.find(row => {
+            const view = this.unwrapJsonApiCandidate(row);
+            const start = startOf(view);
+            const zone = zoneOf(view);
+            const pageUrl = typeof view.url === 'string' ? view.url : '';
+            const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            return typeof start === 'string' && wallPattern.test(start) && !/T00:00|\s00:00/.test(start)
+                && typeof zone === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone)
+                && pageHost && pageHost === sourceHost;
+        });
+        if (!sample) return;
+        if (!this.jsonApiZoneVerdicts) this.jsonApiZoneVerdicts = new Map();
+        let verdict = this.jsonApiZoneVerdicts.get(sourceHost);
+        if (verdict === undefined) {
+            const view = this.unwrapJsonApiCandidate(sample);
+            const start = String(startOf(view));
+            const zone = String(zoneOf(view));
+            const digits = start.match(wallPattern);
+            verdict = false;
+            try {
+                const response = await httpAdapter.fetchData(view.url);
+                const html = response && typeof response.html === 'string' ? response.html : '';
+                const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
+                const withOffset = pageStarts.find(value => new RegExp(`^${digits[1]}T${digits[2]}(?::\\d{2})?([+-]\\d{2}:?\\d{2}|Z)$`).test(value));
+                if (withOffset) {
+                    const pageInstant = new Date(withOffset).getTime();
+                    const zoneInstant = this.wallClockInZone(digits[1], digits[2], zone);
+                    if (Number.isFinite(pageInstant) && Number.isFinite(zoneInstant) && pageInstant !== zoneInstant) {
+                        verdict = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} states zone ${zone} but its own page prints "${view.title || view.name || view.url}" as ${withOffset} — the feed's zone is off by ${Math.round((zoneInstant - pageInstant) / 60000)} min; reading every row's wall clock in the venue's own zone`);
+                    }
+                }
+            } catch (error) {
+                console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's zone (${error.message}) — zone kept`);
+            }
+            this.jsonApiZoneVerdicts.set(sourceHost, verdict);
+        }
+        if (!verdict) return;
+        for (const row of rows) {
+            for (const target of [row, this.unwrapJsonApiCandidate(row)]) {
+                if (!target || typeof target !== 'object') continue;
+                for (const key of Object.keys(target)) {
+                    if (/^(tz|time_?zone)$/.test(this.normalizeJsonApiKey(key))) delete target[key];
+                }
+            }
+        }
+    }
+
+    // Instant (ms) of a wall clock "YYYY-MM-DD" + "HH:MM" in an IANA zone.
+    wallClockInZone(dateText, timeText, zone) {
+        const [year, month, day] = dateText.split('-').map(Number);
+        const [hour, minute] = timeText.split(':').map(Number);
+        const base = Date.UTC(year, month - 1, day, hour, minute, 0);
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const zonedAsUtc = (ms) => {
+                const parts = Object.fromEntries(formatter.formatToParts(new Date(ms)).map(part => [part.type, part.value]));
+                return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour) % 24, Number(parts.minute), Number(parts.second));
+            };
+            let guess = base;
+            for (let i = 0; i < 3; i++) {
+                const next = base - (zonedAsUtc(guess) - guess);
+                if (next === guess) break;
+                guess = next;
+            }
+            return guess;
+        } catch (_) {
+            return NaN;
+        }
     }
 
     extractEventsFromJsonApiPayload(parsed, sourceUrl, cityConfig = null) {

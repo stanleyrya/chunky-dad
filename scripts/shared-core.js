@@ -34,6 +34,7 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 const DEAD_END_CAPABILITY = 'machine-door-2026-09';
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
+const MACHINE_DOOR_MAX_PROBES = 12;
 const MACHINE_DOOR_WELL_KNOWN_PATHS = [
     '/feed.json',
     '/events.json',
@@ -12482,16 +12483,26 @@ class SharedCore {
         const pageEventCount = this.extractJsonLdEventNodes(html).length;
         const tried = [];
         const answered = [];
-        for (const candidate of candidates.slice(0, 8)) {
+        let consecutiveNetworkFailures = 0;
+        for (const candidate of candidates.slice(0, MACHINE_DOOR_MAX_PROBES)) {
             let body = '';
             let statusCode = null;
             try {
                 const response = await httpAdapter.fetchData(candidate, { headers: { Accept: 'application/json, text/calendar, application/feed+json, */*' } });
                 body = response && typeof response.html === 'string' ? response.html : '';
                 statusCode = response && Number.isFinite(Number(response.statusCode)) ? Number(response.statusCode) : null;
+                consecutiveNetworkFailures = 0;
             } catch (error) {
                 this.recordDeadEndNetworkFailure({ url: candidate, currentDepth: 1 });
                 tried.push(`${candidate} (${error && error.message ? error.message : 'error'})`);
+                // A host dropping the connection three probes running is
+                // refusing, not answering — every further probe would cost
+                // a full timeout (thedallaseagle.com: nine "fetch failed").
+                consecutiveNetworkFailures += 1;
+                if (consecutiveNetworkFailures >= 3) {
+                    tried.push('host refusing — probing stopped');
+                    break;
+                }
                 continue;
             }
             const door = this.readMachineDoorBody(body, candidate);
@@ -12578,15 +12589,25 @@ class SharedCore {
             const path = lower.split(/[?#]/)[0];
             if (path.endsWith('.json') || path.endsWith('.ics') || /[?&](?:format=json|ical=1|outlook-ical=1)\b/.test(lower)) add(value);
         }
-        // Well-known paths only on a hint: the page advertises a feed (so
-        // the site publishes feeds — its JSON twin is worth one request
-        // each), or carries WordPress markers (its events REST routes). A
-        // page with no hint is read as a page; no blind probing.
+        // Well-known paths only on a hint, platform-implied routes first:
+        // WordPress markers → its events REST routes (the richest door a
+        // WordPress events site has — bearitmtl.com's Tribe REST answers
+        // 29 fields a row where its iCalendar answers 8); a feed advertised
+        // → the site publishes feeds, so its generic twins are worth one
+        // request each. A page with no hint is read as a page.
         const advertised = ordered.length > 0;
         const wordpress = /\/wp-(?:content|json|includes)\//i.test(source);
-        for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
-            const isWordPressRoute = wellKnown.startsWith('/wp-json/') || wellKnown.includes('?ical=1');
-            if ((advertised && !isWordPressRoute) || (wordpress && isWordPressRoute)) add(`${origin}${wellKnown}`);
+        if (wordpress) {
+            for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+                if (wellKnown.startsWith('/wp-json/')) add(`${origin}${wellKnown}`);
+            }
+        }
+        if (advertised || wordpress) {
+            for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+                if (wellKnown.startsWith('/wp-json/')) continue;
+                if (wellKnown.includes('?ical=1') && !wordpress) continue;
+                add(`${origin}${wellKnown}`);
+            }
         }
         return ordered;
     }
@@ -12624,9 +12645,15 @@ class SharedCore {
         const iso = (entry) => {
             if (!entry || !entry.wall) return '';
             if (entry.isDateOnly) return `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}`;
-            // Floating (no TZID, no Z) is the venue's wall clock: no offset.
-            if (!entry.tzid) return wallIso(entry);
-            return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+            // A Z instant is exact. Everything else is the venue's wall
+            // clock, offset-less; a TZID rides along as the row's timezone
+            // key — where the JSON-API reader can still check it against
+            // the site's own page (a WordPress site set to a fixed
+            // "UTC-4" exports TZID=America/Halifax for Montréal events).
+            if (entry.tzid === 'UTC') {
+                return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+            }
+            return wallIso(entry);
         };
         const start = iso(record.start);
         if (!start) return null;
@@ -12648,7 +12675,7 @@ class SharedCore {
         };
         if (record.rrule) row.rrule = record.rrule;
         const tzid = record.start.tzid;
-        if (tzid && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
+        if (tzid && tzid !== 'UTC' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
         return row;
     }
 

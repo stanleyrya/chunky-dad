@@ -13043,6 +13043,65 @@ const MEC_SEPTEMBER_RESPONSE_JSON = JSON.stringify({
   next_month: { label: '2026 October', id: '202610', year: '2026', month: '10' }
 });
 
+// The two grid skins, trimmed from the real October feeds (thedallaseagle.com
+// cells with tooltips; eaglela.com side list with one JSON-LD per occurrence).
+const MEC_CELLS_GRID = `
+  <dl class="mec-calendar-row">
+    <dt class="mec-calendar-day " data-mec-cell="20261007" data-day="7" data-month="202610"><div class="">7</div>
+      <div class="ended-relative simple-skin-ended"><a class="mec-monthly-tooltip event-single-link-simple" data-tooltip-content="#mec-tooltip-96201790794800-20261007" data-event-id="9620" href="https://venue.example/events/underwear-happy-hour-19/" ><h4 class="mec-event-title">Underwear Happy Hour</h4></a></div>
+      <div class="tooltip_templates event-single-content-simple"><div id="mec-tooltip-96201790794800-20261007"><div class="mec-tooltip-event-title">Underwear Happy Hour</div><div class="mec-tooltip-event-time"><i class="mec-sl-clock-o"></i> 7:00 pm - 9:00 pm</div><div class="mec-event-detail"></div><div class="mec-tooltip-event-content"><div class="mec-tooltip-event-desc">Every Wednesday evening is UNDERWEAR HAPPY HOUR &amp; more</div></div><span class="mec-wrap"><span id="x"></span></span></div></div>
+      <div class="ended-relative simple-skin-ended"><a class="mec-monthly-tooltip event-single-link-simple" data-tooltip-content="#mec-tooltip-96211790802000-20261007" data-event-id="9621" href="https://venue.example/events/jocktoberfest/" ><h4 class="mec-event-title">Jocktoberfest! with DJ Drew G</h4></a></div>
+      <div class="tooltip_templates event-single-content-simple"><div id="mec-tooltip-96211790802000-20261007"><div class="mec-tooltip-event-title">Jocktoberfest! with DJ Drew G</div><div class="mec-event-detailed-time mec-tooltip-event-time mec-color"><i class="mec-sl-clock-o"></i> <div class="mec-detailed-time-wrapper"><div class="mec-start-time">9:00 pm</div> - <div class="mec-end-time">2:00 am</div></div></div><div class="mec-event-detail"></div><div class="mec-tooltip-event-content"><div class="mec-tooltip-event-desc">Lederhosen optional.</div></div><span class="mec-wrap"><span id="y"></span></span></div></div>
+    </dt>
+    <dt class="mec-calendar-day " data-mec-cell="20261008" data-day="8" data-month="202610"><div class="">8</div></dt>
+  </dl>`;
+const MEC_SIDE_LIST_GRID = `
+  <div class="mec-calendar-events-sec" id="mec-calendar-events-sec-910-20261004" data-mec-cell="20261004"><h6 class="mec-table-side-title">Events for October</h6><h3 class="mec-color mec-table-side-day"> 4th</h3>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"Event","startDate":"2026-10-04","endDate":"2026-10-04","location":{"@type":"Place","name":"","address":""},"offers":{"url":"https://venue.example/events/sunday-beer-bust-4/"},"description":"&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;","image":"https://venue.example/wp-content/uploads/bust.jpg","name":"SUNDAY BEER BUST","url":"https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04"}</script>
+    <article class="mec-event-article"><h4 class="mec-event-title"><a href="https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04">SUNDAY BEER BUST</a></h4></article>
+    <script type="application/ld+json">{"@type":"Event","startDate":"2026-10-04T21:00","name":"CUBSCOUT","url":"https://venue.example/events/cubscout/?occurrence=2026-10-04"}</script>
+  </div>
+  <div class="mec-calendar-events-sec" id="mec-calendar-events-sec-910-20261007" data-mec-cell="20261007">
+    <script type="application/ld+json">{"@type":"Event","startDate":"2026-10-07","name":"HUMP NIGHT","url":"https://venue.example/events/hump-night/?occurrence=2026-10-07"}</script>
+  </div>`;
+
+test('MEC grid reader: every cell occurrence becomes a dated event — cell date, tooltip time range, page link, description', () => {
+  const parser = createParser();
+  const rows = parser.readMecGridCells(MEC_CELLS_GRID, 'https://venue.example/events/');
+  assert.equal(rows.length, 2);
+  const [happy, jock] = rows;
+  assert.equal(happy.title, 'Underwear Happy Hour');
+  assert.equal(happy.startDate.toISOString(), '2026-10-07T19:00:00.000Z', 'wall clock anchored as UTC');
+  assert.equal(happy.endDate.toISOString(), '2026-10-07T21:00:00.000Z');
+  assert.equal(happy._timezoneUnresolved, true, 'flagged for city re-anchoring');
+  assert.equal(happy.url, 'https://venue.example/events/underwear-happy-hour-19/');
+  assert.equal(happy.description, 'Every Wednesday evening is UNDERWEAR HAPPY HOUR & more');
+  assert.equal(happy.source, 'mec');
+  assert.equal(jock.title, 'Jocktoberfest! with DJ Drew G');
+  assert.equal(jock.startDate.toISOString(), '2026-10-07T21:00:00.000Z', 'the detailed-time skin reads the same');
+  assert.equal(jock.endDate.toISOString(), '2026-10-08T02:00:00.000Z', 'an end before the start is past midnight');
+});
+
+test('MEC grid reader: a side-list grid yields one event per JSON-LD occurrence — cell date, ?occurrence= link, artwork; time only when stated', () => {
+  const parser = createParser();
+  const rows = parser.readMecGridSideList(MEC_SIDE_LIST_GRID, 'https://venue.example/calendar/', null);
+  assert.deepEqual(rows.map(r => [r.title, r.startDate.toISOString(), r.url]), [
+    ['SUNDAY BEER BUST', '2026-10-04T00:00:00.000Z', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'],
+    ['CUBSCOUT', '2026-10-04T21:00:00.000Z', 'https://venue.example/events/cubscout/?occurrence=2026-10-04'],
+    ['HUMP NIGHT', '2026-10-07T00:00:00.000Z', 'https://venue.example/events/hump-night/?occurrence=2026-10-07']
+  ]);
+  assert.equal(rows[0].image, 'https://venue.example/wp-content/uploads/bust.jpg');
+  assert.equal(rows[0].description, 'Beer & bears', 'double-escaped description decoded and stripped');
+});
+
+test('MEC grid reader: the page\'s own month plus the replayed feeds, de-duplicated per page+day; only on a MEC page', () => {
+  const parser = createParser();
+  const page = `${MEC_MONTH_GRID_PAGE_HTML}${MEC_CELLS_GRID}`;
+  const events = parser.collectMecGridEvents(page, [{ label: '2026-10', html: MEC_CELLS_GRID }, { label: '2026-11', html: MEC_SIDE_LIST_GRID }], 'https://venue.example/events/', null);
+  assert.equal(events.length, 5, '2 cell occurrences (repeated grid folded) + 3 side-list occurrences');
+  assert.deepEqual(parser.collectMecGridEvents('<html><body>No calendar here</body></html>', [{ label: 'x', html: MEC_CELLS_GRID }], 'https://plain.example/', null), [], 'not a MEC page → nothing');
+});
+
 test('a MEC month-grid page replays its own admin-ajax month feed and harvests next month\'s links', async () => {
   const parser = createParser();
   const postCalls = [];
