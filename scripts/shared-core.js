@@ -17426,11 +17426,19 @@ class SharedCore {
         // run 20260911), so agreeing coordinates never outrank two different
         // bar names, two different street addresses, or two different
         // ticket links. The name rung below still meets those pairs.
+        // …and the two records must be RELATED beyond the slot: one was
+        // reached through the other's own link (a listing stub and the
+        // ticket page it points at), or their names share a distinctive
+        // word / differ by an OCR slip. Two unrelated names in one slot at
+        // one venue are two rooms (tockify thotyssey feed, run 20260911:
+        // "PANTHEON: A Classic Queer Dance Party" folded into "Goldiloxx:
+        // Bear Tea at 3 Dollar Bill" — same building, same 4pm).
         if (this.areDatesEqual(incoming.startDate, existing.startDate, 15)
             && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
             && (incoming.bar || incoming.address) && (existing.bar || existing.address)
             && this.areIdentityPlacesSimilar(incoming, existing)
-            && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)) {
+            && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)
+            && (this.recordsShareLinkLineage(newEvent, existingEvent) || this.namesHaveAffinity(newEvent, existingEvent))) {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -17631,6 +17639,61 @@ class SharedCore {
     // Positive evidence that two records describe DIFFERENT events: both carry place
     // information and the places do not match. Used to veto key-collision merges —
     // a missing venue on either side stays inconclusive (returns false).
+    // TRUE when one record was scraped from a page the other links to (its
+    // ticketUrl / website / url): the listing stub and its own ticket page.
+    recordsShareLinkLineage(eventA, eventB) {
+        const key = (url) => {
+            if (typeof url !== 'string' || !url.trim()) return '';
+            const match = url.trim().split('?')[0].match(/^https?:\/\/([^/?#]+)(\/[^#]*)?/i);
+            return match ? `${match[1].toLowerCase().replace(/^www\./, '')}${(match[2] || '/').replace(/\/+$/, '') || '/'}` : '';
+        };
+        const linksOf = (event) => [event && event.ticketUrl, event && event.website, event && event.url].map(key).filter(Boolean);
+        const sourceA = key(eventA && eventA._sourcePageUrl);
+        const sourceB = key(eventB && eventB._sourcePageUrl);
+        return Boolean((sourceA && linksOf(eventB).includes(sourceA)) || (sourceB && linksOf(eventA).includes(sourceB)));
+    }
+
+    // TRUE when the two names share a distinctive word (5+ letters, not
+    // generic event vocabulary) or a pair of such words one OCR slip apart
+    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
+    namesHaveAffinity(eventA, eventB) {
+        const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
+            'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
+        const tokens = (event) => {
+            const names = [event && event.title, event && event.shortName, event && event.name].filter(value => typeof value === 'string');
+            const out = new Set();
+            for (const name of names) {
+                const lower = this.decodeBasicHtmlEntities(name).toLowerCase();
+                for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word)) out.add(word);
+                }
+                // The whole name squashed: an OCR slip that inserts
+                // punctuation ("GOLDII.OXX") splits the word it misread.
+                const squashed = lower.replace(/[^a-z0-9]+/g, '');
+                if (squashed.length >= 6) out.add(squashed);
+            }
+            return [...out];
+        };
+        const a = tokens(eventA);
+        const b = tokens(eventB);
+        if (a.length === 0 || b.length === 0) return false;
+        const within = (x, y, max) => {
+            if (Math.abs(x.length - y.length) > max) return false;
+            const prev = Array.from({ length: y.length + 1 }, (_, i) => i);
+            for (let i = 1; i <= x.length; i++) {
+                let last = prev[0];
+                prev[0] = i;
+                for (let j = 1; j <= y.length; j++) {
+                    const temp = prev[j];
+                    prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, last + (x[i - 1] === y[j - 1] ? 0 : 1));
+                    last = temp;
+                }
+            }
+            return prev[y.length] <= max;
+        };
+        return a.some(x => b.some(y => x === y || (x.length >= 6 && y.length >= 6 && within(x, y, 1))));
+    }
+
     // TRUE when both records state a place/ticket fact and the facts differ:
     // two bar names that are not the same bar, two street addresses (both
     // numbered) that are not the same street address, or two ticket links

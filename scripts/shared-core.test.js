@@ -21453,7 +21453,20 @@ test('same venue at the same start instant is one event, whatever each record ca
   assert.equal(core.getSameEventIdentitySignal(wanted, dolly), null, 'shared pin never outranks two different rooms');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '', address: '' }, { ...dolly, bar: '', address: '' }), null, 'two different ticket links alone contradict');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null, 'same bar, different street numbers still contradict');
-  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), 'place-exact-start', 'one-sided evidence is not a contradiction');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null,
+    'one-sided place evidence is no contradiction, but "WANTED" and "Dolly Disco" are unrelated names — two rooms, not one party');
+  // Same building, same 4pm, unrelated names, no links at all (tockify
+  // thotyssey feed): two events.
+  const tea = { title: 'Goldiloxx: Bear Tea at 3 Dollar Bill', startDate: at('2026-09-12T20:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn' };
+  const pantheon = { title: 'PANTHEON: A Classic Queer Dance Party', startDate: at('2026-09-12T20:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn' };
+  assert.equal(core.getSameEventIdentitySignal(pantheon, tea), null);
+  // A listing stub and the ticket page reached through its own link are one
+  // event whatever the page calls it.
+  const stub = { title: 'October', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://tickets.example/e/pdx-oct' };
+  const child = { title: 'Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', _sourcePageUrl: 'https://tickets.example/e/pdx-oct' };
+  assert.equal(core.getSameEventIdentitySignal(child, stub), 'place-exact-start');
+  assert.equal(core.namesHaveAffinity({ title: 'GOLDII.OXX' }, { title: 'GOLDILOXX Chicago' }), true);
+  assert.equal(core.namesHaveAffinity({ title: 'Bear Party Saturday' }, { title: 'Bear Night Saturday' }), false, 'generic words are not affinity');
   // Hours apart at one venue on one night are two events (the Montréal case).
   const early = { title: 'Concours PUP Montréal', startDate: at('2026-08-29T22:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
   const late = { title: 'KINK Playground', startDate: at('2026-08-30T02:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
