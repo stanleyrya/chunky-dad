@@ -6247,8 +6247,10 @@ class AiWebParser {
     collectSquarespaceCollectionItems(payload) {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
         const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
+        // "events", "events-stacked", "events-list" — the layout variants
+        // of one collection type (massbearsandcubs.org, trial 2026-09-12).
         const typeName = String(collection.typeName || '').toLowerCase();
-        if (typeName && typeName !== 'events') return [];
+        if (typeName && !/^events?(?:[-_]|$)/.test(typeName)) return [];
         const isDatedItem = (item) => item && typeof item === 'object' && !Array.isArray(item)
             && typeof item.title === 'string' && item.title.trim() !== ''
             && typeof item.startDate === 'number' && item.startDate > 1e11 && item.startDate < 1e13;

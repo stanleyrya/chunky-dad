@@ -16915,6 +16915,8 @@ test('Squarespace collection: the listing\'s JSON twin is read on the configured
   assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: '<html><body class="collection-type-events"><div class="eventlist"></div></body></html>', url: 'https://www.3dollarbillbk.example/rsvp' }, config, otherPlatform.httpAdapter), []);
   assert.deepEqual(otherPlatform.fetched, [], 'the events class alone, without the platform context, is not the platform');
 
+  const stacked = squarespaceStubAdapter({ collection: { typeName: 'events-stacked' }, upcoming: [{ id: 's', title: 'Bear Tea', startDate: 1789250400000, fullUrl: '/events/bear-tea' }] });
+  assert.equal((await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, stacked.httpAdapter)).length, 1, 'layout variants of the events type are read');
   const blogTwin = squarespaceStubAdapter({ collection: { typeName: 'blog' }, items: [{ id: 'b', title: 'Post', startDate: 1789250400000 }] });
   assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, blogTwin.httpAdapter), [], 'a non-events collection is not read');
 
