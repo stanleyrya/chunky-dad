@@ -6774,7 +6774,10 @@ class AiWebParser {
      * string parsing, no timezone involvement.
      */
     deriveCadenceRrule(dates) {
-        if (!Array.isArray(dates) || dates.length < 2) return null;
+        // Two dates prove nothing (any two Fridays a month apart "are" a
+        // 3rd-Friday series — UNDERBEAR 9/18 + 10/16 was proposed as one,
+        // daily run 20260912-063741; owner: three, minimum).
+        if (!Array.isArray(dates) || dates.length < 3) return null;
         const parts = [];
         for (const date of dates) {
             const match = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);

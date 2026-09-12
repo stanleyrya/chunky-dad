@@ -14358,8 +14358,10 @@ test('deriveCadenceRrule: weekly needs same weekday + a run of 3 consecutive 7-d
   assert.equal(parser.deriveCadenceRrule(['2026-08-05', '2026-08-19', '2026-09-02', '2026-09-16']), null);
   // Mixed weekdays never derive.
   assert.equal(parser.deriveCadenceRrule(['2026-08-05', '2026-08-13', '2026-08-21', '2026-08-29']), null);
-  // Monthly: >=2 observations, all different months, same ordinal weekday.
-  assert.deepEqual(parser.deriveCadenceRrule(['2026-08-07', '2026-09-04']), { rrule: 'FREQ=MONTHLY;BYDAY=1FR' });
+  // Monthly: >=3 observations, all different months, same ordinal weekday
+  // (two dates are a coincidence, not a rule — owner decision 2026-09-12).
+  assert.equal(parser.deriveCadenceRrule(['2026-08-07', '2026-09-04']), null);
+  assert.deepEqual(parser.deriveCadenceRrule(['2026-08-07', '2026-09-04', '2026-10-02']), { rrule: 'FREQ=MONTHLY;BYDAY=1FR' });
   // Same ordinal but a repeated month fails closed.
   assert.equal(parser.deriveCadenceRrule(['2026-08-08', '2026-08-22', '2026-09-12']), null);
   // Single observation derives nothing.
@@ -14468,6 +14470,12 @@ test('applyDerivedCadenceStamps: a monthly pair on per-date slugs keeps both occ
       startDate: new Date('2026-09-04T21:00:00.000Z'), // 1st Friday
       endDate: new Date('2026-09-04T23:00:00.000Z'),
       url: 'https://fixture-eagle.example/events/cub-scout-4/'
+    }),
+    buildCadenceStampRecord({
+      title: 'CUB SCOUT',
+      startDate: new Date('2026-10-02T21:00:00.000Z'), // 1st Friday
+      endDate: new Date('2026-10-02T23:00:00.000Z'),
+      url: 'https://fixture-eagle.example/events/cub-scout-5/'
     })
   ];
   parser.applyDerivedCadenceStamps(records);
@@ -14475,7 +14483,7 @@ test('applyDerivedCadenceStamps: a monthly pair on per-date slugs keeps both occ
     assert.equal(record.recurrenceRule, undefined, 'no series conversion on per-date slugs');
     assert.ok(record._seriesInfo, 'family metadata stamped');
     assert.equal(record._seriesInfo.rrule, 'FREQ=MONTHLY;BYDAY=1FR', 'derived cadence kept as metadata');
-    assert.equal(record._seriesInfo.occurrences, 2);
+    assert.equal(record._seriesInfo.occurrences, 3);
   }
 });
 
@@ -14748,6 +14756,16 @@ test('applyDerivedCadenceStamps: per-record guest-DJ suffixes still group into o
       startDate: new Date('2026-09-12T02:00:00.000Z'), // Fri Sep 11, 9pm CDT — 2nd Friday
       endDate: new Date('2026-09-12T07:00:00.000Z'),
       url: 'https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/',
+      recurrenceRule: 'FREQ=MONTHLY',
+      source: 'ai-web'
+    },
+    {
+      title: 'Discipline Corps Bar Night with DJ Qwest',
+      bar: 'Dallas Eagle',
+      timezone: 'America/Chicago',
+      startDate: new Date('2026-11-14T03:00:00.000Z'), // Fri Nov 13, 9pm CST — 2nd Friday
+      endDate: new Date('2026-11-14T08:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/discipline-corps-bar-night-with-dj-qwest/',
       recurrenceRule: 'FREQ=MONTHLY',
       source: 'ai-web'
     },

@@ -14219,6 +14219,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // url is an alias/view of website (ONE canonical field) — comparing it
       // separately rendered a phantom second links row on every diff.
       "url",
+      // Bookkeeping the scraper regenerates every run — the dedup key, the
+      // derived maps link, the timezone resolved from the city, and the
+      // provenance companions (barSource, pinSource, …). They are saved
+      // (notes carry them) but they are not a change worth a diff row
+      // (owner review 2026-09-12: "save what is needed, just don't show it
+      // as a diff to me").
+      "key",
+      "timezone",
       "isBearEvent",
       "source",
       "city",
@@ -14798,8 +14806,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
               ? "unstamped"
               : this.escapeHtml(String(val));
           if (existingTier !== null && finalTier !== null && finalTier >= existingTier) {
-            flowIcon = "→";
-            resultText = `<span style="color: #34c759;">PROVENANCE UPGRADED (${describeStamp(existingValue)} → ${describeStamp(finalValue)})</span>`;
+            // A provenance stamp that stayed level or got better is
+            // bookkeeping, not a change: saved, never a diff row (owner
+            // 2026-09-12). Only a DOWNGRADE below still warns.
+            return;
           } else if (existingTier !== null && finalTier !== null) {
             flowIcon = "⚠️";
             resultText = `<span style="color: #ff3b30;">PROVENANCE DOWNGRADED (${describeStamp(existingValue)} → ${describeStamp(finalValue)})</span>`;
