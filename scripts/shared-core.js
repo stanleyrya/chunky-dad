@@ -10877,11 +10877,21 @@ class SharedCore {
             const existingWallClock = Boolean(existingEvent._timezoneUnresolved);
             const newWallClock = Boolean(newEvent._timezoneUnresolved);
             if (existingWallClock || newWallClock) {
+                // Same INSTANT, not same object: arbitration hands back fresh
+                // Date objects, and a reference miss fell through to "from
+                // new" — a timezone-anchored start that won the merge was
+                // then re-anchored as wall clock (clubchubusa.com, audit
+                // 2026-09-12: Club Chub Weekend 11:00 → 18:00 PDT).
+                const sameInstant = (a, b) => {
+                    const millisA = SharedCore.toEpochMillis(a);
+                    const millisB = SharedCore.toEpochMillis(b);
+                    return Number.isFinite(millisA) && Number.isFinite(millisB) && millisA === millisB;
+                };
                 const finalDateIsWallClock = (fieldName) => {
                     const value = mergedEvent[fieldName];
                     if (isEmpty(value)) return false;
-                    const fromExisting = value === existingEvent[fieldName];
-                    const fromNew = value === newEvent[fieldName];
+                    const fromExisting = value === existingEvent[fieldName] || sameInstant(value, existingEvent[fieldName]);
+                    const fromNew = value === newEvent[fieldName] || sameInstant(value, newEvent[fieldName]);
                     if (fromExisting && fromNew) return existingWallClock && newWallClock;
                     if (fromExisting) return existingWallClock;
                     if (fromNew) return newWallClock;

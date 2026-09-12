@@ -1134,6 +1134,12 @@ class AiWebParser {
             if (squarespaceRows.length > 0) {
                 console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
             }
+            // Wix Events sites ship their whole upcoming list in the page's
+            // own warmup blob (see collectWixEventListEvents).
+            const wixEvents = this.collectWixEventListEvents(html, sourceUrl, parserConfig);
+            if (wixEvents.length > 0) {
+                console.log(`🟪 WIX EVENTS: built ${wixEvents.length} event(s) from the page's own events widget for ${sourceUrl}`);
+            }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
             // The month grids ARE the listing: every occurrence, dated, with
             // its page — read deterministically (see collectMecGridEvents)
@@ -1212,22 +1218,26 @@ class AiWebParser {
             // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
+                : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
+                    ? 'wix'
                 : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
                     ? 'mec'
                     : (completeJsonLdEvents.length > 0
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
-                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)))));
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
+                : (structuredSource === 'wix'
+                    ? wixEvents
                 : (structuredSource === 'mec'
                     ? mecEvents
                     : (structuredSource === 'jsonld'
                         ? completeJsonLdEvents
                         : (structuredSource === 'json-api'
                             ? completeJsonApiEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))));
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1247,6 +1257,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Squarespace event collection — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'mec') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'wix') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
@@ -6130,7 +6142,10 @@ class AiWebParser {
         for (let page = 0; nextUrl && page < 5; page++) {
             let payload = null;
             try {
-                const response = await httpAdapter.fetchData(nextUrl, { headers: { 'x-api-key': widget.apiKey, Accept: 'application/json', Referer: sourceUrl } });
+                // Some partner keys are origin-scoped (401 without the site's
+                // own Origin — cmoneverybody.com); send the page's origin.
+                const pageOrigin = (String(sourceUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+                const response = await httpAdapter.fetchData(nextUrl, { headers: { 'x-api-key': widget.apiKey, Accept: 'application/json', Referer: sourceUrl, ...(pageOrigin ? { Origin: pageOrigin } : {}) } });
                 const body = response && typeof response.html === 'string' ? response.html : '';
                 payload = body ? JSON.parse(body) : null;
             } catch (error) {
@@ -8948,6 +8963,51 @@ class AiWebParser {
         return collected;
     }
 
+    // A Wix Events listing page is its own machine door: the warmup blob
+    // carries every upcoming event with exact UTC instants, IANA zone,
+    // address, pin, artwork and slug (chunk-party.com: 15 rows; the AI
+    // segmented 16 windows and enriched afterwards — 5 timezone alarms and
+    // 13 merges for 3 events, audit 2026-09-12). Only on the configured
+    // entry page (the blob rides on every page), and only when the page's
+    // own links show where event pages live, is the slug made a link.
+    collectWixEventListEvents(html, sourceUrl, parserConfig) {
+        if (!html || !sourceUrl || !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return [];
+        const records = this.extractWixServerEventList(html).filter(record => record && record.title && record.startDateUtc instanceof Date);
+        if (records.length === 0) return [];
+        const origin = (String(sourceUrl).match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        // The site's own event-page route, learned from its links.
+        const routeMatch = String(html).match(/href=["'](?:https?:\/\/[^/"']+)?(\/[a-z0-9-]*event[a-z0-9-]*\/)[a-z0-9-]+["']/i);
+        const route = routeMatch ? routeMatch[1] : '';
+        const events = [];
+        const seen = new Set();
+        for (const record of records) {
+            const key = `${record.slug || record.title.toLowerCase()}|${record.startDateUtc.toISOString()}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const pageUrl = route && record.slug ? `${origin}${route}${record.slug}` : '';
+            const event = {
+                title: record.title,
+                description: '',
+                startDate: record.startDateUtc,
+                endDate: record.endDateUtc instanceof Date && record.endDateUtc.getTime() > record.startDateUtc.getTime() ? record.endDateUtc : null,
+                timezone: record.timezone || null,
+                bar: '',
+                address: record.address || '',
+                url: pageUrl || sourceUrl,
+                website: pageUrl || sourceUrl,
+                source: 'wix'
+            };
+            if (record.coordinates) event.location = record.coordinates;
+            if (record.cover) event.cover = record.cover;
+            if (record.image) {
+                event.image = record.image;
+                event.imageSource = 'json-api';
+            }
+            events.push(event);
+        }
+        return events;
+    }
+
     buildWixServerEventRecord(node, tickets) {
         const clean = (value) => typeof value === 'string' ? this.normalizeWhitespace(value) : '';
         const location = node.location && typeof node.location === 'object' ? node.location : {};
@@ -9406,7 +9466,7 @@ class AiWebParser {
             .filter(value => value && typeof value === 'object' && !Array.isArray(value));
         for (const container of containers) {
             for (const key of Object.keys(container)) {
-                if (!/^(next|next_url|next_page|next_page_url|next_link)$/.test(this.normalizeJsonApiKey(key))) continue;
+                if (!/^(next|next_url|next_page|next_page_url|next_link|next_rest_url)$/.test(this.normalizeJsonApiKey(key))) continue;
                 const link = absolute(container[key]);
                 if (link && link !== sourceUrl) return link;
             }
