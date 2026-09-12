@@ -13159,6 +13159,20 @@ test('a single-event page\'s own heading names the event when the model answered
   assert.equal(normalized.title, 'Bear Night');
 });
 
+test('social share endpoints are not profiles, and ticket-utility pages are never crawled', () => {
+  const parser = createParser();
+  const links = parser.extractStaticSocialLinks
+    ? parser.extractStaticSocialLinks('<a href="https://www.facebook.com/sharer.php?u=https://x.example/e/1">Share</a><a href="https://www.facebook.com/goldiloxxparty">FB</a><a href="https://www.instagram.com/accounts/login/">IG login</a><a href="https://instagram.com/goldiloxx">IG</a>')
+    : null;
+  if (links) {
+    assert.equal(links.facebook, 'https://www.facebook.com/goldiloxxparty');
+    assert.equal(links.instagram, 'https://instagram.com/goldiloxx');
+  }
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago/resend', 'https://sickening.events/events?q=goldiloxx').reason, 'ticket-utility-page');
+  assert.equal(parser.validateEventUrl('https://www.eventbrite.com/e/x-123/refund', 'https://x.example/').reason, 'ticket-utility-page');
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago', 'https://sickening.events/events?q=goldiloxx').valid, true);
+});
+
 test('a venue closure notice is not an event; markup inside HTML comments is not on the page; an all-day widget row has no clock', () => {
   const parser = createParser();
   for (const title of ['CLOSED FOR A PRIVATE EVENT', 'Closed for Labor Day', 'CLOSED DUE TO WEATHER', 'CLOSED for Pride Recovery!', 'We will reopen Tuesday', 'No events tonight!', 'Bar closed']) {

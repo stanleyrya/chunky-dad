@@ -12325,6 +12325,17 @@ class AiWebParser {
             return lowerPath === lp || lowerPath.startsWith(lp + '/');
         });
         if (isWordPressInfra) return { valid: false, reason: 'wordpress-infrastructure' };
+        // Ticket-utility pages (resend/refund/waitlist/checkout/login…) are
+        // account plumbing, never event pages: goldiloxx's listing linked
+        // /e/…/resend on both platforms and the crawl ran AI + OCR on them
+        // (audit 2026-09-13), inventing a 2024 date.
+        {
+            const segments = lowerPath.split('/').filter(Boolean);
+            const last = segments.length > 0 ? segments[segments.length - 1] : '';
+            if (/^(?:resend|refund|refunds|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
+                return { valid: false, reason: 'ticket-utility-page' };
+            }
+        }
         // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages
         if (/\{[^}]+\}/.test(url)) {
             return { valid: false, reason: 'template-url' };
@@ -24691,6 +24702,11 @@ TEXT:
             const host = String(parsedUrl.hostname || '').toLowerCase();
             const isInstagram = host === 'instagram.com' || host.endsWith('.instagram.com');
             const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
+            // A share/login/embed endpoint on a social host is page chrome,
+            // not the event's profile (goldiloxx: facebook.com/sharer.php?u=…
+            // became the calendar's facebook link, audit 2026-09-13).
+            const socialPath = (() => { try { return new URL(normalized).pathname.toLowerCase(); } catch (_) { return ''; } })();
+            if ((isInstagram || isFacebook) && /^\/(?:sharer(?:\.php)?|share|dialog|login|intent|plugins|embed|oauth|privacy|policies|help|tr|v\d+\.\d+)(?:\/|$)/.test(socialPath)) continue;
             const isGoogleMaps = this.isGoogleMapsUrl(parsedUrl);
             if (!instagram && isInstagram) instagram = normalized;
             if (!facebook && isFacebook) facebook = normalized;
