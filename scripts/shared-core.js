@@ -4081,6 +4081,30 @@ class SharedCore {
                     };
                 }
             }
+            // A title the site's own listing states (a month grid cell, a
+            // feed row, JSON-LD) beats a phrase the model lifted from a
+            // page's body — unless the model's title is the listing's title
+            // plus a subtitle. thedallaseagle.com's "Bear Night" post opens
+            // with "Second Fridays…", and the crawled page's AI read won the
+            // merge over the grid's own title (daily run 20260912-063741).
+            if (context && context.records && context.records.a && context.records.b) {
+                const structuredSources = new Set(['mec', 'jsonld', 'json-ld', 'json-api', 'squarespace', 'wix', 'elfsight', 'dice']);
+                const isStructured = (record) => Boolean(record && typeof record.source === 'string' && structuredSources.has(record.source.toLowerCase()));
+                const structuredA = isStructured(context.records.a);
+                const structuredB = isStructured(context.records.b);
+                if (structuredA !== structuredB) {
+                    const fold = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                    const stated = structuredA ? valueA : valueB;
+                    const derived = structuredA ? valueB : valueA;
+                    const derivedExtends = fold(stated) && fold(derived).includes(fold(stated)) && fold(derived).length > fold(stated).length;
+                    if (!derivedExtends) {
+                        return {
+                            winner: structuredA ? 'a' : 'b',
+                            reason: 'the listing\'s own stated title beats a title read from body text'
+                        };
+                    }
+                }
+            }
             // Title doctrine rung: the venue's name belongs in the bar field,
             // not the title (run 20260725-170926: "…Singlet Night at the
             // Dallas Eagle" vs "Singlet Night with DJ Drew G" — the venue-free

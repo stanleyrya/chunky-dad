@@ -21482,6 +21482,16 @@ test('a bare site root in ticketUrl is a website, not a ticket link', () => {
   } finally { console.log = originalLog; }
 });
 
+test('a listing\'s stated title beats a title read from body text, unless the body title extends it', () => {
+  const core = createCore();
+  const grid = { title: 'Bear Night', source: 'mec' };
+  const page = { title: 'Second Fridays' };
+  assert.deepEqual(core.resolveConflictDeterministically('title', 'Second Fridays', 'Bear Night', { records: { a: page, b: grid }, sideLabels: { a: 'existing', b: 'incoming' } }),
+    { winner: 'b', reason: 'the listing\'s own stated title beats a title read from body text' });
+  assert.equal(core.resolveConflictDeterministically('title', 'Bear Night: Lumberjack Party', 'Bear Night', { records: { a: { title: 'Bear Night: Lumberjack Party' }, b: grid }, sideLabels: { a: 'existing', b: 'incoming' } }),
+    null, 'a body title that extends the stated one is left to the ordinary rungs');
+});
+
 test('a trim answer that ends on a separator or conjunction loses that dangling tail', () => {
   const core = createCore();
   assert.equal(core.stripDanglingTrimTail('ButtTootKing 2026: Lydia B Kollins, Suzie Toot,'), 'ButtTootKing 2026: Lydia B Kollins, Suzie Toot');
