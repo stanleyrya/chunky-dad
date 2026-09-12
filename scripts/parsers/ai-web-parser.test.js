@@ -7813,6 +7813,8 @@ test('a WordPress/Tribe REST row: start_date beats the post date, the nested ven
   assert.equal(event.image, 'https://i0.wp.example/uploads/Vignette_WEB.jpg');
   assert.equal(event.cover, '25-35 CAD');
   assert.equal(event.ticketUrl, '', 'the row\'s own page on the feed host is not a ticket link');
+  assert.equal(event._jsonApiOwnPageUrl, 'https://www.bearitmtl.example/event/ensemble/', 'the own page is remembered for the site-role pass');
+  assert.equal(event.website, '', 'not adopted by the builder itself — an aggregator\'s copy stays off the record');
 });
 
 test('a feed row with an RRULE becomes its next dated occurrences, never the series start', () => {

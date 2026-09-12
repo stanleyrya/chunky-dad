@@ -1198,6 +1198,25 @@ class AiWebParser {
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
+            // On a venue's or promoter's own site (config siteRole, or the
+            // page's derived role), a feed row's own page IS the event's page
+            // (powerhousebar.com: 57 events all pointing at the homepage,
+            // trial 2026-09-12). An aggregator's copies stay off the record.
+            {
+                const configuredRole = parserConfig && typeof parserConfig.siteRole === 'string' ? this.normalizeSiteRoleValue(parserConfig.siteRole) : '';
+                const pageRole = this.getPageSiteRole(effectiveHtmlData);
+                const ownSite = ['venue', 'promoter', 'organizer'].includes(configuredRole || pageRole);
+                let adoptedOwnPages = 0;
+                for (const event of jsonApiEvents) {
+                    if (!ownSite || !event || !event._jsonApiOwnPageUrl) continue;
+                    if (!event.website && !event.url) {
+                        event.website = event._jsonApiOwnPageUrl;
+                        event.url = event._jsonApiOwnPageUrl;
+                        adoptedOwnPages++;
+                    }
+                }
+                if (adoptedOwnPages > 0) console.log(`🔗 LINKS: ${adoptedOwnPages} feed row(s) carry their own event page as website — this is the ${configuredRole || pageRole}'s own site`);
+            }
             // A stated city is place evidence too: an aggregator row with no
             // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
             // in that city, not an incomplete record.
@@ -10102,6 +10121,10 @@ class AiWebParser {
         if (slugValue && !/^https?:\/\//i.test(slugValue) && !/[\s/]/.test(slugValue.trim()) && !ownPageUrl) {
             event._jsonApiSlug = slugValue.trim();
         }
+        // The row's own page on the feed host: on a venue's or promoter's
+        // OWN site that page is the event's page (adopted below once the
+        // site's role is known); on an aggregator it is a copy. Internal.
+        if (ownPageUrl) event._jsonApiOwnPageUrl = this.normalizeHttpUrlValue(ownPageUrl) || '';
         // Recurrence, when the row states one (RRULE text): expanded to dated
         // occurrences by extractEventsFromJsonApiPayload. Internal field.
         const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
