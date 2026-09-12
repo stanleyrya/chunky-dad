@@ -14116,6 +14116,7 @@ class SharedCore {
             event?._pastSpanWithheld !== true &&
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
+            event?._announcementOnlyWithheld !== true &&
             // A merge stamped _mergeNoOp writes nothing by definition — the
             // final payload is field-identical to the calendar record
             // (stamp site: buildAnalyzedCalendarEvent), so executing it
@@ -14181,6 +14182,7 @@ class SharedCore {
             '_festivalContext',
             '_pastSpanWithheld',
             '_unresolvedCityWithheld',
+            '_announcementOnlyWithheld',
             '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
@@ -14212,6 +14214,7 @@ class SharedCore {
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
+        if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement-only listing row — no time, no ticket link)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
@@ -16501,6 +16504,24 @@ class SharedCore {
             if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
+            // ANNOUNCEMENT-ONLY WITHHOLD — a one-line listing row ("10/3
+            // FURBALL DC - ICON") states a date and a place and nothing else:
+            // no time, no ticket page, no copy. It is the promoter's
+            // announcement, not yet a published event (owner review of the
+            // 2026-09-12 run: "I'm concerned they aren't real"). Flag, don't
+            // drop: the card stays in results; the calendar write waits until
+            // a venue or ticket page corroborates it (a time or a ticket link).
+            {
+                const segment = analyzedEvent._multiEventSegment;
+                const oneLineRow = segment && typeof segment === 'object' && Number(segment.lineCount) === 1;
+                const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
+                const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
+                if (oneLineRow && noTime && noTicket) {
+                    analyzedEvent._announcementOnlyWithheld = true;
+                    console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is a one-line listing row with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
+                }
             }
 
             // UNRESOLVED CITY WITHHOLD — an event with no city has no

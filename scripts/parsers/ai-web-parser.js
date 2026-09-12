@@ -1913,6 +1913,13 @@ class AiWebParser {
                 const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults, pageDateContext);
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (event) {
+                    // A one-line listing row owns no artwork: any picture it
+                    // acquired came from the page around it.
+                    if (segment && segment._compactListingRow && event.image && !(typeof segment.html === 'string' && segment.html.includes(String(event.image)))) {
+                        console.log(`🖼️ AI Web: Dropped "${event.title || 'event'}" image — a one-line listing row has no artwork of its own (the picture belongs to the page's cards): ${event.image}`);
+                        delete event.image;
+                        delete event.imageSource;
+                    }
                     event._multiEventSegment = {
                         index: i + 1,
                         total: segments.length,
@@ -4062,6 +4069,13 @@ class AiWebParser {
     }
 
     attachSequentialImageHintsToSegments(html, segments, sourceUrl = '', ocrResults = []) {
+        // A one-line listing row ("10/3 FURBALL DC - ICON") states no artwork
+        // of its own; the page's pictures belong to its cards. Pairing one
+        // with a ticker row hands a multi-event flyer to a single event
+        // (furball.nyc, daily run 20260912-063741: FURBALL DC shipped with
+        // the page's six-party flyer).
+        const compactRows = (Array.isArray(segments) ? segments : []).filter(segment => segment && Array.isArray(segment.lines) && segment.lines.length === 1 && this.isCompactEventLine(segment.lines[0]));
+        for (const row of compactRows) row._compactListingRow = true;
         const source = String(html || '');
         const sourceSegments = Array.isArray(segments) ? segments : [];
         if (!source || sourceSegments.length < 2) return sourceSegments;
@@ -4134,7 +4148,7 @@ class AiWebParser {
         return sourceSegments.map((segment, index) => {
             const orderedImage = dedupedMatchedImageUrls[index];
             // Skip if this image was already assigned to an earlier segment
-            if (!orderedImage || !segment || typeof segment !== 'object') return segment;
+            if (!orderedImage || !segment || typeof segment !== 'object' || segment._compactListingRow) return segment;
             const existingImages = this.extractOrderedImageUrlsFromHtml(
                 segment && typeof segment.html === 'string' ? segment.html : '',
                 sourceUrl,
@@ -5946,7 +5960,8 @@ class AiWebParser {
             url: href,
             website: href,
             source: 'mec',
-            _timezoneUnresolved: true
+            _timezoneUnresolved: true,
+            _titleFromListing: true
         };
         if (image) {
             event.image = image;
@@ -6399,7 +6414,8 @@ class AiWebParser {
             address: addressParts.join(', '),
             url: eventPageUrl || sourceUrl,
             website: eventPageUrl || sourceUrl,
-            source: 'squarespace'
+            source: 'squarespace',
+            _titleFromListing: true
         };
         if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) event.bar = '';
         const lat = Number(location.markerLat !== undefined ? location.markerLat : location.mapLat);
@@ -9112,7 +9128,8 @@ class AiWebParser {
                 address: record.address || '',
                 url: pageUrl || sourceUrl,
                 website: pageUrl || sourceUrl,
-                source: 'wix'
+                source: 'wix',
+                _titleFromListing: true
             };
             if (record.coordinates) event.location = record.coordinates;
             if (record.cover) event.cover = record.cover;
