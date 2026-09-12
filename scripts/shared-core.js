@@ -7046,29 +7046,29 @@ class SharedCore {
                     pageEventsForEnrich = parsedEvents;
                 }
 
-                const additionalLinks = parseResult?.additionalLinks || [];
+                // A root read through its feed is the site's own complete
+                // statement: no discovery crawl from it, in either depth mode.
+                // The feed's other links are its venue and organizer
+                // directories (bearitmtl.com: /lieu/…, festival pages — four
+                // hops of AI reads that merged "Stock Bar" into ENSEMBLE, run
+                // 20260911) or, on an aggregator, its own copies of every
+                // event page (thebearcalendar.com: 58 pages). The events' own
+                // ticket links are still enriched below.
+                const feedRead = Boolean(htmlData && htmlData.machineDoor);
+                const additionalLinks = feedRead ? [] : (parseResult?.additionalLinks || []);
+                if (feedRead && Array.isArray(parseResult?.additionalLinks) && parseResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: 🚪 MACHINE DOOR: not following ${parseResult.additionalLinks.length} link(s) from the feed behind ${url} — the feed is the listing; only its events' own ticket links are enriched`);
+                }
                 let linksToConsider = additionalLinks;
                 // Tracks whether an adaptive-mode branch below already logged WHY
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
-                let adaptiveFollowBlocked = false;
-                if (adaptiveCrawl) {
+                let adaptiveFollowBlocked = feedRead;
+                if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
-                    if (htmlData && htmlData.machineDoor) {
-                        // A root read through its feed is the site's own complete
-                        // statement: no discovery crawl from it. The feed's other
-                        // links are its venue and organizer directories (bearitmtl
-                        // .com: /lieu/…, festival pages — four hops of AI reads
-                        // that merged "Stock Bar" into ENSEMBLE, run 20260911).
-                        // The events' own ticket links are still enriched below.
-                        if (linksToConsider.length > 0) {
-                            await displayAdapter.logInfo(`SYSTEM: 🚪 MACHINE DOOR: not following ${linksToConsider.length} link(s) from the feed behind ${url} — the feed is the listing; only its events' own ticket links are enriched`);
-                        }
-                        linksToConsider = [];
-                        adaptiveFollowBlocked = true;
-                    } else if (enrichContext) {
+                    if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
                         if (linksToConsider.length > 0) {
