@@ -2681,6 +2681,15 @@ class AiWebParser {
     }
 
     computeMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
+        // A listing that marks up one JSON-LD Event per card element is
+        // already segmented by its author: each card is one window, with
+        // its own text, links and images (see buildJsonLdCardSegments).
+        const cardSegments = this.buildJsonLdCardSegments(html);
+        if (cardSegments.length >= 2) {
+            console.log(`🧩 JSON-LD CARDS: ${cardSegments.length} card window(s), one per JSON-LD event element — the card element is the window, never a date line`);
+            const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
+            return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
+        }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
             const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
@@ -2712,6 +2721,88 @@ class AiWebParser {
     // date line plus another line, or most of its lines). The merged list is
     // put back in document order so sequential image pairing still walks the
     // page top to bottom.
+    // Card windows from JSON-LD: for every <script type="application/ld+json">
+    // holding an Event, the nearest enclosing repeated element (an
+    // <article>, <li>, or a div/section with role="listitem" or an
+    // item/card/event class) is the card, closed by tag balance. Cards
+    // must not overlap and there must be one per Event script — a page
+    // whose JSON-LD sits in one block for the whole list yields nothing
+    // here and the other tiers run. massive.club/calendar (audit
+    // 2026-09-12): every card ENDS with its "Mon D, YYYY H:MM PM" line, so
+    // the text splitter opened each window one card late — 7 of 17 cards
+    // took the previous card's time and ticket link.
+    buildJsonLdCardSegments(html) {
+        const source = String(html || '');
+        if (!source) return [];
+        const scriptPattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        const scripts = [];
+        let match;
+        while ((match = scriptPattern.exec(source)) !== null) {
+            let parsed = null;
+            try {
+                parsed = JSON.parse(match[1]);
+            } catch (_) {
+                continue;
+            }
+            const nodes = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed['@graph']) ? parsed['@graph'] : [parsed]);
+            const events = nodes.filter(node => node && typeof node === 'object' && /event/i.test(String(node['@type'] || '')) && node.startDate);
+            if (events.length === 1) scripts.push({ index: match.index, end: match.index + match[0].length });
+        }
+        if (scripts.length < 2) return [];
+        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
+        const isCardTag = (attrs) => /role=["']listitem["']/i.test(attrs) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(attrs);
+        const closeOf = (tag, from) => {
+            const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+            pattern.lastIndex = from;
+            let depth = 0;
+            let token;
+            while ((token = pattern.exec(source)) !== null) {
+                if (token[1] === '/') {
+                    depth--;
+                    if (depth === 0) return token.index + token[0].length;
+                } else if (!/\/\s*>$/.test(token[0])) {
+                    depth++;
+                }
+            }
+            return -1;
+        };
+        const cards = [];
+        for (const script of scripts) {
+            // Nearest card-shaped opening tag before the script that still
+            // encloses it.
+            let best = null;
+            openPattern.lastIndex = 0;
+            let open;
+            while ((open = openPattern.exec(source)) !== null && open.index < script.index) {
+                if (!isCardTag(open[2])) continue;
+                best = { tag: open[1].toLowerCase(), start: open.index };
+            }
+            if (!best) return [];
+            const end = closeOf(best.tag, best.start);
+            if (end < 0 || end <= script.end) return [];
+            cards.push({ start: best.start, end });
+        }
+        // One card per script, no overlaps, in document order.
+        cards.sort((a, b) => a.start - b.start);
+        for (let i = 1; i < cards.length; i++) {
+            if (cards[i].start < cards[i - 1].end) return [];
+        }
+        const seen = new Set();
+        const segments = [];
+        for (const card of cards) {
+            const key = `${card.start}:${card.end}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const cardHtml = source.slice(card.start, card.end);
+            const lines = this.extractBodyParts(cardHtml, this.extractionLimits.multiEventScanLineLimit)
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            if (lines.length === 0) continue;
+            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml });
+        }
+        return segments.length === cards.length ? segments : [];
+    }
+
     coverUnclaimedDatedWindows(html, structuredSegments) {
         const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
         if (structured.length === 0) return structured;

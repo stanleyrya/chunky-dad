@@ -16633,6 +16633,24 @@ test('a header ticker that lists events keeps exactly its listing rows through c
   assert.equal(single.some(line => /Open since/.test(line)), false);
 });
 
+test('a listing with one JSON-LD Event per card element is segmented by its cards, never by its date lines', () => {
+  const parser = createParser();
+  const card = (n, title, day, time) => `<div role="listitem" class="event-item w-dyn-item"><div class="schema w-embed"><script type="application/ld+json">{"@type":"Event","name":"${title}","startDate":"2026-09-${day}T${time}:00-07:00","url":"https://massive.example/events/${n}"}</script></div>
+    <div class="date"><div>Sat</div><div>Sep</div></div>
+    <div class="time">${time.replace(/^(\d\d):(\d\d)$/, (m, h, mm) => `${((+h + 11) % 12) + 1}:${mm} ${+h >= 12 ? 'pm' : 'am'}`)}</div>
+    <a href="https://tixr.example/e/${n}">get TICKETS</a>
+    <h3>${title}</h3>
+    <div class="full-date">Sep ${day}, 2026 ${time}</div></div>`;
+  const html = `<html><body><div class="events-list grid"><div role="list" class="event-grid w-dyn-items">${card(1, 'Dungeon and Drag Queens', 12, '17:30')}${card(2, 'Bearracuda | Seattle', 12, '21:00')}${card(3, 'TKVR | Cucci', 13, '21:00')}</div></div></body></html>`;
+  const segments = parser.buildJsonLdCardSegments(html);
+  assert.equal(segments.length, 3);
+  assert.deepEqual(segments.map(s => s.lines.find(l => /Dungeon|Bearracuda|TKVR/.test(l))), ['Dungeon and Drag Queens', 'Bearracuda | Seattle', 'TKVR | Cucci']);
+  assert.ok(segments.every((s, i) => (s.html.match(/ld\+json/g) || []).length === 1 && s.html.includes(`tixr.example/e/${i + 1}`)), 'each window holds exactly its own JSON-LD and its own ticket link');
+  assert.ok(segments[1].lines.includes('Sep 12, 2026 21:00') && !segments[2].lines.includes('Sep 12, 2026 21:00'), 'the trailing date line stays with its own card');
+  // One JSON-LD block for the whole list → not cards.
+  assert.deepEqual(parser.buildJsonLdCardSegments('<html><body><script type="application/ld+json">[{"@type":"Event","name":"A","startDate":"2026-09-12"},{"@type":"Event","name":"B","startDate":"2026-09-13"}]</script><div class="item">A</div><div class="item">B</div></body></html>'), []);
+});
+
 test('coverage audit: compact listing rows become one window each, straight from the corpus', () => {
   const parser = createParser();
   const html = `<html><body>
