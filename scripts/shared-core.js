@@ -4089,7 +4089,8 @@ class SharedCore {
             // merge over the grid's own title (daily run 20260912-063741).
             if (context && context.records && context.records.a && context.records.b) {
                 const structuredSources = new Set(['mec', 'jsonld', 'json-ld', 'json-api', 'squarespace', 'wix', 'elfsight', 'dice']);
-                const isStructured = (record) => Boolean(record && typeof record.source === 'string' && structuredSources.has(record.source.toLowerCase()));
+                const isStructured = (record) => Boolean(record && (record._titleFromListing === true
+                    || (typeof record.source === 'string' && structuredSources.has(record.source.toLowerCase()))));
                 const structuredA = isStructured(context.records.a);
                 const structuredB = isStructured(context.records.b);
                 if (structuredA !== structuredB) {
@@ -14180,6 +14181,7 @@ class SharedCore {
             '_festivalContext',
             '_pastSpanWithheld',
             '_unresolvedCityWithheld',
+            '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
             '_seriesAuthority',

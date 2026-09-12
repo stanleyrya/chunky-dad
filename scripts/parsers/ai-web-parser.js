@@ -1340,6 +1340,11 @@ class AiWebParser {
                 // og:image fill below, so an event whose structured data
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
+                // Every structured event's title is the LISTING'S own stated
+                // title — a merge-time fact (the deterministic title rung),
+                // kept on an internal field because `source` is later
+                // stamped with the parser's name.
+                structuredEvents.forEach(event => { if (event && typeof event === 'object') event._titleFromListing = true; });
                 // Closure notices are not events, on any structured route.
                 for (let index = structuredEvents.length - 1; index >= 0; index--) {
                     const event = structuredEvents[index];
