@@ -7790,6 +7790,31 @@ test('a feed row names its city without an address, keeps ticket over its own ur
   assert.equal(ownPageOnly.city, 'portland');
 });
 
+test('a WordPress/Tribe REST row: start_date beats the post date, the nested venue is the place, the image object and entity-encoded cost are read, organizer[] is not a performance list', () => {
+  const parser = createParser();
+  const row = {
+    id: 19317, date: '2026-08-14 16:47:41', date_utc: '2026-08-14 20:47:41', url: 'https://www.bearitmtl.example/event/ensemble/', title: 'ENSEMBLE',
+    description: '<p>Une soirée</p>', image: { url: 'https://i0.wp.example/uploads/Vignette_WEB.jpg', width: 1920 },
+    start_date: '2026-09-19 18:00:00', end_date: '2026-09-20 03:00:00', utc_start_date: '2026-09-19 21:00:00', timezone: 'UTC-4',
+    cost: '&#036;25.00 &#8211; &#036;35.00', cost_details: { currency_symbol: '$', currency_code: 'CAD', values: ['25', '35'] },
+    website: '', venue: { id: 19755, venue: 'Stock Bar', address: '1171 Rue Ste Catherine Est', city: 'Montréal', state_province: 'QC', zip: 'H2L 2J5', url: 'https://www.bearitmtl.example/lieu/stock-bar/' },
+    organizer: [{ id: 19754, organizer: 'Bear it MTL', date: '2026-09-09 06:16:50', url: 'https://www.bearitmtl.example/organisateur/bear-it-mtl/' }]
+  };
+  const events = parser.extractEventsFromJsonApiPayload({ events: [row], total: 1 }, 'https://www.bearitmtl.example/wp-json/tribe/events/v1/events?per_page=50',
+    { montreal: { timezone: 'America/Toronto', patterns: ['montreal', 'montréal'] } });
+  assert.equal(events.length, 1, 'one event — the organizer list is not a performance list');
+  const [event] = events;
+  assert.equal(event.startDate.toISOString(), '2026-09-19T18:00:00.000Z', 'start_date (wall clock), never the post date');
+  assert.equal(event.endDate.toISOString(), '2026-09-20T03:00:00.000Z');
+  assert.equal(event.bar, 'Stock Bar');
+  assert.equal(event.address, '1171 Rue Ste Catherine Est, Montréal, QC, H2L 2J5');
+  assert.equal(event.city, 'montreal');
+  assert.equal(event.timezone, 'America/Toronto', 'a non-IANA "UTC-4" is ignored; the city\'s zone stands');
+  assert.equal(event.image, 'https://i0.wp.example/uploads/Vignette_WEB.jpg');
+  assert.equal(event.cover, '25-35 CAD');
+  assert.equal(event.ticketUrl, '', 'the row\'s own page on the feed host is not a ticket link');
+});
+
 test('a feed row with an RRULE becomes its next dated occurrences, never the series start', () => {
   const parser = createParser();
   const day = 24 * 60 * 60 * 1000;

@@ -7056,7 +7056,19 @@ class SharedCore {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
-                    if (enrichContext) {
+                    if (htmlData && htmlData.machineDoor) {
+                        // A root read through its feed is the site's own complete
+                        // statement: no discovery crawl from it. The feed's other
+                        // links are its venue and organizer directories (bearitmtl
+                        // .com: /lieu/…, festival pages — four hops of AI reads
+                        // that merged "Stock Bar" into ENSEMBLE, run 20260911).
+                        // The events' own ticket links are still enriched below.
+                        if (linksToConsider.length > 0) {
+                            await displayAdapter.logInfo(`SYSTEM: 🚪 MACHINE DOOR: not following ${linksToConsider.length} link(s) from the feed behind ${url} — the feed is the listing; only its events' own ticket links are enriched`);
+                        }
+                        linksToConsider = [];
+                        adaptiveFollowBlocked = true;
+                    } else if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
                         if (linksToConsider.length > 0) {

@@ -9220,10 +9220,16 @@ class AiWebParser {
     // endpoints. Null when the object has no such array.
     findJsonApiPerformancesArray(obj) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
-        for (const value of Object.values(obj)) {
+        for (const [arrayKey, value] of Object.entries(obj)) {
             if (!Array.isArray(value) || value.length === 0) continue;
+            // People and places are not performances: a Tribe row's
+            // organizer[] entries carry the organizer post's publish `date`,
+            // and PLAYERS was dated the day its organizer was created
+            // (bearitmtl.com, run 20260911). Entries must state a START.
+            if (/^(organizers?|venues?|categories|tags|images|attachments|performers?|hosts?|sponsors?)$/.test(this.normalizeJsonApiKey(arrayKey))) continue;
             const everyEntryHasStart = value.every(entry => entry && typeof entry === 'object' && !Array.isArray(entry)
-                && Object.keys(entry).some(key => this.jsonApiStartDateFromEntry(key, entry[key]) !== null));
+                && Object.keys(entry).some(key => /(^|_)(starts?(_(at|date|time|datetime))?|when)$/.test(this.normalizeJsonApiKey(key))
+                    && this.jsonApiStartDateFromEntry(key, entry[key]) !== null));
             if (everyEntryHasStart) return value;
         }
         return null;
@@ -9619,13 +9625,26 @@ class AiWebParser {
                         visit(value, depth + 1);
                         continue;
                     }
-                    if (!currency && /(^|_)currency(_|$)/.test(normalizedKey)
-                        && typeof value === 'string' && /^[A-Za-z]{3}$|^[$€£¥]$/.test(value.trim())) {
+                    // A 3-letter code beats a symbol met earlier (Tribe lists
+                    // currency_symbol "$" before currency_code "CAD").
+                    if (/(^|_)currency(_|$)/.test(normalizedKey)
+                        && typeof value === 'string' && /^[A-Za-z]{3}$|^[$€£¥]$/.test(value.trim())
+                        && (!currency || (/^[$€£¥]$/.test(currency) && /^[A-Za-z]{3}$/.test(value.trim())))) {
                         currency = value.trim().toUpperCase();
                         continue;
                     }
                     if (!priceKeyPattern.test(normalizedKey)) continue;
                     if (excludedKeyPattern.test(normalizedKey)) continue;
+                    // A formatted price string ("&#036;25.00 – &#036;35.00",
+                    // "$20 / $25 door") yields every amount it prints.
+                    if (typeof value === 'string' && !/^\s*-?\d+(?:\.\d+)?\s*$/.test(value)) {
+                        const decoded = this.decodeBasicEntities(value).replace(/&#0?36;/g, '$');
+                        for (const found of decoded.match(/\d+(?:[.,]\d{1,2})?/g) || []) {
+                            const parsedAmount = Number(found.replace(',', '.'));
+                            if (Number.isFinite(parsedAmount) && parsedAmount > 0) amounts.push(parsedAmount);
+                        }
+                        continue;
+                    }
                     const amount = Number(String(value === null || value === undefined ? '' : value).trim());
                     if (!Number.isFinite(amount) || amount <= 0) continue;
                     amounts.push(/cents/.test(normalizedKey) ? amount / 100 : amount);
@@ -9829,7 +9848,13 @@ class AiWebParser {
         // when-container — the same rule the recognizer applied (see
         // jsonApiStartDateFromEntry); end likewise, containers resolving
         // ONLY their end member.
-        const start = firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
+        // A key that SAYS start wins over a bare date key whatever the
+        // payload's key order: WordPress/Tribe rows list the post's
+        // publish `date` before `start_date` (bearitmtl.com: ENSEMBLE dated
+        // the day it was posted, run 20260911).
+        const startish = (key) => /(^|_)starts?(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
+        const startFromNamed = firstDateBy((key, value) => (startish(key) ? this.jsonApiStartDateFromEntry(key, value) : null));
+        const start = startFromNamed.date ? startFromNamed : firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
         if (!title || !start.date) return null;
         const end = firstDateBy((key, value) => this.jsonApiEndDateFromEntry(key, value));
 
@@ -9850,13 +9875,35 @@ class AiWebParser {
             return null;
         }
 
+        // A nested venue object (Tribe `venue: { venue, address, city, … }`,
+        // schema-ish `location: { name, address }`) is read as the place:
+        // its name is the bar and its parts the address. Scalar keys on the
+        // row itself are still read after it.
+        const venueObject = (() => {
+            for (const key of keys) {
+                if (!/^(venue|location|place)$/.test(this.normalizeJsonApiKey(key))) continue;
+                const value = view[key];
+                if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+                if (Array.isArray(value) && value[0] && typeof value[0] === 'object') return value[0];
+            }
+            return null;
+        })();
+        const venueField = (pattern) => {
+            if (!venueObject) return '';
+            for (const key of Object.keys(venueObject)) {
+                if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                const value = venueObject[key];
+                if (isNonEmptyString(value)) return value;
+            }
+            return '';
+        };
         // Address composed from street + locality + state + postal style keys,
         // with the JSON-LD path's duplicate-part guard.
         const addressParts = [
-            clean(firstValue(/(^|_)(address_line_?1|street_address|street|address)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(city|locality)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(state|region|province)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(postal_code|postal|zip_code|zip)$/, isNonEmptyString))
+            clean(venueField(/^(address|address_line_?1|street_address|street)$/) || firstValue(/(^|_)(address_line_?1|street_address|street|address)$/, isNonEmptyString)),
+            clean(venueField(/^(city|locality)$/) || firstValue(/(^|_)(city|locality)$/, isNonEmptyString)),
+            clean(venueField(/^(state|region|province|state_province)$/) || firstValue(/(^|_)(state|region|province)$/, isNonEmptyString)),
+            clean(venueField(/^(postal_code|postal|zip_code|zip)$/) || firstValue(/(^|_)(postal_code|postal|zip_code|zip)$/, isNonEmptyString))
         ];
         const accumulated = [];
         for (const part of addressParts) {
@@ -9867,14 +9914,18 @@ class AiWebParser {
         const address = accumulated.join(', ');
 
         // `place` is schema.org's and Tockify's venue-name key.
-        let bar = clean(firstValue(/^(venue|venue_name|location_name|place)$/, isNonEmptyString));
+        let bar = clean(venueField(/^(venue|name|venue_name|title)$/) || firstValue(/^(venue|venue_name|location_name|place)$/, isNonEmptyString));
         if (bar && this.venueNameLooksLikeStreetAddress(bar, address)) {
             console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
             bar = '';
         }
 
         const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
-        const rawImage = firstValue(imageKeyPattern, isHttpString);
+        // An image member may be an object ({ url, sizes… } — WordPress/Tribe).
+        const imageHttpString = (value) => isHttpString(value)
+            || (value && typeof value === 'object' && !Array.isArray(value) && isHttpString(value.url || value.src || value.source_url));
+        const rawImageValue = firstValue(imageKeyPattern, imageHttpString);
+        const rawImage = typeof rawImageValue === 'string' ? rawImageValue : (rawImageValue ? (rawImageValue.url || rawImageValue.src || rawImageValue.source_url) : '');
         const image = rawImage
             ? (this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(rawImage) || '') || '')
             : '';
