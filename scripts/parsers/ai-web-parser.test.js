@@ -13155,10 +13155,13 @@ test('a listing with no time adopts the single clock its own poster states — f
   const other = mk('BEAR NIGHT', 12, 'https://v.example/other-date.jpg');
   const two = mk('SHOW', 13, 'https://v.example/two.jpg');
   const timed = { title: 'TIMED', startDate: new Date(Date.UTC(2026, 8, 14, 21)), image: 'https://v.example/cubcake.jpg' };
+  // A real instant at 00:00Z (an Elfsight row at 8pm EDT) is a time, not a placeholder.
+  const instant = { title: 'DIRTY LITTLE SECRET', startDate: new Date(Date.UTC(2026, 8, 12, 0)), timezone: 'America/New_York', image: 'https://v.example/cubcake.jpg' };
   const originalLog = console.log; console.log = () => {};
   let adopted;
-  try { adopted = parser.adoptFlyerClockForPlaceholderTimes([cub, hump, other, two, timed]); } finally { console.log = originalLog; }
+  try { adopted = parser.adoptFlyerClockForPlaceholderTimes([cub, hump, other, two, timed, instant]); } finally { console.log = originalLog; }
   assert.equal(adopted, 2);
+  assert.equal(instant.startDate.toISOString(), '2026-09-12T00:00:00.000Z', 'an exact instant at UTC midnight is never re-timed');
   assert.equal(cub.startDate.toISOString(), '2026-09-11T21:00:00.000Z', 'poster names this date and one clock');
   assert.equal(cub.endDate, undefined);
   assert.equal(hump.startDate.toISOString(), '2026-09-09T21:00:00.000Z', 'undated poster with a range');

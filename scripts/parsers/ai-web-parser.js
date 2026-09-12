@@ -5665,12 +5665,12 @@ class AiWebParser {
         // gets its artwork from the crawl's own budget — reading every page
         // for pictures alone fanned out into 60 requests and a firewall
         // block (thedallaseagle.com, run 20260911).
-        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate)));
+        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate, event)));
         if (needing.length === 0) return;
         let pagesRead = 0;
         let timed = 0;
         for (const [path, group] of needing.slice(0, MEC_EVENT_PAGE_ENRICH_CAP)) {
-            const sample = group.find(event => this.isMidnightWallClock(event.startDate)) || group[0];
+            const sample = group.find(event => this.isMidnightWallClock(event.startDate, event)) || group[0];
             let html = '';
             try {
                 const response = await httpAdapter.fetchData(sample.url);
@@ -5691,7 +5691,7 @@ class AiWebParser {
             const image = this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || '';
             const description = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(this.decodeBasicEntities(String(node.description || '')))).replace(/&amp;/gi, '&'));
             for (const event of group) {
-                if (start && this.isMidnightWallClock(event.startDate)) {
+                if (start && this.isMidnightWallClock(event.startDate, event)) {
                     const day = event.startDate;
                     event.startDate = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), start.hour, start.minute));
                     if (end) {
@@ -5711,8 +5711,16 @@ class AiWebParser {
         console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} un-timed listing(s) — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap not read)` : ''}`);
     }
 
-    isMidnightWallClock(date) {
-        return date instanceof Date && !Number.isNaN(date.getTime()) && date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+    // TRUE only for a wall-clock-as-UTC placeholder: an event whose date
+    // is a listing's bare day (anchored as UTC midnight and flagged
+    // _timezoneUnresolved, or built from a grid cell). A real INSTANT at
+    // 00:00Z — an Elfsight row at 8pm EDT — is a time, never a placeholder
+    // (rockbarnyc.com, audit 2026-09-12: DIRTY LITTLE SECRET re-dated).
+    isMidnightWallClock(date, event = null) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+        if (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0) return false;
+        if (event === null) return true;
+        return Boolean(event && (event._timezoneUnresolved === true || event.source === 'mec'));
     }
 
     // The page's own JSON-LD Event for this page: the node whose url path is
@@ -20249,7 +20257,7 @@ TEXT:
         const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
         let adopted = 0;
         for (const event of events) {
-            if (!event || !this.isMidnightWallClock(event.startDate)) continue;
+            if (!event || !this.isMidnightWallClock(event.startDate, event)) continue;
             const image = typeof event.image === 'string' ? event.image.trim() : '';
             if (!image) continue;
             const verdict = this.getOcrImageVerdict(image);
