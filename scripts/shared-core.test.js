@@ -21482,6 +21482,34 @@ test('a bare site root in ticketUrl is a website, not a ticket link', () => {
   } finally { console.log = originalLog; }
 });
 
+test('calendar merges are decided by source authority, deterministically', () => {
+  const core = createCore();
+  const ctx = (scraped, extra = {}) => ({ sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'X' }, b: scraped }, arbitrationMode: 'deterministic', ...extra });
+  const ownPage = { title: 'Bear Night', _sourcePageUrl: 'https://venue.example/events/bear-night/', _venueSitePageHost: 'venue.example', _staticFields: { website: 'https://promoter.example', instagram: 'https://instagram.com/promoter' }, bar: 'The Venue' };
+  const aggregator = { title: 'Bear Night', _sourcePageUrl: 'https://aggregator.example/events/bear-night/', _staticFields: { website: 'https://promoter.example', instagram: 'https://instagram.com/promoter' }, bar: 'The Venue' };
+  // Equivalent values are no change.
+  assert.equal(core.resolveConflictDeterministically('title', 'UNDERBEAR: HEAT WAVE', 'UNDERBEAR HEATWAVE', ctx(aggregator)).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://venue.example/events/cub-scout-3/', 'https://venue.example/events/cub-scout-3/?occurrence=2026-10-02', ctx(aggregator)).winner, 'a', 'a query variant of the stored link is not a change');
+  // Instagram: the promoter's registry handle wins; a venue handle never replaces it.
+  assert.equal(core.resolveConflictDeterministically('instagram', 'https://www.instagram.com/thevenue', 'https://instagram.com/promoter', ctx(aggregator)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('instagram', 'https://instagram.com/promoter', 'https://www.instagram.com/thevenue', ctx(aggregator)).winner, 'a');
+  // Website ranks by what it is.
+  assert.equal(core.resolveConflictDeterministically('website', 'https://www.eventbrite.com/e/x-123', 'https://promoter.example/events/bear-night', ctx(aggregator)).winner, 'b', 'promoter site beats a platform link');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://venue.example/events/bear-night/', 'https://aggregator.example/events/bear-night/', ctx(aggregator)).winner, 'a', 'own event page beats an aggregator copy');
+  // Times: the event's own page updates the calendar; a flyer or wall-clock guess never does; equal authority keeps the calendar.
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx(ownPage)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx({ ...ownPage, _startTimeFromFlyer: true })).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx(aggregator)).winner, 'a');
+  // Text: extension replaces; own page replaces; two third-party copies keep the calendar (description alone may go to the AI).
+  assert.equal(core.resolveConflictDeterministically('title', 'BEARRACUDA: Seattle💦', 'Bearracuda Seattle: 7 DAY LOAD', ctx(aggregator)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(aggregator)).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(ownPage)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('description', 'A monthly social for friendly fauna.', 'DJs spin a short set.', ctx(aggregator)), null, 'two third-party descriptions are left to the AI');
+  assert.equal(core.resolveConflictDeterministically('description', 'A monthly social.', 'Go-go bears and more.', ctx(ownPage)).winner, 'b');
+  // The switch: "ai" restores the old arbiter (this rung steps aside).
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(aggregator, { arbitrationMode: 'ai' })), null);
+});
+
 test('a listing\'s stated title beats a title read from body text, unless the body title extends it', () => {
   const core = createCore();
   const grid = { title: 'Bear Night', source: 'mec' };

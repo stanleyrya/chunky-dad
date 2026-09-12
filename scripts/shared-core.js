@@ -3595,6 +3595,133 @@ class SharedCore {
         };
     }
 
+    resolveMergeArbitrationMode(context) {
+        if (context && typeof context.arbitrationMode === 'string') return context.arbitrationMode;
+        const config = context && context.config && typeof context.config === 'object' ? context.config : null;
+        const merge = config && config.merge && typeof config.merge === 'object' ? config.merge : (config && config.config && config.config.merge) || null;
+        // No config at all (isolated callers, tests) keeps the legacy arbiter;
+        // the shipped config names the mode explicitly.
+        if (!merge || typeof merge.arbitration !== 'string') return 'ai';
+        return merge.arbitration.toLowerCase() === 'ai' ? 'ai' : 'deterministic';
+    }
+
+    // === Calendar-merge authority rules (owner decision 2026-09-12) ===
+    // The AI arbiter is position-biased and re-judged the same pair every
+    // run (title 117×, description 144×, address 142× in one daily run,
+    // flipping sides). Calendar merges are now decided by SOURCE
+    // AUTHORITY, deterministically: equivalent values are no change; the
+    // event's OWN page (the promoter's or venue's site, its feed or grid
+    // row, its ticket page) updates the calendar; a promoter's Instagram
+    // beats a venue's; a website ranks by what it is; text that EXTENDS the
+    // stored value replaces it; everything else keeps the calendar and is
+    // recorded as contested. Only `description` may still reach the AI —
+    // and only when neither side is the event's own page.
+    scrapedRecordIsOwnPage(record) {
+        if (!record || typeof record !== 'object') return false;
+        if (record._titleFromListing === true) return true;
+        const sourceHost = this.getHostFromUrl(record._sourcePageUrl || '').toLowerCase().replace(/^www\./, '');
+        if (!sourceHost) return false;
+        const venueHost = String(record._venueSitePageHost || '').toLowerCase().replace(/^www\./, '');
+        if (venueHost && sourceHost === venueHost) return true;
+        const promoterSite = record._staticFields && typeof record._staticFields.website === 'string' ? record._staticFields.website : '';
+        const promoterHost = this.getHostFromUrl(promoterSite).toLowerCase().replace(/^www\./, '');
+        if (promoterHost && sourceHost === promoterHost) return true;
+        if (typeof this.isKnownTicketingPlatformHost === 'function' && this.isKnownTicketingPlatformHost(sourceHost)
+            && record._pageClassification === 'event-page') return true;
+        return false;
+    }
+
+    mergeTextEquivalent(a, b) {
+        const fold = (value) => String(value || '').toLowerCase().replace(/&#?[0-9a-z]+;/gi, ' ').replace(/[^a-z0-9]+/g, '');
+        const foldedA = fold(a);
+        const foldedB = fold(b);
+        return Boolean(foldedA) && foldedA === foldedB;
+    }
+
+    mergeTextExtends(shorter, longer) {
+        const fold = (value) => String(value || '').toLowerCase().replace(/&#?[0-9a-z]+;/gi, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+        const a = fold(shorter);
+        const b = fold(longer);
+        return Boolean(a) && Boolean(b) && b.length > a.length && b.includes(a);
+    }
+
+    canonicalMergeUrl(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        return `${match[1].toLowerCase().replace(/^www\./, '')}${match[2].replace(/\/+$/, '').toLowerCase()}`;
+    }
+
+    // What a website link IS: the promoter's registry site (4), an event
+    // page on the event's own site (3), an event page elsewhere (2), a
+    // ticketing/social platform link or a bare site root (1).
+    rankMergeWebsite(value, record, promoterHost) {
+        const canonical = this.canonicalMergeUrl(value);
+        if (!canonical) return 0;
+        const host = canonical.split('/')[0];
+        const hasPath = canonical.includes('/');
+        const social = /(^|\.)(instagram|facebook|twitter|x|tiktok|linktr)\.(com|ee)$/i.test(host);
+        const platform = typeof this.isKnownTicketingPlatformHost === 'function' && this.isKnownTicketingPlatformHost(host);
+        if (promoterHost && host === promoterHost) return hasPath ? 4 : 3.5;
+        const venueHost = record && record._venueSitePageHost ? String(record._venueSitePageHost).toLowerCase().replace(/^www\./, '') : '';
+        if (venueHost && host === venueHost && hasPath) return 3;
+        if (social || platform || !hasPath) return 1;
+        return 2;
+    }
+
+    resolveCalendarMergeByAuthority(fieldName, calendarValue, scraperValue, context) {
+        const scraped = context.records.b;
+        const promoterSite = scraped && scraped._staticFields && typeof scraped._staticFields.website === 'string' ? scraped._staticFields.website : '';
+        const promoterHost = this.getHostFromUrl(promoterSite).toLowerCase().replace(/^www\./, '');
+        const ownPage = this.scrapedRecordIsOwnPage(scraped);
+        const isText = ['title', 'description', 'address', 'bar', 'shortName'].includes(fieldName);
+        const isUrl = ['website', 'ticketUrl', 'image', 'instagram', 'facebook', 'gmaps'].includes(fieldName);
+        const isDate = fieldName === 'startDate' || fieldName === 'endDate';
+
+        if (isUrl && this.canonicalMergeUrl(calendarValue) && this.canonicalMergeUrl(calendarValue) === this.canonicalMergeUrl(scraperValue)) {
+            return { winner: 'a', reason: 'equivalent links — no change' };
+        }
+        if (isText && this.mergeTextEquivalent(calendarValue, scraperValue)) {
+            return { winner: 'a', reason: 'equivalent text — no change' };
+        }
+
+        if (fieldName === 'instagram') {
+            const registry = scraped && scraped._staticFields && typeof scraped._staticFields.instagram === 'string' ? scraped._staticFields.instagram : '';
+            const handle = (value) => (String(value || '').match(/instagram\.com\/([^/?#]+)/i) || [, String(value || '').replace(/^@/, '')])[1].toLowerCase().replace(/\/+$/, '');
+            if (registry) {
+                if (handle(scraperValue) === handle(registry)) return { winner: 'b', reason: "the promoter's own Instagram (registry) beats the venue's" };
+                if (handle(calendarValue) === handle(registry)) return { winner: 'a', reason: "the promoter's own Instagram (registry) is already stored" };
+            }
+            const barKey = this.normalizeIdentityText(scraped && scraped.bar);
+            const scrapedIsVenue = barKey && handle(scraperValue).replace(/[^a-z0-9]/g, '').includes(barKey.replace(/[^a-z0-9]/g, '').slice(0, 6));
+            if (scrapedIsVenue) return { winner: 'a', reason: "a venue's Instagram never replaces the stored promoter handle" };
+            return { winner: 'a', reason: 'contested Instagram (equal authority) — calendar kept, flagged' };
+        }
+
+        if (fieldName === 'website') {
+            const rankA = this.rankMergeWebsite(calendarValue, scraped, promoterHost);
+            const rankB = this.rankMergeWebsite(scraperValue, scraped, promoterHost);
+            if (rankB > rankA) return { winner: 'b', reason: `website ranks higher (${rankB} vs ${rankA}: promoter site > own event page > other event page > platform/root)` };
+            return { winner: 'a', reason: rankA > rankB ? `stored website ranks higher (${rankA} vs ${rankB})` : 'same website rank — calendar kept' };
+        }
+
+        if (isDate) {
+            if (scraped && scraped._startTimeFromFlyer === true) return { winner: 'a', reason: 'a flyer-read time never replaces the stored time' };
+            if (scraped && scraped._timezoneUnresolved === true) return { winner: 'a', reason: 'a wall-clock guess never replaces an anchored time' };
+            if (ownPage) return { winner: 'b', reason: "the event's own page states it — calendar updated" };
+            return { winner: 'a', reason: 'contested time (equal authority) — calendar kept, flagged' };
+        }
+
+        if (isText) {
+            if (this.mergeTextExtends(calendarValue, scraperValue)) return { winner: 'b', reason: 'scraped text extends the stored value' };
+            if (fieldName === 'title' && scraped && scraped._titleFromListing === true) return { winner: 'b', reason: "the listing's own stated title" };
+            if (ownPage) return { winner: 'b', reason: "the event's own page states it — calendar updated" };
+            if (fieldName === 'description') return null; // the AI may judge two third-party copies
+            return { winner: 'a', reason: `contested ${fieldName} (equal authority) — calendar kept, flagged` };
+        }
+        return null;
+    }
+
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
         // NOLA): wave 2's extraction fix promoted a DOORS start to the
@@ -4452,6 +4579,17 @@ class SharedCore {
                     reason: 'case-only variants — kept less-uppercased form'
                 };
             }
+        }
+        // Source-authority fallback (calendar merges only, config
+        // merge.arbitration "deterministic"): what every rung above left
+        // undecided is decided here instead of by the AI — see
+        // resolveCalendarMergeByAuthority.
+        if (context && context.sideLabels && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped'
+            && context.records && context.records.a && context.records.b
+            && !this.isEmptyArbitrationValue(valueA) && !this.isEmptyArbitrationValue(valueB)
+            && this.resolveMergeArbitrationMode(context) === 'deterministic') {
+            const byAuthority = this.resolveCalendarMergeByAuthority(fieldName, valueA, valueB, context);
+            if (byAuthority) return byAuthority;
         }
         return null;
     }
@@ -11095,7 +11233,10 @@ class SharedCore {
             barNames: [calendarObject.bar, scraperObject.bar],
             eventTitle: mergeTitle,
             sideLabels: { a: 'calendar', b: 'scraped' },
-            records: { a: calendarObject, b: scraperObject }
+            records: { a: calendarObject, b: scraperObject },
+            // config.merge.arbitration: "deterministic" (default) | "ai" — the
+            // one-line revert to the position-biased arbiter.
+            arbitrationMode: this.resolveMergeArbitrationMode({ config: (options && (options.globalConfig || options.mainConfig || options.config)) || null })
         };
         // OCR title-evidence preload: both primary-image candidates' flyer
         // texts (verdict store or disk cache), read before the sync ladder.
