@@ -1209,7 +1209,13 @@ class AiWebParser {
                 let adoptedOwnPages = 0;
                 for (const event of jsonApiEvents) {
                     if (!ownSite || !event || !event._jsonApiOwnPageUrl) continue;
-                    if (!event.website && !event.url) {
+                    // A website key pointing at a SHARED page on the same host
+                    // (eaglebarwm.com HONEY POT: website = the series landing
+                    // page, url = the dated page) hides the per-date identity
+                    // the shape detector needs — the dated page is the event's.
+                    const sharedSameHostWebsite = event.website && event.website !== event._jsonApiOwnPageUrl
+                        && this.getVenueSiteHostKey(event.website) === this.getVenueSiteHostKey(event._jsonApiOwnPageUrl);
+                    if ((!event.website && !event.url) || sharedSameHostWebsite) {
                         event.website = event._jsonApiOwnPageUrl;
                         event.url = event._jsonApiOwnPageUrl;
                         adoptedOwnPages++;
@@ -6418,8 +6424,12 @@ class AiWebParser {
             _titleFromListing: true
         };
         if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) event.bar = '';
-        const lat = Number(location.markerLat !== undefined ? location.markerLat : location.mapLat);
-        const lng = Number(location.markerLng !== undefined ? location.markerLng : location.mapLng);
+        // The map pin (mapLat/mapLng) is where the venue IS; markerLat/Lng is
+        // the template's default marker (massbearsandcubs: every event carried
+        // the New York default marker beside a Boston map pin, audit 2026-09-13).
+        const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
+        const lat = pickCoordinate(location.mapLat, location.markerLat);
+        const lng = pickCoordinate(location.mapLng, location.markerLng);
         if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
             event.location = `${lat}, ${lng}`;
         }
@@ -8564,6 +8574,20 @@ class AiWebParser {
         const start = this.parseJsonLdDateValue(node.startDate);
         if (!title || !start.date) return null;
         const end = this.parseJsonLdDateValue(node.endDate);
+        // An offset-less END beside an anchored START ("endDate":"2026-10-10"
+        // next to "startDate":"…T19:00:00-04:00", Eventbrite's JSON-LD, audit
+        // 2026-09-13) is a wall clock in the start's own offset — read it there
+        // and never let the guess flag the whole event as unanchored (the
+        // flag re-anchored the exact START too).
+        if (!start.timezoneUnresolved && end.date && end.timezoneUnresolved) {
+            const offsetMatch = startDateRawText.match(/(Z|[+-]\d{2}):?(\d{2})?$/i);
+            if (offsetMatch) {
+                const offsetMinutes = /^z$/i.test(offsetMatch[1]) ? 0
+                    : (Number(offsetMatch[1].slice(1)) * 60 + Number(offsetMatch[2] || 0)) * (offsetMatch[1][0] === '-' ? -1 : 1);
+                end.date = new Date(end.date.getTime() - offsetMinutes * 60 * 1000);
+                end.timezoneUnresolved = false;
+            }
+        }
 
         const place = this.pickJsonLdPlace(node.location);
         const address = place ? this.formatJsonLdAddress(place.address, clean) : '';
@@ -9518,6 +9542,15 @@ class AiWebParser {
     // uses; null when the row states none.
     jsonApiRowStartMillis(row) {
         const view = this.unwrapJsonApiCandidate(row);
+        // A start-named key (start_date, starts_at, utc_start_date) before any
+        // generic `date` — WordPress rows list the post's publish stamp as
+        // `date` ahead of `start_date`, so the horizon never fired and paging
+        // ran to the cap (eaglebarwm.com: 163 rows in 2027, audit 2026-09-13).
+        for (const key of Object.keys(view)) {
+            if (!/(^|_)starts?(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key))) continue;
+            const candidate = this.jsonApiStartDateFromEntry(key, view[key]);
+            if (candidate && candidate.date) return candidate.date.getTime();
+        }
         for (const key of Object.keys(view)) {
             const candidate = this.jsonApiStartDateFromEntry(key, view[key]);
             if (candidate && candidate.date) return candidate.date.getTime();
@@ -9854,6 +9887,7 @@ class AiWebParser {
         try {
             const amounts = [];
             let currency = '';
+            let statedFree = false;
             const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
             const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency)(_|$)|display/;
             const visit = (node, depth) => {
@@ -9883,6 +9917,9 @@ class AiWebParser {
                     // "$20 / $25 door") yields every amount it prints.
                     if (typeof value === 'string' && !/^\s*-?\d+(?:\.\d+)?\s*$/.test(value)) {
                         const decoded = this.decodeBasicEntities(value).replace(/&#0?36;/g, '$');
+                        // "Free" / "No cover" is a stated price too (Tribe cost
+                        // text) — worth a cover of its own when no amount prints.
+                        if (/^\s*(free|no cover|free entry|free admission)\s*[!.]?\s*$/i.test(decoded)) statedFree = true;
                         for (const found of decoded.match(/\d+(?:[.,]\d{1,2})?/g) || []) {
                             const parsedAmount = Number(found.replace(',', '.'));
                             if (Number.isFinite(parsedAmount) && parsedAmount > 0) amounts.push(parsedAmount);
@@ -9895,7 +9932,7 @@ class AiWebParser {
                 }
             };
             visit(obj, 0);
-            if (amounts.length === 0) return '';
+            if (amounts.length === 0) return statedFree ? 'Free' : '';
             const min = Math.min(...amounts);
             const max = Math.max(...amounts);
             const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
@@ -10045,8 +10082,13 @@ class AiWebParser {
     // slug: url is always the fetched sourceUrl.
     buildEventFromJsonApiObject(obj, sourceUrl, cityConfig = null) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+        // WordPress REST strings arrive entity-encoded and sometimes doubly so
+        // ("UNDERWEAR &#038; SINGLET NIGHT", "&amp;#038;" — eaglebarwm.com,
+        // audit 2026-09-13): unwrap the outer &amp; layer first, then decode
+        // once, then the ampersand entities decodeBasicEntities keeps encoded.
         const clean = (value) => this.normalizeWhitespace(
-            this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
+            this.decodeBasicEntities(this.stripTags(String(value || '')).replace(/&amp;(#\d{1,7};|#x[0-9a-f]{1,6};|[a-z]{2,8};)/gi, '&$1'))
+                .replace(/&amp;/gi, '&').replace(/&#0*38;|&#x0*26;/gi, '&')
         );
         // Attribute-wrapped payloads (Tockify `content`, JSON:API `attributes`)
         // expose their event fields one level down — match against the

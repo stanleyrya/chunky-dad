@@ -18194,9 +18194,15 @@ class SharedCore {
             && !(streetA.includes(streetB) || streetB.includes(streetA))) {
             return true;
         }
+        // A purchase sub-path is the same ticket page ("…/e/<slug>" and
+        // "…/e/<slug>/tickets" — bearracuda.com's stub vs its sickening
+        // page's JSON-LD, audit 2026-09-13: the pair was vetoed as two
+        // different ticket links and the enrich child dropped).
         const ticketKey = (url) => {
             const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
-            return match ? `${match[1].replace(/^www\./i, '')}${match[2].replace(/\/+$/, '')}`.toLowerCase() : '';
+            if (!match) return '';
+            const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
+            return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };
         const ticketA = ticketKey(eventA && eventA.ticketUrl);
         const ticketB = ticketKey(eventB && eventB.ticketUrl);

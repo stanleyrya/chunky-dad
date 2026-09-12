@@ -13159,6 +13159,32 @@ test('a single-event page\'s own heading names the event when the model answered
   assert.equal(normalized.title, 'Bear Night');
 });
 
+test('audit 2026-09-13 fixes: end-only offset-less dates, Squarespace map pin, Free covers, double-encoded entities, paging start key', () => {
+  const parser = createParser();
+  // An offset-less END beside an anchored start is read in the start's offset; the start is never re-anchored.
+  const q=console.log; console.log=()=>{};
+  let ev;
+  try {
+    ev = parser.extractEventsFromJsonLd('<script type="application/ld+json">{"@type":"Event","name":"The Belly Party","startDate":"2026-10-09T19:00:00-04:00","endDate":"2026-10-10","location":{"@type":"Place","name":"Jacques Cabaret","address":{"streetAddress":"79 Broadway","addressLocality":"Boston","addressRegion":"MA"}}}</script>', 'https://www.eventbrite.com/e/x-1', { boston: { timezone: 'America/New_York', patterns: ['boston'] } })[0];
+  } finally { console.log=q; }
+  assert.equal(ev.startDate.toISOString(), '2026-10-09T23:00:00.000Z');
+  assert.equal(ev._timezoneUnresolved, undefined, 'the start decides; an end-only guess never flags the event');
+  assert.equal(ev.endDate.toISOString(), '2026-10-10T04:00:00.000Z', 'the date-only end is midnight in the start\'s offset');
+  // Squarespace: the map pin, never the default marker.
+  const item = { id: 'a', title: 'Bear Tea', startDate: 1789250400000, fullUrl: '/events/bear-tea', location: { markerLat: 40.7207559, markerLng: -74.0007613, mapLat: 42.3513, mapLng: -71.0656, addressTitle: 'Club Cafe', addressLine1: '209 Columbus Ave', addressLine2: 'Boston, MA' } };
+  assert.equal(parser.buildEventFromSquarespaceItem(item, 'https://www.massbearsandcubs.example/events').location, '42.3513, -71.0656');
+  // Cost text.
+  assert.equal(parser.formatJsonApiPriceCover({ cost: 'Free' }), 'Free');
+  assert.equal(parser.formatJsonApiPriceCover({ cost: 'at door' }), '');
+  // Double-encoded entities.
+  assert.equal(parser.decodeBasicEntities('UNDERWEAR &amp;#038; SINGLET NIGHT'), 'UNDERWEAR &amp;#038; SINGLET NIGHT', 'decodeBasicEntities keeps its decode-once contract');
+  const wpRow = parser.buildEventFromJsonApiObject({ id: 7, title: 'UNDERWEAR &amp;#038; SINGLET NIGHT', start_date: '2026-10-14 21:00:00', venue: { venue: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'Wilton Manors' } }, 'https://eaglebarwm.com/wp-json/tribe/events/v1/events');
+  assert.equal(wpRow.title, 'UNDERWEAR & SINGLET NIGHT', 'the JSON-API builder unwraps WordPress double-encoding');
+  assert.equal(parser.buildEventFromJsonApiObject({ id: 8, title: 'Rock &#038; Roll', start_date: '2026-10-14 21:00:00' }, 'https://eaglebarwm.com/wp-json/tribe/events/v1/events').title, 'Rock & Roll');
+  // Paging horizon reads start_date, never the post's publish date.
+  assert.equal(parser.jsonApiRowStartMillis({ date: '2026-05-01 10:00:00', start_date: '2026-10-09 21:00:00' }), Date.UTC(2026, 9, 9, 21));
+});
+
 test('social share endpoints are not profiles, and ticket-utility pages are never crawled', () => {
   const parser = createParser();
   const links = parser.extractStaticSocialLinks

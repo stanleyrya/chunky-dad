@@ -21575,6 +21575,10 @@ test('same venue at the same start instant is one event, whatever each record ca
   const dolly = { title: 'Dolly Disco', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://eventim.us/wafform.aspx?_act=eventdashboard&_pky=704326' };
   assert.equal(core.getSameEventIdentitySignal(wanted, dolly), null, 'shared pin never outranks two different rooms');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '', address: '' }, { ...dolly, bar: '', address: '' }), null, 'two different ticket links alone contradict');
+  // A purchase sub-path of the same ticket page is the same ticket link.
+  const stubTix = { title: 'Bearracuda Portland Oct', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://sickening.events/e/bearracuda-portland-oct' };
+  const childTix = { title: 'Bearracuda Portland: Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://sickening.events/e/bearracuda-portland-oct/tickets' };
+  assert.equal(core.getSameEventIdentitySignal(childTix, stubTix), 'place-exact-start', '/tickets is the same ticket page');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null, 'same bar, different street numbers still contradict');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null,
     'one-sided place evidence is no contradiction, but "WANTED" and "Dolly Disco" are unrelated names — two rooms, not one party');
