@@ -3122,6 +3122,16 @@ test('extractCityFromAddress resolves accented address text containing "Montréa
   assert.equal(normalizer.extractCityFromAddress('2915 Rue Ontario E'), null);
 });
 
+test('extractCityFromEvent: the address outranks a city named in the title', () => {
+  const core = new SharedCore({ ...CITIES, sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] } }, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  const originalLog = console.log; console.log = () => {};
+  try {
+    assert.equal(normalizer.extractCityFromEvent({ title: 'GRUNT (SF)', bar: "C'mon Everybody", address: '325 Franklin Avenue, New York, 11238' }), 'nyc');
+    assert.equal(normalizer.extractCityFromEvent({ title: 'GRUNT (SF)', bar: 'The Powerhouse' }), 'sf', 'no address → the title still routes');
+  } finally { console.log = originalLog; }
+});
+
 test('extractCityFromEvent resolves an accented city field and accented title/venue text', () => {
   const normalizer = createMontrealLocationNormalizer();
   assert.equal(normalizer.extractCityFromEvent({ city: 'montréal' }), 'montreal');
