@@ -1,0 +1,611 @@
+{
+  "schemaVersion": 1,
+  "source": "Mass Bears and Cubs",
+  "slug": "mass-bears-and-cubs",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "feed",
+      "static",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.massbearsandcubs.org/events"
+    ],
+    "doors": [
+      {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "kind": "squarespace-collection-json",
+        "role": "feed",
+        "rowsReturned": 52,
+        "truthFlag": "upcoming[] 22 (not paginated — the Squarespace events collection returns every upcoming item); past[] 30 = pagination.pageSize with pagination.nextPage true / nextPageUrl \"/events?offset=1769729598148\"; collection.itemCount 83",
+        "note": "Verified door: collection.typeName \"events-stacked\", website.timeZone \"America/New_York\". Rows carry epoch-ms startDate/endDate, title, fullUrl, assetUrl, excerpt + body HTML, tags[], and a per-item location {addressTitle, addressLine1, addressLine2, markerLat, markerLng}. 19 of the 22 upcoming rows carry markerLat/markerLng 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan) — so those coordinates are NOT the venue; only three rows (MA Bear Contest Meet & Greet, Belly Party Spooky Bear, Bear Boutique) carry real Massachusetts coordinates. Saved as discovery/massbearsandcubs.org/events-json.body (2026-09-12 14:59)."
+      },
+      {
+        "url": "https://www.massbearsandcubs.org/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 52,
+        "truthFlag": "one <div class=\"eventlist eventlist--upcoming\"> and one <div class=\"eventlist eventlist--past\">; 52 eventlist-meta-date blocks; no eventlist-pagination element",
+        "note": "Configured parser URL. Static HTML renders the same 22 upcoming + 30 past article.eventlist-event blocks as the JSON door (the past section starts \"Sep 2 Monthly Membership Meetings\"). JSON-LD on the page is only a WebSite object and a LocalBusiness with an empty address — no Event JSON-LD. Saved as discovery/massbearsandcubs.org/events.body and the scraper page cache (storage/pages/www.massbearsandcubs.org/events.json)."
+      },
+      {
+        "url": "https://www.massbearsandcubs.org/events/<slug>?format=ical",
+        "kind": "ics",
+        "role": "event",
+        "rowsReturned": 6,
+        "truthFlag": "one VEVENT per item, no RRULE",
+        "note": "Read from the scraper page cache for six items (bellyparty1-…-tea6t, mbctrivia-…-ptdw8, bear-tea-club-cafe-…-hy9mp, alley-bears-…-pwm78, monthly-membership-meetings-…-wtbgw, ma-bear-contest-meet-greet). PRODID Squarespace; DTSTART/DTEND in UTC and equal to the feed's epoch values; GEO repeats the same default-marker 40.720756;-74.000761 on five of six (the Meet & Greet carries GEO:42.358132;-71.05882); LOCATION is the addressTitle + address. Confirms every item is a standalone dated entry — Squarespace has no recurrence, the org re-creates each month by hand."
+      },
+      {
+        "url": "https://www.massbearsandcubs.org/events/<slug>",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 6,
+        "truthFlag": null,
+        "note": "Six item pages in the scraper page cache (same six slugs). Each page carries the item's body HTML and a \"Back to All Events\"-style stacked layout; nothing beyond what the feed row already holds."
+      }
+    ],
+    "notes": "Squarespace events collection (collection.typeName events-stacked), confirmed by the working ?format=json door. The org publishes a fresh item for every month of each recurring social — Monthly Trivia, Bear Tea, Alley Bears, the virtual membership meeting, Bears Brews & Boys — so the 22 upcoming rows are 5 series + 5 one-offs, not 22 events. Cadence words live in the item body/excerpt (\"Always the 3rd Thursday of the month\", \"every third Sunday\"); where the site says only \"monthly\" the day-of-month rule is proven from the listed dates and the past[] instances and said so in the event note. Venues are all third-party (The Alley Bar, Club Cafe, Jacques' Cabaret, Dorchester Brewing Company, Red Room in Provincetown) — Mass Bears and Cubs is an organization, not a bar, so defaults carry no bar. The feed's markerLat/markerLng is the Squarespace default marker on 19 of 22 rows and must not be used as coordinates."
+  },
+  "defaults": {
+    "city": "boston",
+    "timezone": "America/New_York",
+    "location": null,
+    "website": "https://www.massbearsandcubs.org"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Single feed door read in full: ?format=json returns upcoming[] with 22 rows and no pagination on the upcoming side (Squarespace paginates only past[]). The static /events page renders the same 22 upcoming article blocks. Collapse: Monthly Trivia ×4, Bear Tea ×4, Alley Bears Gear Night ×4, Monthly Membership Meetings ×3 and Bears Brews & Boys ×2 are five recurring socials published one item per month → 5 series (17 rows); the remaining 5 rows are one-offs → 5 singles (The Belly Party Sep 12, MA Bear Contest Meet & Greet Oct 9, MA Bear Contest 2027 Oct 10, The Belly Party Spooky Bear Oct 30 in Provincetown, Bear Boutique Nov 15). publishedEventCount = 5 + 5 = 10. Every series occurrence is a dated item in the feed (origin listed, one jsonPath each); the window runs to 2026-12-31 because the feed lists December instances for three of the five series. Past listings: past[] page 1 holds 30 rows (2026-09-02 back to 2026-05-06) with pagination.nextPage true; collection.itemCount is 83, so the archive is deeper than the 30 shown — counted, not enumerated, and not paged (no further requests were spent).",
+    "publishedEventCount": 10,
+    "documentedEventCount": 10,
+    "occurrenceWindow": {
+      "start": "2026-09-12",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "past[] beyond page 1 (offset pagination) was not pulled; the past count is 30 shown + an unknown remainder (collection.itemCount 83 covers upcoming and past together).",
+      "Bears, Brews & Boys lists no September 2026 instance and no December instance; the file records only the two listed dates.",
+      "Item bodies were read from the feed's body HTML; the six cached item pages were checked for extra fields (none) but the remaining 16 item pages were not opened."
+    ]
+  },
+  "events": [
+    {
+      "id": "monthly-trivia",
+      "kind": "series",
+      "title": "Monthly Trivia",
+      "bar": "The Alley Bar",
+      "address": "14 Pi Alley, Boston, MA, 02108",
+      "location": null,
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/3.png",
+      "description": "Join us for this month's MBC Trivia Night at the Alley Bar, Always the 3rd Thursday of the month. Gather your friends and form a team, or join a team at the bar. Arrive a little early for pre-game socializing over cocktails! Cash prizes for the top three teams, plus a few extra surprises!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
+      "recurrenceStatedAs": "Always the 3rd Thursday of the month",
+      "occurrences": [
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[1]",
+            "quote": "\"fullUrl\":\"/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8\""
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[7]",
+            "quote": "\"fullUrl\":\"/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff"
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[15]",
+            "quote": "\"fullUrl\":\"/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3"
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[19]",
+            "quote": "\"fullUrl\":\"/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3-74hmk\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3-74hmk"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[1].excerpt",
+        "quote": "Always the 3rd Thursday of the month"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Four separate Squarespace items (one per month, each with its own fullUrl and the same body/flyer) collapsed into one series. Body: \"MBC Trivia Night at the Alley Bar, 8 to 10 p.m. Always the 3rd Thursday of the month.\" Cash prizes for the top three teams. The Aug 20 / Jul 16 / May 21 items in past[] are earlier instances of the same series (Jun 18 was the \"Bear Pride Trivia\" special edition). The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "bear-tea-club-cafe",
+      "kind": "series",
+      "title": "Bear Tea / Club Cafe",
+      "bar": "Club Cafe",
+      "address": "209 Columbus Avenue, Boston, MA, 02116",
+      "location": null,
+      "startTime": "16:00",
+      "endTime": "22:00",
+      "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hy9mp",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d-83d1-07b6d2cf5609/4.png",
+      "description": "Join us every third Sunday Bear Tea from 4–10 p.m. Come early to enjoy Club Café’s Sunday Funday half-price menu before the music kicks in. Each month brings something special, from community fundraisers to great raffle prizes. Dance the evening away with DJ Darrin Friedman , spinning hits from the ’70s to today.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "recurrenceStatedAs": "every third Sunday",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[2]",
+            "quote": "\"fullUrl\":\"/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hy9mp\""
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[8]",
+            "quote": "\"fullUrl\":\"/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w\""
+          },
+          "overrides": {
+            "title": "Bear Tea  - Meet MA Bear 2027!",
+            "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w"
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[14]",
+            "quote": "\"fullUrl\":\"/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-jcydj\""
+          },
+          "overrides": {
+            "title": "Bear Tea /Club Cafe",
+            "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-jcydj"
+          }
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[20]",
+            "quote": "\"fullUrl\":\"/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-65clr\""
+          },
+          "overrides": {
+            "title": "Bear Tea /Club Cafe",
+            "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-65clr"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[2].excerpt",
+        "quote": "every third Sunday"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Four monthly items collapsed into one series; the site's title varies by item (\"Bear Tea / Club Cafe\", \"Bear Tea  - Meet MA Bear 2027!\" on Oct 18 — the contest winner's first Tea — \"Bear Tea /Club Cafe\"). Body: \"Join us every third Sunday Bear Tea from 4–10 p.m.\", DJ Darrin Friedman, Club Café's Sunday Funday half-price menu. Past instances Aug 16, Jul 19, Jun 21, May 17 in past[]. The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "alley-bears-gear-night",
+      "kind": "series",
+      "title": "Alley Bears - Gear Night!",
+      "bar": "The Alley Bar",
+      "address": "14 Pi Alley, Boston, MA, 02108",
+      "location": null,
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788707749387-3PXCA0EPIWV229753JD9/1.jpg",
+      "description": "Join Mass Bears and Cubs for Alley Bears, our monthly bar Gear night at the Alley Bar! Start off with cocktails and conversation at the downstairs bar beginning at 9, and then we'll be moving upstairs to the dance floor starting at 9PM. No cover, 21+ Gear is required to Party Upstairs!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
+      "recurrenceStatedAs": "our monthly bar Gear night at the Alley Bar",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[3]",
+            "quote": "\"fullUrl\":\"/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78\""
+          }
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[9]",
+            "quote": "\"fullUrl\":\"/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj\""
+          },
+          "overrides": {
+            "title": "Alley Bears - Gear Night",
+            "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj",
+            "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788707874753-4HY95LPGAIFN9YL9E95B/2.jpg"
+          }
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[16]",
+            "quote": "\"fullUrl\":\"/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn",
+            "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708069785-7D00G1ZOHYTPRTAHA8JF/3.jpg"
+          }
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[21]",
+            "quote": "\"fullUrl\":\"/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn-yaf87\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn-yaf87",
+            "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708131478-FYE8K8XEJG5TC1JDSC6Z/4.jpg"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[3].excerpt",
+        "quote": "our monthly bar Gear night at the Alley Bar"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Four monthly items collapsed into one series. The site text says only \"monthly\"; the 4th-Saturday rule is proven by the listed dates (Sep 26, Oct 24, Nov 28, Dec 26 — all fourth Saturdays; Oct 24 is the 4th but not the last Saturday of October) and by the four past instances (Aug 22, Jul 25, Jun 27, May 23, titled plainly \"Alley Bears\", 9 PM–2 AM). Body: \"cocktails and conversation at the downstairs bar beginning at 9, and then we'll be moving upstairs to the dance floor starting at 9PM. No cover, 21+ Gear is required to Party Upstairs!\" Feed endDate is 00:00 the next day (3-hour block), so endTime 00:00 with the end date rolling over. Each month has its own flyer (1.jpg/2.jpg/3.jpg/4.jpg). The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "monthly-membership-meetings",
+      "kind": "series",
+      "title": "Monthly Membership Meetings",
+      "bar": "Online/Virtual",
+      "address": null,
+      "location": null,
+      "startTime": "19:00",
+      "endTime": "20:30",
+      "website": "https://www.massbearsandcubs.org/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1769728793226-8A5WVXQH5GOKAIOLS977/meetings.png",
+      "description": "We’d love for you to join us for our monthly Mass Bears and Cubs virtual membership meeting ! These meetings are a great way to learn how to get involved, hear about upcoming events and activities, meet new people, and deepen your connection to the Mass Bears and Cubs community.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "recurrenceStatedAs": "our monthly Mass Bears and Cubs virtual membership meeting",
+      "occurrences": [
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[4]",
+            "quote": "\"fullUrl\":\"/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw\""
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[12]",
+            "quote": "\"fullUrl\":\"/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh-mrgps\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh-mrgps"
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[18]",
+            "quote": "\"fullUrl\":\"/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[4].excerpt",
+        "quote": "our monthly Mass Bears and Cubs virtual membership meeting"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Three monthly items collapsed into one series (the Sep 2 instance is already in past[]; Aug 5, Jul 1, May 6 too — all first Wednesdays; the Jun 3 slot became the in-person \"Meet & Greet Bear Pride Kickoff\" at The Alley under the same slug family). The site says \"monthly\"; the first-Wednesday rule is proven by every listed date. Location title on the site is \"Online/Virtual\" with no address (addressLine1/addressLine2 empty) — bar carries that verbatim text because that is what the site publishes; it is not a venue. \"If you're interested in attending, please email us at Members@massbearsandcubs.org for meeting details.\" 7–8:30 PM. The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "bears-brews-boys",
+      "kind": "series",
+      "title": "Bears, Brews & Boys",
+      "bar": "Dorchester Brewing Company",
+      "address": "1250 Massachusetts Avenue, Boston, MA, 02125",
+      "location": null,
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "website": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1765045071710-1K7706KECPUA2YK73MPT/dotbrewing.png",
+      "description": "Bears, Brews & Boys is a fun, inclusive monthly social event hosted by Mass Bears and Cubs in partnership with Dorchester Brewing Company. Each month features a different theme, great music, craft drinks, and a relaxed, queer-friendly atmosphere. Guests can also enjoy raffles that help raise money for local charities. Open to all adults 21+, it’s a welcoming space to connect, socialize, and support the community.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SU",
+      "recurrenceStatedAs": "a fun, inclusive monthly social event hosted by Mass Bears and Cubs in partnership with Dorchester Brewing Company",
+      "occurrences": [
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[10]",
+            "quote": "\"fullUrl\":\"/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh\""
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.massbearsandcubs.org/events?format=json",
+            "jsonPath": "$.upcoming[17]",
+            "quote": "\"fullUrl\":\"/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh-mkzk5\""
+          },
+          "overrides": {
+            "website": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh-mkzk5"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[10].excerpt",
+        "quote": "a fun, inclusive monthly social event hosted by Mass Bears and Cubs in partnership with Dorchester Brewing Company"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Two listed months (Oct 25, Nov 29) collapsed into one series. The site says \"monthly\"; the last-Sunday rule is proven by the listed dates plus the four past instances in past[] (Aug 30, Jul 26, Jun 28, May 31 — all last Sundays; Nov 29 is a fifth Sunday, which rules out 4SU). No September 2026 instance is listed (Sep 27 absent from both upcoming[] and past[]) and no December instance yet. 4–8 PM, 21+, raffles for local charities. The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "the-belly-party-2026-09-12",
+      "kind": "single",
+      "title": "The Belly Party",
+      "bar": "Jacques Cabaret",
+      "address": "79 Broadway Street, Boston, MA, 02116",
+      "location": null,
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1787064667040-F8PWSYM6FXWEM290IRM4/BELLYFLYER-+%28Instagram+Post+%2845%29%29.png",
+      "description": "✨ BELLY is more than a party—it’s a MOVEMENT. ✨We celebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY: Thick, Juicy, and Unapologetic. 🍑",
+      "startDate": "2026-09-12",
+      "endDate": "2026-09-13",
+      "cover": "$20",
+      "ticketUrl": "https://www.eventbrite.com/e/the-belly-party-tickets-1992454124923",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[0]",
+        "quote": "\"title\":\"The Belly Party\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Underwear party by Henry Paquin Presents with Mass Bears and Cubs at Jacques' Cabaret. Body: \"🕗 Doors open at 8PM 🎧 Music by DJ Giller 🐻 Go-Go Chubs: Jon & Nobriener 🎟️ Cover: $20 🎟️ Limited discounted presale tickets available now!\" — the TICKETS button links to Eventbrite (ticketUrl); beacons.ai/thebellyparty is also linked. Feed endDate 2026-09-13 00:00 local. Tags: Belly, Pride. Earlier Belly Parties (Jul 11, Jun 6, May 9 Boston; Jul 17 Provincetown Bear Week) are in past[]. Recurs irregularly — no cadence is stated, so each Belly Party is a single. The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "ma-bear-contest-meet-greet-2026-10-09",
+      "kind": "single",
+      "title": "MA BEAR CONTEST: MEET & GREET",
+      "bar": "The Alley Bar",
+      "address": "14 Pi Alley, Boston, Massachusetts, 02108",
+      "location": "42.3581324, -71.0588204",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "website": "https://www.massbearsandcubs.org/events/ma-bear-contest-meet-greet",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788385145899-OCFWCHXG5XDGI6VER4O5/MA+Bear+2027+save+the+date+.png",
+      "description": "Join us as we kick off the MA Bear Contest 2027 ! Contest Weekend at the alley and you can meet the contestants.",
+      "startDate": "2026-10-09",
+      "endDate": "2026-10-10",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[5]",
+        "quote": "\"title\":\"MA BEAR CONTEST: MEET & GREET \""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Save the Date! Join us as we kick off the MA Bear Contest 2027! Contest Weekend at the alley and you can meet the contestants. More information to come!\" Feed endDate 2026-10-10 00:00 local. This item carries REAL coordinates (markerLat 42.3581324, markerLng -71.0588204 — downtown Boston), unlike most rows. Tags: MABEARCONTEST, Club Cafe, Bear Tea (the tags are wrong for the venue — it is at The Alley Bar)."
+    },
+    {
+      "id": "ma-bear-contest-2027-2026-10-10",
+      "kind": "single",
+      "title": "MA Bear Contest 2027",
+      "bar": "The Alley Bar",
+      "address": "14 Pi Alley, Boston, MA, 02108",
+      "location": null,
+      "startTime": "19:00",
+      "endTime": "00:00",
+      "website": "https://www.massbearsandcubs.org/events/ma-bear-contest-2027",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788710519978-CYIYJKOWBJ49WYHNBNJO/contest.png",
+      "description": "Join us on Saturday, October 10, 2026, at The Alley Bar, 14 Pi Alley, Boston, for the MA Bear Contest 2027 !",
+      "startDate": "2026-10-10",
+      "endDate": "2026-10-11",
+      "ticketUrl": "https://www.eventbrite.com/e/massachusetts-bear-2027-contest-tickets-2000202025101",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[6]",
+        "quote": "\"title\":\"MA Bear Contest 2027\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Join us on Saturday, October 10, 2026, at The Alley Bar, 14 Pi Alley, Boston, for the MA Bear Contest 2027! Kicking off at 7PM … DJ Giller! This is a 21+ event. Valid ID required.\" The Tickets button links to Eventbrite (ticketUrl); the body also links /massachusetts-bear (the contest page on this site). Feed endDate 2026-10-11 00:00 local. The feed's location.markerLat/markerLng on this item is 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan), identical on 19 of 22 upcoming rows and on the per-item ICS GEO line — so location is null here; the address is real."
+    },
+    {
+      "id": "the-belly-party-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "The Belly Party - SPOOKY BEAR!",
+      "bar": "Red Room",
+      "address": "258 Commercial Street, Provincetown, Massachusetts, 02657",
+      "location": "42.0510476, -70.18767369999999",
+      "startTime": "21:00",
+      "endTime": "01:00",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "description": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
+      "startDate": "2026-10-30",
+      "endDate": "2026-10-31",
+      "city": "ptown",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[11]",
+        "quote": "\"title\":\"The Belly Party - SPOOKY BEAR!\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Provincetown, not Boston: \"BOSTON'S hottest chubby party is coming to PTOWN for Spooky Bear Weekend\" — Red Room, 258 Commercial St, Provincetown. Body: \"Friday, Oct 30 • Doors 9PM\", go-go Nobriener, performance by Lakia Mondale, DJ Brian Halligan; \"On sale soon\" (no ticket link yet). Feed endDate 2026-10-31 01:00 local. Real coordinates on this item (markerLat 42.0510476, markerLng -70.1876737). city overrides the Boston default."
+    },
+    {
+      "id": "bear-boutique-2026-11-15",
+      "kind": "single",
+      "title": "Bear Boutique",
+      "bar": "Club Cafe",
+      "address": "209 Columbus Avenue, Boston, Massachusetts, 02116",
+      "location": "42.3486155, -71.0723826",
+      "startTime": "12:00",
+      "endTime": "16:30",
+      "website": "https://www.massbearsandcubs.org/events/bear-boutique",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788985781733-JOS8YWKYEKC37MHG09E3/Bear+Boutique+IG.jpg",
+      "description": "Bear Boutique returns to Club Café on Sunday, November 15, 2026. Mass Bears and Cubs’ annual marketplace opens the holiday shopping season!",
+      "startDate": "2026-11-15",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[13]",
+        "quote": "\"title\":\"Bear Boutique\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Bear Boutique returns to Club Café on Sunday, November 15, 2026. Mass Bears and Cubs' annual marketplace opens the holiday shopping season! Vendor Registration is Now Open\" — the only link is a Google Form for vendors (forms.gle/jP8wLd9ShQJBWFMd6), not a ticket link. 12:00–16:30, same day and venue as the 4 PM Bear Tea. Real coordinates on this item (markerLat 42.3486155, markerLng -71.0723826)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "past-archive-30-plus",
+      "kind": "past-event",
+      "label": "past[] / <div class=\"eventlist eventlist--past\"> — 30 already-happened items from \"Sep 2 Monthly Membership Meetings\" back to \"May 6 Monthly Membership Meetings\", with more behind pagination",
+      "why": "The configured page renders the past section below the upcoming one, and the JSON door returns them as past[] (pageSize 30, nextPage true). They are earlier instances of the same five series plus one-offs (Jocks at Jacques Aug 28, Bears at the Beach Aug 1, Bearzaar Jun 14, Bear Pride Cruise Jun 7, WOOF Block Party Jun 6, Belly Parties). Under the global allowPastEvents: true the 2026-09-12 trial run extracted all 30 alongside the 22 upcoming (52 records) — that is expected behaviour, but they must never be counted against publishedEventCount, which covers upcoming only.",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.pagination",
+        "quote": "\"nextPage\":true,\"nextPageOffset\":1769729598148,\"nextPageUrl\":\"/events?offset=1769729598148\",\"pageSize\":30"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "same-series-monthly-items",
+      "kind": "duplicate-listing",
+      "label": "Four \"Monthly Trivia\" items, four \"Bear Tea\" items, four \"Alley Bears - Gear Night\" items, three \"Monthly Membership Meetings\" items, two \"Bears, Brews & Boys\" items — one per month, identical body and flyer, distinct fullUrl suffixes (…-ptdw8, …-ptdw8-xf7ff, …-xf7ff-t38z3, …)",
+      "why": "Squarespace has no recurrence, so the org hand-copies each item month by month (the slug grows a new suffix each copy). They are instances of one series, not 17 separate events: a run that emits 17 one-off records is not wrong per se (each is a real dated instance) but a run that emits a different title per instance, or re-dates one, is. The per-instance pages are the only place the month's own flyer lives (Alley Bears 1.jpg/2.jpg/3.jpg/4.jpg).",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events?format=json",
+        "jsonPath": "$.upcoming[7].fullUrl",
+        "quote": "\"fullUrl\":\"/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Should the scraper discard Squarespace's default map marker (markerLat 40.7207559 / markerLng -74.0007613, repeated on 19 of 22 rows and in every per-item ICS GEO line) instead of treating it as venue coordinates? The Boston items would otherwise be placed in Manhattan.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    },
+    {
+      "q": "The virtual \"Monthly Membership Meetings\" publish location title \"Online/Virtual\" with no address; the 2026-09-12 trial run gave those records city \"unknown\". Whether an online org meeting belongs on a bar calendar at all is a bear-pass / policy call, not a recon one.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    }
+  ]
+}

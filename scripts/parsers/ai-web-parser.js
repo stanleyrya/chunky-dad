@@ -208,6 +208,8 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 const JSON_API_FEED_HORIZON_DAYS = 90;
 const JSON_API_FEED_MAX_PAGES = 6;
 const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// Distinct MEC event pages read per grid for their wall-clock times.
+const MEC_EVENT_PAGE_ENRICH_CAP = 60;
 
 // deriveListingTitleSpanFromDatedLine handed the bare LABEL back as the
 // page's own listing title, so "Start from" (x3) and "End at" (x2) shipped as
@@ -1132,7 +1134,21 @@ class AiWebParser {
             if (squarespaceRows.length > 0) {
                 console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
             }
+            // Wix Events sites ship their whole upcoming list in the page's
+            // own warmup blob (see collectWixEventListEvents).
+            const wixEvents = this.collectWixEventListEvents(html, sourceUrl, parserConfig);
+            if (wixEvents.length > 0) {
+                console.log(`🟪 WIX EVENTS: built ${wixEvents.length} event(s) from the page's own events widget for ${sourceUrl}`);
+            }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
+            // The month grids ARE the listing: every occurrence, dated, with
+            // its page — read deterministically (see collectMecGridEvents)
+            // instead of hoping the crawl budget reaches each cell's link.
+            const mecEvents = this.collectMecGridEvents(html, monthFeedSources, sourceUrl, cityConfig);
+            if (mecEvents.length > 0) {
+                console.log(`📆 MEC GRID: built ${mecEvents.length} dated occurrence(s) from ${1 + monthFeedSources.length} month grid(s) for ${sourceUrl}`);
+                await this.enrichMecOccurrencesFromEventPages(mecEvents, httpAdapter);
+            }
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
                 // Report-only cadence evidence from the page grid + month
@@ -1182,6 +1198,25 @@ class AiWebParser {
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
+            // On a venue's or promoter's own site (config siteRole, or the
+            // page's derived role), a feed row's own page IS the event's page
+            // (powerhousebar.com: 57 events all pointing at the homepage,
+            // trial 2026-09-12). An aggregator's copies stay off the record.
+            {
+                const configuredRole = parserConfig && typeof parserConfig.siteRole === 'string' ? this.normalizeSiteRoleValue(parserConfig.siteRole) : '';
+                const pageRole = this.getPageSiteRole(effectiveHtmlData);
+                const ownSite = ['venue', 'promoter', 'organizer'].includes(configuredRole || pageRole);
+                let adoptedOwnPages = 0;
+                for (const event of jsonApiEvents) {
+                    if (!ownSite || !event || !event._jsonApiOwnPageUrl) continue;
+                    if (!event.website && !event.url) {
+                        event.website = event._jsonApiOwnPageUrl;
+                        event.url = event._jsonApiOwnPageUrl;
+                        adoptedOwnPages++;
+                    }
+                }
+                if (adoptedOwnPages > 0) console.log(`🔗 LINKS: ${adoptedOwnPages} feed row(s) carry their own event page as website — this is the ${configuredRole || pageRole}'s own site`);
+            }
             // A stated city is place evidence too: an aggregator row with no
             // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
             // in that city, not an incomplete record.
@@ -1197,20 +1232,31 @@ class AiWebParser {
             // A Squarespace collection outranks the listing's own JSON-LD:
             // the page marks up only a LocalBusiness (never the cards), and
             // the collection is the cards, complete, with a pin per event.
+            // A month grid outranks the page's own JSON-LD when it lists
+            // more: a MEC listing page marks up its featured/upcoming subset
+            // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
-                : (completeJsonLdEvents.length > 0
-                    ? 'jsonld'
-                    : (completeJsonApiEvents.length > 0
-                        ? 'json-api'
-                        : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))));
+                : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
+                    ? 'wix'
+                : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
+                    ? 'mec'
+                    : (completeJsonLdEvents.length > 0
+                        ? 'jsonld'
+                        : (completeJsonApiEvents.length > 0
+                            ? 'json-api'
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
-                : (structuredSource === 'jsonld'
-                    ? completeJsonLdEvents
-                    : (structuredSource === 'json-api'
-                        ? completeJsonApiEvents
-                        : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)));
+                : (structuredSource === 'wix'
+                    ? wixEvents
+                : (structuredSource === 'mec'
+                    ? mecEvents
+                    : (structuredSource === 'jsonld'
+                        ? completeJsonLdEvents
+                        : (structuredSource === 'json-api'
+                            ? completeJsonApiEvents
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1228,6 +1274,10 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the DICE event-list widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'squarespace') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Squarespace event collection — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'mec') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'wix') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
@@ -1290,6 +1340,14 @@ class AiWebParser {
                 // og:image fill below, so an event whose structured data
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
+                // Closure notices are not events, on any structured route.
+                for (let index = structuredEvents.length - 1; index >= 0; index--) {
+                    const event = structuredEvents[index];
+                    if (event && this.isVenueClosureNoticeTitle(event.title)) {
+                        console.log(`🚪 CLOSED: "${event.title}" is a closure notice, not an event — dropped`);
+                        structuredEvents.splice(index, 1);
+                    }
+                }
                 structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
                 // Read the structured nodes' OWN artwork before anything
                 // judges it. Runs FIRST so the furniture rejection below and
@@ -1297,6 +1355,9 @@ class AiWebParser {
                 // instead of from the shape of its URL.
                 const structuredArtworkOcrCount = await this.vetStructuredEventArtwork(
                     structuredEvents, parserConfig, httpAdapter);
+                // A listing that states no time may have a poster that does
+                // (see adoptFlyerClockForPlaceholderTimes).
+                this.adoptFlyerClockForPlaceholderTimes(structuredEvents);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -2175,6 +2236,22 @@ class AiWebParser {
             || /[$€£]\s*\d/.test(text);
     }
 
+    // "CLOSED FOR A PRIVATE EVENT", "Closed for Labor Day", "CLOSED DUE TO
+    // WEATHER", "CLOSED for Pride Recovery!", "We will reopen …": a venue
+    // announcing it is shut is not an event to attend. rockbarnyc.com's
+    // calendar widget carries nine such rows (one on a monthly rule) and a
+    // real party merged INTO one of them (audit 2026-09-12).
+    isVenueClosureNoticeTitle(title) {
+        const text = String(title || '').replace(/&#?[0-9a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+        if (!text) return false;
+        // "CLOSED CIRCUIT: a leather party" is a name; "CLOSED FOR …",
+        // "CLOSED X-MAS EVE", "Bar closed" are notices.
+        if (/^(?:bar\s+|venue\s+|we\s+are\s+|we're\s+)?closed(?:\s*[!.]*$|\s+(?:for|due|until|till|today|tonight|tomorrow|on|this|thru|through|thanksgiving|christmas|x-?mas|new\s+year|labou?r|memorial|easter|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i.test(text)) return true;
+        if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
+        if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
+        return false;
+    }
+
     isVenueHoursNoticeTitle(title) {
         const normalized = String(title || '')
             .toLowerCase()
@@ -2604,6 +2681,15 @@ class AiWebParser {
     }
 
     computeMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
+        // A listing that marks up one JSON-LD Event per card element is
+        // already segmented by its author: each card is one window, with
+        // its own text, links and images (see buildJsonLdCardSegments).
+        const cardSegments = this.buildJsonLdCardSegments(html);
+        if (cardSegments.length >= 2) {
+            console.log(`🧩 JSON-LD CARDS: ${cardSegments.length} card window(s), one per JSON-LD event element — the card element is the window, never a date line`);
+            const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
+            return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
+        }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
             const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
@@ -2635,6 +2721,88 @@ class AiWebParser {
     // date line plus another line, or most of its lines). The merged list is
     // put back in document order so sequential image pairing still walks the
     // page top to bottom.
+    // Card windows from JSON-LD: for every <script type="application/ld+json">
+    // holding an Event, the nearest enclosing repeated element (an
+    // <article>, <li>, or a div/section with role="listitem" or an
+    // item/card/event class) is the card, closed by tag balance. Cards
+    // must not overlap and there must be one per Event script — a page
+    // whose JSON-LD sits in one block for the whole list yields nothing
+    // here and the other tiers run. massive.club/calendar (audit
+    // 2026-09-12): every card ENDS with its "Mon D, YYYY H:MM PM" line, so
+    // the text splitter opened each window one card late — 7 of 17 cards
+    // took the previous card's time and ticket link.
+    buildJsonLdCardSegments(html) {
+        const source = String(html || '');
+        if (!source) return [];
+        const scriptPattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        const scripts = [];
+        let match;
+        while ((match = scriptPattern.exec(source)) !== null) {
+            let parsed = null;
+            try {
+                parsed = JSON.parse(match[1]);
+            } catch (_) {
+                continue;
+            }
+            const nodes = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed['@graph']) ? parsed['@graph'] : [parsed]);
+            const events = nodes.filter(node => node && typeof node === 'object' && /event/i.test(String(node['@type'] || '')) && node.startDate);
+            if (events.length === 1) scripts.push({ index: match.index, end: match.index + match[0].length });
+        }
+        if (scripts.length < 2) return [];
+        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
+        const isCardTag = (attrs) => /role=["']listitem["']/i.test(attrs) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(attrs);
+        const closeOf = (tag, from) => {
+            const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+            pattern.lastIndex = from;
+            let depth = 0;
+            let token;
+            while ((token = pattern.exec(source)) !== null) {
+                if (token[1] === '/') {
+                    depth--;
+                    if (depth === 0) return token.index + token[0].length;
+                } else if (!/\/\s*>$/.test(token[0])) {
+                    depth++;
+                }
+            }
+            return -1;
+        };
+        const cards = [];
+        for (const script of scripts) {
+            // Nearest card-shaped opening tag before the script that still
+            // encloses it.
+            let best = null;
+            openPattern.lastIndex = 0;
+            let open;
+            while ((open = openPattern.exec(source)) !== null && open.index < script.index) {
+                if (!isCardTag(open[2])) continue;
+                best = { tag: open[1].toLowerCase(), start: open.index };
+            }
+            if (!best) return [];
+            const end = closeOf(best.tag, best.start);
+            if (end < 0 || end <= script.end) return [];
+            cards.push({ start: best.start, end });
+        }
+        // One card per script, no overlaps, in document order.
+        cards.sort((a, b) => a.start - b.start);
+        for (let i = 1; i < cards.length; i++) {
+            if (cards[i].start < cards[i - 1].end) return [];
+        }
+        const seen = new Set();
+        const segments = [];
+        for (const card of cards) {
+            const key = `${card.start}:${card.end}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const cardHtml = source.slice(card.start, card.end);
+            const lines = this.extractBodyParts(cardHtml, this.extractionLimits.multiEventScanLineLimit)
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            if (lines.length === 0) continue;
+            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml });
+        }
+        return segments.length === cards.length ? segments : [];
+    }
+
     coverUnclaimedDatedWindows(html, structuredSegments) {
         const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
         if (structured.length === 0) return structured;
@@ -5516,6 +5684,272 @@ class AiWebParser {
      * (fail open: no feed, page behaves exactly as before).
      * Pure string/regex work — no URL global (iOS JavaScriptCore).
      */
+    // Every dated occurrence a MEC month grid publishes, from the page's
+    // active month and the replayed month feeds. Two grid skins exist:
+    //   - cells: <dt class="mec-calendar-day" data-mec-cell="YYYYMMDD"> with
+    //     one tooltip anchor per event (title, page link) and a tooltip
+    //     body carrying the time range and a description
+    //     (thedallaseagle.com — 153 occurrences over four months);
+    //   - side list: <div class="mec-calendar-events-sec" data-mec-cell=…>
+    //     with one JSON-LD Event per occurrence (name, ?occurrence= page
+    //     link, image; date only — the time lives on the event page)
+    //     (eaglela.com — 166 occurrences over four months).
+    // Times are the venue's wall clock (anchored as UTC and flagged for the
+    // normalizer's city re-anchoring, like every offset-less date). The
+    // crawl that follows enriches what its budget reaches; the grid is what
+    // makes the rest exist at all (run 20260911-053318: 15 links followed
+    // of 118 the grids offered — Dallas Eagle 41 records for 153 dates).
+    collectMecGridEvents(html, monthFeedSources, sourceUrl, cityConfig = null) {
+        if (!html || !this.detectMecMonthlyView(html)) return [];
+        const grids = [String(html)].concat((Array.isArray(monthFeedSources) ? monthFeedSources : [])
+            .map(feed => (feed && typeof feed.html === 'string' ? feed.html : ''))
+            .filter(Boolean));
+        const events = [];
+        const seen = new Set();
+        const push = (event) => {
+            if (!event || !event.title || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+            const key = `${(event.url || event.title).toLowerCase()}|${event.startDate.toISOString().slice(0, 10)}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            events.push(event);
+        };
+        for (const grid of grids) {
+            for (const row of this.readMecGridCells(grid, sourceUrl)) push(row);
+            for (const row of this.readMecGridSideList(grid, sourceUrl, cityConfig)) push(row);
+        }
+        return events;
+    }
+
+    readMecGridCells(grid, sourceUrl) {
+        const rows = [];
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const cellPattern = /<dt\b[^>]*class="[^"]*mec-calendar-day\b[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<dt\b[^>]*class="[^"]*mec-calendar-day\b|<\/dl>)/gi;
+        let cell;
+        while ((cell = cellPattern.exec(grid)) !== null) {
+            const day = cell[1];
+            const body = cell[2];
+            const anchorPattern = /<a\b[^>]*class="[^"]*mec-monthly-tooltip[^"]*"[^>]*data-tooltip-content="#([^"]+)"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+            let anchor;
+            while ((anchor = anchorPattern.exec(body)) !== null) {
+                const tooltipId = anchor[1];
+                const href = this.normalizeHttpUrlValue(this.decodeBasicEntities(anchor[2]).trim()) || '';
+                // Status labels the grid appends to a cell title ("(Expired!)",
+                // "Ongoing", a sold-out badge span) are not the event's name.
+                const title = clean(anchor[3].replace(/<span\b[^>]*class="[^"]*(?:expired|ongoing|soldout|sold-out|status|label|badge)[^"]*"[^>]*>[\s\S]*?<\/span>/gi, ' '))
+                    .replace(/\s*\(?\b(?:expired!?|ongoing|sold out|cancelled|canceled|postponed)\b!?\)?\s*$/i, '')
+                    .trim();
+                if (!title || !href) continue;
+                const tooltipMatch = body.match(new RegExp(`<div\\s+id="${tooltipId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>([\\s\\S]*?)<span class="mec-wrap">`, 'i'));
+                const tooltip = tooltipMatch ? tooltipMatch[1] : '';
+                const timeMatch = tooltip.match(/class="[^"]*mec-tooltip-event-time[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>\s*)*<div class="mec-event-detail"/i)
+                    || tooltip.match(/class="[^"]*mec-tooltip-event-time[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+                const timeText = timeMatch ? clean(timeMatch[1]) : '';
+                const descMatch = tooltip.match(/class="mec-tooltip-event-desc"[^>]*>([\s\S]*?)<\/div>/i);
+                const event = this.buildMecOccurrenceEvent({
+                    title, href, day, timeText, description: descMatch ? clean(descMatch[1]) : ''
+                }, sourceUrl);
+                if (event) rows.push(event);
+            }
+        }
+        return rows;
+    }
+
+    readMecGridSideList(grid, sourceUrl, cityConfig) {
+        const rows = [];
+        const sectionPattern = /<div\b[^>]*class="[^"]*mec-calendar-events-sec[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*mec-calendar-events-sec\b|$)/gi;
+        let section;
+        while ((section = sectionPattern.exec(grid)) !== null) {
+            const day = section[1];
+            const body = section[2];
+            const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+            let block;
+            while ((block = blockPattern.exec(body)) !== null) {
+                let node = null;
+                try {
+                    node = JSON.parse(block[1]);
+                } catch (_) {
+                    continue;
+                }
+                if (!node || typeof node !== 'object' || !/event/i.test(String(node['@type'] || ''))) continue;
+                const href = this.normalizeHttpUrlValue(String(node.url || '').trim()) || '';
+                const cleanText = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+                const title = cleanText(node.name);
+                if (!title || !href) continue;
+                const startText = String(node.startDate || '');
+                const timeMatch = startText.match(/T(\d{2}:\d{2})/);
+                // The description arrives HTML-escaped inside the JSON
+                // ("&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;"): decode, strip, decode again.
+                const event = this.buildMecOccurrenceEvent({
+                    title, href, day,
+                    timeText: timeMatch ? timeMatch[1] : '',
+                    description: cleanText(this.decodeBasicEntities(String(node.description || '')).replace(/&amp;/gi, '&')),
+                    image: this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || ''
+                }, sourceUrl);
+                if (event) rows.push(event);
+            }
+        }
+        return rows;
+    }
+
+    // A side-list grid states no times: each occurrence's own event page
+    // does (JSON-LD with the wall clock, plus artwork and copy). One fetch
+    // per distinct page — page-cached, so repeat runs cost nothing — and
+    // the wall clock applies to EVERY occurrence of that page in the grid
+    // (a series page is one document for all its dates). Cells that
+    // already state a time are left as the grid printed them.
+    async enrichMecOccurrencesFromEventPages(mecEvents, httpAdapter) {
+        if (!Array.isArray(mecEvents) || mecEvents.length === 0 || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const pathOf = (url) => String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+        const byPath = new Map();
+        for (const event of mecEvents) {
+            const path = pathOf(event.url);
+            if (!path) continue;
+            if (!byPath.has(path)) byPath.set(path, []);
+            byPath.get(path).push(event);
+        }
+        // Only listings that state no time: a grid that prints times (cells)
+        // gets its artwork from the crawl's own budget — reading every page
+        // for pictures alone fanned out into 60 requests and a firewall
+        // block (thedallaseagle.com, run 20260911).
+        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate, event)));
+        if (needing.length === 0) return;
+        let pagesRead = 0;
+        let timed = 0;
+        for (const [path, group] of needing.slice(0, MEC_EVENT_PAGE_ENRICH_CAP)) {
+            const sample = group.find(event => this.isMidnightWallClock(event.startDate, event)) || group[0];
+            let html = '';
+            try {
+                const response = await httpAdapter.fetchData(sample.url);
+                html = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            if (!html) continue;
+            pagesRead++;
+            const node = this.findJsonLdEventNodeForPage(html, path, sample.title);
+            if (!node) continue;
+            const clock = (value) => {
+                const match = String(value || '').match(/T(\d{2}):(\d{2})/);
+                return match ? { hour: Number(match[1]), minute: Number(match[2]) } : null;
+            };
+            const start = clock(node.startDate);
+            const end = clock(node.endDate);
+            const image = this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || '';
+            const description = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(this.decodeBasicEntities(String(node.description || '')))).replace(/&amp;/gi, '&'));
+            for (const event of group) {
+                if (start && this.isMidnightWallClock(event.startDate, event)) {
+                    const day = event.startDate;
+                    event.startDate = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), start.hour, start.minute));
+                    if (end) {
+                        let endDate = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), end.hour, end.minute));
+                        if (endDate.getTime() <= event.startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                        event.endDate = endDate;
+                    }
+                    timed++;
+                }
+                if (image && !event.image) {
+                    event.image = image;
+                    event.imageSource = 'json-ld';
+                }
+                if (description && !event.description) event.description = description;
+            }
+        }
+        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} un-timed listing(s) — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap not read)` : ''}`);
+    }
+
+    // TRUE only for a wall-clock-as-UTC placeholder: an event whose date
+    // is a listing's bare day (anchored as UTC midnight and flagged
+    // _timezoneUnresolved, or built from a grid cell). A real INSTANT at
+    // 00:00Z — an Elfsight row at 8pm EDT — is a time, never a placeholder
+    // (rockbarnyc.com, audit 2026-09-12: DIRTY LITTLE SECRET re-dated).
+    isMidnightWallClock(date, event = null) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+        if (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0) return false;
+        if (event === null) return true;
+        return Boolean(event && (event._timezoneUnresolved === true || event.source === 'mec'));
+    }
+
+    // The page's own JSON-LD Event for this page: the node whose url path is
+    // the page path, else the one named like the listing, else the only one.
+    findJsonLdEventNodeForPage(html, path, title) {
+        const nodes = [];
+        const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+        let block;
+        while ((block = blockPattern.exec(String(html || ''))) !== null) {
+            let parsed = null;
+            try {
+                parsed = JSON.parse(block[1]);
+            } catch (_) {
+                continue;
+            }
+            const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed['@graph']) ? parsed['@graph'] : [parsed]);
+            for (const node of list) {
+                if (node && typeof node === 'object' && /event/i.test(String(node['@type'] || '')) && node.startDate) nodes.push(node);
+            }
+        }
+        if (nodes.length === 0) return null;
+        const pathOf = (url) => String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+        const byPath = nodes.find(node => pathOf(node.url) === path);
+        if (byPath) return byPath;
+        const wanted = this.normalizeEvidenceText(title || '');
+        const byName = wanted ? nodes.find(node => this.normalizeEvidenceText(String(node.name || '')) === wanted) : null;
+        if (byName) return byName;
+        return nodes.length === 1 ? nodes[0] : null;
+    }
+
+    // One grid occurrence → an event: the cell's date, the tooltip's time
+    // range ("7:00 pm - 9:00 pm", an end before the start rolls to the next
+    // day), the page link as the event's own page.
+    buildMecOccurrenceEvent({ title, href, day, timeText, description, image }, sourceUrl) {
+        const match = String(day || '').match(/^(\d{4})(\d{2})(\d{2})$/);
+        if (!match) return null;
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const date = Number(match[3]);
+        const parseClock = (text) => {
+            const clock = String(text || '').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+            if (!clock) return null;
+            let hour = Number(clock[1]);
+            const minute = Number(clock[2] || 0);
+            const meridiem = clock[3] ? clock[3].toLowerCase() : '';
+            if (meridiem === 'pm' && hour < 12) hour += 12;
+            if (meridiem === 'am' && hour === 12) hour = 0;
+            return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? { hour, minute } : null;
+        };
+        // "7:00 pm - 9:00 pm", "9:00 pm - 2:00 am", "Start from: October 7,
+        // 2026 - 9:00 pm End at: October 8, 2026 - 2:00 am", "21:00": the
+        // clocks in the text, in order — first the start, then the end.
+        const text = String(timeText || '');
+        const clocks = text.match(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{2}:\d{2}\b/gi) || [];
+        const start = clocks.length > 0 ? parseClock(clocks[0]) : null;
+        const end = clocks.length > 1 ? parseClock(clocks[1]) : null;
+        const startDate = new Date(Date.UTC(year, month - 1, date, start ? start.hour : 0, start ? start.minute : 0));
+        if (Number.isNaN(startDate.getTime())) return null;
+        let endDate = null;
+        if (start && end) {
+            endDate = new Date(Date.UTC(year, month - 1, date, end.hour, end.minute));
+            if (endDate.getTime() <= startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+        }
+        const event = {
+            title,
+            description: description || '',
+            startDate,
+            endDate,
+            timezone: null,
+            bar: '',
+            address: '',
+            url: href,
+            website: href,
+            source: 'mec',
+            _timezoneUnresolved: true
+        };
+        if (image) {
+            event.image = image;
+            event.imageSource = 'json-ld';
+        }
+        return event;
+    }
+
     detectMecMonthlyView(html) {
         const text = String(html || '');
         if (!/data-mec-cell=|mec-load-month/.test(text)) return null;
@@ -5559,9 +5993,12 @@ class AiWebParser {
         const configured = parserConfig && parserConfig.calendarLookaheadMonths !== undefined
             ? parserConfig.calendarLookaheadMonths
             : (this.config ? this.config.calendarLookaheadMonths : undefined);
+        // Three months by default: the source expectations document a
+        // 90-day window, and the Eagles' December singles sat one month
+        // past the old two (run 20260911-053318).
         const value = Number(configured);
-        if (!Number.isFinite(value)) return 2;
-        return Math.max(0, Math.min(3, Math.floor(value)));
+        if (!Number.isFinite(value)) return 3;
+        return Math.max(0, Math.min(4, Math.floor(value)));
     }
 
     /**
@@ -5645,8 +6082,15 @@ class AiWebParser {
         const ids = new Set();
         const pattern = /elfsight-app-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
         let match;
-        while ((match = pattern.exec(String(html || ''))) !== null) ids.add(match[1].toLowerCase());
+        // Markup inside an HTML comment is not on the page: rockbarnyc.com
+        // keeps a retired 2024 calendar widget commented out, and its nine
+        // stale rows were read as live on every run (audit 2026-09-12).
+        while ((match = pattern.exec(this.stripHtmlComments(html))) !== null) ids.add(match[1].toLowerCase());
         return Array.from(ids);
+    }
+
+    stripHtmlComments(html) {
+        return String(html || '').replace(/<!--[\s\S]*?-->/g, ' ');
     }
 
     // The boot payload nests the settings under the widget's own id. Anything
@@ -5670,6 +6114,14 @@ class AiWebParser {
         const end = row.end && typeof row.end === 'object' ? row.end : {};
         if (!start.date) return null;
         const timezone = typeof row.timeZone === 'string' && row.timeZone.trim() ? row.timeZone.trim() : '';
+        // An all-day row's start.time is the moment the row was created
+        // (rockbarnyc.com: CLOSED FOR A PRIVATE EVENT at 23:33) — not a
+        // clock. All-day means the day, from midnight.
+        const isAllDay = row.isAllDay === true || row.allDay === true;
+        if (isAllDay) {
+            start.time = '00:00';
+            if (end && typeof end === 'object') end.time = '';
+        }
         const startDate = this.convertLocalDateTimeToUtc(`${start.date} ${start.time || '00:00'}:00`, timezone)
             || combineDateAndTime(start.date, start.time || '00:00');
         if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return null;
@@ -5800,7 +6252,10 @@ class AiWebParser {
         for (let page = 0; nextUrl && page < 5; page++) {
             let payload = null;
             try {
-                const response = await httpAdapter.fetchData(nextUrl, { headers: { 'x-api-key': widget.apiKey, Accept: 'application/json', Referer: sourceUrl } });
+                // Some partner keys are origin-scoped (401 without the site's
+                // own Origin — cmoneverybody.com); send the page's origin.
+                const pageOrigin = (String(sourceUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+                const response = await httpAdapter.fetchData(nextUrl, { headers: { 'x-api-key': widget.apiKey, Accept: 'application/json', Referer: sourceUrl, ...(pageOrigin ? { Origin: pageOrigin } : {}) } });
                 const body = response && typeof response.html === 'string' ? response.html : '';
                 payload = body ? JSON.parse(body) : null;
             } catch (error) {
@@ -5864,7 +6319,7 @@ class AiWebParser {
     }
 
     isSquarespaceEventCollectionPage(html) {
-        const source = String(html || '');
+        const source = this.stripHtmlComments(html);
         if (!/Static\.SQUARESPACE_CONTEXT/.test(source)) return false;
         return /\bcollection-type-events\b/.test(source) || /\beventlist(--upcoming|--past)?\b/.test(source);
     }
@@ -5883,8 +6338,10 @@ class AiWebParser {
     collectSquarespaceCollectionItems(payload) {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
         const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
+        // "events", "events-stacked", "events-list" — the layout variants
+        // of one collection type (massbearsandcubs.org, trial 2026-09-12).
         const typeName = String(collection.typeName || '').toLowerCase();
-        if (typeName && typeName !== 'events') return [];
+        if (typeName && !/^events?(?:[-_]|$)/.test(typeName)) return [];
         const isDatedItem = (item) => item && typeof item === 'object' && !Array.isArray(item)
             && typeof item.title === 'string' && item.title.trim() !== ''
             && typeof item.startDate === 'number' && item.startDate > 1e11 && item.startDate < 1e13;
@@ -5992,7 +6449,7 @@ class AiWebParser {
     // embed HTML entity-escaped (once or twice) inside a script payload, so
     // the search runs over the raw page and its unescaped forms.
     extractDiceWidgetConfig(html) {
-        const source = String(html || '');
+        const source = this.stripHtmlComments(html);
         if (!source) return null;
         const forms = [source];
         let decoded = this.decodeBasicEntities(source).replace(/\\"/g, '"');
@@ -8618,6 +9075,51 @@ class AiWebParser {
         return collected;
     }
 
+    // A Wix Events listing page is its own machine door: the warmup blob
+    // carries every upcoming event with exact UTC instants, IANA zone,
+    // address, pin, artwork and slug (chunk-party.com: 15 rows; the AI
+    // segmented 16 windows and enriched afterwards — 5 timezone alarms and
+    // 13 merges for 3 events, audit 2026-09-12). Only on the configured
+    // entry page (the blob rides on every page), and only when the page's
+    // own links show where event pages live, is the slug made a link.
+    collectWixEventListEvents(html, sourceUrl, parserConfig) {
+        if (!html || !sourceUrl || !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return [];
+        const records = this.extractWixServerEventList(html).filter(record => record && record.title && record.startDateUtc instanceof Date);
+        if (records.length === 0) return [];
+        const origin = (String(sourceUrl).match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        // The site's own event-page route, learned from its links.
+        const routeMatch = String(html).match(/href=["'](?:https?:\/\/[^/"']+)?(\/[a-z0-9-]*event[a-z0-9-]*\/)[a-z0-9-]+["']/i);
+        const route = routeMatch ? routeMatch[1] : '';
+        const events = [];
+        const seen = new Set();
+        for (const record of records) {
+            const key = `${record.slug || record.title.toLowerCase()}|${record.startDateUtc.toISOString()}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const pageUrl = route && record.slug ? `${origin}${route}${record.slug}` : '';
+            const event = {
+                title: record.title,
+                description: '',
+                startDate: record.startDateUtc,
+                endDate: record.endDateUtc instanceof Date && record.endDateUtc.getTime() > record.startDateUtc.getTime() ? record.endDateUtc : null,
+                timezone: record.timezone || null,
+                bar: '',
+                address: record.address || '',
+                url: pageUrl || sourceUrl,
+                website: pageUrl || sourceUrl,
+                source: 'wix'
+            };
+            if (record.coordinates) event.location = record.coordinates;
+            if (record.cover) event.cover = record.cover;
+            if (record.image) {
+                event.image = record.image;
+                event.imageSource = 'json-api';
+            }
+            events.push(event);
+        }
+        return events;
+    }
+
     buildWixServerEventRecord(node, tickets) {
         const clean = (value) => typeof value === 'string' ? this.normalizeWhitespace(value) : '';
         const location = node.location && typeof node.location === 'object' ? node.location : {};
@@ -8937,10 +9439,16 @@ class AiWebParser {
     // endpoints. Null when the object has no such array.
     findJsonApiPerformancesArray(obj) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
-        for (const value of Object.values(obj)) {
+        for (const [arrayKey, value] of Object.entries(obj)) {
             if (!Array.isArray(value) || value.length === 0) continue;
+            // People and places are not performances: a Tribe row's
+            // organizer[] entries carry the organizer post's publish `date`,
+            // and PLAYERS was dated the day its organizer was created
+            // (bearitmtl.com, run 20260911). Entries must state a START.
+            if (/^(organizers?|venues?|categories|tags|images|attachments|performers?|hosts?|sponsors?)$/.test(this.normalizeJsonApiKey(arrayKey))) continue;
             const everyEntryHasStart = value.every(entry => entry && typeof entry === 'object' && !Array.isArray(entry)
-                && Object.keys(entry).some(key => this.jsonApiStartDateFromEntry(key, entry[key]) !== null));
+                && Object.keys(entry).some(key => /(^|_)(starts?(_(at|date|time|datetime))?|when)$/.test(this.normalizeJsonApiKey(key))
+                    && this.jsonApiStartDateFromEntry(key, entry[key]) !== null));
             if (everyEntryHasStart) return value;
         }
         return null;
@@ -9070,7 +9578,7 @@ class AiWebParser {
             .filter(value => value && typeof value === 'object' && !Array.isArray(value));
         for (const container of containers) {
             for (const key of Object.keys(container)) {
-                if (!/^(next|next_url|next_page|next_page_url|next_link)$/.test(this.normalizeJsonApiKey(key))) continue;
+                if (!/^(next|next_url|next_page|next_page_url|next_link|next_rest_url)$/.test(this.normalizeJsonApiKey(key))) continue;
                 const link = absolute(container[key]);
                 if (link && link !== sourceUrl) return link;
             }
@@ -9098,6 +9606,7 @@ class AiWebParser {
         if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
         const rowArray = this.findJsonApiRowArray(payload);
         if (!rowArray || rowArray.rows.length === 0) return payload;
+        await this.reconcileJsonApiTimezoneKeys(rowArray.rows, sourceUrl, httpAdapter);
         const utcPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)$/;
         const dateKey = (key) => /(^|_)(start|end)(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
         const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
@@ -9149,6 +9658,89 @@ class AiWebParser {
             }
         }
         return payload;
+    }
+
+    // A feed whose rows state a wall clock plus a timezone key is checked
+    // ONCE against the site's own event page: when the page's JSON-LD
+    // prints the same wall-clock digits with an explicit offset that the
+    // feed's zone does not have at that instant, the feed's zone is the
+    // site's misconfiguration (WordPress "UTC-4" → TZID=America/Halifax
+    // on bearitmtl.com: every event an hour early) and the timezone keys
+    // are dropped so the city's zone anchors the wall clock instead.
+    async reconcileJsonApiTimezoneKeys(rows, sourceUrl, httpAdapter) {
+        const wallPattern = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?$/;
+        const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const startOf = (view) => view.start || view.start_date || view.startDate || view.starts_at;
+        const zoneOf = (view) => view.timezone || view.time_zone || view.tz;
+        const sample = rows.find(row => {
+            const view = this.unwrapJsonApiCandidate(row);
+            const start = startOf(view);
+            const zone = zoneOf(view);
+            const pageUrl = typeof view.url === 'string' ? view.url : '';
+            const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            return typeof start === 'string' && wallPattern.test(start) && !/T00:00|\s00:00/.test(start)
+                && typeof zone === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone)
+                && pageHost && pageHost === sourceHost;
+        });
+        if (!sample) return;
+        if (!this.jsonApiZoneVerdicts) this.jsonApiZoneVerdicts = new Map();
+        let verdict = this.jsonApiZoneVerdicts.get(sourceHost);
+        if (verdict === undefined) {
+            const view = this.unwrapJsonApiCandidate(sample);
+            const start = String(startOf(view));
+            const zone = String(zoneOf(view));
+            const digits = start.match(wallPattern);
+            verdict = false;
+            try {
+                const response = await httpAdapter.fetchData(view.url);
+                const html = response && typeof response.html === 'string' ? response.html : '';
+                const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
+                const withOffset = pageStarts.find(value => new RegExp(`^${digits[1]}T${digits[2]}(?::\\d{2})?([+-]\\d{2}:?\\d{2}|Z)$`).test(value));
+                if (withOffset) {
+                    const pageInstant = new Date(withOffset).getTime();
+                    const zoneInstant = this.wallClockInZone(digits[1], digits[2], zone);
+                    if (Number.isFinite(pageInstant) && Number.isFinite(zoneInstant) && pageInstant !== zoneInstant) {
+                        verdict = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} states zone ${zone} but its own page prints "${view.title || view.name || view.url}" as ${withOffset} — the feed's zone is off by ${Math.round((zoneInstant - pageInstant) / 60000)} min; reading every row's wall clock in the venue's own zone`);
+                    }
+                }
+            } catch (error) {
+                console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's zone (${error.message}) — zone kept`);
+            }
+            this.jsonApiZoneVerdicts.set(sourceHost, verdict);
+        }
+        if (!verdict) return;
+        for (const row of rows) {
+            for (const target of [row, this.unwrapJsonApiCandidate(row)]) {
+                if (!target || typeof target !== 'object') continue;
+                for (const key of Object.keys(target)) {
+                    if (/^(tz|time_?zone)$/.test(this.normalizeJsonApiKey(key))) delete target[key];
+                }
+            }
+        }
+    }
+
+    // Instant (ms) of a wall clock "YYYY-MM-DD" + "HH:MM" in an IANA zone.
+    wallClockInZone(dateText, timeText, zone) {
+        const [year, month, day] = dateText.split('-').map(Number);
+        const [hour, minute] = timeText.split(':').map(Number);
+        const base = Date.UTC(year, month - 1, day, hour, minute, 0);
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const zonedAsUtc = (ms) => {
+                const parts = Object.fromEntries(formatter.formatToParts(new Date(ms)).map(part => [part.type, part.value]));
+                return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour) % 24, Number(parts.minute), Number(parts.second));
+            };
+            let guess = base;
+            for (let i = 0; i < 3; i++) {
+                const next = base - (zonedAsUtc(guess) - guess);
+                if (next === guess) break;
+                guess = next;
+            }
+            return guess;
+        } catch (_) {
+            return NaN;
+        }
     }
 
     extractEventsFromJsonApiPayload(parsed, sourceUrl, cityConfig = null) {
@@ -9252,13 +9844,26 @@ class AiWebParser {
                         visit(value, depth + 1);
                         continue;
                     }
-                    if (!currency && /(^|_)currency(_|$)/.test(normalizedKey)
-                        && typeof value === 'string' && /^[A-Za-z]{3}$|^[$€£¥]$/.test(value.trim())) {
+                    // A 3-letter code beats a symbol met earlier (Tribe lists
+                    // currency_symbol "$" before currency_code "CAD").
+                    if (/(^|_)currency(_|$)/.test(normalizedKey)
+                        && typeof value === 'string' && /^[A-Za-z]{3}$|^[$€£¥]$/.test(value.trim())
+                        && (!currency || (/^[$€£¥]$/.test(currency) && /^[A-Za-z]{3}$/.test(value.trim())))) {
                         currency = value.trim().toUpperCase();
                         continue;
                     }
                     if (!priceKeyPattern.test(normalizedKey)) continue;
                     if (excludedKeyPattern.test(normalizedKey)) continue;
+                    // A formatted price string ("&#036;25.00 – &#036;35.00",
+                    // "$20 / $25 door") yields every amount it prints.
+                    if (typeof value === 'string' && !/^\s*-?\d+(?:\.\d+)?\s*$/.test(value)) {
+                        const decoded = this.decodeBasicEntities(value).replace(/&#0?36;/g, '$');
+                        for (const found of decoded.match(/\d+(?:[.,]\d{1,2})?/g) || []) {
+                            const parsedAmount = Number(found.replace(',', '.'));
+                            if (Number.isFinite(parsedAmount) && parsedAmount > 0) amounts.push(parsedAmount);
+                        }
+                        continue;
+                    }
                     const amount = Number(String(value === null || value === undefined ? '' : value).trim());
                     if (!Number.isFinite(amount) || amount <= 0) continue;
                     amounts.push(/cents/.test(normalizedKey) ? amount / 100 : amount);
@@ -9462,7 +10067,13 @@ class AiWebParser {
         // when-container — the same rule the recognizer applied (see
         // jsonApiStartDateFromEntry); end likewise, containers resolving
         // ONLY their end member.
-        const start = firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
+        // A key that SAYS start wins over a bare date key whatever the
+        // payload's key order: WordPress/Tribe rows list the post's
+        // publish `date` before `start_date` (bearitmtl.com: ENSEMBLE dated
+        // the day it was posted, run 20260911).
+        const startish = (key) => /(^|_)starts?(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
+        const startFromNamed = firstDateBy((key, value) => (startish(key) ? this.jsonApiStartDateFromEntry(key, value) : null));
+        const start = startFromNamed.date ? startFromNamed : firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
         if (!title || !start.date) return null;
         const end = firstDateBy((key, value) => this.jsonApiEndDateFromEntry(key, value));
 
@@ -9483,13 +10094,35 @@ class AiWebParser {
             return null;
         }
 
+        // A nested venue object (Tribe `venue: { venue, address, city, … }`,
+        // schema-ish `location: { name, address }`) is read as the place:
+        // its name is the bar and its parts the address. Scalar keys on the
+        // row itself are still read after it.
+        const venueObject = (() => {
+            for (const key of keys) {
+                if (!/^(venue|location|place)$/.test(this.normalizeJsonApiKey(key))) continue;
+                const value = view[key];
+                if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+                if (Array.isArray(value) && value[0] && typeof value[0] === 'object') return value[0];
+            }
+            return null;
+        })();
+        const venueField = (pattern) => {
+            if (!venueObject) return '';
+            for (const key of Object.keys(venueObject)) {
+                if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                const value = venueObject[key];
+                if (isNonEmptyString(value)) return value;
+            }
+            return '';
+        };
         // Address composed from street + locality + state + postal style keys,
         // with the JSON-LD path's duplicate-part guard.
         const addressParts = [
-            clean(firstValue(/(^|_)(address_line_?1|street_address|street|address)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(city|locality)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(state|region|province)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(postal_code|postal|zip_code|zip)$/, isNonEmptyString))
+            clean(venueField(/^(address|address_line_?1|street_address|street)$/) || firstValue(/(^|_)(address_line_?1|street_address|street|address)$/, isNonEmptyString)),
+            clean(venueField(/^(city|locality)$/) || firstValue(/(^|_)(city|locality)$/, isNonEmptyString)),
+            clean(venueField(/^(state|region|province|state_province)$/) || firstValue(/(^|_)(state|region|province)$/, isNonEmptyString)),
+            clean(venueField(/^(postal_code|postal|zip_code|zip)$/) || firstValue(/(^|_)(postal_code|postal|zip_code|zip)$/, isNonEmptyString))
         ];
         const accumulated = [];
         for (const part of addressParts) {
@@ -9500,14 +10133,18 @@ class AiWebParser {
         const address = accumulated.join(', ');
 
         // `place` is schema.org's and Tockify's venue-name key.
-        let bar = clean(firstValue(/^(venue|venue_name|location_name|place)$/, isNonEmptyString));
+        let bar = clean(venueField(/^(venue|name|venue_name|title)$/) || firstValue(/^(venue|venue_name|location_name|place)$/, isNonEmptyString));
         if (bar && this.venueNameLooksLikeStreetAddress(bar, address)) {
             console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
             bar = '';
         }
 
         const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
-        const rawImage = firstValue(imageKeyPattern, isHttpString);
+        // An image member may be an object ({ url, sizes… } — WordPress/Tribe).
+        const imageHttpString = (value) => isHttpString(value)
+            || (value && typeof value === 'object' && !Array.isArray(value) && isHttpString(value.url || value.src || value.source_url));
+        const rawImageValue = firstValue(imageKeyPattern, imageHttpString);
+        const rawImage = typeof rawImageValue === 'string' ? rawImageValue : (rawImageValue ? (rawImageValue.url || rawImageValue.src || rawImageValue.source_url) : '');
         const image = rawImage
             ? (this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(rawImage) || '') || '')
             : '';
@@ -9577,6 +10214,10 @@ class AiWebParser {
         if (slugValue && !/^https?:\/\//i.test(slugValue) && !/[\s/]/.test(slugValue.trim()) && !ownPageUrl) {
             event._jsonApiSlug = slugValue.trim();
         }
+        // The row's own page on the feed host: on a venue's or promoter's
+        // OWN site that page is the event's page (adopted below once the
+        // site's role is known); on an aggregator it is a copy. Internal.
+        if (ownPageUrl) event._jsonApiOwnPageUrl = this.normalizeHttpUrlValue(ownPageUrl) || '';
         // Recurrence, when the row states one (RRULE text): expanded to dated
         // occurrences by extractEventsFromJsonApiPayload. Internal field.
         const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
@@ -17713,6 +18354,10 @@ TEXT:
             console.log(`🤖 AI Web: Title "${title}" is a navigation label, not an event name — treating the title as missing`);
             title = '';
         }
+        if (title && this.isVenueClosureNoticeTitle(title)) {
+            console.log(`🚪 CLOSED: "${title}" is a closure notice, not an event — no event`);
+            return null;
+        }
         // Restore a title extraction truncated, proven by containment in the
         // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).
         // Deliberately FIRST of the title cleanups: the adopted value is the
@@ -19818,6 +20463,82 @@ TEXT:
             console.log(`🤖 AI Web: OCR-read structured-data artwork for "${event.title || 'Unknown'}" — ${readAs}: ${image}`);
         }
         return vettedCount;
+    }
+
+    // A structured event dated at midnight (the listing printed no time)
+    // whose OWN poster the vision pass read as stating exactly one start
+    // clock adopts it — when the poster also names this event's date, or
+    // names no date at all. eaglela.com prints no times anywhere in its
+    // grids or event pages; the flyers do ("CUBCAKE SEP 11 9pm $8"). A
+    // poster naming a different date, or several clocks, decides nothing.
+    adoptFlyerClockForPlaceholderTimes(events) {
+        if (!Array.isArray(events)) return 0;
+        const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        let adopted = 0;
+        for (const event of events) {
+            if (!event || !this.isMidnightWallClock(event.startDate, event)) continue;
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image) continue;
+            const verdict = this.getOcrImageVerdict(image);
+            const text = verdict && typeof verdict.text === 'string' ? verdict.text : '';
+            if (!text.trim()) continue;
+            const clock = this.readSingleStartClockFromFlyerText(text);
+            if (!clock) continue;
+            const day = event.startDate;
+            const month = day.getUTCMonth();
+            const date = day.getUTCDate();
+            const datePattern = new RegExp(`\\b(?:${MONTHS[month]}[a-z]*\\.?\\s+${date}(?!\\d)|${month + 1}[/.]${date}(?!\\d)|${date}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTHS[month]}[a-z]*)`, 'i');
+            const anyDatePattern = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?!\d)|\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/i;
+            const namesThisDate = datePattern.test(text);
+            if (!namesThisDate && anyDatePattern.test(text)) continue;
+            event.startDate = new Date(Date.UTC(day.getUTCFullYear(), month, date, clock.start.hour, clock.start.minute));
+            if (clock.end) {
+                let endDate = new Date(Date.UTC(day.getUTCFullYear(), month, date, clock.end.hour, clock.end.minute));
+                if (endDate.getTime() <= event.startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                event.endDate = endDate;
+            }
+            event._startTimeFromFlyer = true;
+            adopted++;
+            console.log(`🕒 FLYER CLOCK: "${event.title}" listed with no time — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; start set to ${String(clock.start.hour).padStart(2, '0')}:${String(clock.start.minute).padStart(2, '0')} wall clock`);
+        }
+        return adopted;
+    }
+
+    // Exactly one start clock in a poster's text ("9pm", "9:00 PM",
+    // "9pm-2am", "doors 8pm"): the first clock of the first range; null
+    // when the text states two different starts or none.
+    readSingleStartClockFromFlyerText(text) {
+        const source = String(text || '');
+        const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+        const parse = (match) => {
+            let hour = Number(match[1]);
+            const minute = Number(match[2] || 0);
+            const meridiem = match[3].toLowerCase();
+            if (meridiem === 'pm' && hour < 12) hour += 12;
+            if (meridiem === 'am' && hour === 12) hour = 0;
+            return hour < 24 && minute < 60 ? { hour, minute } : null;
+        };
+        const found = [];
+        let match;
+        while ((match = clockPattern.exec(source)) !== null) {
+            const parsed = parse(match);
+            if (parsed) found.push({ ...parsed, index: match.index, text: match[0] });
+        }
+        if (found.length === 0) return null;
+        const starts = [];
+        for (let i = 0; i < found.length; i++) {
+            const between = i > 0 ? source.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
+            // The second clock of a "9pm - 2am" / "9pm to 2am" range is an end.
+            if (i > 0 && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(between)) continue;
+            starts.push(i);
+        }
+        const distinct = new Set(starts.map(i => `${found[i].hour}:${found[i].minute}`));
+        if (distinct.size !== 1) return null;
+        const startIndex = starts[0];
+        const next = found[startIndex + 1];
+        const betweenNext = next ? source.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
+        const end = next && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(betweenNext) ? { hour: next.hour, minute: next.minute } : null;
+        return { start: { hour: found[startIndex].hour, minute: found[startIndex].minute }, end, text: end ? `${found[startIndex].text} – ${next.text}` : found[startIndex].text };
     }
 
     fillImageFromPageMetaArtwork(event, htmlData) {

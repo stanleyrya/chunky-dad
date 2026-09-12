@@ -1,0 +1,1027 @@
+{
+  "schemaVersion": 1,
+  "source": "Eagle Manchester",
+  "slug": "eagle-manchester",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "static",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eaglemanchester.com/eventlist"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "kind": "wix-events-warmup-json",
+        "role": "feed",
+        "rowsReturned": 18,
+        "truthFlag": "events.hasMore: TRUE; all 18 rows status 0 (upcoming)",
+        "note": "Static curl with a Safari UA, HTTP 200, 1420840 bytes (discovery/eaglemanchester.com/eventlist.body); the scraper's page cache holds the same page fetched 2026-09-12T13:13:03Z. appsWarmupData[\"140603ad-af8d-84a5-2c80-a0f60cb47351\"][\"widgetcomp-kl9vmmlp\"].events.events[] holds the widget's FIRST PAGE ONLY: 18 rows, hasMore true (saved as gt/eaglemanchester-warmup.json); the rendered list ends in a 'Load More' button and the second page is fetched client-side, so this door shows rows dated 2026-09-12 through 2026-10-17 and nothing later. Row fields as on any Wix Events site: slug, title, description, status, scheduling.config.startDate/endDate (UTC) + timeZoneId Europe/London, scheduling.formatted, location.name ('The Eagle Bar' x12, 'Eagle Bar Manchester' x3, 'Manchester' x3 — all with fullAddress.formattedAddress '15 Bloom St, Manchester M1 3HZ, UK' and geocode 53.4776757,-2.2369046), registration.type (2 ticketing, 1 RSVP for Spank Guys/Collared, 3 external for InTheHouse with registration.external.registration = a Skiddle URL), ticketing.lowestPrice/highestPrice, mainImage.url. No recurrence field; recurring nights are separate rows with date-stamped slugs."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "kind": "wix-static-html-text",
+        "role": "listing",
+        "rowsReturned": 18,
+        "truthFlag": "'Load More' button after the 18th card",
+        "note": "Text-stripped page: 'EVENTS EAGLE MANCHESTER OUR CLUB EVENTS ... Upcoming Events Multiple Dates Manbears Social Sat 12 Sept The Eagle Bar More info BOOK NOW Multiple Dates Locker Room Sat 12 Sept ... Lola Lasagne does Sunday Service with hostess Gladys Duffy Sun 13 Sept ... Multiple Dates Beareoke Sun 13 Sept ... Hellbent Sat 17 Oct Eagle Bar Manchester More info BOOK NOW Load More EVENT FAQ IS THERE A CLOAK ROOM? ...'. 18 cards = the 18 warmup rows; 'Multiple Dates' is printed on the Manbears, Locker Room, Beareoke, Quizzical, Spank Guys, Hanky Panky, Collared and Ultimate00s cards (rows created with Wix's recurring feature) and not on Lola Lasagne, InTheHouse or Hellbent. Cards carry no year. Footer: '15 Bloom Street Manchester Gay Village Manchester England United Kingdom M1 3HZ info@eaglemanchester.com'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-pages-sitemap.xml",
+        "kind": "wix-event-pages-sitemap",
+        "role": "sitemap",
+        "rowsReturned": 1356,
+        "truthFlag": null,
+        "note": "HTTP 200, 435626 bytes (discovery/eaglemanchester.com/event-pages-sitemap.body). 1356 /event-details/<slug> URLs since 2022. 28 date-stamped slugs are on or after the recon date: the 15 dated widget rows plus 13 beyond the first page — collared-manchester 2026-11-07 / 2026-12-05, hanky-panky 2026-11-28, locker-room 2026-11-14 / 2027-01-09, manbears-social 2026-11-14 / 2026-12-12, spank-guys 2026-11-06-18-30 / 2026-11-21-13-00 / 2026-12-04-18-30 / 2026-12-19-13-00, suck-my-disco 2026-11-07, ultimate00s 2026-12-05. Undated slugs with lastmod >= 2026-08-01 that are NOT widget rows: nine pride-2026-* pages (lastmod 3-25 Aug), martha-darthur-does-sunday-service-with-hostess-gladys-duffy-3 (08-10), inthehouse (08-11), the-haus-of-dorothy (08-15), lets-get-quizzical-with-lola-lasagne-24 (08-24), lady-imelda-does-sunday-service-with-hostess-shania-pain (09-02), plus hellbent-13 (04-10); none was opened, see knownGaps."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Discovery home.body, HTTP 200, 1633413 bytes. Its warmup blob has no events widget; the page text is 'EAGLE BAR MANCHESTER IS A PRIVATE MEMBERS CLUB & REQUIRES MEMBERSHIP', 'MANCHESTERS MEN ONLY MEMBERS BAR', an 'UPCOMING EVENTS' heading followed only by an Instagram embed ('Follow us on Instagram #wix @wix Load More'), the address and social links instagram.com/eaglemanchester, facebook.com/eaglebarmanchester, x.com/eaglemanchester."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/suck-my-disco-2026-11-07-23-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "'Last available date' (no Other dates)",
+        "note": "Fetched 2026-09-12 to read the one sitemap-listed future single with no cached page. JSON-LD 2026-11-07T23:00:00Z – 2026-11-08T05:00:00Z, Eagle Bar Manchester; tickets Early Bird £5.00 / Advance Only £8.00."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-09-12-16-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-12T16:00:00+01:00 – 2026-09-12T20:00:00+01:00, AggregateOffer £0; 'Other dates Sat 10 Oct, 16:00 Sat 14 Nov, 16:00 Sat 12 Dec, 16:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/locker-room-2026-09-12-23-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-12T23:00:00+01:00 – 2026-09-13T05:00:00+01:00, £8-£10; 'Other dates Sat 14 Nov, 23:00 Sat 09 Jan, 23:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-13-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-13T20:00:00+01:00 – 2026-09-14T01:00:00+01:00; 'Other dates Sun 20 Sept, 20:00 Sun 27 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-20-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-20T20:00:00+01:00 – 2026-09-21T01:00:00+01:00; 'Other dates Sun 13 Sept, 20:00 Sun 27 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-27T20:00:00+01:00 – 2026-09-28T01:00:00+01:00; 'Other dates Sun 13 Sept, 20:00 Sun 20 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/lets-get-quizzical-with-lola-lasagne-2026-09-17-19-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-17T19:00:00+01:00 – 2026-09-17T23:00:00+01:00; 'Other dates Thu 24 Sept, 19:00 Thu 01 Oct, 19:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/lets-get-quizzical-with-lola-lasagne-2026-09-24-19-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-24T19:00:00+01:00 – 2026-09-24T23:00:00+01:00; 'Other dates Thu 17 Sept, 19:00 Thu 01 Oct, 19:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/lets-get-quizzical-with-lola-lasagne-2026-10-01-19-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-10-01T19:00:00+01:00 – 2026-10-01T23:00:00+01:00; 'Other dates Thu 17 Sept, 19:00 Thu 24 Sept, 19:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-09-19-13-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-19T13:00:00+01:00 – 2026-09-19T17:00:00+01:00, location name 'Manchester'; 'Other dates Sat 17 Oct, 13:00 Sat 21 Nov, 13:00 Sat 19 Dec, 13:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-10-02-18-30",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-10-02T18:30:00+01:00 – 2026-10-02T22:30:00+01:00; 'Other dates Fri 06 Nov, 18:30 Fri 04 Dec, 18:30'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-09-26T23:00:00+01:00 – 2026-09-27T05:00:00+01:00, £5-£8; 'Other dates Sat 28 Nov, 23:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/event-details/collared-manchester-2026-10-03-19-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12. JSON-LD 2026-10-03T19:00:00+01:00 – 2026-10-03T23:00:00+01:00; 'Other dates Sat 07 Nov, 19:00 Sat 05 Dec, 19:00'."
+      }
+    ]
+  },
+  "defaults": {
+    "city": "manchester",
+    "timezone": "Europe/London",
+    "bar": "The Eagle Bar",
+    "address": "15 Bloom St, Manchester M1 3HZ, UK",
+    "location": "53.4776757, -2.2369046",
+    "website": "https://www.eaglemanchester.com",
+    "instagram": "https://www.instagram.com/eaglemanchester",
+    "facebook": "https://www.facebook.com/eaglebarmanchester"
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "Feed door (/eventlist wix-warmup-data, widgetcomp-kl9vmmlp.events): 18 rows, hasMore TRUE — the widget pages and the static HTML carries only page one (12 Sept – 17 Oct). Second door (event-pages-sitemap.xml): 28 date-stamped slugs on or after the recon date = the 15 dated widget rows + 13 later instances; third door: the 12 cached event pages, whose JSON-LD matches their rows one for one and whose 'Other dates' blocks name the same later instances the sitemap holds (Manbears 14 Nov / 12 Dec, Spank Guys 21 Nov / 19 Dec and 6 Nov / 4 Dec, Collared 7 Nov / 5 Dec, Hanky Panky 28 Nov, Locker Room 14 Nov / 9 Jan); the one later single with no cached page (Suck My Disco 7 Nov) was fetched. The 18 first-page rows fold into 12 things: 6 series with a quoted cadence (Beareoke every Sunday x3 rows, Quizzical every Thursday x3, Manbears second Saturday x2, Spank Guys third Saturday x2 and first Friday x1 — two series sharing a title — Collared first Saturday x1) and 6 singles (Lola Lasagne Sunday Service, Locker Room 12 Sept, Hanky Panky 26 Sept, Ultimate00s 3 Oct, InTheHouse 9 Oct, Hellbent 17 Oct). The sitemap/Other-dates tail adds 5 more singles (Locker Room 14 Nov and 9 Jan, Hanky Panky 28 Nov, Ultimate00s 5 Dec, Suck My Disco 7 Nov) — same-title nights whose gaps are irregular or unstated — and 8 further listed occurrences of the series. publishedEventCount 17 = 6 series + 11 singles. Confidence is medium, not high, because the widget's second page was never read as a list: any UNDATED-slug one-off on it (the sitemap has six recent undated pages that are not first-page rows) is invisible to every door used. Past listings: none served by the widget; 1300-odd older sitemap pages are history, not enumerated. Run 20260912-152153 returned the 18 first-page rows (5 kept, 13 bear-dropped).",
+    "publishedEventCount": 17,
+    "documentedEventCount": 17,
+    "occurrenceWindow": {
+      "start": "2026-09-12",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": [
+      "The Wix Events widget on /eventlist pages: events.hasMore is true and the static door (warmup JSON) shows only the first 18 rows (12 Sept – 17 Oct). Rows on the second page are known only where a date-stamped slug in event-pages-sitemap.xml or an 'Other dates' block on a cached page names them; undated one-offs on the second page cannot be seen from any door used.",
+      "Six recent undated sitemap pages that are not first-page rows were not opened, so it is unknown whether they are past or upcoming: lady-imelda-does-sunday-service-with-hostess-shania-pain (lastmod 2026-09-02), lets-get-quizzical-with-lola-lasagne-24 (08-24), the-haus-of-dorothy (08-15), inthehouse (08-11), martha-darthur-does-sunday-service-with-hostess-gladys-duffy-3 (08-10), hellbent-13 (04-10); plus nine pride-2026-* pages (lastmod 3-25 Aug).",
+      "For the five tail singles (Locker Room 14 Nov / 9 Jan, Hanky Panky 28 Nov, Ultimate00s 5 Dec) only the start date and time are asserted; their pages were not opened.",
+      "occurrenceWindow ends 2026-12-31 rather than at 90 days so that the December instances the site lists (Manbears 12 Dec, Spank Guys 19 Dec) stay inside it."
+    ]
+  },
+  "events": [
+    {
+      "id": "beareoke",
+      "kind": "series",
+      "title": "Beareoke",
+      "description": "From 8pm every week, straight after Sunday Service, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out!\nGet down early, get your song requests in and finish the weekend off with a bang!",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-09-13",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Row description / event page: 'From 8pm every week, straight after Sunday Service, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out!'",
+      "website": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-13-20-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-13-20-00",
+      "image": "https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[3]",
+            "quote": "beareoke-2026-09-13-20-00"
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[6]",
+            "quote": "beareoke-2026-09-20-20-00"
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[9]",
+            "quote": "beareoke-2026-09-27-20-00"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[3]",
+        "quote": "beareoke-2026-09-13-20-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 3: status 0, scheduling.config.startDate 2026-09-13T19:00:00.000Z / endDate 2026-09-14T00:00:00.000Z (Europe/London), scheduling.formatted '13 September 2026 at 20:00 – 14 September 2026 at 01:00', location.name 'The Eagle Bar', registration.type 2 lowestPrice £0. Three dated rows (3, 6, 9), each 20:00-01:00 BST, free (lowestPrice £0), same mainImage; event pages' JSON-LD 2026-09-13T20:00:00+01:00 etc. and 'Other dates Sun 20 Sept, 20:00 Sun 27 Sept, 20:00'. Only three Sundays are materialized on the site (the sitemap has no beareoke slug after 27 Sept); later Sundays are RRULE arithmetic from 'every week'. Run 20260912-152153 returned all three rows as separate records (kept)."
+    },
+    {
+      "id": "lets-get-quizzical-with-lola-lasagne",
+      "kind": "series",
+      "title": "Lets Get Quizzical with Lola Lasagne",
+      "description": "Join us every Thursday for the biggest quiz night in the village with Miss Lola Lasagne.\nYou've got to be in it to win it though, so book your table (max of 6 per team) on our website!\nPlease try and bring your entry fee in cash - this would be super-helpful.",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-09-17",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "Row description / event page: 'Join us every Thursday for the biggest quiz night in the village with Miss Lola Lasagne.'",
+      "website": "https://www.eaglemanchester.com/event-details/lets-get-quizzical-with-lola-lasagne-2026-09-17-19-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/lets-get-quizzical-with-lola-lasagne-2026-09-17-19-00",
+      "image": "https://static.wixstatic.com/media/741c1a_2b79e998eb534f4094d18e597daf46d2~mv2.png",
+      "occurrences": [
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[4]",
+            "quote": "lets-get-quizzical-with-lola-lasagne-2026-09-17-19-00"
+          }
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[7]",
+            "quote": "lets-get-quizzical-with-lola-lasagne-2026-09-24-19-00"
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[10]",
+            "quote": "lets-get-quizzical-with-lola-lasagne-2026-10-01-19-00"
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-31",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[4]",
+        "quote": "lets-get-quizzical-with-lola-lasagne-2026-09-17-19-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 4: status 0, scheduling.config.startDate 2026-09-17T18:00:00.000Z / endDate 2026-09-17T22:00:00.000Z (Europe/London), scheduling.formatted '17 September 2026, 19:00–23:00', location.name 'The Eagle Bar', registration.type 2 lowestPrice £0. Three dated rows (4, 7, 10), each 19:00-23:00 BST, free (entry fee 'in cash'); event pages 'Other dates Thu 24 Sept, 19:00 Thu 01 Oct, 19:00'. Only three Thursdays are materialized (no later slug in the sitemap); later Thursdays are RRULE arithmetic from 'every Thursday'. Run 20260912-152153 returned all three rows (bear-dropped)."
+    },
+    {
+      "id": "manbears-social",
+      "kind": "series",
+      "title": "Manbears Social",
+      "description": "The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-09-12",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "Row description / event page: 'The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.'",
+      "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-09-12-16-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/manbears-social-2026-09-12-16-00",
+      "image": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[0]",
+            "quote": "manbears-social-2026-09-12-16-00"
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[15]",
+            "quote": "manbears-social-2026-10-10-16-00"
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-09-12-16-00",
+            "quote": "Other dates Sat 10 Oct, 16:00 Sat 14 Nov, 16:00 Sat 12 Dec, 16:00"
+          }
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-09-12-16-00",
+            "quote": "Other dates Sat 10 Oct, 16:00 Sat 14 Nov, 16:00 Sat 12 Dec, 16:00"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[0]",
+        "quote": "manbears-social-2026-09-12-16-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 0: status 0, scheduling.config.startDate 2026-09-12T15:00:00.000Z / endDate 2026-09-12T19:00:00.000Z (Europe/London), scheduling.formatted '12 September 2026, 16:00–20:00', location.name 'The Eagle Bar', registration.type 2 lowestPrice £0. Rows 0 and 15 (12 Sept, 10 Oct), 16:00-20:00 BST, free; the 12 Sept page lists 'Other dates Sat 10 Oct, 16:00 Sat 14 Nov, 16:00 Sat 12 Dec, 16:00' and the sitemap holds manbears-social-2026-11-14-16-00 and -2026-12-12-16-00, so all four instances through December are listed by the site (November's and December's sit on the widget's unread second page). 'The Black Eagle' is a room of the venue. Run 20260912-152153 returned the two widget rows (kept)."
+    },
+    {
+      "id": "spank-guys-third-saturday",
+      "kind": "series",
+      "title": "Spank Guys",
+      "description": "The North West CP Group meet in The Eagle at 1pm on the third Saturday of every month.",
+      "bar": "Manchester",
+      "startDate": "2026-09-19",
+      "startTime": "13:00",
+      "endTime": "17:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "Row description / event page: 'The North West CP Group meet in The Eagle at 1pm on the third Saturday of every month.'",
+      "website": "https://www.eaglemanchester.com/event-details/spank-guys-2026-09-19-13-00",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/741c1a_64128cc7687b4b18bac448fc35f1924d~mv2.png",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[5]",
+            "quote": "spank-guys-2026-09-19-13-00"
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[16]",
+            "quote": "spank-guys-2026-10-17-13-00"
+          }
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-09-19-13-00",
+            "quote": "Other dates Sat 17 Oct, 13:00 Sat 21 Nov, 13:00 Sat 19 Dec, 13:00"
+          }
+        },
+        {
+          "startDate": "2026-12-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-09-19-13-00",
+            "quote": "Other dates Sat 17 Oct, 13:00 Sat 21 Nov, 13:00 Sat 19 Dec, 13:00"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[5]",
+        "quote": "spank-guys-2026-09-19-13-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 5: status 0, scheduling.config.startDate 2026-09-19T12:00:00.000Z / endDate 2026-09-19T16:00:00.000Z (Europe/London), scheduling.formatted '19 September 2026, 13:00–17:00', location.name 'Manchester', registration.type 1. Rows 5 and 16 (19 Sept, 17 Oct), 13:00-17:00 BST, registration.type 1 (RSVP, no tickets), location.name 'Manchester' as published; the 19 Sept page lists 'Other dates Sat 17 Oct, 13:00 Sat 21 Nov, 13:00 Sat 19 Dec, 13:00' and the sitemap holds spank-guys-2026-11-21-13-00 and -2026-12-19-13-00. This is the Saturday-afternoon series; a SECOND series with the same title runs on first Fridays (spank-guys-first-friday) — they are not duplicates. Run 20260912-152153 returned both widget rows (bear-dropped)."
+    },
+    {
+      "id": "spank-guys-first-friday",
+      "kind": "series",
+      "title": "Spank Guys",
+      "description": "The North West CP Group meet in The Eagle at 6.30pm on the first Friday of every month.",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-10-02",
+      "startTime": "18:30",
+      "endTime": "22:30",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "Row description / event page: 'The North West CP Group meet in The Eagle at 6.30pm on the first Friday of every month.'",
+      "website": "https://www.eaglemanchester.com/event-details/spank-guys-2026-10-02-18-30",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/741c1a_73bd8931a82b43b2af495a2063517e7e~mv2.png",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[11]",
+            "quote": "spank-guys-2026-10-02-18-30"
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-10-02-18-30",
+            "quote": "Other dates Fri 06 Nov, 18:30 Fri 04 Dec, 18:30"
+          }
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/spank-guys-2026-10-02-18-30",
+            "quote": "Other dates Fri 06 Nov, 18:30 Fri 04 Dec, 18:30"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[11]",
+        "quote": "spank-guys-2026-10-02-18-30"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 11: status 0, scheduling.config.startDate 2026-10-02T17:30:00.000Z / endDate 2026-10-02T21:30:00.000Z (Europe/London), scheduling.formatted '2 October 2026, 18:30–22:30', location.name 'The Eagle Bar', registration.type 1. Row 11 (2 Oct), 18:30-22:30 BST, RSVP (type 1), different mainImage and description from the Saturday series; page 'Other dates Fri 06 Nov, 18:30 Fri 04 Dec, 18:30'; sitemap spank-guys-2026-11-06-18-30 and -2026-12-04-18-30. Same title as spank-guys-third-saturday, different cadence, time and description. Run 20260912-152153 returned the widget row (bear-dropped)."
+    },
+    {
+      "id": "collared-manchester",
+      "kind": "series",
+      "title": "Collared Manchester",
+      "description": "Club Collared meet at 7pm on the first Saturday of every month.",
+      "bar": "Eagle Bar Manchester",
+      "startDate": "2026-10-03",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "Row description / event page: 'Club Collared meet at 7pm on the first Saturday of every month.'",
+      "website": "https://www.eaglemanchester.com/event-details/collared-manchester-2026-10-03-19-00",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/741c1a_c74673609f934b739b4b3560296f60a2~mv2.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/eventlist",
+            "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[12]",
+            "quote": "collared-manchester-2026-10-03-19-00"
+          }
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/collared-manchester-2026-10-03-19-00",
+            "quote": "Other dates Sat 07 Nov, 19:00 Sat 05 Dec, 19:00"
+          }
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglemanchester.com/event-details/collared-manchester-2026-10-03-19-00",
+            "quote": "Other dates Sat 07 Nov, 19:00 Sat 05 Dec, 19:00"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[12]",
+        "quote": "collared-manchester-2026-10-03-19-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 12: status 0, scheduling.config.startDate 2026-10-03T18:00:00.000Z / endDate 2026-10-03T22:00:00.000Z (Europe/London), scheduling.formatted '3 October 2026, 19:00–23:00', location.name 'Eagle Bar Manchester', registration.type 1. Row 12 (3 Oct), 19:00-23:00 BST, RSVP (type 1), location.name 'Eagle Bar Manchester'; page 'Other dates Sat 07 Nov, 19:00 Sat 05 Dec, 19:00'; sitemap collared-manchester-2026-11-07-19-00 and -2026-12-05-19-00. Run 20260912-152153 returned the widget row (bear-dropped)."
+    },
+    {
+      "id": "lola-lasagne-does-sunday-service-with-hostess-gladys-duffy-2026-09-13",
+      "kind": "single",
+      "title": "Lola Lasagne does Sunday Service with hostess Gladys Duffy",
+      "description": "The Dame Lola Lasagne is back at Eagle on Sunday 13th September for her post-pride Sunday Service party! \nShe'll be joined by evergreen hostess Gladys Duffy from 4pm on the nose.",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-09-13",
+      "startTime": "14:00",
+      "endDate": "2026-09-13",
+      "endTime": "20:00",
+      "website": "https://www.eaglemanchester.com/event-details/lola-lasagne-does-sunday-service-with-hostess-gladys-duffy-1",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/lola-lasagne-does-sunday-service-with-hostess-gladys-duffy-1",
+      "image": "https://static.wixstatic.com/media/741c1a_a594c32b02a04dada87d03d79496f3a9~mv2.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[2]",
+        "quote": "lola-lasagne-does-sunday-service-with-hostess-gladys-duffy-1"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 2: status 0, scheduling.config.startDate 2026-09-13T13:00:00.000Z / endDate 2026-09-13T19:00:00.000Z (Europe/London), scheduling.formatted '13 September 2026, 14:00–20:00', location.name 'The Eagle Bar', registration.type 2 lowestPrice £0. Run 20260912-152153 returned it (bear-dropped). One-off (undated slug ...-1, no 'Multiple Dates' label): 'The Dame Lola Lasagne is back at Eagle on Sunday 13th September for her post-pride Sunday Service party! She'll be joined by evergreen hostess Gladys Duffy from 4pm on the nose.' Row 14:00-20:00 while the text says the hostess is on from 4pm. Run 20260912-152153 returned it (bear-dropped)."
+    },
+    {
+      "id": "locker-room-2026-09-12",
+      "kind": "single",
+      "title": "Locker Room",
+      "description": "Sweat it out. Strip down. Step into the LOCKER ROOM!\nJoin DJ Dave Ritson for non stop gym inspired music!\n\nSportswear and underwear are encouraged.\nInstagram @Lockerroom_mcr",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-09-12",
+      "startTime": "23:00",
+      "endDate": "2026-09-13",
+      "endTime": "05:00",
+      "website": "https://www.eaglemanchester.com/event-details/locker-room-2026-09-12-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/locker-room-2026-09-12-23-00",
+      "image": "https://static.wixstatic.com/media/741c1a_1c8609af8cb04abeae19cc9f12fc6bf4~mv2.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[1]",
+        "quote": "locker-room-2026-09-12-23-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 1: status 0, scheduling.config.startDate 2026-09-12T22:00:00.000Z / endDate 2026-09-13T04:00:00.000Z (Europe/London), scheduling.formatted '12 September 2026 at 23:00 – 13 September 2026 at 05:00', location.name 'The Eagle Bar', registration.type 2 lowestPrice £8 highestPrice £10. Run 20260912-152153 returned it (bear-dropped).Event page JSON-LD 2026-09-12T23:00:00+01:00 – 2026-09-13T05:00:00+01:00, AggregateOffer £8-£10; 'Other dates Sat 14 Nov, 23:00 Sat 09 Jan, 23:00' — irregular gaps and no stated cadence, so each date is its own single (see locker-room-2026-11-14, locker-room-2027-01-09). Sportswear/underwear night, DJ Dave Ritson, Instagram @Lockerroom_mcr."
+    },
+    {
+      "id": "hanky-panky-2026-09-26",
+      "kind": "single",
+      "title": "Hanky Panky!",
+      "description": "Hanky Panky: An 80s & 90s Affair!\nGet ready to party with a twist! Join us for Hanky Panky, a retro-fueled night celebrating the best of 80s and 90s jams, where the beats are hot, and the code is hotter.",
+      "bar": "Eagle Bar Manchester",
+      "startDate": "2026-09-26",
+      "startTime": "23:00",
+      "endDate": "2026-09-27",
+      "endTime": "05:00",
+      "website": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00",
+      "image": "https://static.wixstatic.com/media/741c1a_2d9ab8c05635407e808236bc9a2de9cb~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[8]",
+        "quote": "hanky-panky-2026-09-26-23-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 8: status 0, scheduling.config.startDate 2026-09-26T22:00:00.000Z / endDate 2026-09-27T04:00:00.000Z (Europe/London), scheduling.formatted '26 September 2026 at 23:00 – 27 September 2026 at 05:00', location.name 'Eagle Bar Manchester', registration.type 2 lowestPrice £5 highestPrice £8. Run 20260912-152153 returned it (bear-dropped).Event page JSON-LD 2026-09-26T23:00:00+01:00 – 2026-09-27T05:00:00+01:00, £5-£8; 'Other dates Sat 28 Nov, 23:00' (see hanky-panky-2026-11-28). 80s & 90s night."
+    },
+    {
+      "id": "ultimate00s-2026-10-03",
+      "kind": "single",
+      "title": "Ultimate00s",
+      "description": "\"The best new night to hit the village in a long time\"",
+      "bar": "Manchester",
+      "startDate": "2026-10-03",
+      "startTime": "23:00",
+      "endDate": "2026-10-04",
+      "endTime": "05:00",
+      "website": "https://www.eaglemanchester.com/event-details/ultimate00s-2026-10-03-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/ultimate00s-2026-10-03-23-00",
+      "image": "https://static.wixstatic.com/media/09ec66_825d59ec640349f9a07635ce5cb54c27~mv2.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[13]",
+        "quote": "ultimate00s-2026-10-03-23-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 13: status 0, scheduling.config.startDate 2026-10-03T22:00:00.000Z / endDate 2026-10-04T04:00:00.000Z (Europe/London), scheduling.formatted '3 October 2026 at 23:00 – 4 October 2026 at 05:00', location.name 'Manchester', registration.type 2 lowestPrice £3 highestPrice £5. Run 20260912-152153 returned it (bear-dropped).Row 13, location.name 'Manchester' as published, £3-£5, description '\"The best new night to hit the village in a long time\"', created 2025-01-02 (a batch of bi-monthly first-Saturday instances; see ultimate00s-2026-12-05). Event page not cached. Same night as Collared Manchester (19:00-23:00)."
+    },
+    {
+      "id": "inthehouse-halloween-neon-takeover-2026-10-09",
+      "kind": "single",
+      "title": "InTheHouse - Halloween Neon Takeover",
+      "description": "Who's ready for round 5\nThe neon takeover is back again, but this time, for its Halloween Neon Takeover \nGet ready to glow\nGet yourself to @eaglemanchester and join the next InTheHouse event and experience it for yourself",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-10-09",
+      "startTime": "23:00",
+      "endDate": "2026-10-10",
+      "endTime": "05:00",
+      "website": "https://www.eaglemanchester.com/event-details/inthehouse-halloween-neon-takeover-1",
+      "ticketUrl": "https://www.skiddle.com/whats-on/Manchester/The-Eagle-Manchester/InTheHouse---Halloween-Neon-Takeover/42640605/?fbclid=IwY2xjawULoRlwZG9mAWV4dG4DYWVtAjEwAGJyaWQRMGxFbkJRQjlsVE9BRldXVThzcnRjBmFwcF9pZBAyMjIwMzkxNzg4MjAwODkyAAEe-SOSTXZJVMwW_u7flMYAOTEITd1e9nkvtvl5fOJZ64Xiz4xJ5LdpG-Du6Es_aem_gZXnMLGwa8YzT3LBFyKrdA",
+      "image": "https://static.wixstatic.com/media/741c1a_30deba7484474d4c92ed8f67b0b1a649~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[14]",
+        "quote": "inthehouse-halloween-neon-takeover-1"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 14: status 0, scheduling.config.startDate 2026-10-09T22:00:00.000Z / endDate 2026-10-10T04:00:00.000Z (Europe/London), scheduling.formatted '9 October 2026 at 23:00 – 10 October 2026 at 05:00', location.name 'The Eagle Bar', registration.type 3. Run 20260912-152153 returned it (bear-dropped).Row 14: registration.type 3 (external) with registration.external.registration = the Skiddle listing (kept verbatim, fbclid included, as the site publishes it); description 'Who's ready for round 5 The neon takeover is back again, but this time, for its Halloween Neon Takeover'. Undated slug, one-off."
+    },
+    {
+      "id": "hellbent-2026-10-17",
+      "kind": "single",
+      "title": "Hellbent",
+      "description": "Sin has never sounded so good. HELLBENT is where full fetish meets full pop fantasy. Strict dress code, iconic anthems and a dancefloor ready for the ultimate pop worship.",
+      "bar": "Eagle Bar Manchester",
+      "startDate": "2026-10-17",
+      "startTime": "23:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:00",
+      "website": "https://www.eaglemanchester.com/event-details/hellbent-12",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/hellbent-12",
+      "image": "https://static.wixstatic.com/media/ca9846_3057b40688f44f62974fec654416b2f7~mv2.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[17]",
+        "quote": "hellbent-12"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 17: status 0, scheduling.config.startDate 2026-10-17T22:00:00.000Z / endDate 2026-10-18T03:00:00.000Z (Europe/London), scheduling.formatted '17 October 2026 at 23:00 – 18 October 2026 at 04:00', location.name 'Eagle Bar Manchester', registration.type 2 lowestPrice £6 highestPrice £8. Run 20260912-152153 returned it (bear-dropped).Row 17, undated slug hellbent-12, £6-£8, location.name 'Eagle Bar Manchester'; 'HELLBENT is where full fetish meets full pop fantasy. Strict dress code'. The sitemap holds hellbent-13 (lastmod 2026-04-10) whose date is unknown (not opened)."
+    },
+    {
+      "id": "locker-room-2026-11-14",
+      "kind": "single",
+      "title": "Locker Room",
+      "bar": "The Eagle Bar",
+      "startDate": "2026-11-14",
+      "startTime": "23:00",
+      "website": "https://www.eaglemanchester.com/event-details/locker-room-2026-11-14-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/locker-room-2026-11-14-23-00",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-details/locker-room-2026-09-12-23-00",
+        "quote": "Other dates Sat 14 Nov, 23:00 Sat 09 Jan, 23:00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed by the 12 Sept Locker Room page ('Other dates Sat 14 Nov, 23:00 Sat 09 Jan, 23:00') and by the sitemap (locker-room-2026-11-14-23-00); the row sits on the widget's unread second page and its own page was not opened, so only the start is asserted. Same-title instances are irregular (12 Sept, 14 Nov, 9 Jan) and no text states a cadence, so each is a single. Not in run 20260912-152153 (beyond the first 18 rows)."
+    },
+    {
+      "id": "locker-room-2027-01-09",
+      "kind": "single",
+      "title": "Locker Room",
+      "bar": "The Eagle Bar",
+      "startDate": "2027-01-09",
+      "startTime": "23:00",
+      "website": "https://www.eaglemanchester.com/event-details/locker-room-2027-01-09-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/locker-room-2027-01-09-23-00",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-pages-sitemap.xml",
+        "quote": "https://www.eaglemanchester.com/event-details/locker-room-2027-01-09-23-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sitemap slug locker-room-2027-01-09-23-00 plus the 12 Sept page's 'Other dates ... Sat 09 Jan, 23:00' (the page prints no year; the slug does). Page not opened; only the start is asserted. Not in run 20260912-152153."
+    },
+    {
+      "id": "hanky-panky-2026-11-28",
+      "kind": "single",
+      "title": "Hanky Panky!",
+      "bar": "Eagle Bar Manchester",
+      "startDate": "2026-11-28",
+      "startTime": "23:00",
+      "website": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-11-28-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-11-28-23-00",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00",
+        "quote": "Other dates Sat 28 Nov, 23:00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed by the 26 Sept Hanky Panky page ('Other dates Sat 28 Nov, 23:00') and the sitemap (hanky-panky-2026-11-28-23-00). Sitemap history shows the night every second month on the last Saturday (2025-09-27, 11-29, 2026-01-31, 03-28, 05-30, 07-25, 09-26, 11-28) but no page states that rule, so each instance is a single. Page not opened; only the start is asserted. Not in run 20260912-152153."
+    },
+    {
+      "id": "ultimate00s-2026-12-05",
+      "kind": "single",
+      "title": "Ultimate00s",
+      "bar": "Manchester",
+      "startDate": "2026-12-05",
+      "startTime": "23:00",
+      "website": "https://www.eaglemanchester.com/event-details/ultimate00s-2026-12-05-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/ultimate00s-2026-12-05-23-00",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-pages-sitemap.xml",
+        "quote": "https://www.eaglemanchester.com/event-details/ultimate00s-2026-12-05-23-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sitemap-only evidence: slug ultimate00s-2026-12-05-23-00 (the 3 Oct page was not cached, so its 'Other dates' block was not read). Sitemap history is first Saturdays every second month since 2025-02-01 but no page states a rule, so each instance is a single. Title and location.name 'Manchester' follow the 3 Oct row. Not in run 20260912-152153."
+    },
+    {
+      "id": "suck-my-disco-2026-11-07",
+      "kind": "single",
+      "title": "Suck My Disco",
+      "description": "DJ Disco Dave Ritson brings you the best Disco tunes for you to dance the night away to. Expect plenty of Donna Summer, Chic, Sylvester, Cher, ABBA, Gloria and much, much, more! There will be bespoke cocktails, gorgeous go-gos and more mirror balls than you can shake a glow stick at!",
+      "bar": "Eagle Bar Manchester",
+      "startDate": "2026-11-07",
+      "startTime": "23:00",
+      "endDate": "2026-11-08",
+      "endTime": "05:00",
+      "website": "https://www.eaglemanchester.com/event-details/suck-my-disco-2026-11-07-23-00",
+      "ticketUrl": "https://www.eaglemanchester.com/event-details/suck-my-disco-2026-11-07-23-00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-details/suck-my-disco-2026-11-07-23-00",
+        "quote": "\"startDate\":\"2026-11-07T23:00:00Z\",\"endDate\":\"2026-11-08T05:00:00Z\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Fetched 2026-09-12 (discovery/eaglemanchester.com/suck-my-disco-2026-11-07.body, HTTP 200): JSON-LD Event 2026-11-07T23:00:00Z – 2026-11-08T05:00:00Z (GMT, after the clocks change), EventScheduled, Eagle Bar Manchester, 15 Bloom St; page 'Time & Location 07 Nov 2026, 23:00 – 08 Nov 2026, 05:00' and 'Last available date' (no Other dates). Tickets 'Early Bird (Before 11:30pm) £5.00', 'Advance Only £8.00' (the blurb's '£3 / £5 / £10 on the door' is stale). Sitemap history: first Saturday every second month since 2024-07-13; no stated rule, so a single. Beyond the widget's first page; not in run 20260912-152153."
+    }
+  ],
+  "traps": [
+    {
+      "id": "spank-guys-two-series-same-title",
+      "label": "Two 'Spank Guys' rows with different descriptions: 'at 1pm on the third Saturday of every month' (19 Sept, 17 Oct) and 'at 6.30pm on the first Friday of every month' (2 Oct)",
+      "kind": "duplicate-listing",
+      "why": "Lookalike, not a duplicate: the same group meets on two independent monthly cadences with different times, images and descriptions. Dedup keyed on title + venue must not fold the first-Friday instances into the Saturday series or drop either one.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[11].description",
+        "quote": "The North West CP Group meet in The Eagle at 6.30pm on the first Friday of every month."
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Both series (and every instance) are expected; the trap is folding them."
+      },
+      "seenInRun": "20260912-152153"
+    },
+    {
+      "id": "sunday-service-mentions",
+      "label": "'Sunday Service' as named inside other rows: Beareoke 'straight after Sunday Service' and 'Lola Lasagne does Sunday Service with hostess Gladys Duffy'",
+      "kind": "recurring-blurb",
+      "why": "The venue's Sunday-afternoon cabaret has no row of its own on the first page (only the 13 Sept edition with Lola Lasagne is listed, as a titled one-off). 'Sunday Service' must not be split out of the Beareoke description into a separate weekly event.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[3].description",
+        "quote": "straight after Sunday Service"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "event-faq-block",
+      "label": "'EVENT FAQ IS THERE A CLOAK ROOM? ... WHERE DO WE PURCHASE TICKETS? ... tickets ... are normally available on the day from the event entrance' under the list on /eventlist",
+      "kind": "announcement",
+      "why": "FAQ prose under the widget; no date, no title.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "quote": "IS THERE A CLOAK ROOM?"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "membership-notice",
+      "label": "Homepage 'EAGLE BAR MANCHESTER IS A PRIVATE MEMBERS CLUB & REQUIRES MEMBERSHIP' / 'MANCHESTERS MEN ONLY MEMBERS BAR' and its 'UPCOMING EVENTS' heading over an Instagram embed",
+      "kind": "gallery",
+      "why": "Outside the parser's urls. The homepage's 'UPCOMING EVENTS' section is an Instagram feed ('Follow us on Instagram #wix @wix Load More'), not an events widget; the membership banner is a venue notice.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/",
+        "quote": "UPCOMING EVENTS"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-tiers",
+      "label": "Price ranges and tiers: Locker Room £8-£10, Hanky Panky £5-£8, Hellbent £6-£8, Ultimate00s £3-£5, Suck My Disco 'Early Bird (Before 11:30pm) £5.00 / Advance Only £8.00'",
+      "kind": "ticket-tier",
+      "why": "Wix ticketing tiers inside one event; the early-bird cutoff (11:30pm) is not a second start time.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-details/suck-my-disco-2026-11-07-23-00",
+        "quote": "Ticket type Early Bird (Before 11:30pm)"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "pride-2026-sitemap-pages",
+      "label": "Nine sitemap-only 'pride-2026-*' pages (launch party, outside stage Friday/Saturday/Sunday/Monday, Saturday/Sunday/Monday service, closing party, 'follow the yellow brick load', 'if I only had a harness', 'lions daddies bears oh my'), lastmod 3-25 August 2026",
+      "kind": "past-event",
+      "why": "Absent from the widget's first page, which starts at today's rows; Wix drops finished events from the list. Not opened during recon, so their dates are unverified; a sitemap-driven crawl would resurface a whole Pride weekend.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/event-pages-sitemap.xml",
+        "quote": "https://www.eaglemanchester.com/event-details/pride-2026-lions-daddies-bears-oh-my"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "location-name-manchester",
+      "label": "Rows whose location.name is the bare word 'Manchester' (Spank Guys Saturdays, Ultimate00s) or 'Eagle Bar Manchester' (Hanky Panky, Collared, Hellbent, Suck My Disco) instead of 'The Eagle Bar'",
+      "kind": "venue-header",
+      "why": "Three spellings of the one venue, all with the same address and geocode. 'Manchester' read as a bar name would geocode to the city; the address line '15 Bloom St, Manchester M1 3HZ, UK' is the constant.",
+      "evidence": {
+        "url": "https://www.eaglemanchester.com/eventlist",
+        "jsonPath": "$.widgetcomp-kl9vmmlp.events.events[5].location.name",
+        "quote": "Manchester"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "The events are expected; the trap is treating the three names as three venues."
+      },
+      "seenInRun": "20260912-152153"
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "What is on the second page of the /eventlist widget beyond the sitemap-dated instances — in particular lady-imelda-does-sunday-service-with-hostess-shania-pain (lastmod 2026-09-02), the-haus-of-dorothy, inthehouse, lets-get-quizzical-with-lola-lasagne-24 and hellbent-13? Is there a browser-free door for page two?",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-10-12"
+}

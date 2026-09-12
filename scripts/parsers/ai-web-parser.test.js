@@ -7790,6 +7790,33 @@ test('a feed row names its city without an address, keeps ticket over its own ur
   assert.equal(ownPageOnly.city, 'portland');
 });
 
+test('a WordPress/Tribe REST row: start_date beats the post date, the nested venue is the place, the image object and entity-encoded cost are read, organizer[] is not a performance list', () => {
+  const parser = createParser();
+  const row = {
+    id: 19317, date: '2026-08-14 16:47:41', date_utc: '2026-08-14 20:47:41', url: 'https://www.bearitmtl.example/event/ensemble/', title: 'ENSEMBLE',
+    description: '<p>Une soirée</p>', image: { url: 'https://i0.wp.example/uploads/Vignette_WEB.jpg', width: 1920 },
+    start_date: '2026-09-19 18:00:00', end_date: '2026-09-20 03:00:00', utc_start_date: '2026-09-19 21:00:00', timezone: 'UTC-4',
+    cost: '&#036;25.00 &#8211; &#036;35.00', cost_details: { currency_symbol: '$', currency_code: 'CAD', values: ['25', '35'] },
+    website: '', venue: { id: 19755, venue: 'Stock Bar', address: '1171 Rue Ste Catherine Est', city: 'Montréal', state_province: 'QC', zip: 'H2L 2J5', url: 'https://www.bearitmtl.example/lieu/stock-bar/' },
+    organizer: [{ id: 19754, organizer: 'Bear it MTL', date: '2026-09-09 06:16:50', url: 'https://www.bearitmtl.example/organisateur/bear-it-mtl/' }]
+  };
+  const events = parser.extractEventsFromJsonApiPayload({ events: [row], total: 1 }, 'https://www.bearitmtl.example/wp-json/tribe/events/v1/events?per_page=50',
+    { montreal: { timezone: 'America/Toronto', patterns: ['montreal', 'montréal'] } });
+  assert.equal(events.length, 1, 'one event — the organizer list is not a performance list');
+  const [event] = events;
+  assert.equal(event.startDate.toISOString(), '2026-09-19T18:00:00.000Z', 'start_date (wall clock), never the post date');
+  assert.equal(event.endDate.toISOString(), '2026-09-20T03:00:00.000Z');
+  assert.equal(event.bar, 'Stock Bar');
+  assert.equal(event.address, '1171 Rue Ste Catherine Est, Montréal, QC, H2L 2J5');
+  assert.equal(event.city, 'montreal');
+  assert.equal(event.timezone, 'America/Toronto', 'a non-IANA "UTC-4" is ignored; the city\'s zone stands');
+  assert.equal(event.image, 'https://i0.wp.example/uploads/Vignette_WEB.jpg');
+  assert.equal(event.cover, '25-35 CAD');
+  assert.equal(event.ticketUrl, '', 'the row\'s own page on the feed host is not a ticket link');
+  assert.equal(event._jsonApiOwnPageUrl, 'https://www.bearitmtl.example/event/ensemble/', 'the own page is remembered for the site-role pass');
+  assert.equal(event.website, '', 'not adopted by the builder itself — an aggregator\'s copy stays off the record');
+});
+
 test('a feed row with an RRULE becomes its next dated occurrences, never the series start', () => {
   const parser = createParser();
   const day = 24 * 60 * 60 * 1000;
@@ -13043,6 +13070,138 @@ const MEC_SEPTEMBER_RESPONSE_JSON = JSON.stringify({
   next_month: { label: '2026 October', id: '202610', year: '2026', month: '10' }
 });
 
+// The two grid skins, trimmed from the real October feeds (thedallaseagle.com
+// cells with tooltips; eaglela.com side list with one JSON-LD per occurrence).
+const MEC_CELLS_GRID = `
+  <dl class="mec-calendar-row">
+    <dt class="mec-calendar-day " data-mec-cell="20261007" data-day="7" data-month="202610"><div class="">7</div>
+      <div class="ended-relative simple-skin-ended"><a class="mec-monthly-tooltip event-single-link-simple" data-tooltip-content="#mec-tooltip-96201790794800-20261007" data-event-id="9620" href="https://venue.example/events/underwear-happy-hour-19/" ><h4 class="mec-event-title">Underwear Happy Hour</h4></a></div>
+      <div class="tooltip_templates event-single-content-simple"><div id="mec-tooltip-96201790794800-20261007"><div class="mec-tooltip-event-title">Underwear Happy Hour</div><div class="mec-tooltip-event-time"><i class="mec-sl-clock-o"></i> 7:00 pm - 9:00 pm</div><div class="mec-event-detail"></div><div class="mec-tooltip-event-content"><div class="mec-tooltip-event-desc">Every Wednesday evening is UNDERWEAR HAPPY HOUR &amp; more</div></div><span class="mec-wrap"><span id="x"></span></span></div></div>
+      <div class="ended-relative simple-skin-ended"><a class="mec-monthly-tooltip event-single-link-simple" data-tooltip-content="#mec-tooltip-96211790802000-20261007" data-event-id="9621" href="https://venue.example/events/jocktoberfest/" ><h4 class="mec-event-title">Jocktoberfest! with DJ Drew G</h4></a></div>
+      <div class="tooltip_templates event-single-content-simple"><div id="mec-tooltip-96211790802000-20261007"><div class="mec-tooltip-event-title">Jocktoberfest! with DJ Drew G</div><div class="mec-event-detailed-time mec-tooltip-event-time mec-color"><i class="mec-sl-clock-o"></i> <div class="mec-detailed-time-wrapper"><div class="mec-start-time">9:00 pm</div> - <div class="mec-end-time">2:00 am</div></div></div><div class="mec-event-detail"></div><div class="mec-tooltip-event-content"><div class="mec-tooltip-event-desc">Lederhosen optional.</div></div><span class="mec-wrap"><span id="y"></span></span></div></div>
+    </dt>
+    <dt class="mec-calendar-day " data-mec-cell="20261008" data-day="8" data-month="202610"><div class="">8</div></dt>
+  </dl>`;
+const MEC_SIDE_LIST_GRID = `
+  <div class="mec-calendar-events-sec" id="mec-calendar-events-sec-910-20261004" data-mec-cell="20261004"><h6 class="mec-table-side-title">Events for October</h6><h3 class="mec-color mec-table-side-day"> 4th</h3>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"Event","startDate":"2026-10-04","endDate":"2026-10-04","location":{"@type":"Place","name":"","address":""},"offers":{"url":"https://venue.example/events/sunday-beer-bust-4/"},"description":"&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;","image":"https://venue.example/wp-content/uploads/bust.jpg","name":"SUNDAY BEER BUST","url":"https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04"}</script>
+    <article class="mec-event-article"><h4 class="mec-event-title"><a href="https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04">SUNDAY BEER BUST</a></h4></article>
+    <script type="application/ld+json">{"@type":"Event","startDate":"2026-10-04T21:00","name":"CUBSCOUT","url":"https://venue.example/events/cubscout/?occurrence=2026-10-04"}</script>
+  </div>
+  <div class="mec-calendar-events-sec" id="mec-calendar-events-sec-910-20261007" data-mec-cell="20261007">
+    <script type="application/ld+json">{"@type":"Event","startDate":"2026-10-07","name":"HUMP NIGHT","url":"https://venue.example/events/hump-night/?occurrence=2026-10-07"}</script>
+  </div>`;
+
+test('MEC grid reader: every cell occurrence becomes a dated event — cell date, tooltip time range, page link, description', () => {
+  const parser = createParser();
+  const rows = parser.readMecGridCells(MEC_CELLS_GRID, 'https://venue.example/events/');
+  assert.equal(rows.length, 2);
+  const [happy, jock] = rows;
+  assert.equal(happy.title, 'Underwear Happy Hour');
+  assert.equal(happy.startDate.toISOString(), '2026-10-07T19:00:00.000Z', 'wall clock anchored as UTC');
+  assert.equal(happy.endDate.toISOString(), '2026-10-07T21:00:00.000Z');
+  assert.equal(happy._timezoneUnresolved, true, 'flagged for city re-anchoring');
+  assert.equal(happy.url, 'https://venue.example/events/underwear-happy-hour-19/');
+  assert.equal(happy.description, 'Every Wednesday evening is UNDERWEAR HAPPY HOUR & more');
+  assert.equal(happy.source, 'mec');
+  assert.equal(jock.title, 'Jocktoberfest! with DJ Drew G');
+  assert.equal(jock.startDate.toISOString(), '2026-10-07T21:00:00.000Z', 'the detailed-time skin reads the same');
+  assert.equal(jock.endDate.toISOString(), '2026-10-08T02:00:00.000Z', 'an end before the start is past midnight');
+});
+
+test('MEC grid reader: a side-list grid yields one event per JSON-LD occurrence — cell date, ?occurrence= link, artwork; time only when stated', () => {
+  const parser = createParser();
+  const rows = parser.readMecGridSideList(MEC_SIDE_LIST_GRID, 'https://venue.example/calendar/', null);
+  assert.deepEqual(rows.map(r => [r.title, r.startDate.toISOString(), r.url]), [
+    ['SUNDAY BEER BUST', '2026-10-04T00:00:00.000Z', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'],
+    ['CUBSCOUT', '2026-10-04T21:00:00.000Z', 'https://venue.example/events/cubscout/?occurrence=2026-10-04'],
+    ['HUMP NIGHT', '2026-10-07T00:00:00.000Z', 'https://venue.example/events/hump-night/?occurrence=2026-10-07']
+  ]);
+  assert.equal(rows[0].image, 'https://venue.example/wp-content/uploads/bust.jpg');
+  assert.equal(rows[0].description, 'Beer & bears', 'double-escaped description decoded and stripped');
+});
+
+test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwork and copy from their own event page, once per page', async () => {
+  const parser = createParser();
+  const rows = parser.readMecGridSideList(MEC_SIDE_LIST_GRID, 'https://venue.example/calendar/', null);
+  rows.push(parser.buildMecOccurrenceEvent({ title: 'SUNDAY BEER BUST', href: 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-11', day: '20261011', timeText: '' }, 'https://venue.example/calendar/'));
+  const fetched = [];
+  const pages = {
+    'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04': '<html><script type="application/ld+json">{"@type":"Event","name":"SUNDAY BEER BUST","url":"https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04","startDate":"2026-10-04T16:00:00-07:00","endDate":"2026-10-04T20:00:00-07:00","description":"Beer bust copy"}</script><script type="application/ld+json">{"@type":"Event","name":"OTHER","url":"https://venue.example/events/other/","startDate":"2026-10-05T21:00:00-07:00"}</script></html>',
+    'https://venue.example/events/hump-night/?occurrence=2026-10-07': '<html><script type="application/ld+json">{"@type":"Event","name":"HUMP NIGHT","url":"https://venue.example/events/hump-night/","startDate":"2026-10-07T21:00:00-07:00","endDate":"2026-10-08T02:00:00-07:00","image":"https://venue.example/hump.jpg"}</script></html>'
+  };
+  const httpAdapter = { async fetchData(url) { fetched.push(url); return { html: pages[url] || '', url, statusCode: pages[url] ? 200 : 404, headers: {} }; } };
+  const originalLog = console.log; console.log = () => {};
+  try { await parser.enrichMecOccurrencesFromEventPages(rows, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched.sort(), ['https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page; the timed CUBSCOUT page is never fetched');
+  const busts = rows.filter(r => r.title === 'SUNDAY BEER BUST').map(r => [r.startDate.toISOString(), r.endDate && r.endDate.toISOString()]);
+  assert.deepEqual(busts, [['2026-10-04T16:00:00.000Z', '2026-10-04T20:00:00.000Z'], ['2026-10-11T16:00:00.000Z', '2026-10-11T20:00:00.000Z']], 'both occurrences of the page carry its wall clock');
+  assert.equal(rows.find(r => r.title === 'SUNDAY BEER BUST').description, 'Beer & bears', 'the grid\'s own copy stands; the page fills blanks only');
+  const hump = rows.find(r => r.title === 'HUMP NIGHT');
+  assert.equal(hump.startDate.toISOString(), '2026-10-07T21:00:00.000Z');
+  assert.equal(hump.endDate.toISOString(), '2026-10-08T02:00:00.000Z', 'past-midnight end');
+  assert.equal(hump.image, 'https://venue.example/hump.jpg');
+  assert.equal(rows.find(r => r.title === 'CUBSCOUT').startDate.toISOString(), '2026-10-04T21:00:00.000Z', 'a timed row is untouched');
+});
+
+test('a venue closure notice is not an event; markup inside HTML comments is not on the page; an all-day widget row has no clock', () => {
+  const parser = createParser();
+  for (const title of ['CLOSED FOR A PRIVATE EVENT', 'Closed for Labor Day', 'CLOSED DUE TO WEATHER', 'CLOSED for Pride Recovery!', 'We will reopen Tuesday', 'No events tonight!', 'Bar closed']) {
+    assert.equal(parser.isVenueClosureNoticeTitle(title), true, title);
+  }
+  for (const title of ['CLOSED CIRCUIT: a leather party', 'Behind Closed Doors', 'Bear Night', 'Open Bar Sunday']) {
+    assert.equal(parser.isVenueClosureNoticeTitle(title), false, title);
+  }
+  assert.equal(parser.normalizeAiEvent({ title: 'CLOSED FOR THANKSGIVING', startDate: '2026-11-26', bar: 'Rockbar' }, {}, { html: '', url: 'https://venue.example/' }), null, 'a closure notice yields no event');
+  assert.deepEqual(parser.extractElfsightWidgetIds('<div class="elfsight-app-e122bc50-bc4f-4cde-a6b9-ee6d4e31531a"></div><!-- <div class="elfsight-app-8c5b40b3-85f2-43cf-9a4c-d13aefd10dee"></div> -->'),
+    ['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'], 'the commented-out widget is not on the page');
+  const originalLog = console.log; console.log = () => {};
+  let allDay, timed;
+  try {
+    allDay = parser.buildEventFromElfsightRow({ name: 'CLOSED FOR A PRIVATE EVENT', isAllDay: true, start: { date: '2026-05-07', time: '23:33' }, end: { date: '2026-05-07', time: '23:33' }, timeZone: 'America/New_York' }, 'https://venue.example/calendar');
+    timed = parser.buildEventFromElfsightRow({ name: 'BEARS NIGHT OUT', isAllDay: false, start: { date: '2026-05-09', time: '21:00' }, end: { date: '2026-05-10', time: '02:00' }, timeZone: 'America/New_York' }, 'https://venue.example/calendar');
+  } finally { console.log = originalLog; }
+  assert.equal(allDay.startDate.toISOString(), '2026-05-07T04:00:00.000Z', 'an all-day row starts at the day\'s midnight, not its creation clock');
+  assert.equal(timed.startDate.toISOString(), '2026-05-10T01:00:00.000Z', 'a timed row keeps its clock');
+});
+
+test('a listing with no time adopts the single clock its own poster states — for this date, or undated', () => {
+  const parser = createParser();
+  const at = (day) => new Date(Date.UTC(2026, 8, day));
+  const mk = (title, day, image) => ({ title, startDate: at(day), image, _timezoneUnresolved: true });
+  parser.recordOcrImageTextEvidence('https://v.example/cubcake.jpg', { text: 'CUBCAKE\nSEP 11 9pm $8' });
+  parser.recordOcrImageTextEvidence('https://v.example/hump.jpg', { text: 'HUMP NIGHT every Wednesday 9pm - 2am no cover' });
+  parser.recordOcrImageTextEvidence('https://v.example/other-date.jpg', { text: 'BEAR NIGHT OCT 3 10pm' });
+  parser.recordOcrImageTextEvidence('https://v.example/two.jpg', { text: 'Doors 8pm Show 10pm' });
+  const cub = mk('CUBCAKE', 11, 'https://v.example/cubcake.jpg');
+  const hump = mk('HUMP NIGHT', 9, 'https://v.example/hump.jpg');
+  const other = mk('BEAR NIGHT', 12, 'https://v.example/other-date.jpg');
+  const two = mk('SHOW', 13, 'https://v.example/two.jpg');
+  const timed = { title: 'TIMED', startDate: new Date(Date.UTC(2026, 8, 14, 21)), image: 'https://v.example/cubcake.jpg' };
+  // A real instant at 00:00Z (an Elfsight row at 8pm EDT) is a time, not a placeholder.
+  const instant = { title: 'DIRTY LITTLE SECRET', startDate: new Date(Date.UTC(2026, 8, 12, 0)), timezone: 'America/New_York', image: 'https://v.example/cubcake.jpg' };
+  const originalLog = console.log; console.log = () => {};
+  let adopted;
+  try { adopted = parser.adoptFlyerClockForPlaceholderTimes([cub, hump, other, two, timed, instant]); } finally { console.log = originalLog; }
+  assert.equal(adopted, 2);
+  assert.equal(instant.startDate.toISOString(), '2026-09-12T00:00:00.000Z', 'an exact instant at UTC midnight is never re-timed');
+  assert.equal(cub.startDate.toISOString(), '2026-09-11T21:00:00.000Z', 'poster names this date and one clock');
+  assert.equal(cub.endDate, undefined);
+  assert.equal(hump.startDate.toISOString(), '2026-09-09T21:00:00.000Z', 'undated poster with a range');
+  assert.equal(hump.endDate.toISOString(), '2026-09-10T02:00:00.000Z');
+  assert.equal(other.startDate.toISOString(), '2026-09-12T00:00:00.000Z', 'a poster for another date decides nothing');
+  assert.equal(two.startDate.toISOString(), '2026-09-13T00:00:00.000Z', 'two different clocks decide nothing');
+  assert.equal(timed.startDate.toISOString(), '2026-09-14T21:00:00.000Z', 'a timed event is untouched');
+});
+
+test('MEC grid reader: the page\'s own month plus the replayed feeds, de-duplicated per page+day; only on a MEC page', () => {
+  const parser = createParser();
+  const page = `${MEC_MONTH_GRID_PAGE_HTML}${MEC_CELLS_GRID}`;
+  const events = parser.collectMecGridEvents(page, [{ label: '2026-10', html: MEC_CELLS_GRID }, { label: '2026-11', html: MEC_SIDE_LIST_GRID }], 'https://venue.example/events/', null);
+  assert.equal(events.length, 5, '2 cell occurrences (repeated grid folded) + 3 side-list occurrences');
+  assert.deepEqual(parser.collectMecGridEvents('<html><body>No calendar here</body></html>', [{ label: 'x', html: MEC_CELLS_GRID }], 'https://plain.example/', null), [], 'not a MEC page → nothing');
+});
+
 test('a MEC month-grid page replays its own admin-ajax month feed and harvests next month\'s links', async () => {
   const parser = createParser();
   const postCalls = [];
@@ -13056,7 +13215,7 @@ test('a MEC month-grid page replays its own admin-ajax month feed and harvests n
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
 
-  assert.equal(postCalls.length, 2, 'default lookahead is exactly TWO future months');
+  assert.equal(postCalls.length, 3, 'default lookahead is exactly THREE future months');
   assert.equal(postCalls[0].url, 'https://venue.example/wp-admin/admin-ajax.php');
   assert.equal(postCalls[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
   assert.ok(postCalls[0].body.startsWith('action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&'),
@@ -13092,7 +13251,7 @@ test('the month-feed POST body carries the page\'s atts blob verbatim and a stab
   await parser.parseEvents(
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
-  assert.equal(postCalls.length, 2);
+  assert.equal(postCalls.length, 3);
   assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
     `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
   assert.equal(postCalls[0].options.cacheUrl,
@@ -13122,10 +13281,10 @@ test('a failed month-feed POST degrades like any failed crawled page: logged, ru
     'the page\'s own discovery must be untouched by the month-feed failure');
 });
 
-test('calendarLookaheadMonths is clamped 0..3 and 0 disables the feed', async () => {
+test('calendarLookaheadMonths is clamped 0..4 and 0 disables the feed', async () => {
   const parser = createParser();
-  assert.equal(parser.resolveCalendarLookaheadMonths({}), 2, 'default: current + 2 months — one month of observations is provably one short for cadence derivation (Dallas GEAR NIGHT)');
-  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 3);
+  assert.equal(parser.resolveCalendarLookaheadMonths({}), 3, 'default: current + 3 months — the 90-day expectations window (the Eagles\' December singles sat one month past two)');
+  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 4);
   assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: -2 }), 0);
   let posts = 0;
   const stubAdapter = { postForm: async () => { posts++; return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } };
@@ -16474,6 +16633,24 @@ test('a header ticker that lists events keeps exactly its listing rows through c
   assert.equal(single.some(line => /Open since/.test(line)), false);
 });
 
+test('a listing with one JSON-LD Event per card element is segmented by its cards, never by its date lines', () => {
+  const parser = createParser();
+  const card = (n, title, day, time) => `<div role="listitem" class="event-item w-dyn-item"><div class="schema w-embed"><script type="application/ld+json">{"@type":"Event","name":"${title}","startDate":"2026-09-${day}T${time}:00-07:00","url":"https://massive.example/events/${n}"}</script></div>
+    <div class="date"><div>Sat</div><div>Sep</div></div>
+    <div class="time">${time.replace(/^(\d\d):(\d\d)$/, (m, h, mm) => `${((+h + 11) % 12) + 1}:${mm} ${+h >= 12 ? 'pm' : 'am'}`)}</div>
+    <a href="https://tixr.example/e/${n}">get TICKETS</a>
+    <h3>${title}</h3>
+    <div class="full-date">Sep ${day}, 2026 ${time}</div></div>`;
+  const html = `<html><body><div class="events-list grid"><div role="list" class="event-grid w-dyn-items">${card(1, 'Dungeon and Drag Queens', 12, '17:30')}${card(2, 'Bearracuda | Seattle', 12, '21:00')}${card(3, 'TKVR | Cucci', 13, '21:00')}</div></div></body></html>`;
+  const segments = parser.buildJsonLdCardSegments(html);
+  assert.equal(segments.length, 3);
+  assert.deepEqual(segments.map(s => s.lines.find(l => /Dungeon|Bearracuda|TKVR/.test(l))), ['Dungeon and Drag Queens', 'Bearracuda | Seattle', 'TKVR | Cucci']);
+  assert.ok(segments.every((s, i) => (s.html.match(/ld\+json/g) || []).length === 1 && s.html.includes(`tixr.example/e/${i + 1}`)), 'each window holds exactly its own JSON-LD and its own ticket link');
+  assert.ok(segments[1].lines.includes('Sep 12, 2026 21:00') && !segments[2].lines.includes('Sep 12, 2026 21:00'), 'the trailing date line stays with its own card');
+  // One JSON-LD block for the whole list → not cards.
+  assert.deepEqual(parser.buildJsonLdCardSegments('<html><body><script type="application/ld+json">[{"@type":"Event","name":"A","startDate":"2026-09-12"},{"@type":"Event","name":"B","startDate":"2026-09-13"}]</script><div class="item">A</div><div class="item">B</div></body></html>'), []);
+});
+
 test('coverage audit: compact listing rows become one window each, straight from the corpus', () => {
   const parser = createParser();
   const html = `<html><body>
@@ -16756,6 +16933,8 @@ test('Squarespace collection: the listing\'s JSON twin is read on the configured
   assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: '<html><body class="collection-type-events"><div class="eventlist"></div></body></html>', url: 'https://www.3dollarbillbk.example/rsvp' }, config, otherPlatform.httpAdapter), []);
   assert.deepEqual(otherPlatform.fetched, [], 'the events class alone, without the platform context, is not the platform');
 
+  const stacked = squarespaceStubAdapter({ collection: { typeName: 'events-stacked' }, upcoming: [{ id: 's', title: 'Bear Tea', startDate: 1789250400000, fullUrl: '/events/bear-tea' }] });
+  assert.equal((await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, stacked.httpAdapter)).length, 1, 'layout variants of the events type are read');
   const blogTwin = squarespaceStubAdapter({ collection: { typeName: 'blog' }, items: [{ id: 'b', title: 'Post', startDate: 1789250400000 }] });
   assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, config, blogTwin.httpAdapter), [], 'a non-events collection is not read');
 

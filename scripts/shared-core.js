@@ -34,6 +34,7 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 const DEAD_END_CAPABILITY = 'machine-door-2026-09';
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
+const MACHINE_DOOR_MAX_PROBES = 12;
 const MACHINE_DOOR_WELL_KNOWN_PATHS = [
     '/feed.json',
     '/events.json',
@@ -7045,13 +7046,25 @@ class SharedCore {
                     pageEventsForEnrich = parsedEvents;
                 }
 
-                const additionalLinks = parseResult?.additionalLinks || [];
+                // A root read through its feed is the site's own complete
+                // statement: no discovery crawl from it, in either depth mode.
+                // The feed's other links are its venue and organizer
+                // directories (bearitmtl.com: /lieu/…, festival pages — four
+                // hops of AI reads that merged "Stock Bar" into ENSEMBLE, run
+                // 20260911) or, on an aggregator, its own copies of every
+                // event page (thebearcalendar.com: 58 pages). The events' own
+                // ticket links are still enriched below.
+                const feedRead = Boolean(htmlData && htmlData.machineDoor);
+                const additionalLinks = feedRead ? [] : (parseResult?.additionalLinks || []);
+                if (feedRead && Array.isArray(parseResult?.additionalLinks) && parseResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: 🚪 MACHINE DOOR: not following ${parseResult.additionalLinks.length} link(s) from the feed behind ${url} — the feed is the listing; only its events' own ticket links are enriched`);
+                }
                 let linksToConsider = additionalLinks;
                 // Tracks whether an adaptive-mode branch below already logged WHY
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
-                let adaptiveFollowBlocked = false;
-                if (adaptiveCrawl) {
+                let adaptiveFollowBlocked = feedRead;
+                if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
@@ -10864,11 +10877,21 @@ class SharedCore {
             const existingWallClock = Boolean(existingEvent._timezoneUnresolved);
             const newWallClock = Boolean(newEvent._timezoneUnresolved);
             if (existingWallClock || newWallClock) {
+                // Same INSTANT, not same object: arbitration hands back fresh
+                // Date objects, and a reference miss fell through to "from
+                // new" — a timezone-anchored start that won the merge was
+                // then re-anchored as wall clock (clubchubusa.com, audit
+                // 2026-09-12: Club Chub Weekend 11:00 → 18:00 PDT).
+                const sameInstant = (a, b) => {
+                    const millisA = SharedCore.toEpochMillis(a);
+                    const millisB = SharedCore.toEpochMillis(b);
+                    return Number.isFinite(millisA) && Number.isFinite(millisB) && millisA === millisB;
+                };
                 const finalDateIsWallClock = (fieldName) => {
                     const value = mergedEvent[fieldName];
                     if (isEmpty(value)) return false;
-                    const fromExisting = value === existingEvent[fieldName];
-                    const fromNew = value === newEvent[fieldName];
+                    const fromExisting = value === existingEvent[fieldName] || sameInstant(value, existingEvent[fieldName]);
+                    const fromNew = value === newEvent[fieldName] || sameInstant(value, newEvent[fieldName]);
                     if (fromExisting && fromNew) return existingWallClock && newWallClock;
                     if (fromExisting) return existingWallClock;
                     if (fromNew) return newWallClock;
@@ -12482,16 +12505,26 @@ class SharedCore {
         const pageEventCount = this.extractJsonLdEventNodes(html).length;
         const tried = [];
         const answered = [];
-        for (const candidate of candidates.slice(0, 8)) {
+        let consecutiveNetworkFailures = 0;
+        for (const candidate of candidates.slice(0, MACHINE_DOOR_MAX_PROBES)) {
             let body = '';
             let statusCode = null;
             try {
                 const response = await httpAdapter.fetchData(candidate, { headers: { Accept: 'application/json, text/calendar, application/feed+json, */*' } });
                 body = response && typeof response.html === 'string' ? response.html : '';
                 statusCode = response && Number.isFinite(Number(response.statusCode)) ? Number(response.statusCode) : null;
+                consecutiveNetworkFailures = 0;
             } catch (error) {
                 this.recordDeadEndNetworkFailure({ url: candidate, currentDepth: 1 });
                 tried.push(`${candidate} (${error && error.message ? error.message : 'error'})`);
+                // A host dropping the connection three probes running is
+                // refusing, not answering — every further probe would cost
+                // a full timeout (thedallaseagle.com: nine "fetch failed").
+                consecutiveNetworkFailures += 1;
+                if (consecutiveNetworkFailures >= 3) {
+                    tried.push('host refusing — probing stopped');
+                    break;
+                }
                 continue;
             }
             const door = this.readMachineDoorBody(body, candidate);
@@ -12578,15 +12611,25 @@ class SharedCore {
             const path = lower.split(/[?#]/)[0];
             if (path.endsWith('.json') || path.endsWith('.ics') || /[?&](?:format=json|ical=1|outlook-ical=1)\b/.test(lower)) add(value);
         }
-        // Well-known paths only on a hint: the page advertises a feed (so
-        // the site publishes feeds — its JSON twin is worth one request
-        // each), or carries WordPress markers (its events REST routes). A
-        // page with no hint is read as a page; no blind probing.
+        // Well-known paths only on a hint, platform-implied routes first:
+        // WordPress markers → its events REST routes (the richest door a
+        // WordPress events site has — bearitmtl.com's Tribe REST answers
+        // 29 fields a row where its iCalendar answers 8); a feed advertised
+        // → the site publishes feeds, so its generic twins are worth one
+        // request each. A page with no hint is read as a page.
         const advertised = ordered.length > 0;
         const wordpress = /\/wp-(?:content|json|includes)\//i.test(source);
-        for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
-            const isWordPressRoute = wellKnown.startsWith('/wp-json/') || wellKnown.includes('?ical=1');
-            if ((advertised && !isWordPressRoute) || (wordpress && isWordPressRoute)) add(`${origin}${wellKnown}`);
+        if (wordpress) {
+            for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+                if (wellKnown.startsWith('/wp-json/')) add(`${origin}${wellKnown}`);
+            }
+        }
+        if (advertised || wordpress) {
+            for (const wellKnown of MACHINE_DOOR_WELL_KNOWN_PATHS) {
+                if (wellKnown.startsWith('/wp-json/')) continue;
+                if (wellKnown.includes('?ical=1') && !wordpress) continue;
+                add(`${origin}${wellKnown}`);
+            }
         }
         return ordered;
     }
@@ -12624,9 +12667,15 @@ class SharedCore {
         const iso = (entry) => {
             if (!entry || !entry.wall) return '';
             if (entry.isDateOnly) return `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}`;
-            // Floating (no TZID, no Z) is the venue's wall clock: no offset.
-            if (!entry.tzid) return wallIso(entry);
-            return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+            // A Z instant is exact. Everything else is the venue's wall
+            // clock, offset-less; a TZID rides along as the row's timezone
+            // key — where the JSON-API reader can still check it against
+            // the site's own page (a WordPress site set to a fixed
+            // "UTC-4" exports TZID=America/Halifax for Montréal events).
+            if (entry.tzid === 'UTC') {
+                return entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.toISOString() : '';
+            }
+            return wallIso(entry);
         };
         const start = iso(record.start);
         if (!start) return null;
@@ -12648,7 +12697,7 @@ class SharedCore {
         };
         if (record.rrule) row.rrule = record.rrule;
         const tzid = record.start.tzid;
-        if (tzid && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
+        if (tzid && tzid !== 'UTC' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
         return row;
     }
 
@@ -14040,6 +14089,8 @@ class SharedCore {
             // stamps _pastSpanWithheld + the span-fully-past review flag)
             // and gated here, exactly like the recurring-series withhold.
             event?._pastSpanWithheld !== true &&
+            // No resolvable city → no calendar (stamp site: the same place).
+            event?._unresolvedCityWithheld !== true &&
             // A merge stamped _mergeNoOp writes nothing by definition — the
             // final payload is field-identical to the calendar record
             // (stamp site: buildAnalyzedCalendarEvent), so executing it
@@ -14104,6 +14155,7 @@ class SharedCore {
             '_festivalMatch',
             '_festivalContext',
             '_pastSpanWithheld',
+            '_unresolvedCityWithheld',
             '_mergeNoOp',
             '_duplicateOfKept',
             '_seriesAuthority',
@@ -14133,6 +14185,7 @@ class SharedCore {
         if (!event || typeof event !== 'object') return 'UNKNOWN';
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
+        if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
@@ -16422,6 +16475,20 @@ class SharedCore {
             if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
+            // UNRESOLVED CITY WITHHOLD — an event with no city has no
+            // calendar: the write would route to the UNKNOWN calendar name,
+            // which does not exist on chunky.dad (ursamen.org/ct-bear, audit
+            // 2026-09-12: "Connecticut Bear", city unknown, planned as NEW
+            // against a 404 unknown.ics). Flag, don't drop: the card stays in
+            // the results UI; only the calendar write is withheld.
+            {
+                const cityKey = String(analyzedEvent.city || '').trim().toLowerCase();
+                if (!cityKey || cityKey === 'unknown') {
+                    analyzedEvent._unresolvedCityWithheld = true;
+                    console.log(`🗺️ NO CITY: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — no resolvable city, so no calendar to write to; card kept in results`);
+                }
             }
 
             // Recurring series are display+export only: keep the card in the

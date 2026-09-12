@@ -269,6 +269,66 @@ const scraperConfig = {
       urls: ["https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears"],
       alwaysBear: false,
     },
+    // ── Added 2026-09-12 from promoter discovery (organizers behind events
+    // the aggregators already carried). Each is read through a door the
+    // crawler finds itself — no per-site code.
+    {
+      name: "Mass Bears and Cubs",
+      // Boston bear club (Squarespace). /events?format=json is the whole
+      // collection: Bear Tea 3rd Sun, Alley Bears 4th Sat, Trivia 3rd Thu,
+      // Belly Party. A bear club: everything it lists is a bear event.
+      urls: ["https://www.massbearsandcubs.org/events"],
+      alwaysBear: true,
+      metadata: { website: { value: "https://www.massbearsandcubs.org" } },
+    },
+    {
+      name: "Powerhouse Bar",
+      // SF leather/cruise bar (WordPress + The Events Calendar). The Tribe
+      // REST door answers the whole calendar (57 rows / 2 pages); Chub Rub
+      // 3rd Sat is the bear night, the rest goes through the bear check.
+      urls: ["https://powerhousebar.com/events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://powerhousebar.com" } },
+    },
+    {
+      name: "Eagle Wilton Manors",
+      // Fort Lauderdale leather bar (WordPress + Tribe; weekday series
+      // pre-expanded: 550 rows / 11 pages, read to the 90-day horizon).
+      // HONEY POT 3rd Wed is the bear night; kink/pup nights dominate.
+      urls: ["https://eaglebarwm.com/calendar2/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://eaglebarwm.com" } },
+    },
+    {
+      name: "C'mon Everybody",
+      // Brooklyn venue (Squarespace shell + DICE widget; the partner key is
+      // origin-scoped, so the feed is fetched with the site's own Origin).
+      // Bear Belly and GRUNT are the bear nights among ~30 shows a month.
+      urls: ["https://www.cmoneverybody.com/events"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.cmoneverybody.com" } },
+    },
+    {
+      name: "Eagle London",
+      // Wix Events: the homepage warmup blob lists every upcoming night
+      // (Bear Bash 2nd Fri, Horse Meat Disco, 3310).
+      urls: ["https://www.eaglelondon.com/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.eaglelondon.com" } },
+    },
+    {
+      name: "Eagle Manchester",
+      // Wix Events (/eventlist warmup blob, first page of the widget —
+      // Manbears Social 2nd Sat, Beareoke weekly).
+      urls: ["https://www.eaglemanchester.com/eventlist"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.eaglemanchester.com" } },
+    },
     {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,

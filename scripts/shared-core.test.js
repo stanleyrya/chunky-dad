@@ -21433,7 +21433,8 @@ test('machine door: no hint → no probing; a hinted door that fails is a dead e
   const wpPage = { html: '<html><head><link rel="stylesheet" href="/wp-content/themes/x/style.css"></head><body>Sep 12 Bear Night</body></html>', url: 'https://wp.example/events/' };
   const stillPage = await core.resolveMachineDoor(wpPage, 'https://wp.example/events/', wp.httpAdapter, display);
   assert.equal(stillPage, wpPage);
-  assert.ok(wp.fetched.every(url => url.includes('/wp-json/') || url.includes('ical=1')), 'WordPress markers probe only the WordPress routes');
+  assert.ok(wp.fetched[0].includes('/wp-json/tribe/'), 'WordPress markers probe the platform-implied REST routes first');
+  assert.ok(wp.fetched.some(url => url.endsWith('/feed.json')), '…then the generic well-known twins');
   assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR') && line.includes('no feed answered')));
 
   // A feed that answers with FEWER events than the page's own structured

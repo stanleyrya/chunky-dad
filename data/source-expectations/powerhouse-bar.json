@@ -1,0 +1,1451 @@
+{
+  "schemaVersion": 1,
+  "source": "Powerhouse Bar",
+  "slug": "powerhouse-bar",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "feed",
+      "static",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://powerhousebar.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 50,
+        "truthFlag": "total: 57, total_pages: 2, next_rest_url → page=2 (server-set start_date=2026-09-11 02:00:00, end_date two years out, status=publish)",
+        "note": "The Events Calendar REST v1 (ECPv6.17.3 per the ICS PRODID). Every row: series key absent, all_day false, timezone America/Los_Angeles, venue {Powerhouse Bar, 1347 Folsom St, San Francisco 94103, geo_lat 37.773044, geo_lng -122.412092}, categories [\"Event Calendar\"], organizer [], website \"\" (empty on all 57), cost mostly \"at door\" (cost_details.values [\"at-door\"]). Recurring titles appear as separate rows whose url carries a date suffix (/event/<slug>/<YYYY-MM-DD>/). Saved as discovery/powerhousebar.com/tribe-events.body (2026-09-12 14:59) and in the scraper page cache."
+      },
+      {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 7,
+        "truthFlag": "total: 57, total_pages: 2, next_rest_url null",
+        "note": "Page 2 read from the scraper page cache (storage/pages/powerhousebar.com/wp-json__tribe__events__v1__events--q-12kpe6b.json, the next_rest_url form with start_date/end_date/status, fetched 2026-09-12 13:12Z). Rows 51–57: Travieso Nov 6, Powerblouse! Nov 7, PRIMAL Nov 8, HOUSE PARTY Nov 14, The Playpen Nov 25, SHAGGIN Nov 29, The Playpen 2027-02-24."
+      },
+      {
+        "url": "https://powerhousebar.com/events/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 30,
+        "truthFlag": "30 VEVENTs 2026-09-12 … 2026-10-12, no RRULE lines, no completeness flag",
+        "note": "Read from the scraper page cache (fetched 2026-09-12 13:12Z; /events/list/?ical=1 is byte-identical). DTSTART;TZID=America/Los_Angeles wall-clock values match REST. The export is a strict subset of the REST rows (Sep 12 – Oct 12: HOUSE PARTY … PILLOWS) and omits the Sep 11 rows; it does not state whether 30 is a cap, so it is not used for counts."
+      },
+      {
+        "url": "https://powerhousebar.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 12,
+        "truthFlag": "\"Events from September 12 – September 25\"; 12 tribe-events-calendar-list__event-row + 12 Event JSON-LD objects; rel-next links to /events/page/2/ and /events/page/3/; a \"Previous Events\" link to /events/list/?eventDisplay=past",
+        "note": "Configured parser URL; Tribe list view, statically rendered (scraper page cache 2026-09-12 13:12Z, 155,585 chars). The 12 rows are exactly REST rows 3–14 (HOUSE PARTY Sep 12 … Stank Sep 25); the Sep 11 rows are not shown. The month separator is a single \"September\" header."
+      },
+      {
+        "url": "https://powerhousebar.com/event/chub-rub/all/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 3,
+        "truthFlag": null,
+        "note": "Tribe recurring-event index for Chub Rub: links to /event/chub-rub/2026-05-16/ (past), /2026-09-19/ and /2026-10-17/, plus a \"?eventDisplay=past\" toggle and per-series ?ical=1 export. Saved as discovery/powerhousebar.com/chub-rub.body. Confirms Tribe treats the date-suffixed rows as one recurring event even though REST rows carry no series key."
+      },
+      {
+        "url": "https://powerhousebar.com/event/t-dance/2026-09-11/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Single occurrence page from the scraper page cache: one Event JSON-LD (name \"T &#8211; Dance\", startDate 2026-09-11T17:00:00-07:00), links to /event/t-dance/all/. Nothing beyond the REST row."
+      }
+    ],
+    "notes": "WordPress + The Events Calendar (Tribe) 6.17.3, confirmed by the working /wp-json/tribe/events/v1/events endpoint and the ICS PRODID. REST rows carry no series key and no recurrence field, yet 20 titles repeat on a fixed cadence and each recurring title has a Tribe /all/ index (Chub Rub verified) — the site runs Tribe recurrence with per-occurrence rows. Weekly titles (Shirts Off Sundays, PILLOWS) are only pre-expanded ~6 weeks ahead (last row 2026-10-26); monthly titles 2–3 months ahead. Cadence text, where the site publishes it, is in the description (\"Every Third Saturday\", \"Every 4th Friday\", \"Every First Saturday\", \"Every first Sunday!\", \"every second Wednesday\", \"every third Wednesday\", \"Every FIRST WEDNESDAY\", \"The Monday drag party\"); nine repeating titles publish no cadence text and are grouped from their dates with the occurrence-URL quoted as the structural statement. All 57 rows are at the bar itself (1347 Folsom St) with real coordinates. The 2026-09-12 trial run kept 3 records (Chub Rub ×2, FLEX) and bear-dropped 54."
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "bar": "Powerhouse Bar",
+    "address": "1347 Folsom St, San Francisco, CA 94103",
+    "location": "37.773044, -122.412092",
+    "website": "https://powerhousebar.com"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "REST feed page 1 (total 57, total_pages 2) + page 2 from the scraper page cache = 57 rows, 57 distinct ids, Sep 11 2026 – Feb 24 2027. The configured /events/ list shows the first 12 of them statically and links pages 2–3; the ICS export carries 30 of them (Sep 12 – Oct 12) with identical wall-clock times; zero conflicts between doors. Collapse: 20 titles repeat on a provable cadence (2 weekly, 18 monthly nth-weekday; 50 rows) → 20 series; 7 rows are one-offs or unprovable pairs (Rubber Ducky, FLEX, Black Brown and Kinky, NUTZ, SHAGGIN, The Playpen ×2) → 7 singles. publishedEventCount = 27. Every occurrence is a dated feed row (origin listed); the window end 2026-12-31 exceeds every listed series date, and no rule-derived dates are added beyond what the site lists. Past listings: the list view links a \"Previous Events\" view (/events/list/?eventDisplay=past) and the Chub Rub /all/ index shows one past instance (2026-05-16); the past view itself was not read (no request budget), so the count is unknown.",
+    "publishedEventCount": 27,
+    "documentedEventCount": 27,
+    "occurrenceWindow": {
+      "start": "2026-09-11",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "The past view (/events/list/?eventDisplay=past) was not read; how many past rows the site keeps is unknown (REST with start_date=2000-01-01 would answer it in one call).",
+      "Weekly series occurrences stop where the feed's pre-expansion stops (2026-10-25 Shirts Off Sundays, 2026-10-26 PILLOWS); November–December Sundays/Mondays are not asserted.",
+      "Event-page descriptions were taken from REST; only two occurrence pages (t-dance 2026-09-11, chub-rub /all/) were opened."
+    ]
+  },
+  "events": [
+    {
+      "id": "t-dance",
+      "kind": "series",
+      "title": "T – Dance",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://powerhousebar.com/event/t-dance/2026-09-11/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/Tdance.png",
+      "cover": "at door",
+      "description": "Divine Masc: T-Dance is a Trans Masc meet up and happy hour. This is our casual after work bar hangout time,  for those that don’t want to stay out late,  or don’t vibe with the evening bar scene. No cover, just donations.  Come relax, have a drink, have some complimentary pizza, get a tattoo, and meet new friends!  Everyone is welcome!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/t-dance/2026-09-11/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[0]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/t-dance/2026-09-11/\""
+          }
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[26]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/t-dance/2026-10-09/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/t-dance/2026-10-09/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[0]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/t-dance/2026-09-11/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 11 and Oct 9 are both second Fridays. Divine Masc's Trans Masc happy hour, 5–9 PM, \"No cover, just donations\". The Sep 11 instance had already happened by recon but the feed still listed it (see traps). Title in the feed is \"T &#8211; Dance\" (en dash)."
+    },
+    {
+      "id": "cuir",
+      "kind": "series",
+      "title": "Cuir",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/cuir/2026-09-11/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/06/cuir.png",
+      "cover": "at door",
+      "description": "“It’s pronounced queer, you heathens.” Think infernal leather, heavy bass, cruising energy, and unapologetic queer presence. A night for the bold, the deviant, and the beautifully adorned. Bring your harnesses, your boots, your attitude—and maybe a friend who bites.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/cuir/2026-09-11/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/cuir/2026-09-11/\""
+          }
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[27]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/cuir/2026-10-09/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/cuir/2026-10-09/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[1]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/cuir/2026-09-11/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 11 and Oct 9 are both second Fridays, 10 PM–2 AM. Sep 11 instance already past at recon (see traps)."
+    },
+    {
+      "id": "house-party",
+      "kind": "series",
+      "title": "HOUSE PARTY",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/house-party-2/2026-09-12/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/hpmay.jpg",
+      "cover": "at door",
+      "description": "The furniture and rugs get moved back in for the best frat infused underground dance party!  Ky and Juan Martinez give you a lasers, lights ‘n smoke!!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/house-party-2/2026-09-12/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[2]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/house-party-2/2026-09-12/\""
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[28]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/house-party-2/2026-10-10/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/house-party-2/2026-10-10/"
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[3]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/house-party-2/2026-11-14/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/house-party-2/2026-11-14/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[2]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/house-party-2/2026-09-12/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 12, Oct 10 and Nov 14 are all second Saturdays, 9 PM–2 AM. Slug is house-party-2."
+    },
+    {
+      "id": "shirts-off-sundays",
+      "kind": "series",
+      "title": "Shirts Off Sundays",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-09-13/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/shirtsoffsundays.jpg",
+      "cover": "Free",
+      "description": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/shirts-off-sundays/2026-09-13/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[3]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-09-13/\""
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[10]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-09-20/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-09-20/"
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[16]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-09-27/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-09-27/"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[21]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-10-04/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-10-04/"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[29]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-10-11/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-10-11/"
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[36]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-10-18/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-10-18/"
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[43]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-10-25/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/shirts-off-sundays/2026-10-25/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[3]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/shirts-off-sundays/2026-09-13/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Seven consecutive Sundays Sep 13 – Oct 25, 4–8 PM, cost \"Free\", no description or excerpt on any row. The REST door lists weekly items only about six weeks ahead (nothing after 2026-10-26 for any weekly title), so occurrences stop where the site's list stops — no rule-derived dates are added."
+    },
+    {
+      "id": "primal",
+      "kind": "series",
+      "title": "PRIMAL",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/primal/2026-09-13/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/08/primalaugust.jpg",
+      "cover": "at door",
+      "description": "Powerhouse’s favorite Pup and Furry party. With electrifying dance music, strong drinks and hot gogo pup’s! Hosted by pup handler themselves Whisper!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/primal/2026-09-13/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[4]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/primal/2026-09-13/\""
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[30]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/primal/2026-10-11/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/primal/2026-10-11/"
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[2]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/primal/2026-11-08/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/primal/2026-11-08/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[4]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/primal/2026-09-13/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 13, Oct 11 and Nov 8 are all second Sundays, 8 PM–1 AM. \"Powerhouse's favorite Pup and Furry party\" hosted by Whisper."
+    },
+    {
+      "id": "pillows",
+      "kind": "series",
+      "title": "PILLOWS",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/pillows/2026-09-14/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/06/pillows6-8.jpg",
+      "cover": "at door",
+      "description": "The Monday drag party with Glamamore and crew…fresh beats, crafting & performance!",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "The Monday drag party with Glamamore and crew",
+      "occurrences": [
+        {
+          "startDate": "2026-09-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[5]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-09-14/\""
+          }
+        },
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[12]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-09-21/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-09-21/"
+          }
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[18]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-09-28/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-09-28/"
+          }
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[23]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-10-05/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-10-05/"
+          }
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[31]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-10-12/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-10-12/"
+          }
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[38]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-10-19/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-10-19/"
+          }
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[45]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/pillows/2026-10-26/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/pillows/2026-10-26/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[5].description",
+        "quote": "The Monday drag party with Glamamore and crew…fresh beats, crafting & performance!"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Seven consecutive Mondays Sep 14 – Oct 26, 9 PM–2 AM. The REST door lists weekly items only about six weeks ahead (nothing after 2026-10-26 for any weekly title), so occurrences stop where the site's list stops — no rule-derived dates are added."
+    },
+    {
+      "id": "boystown",
+      "kind": "series",
+      "title": "BoysTown",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/boystown/2026-09-16/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/boystownjune-scaled.jpg",
+      "cover": "at door",
+      "description": "Divine Masc: BoysTown is our monthly Trans Masc bar night and cruising social. Get ready to dance your butt off to amazing beats alongside the sexiest Trans Masc peeps of the Bay Area! This Trans centered dance party happens every third Wednesday at the infamous Powerhouse in Soma. Everyone is welcome!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3WE",
+      "recurrenceStatedAs": "This Trans centered dance party happens every third Wednesday at the infamous Powerhouse in Soma",
+      "occurrences": [
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[6]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/boystown/2026-09-16/\""
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[39]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/boystown/2026-10-21/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/boystown/2026-10-21/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[6].description",
+        "quote": "This Trans centered dance party happens every third Wednesday at the infamous Powerhouse in Soma."
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sep 16 and Oct 21 are third Wednesdays, 8 PM–1 AM. Divine Masc's monthly Trans Masc bar night."
+    },
+    {
+      "id": "trade",
+      "kind": "series",
+      "title": "Trade",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/trade/2026-09-18/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/trade-standard.png",
+      "cover": "at door",
+      "description": "TRADE is a monthly dance party at Powerhouse produced by Mark Weston and Mike Castro, bringing together underground house music, late-night energy, and a crowd that’s always ready to move. Built around connection, community, and a packed dance floor, TRADE has quickly become a staple for those looking for an elevated nightlife experience with a little edge.   At the heart of TRADE is resident DJ Will Vitagliano, whose signature sound blends deep melodic house, driving rhythms, and hypnotic grooves. His sets create the perfect journey—from warm, emotional builds to peak-time moments that keep the floor moving well into the night.   Each month, TRADE welcomes a rotating lineup of local favorites and guest talent, creating a unique experience while staying true to its roots: great music, great people, and an atmosphere where everyone can let go, connect, and lose themselves in the moment.   Whether you’re a regular or joining us for the first time, TRADE is where house music, community, and nightlife come together on one unforgettable dance floor.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3FR",
+      "recurrenceStatedAs": "TRADE is a monthly dance party at Powerhouse",
+      "occurrences": [
+        {
+          "startDate": "2026-09-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[7]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/trade/2026-09-18/\""
+          }
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[33]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/trade/2026-10-16/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/trade/2026-10-16/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[7].description",
+        "quote": "TRADE is a monthly dance party at Powerhouse produced by Mark Weston and Mike Castro"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site says \"monthly\"; third-Friday is proven by the listed dates (Sep 18, Oct 16). 9 PM–2 AM, resident DJ Will Vitagliano."
+    },
+    {
+      "id": "chub-rub",
+      "kind": "series",
+      "title": "Chub Rub",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://powerhousebar.com/event/chub-rub/2026-09-19/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg",
+      "cover": "at door",
+      "description": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/chub-rub/2026-09-19/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[8]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/chub-rub/2026-09-19/\""
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[34]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/chub-rub/2026-10-17/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/chub-rub/2026-10-17/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[8]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/chub-rub/2026-09-19/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 19 and Oct 17 are third Saturdays, 5–9 PM; no description on either row. The recurring-event index /event/chub-rub/all/ (discovery/powerhousebar.com/chub-rub.body) lists exactly these two upcoming dates plus one past instance (2026-05-16). This is the only title the 2026-09-12 trial run kept as bear (2 of 3 kept records)."
+    },
+    {
+      "id": "beatpig",
+      "kind": "series",
+      "title": "BEATPIG",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/beatpig-2-2014-06-21/2026-09-19/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/bpmay.jpg",
+      "cover": "at door",
+      "description": "Every Third Saturday   BEATPIG brings together all the great elements of leather, fashion, and drag to the legendary Powerhouse SOMA venue. Hosted every third Saturday by Juanita MORE! & DJ Stanley Frank this party features great music, cheap drinks, juicy gogo dancers, bondage demonstrations & rotating photographers all carrying on at the legendary leather bar – Powerhouse. Benefiting Openhouse – Openhouse enables San Francisco Bay Area LGBTQ+ seniors to overcome the unique challenges they face as they age by providing housing, direct services and community programs.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "Every Third Saturday",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[9]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/beatpig-2-2014-06-21/2026-09-19/\""
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[35]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/beatpig-2-2014-06-21/2026-10-17/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/beatpig-2-2014-06-21/2026-10-17/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[9].description",
+        "quote": "Every Third Saturday"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description: \"Hosted every third Saturday by Juanita MORE! & DJ Stanley Frank … Benefiting Openhouse\". Sep 19 and Oct 17, 9 PM–2 AM. Slug beatpig-2-2014-06-21 (a 2014 series revived)."
+    },
+    {
+      "id": "cocktailgate",
+      "kind": "series",
+      "title": "Cocktailgate",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/cocktailgate/2026-09-20/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/cgateMay.jpg",
+      "cover": "$5 – $10",
+      "description": "Cocktailgate 2.0 – The drag show that just refuses to die. One of the Bay Areas longest running shows built on chaos and art. Come see what “Minutes of Rehearsal” can do for you. Hosted by Suppositori Spelling and Florence Frightengale.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/cocktailgate/2026-09-20/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[11]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/cocktailgate/2026-09-20/\""
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[37]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/cocktailgate/2026-10-18/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/cocktailgate/2026-10-18/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[11]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/cocktailgate/2026-09-20/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 20 and Oct 18 are third Sundays, 8 PM–2 AM. The only row family with a numeric cost: cost \"$5 – $10\" (cost_details values 5, 10). Drag show hosted by Suppositori Spelling and Florence Frightengale."
+    },
+    {
+      "id": "stank",
+      "kind": "series",
+      "title": "Stank",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/stank/2026-09-25/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/StankStandard.jpg",
+      "cover": "at door",
+      "description": "Stank is San Francisco’s infamous Ripe Pit night. Every 4th Friday the pit pigs, pups, and perverts converge on Powerhouse for a music forward night to take in the heady aromas, deep sounds, and experience the Pit Crew. Stank can also be seen on the road, having traveled the West Coast, to New York, and internationally.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
+      "recurrenceStatedAs": "Every 4th Friday",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[13]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/stank/2026-09-25/\""
+          }
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[40]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/stank/2026-10-23/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/stank/2026-10-23/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[13].description",
+        "quote": "Every 4th Friday the pit pigs, pups, and perverts converge on Powerhouse"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sep 25 and Oct 23 are fourth Fridays, 9 PM–2 AM. \"San Francisco's infamous Ripe Pit night.\""
+    },
+    {
+      "id": "lick-it",
+      "kind": "series",
+      "title": "LICK IT",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/lick-it-2014-06-13-2017-07-14/2026-09-26/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/Lickitmay-scaled.jpg",
+      "cover": "at door",
+      "description": "What Do You Have A Taste For?   Drink Specials . Every 4th Saturdays at the Powerhouse 9pm to 2am.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
+      "recurrenceStatedAs": "Every 4th Saturdays at the Powerhouse 9pm to 2am",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[14]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/lick-it-2014-06-13-2017-07-14/2026-09-26/\""
+          }
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[41]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/lick-it-2014-06-13-2017-07-14/2026-10-24/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/lick-it-2014-06-13-2017-07-14/2026-10-24/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[14].description",
+        "quote": "Every 4th Saturdays at the Powerhouse 9pm to 2am."
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sep 26 and Oct 24 are fourth Saturdays. Slug lick-it-2014-06-13-2017-07-14."
+    },
+    {
+      "id": "carne-fresca",
+      "kind": "series",
+      "title": "Carne Fresca",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "website": "https://powerhousebar.com/event/carne-fresca/2026-09-27/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/carnemay.jpg",
+      "cover": "at door",
+      "description": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SU",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/carne-fresca/2026-09-27/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[15]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/carne-fresca/2026-09-27/\""
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[42]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/carne-fresca/2026-10-25/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/carne-fresca/2026-10-25/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[15]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/carne-fresca/2026-09-27/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 27 and Oct 25 are fourth Sundays, 4–8 PM; no description on either row. Same afternoon slot as Shirts Off Sundays (both 16:00–20:00 on those two dates)."
+    },
+    {
+      "id": "fan-dumb",
+      "kind": "series",
+      "title": "Fan-Dumb",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/fan-dumb/2026-09-27/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/MayFandumb.jpg",
+      "cover": "at door",
+      "description": "Where nerds and geeks come to be the cool kids. Take a little  cosplay,  a little  drag   and make a big  Big Show!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SU",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/fan-dumb/2026-09-27/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[17]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/fan-dumb/2026-09-27/\""
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[44]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/fan-dumb/2026-10-25/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/fan-dumb/2026-10-25/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[17]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/fan-dumb/2026-09-27/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Sep 27 and Oct 25 are fourth Sundays, 9 PM–2 AM. Cosplay/drag show."
+    },
+    {
+      "id": "travieso",
+      "kind": "series",
+      "title": "TRAVIESO",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/travieso/2026-10-02/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/TraviesoJune.jpg",
+      "cover": "at door",
+      "description": "TRAVIESO! Your new favorite Latin Leather Night is back at @sfpowerhouse",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "https://powerhousebar.com/event/travieso/2026-10-02/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[19]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/travieso/2026-10-02/\""
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[0]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/travieso/2026-11-06/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/travieso/2026-11-06/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[19]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/travieso/2026-10-02/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states no cadence in text for this one; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar only mints for a recurring event, and the rule is proven from the listed dates. Oct 2 and Nov 6 are first Fridays, 9 PM–2 AM. \"Your new favorite Latin Leather Night is back at @sfpowerhouse\"."
+    },
+    {
+      "id": "powerblouse",
+      "kind": "series",
+      "title": "Powerblouse!",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/powerblouse-2018-09-02-2016-12-03/2026-10-03/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/06/pbjune.jpg",
+      "cover": "at door",
+      "description": "Every First Saturday   Each month Juanita MORE! and Glamamore invite one lucky person to the stage of the Powerhouse Bar for a full-fantasy drag makeover. Watch as they use their sacred drag queen powers to tuck, tape, shape, glue, and staple this person together. Once the vision is complete, they push the newbie baby drag person onto the stage for their first-ever live lip-sync performance! The magic mascara wand will be casting spells!   Benefiting GSA Network, Roses Program – The Roses Program grew out of our TRUTH Program and our commitment to support trans girls of color. The Roses program is creating space built by and for trans girls of color, sculpted to not only welcome girls in but to uplift their voices and power.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "Every First Saturday",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[20]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/powerblouse-2018-09-02-2016-12-03/2026-10-03/\""
+          }
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/powerblouse-2018-09-02-2016-12-03/2026-11-07/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/powerblouse-2018-09-02-2016-12-03/2026-11-07/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[20].description",
+        "quote": "Every First Saturday"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Oct 3 and Nov 7 are first Saturdays, 10 PM–2 AM. Juanita MORE! and Glamamore drag-makeover show; benefiting GSA Network's Roses Program. Slug powerblouse-2018-09-02-2016-12-03."
+    },
+    {
+      "id": "wild-cards",
+      "kind": "series",
+      "title": "Wild Cards",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/wild-cards/2026-10-04/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/04/wildcardsMay.jpg",
+      "cover": null,
+      "description": "Welcome to the ultimate free-for-all drag show.  Performers are welcome to come perform whatever they want with no theme. (Most of the time) Hosted by the thrilling Florence Frightengale. Every first Sunday!",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SU",
+      "recurrenceStatedAs": "Every first Sunday!",
+      "occurrences": [
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[22]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/wild-cards/2026-10-04/\""
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[49]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/wild-cards/2026-11-01/\""
+          },
+          "overrides": {
+            "website": "https://powerhousebar.com/event/wild-cards/2026-11-01/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[22].description",
+        "quote": "Every first Sunday!"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Oct 4 and Nov 1 are first Sundays, 8 PM–1 AM. cost is an empty string on both rows (cost_details.values []), so cover is null. Hosted by Florence Frightengale."
+    },
+    {
+      "id": "whorror",
+      "kind": "series",
+      "title": "WHORROR",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/whorror/2026-10-07/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2020/01/whorrorstandard.jpg",
+      "cover": "at door",
+      "description": "” WHORROR! , the hottest monthly horror/alt show in the Bay! Every  FIRST WEDNESDAY   with  Polly Amber Ross  at the legendary SF Powerhouse. Be sure to follow us on Instagram: @whorrordragshowofficial “",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "recurrenceStatedAs": "Every FIRST WEDNESDAY",
+      "occurrences": [
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[24]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/whorror/2026-10-07/\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[24].description",
+        "quote": "the hottest monthly horror/alt show in the Bay! Every  FIRST WEDNESDAY   with  Polly Amber Ross"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site states the rule but lists only ONE upcoming date (Oct 7; Sep 2 is past, Nov 4 not yet published), so the series carries a single occurrence. 8 PM–1 AM."
+    },
+    {
+      "id": "what-the-fuck",
+      "kind": "series",
+      "title": "What the Fuck!",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/what-the-fuck/2026-10-14/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/WtfJune-scaled.jpg",
+      "cover": "at door",
+      "description": "It’s the show that brings the chaotic energy, experimental drag and fun beats to you every second Wednesday.   Do you want to try out a new performance ? First day in drag? Or just want to twirl on stage ? bring a thumb drive, whether you just started or you’re a pro there’s a space for you. Open to any and all styles of performance.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2WE",
+      "recurrenceStatedAs": "every second Wednesday",
+      "occurrences": [
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[32]",
+            "quote": "\"url\":\"https://powerhousebar.com/event/what-the-fuck/2026-10-14/\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[32].description",
+        "quote": "It’s the show that brings the chaotic energy, experimental drag and fun beats to you every second Wednesday."
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stated rule, one listed date (Oct 14; Sep 9 is past, Nov 11 not yet published). 8 PM–2 AM, open-stage drag."
+    },
+    {
+      "id": "rubber-ducky-2026-10-08",
+      "kind": "single",
+      "title": "Rubber Ducky",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://powerhousebar.com/event/rubber-ducky/2026-10-08/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/rubbermay.jpg",
+      "cover": null,
+      "description": null,
+      "startDate": "2026-10-08",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[25]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/rubber-ducky/2026-10-08/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One listed date (Thu Oct 8, 5–9 PM), no description, empty cost (cover null). No cadence stated anywhere and only one instance in the feed, so a single."
+    },
+    {
+      "id": "flex-2026-10-30",
+      "kind": "single",
+      "title": "FLEX",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/flex/2026-10-30/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2016/11/FLEX-Big-poster-scaled.jpg",
+      "cover": "at door",
+      "description": "FLEX is the muscle worship event for big men and their admirers. Featuring built go-go dancers, sexy on-stage flexing scenes, and a mega-mix of classic muscle porn and bodybuilder videos to keep you gooning all night long. There’s a bicep contest at midnight with prizes to win from FLEX sponsors, followed by a hands-on bodybuilder pose down. Get pumped, take your shirt off, and show off your gains at FLEX.",
+      "startDate": "2026-10-30",
+      "endDate": "2026-10-31",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[46]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/flex/2026-10-30/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Fri Oct 30, 9 PM–2 AM (feed end_date 2026-10-31 02:00). \"FLEX is the muscle worship event for big men and their admirers … bicep contest at midnight\". Poster image is the 2016 FLEX-Big-poster. One listed date, no cadence stated → single. Kept as bear by the 2026-09-12 trial run."
+    },
+    {
+      "id": "black-brown-and-kinky-2026-10-31",
+      "kind": "single",
+      "title": "Black Brown and Kinky",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "website": "https://powerhousebar.com/event/black-brown-and-kinky/2026-10-31/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/onyxjune.jpg",
+      "cover": "at door",
+      "description": null,
+      "startDate": "2026-10-31",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[47]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/black-brown-and-kinky/2026-10-31/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sat Oct 31, 6–9 PM, no description; image file is onyxjune.jpg (ONYX-branded flyer). Single."
+    },
+    {
+      "id": "nutz-2026-10-31",
+      "kind": "single",
+      "title": "NUTZ",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/nutz/2026-10-31/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/nutzmay-1.jpg",
+      "cover": "at door",
+      "description": null,
+      "startDate": "2026-10-31",
+      "endDate": "2026-11-01",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[48]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/nutz/2026-10-31/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sat Oct 31, 10 PM–2 AM (feed end_date 2026-11-01 02:00), no description. Single."
+    },
+    {
+      "id": "the-playpen-2026-11-25",
+      "kind": "single",
+      "title": "The Playpen",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/the-playpen/2026-11-25/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/playpenMay.jpg",
+      "cover": "at door",
+      "description": null,
+      "startDate": "2026-11-25",
+      "endDate": "2026-11-26",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "jsonPath": "$.events[4]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/the-playpen/2026-11-25/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Wed Nov 25, 8 PM–1 AM, no description. The feed lists a second The Playpen on 2027-02-24 (also a fourth Wednesday) but no December or January instance and no cadence text, so the two dates do not prove a rule — documented as two singles."
+    },
+    {
+      "id": "the-playpen-2027-02-24",
+      "kind": "single",
+      "title": "The Playpen",
+      "startTime": "20:00",
+      "endTime": "01:00",
+      "website": "https://powerhousebar.com/event/the-playpen/2027-02-24/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/playpenMay.jpg",
+      "cover": "at door",
+      "description": null,
+      "startDate": "2027-02-24",
+      "endDate": "2027-02-25",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "jsonPath": "$.events[6]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/the-playpen/2027-02-24/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Wed Feb 24 2027, 8 PM–1 AM — the only row in the feed beyond November 2026 (57th row, page 2). Three months after the Nov 25 instance with nothing between; see the-playpen-2026-11-25. Singles are never window-limited, so it is documented although outside occurrenceWindow."
+    },
+    {
+      "id": "shaggin-2026-11-29",
+      "kind": "single",
+      "title": "SHAGGIN",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "website": "https://powerhousebar.com/event/shag/2026-11-29/",
+      "image": "https://powerhousebar.com/wp-content/uploads/2026/05/cc6e5a6a-448e-4d80-a3d0-1667741512bf.jpg",
+      "cover": "at door",
+      "description": "Bawlz Out Sundays…  SHAGGIN – Keeping it  HORNY with the best music from the 70s – 90s. You can dance, cruise, drink or just hang out with all your friends or make new ones.",
+      "startDate": "2026-11-29",
+      "endDate": "2026-11-30",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "jsonPath": "$.events[5]",
+        "quote": "\"url\":\"https://powerhousebar.com/event/shag/2026-11-29/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Sun Nov 29, 8 PM–2 AM (feed end_date 2026-11-30 02:00). \"Bawlz Out Sundays… SHAGGIN – Keeping it HORNY with the best music from the 70s – 90s.\" Slug is shag. One listed date, no cadence stated → single."
+    }
+  ],
+  "traps": [
+    {
+      "id": "sep-11-rows-already-past",
+      "kind": "past-event",
+      "label": "\"T – Dance\" and \"Cuir\" on 2026-09-11 — the first two REST rows, already over at recon",
+      "why": "REST's server-set start_date is 2026-09-11 02:00:00, so the feed still returns Friday's two parties on Saturday; the HTML list and the ICS export both start at Sep 12. Extracting them is correct under allowPastEvents (they are real instances of the T – Dance and Cuir series), but they must keep their Sep 11 date.",
+      "evidence": {
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.rest_url",
+        "quote": "start_date=2026-09-11 02:00:00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "list-pagination-12-per-page",
+      "kind": "navigation",
+      "label": "\"Events from September 12 – September 25\" + rel-next /events/page/2/, /events/page/3/ on the configured list page",
+      "why": "The static list page holds only 12 of the 57 rows. A run that reads just the configured HTML without following pagination (or without the REST door) sees two weeks of programming and misses the other 45 rows — a coverage trap rather than a false event. The pagination links themselves are not events.",
+      "evidence": {
+        "url": "https://powerhousebar.com/events/",
+        "quote": "Events from September 12 – September 25"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "chub-rub-all-past-instance",
+      "kind": "past-event",
+      "label": "/event/chub-rub/all/ lists \"2026-05-16\" alongside the two upcoming Chub Rub dates",
+      "why": "Tribe's per-series index shows every occurrence including past ones. Reachable only by crawling from an occurrence page; if the crawl follows it, the May 16 instance appears as a past record (legitimate under allowPastEvents) — it is not a third upcoming Chub Rub.",
+      "evidence": {
+        "url": "https://powerhousebar.com/event/chub-rub/all/",
+        "quote": "https://powerhousebar.com/event/chub-rub/2026-05-16/"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Depends on whether the crawl follows the /all/ link from an occurrence page; the configured list and the REST door never expose it."
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "previous-events-view",
+      "kind": "past-event",
+      "label": "\"Previous Events\" link → /events/list/?eventDisplay=past",
+      "why": "The past archive of a Tribe site; not read during recon. Rows behind it are already-happened instances of the same series and must not be counted as upcoming.",
+      "evidence": {
+        "url": "https://powerhousebar.com/events/",
+        "quote": "https://powerhousebar.com/events/list/?eventDisplay=past"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Not read; whether the crawl follows the past view is a config question (allowPastEvents), not a site one."
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Nine repeating titles (T – Dance, Cuir, HOUSE PARTY, Shirts Off Sundays, PRIMAL, Chub Rub, Cocktailgate, Carne Fresca, Fan-Dumb, TRAVIESO) publish no cadence text; the rules here are proven from 2–7 listed dates plus Tribe's date-suffixed occurrence URLs. If the scraper should only ever write a recurrence it can quote, these stay dated singles per occurrence.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    },
+    {
+      "q": "The 2026-09-12 trial run bear-dropped 54 of 57 records including Chub Rub-adjacent bear/leather programming (BEATPIG, Stank, LICK IT, FLEX kept). Bear verdicts are deferred to the owner's pass.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    }
+  ]
+}

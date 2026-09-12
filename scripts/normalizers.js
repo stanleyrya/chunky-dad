@@ -1334,10 +1334,11 @@ class LocationNormalizer extends BaseNormalizer {
         // matches the unaccented "montreal" pattern (run 20260727-145617),
         // and word-boundary aware so "TRANSFERABLE" is not an "sf" venue
         // (see matchesCityPattern).
+        // A title names a brand or a tour as often as a place ("GRUNT (SF)"
+        // at a Brooklyn venue, cmoneverybody.com, trial 2026-09-12: routed
+        // to sf): the venue's name and the address decide first; the title
+        // only when neither names a city.
         const cityFromTitle = this.matchCityInText(event.title);
-        if (cityFromTitle) {
-            return cityFromTitle;
-        }
 
         const cityFromVenueName = this.matchCityInText(event.bar);
         if (cityFromVenueName) {
@@ -1355,6 +1356,9 @@ class LocationNormalizer extends BaseNormalizer {
         if (event.address) {
             const cityFromAddress = this.extractCityFromAddress(event.address);
             if (cityFromAddress) {
+                if (cityFromTitle && cityFromTitle !== cityFromAddress) {
+                    console.log(`🗺️ LocationNormalizer: "${String(event.title || '').trim()}" names ${cityFromTitle} but its address is in ${cityFromAddress} — the address decides`);
+                }
                 return cityFromAddress;
             }
         }
@@ -1377,6 +1381,10 @@ class LocationNormalizer extends BaseNormalizer {
         // curated-bar / site-identity / parser-config backfills downstream
         // still get their turn at it. Only a truly context-free event (no
         // venue name, no address of any kind) falls through to the prose.
+        if (cityFromTitle) {
+            return cityFromTitle;
+        }
+
         const hasVenueContext = Boolean(
             (typeof event.bar === 'string' && event.bar.trim())
             || (event.venue && (event.venue.name || event.venue.address))

@@ -1,0 +1,943 @@
+{
+  "schemaVersion": 1,
+  "source": "C'mon Everybody",
+  "slug": "c-mon-everybody",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "feed",
+      "static",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.cmoneverybody.com/events"
+    ],
+    "doors": [
+      {
+        "url": "https://www.cmoneverybody.com/events",
+        "kind": "squarespace-static-html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Static curl with a Safari UA, HTTP 200, 135872 bytes (discovery/cmoneverybody.com/events.body; served from Squarespace cache, age 54094 s, dated Fri 11 Sep 2026 19:28 GMT). The page body carries NO event rows: the text-stripped page is 289 chars of nav ('Home Events Merch Our Story'), 'EVENTS' and the newsletter form. Events live in a DICE widget whose config is inline: DiceEventListWidget.create({\"information\":\"simple\",\"eventTitle\":\"event\",\"showImages\":true,\"showAudio\":true,\"showNewBadge\":false,\"layout\":\"gallery\",\"roundButtons\":false,\"theme\":\"dark\",\"fontFamily\":\"inherit\",\"partnerId\":\"443c0988\",\"apiKey\":\"PyghT2k59li4oGXIef8t4Git2vRl58H7WAuUJGpd\",\"version\":2,\"showPrice\":true,\"__p\":false,\"__pc\":{},\"highlightColour\":\"#ff00f2\",\"venues\":[\"C'mon Everybody\",\"Cmon Everybody\"]}) — a VENUE filter (two spellings), not a promoter filter. The scraper's page cache holds an identical copy fetched 2026-09-10T05:39:07Z with the same widget config. Social link on every page: http://instagram.com/cmoneverybodybk (the facebook.com/2008/fbml href is an XML namespace, not a page)."
+      },
+      {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "kind": "dice-partners-api-v2",
+        "role": "feed",
+        "rowsReturned": 32,
+        "truthFlag": "links.next: null (links.self = https://events-api.dice.fm/api/v2/events?filter[venues][]=C%27mon+Everybody&filter[venues][]=Cmon+Everybody&page[size]=100&types=linkout%2Cevent); meta null",
+        "note": "GET with only x-api-key = the widget's apiKey answers HTTP 401 {\"error\":\"unauthorized\",\"description\":\"unauthorized\",\"key\":\"error_unauthorized\"} (dice-cmoneverybody.body). Adding 'Origin: https://www.cmoneverybody.com' answers HTTP 200, 109639 bytes (dice-cmoneverybody-origin.body, 2026-09-12T13:00:47Z); the scraper's page cache holds the same feed fetched 2026-09-12T13:12:38Z. data[] has 32 rows, all type 'event' (DICE-ticketed, url = link.dice.fm short link, perm_name, ticket_types[].price.total in cents, currency USD): 31 status 'on-sale' and 1 status 'cancelled' (Funny Moms). Every row has venue \"C'mon Everybody\" (venues[0].id 5325, dice.fm/venue/cmon-everybody-ad2x), address '325 Franklin Ave, Brooklyn, NY 11238, USA', location.lat/lng 40.6883003/-73.9568077, timezone America/New_York and promoters[0].name 'Sosa and Zuco LLC dba C’mon Everybody'. Rows are sorted by date ascending; row 0 is dated 2026-09-12T22:00:00Z (today, 18:00 EDT), so nothing past is served. Other row fields: date/date_end (ISO Z), description, images[] (dice-media.imgix.net), lineup[] ('Doors open 7:30 PM'), genre_tags, age_limit, sale_start_date, sold_out."
+      },
+      {
+        "url": "https://www.cmoneverybody.com/",
+        "kind": "squarespace-static-html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Read from the scraper's page cache (fetchedAt 2026-09-12T13:18:39Z, 389925 chars). Text: 'C’mon Everybody is a queer owned & operated bar and venue', an 'EVENTS * EVENTS * EVENTS * Click Here' marquee linking to /events, drinks names, 'Visit Us 325 Franklin Ave, Brooklyn NY 11238 Hours: Mon-Sun 5pm-LATE', 'The bar is open seven nights a week'. No event rows and no second widget."
+      },
+      {
+        "url": "https://www.cmoneverybody.com/ourstory",
+        "kind": "squarespace-static-html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache, fetchedAt 2026-09-12T13:24:16Z. 'C’mon Everybody is a Queer owned and operated bar, music venue and live arts space located in Bed Stuy, Brooklyn. Founded in 2014'. No events."
+      }
+    ]
+  },
+  "defaults": {
+    "city": "nyc",
+    "timezone": "America/New_York",
+    "bar": "C'mon Everybody",
+    "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+    "location": "40.6883003, -73.9568077",
+    "website": "https://www.cmoneverybody.com",
+    "instagram": "https://www.instagram.com/cmoneverybodybk"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "publishedEventCount 31 = the DICE partners feed the /events widget is configured with (links.next null, 32 rows: 31 on-sale + 1 cancelled). The feed is a venue filter, so it is the venue's whole DICE calendar, not one promoter's slice. The /events page itself contributes 0 rows (a Squarespace shell whose only event content is the widget config), and the homepage and /ourstory carry no rows either, so there is no second listing door on this host to reconcile against; the reconciliation is the feed's own completeness flag plus the 401-without-Origin probe proving the key/origin pair is the widget's. Every row is a dated single with its own link.dice.fm ticket link; no row states a repeat (the venue's recurring shows — Bear Belly, FEMME, Frolic, Learn The Words, Bitch!, Lezzie McGuire — are published as discrete dated rows), so no series entry exists. Past listings: none served (row 0 is today's 18:00 tea dance). Run 20260912-153241 read this same feed and returned all 31 on-sale rows (2 kept, 29 bear-dropped) and skipped the cancelled one.",
+    "publishedEventCount": 31,
+    "documentedEventCount": 31,
+    "occurrenceWindow": {
+      "start": "2026-09-12",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "events": [
+    {
+      "id": "bear-belly-bear-tea-dance-2026-09-12",
+      "kind": "single",
+      "title": "Bear Belly • Bear Tea Dance",
+      "description": "a bear tea dance\n\nSounds: That Matt\n\nGogos: Archie & Hairy Beau\n\nHost: Emotionalluggage & Cruiseship13\n\n2-for-1 well drinks 6-8pm\n\nPresented by C’mon Everybody.\n\nThis is an 21+ event",
+      "startDate": "2026-09-12",
+      "startTime": "18:00",
+      "endDate": "2026-09-12",
+      "endTime": "22:30",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/ae367058a9fa",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-28/90b51142-e5e4-4d86-a0f6-98c7d25b1377.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[0]",
+        "quote": "bear-belly-bear-tea-dance-12th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-12T22:00:00Z - 2026-09-13T02:30:00Z (America/New_York) = 18:00-22:30 EDT; tickets General Admission $0.00; lineup 'Doors open 6:00 PM'; age_limit 'This is an 21+ event'; sale_start_date 2026-08-28T04:15:00Z. Run 20260912-153241 returned it (kept)."
+    },
+    {
+      "id": "str8-to-dvd-turns-10-2026-09-12",
+      "kind": "single",
+      "title": "STR8 TO DVD TURNS 10!",
+      "description": "Celebrating 10 years!\n\nWith Special Guests:\n\nLollygag\n\nMagenta\n\nAngel Au\n\nPresented by C’mon Everybody.\n\nThis is an 21+ event",
+      "startDate": "2026-09-12",
+      "startTime": "22:00",
+      "endDate": "2026-09-13",
+      "endTime": "03:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/S1f73421ee78",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-01/60e7450b-cd52-4263-83bf-5d2c8cd754a7.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[1]",
+        "quote": "str8-to-dvd-turns-10-12th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-13T02:00:00Z - 2026-09-13T07:00:00Z (America/New_York) = 22:00-03:00 EDT; tickets GA $13.39; lineup 'Doors open 10:00 PM'; age_limit 'This is an 21+ event'; sale_start_date 2026-07-29T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "fashions-night-out-2026-09-13",
+      "kind": "single",
+      "title": "FASHION’S NIGHT OUT",
+      "description": "Hosted by Lily Marotta\n\nDon’t feed the models! Join recluse Italian designer Liliana Marotta for a night of minimalist fashion themed comedy and improv. The show will feature design competitions, the history of the halter top, runway walk offs, belts,bags and boots. Yeah that’s right Dolce & Gabbana were an improv troupe before building a fashion empire.\n\nFeaturing famous designers:\n\nPatti Harrison\n\nDrew Anderson\n\nMera Caulfield\n\nPeter Mills Weiss\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-13",
+      "startTime": "20:00",
+      "endDate": "2026-09-13",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Vf06ce2076f7",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-28/83115516-fbc6-4abe-a86a-4cd05b42e643.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[2]",
+        "quote": "fashions-night-out-13th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-14T00:00:00Z - 2026-09-14T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $24.11; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-28T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "yes-anne-wreina-no-buena-daniella-darling-2026-09-13",
+      "kind": "single",
+      "title": "Yes, Anne w/Reina No Buena & Daniella Darling",
+      "description": "A Live Podcast and Improv Drag Show\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-13",
+      "startTime": "22:00",
+      "endDate": "2026-09-14",
+      "endTime": "00:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/zeed4e9a90e6",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-01/bd31b06d-dfe0-4c83-800e-1bcabd55655f.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[3]",
+        "quote": "yes-anne-wreina-no-buena-daniella-darling-13th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-14T02:00:00Z - 2026-09-14T04:00:00Z (America/New_York) = 22:00-00:00 EDT; tickets General Admission Partial Seating/Partial Standing $0.00; lineup 'Doors open 10:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-01T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "femme-2026-09-14",
+      "kind": "single",
+      "title": "FEMME",
+      "description": "FEMME jam is back! A first-of-its-kind jam session featuring all-female artists, Femme Jam is disrupting New York's male-dominated music scene.\n\nPresented by C’mon Everybody.\n\n21+",
+      "startDate": "2026-09-14",
+      "startTime": "19:30",
+      "endDate": "2026-09-14",
+      "endTime": "23:30",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/E92f86c390b0",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-31/9c0cac11-4c85-4361-aa63-81c50455f6a9.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[4]",
+        "quote": "femme-14th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-14T23:30:00Z - 2026-09-15T03:30:00Z (America/New_York) = 19:30-23:30 EDT; tickets General Admission $15.00; lineup 'Doors open 7:30 PM'; age_limit '21+'; sale_start_date 2026-07-31T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "breeding-season-book-launch-2026-09-15",
+      "kind": "single",
+      "title": "breeding season book launch",
+      "description": "Cum 1, cum all to the book launch for Dante Fuoco’s “breeding season,” a slutty poetry collection reflecting on gay sex and love. Readings aren’t always fun but this one will be. Slutty attire encouraged but not required :)\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-15",
+      "startTime": "20:00",
+      "endDate": "2026-09-15",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/s98bf5b58c0b",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-27/ae654d36-b1d5-41e7-aae3-b09dcd20c095.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[5]",
+        "quote": "breeding-season-book-launch-15th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-16T00:00:00Z - 2026-09-16T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission Partial Seated/Partial Standing $13.39, General Admission + Book $33.48; lineup 'Doors open 8:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-27T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "guilty-pleasures-2026-09-16",
+      "kind": "single",
+      "title": "GUILTY PLEASURES",
+      "description": "Drag King Maxxx Pleasure presents GUILTY PLEASURES - a drag show where Brooklyn's Best does their WORST!\n\nSuddenly Audrey, King Cameron, and The Illustrious Pearl will be performing their guilty pleasure songs and/or tributes to their shameful faves - don't miss it!\n\nPlease email mrmaxxxpleasure@gmail.com if you require seating accommodations.\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-16",
+      "startTime": "20:00",
+      "endDate": "2026-09-16",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/kb85bdea0eb5",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-10/bfc81043-9378-49cf-8f23-5ef77761fd16.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[6]",
+        "quote": "guilty-pleasures-16th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-17T00:00:00Z - 2026-09-17T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-10T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "cocaine-milkshake-ft-yvie-oddly-2026-09-17",
+      "kind": "single",
+      "title": "Cocaine Milkshake ft Yvie Oddly",
+      "description": "Cocaine Milkshake is Brooklyn’s PREMIERE Après-Ski party meets drag show! Complete with spoken word skits, parlor games, unforgettable lip syncs & sickening guests, Cocaine Milkshake is the true embodiment of ‘Saturday Morning Cartoons’ on acid! So hop off the bunny slope and come warm up with this eclectic & electric mother/daughter duo 🔥⛷️🔥\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-17",
+      "startTime": "20:00",
+      "endDate": "2026-09-17",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/e612f127e89f",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-03/49d70758-1818-4545-bf78-f3028217130c.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[7]",
+        "quote": "cocaine-milkshake-ft-yvie-oddly-17th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-18T00:00:00Z - 2026-09-18T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM; Yvie Oddly'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-02T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "carly-rae-jepsen-day-and-night-album-release-party-2026-09-17",
+      "kind": "single",
+      "title": "Carly Rae Jepsen: Day and Night *album release party*",
+      "description": "a Carly Rae tribute show and album release party\n\nSounds: Sean McMahill\n\nShows: Megami, Roque, Atomic Annie\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-17",
+      "startTime": "22:00",
+      "endDate": "2026-09-18",
+      "endTime": "02:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Jd6f3daece8d",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-19/4078f959-bb3e-43d8-a3ed-bcf69125890f.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[8]",
+        "quote": "carly-rae-jepsen-day-and-night-album-release-party-17th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-18T02:00:00Z - 2026-09-18T06:00:00Z (America/New_York) = 22:00-02:00 EDT; tickets General Admission $13.39; lineup 'Doors open 10:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-19T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "untitled-art-star-s4-r4-maximalism-2026-09-18",
+      "kind": "single",
+      "title": "Untitled (Art Star): S4: R4: Maximalism",
+      "description": "Join us for Season 4: Round of our experimental drag contest searching for Brooklyn's Next Drag Art Star.\n\nFeaturing Contestants: Luckiii, Oracle, STAN, Talia Fortune. Presented by Untitled Queen and DJ Jessamess.\n\nASL Interpretation Provided by Flamingo Interpreting.\n\nSnacks and green treats by Bibingka Mama.\n\nStage Queen: Magnifa. Special guest: DJ Ickarus.\n\nPresented by C’mon Everybody.\n\nThis is an 21+ event",
+      "startDate": "2026-09-18",
+      "startTime": "19:30",
+      "endDate": "2026-09-18",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Ja95b5eb08ea",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-01/65a2b4ff-adbf-4a8a-a7a6-07c328a2fa00.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[9]",
+        "quote": "untitled-art-star-s4-r4-maximalism-18th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-18T23:30:00Z - 2026-09-19T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission $16.74; lineup 'Doors open 7:30 PM'; age_limit 'This is an 21+ event'; sale_start_date 2026-09-01T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "very-2026-09-18",
+      "kind": "single",
+      "title": "VERY",
+      "description": "Sounds - Justin Cudmore, Rich Juzwiak, VERY DJs\n\nHosts - Ramon Christian, Sam Waxman, Matthew Priestly\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-18",
+      "startTime": "22:30",
+      "endDate": "2026-09-19",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/W71b04885e84",
+      "image": "https://dice-media.imgix.net/attachments/2026-04-07/5a99a4fa-7fcd-4327-b852-0fd889b26ce6.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[10]",
+        "quote": "very-18th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-19T02:30:00Z - 2026-09-19T08:00:00Z (America/New_York) = 22:30-04:00 EDT; tickets General Admission $32.06; lineup 'Doors open 10:30 PM; Justin Cudmore'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-17T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "plenty-of-fgs-sapphic-edition-2026-09-19",
+      "kind": "single",
+      "title": "Plenty of F*gs: Sapphic Edition",
+      "description": "Plenty of F\\*gs: Sapphic Edition is here! Three sexy bachelorettes are on the mission to find THE ONE out of 10 contestants – hosted by Essa Noche and Shia Ho with special guest, Daniella Darling! This dating show is not for the weak, be prepared to see lots of kissing and sexy fun!\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-19",
+      "startTime": "19:30",
+      "endDate": "2026-09-19",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Je538d9078e6",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-02/18eae66b-8cce-4cd2-a68f-7d85aa36d9f2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[11]",
+        "quote": "plenty-of-fgs-sapphic-edition-19th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-19T23:30:00Z - 2026-09-20T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-31T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "grunt-sf-2026-09-19",
+      "kind": "single",
+      "title": "GRUNT (SF)",
+      "description": "Did you miss our premiere Brooklyn GRUNT in JUNE? Now there's more to go around. Bringing our SF vibes for an Autum GRUNT, as the nights grow longer and the evening chillier, GRUNT in here.\n\nYou like em BIG. BIG Beats. BIG Guys. BIG Sleaze. BIG Vibes.\n\nCome for the music, stay for the cruising.\n\nWill Jack (TOSSD) and Del (BAY AREA)\n\nYou won't get it, unless you get there.\n\nSuggested Dress: Sportswear, Classic Leather, Rubber, Boots, Punk, Biker, Sleaze, Rubber, Heavy Fetish, Tighty-Whities, Jockstrap, Chains, Trade, Bruno B, Slut, Himbo, Trackies, Sneakers. Dirty Denim. Pile of rocks. or whatever Clothing Check: Less Clothes more body. Sweat is a look.\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-19",
+      "startTime": "22:30",
+      "endDate": "2026-09-20",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/L78eaa3a7d66",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-05/34ea7a12-8b2b-4747-b34d-a0c0a300ee67.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[12]",
+        "quote": "grunt-sf-19th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-20T02:30:00Z - 2026-09-20T08:00:00Z (America/New_York) = 22:30-04:00 EDT; tickets General Admission $26.78; lineup 'Doors open 10:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-05T04:00:00Z. Run 20260912-153241 returned it (kept)."
+    },
+    {
+      "id": "family-meal-a-disco-supper-club-2026-09-20",
+      "kind": "single",
+      "title": "FAMILY MEAL • A Disco Supper Club",
+      "description": "Family Meal, the queer disco supper club and hospitality collective, returns home to C’mon Everybody for our seventh edition and the official kickoff of our second season!\n\nThere’s a shift happening—a certain smell in the air that has us inspired, hungry, and ready to serve up our signature beats and bites that feed the soul.\n\nFor Edition 07, we’re curating an evening centered around the idea of “Homecoming.” Fall is just around the corner, school is almost back in session, and folks are returning home from their summer travels—including our guest chef and deep family, Isabella Mezzettone, who has spent the last several months traveling, cooking, and eating her way through Italy.\n\nIsabella cooked for Family Meal Edition 01 and has supported Greg and Joyah through nearly every edition since, so it feels especially good to welcome her home and share her extensive experience through the art of Italian cooking.\n\nProviding the beats to complement such divine culinary magic is my friend, the incomparable Karim Olen Ash, who will be playing alongside his good Judy, Hijo Prodigo. These two talented artists have played separately all over the world, but together, they are known here in NYC for their high-energy, soulful B2B sets at Animal, and we’re thrilled to welcome them into our little family.\n\nWe’re excited to announce that for year 2 of FM, we’re introducing a new ticketing structure that gives you, our guests, a little more choice in how you show up and what you bring to our family table. It’s one of the ways we’re building something that can continue to sustain and grow this gathering and collective.\n\nFor $20, grab yourself “The Plate” — entry, a plate of delicious food, and live music all night.\n\nFor $30, there’s “The Plate & Pour” — everything above, plus a complimentary drink from the bar.\n\nFor $50, go for “The Full Spread” — The Plate & Pour, plus a custom care package from the Family Meal Collective, filled with special treats and exclusive Family Meal merchandise.\n\nTickets are available now via DICE. More information coming soon.\n\nYou won’t want to miss this very special edition of Family Meal. 🪩🍽️\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-20",
+      "startTime": "17:00",
+      "endDate": "2026-09-20",
+      "endTime": "21:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/s85134a781da",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-25/4e9ef9cb-80f2-495b-97ac-a2b59e0ba657.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[13]",
+        "quote": "family-meal-a-disco-supper-club-20th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-20T21:00:00Z - 2026-09-21T01:00:00Z (America/New_York) = 17:00-21:00 EDT; tickets The Plate  $26.78, The Plate and Pour $40.17, The Full Spread $66.95; lineup 'Doors open 5:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-25T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "vagabond-a-tribute-to-tim-curry-2026-09-21",
+      "kind": "single",
+      "title": "Vagabond: A Tribute to Tim Curry",
+      "description": "Starring:\n\nShowponii\n\nAngela Mansberry\n\nVenus Babes\n\nLeopard Killa\n\nGod Complex\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-21",
+      "startTime": "20:00",
+      "endDate": "2026-09-21",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Jaaafc0eef5b",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-09/88d49b41-b4b2-49ed-b970-d468460c6c76.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[14]",
+        "quote": "vagabond-a-tribute-to-tim-curry-21st-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-22T00:00:00Z - 2026-09-22T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-09T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "the-room-starring-benedick-the-bastard-2026-09-22",
+      "kind": "single",
+      "title": "The Room starring Benedick the Bastard",
+      "description": "Oh hi Brooklyn.\n\nBenedick the Bastard is a lot of things: drag king, very serious method actor, writer, director, producer, possessor of a large sum of wealth of mysterious origin, and extremely humble, just to name a few.\n\nFor one night only, catch him and a slew of All Star nightlife artists for a FULL SHADOWCAST REENACTMENT of Tommy Wiseau’s masterpiece, “The Room”.\n\nFeaturing a Q&A and photo op with the man himself.\n\nSTARRING:\n\nBenedick the Bastard as Tommy Wiseau as Johnny\n\nJordan Snyder as Mark\n\nAlvah Klempt as Claudette\n\nSourdoe as Denny\n\nBertha Vanayshun as Lisa\n\nJess And as Lisa\n\nMr. Slut as Male Friends, Etc.\n\n…and more?\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-22",
+      "startTime": "20:00",
+      "endDate": "2026-09-22",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/H3872402359d",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-30/ad08b17e-3449-40a9-a4b5-4ac4b55f5571.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[16]",
+        "quote": "the-room-starring-benedick-the-bastard-22nd-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-23T00:00:00Z - 2026-09-23T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission Partial Seated/Partial Standing $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-30T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "frolic-black-burlesque-revue-2026-09-23",
+      "kind": "single",
+      "title": "Frolic: Black Burlesque Revue",
+      "description": "Celebrate the beginning of the Fall season at FROLIC, NYC's longest-running Black Burlesque show, produced by Foxy Belle Afriq. Join us for an unforgettable evening of Black burlesque, community, glamour, and joy.\n\n✨ Featuring\n\n• Chicava HoneyChild\n\n• Vera Safire\n\n• Audrey Love\n\n🕢 Doors: 7:30 PM\n\n🎭 Show: 8:00 PM–9:30 PM\n\nShop featured vendors, including Topi Canna, a women-owned cannabis business and longtime raffle sponsor, alongside other Black and Brown-owned businesses. Enter our raffle, discover local entrepreneurs, and support community creatives.\n\n🎟️ Tickets\n\n$15 Advance\n\n$20 at the Door\n\n💸 Bring your tipping dollars and show some love to our incredible performers!\n\nAdvance tickets are limited—secure yours today!\n\nAccessibility\n\nSeating is first come, first served, with additional standing room available. C'mon Everybody is ADA accessible. If you require an accommodation, please email foxybelleafriq@gmail.com before the event.\n\nPresented by Foxy Belle Afrique\n\n21+ ",
+      "startDate": "2026-09-23",
+      "startTime": "19:30",
+      "endDate": "2026-09-23",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/p771af93653c",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-31/e11c3a12-245b-4118-a8eb-aa8304a1c4de.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[17]",
+        "quote": "frolic-black-burlesque-revue-23rd-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-23T23:30:00Z - 2026-09-24T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission Partial Seating/Partial Standing $15.00; lineup 'Doors open 7:30 PM'; age_limit '21+'; sale_start_date 2026-07-31T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "learn-the-words-bitch-2026-09-24",
+      "kind": "single",
+      "title": "Learn The Words, Bitch!",
+      "description": "Learn The Words, Bitch is back!\n\nHosted by Tony Soto\n\nWant to compete in our competition? Sign up at the door at 7:30pm! All competitors get free entry!\n\nPresented by Maxwell Esposito \n\nThis is a 21+ event",
+      "startDate": "2026-09-24",
+      "startTime": "19:30",
+      "endDate": "2026-09-24",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/hfe06b5d4284",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-27/1516b055-097a-41ab-9f39-a9dd3163655a.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[18]",
+        "quote": "learn-the-words-bitch-24th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-24T23:30:00Z - 2026-09-25T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-27T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "cm-on-everybody-2026-09-24",
+      "kind": "single",
+      "title": "c*m on everybody",
+      "description": "Sounds: Sir Pig\n\nPresented by: Rify Royalty & Pig Haus\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-24",
+      "startTime": "22:00",
+      "endDate": "2026-09-25",
+      "endTime": "03:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Xdb50892a0bd",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-02/86b7042a-d1cb-4989-9ef7-a0555a58baf4.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[19]",
+        "quote": "cm-on-everybody-24th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-25T02:00:00Z - 2026-09-25T07:00:00Z (America/New_York) = 22:00-03:00 EDT; tickets General Admission $20.09; lineup 'Doors open 10:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-02T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "rucession-indicator-2026-09-25",
+      "kind": "single",
+      "title": "Rucession indicator",
+      "description": "A show with drag and comedy about late stage capitalism and stonks and maybe even the ai bubble\n\nStarring :\n\nMiss Maamshe  \nReina nobuena  \nUncle freak  \nTrina Sanyal  \nRuAfza\n\nPresented by C’mon Everybody.\n\nThis is an 21+ event",
+      "startDate": "2026-09-25",
+      "startTime": "20:00",
+      "endDate": "2026-09-25",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/k9c23a84f8ff",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-04/99674516-2177-44bb-9b59-8eee1513f3e4.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[20]",
+        "quote": "rucession-indicator-25th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-26T00:00:00Z - 2026-09-26T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $20.09; lineup 'Doors open 8:00 PM'; age_limit 'This is an 21+ event'; sale_start_date 2026-09-03T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "lezzie-mcguire-925-2026-09-25",
+      "kind": "single",
+      "title": "Lezzie McGuire: 925",
+      "description": "sounds by resident DJ Hope 808\n\nhosted by Harsh Babe\n\nPresented by Hope 808 & C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-25",
+      "startTime": "22:30",
+      "endDate": "2026-09-26",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/n2ba22462879",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-09/cd6a7c5b-7a98-4452-8d05-5d094c756c8a.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[21]",
+        "quote": "lezzie-mcguire-925-25th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-26T02:30:00Z - 2026-09-26T08:00:00Z (America/New_York) = 22:30-04:00 EDT; tickets General Admission $13.39; lineup 'Doors open 10:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-09T04:15:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "pork-butt-2026-09-26",
+      "kind": "single",
+      "title": "Pork Butt",
+      "description": "Sounds: Mike Schreder & Keenan Orr\n\nGogos: Cheeky Pete & Damiano\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-26",
+      "startTime": "22:30",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/t058d05dcf00",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-04/6aae049c-f47e-43ad-8414-325cb191e7ad.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[22]",
+        "quote": "pork-butt-26th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-27T02:30:00Z - 2026-09-27T08:00:00Z (America/New_York) = 22:30-04:00 EDT; tickets General Admission $12.50; lineup 'Doors open 10:30 PM; Keenan Orr'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-04T04:15:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "fagnet-2026-09-27",
+      "kind": "single",
+      "title": "Fagnet",
+      "description": "starring ShowPonii, Mauve, God Complex\n\nwith special guest Zaddy Vampy\n\nMusic by DJ Evangeline\n\nTattoos by Xanawhoria\n\nPresented by C’mon Everybody.\n\nThis is an 21+ event",
+      "startDate": "2026-09-27",
+      "startTime": "20:00",
+      "endDate": "2026-09-27",
+      "endTime": "22:30",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/I88b579882d6",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-10/079fcb7d-f652-4bb8-8636-37ec6421f27e.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[23]",
+        "quote": "fagnet-27th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-28T00:00:00Z - 2026-09-28T02:30:00Z (America/New_York) = 20:00-22:30 EDT; tickets General Admission $16.00; lineup 'Doors open 8:00 PM'; age_limit 'This is an 21+ event'; sale_start_date 2026-09-10T04:15:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "figure-drawing-group-by-gaysian-art-gang-2026-09-29",
+      "kind": "single",
+      "title": "Figure Drawing Group by Gaysian Art Gang",
+      "description": "POC Models & Artists\n\n\\*bring your own supplies\\*\n\nPresented by Gaysian Art Gang & C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-29",
+      "startTime": "20:00",
+      "endDate": "2026-09-29",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/X9e591f7c3b4",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-26/2c9e5f3d-e278-4275-9aa3-bbb47726b372.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[24]",
+        "quote": "figure-drawing-group-by-gaysian-art-gang-29th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-09-30T00:00:00Z - 2026-09-30T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission Limited Seating $13.39; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-26T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "finger-bang-2026-09-30",
+      "kind": "single",
+      "title": "Finger Bang",
+      "description": "FingerBang is the first NYC Open Set for Deaf community members and ASL users to express themselves in Drag, poetry, scene work, comedy, and more.\n\nSign ups begin at 7:30pm and are first come first serve. If you need a backing track or video, please have it ready to email in the moment. Maximum 7 minutes. No messes allowed.\n\nThis is an ASL Space, so no English Interpretation will be provided.\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-09-30",
+      "startTime": "20:00",
+      "endDate": "2026-09-30",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/Rbc71e075ebf",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-26/e1feb8b5-02fd-4044-b887-5807d64394fb.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[25]",
+        "quote": "finger-bang-30th-sep-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-01T00:00:00Z - 2026-10-01T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 8:00 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-08-26T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "braws-2026-10-01",
+      "kind": "single",
+      "title": "BRAWS",
+      "description": "You've heard the tail many times before... something's lurking in the water- a sharp-toothed, cold-blooded killer, hungry for the flesh of men. But what if I told you there was another side to the story? One that demands justice for the gay white shark!\n\nMiss Woman the woman revives her iconic solo-performance, based on the seminole 1975 creature feature. Ladies and crustaceans... swim into the alluring waters of BRAWS.\n\nDon't miss your chance to catch the only drag show in New York City with a splash zone!\n\nFEATURING:\n\nMiss Woman the woman\n\nDJ Evangeline\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-10-01",
+      "startTime": "20:00",
+      "endDate": "2026-10-01",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/V133bcd1b749",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-10/c3fba380-7fc8-406b-86c2-aef25b657163.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[26]",
+        "quote": "braws-1st-oct-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-02T00:00:00Z - 2026-10-02T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $16.07, Splash Zone Seating $33.48; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-04T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "bjrk-tribute-show-2026-10-02",
+      "kind": "single",
+      "title": "Björk Tribute Show",
+      "description": "A Björk Tribute Show\n\nPresented by C’mon Everybody.\n\n21+ ",
+      "startDate": "2026-10-02",
+      "startTime": "19:30",
+      "endDate": "2026-10-02",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/H19df3f5221e",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-11/07b45d1d-2d2e-43d8-8bdd-2c90bb41b399.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[27]",
+        "quote": "bjrk-tribute-show-2nd-oct-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-02T23:30:00Z - 2026-10-03T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM'; age_limit '21+'; sale_start_date 2026-09-11T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "massimo-new-york-do-you-hear-me-2026-10-04",
+      "kind": "single",
+      "title": "Massimo • New York, do you hear me?",
+      "description": "with special guest Gem Rat\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-10-04",
+      "startTime": "20:00",
+      "endDate": "2026-10-04",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/k58d203bd254",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-08/fc103237-a691-4c53-8023-59a41f7cc55f.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[28]",
+        "quote": "massimo-new-york-do-you-hear-me-4th-oct-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-05T00:00:00Z - 2026-10-05T02:00:00Z (America/New_York) = 20:00-22:00 EDT; tickets General Admission $13.39; lineup 'Doors open 7:30 PM; Massimo'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-08T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "stankbk-2026-10-10",
+      "kind": "single",
+      "title": "STANK.BK",
+      "description": "It’s OFFICIAL - STANK is coming to Brooklyn 🐽\n\nPhones down, arms up 🔥\n\nSan Francisco’s sound forward, pit fetish night comes to C’mon Everybody. Sweat to the sonic experience, catch the camp Ripe Pit contest, and leave with a new friend 👀\n\nThe line-up:\n\nStank.BK Resident: Petrichor (MOANS.NYC)\n\nGuest DJs: MTHR TRSA, PUNKALOID\n\nW/ Cellblock Babes: Bru / Pup Elio\n\nHosts: Spencer Adam + Simon Malvaez (Younghearts)\n\nGear encouraged. Looks applauded. Vibes heavy. Sweat necessary.\n\nPresented by Stank & C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-10-10",
+      "startTime": "22:30",
+      "endDate": "2026-10-11",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/a3dfdcfc2eaf",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-11/36aa3743-7fb7-4407-beff-1eefca77321d.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[29]",
+        "quote": "stankbk-10th-oct-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-11T02:30:00Z - 2026-10-11T08:00:00Z (America/New_York) = 22:30-04:00 EDT; tickets General Admission $20.09; lineup 'Doors open 10:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-09-11T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "cult-classics-screen-to-scream-2026-10-14",
+      "kind": "single",
+      "title": "CULT CLASSICS: Screen to Scream",
+      "description": "The creatures of the night are taking over the stage! From vampires and werewolves to iconic villains and supernatural legends, CULT CLASSICS: Screen to Scream brings your favorite cult-classic TV and film characters to life through drag, burlesque, theatrical spectacle, and cinematic fantasy.\n\nFeaturing: Foxy Belle Afriq • Jack Rabbit Slims • Miss Malice • Surrena Surreal • and more.\n\n🕢 Doors: 7:30 PM\n\n🎭 Show: 8:00–10:00 PM\n\n🎟️ Tickets: $10\n\nTickets are just $10—grab yours early and join us for a hauntingly unforgettable night of drag, burlesque, and macabre glamour.\n\nAccessibility: This is a general admission, standing-room-only event. The venue is ADA accessible, and seating accommodations are available for guests with medical, mobility, or other accessibility needs. If you require reserved seating, please contact frolic.burlesque@gmail.com after purchasing your ticket so we can reserve a space for you.\n\nPresented by Foxy Belle Afrique\n\n21+ ",
+      "startDate": "2026-10-14",
+      "startTime": "19:30",
+      "endDate": "2026-10-14",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/r28a7d90186e",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-10/b7017591-4860-4949-8be5-6b2e888d2318.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[30]",
+        "quote": "cult-classics-screen-to-scream-14th-oct-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-10-14T23:30:00Z - 2026-10-15T02:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission Partial Seating/Partial Standing $13.39; lineup 'Doors open 7:30 PM'; age_limit '21+'; sale_start_date 2026-08-10T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    },
+    {
+      "id": "dungeons-drag-queens-2026-11-06",
+      "kind": "single",
+      "title": "Dungeons & Drag Queens",
+      "description": "Drag Queens play Dungeons and Dragons LIVE! Featuring improvised live-play DnD, fierce spell numbers, live music, and much more!\n\nDungeon Master:\n\nPaul Curry: @paulcurrycomedy\n\nMusician:\n\nCarson Cutter: @berlin1990\n\nPresented by C’mon Everybody.\n\nThis is a 21+ event",
+      "startDate": "2026-11-06",
+      "startTime": "19:30",
+      "endDate": "2026-11-06",
+      "endTime": "22:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/nefb4838784f",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-30/cd73936f-3636-4bf4-92d3-6f7bf671e3b5.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[31]",
+        "quote": "dungeons-drag-queens-6th-nov-cmon-everybody-new-york-tickets"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "type event, status on-sale; feed 2026-11-07T00:30:00Z - 2026-11-07T03:00:00Z (America/New_York) = 19:30-22:00 EDT; tickets General Admission $33.48; lineup 'Doors open 7:30 PM'; age_limit 'This is a 21+ event'; sale_start_date 2026-07-30T04:00:00Z. Run 20260912-153241 returned it (bear-dropped)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "funny-moms-cancelled",
+      "label": "DICE row 'Funny Moms', 2026-09-21 20:00-22:00 EDT, status 'cancelled'",
+      "kind": "announcement",
+      "why": "The feed still serves the row (link.dice.fm/g989a51713ff, General Admission $33.48, sale_start_date 2026-09-11T22:47:29Z) but its status is 'cancelled', not 'on-sale'; the widget is configured without hideCancelled so it may render greyed out. A reader that ignores status would create a real-looking Monday-night event that is not happening.",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[15].status",
+        "quote": "cancelled"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260912-153241"
+    },
+    {
+      "id": "ticket-tier-rows",
+      "label": "Multiple ticket_types on one row: FAMILY MEAL 'General Admission $26.78 / Reserved Seating $40.17 / Reserved Seating (Group of 2) $66.95', BRAWS 'General Admission $16.07 / Splash Zone Seating $33.48', breeding season book launch 'General Admission $13.39 / VIP $33.48'",
+      "kind": "ticket-tier",
+      "why": "Price tiers inside a single DICE row. Each tier carries a name and a price but no date of its own; they must stay attributes of the one event, never become sibling events.",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[13].ticket_types",
+        "quote": "FAMILY MEAL • A Disco Supper Club"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "lineup-doors-rows",
+      "label": "lineup[] entries such as 'Doors open 6:00 PM', 'Keenan Orr' (Pork Butt) and 'Massimo' (Massimo • New York, do you hear me?)",
+      "kind": "announcement",
+      "why": "DICE lineup rows are set times and door times inside an event, not events. 'Doors open 10:30 PM' on a row dated 2026-09-27T02:30:00Z is the same 22:30 EDT start, restated; a performer name with no time is a billing line.",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[venues][]=C%27mon%20Everybody&filter[venues][]=Cmon%20Everybody",
+        "jsonPath": "$.data[22].lineup",
+        "quote": "Doors open"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "homepage-hours-and-marquee",
+      "label": "Homepage 'Hours: Mon-Sun 5pm-LATE', 'The bar is open seven nights a week' and the 'EVENTS * EVENTS * EVENTS * Click Here' marquee",
+      "kind": "announcement",
+      "why": "Opening hours and a nav marquee on the homepage (outside the parser's urls). No date, no title; a nightly 5pm-late reading would fabricate a daily event.",
+      "evidence": {
+        "url": "https://www.cmoneverybody.com/",
+        "quote": "Hours: Mon-Sun 5pm-LATE"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [],
+  "recheckAfter": "2026-10-12"
+}
