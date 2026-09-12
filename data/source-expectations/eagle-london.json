@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "source": "Eagle London",
+  "slug": "eagle-london",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "static",
+      "page-cache",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eaglelondon.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eaglelondon.com/",
+        "kind": "wix-events-warmup-json",
+        "role": "feed",
+        "rowsReturned": 14,
+        "truthFlag": "events.hasMore: false; status 0 (upcoming) x13, status 1 (started) x1",
+        "note": "Static curl with a Safari UA, HTTP 200, 1034822 bytes (discovery/eaglelondon.com/home.body); the scraper's page cache holds the same page fetched 2026-09-12T13:12:54Z. The homepage carries <script type=\"application/json\" id=\"wix-warmup-data\"> whose appsWarmupData[\"140603ad-af8d-84a5-2c80-a0f60cb47351\"][\"widgetcomp-kvl1fc9r\"].events.events[] holds 14 rows (saved as gt/eaglelondon-warmup.json); the tag content parsed as plain JSON. Each row: id, slug, title, description, status, scheduling.config.startDate/endDate (UTC ISO) + timeZoneId Europe/London, scheduling.formatted (local wall clock), location.name 'Eagle London' / fullAddress.formattedAddress '349 Kennington Ln, London SE11 5QY, UK' / geocode 51.4863306,-0.1193328, registration.type (2 = Wix ticketing with ticketing.lowestPrice £6.15 or £8.20; 4 = RSVP-less 'Learn more' rows, the two LATE BAR nights), mainImage.url, created/modified. No row carries a recurrence field: Wix recurring nights appear as separate rows with date-stamped slugs (horse-meat-disco-2026-09-13-20-00, late-bar-2026-09-17-20-00). Rows are sorted by start; row 0 (bear-bash-16, 11 Sept 21:00-04:00) has status 1 and had ended nine hours before the read."
+      },
+      {
+        "url": "https://www.eaglelondon.com/",
+        "kind": "wix-static-html-text",
+        "role": "listing",
+        "rowsReturned": 13,
+        "truthFlag": null,
+        "note": "Text-stripped homepage: 'ESTABLISHED IN VAUXHALL 2004 OUR OPENING HOURS THURS 10TH - 8PM-2AM - LATE BAR FRI 11TH - 9PM-4AM - BEAR BASH SAT 12TH - 9PM-4AM - HANDSOME HOUSE PARTY SUN 13TH - 8PM-3AM - HORSE MEAT DISCO', the happy-hour strip, then 'COMING UP' with 13 cards: 'Handsome House Party Sat 12 Sept TICKETS Multiple Dates Horse Meat Disco Sun 13 Sept TICKETS Multiple Dates LATE BAR Thu 17 Sept Learn more MEN INC Fri 18 Sept TICKETS 80:20 Sat 19 Sept TICKETS Multiple Dates Horse Meat Disco Sun 20 Sept TICKETS Multiple Dates LATE BAR Thu 24 Sept Learn more DEEP INSIDE Fri 25 Sept TICKETS 3310 - Noughty By Nature Sat 26 Sept TICKETS Multiple Dates Horse Meat Disco Sun 27 Sept TICKETS Athena Sat 03 Oct TICKETS Handsome House Party Sat 10 Oct TICKETS Get Together Fri 30 Oct TICKETS' = the 13 status-0 rows; the status-1 Bear Bash row is NOT rendered. Cards carry no year. Social links: instagram.com/eagleldn, facebook.com/EagleLDN, twitter.com/eaglelondon. Nav: HOME, OUR NIGHTS (HORSE MEAT DISCO, ATHENA, HANDSOME, 80:20, 3310 NOUGHTY BY NATURE, BEAR BASH), SHOP, MORE (ABOUT US, OPENING HOURS, HAPPY HOURS, LOST PROPERTY, ...)."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-pages-sitemap.xml",
+        "kind": "wix-event-pages-sitemap",
+        "role": "sitemap",
+        "rowsReturned": 1068,
+        "truthFlag": null,
+        "note": "HTTP 200, 315545 bytes (discovery/eaglelondon.com/event-pages-sitemap.body). 1068 /event-details/<slug> URLs with lastmod = every event page since 2021, past included. Only 5 date-stamped slugs are on or after the recon date and they are exactly the widget's 3 Horse Meat Disco + 2 LATE BAR rows. Undated slugs with lastmod >= 2026-08-01: the 9 remaining widget rows (bear-bash-16, handsome-house-party-27/-28, 80-20-49, 3310-noughty-by-nature-12, deep-inside-5, athena-44, men-inc-7; get-together has lastmod 2026-07-02) plus athena-43 (08-02), summer-heat-garden-bbq (08-03), deep-inside-4 (08-06), brut-social-5 (08-12) and closed-for-private-event-1 (08-12), which the widget does not carry (not opened; see traps). History visible in slugs: bear-bash ... bear-bash-16 + bear-bash-london-1..3 + bear-bash-x-tonker (monthly since Jan 2025), late-bar-<every Thursday>-20-00 since 2026-01-15, 80-20 x49, athena x44, handsome-house-party x28, men-inc x7 (+ dated 2025 rows), deep-inside x5, brut-social x5."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/bear-bash-16",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-11T19:31:47Z. JSON-LD Event startDate 2026-09-11T21:00:00+01:00, endDate 2026-09-12T04:00:00+01:00, EventScheduled, Eagle London, 349 Kennington Ln; AggregateOffer £6.15; 'About the event BEAR BASH LONDON: FUR & FLANNEL' ... 'Advance Ticket Sale ends 12 Sept, 02:00 Price £6.00 +£0.15 ticket service fee'. No 'Other dates' block."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/handsome-house-party-27",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:31:44Z. JSON-LD 2026-09-12T21:00:00+01:00 – 2026-09-13T04:00:00+01:00, £8.20. No Other dates."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-13-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:14:56Z. JSON-LD 2026-09-13T20:00:00+01:00 – 2026-09-14T03:00:00+01:00, £8.20; 'Other dates Sun 20 Sept, 20:00 Sun 27 Sept, 20:00'; 'London's legendary Sunday night discotheque, every Sunday at Eagle London for 22 years.'"
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-20-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:15:24Z. JSON-LD 2026-09-20T20:00:00+01:00 – 2026-09-21T03:00:00+01:00; 'Other dates Sun 13 Sept, 20:00 Sun 27 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-27-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:15:37Z. JSON-LD 2026-09-27T20:00:00+01:00 – 2026-09-28T03:00:00+01:00; 'Other dates Sun 13 Sept, 20:00 Sun 20 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/late-bar-2026-09-17-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:15:08Z. JSON-LD 2026-09-17T20:00:00+01:00 – 2026-09-18T02:00:00+01:00, no offers (registration type 4); 'Other dates Thu 24 Sept, 20:00'; 'Open 8pm-2am, last entry 12.30am'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/late-bar-2026-09-24-20-00",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:15:35Z. JSON-LD 2026-09-24T20:00:00+01:00 – 2026-09-25T02:00:00+01:00; 'Other dates Thu 17 Sept, 20:00'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/men-inc-7",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:31:50Z. JSON-LD 2026-09-18T21:00:00+01:00 – 2026-09-19T04:00:00+01:00, £6.15; ticket type 'Mates Ticket' ('Valid for the ticket holder and a free guest!')."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/80-20-49",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:31:56Z. JSON-LD 2026-09-19T21:00:00+01:00 – 2026-09-20T04:00:00+01:00, £8.20; 'Standard Advance Ticket ... Valid until 2.30am'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/deep-inside-5",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:32:00Z. JSON-LD 2026-09-25T21:00:00+01:00 – 2026-09-26T04:00:00+01:00, £6.15; MEN ONLY."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/3310-noughty-by-nature-12",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:32:07Z. JSON-LD 2026-09-26T21:00:00+01:00 – 2026-09-27T04:00:00+01:00, £8.20; '3310 returns to Eagle London on Saturday 26th September'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/event-details/athena-44",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:32:12Z. JSON-LD 2026-10-03T21:00:00+01:00 – 2026-10-04T04:00:00+01:00, £8.20."
+      },
+      {
+        "url": "https://www.eaglelondon.com/about-5-4",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "BEAR BASH night page (page cache 2026-09-12T13:25:49Z). Blurb ending 'Bear Bash is on the 2nd Friday of every month.' plus a 5-image gallery of past-edition flyers (alt 'June Post 2', 'August Post 3', 'November Post_2'). No dated upcoming instance, no ticket link. Run 20260912-153427 classified it as an event-page and OCR'd two flyers: 'BEAR BASH 13 JUNE | 9 PM | EAGLE LONDON + EAGLE AMSTERDAM' and 'BEAR BASH 8 AUGUST | 9 PM | EAGLE LONDON + EAGLE AMSTERDAM' (no year)."
+      },
+      {
+        "url": "https://www.eaglelondon.com/about-5-3",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "3310 NOUGHTY BY NATURE night page (page cache 2026-09-12T13:24:01Z): 'taking over Eagle London on the last Saturday of every month ... Launched in August 2025'. No dated instance."
+      },
+      {
+        "url": "https://www.eaglelondon.com/about-5-2",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "80:20 night page (page cache 2026-09-12T13:22:47Z): 'Eagle London’s monthly queer throwback pop party' — no weekday stated. Instagram 80.20music, Facebook 8020london."
+      },
+      {
+        "url": "https://www.eaglelondon.com/copy-of-80-20",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "ATHENA night page (page cache 2026-09-12T13:19:28Z): 'London hit monthly queer 80s party ... at The Eagle every month since 2017' — no weekday stated."
+      },
+      {
+        "url": "https://www.eaglelondon.com/copy-of-athena",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "HANDSOME night page (page cache 2026-09-12T13:21:24Z): 'Handsome has been a dance floor community for fourteen years' — no cadence stated."
+      },
+      {
+        "url": "https://www.eaglelondon.com/horse-meat-disco",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:17:27Z: 'LOVE AND DANCING EVERY SUNDAY WITH HORSE MEAT DISCO RESIDENT DJS AND SPECIAL GUESTS' and nothing else."
+      },
+      {
+        "url": "https://www.eaglelondon.com/our-nights",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:15:47Z: nav + footer only (384 chars)."
+      },
+      {
+        "url": "https://www.eaglelondon.com/about-us",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:27:54Z: 'The legendary club nights at weekends include Horse Meat Disco, Athena, Handsome, 80:20, Duckie and POP!' ... 'launching Horse Meat Disco ... every Sunday'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/opening-hours",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:28:10Z: 'Mon to wed - closed - Thu - 8pm - 2am - Fri - 9pm - 4am - Sat - 9pm - 4am - Sun - 8pm - 3am'. The same line is the footer of every page."
+      },
+      {
+        "url": "https://www.eaglelondon.com/happy-hours",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:28:17Z: 'AVAILABLE THURSDAY TO SUNDAY ... Thu - 8pm - 10pm - Fri - 9pm - 10pm - sat - 9pm - 10pm - Sun - 8pm - 9pm'."
+      },
+      {
+        "url": "https://www.eaglelondon.com/lost-property-coatcheck",
+        "kind": "wix-static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Page cache 2026-09-12T13:29:25Z: coatcheck charges and terms; no events."
+      }
+    ]
+  },
+  "defaults": {
+    "city": "london",
+    "timezone": "Europe/London",
+    "bar": "Eagle London",
+    "address": "349 Kennington Ln, London SE11 5QY, UK",
+    "location": "51.4863306, -0.1193328",
+    "website": "https://www.eaglelondon.com",
+    "instagram": "https://www.instagram.com/eagleldn/",
+    "facebook": "https://www.facebook.com/EagleLDN"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door (homepage wix-warmup-data, widgetcomp-kvl1fc9r.events): 14 rows, hasMore false — 13 status 0 (upcoming) and 1 status 1 (the 11 Sept Bear Bash, already over). Second door (the rendered COMING UP strip in the same HTML): exactly those 13 upcoming cards. Third door (event-pages-sitemap.xml, 1068 URLs): every date-stamped slug on or after the recon date is one of the 13, and every undated slug modified since August is either one of the 13 or an unopened page the widget does not carry (5 of them, listed as a trap). Twelve of the 13 event pages were read from the page cache and their JSON-LD dates match their rows one for one (handsome-house-party-28 and get-together not opened). The 13 upcoming rows fold into 11 published things: 3 Horse Meat Disco rows = one weekly series (stated 'Every Sunday'), 9 singles (two Handsome, two LATE BAR — no stated rule — MEN INC, 80:20, DEEP INSIDE, Athena, Get Together), and one 3310 row that is the listed instance of a monthly series whose rule the night's own page states ('last Saturday of every month'). Plus one series the widget does not currently carry a dated row for: Bear Bash, published only as the rule 'Bear Bash is on the 2nd Friday of every month.' on /about-5-4 (11 Sept was the last listed edition). publishedEventCount 12 = 3 series + 9 singles. Past listings: the widget serves none; the sitemap's 1050-odd older pages are history and are not enumerated. Run 20260912-153427 returned the 13 upcoming rows (all bear-dropped) plus a BEAR BASH 2026-10-09 record derived from /about-5-4 (kept).",
+    "publishedEventCount": 12,
+    "documentedEventCount": 12,
+    "occurrenceWindow": {
+      "start": "2026-09-12",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": [
+      "The five sitemap-only pages modified in August 2026 (athena-43, summer-heat-garden-bbq, deep-inside-4, brut-social-5, closed-for-private-event-1) were not opened; they are absent from a widget whose hasMore is false, so they are treated as past or unpublished rather than fetched.",
+      "Bear Bash: no dated row exists for October; the series is asserted from the stated monthly rule and the monthly history in the sitemap, so its expect.extracted is \"unknown\" rather than true."
+    ]
+  },
+  "events": [
+    {
+      "id": "horse-meat-disco",
+      "kind": "series",
+      "title": "Horse Meat Disco",
+      "description": "London's Legendary Sunday Night Discotheque. Every Sunday at Eagle London for 22 years!",
+      "startDate": "2026-09-13",
+      "startTime": "20:00",
+      "endTime": "03:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Row description: \"London's Legendary Sunday Night Discotheque. Every Sunday at Eagle London for 22 years!\"; event page: \"London's legendary Sunday night discotheque, every Sunday at Eagle London for 22 years.\"; /horse-meat-disco: 'LOVE AND DANCING EVERY SUNDAY WITH HORSE MEAT DISCO RESIDENT DJS AND SPECIAL GUESTS'",
+      "website": "https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-13-20-00",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-13-20-00",
+      "image": "https://static.wixstatic.com/media/54aaee_e6f8205ad186414da9e643a240108090~mv2.png",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglelondon.com/",
+            "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[2]",
+            "quote": "horse-meat-disco-2026-09-13-20-00"
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglelondon.com/",
+            "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[6]",
+            "quote": "horse-meat-disco-2026-09-20-20-00"
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglelondon.com/",
+            "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[10]",
+            "quote": "horse-meat-disco-2026-09-27-20-00"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[2]",
+        "quote": "horse-meat-disco-2026-09-13-20-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Wix publishes the weekly night as three dated rows (rows 2, 6, 10; date-stamped slugs are Wix's recurring-event form) each 20:00-03:00 BST (scheduling.formatted '13 September 2026 at 20:00 – 14 September 2026 at 03:00'), £8.20 advance, each with its own event page whose JSON-LD matches (2026-09-13T20:00:00+01:00 etc.) and whose 'Other dates' block names the other two Sundays. Only three Sundays are materialized on the site; later Sundays are RRULE arithmetic from the stated 'every Sunday'. Each row carries a different mainImage (the week's flyer); the 13 Sept one is recorded. Run 20260912-153427 returned all three rows as separate records (bear-dropped)."
+    },
+    {
+      "id": "3310-noughty-by-nature",
+      "kind": "series",
+      "title": "3310 - Noughty By Nature",
+      "description": "The queer London party for those with a millennial heart.",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endTime": "04:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "recurrenceStatedAs": "/about-5-3: '3310 is London’s biggest monthly queer millennial party, taking over Eagle London on the last Saturday of every month'",
+      "website": "https://www.eaglelondon.com/event-details/3310-noughty-by-nature-12",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/3310-noughty-by-nature-12",
+      "image": "https://static.wixstatic.com/media/54aaee_207df1b26c6a4929aa26975a960a6d33~mv2.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eaglelondon.com/",
+            "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[9]",
+            "quote": "3310-noughty-by-nature-12"
+          }
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[9]",
+        "quote": "3310-noughty-by-nature-12"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The widget publishes ONE dated row (row 9, slug 3310-noughty-by-nature-12, 26 Sept 21:00-04:00 BST, £8.20 advance; event page 'Happy Hour drinks offers till 10pm £8 advance tickets £9 on the door'); the monthly rule comes from the night's own page /about-5-3, and 26 Sept is the last Saturday of September. The sitemap lists twelve earlier editions (3310-noughty-by-nature, -2 ... -11, plus 2025-11-29 and 2025-12-27 date-stamped ones, both last Saturdays) since the August 2025 launch. October's and November's editions are rule-derived: the site had not created their rows on the recon date. Run 20260912-153427 returned the 26 Sept row as '3310 NOUGHTY BY NATURE' (bear-dropped)."
+    },
+    {
+      "id": "bear-bash",
+      "kind": "series",
+      "title": "Bear Bash",
+      "description": null,
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endTime": "04:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "/about-5-4: 'Bear Bash is on the 2nd Friday of every month.'",
+      "website": "https://www.eaglelondon.com/about-5-4",
+      "ticketUrl": null,
+      "image": null,
+      "occurrences": [
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "page-cache",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/about-5-4",
+        "quote": "Bear Bash is on the 2nd Friday of every month."
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "On the recon date the site publishes NO dated upcoming Bear Bash row: the only widget row is 11 Sept (status 1, already over) and the October date exists solely as the rule on /about-5-4 plus year-less flyers for past editions. Whether a run produces an October record depends on the about-page path (run 20260912-153427 did: it classified /about-5-4 as an event-page and returned BEAR BASH 2026-10-09 21:00 from the rule), not on the widget door."
+      },
+      "bearVerdict": null,
+      "note": "Monthly bear night (Amsterdam-born; 'Cosy Bear runs from 9 to 11pm ... From 11pm until late, Party Bear takes over'; no-photo policy). Times 21:00-04:00 are those of every listed edition (bear-bash-16 row: 11 September 2026 at 21:00 – 12 September 2026 at 04:00, £6.15 advance) and of the homepage strip 'FRI 11TH - 9PM-4AM - BEAR BASH'. The sitemap lists ~20 editions since January 2025 (bear-bash, -2 ... -16, bear-bash-london-1..3, bear-bash-x-tonker), one per month. 2026-10-09, 2026-11-13 and 2026-12-11 are the 2nd Fridays; none had a row on the recon date. The 11 Sept row is recorded as the trap bear-bash-16-started-row."
+    },
+    {
+      "id": "handsome-house-party-2026-09-12",
+      "kind": "single",
+      "title": "Handsome House Party",
+      "description": "Straight Up House 4 Queers",
+      "startDate": "2026-09-12",
+      "startTime": "21:00",
+      "endDate": "2026-09-13",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/handsome-house-party-27",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/handsome-house-party-27",
+      "image": "https://static.wixstatic.com/media/54aaee_7314dc51d11f4a5baca379cd5ca84b8c~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[1]",
+        "quote": "handsome-house-party-27"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 1: status 0, scheduling.config.startDate 2026-09-12T20:00:00.000Z / endDate 2026-09-13T03:00:00.000Z (Europe/London), scheduling.formatted '12 September 2026 at 21:00 – 13 September 2026 at 04:00'; registration.type 2, lowestPrice £8.20. Event page JSON-LD 2026-09-12T21:00:00+01:00 – 2026-09-13T04:00:00+01:00; 'Hilit Kolet returns to Handsome for another serving of intense percussive house'. Handsome's own page (/copy-of-athena) states no cadence ('a dance floor community for fourteen years'), and the two Handsome rows (12 Sept, 10 Oct) carry independent slugs -27/-28, so each is a single. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "late-bar-2026-09-17",
+      "kind": "single",
+      "title": "LATE BAR",
+      "description": null,
+      "startDate": "2026-09-17",
+      "startTime": "20:00",
+      "endDate": "2026-09-18",
+      "endTime": "02:00",
+      "website": "https://www.eaglelondon.com/event-details/late-bar-2026-09-17-20-00",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/54aaee_6f50aa3edd554a9ab2d1087363f12cf3~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[3]",
+        "quote": "late-bar-2026-09-17-20-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 3: status 0, scheduling.config.startDate 2026-09-17T19:00:00.000Z / endDate 2026-09-18T01:00:00.000Z (Europe/London), scheduling.formatted '17 September 2026 at 20:00 – 18 September 2026 at 02:00'; registration.type 4 (RSVP, no tickets). Event page JSON-LD 2026-09-17T20:00:00+01:00 – 2026-09-18T02:00:00+01:00; 'Kick off the weekend with Vauxhall's best value drinks offers! Free entry all night ... Open 8pm-2am, last entry 12.30am.' The row is a Wix recurring instance (date-stamped slug, homepage card labelled 'Multiple Dates', event page 'Other dates Thu 24 Sept, 20:00') and the sitemap holds a late-bar-<date>-20-00 page for every Thursday since 15 Jan 2026, created in monthly batches — but no page states a weekly rule, so the two September rows stay singles. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "men-inc-2026-09-18",
+      "kind": "single",
+      "title": "MEN INC",
+      "description": null,
+      "startDate": "2026-09-18",
+      "startTime": "21:00",
+      "endDate": "2026-09-19",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/men-inc-7",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/men-inc-7",
+      "image": "https://static.wixstatic.com/media/54aaee_4090a8b8cc344a7286a0e541afeadde6~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[4]",
+        "quote": "men-inc-7"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 4: status 0, scheduling.config.startDate 2026-09-18T20:00:00.000Z / endDate 2026-09-19T03:00:00.000Z (Europe/London), scheduling.formatted '18 September 2026 at 21:00 – 19 September 2026 at 04:00'; registration.type 2, lowestPrice £6.15. Event page JSON-LD 2026-09-18T21:00:00+01:00 – 2026-09-19T04:00:00+01:00; 'MEN INC returns with our best value Happy Hour drinks offers and FREE ENTRY till 10pm. With DJs Cactushead and CJ Cooper. Buy a £6 advance ticket, bring a mate for free! On the door £8'; ticket type 'Mates Ticket'. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "80-20-2026-09-19",
+      "kind": "single",
+      "title": "80:20",
+      "description": "Glorious Pop, Indie & Dance 1980 to 2020",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/80-20-49",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/80-20-49",
+      "image": "https://static.wixstatic.com/media/54aaee_a5f5d33181e648de9fec7a7892a15797~mv2.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[5]",
+        "quote": "80-20-49"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 5: status 0, scheduling.config.startDate 2026-09-19T20:00:00.000Z / endDate 2026-09-20T03:00:00.000Z (Europe/London), scheduling.formatted '19 September 2026 at 21:00 – 20 September 2026 at 04:00'; registration.type 2, lowestPrice £8.20. Event page JSON-LD 2026-09-19T21:00:00+01:00 – 2026-09-20T04:00:00+01:00; 'Join us at The Eagle for our monthly pop extravaganza, now in its 5th year! ... Open : 9pm - 4am. Last entry 2.30am. Happy Hour until 10pm. Free entry before 10pm, £9 after. Advance tickets £8.' The night's page /about-5-2 says 'monthly' with no weekday, so it stays a single. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "late-bar-2026-09-24",
+      "kind": "single",
+      "title": "LATE BAR",
+      "description": null,
+      "startDate": "2026-09-24",
+      "startTime": "20:00",
+      "endDate": "2026-09-25",
+      "endTime": "02:00",
+      "website": "https://www.eaglelondon.com/event-details/late-bar-2026-09-24-20-00",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/54aaee_6f50aa3edd554a9ab2d1087363f12cf3~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[7]",
+        "quote": "late-bar-2026-09-24-20-00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 7: status 0, scheduling.config.startDate 2026-09-24T19:00:00.000Z / endDate 2026-09-25T01:00:00.000Z (Europe/London), scheduling.formatted '24 September 2026 at 20:00 – 25 September 2026 at 02:00'; registration.type 4 (RSVP, no tickets). Event page JSON-LD 2026-09-24T20:00:00+01:00 – 2026-09-25T02:00:00+01:00, 'Other dates Thu 17 Sept, 20:00'. See late-bar-2026-09-17 for why this is a single. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "deep-inside-2026-09-25",
+      "kind": "single",
+      "title": "DEEP INSIDE",
+      "description": null,
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/deep-inside-5",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/deep-inside-5",
+      "image": "https://static.wixstatic.com/media/54aaee_929926ca3d374ccf959bac83d891cfd7~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[8]",
+        "quote": "deep-inside-5"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 8: status 0, scheduling.config.startDate 2026-09-25T20:00:00.000Z / endDate 2026-09-26T03:00:00.000Z (Europe/London), scheduling.formatted '25 September 2026 at 21:00 – 26 September 2026 at 04:00'; registration.type 2, lowestPrice £6.15. Event page JSON-LD 2026-09-25T21:00:00+01:00 – 2026-09-26T04:00:00+01:00; 'After it's huge relaunch at Precinct in LA we're representing the OG London party ... £6 tickets, £8 on the door. Free entry for BLUF members in gear. This is a MEN ONLY event.' Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "athena-2026-10-03",
+      "kind": "single",
+      "title": "Athena",
+      "description": null,
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endDate": "2026-10-04",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/athena-44",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/athena-44",
+      "image": "https://static.wixstatic.com/media/54aaee_6a0625eade70453bbdf1334adca4a69e~mv2.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[11]",
+        "quote": "athena-44"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 11: status 0, scheduling.config.startDate 2026-10-03T20:00:00.000Z / endDate 2026-10-04T03:00:00.000Z (Europe/London), scheduling.formatted '3 October 2026 at 21:00 – 4 October 2026 at 04:00'; registration.type 2, lowestPrice £8.20. Event page JSON-LD 2026-10-03T21:00:00+01:00 – 2026-10-04T04:00:00+01:00; 'Since 2017 we have served up a monthly mix of 80s joy ... DJs: Paul Joseph, Gareth Hackney and special guest Ian Wade 9pm-4am, Last entry 2.30am ... Advance tickets £8.' /copy-of-80-20 says 'every month since 2017' with no weekday, so it stays a single. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "handsome-house-party-2026-10-10",
+      "kind": "single",
+      "title": "Handsome House Party",
+      "description": "Straight Up House 4 Queers.",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-11",
+      "endTime": "03:50",
+      "website": "https://www.eaglelondon.com/event-details/handsome-house-party-28",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/handsome-house-party-28",
+      "image": "https://static.wixstatic.com/media/54aaee_84d70e77941643cfaa242204cb2d689a~mv2.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[12]",
+        "quote": "handsome-house-party-28"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 12: status 0, scheduling.config.startDate 2026-10-10T20:00:00.000Z / endDate 2026-10-11T02:50:00.000Z (Europe/London), scheduling.formatted '10 October 2026 at 21:00 – 11 October 2026 at 03:50'; registration.type 2, lowestPrice £8.20. Row 12, slug handsome-house-party-28; endDate 2026-10-11T02:50:00.000Z = 03:50 BST as published (scheduling.formatted '10 October 2026 at 21:00 – 11 October 2026 at 03:50'). Event page not opened. Run 20260912-153427 returned it (bear-dropped)."
+    },
+    {
+      "id": "get-together-2026-10-30",
+      "kind": "single",
+      "title": "Get Together",
+      "description": "Celebrating 21 years of Madonna's Confessions",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "04:00",
+      "website": "https://www.eaglelondon.com/event-details/get-together",
+      "ticketUrl": "https://www.eaglelondon.com/event-details/get-together",
+      "image": "https://static.wixstatic.com/media/54aaee_fc1ca44e55104b13ad039a74cdf7df08~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[13]",
+        "quote": "get-together"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Warmup row 13: status 0, scheduling.config.startDate 2026-10-30T21:00:00.000Z / endDate 2026-10-31T04:00:00.000Z (Europe/London), scheduling.formatted '30 October 2026 at 21:00 – 31 October 2026 at 04:00'; registration.type 2, lowestPrice £8.20. Row 13; after BST ends (25 Oct) 2026-10-30T21:00:00.000Z is 21:00 GMT (scheduling.formatted '30 October 2026 at 21:00 – 31 October 2026 at 04:00'). Description 'Celebrating 21 years of Madonna's Confessions'; created 2026-07-02, the earliest-created upcoming row. Event page not opened. Run 20260912-153427 returned it (bear-dropped)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "bear-bash-16-started-row",
+      "label": "Warmup row 0 'Bear Bash', status 1, 11 September 2026 at 21:00 – 12 September 2026 at 04:00 (slug bear-bash-16)",
+      "kind": "past-event",
+      "why": "The night had ended (04:00 BST) nine hours before the page was read, and the site itself no longer renders it: the COMING UP strip starts at Handsome House Party. Only the warmup JSON still carries the row, with status 1 ('started') rather than 0. A reader that trusts the raw row set over the rendered list would publish a finished night; the same row is the last listed edition of the bear-bash series (2nd Fridays).",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "jsonPath": "$.widgetcomp-kvl1fc9r.events.events[0].status",
+        "quote": "bear-bash-16"
+      },
+      "expect": {
+        "extracted": false,
+        "note": "Run 20260912-153427 did not return it."
+      },
+      "seenInRun": "20260912-153427"
+    },
+    {
+      "id": "homepage-week-strip",
+      "label": "'OUR OPENING HOURS THURS 10TH - 8PM-2AM - LATE BAR FRI 11TH - 9PM-4AM - BEAR BASH SAT 12TH - 9PM-4AM - HANDSOME HOUSE PARTY SUN 13TH - 8PM-3AM - HORSE MEAT DISCO' at the top of the homepage",
+      "kind": "announcement",
+      "why": "A this-week hours strip with day numbers but no month or year. Read as events it duplicates three widget rows (LATE BAR, Handsome, HMD) with a second set of times, and adds a Bear Bash on the 11th that is already over.",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/",
+        "quote": "THURS 10TH - 8PM-2AM - LATE BAR FRI 11TH - 9PM-4AM - BEAR BASH"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260912-153427"
+    },
+    {
+      "id": "night-blurb-pages",
+      "label": "The OUR NIGHTS pages /about-5-2 (80:20 'monthly'), /copy-of-80-20 (Athena 'every month since 2017'), /copy-of-athena (Handsome), /horse-meat-disco ('EVERY SUNDAY'), /about-5-3 (3310 'last Saturday of every month'), /about-5-4 (Bear Bash '2nd Friday of every month') and the /about-us line 'Horse Meat Disco, Athena, Handsome, 80:20, Duckie and POP!'",
+      "kind": "recurring-blurb",
+      "why": "Undated descriptions of the residencies. They must not become standalone records: the dated instances are the widget rows, and where a page states a cadence it is the rule source for the horse-meat-disco, 3310-noughty-by-nature and bear-bash series, not an extra event. 'Duckie' and 'POP!' have no row anywhere on the site. Run 20260912-153427 classified /about-5-4 as an event-page and built BEAR BASH 2026-10-09 from it; that record is the bear-bash series' October occurrence, not a new event.",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/about-5-2",
+        "quote": "80:20 is Eagle London’s monthly queer throwback pop party."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260912-153427"
+    },
+    {
+      "id": "bear-bash-past-flyers",
+      "label": "/about-5-4 gallery flyers 'BEAR BASH 13 JUNE | 9 PM | EAGLE LONDON + EAGLE AMSTERDAM' and 'BEAR BASH 8 AUGUST | 9 PM | EAGLE LONDON + EAGLE AMSTERDAM' (alt 'June Post 2', 'August Post 3', 'November Post_2')",
+      "kind": "past-event",
+      "why": "Past editions' flyers with no year; 13 June and 8 August 2026 were 2nd Fridays. Paired with the rule they would produce back-dated or next-year records. OCR'd in run 20260912-153427 (imageClassification event-flyer).",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/about-5-4",
+        "quote": "August Post 3",
+        "imageUrl": "https://static.wixstatic.com/media/54aaee_0cd3c668a6684f5ab710af2bb00cfd04~mv2.png"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260912-153427"
+    },
+    {
+      "id": "opening-hours-footer",
+      "label": "'OPENING HOURS. MON- WEDS - CLOSED, THURS - 8PM-2AM, FRI - 9PM-4AM, SAT - 9PM-4AM, SUN - 8PM-3AM' in the footer of every page, plus /opening-hours and /happy-hours ('Thu - 8pm - 10pm ...')",
+      "kind": "announcement",
+      "why": "Venue hours and happy-hour windows. A weekly-hours reading would fabricate four nightly events; the LATE BAR rows are the only hours-shaped things the site publishes as events.",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/opening-hours",
+        "quote": "WE'RE OPEN From THURSDAY THROUGH TO SUNDAY."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "sitemap-only-august-pages",
+      "label": "Sitemap-only event pages last modified in August 2026: athena-43, summer-heat-garden-bbq, deep-inside-4, brut-social-5, closed-for-private-event-1",
+      "kind": "past-event",
+      "why": "Present in event-pages-sitemap.xml but absent from the widget, whose hasMore is false and whose rows start at today; Wix drops past (and cancelled) events from the list. Their pages were not opened during recon, so their dates are unverified; a sitemap-driven crawl would resurface them ('closed-for-private-event-1' is a closure notice by name).",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/event-pages-sitemap.xml",
+        "quote": "https://www.eaglelondon.com/event-details/closed-for-private-event-1"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "event-page-ticket-tiers",
+      "label": "Ticket blocks on event pages: 'Mates Ticket' (MEN INC), 'Standard Advance Ticket ... Valid until 2.30am' (80:20), 'Advance Ticket Sale ends 27 Sept, 02:00' (3310)",
+      "kind": "ticket-tier",
+      "why": "Wix checkout rows with a 'Sale ends <date>, 02:00' line; the sale-end date is the morning after the event, not a second date.",
+      "evidence": {
+        "url": "https://www.eaglelondon.com/event-details/men-inc-7",
+        "quote": "Ticket type Mates Ticket Sale ends 19 Sept, 02:00"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Are athena-43, summer-heat-garden-bbq, deep-inside-4, brut-social-5 and closed-for-private-event-1 (sitemap lastmod August 2026) all past, as the hasMore-false widget implies? Not opened during recon.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    },
+    {
+      "q": "Will Eagle London create dated Bear Bash rows for 9 October / 13 November, turning the rule-only series into listed instances?",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-10-12"
+}

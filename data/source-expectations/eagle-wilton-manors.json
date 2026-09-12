@@ -1,0 +1,2525 @@
+{
+  "schemaVersion": 1,
+  "source": "Eagle Wilton Manors",
+  "slug": "eagle-wilton-manors",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-12",
+    "method": [
+      "feed",
+      "page-cache",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://eaglebarwm.com/calendar2/"
+    ],
+    "doors": [
+      {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 50,
+        "truthFlag": "total: 550, total_pages: 11, next_rest_url → page=2 (server-set start_date=2026-09-11 04:00:00, end_date 2028-09-13, status=publish)",
+        "note": "The Events Calendar REST v1 with Events Calendar PRO series: recurring titles come pre-expanded as one row per occurrence (url /event/<slug>/<YYYY-MM-DD>/, provisional ids ≥ 10,000,000), standalone parties as ordinary posts (ids 266435–266458). Every row: venue Eagle Wilton Manors, 2209 WILTON DR, WILTON MANORS 33305 (geo_lat/geo_lng null), timezone America/New_York, organizer [], cost \"\", website \"\" except HONEY POT. Categories seen: Featured, IncludeInEmail, \"Monthly Repeating\", \"Weekday Repeating\". Page 1 = Sep 11 – Oct 12 2026. Saved as discovery/eaglebarwm.com/tribe-events.body (2026-09-12 14:59) and in the scraper page cache."
+      },
+      {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2 … &page=7",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 300,
+        "truthFlag": "total drifted 551 → 554 across the six pages, total_pages 12, each page's next_rest_url present",
+        "note": "Pages 2–7 read from the scraper page cache (storage/pages/eaglebarwm.com/wp-json__tribe__events__v1__events--q-*.json, the next_rest_url form with start_date/end_date/status, fetched 2026-09-12 13:12–13:13Z). 350 rows over pages 1–7, 350 distinct ids, Sep 11 2026 – Oct 14 2027. The total creeping upward within a minute reflects the server re-computing the two-year window as time passes, not new content."
+      },
+      {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=8",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 50,
+        "truthFlag": "total: 550, total_pages: 11, next_rest_url present",
+        "note": "Fetched 2026-09-12 (one of the two requests spent on this host): Oct 16 2027 – Jan 8 2028, and ONLY the five long-running series — DADDY POP (Sat) 11, JOCK STRAP NIGHT 12, UNDERWEAR & SINGLET NIGHT 12, HARNESS NIGHT 12, ONYX Bar Night 3. Saved as discovery/eaglebarwm.com/tribe-events-page8.body."
+      },
+      {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=11",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 50,
+        "truthFlag": "total: 550, total_pages: 11, next_rest_url null — the last page",
+        "note": "Fetched 2026-09-12 (second request): Jun 22 – Sep 11 2028, again only the five series (HARNESS 12, DADDY POP 12, JOCK STRAP 12, UNDERWEAR 11, ONYX 3). Saved as discovery/eaglebarwm.com/tribe-events-page11.body. Pages 9–10 were not fetched; see coverage.basis for the arithmetic that closes them."
+      },
+      {
+        "url": "https://eaglebarwm.com/calendar/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 30,
+        "truthFlag": "30 VEVENTs 2026-09-12 21:00 … 2026-09-30 19:00, no RRULE lines, no completeness flag",
+        "note": "Read from the scraper page cache (fetched 2026-09-12 13:12Z). DTSTART;TZID=America/New_York; each VEVENT's URL is the same occurrence URL as REST (UID <id>-<start>-<end>@eaglebarwm.com). The 30 VEVENTs are exactly the 30 REST rows dated Sep 12–30 (zero delta either way); Sep 11 rows are omitted."
+      },
+      {
+        "url": "https://eaglebarwm.com/calendar2/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 10,
+        "truthFlag": "<div id='calendar'></div> (empty JS shell) + a server-rendered decm_event_display list of 10 <article id=\"event_article_…\"> rows under \"September 2026\" with a \"Load More\" button (dec-eventfeed-future)",
+        "note": "Configured parser URL. A Divi page (wp/v2/pages/483 shows the [decm_divi_event_calendar show_recurring_event=\"on\" …] and [decm_event_display] shortcodes). The month grid is client-rendered and empty in static HTML; the list module renders the next 10 rows statically (DRENCH, ONYX Bar Night, DADDY POP Sep 12; SINFUL SUNDAY Sep 13; JOCK STRAP NIGHT Sep 14; HAPPY HOUR ALL NIGHT Sep 15; HONEY POT, UNDERWEAR & SINGLET NIGHT Sep 16; CIGAR SOCIAL, HARNESS NIGHT Sep 17) with date, start time and the same occurrence URLs as REST — the Sep 11 rows and everything after Sep 17 need the REST door. The page's only JSON-LD is a site-level object, not Events. Scraper page cache 2026-09-12 13:12Z."
+      },
+      {
+        "url": "https://eaglebarwm.com/event/energy/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Standalone party page from the scraper page cache: one Event JSON-LD (startDate 2026-09-11T21:00:00-04:00, endDate 2026-09-12T03:00:00-04:00, location Eagle Wilton Manors 2209 WILTON DR, telephone (954) 533-8248). Nothing beyond the REST row."
+      },
+      {
+        "url": "https://eaglebarwm.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Homepage saved by discovery (566 KB); not used for event rows."
+      }
+    ],
+    "notes": "WordPress + The Events Calendar with Events Calendar PRO recurrence (occurrence URLs with date suffixes, provisional ids, two-year pre-expansion), confirmed by the working REST door. 550 rows collapse to 13 series + 10 singles. The site's own repeat labels are the categories \"Weekday Repeating\" and \"Monthly Repeating\" plus two description phrases (\"Second Saturday of Every Month\", \"3rd WED Every Month\"); DADDY POP and BOOTS ON THE GROUND carry no label or phrase, so their rules are proven from the listed dates with Tribe's occurrence URL quoted as the structural statement. Descriptions open with the bar's hours (\"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM\") before the event's own line — the feed's start_date is the earlier of the two (happy hour), recorded as published. Times are local America/New_York; end_date past midnight rolls to the next day. The 2026-09-12 trial run extracted 346 records (220 kept, 126 bear-dropped) from pages 1–7."
+  },
+  "defaults": {
+    "city": "fort-lauderdale",
+    "timezone": "America/New_York",
+    "bar": "Eagle Wilton Manors",
+    "address": "2209 Wilton Dr, Wilton Manors, FL 33305",
+    "location": null,
+    "website": "https://eaglebarwm.com"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "REST feed: page 1 fetched directly (total 550 / 11 pages), pages 2–7 from the scraper page cache, pages 8 and 11 fetched directly — 450 of 550 rows read, 450 distinct ids. Pages 9–10 (rows 401–500, Jan 8 – Jun 22 2028) were not read, but they are closed arithmetically: the five series that fill page 8 and page 11 (DADDY POP Saturdays, JOCK STRAP NIGHT Mondays, UNDERWEAR & SINGLET NIGHT Wednesdays, HARNESS NIGHT Thursdays, ONYX second Saturdays) need exactly 100 slots between page 8's last row (2028-01-08 21:00 ONYX) and page 11's first row (2028-06-22 21:00 HARNESS NIGHT), and pages 9–10 hold exactly 100 rows — there is no room for a sixth title. Cross-checks: the ICS export's 30 VEVENTs equal the REST rows Sep 12–30 exactly; the configured /calendar2/ page renders the next 10 REST rows statically with the same URLs. Collapse: group by title + Tribe series slug + cadence → 13 series (DADDY POP Fridays, DADDY POP Saturdays, ONYX Bar Night, SINFUL SUNDAY, JOCK STRAP NIGHT, HAPPY HOUR ALL NIGHT, UNDERWEAR & SINGLET NIGHT, HONEY POT, CIGAR SOCIAL, HARNESS NIGHT, BARK AFTER DARK 4th Tuesday, BARK AFTER DARK 2nd Tuesday, BOOTS ON THE GROUND; DADDY POP and BARK AFTER DARK each count twice because the site publishes each as two series objects) and 10 singles (eight Featured weekend parties ENERGY, DRENCH, GRIP, SLICK, GROOVE, SNOUT, STEER, TOOLSHED; SF FOOT MEN; HOLY CROSS STD TESTING). publishedEventCount = 23. Occurrences are materialized only from listed rows (origin listed) inside 2026-09-11 … 2026-12-31: 152 rows fall in the window = 142 series occurrences + 10 singles. Past listings: REST is upcoming-only by default and no past view was read.",
+    "publishedEventCount": 23,
+    "documentedEventCount": 23,
+    "occurrenceWindow": {
+      "start": "2026-09-11",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": null,
+    "knownGaps": [
+      "REST pages 9–10 (100 rows, Jan–Jun 2028) were not read; closed by the slot arithmetic in coverage.basis, not by inspection.",
+      "Whether the site exposes a past archive (Tribe list view /calendar/?eventDisplay=past, or REST with an explicit start_date) was not probed; pastListingsPresent is null, not false.",
+      "Series occurrences after 2026-12-31 (the feed lists them to Sep 2028 for five series, to Jan–Apr 2027 for HONEY POT, BARK AFTER DARK and BOOTS ON THE GROUND) are not materialized.",
+      "Only one event page (energy) was opened; descriptions come from REST."
+    ]
+  },
+  "events": [
+    {
+      "id": "energy-2026-09-11",
+      "kind": "single",
+      "title": "ENERGY",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/energy/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-11-ENERGY_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM ENERGY in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: BARKER GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-11",
+      "endDate": "2026-09-12",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[0]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/energy/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM ENERGY in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: BARKER GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00. Fri Sep 11 — already under way/over at recon; the feed still listed it (see traps)."
+    },
+    {
+      "id": "drench-2026-09-12",
+      "kind": "single",
+      "title": "DRENCH",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/drench/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-12-DRENCH_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM DRENCH in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: JOE PACHECO GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-12",
+      "endDate": "2026-09-13",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[3]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/drench/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM DRENCH in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: JOE PACHECO GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "grip-2026-09-18",
+      "kind": "single",
+      "title": "GRIP",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/grip/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-18-GRIP_DJ_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM GRIP in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: NICK STRACENER GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-18",
+      "endDate": "2026-09-19",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[12]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/grip/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM GRIP in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: NICK STRACENER GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "slick-2026-09-19",
+      "kind": "single",
+      "title": "SLICK",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/slick/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-19-SLICK_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM SLICK in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: T-DON GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-19",
+      "endDate": "2026-09-20",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[15]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/slick/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM SLICK in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: T-DON GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "groove-2026-09-25",
+      "kind": "single",
+      "title": "GROOVE",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/groove/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-25-GROOVE_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM GROOVE in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: IPOK GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-25",
+      "endDate": "2026-09-26",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[24]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/groove/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM GROOVE in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: IPOK GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "snout-2026-09-26",
+      "kind": "single",
+      "title": "SNOUT",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/snout/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-09-26-SNOUT_Square_1080x1350.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM SNOUT in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: J WARREN GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-09-26",
+      "endDate": "2026-09-27",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[26]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/snout/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM SNOUT in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: J WARREN GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00. Poster is 1080x1350 where the others are square. Kept as bear by the 2026-09-12 trial run."
+    },
+    {
+      "id": "steer-2026-10-02",
+      "kind": "single",
+      "title": "STEER",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/steer/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-10-02-STEER_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM STEER in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: NICK BERTOSSI GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-10-02",
+      "endDate": "2026-10-03",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[34]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/steer/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM STEER in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: NICK BERTOSSI GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "toolshed-2026-10-03",
+      "kind": "single",
+      "title": "TOOLSHED",
+      "startTime": "21:00",
+      "endTime": "03:00",
+      "website": "https://eaglebarwm.com/event/toolshed/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/08/26-10-03-TOOLSHED_Square_1080x1080.jpg",
+      "description": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM TOOLSHED in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: DANNY VERDE GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP’s Skip the Line Dress Code Enforced in the Code Bar 11 PM to close *No Re-entry with free wrist band after midnight **Plus fees",
+      "startDate": "2026-10-03",
+      "endDate": "2026-10-04",
+      "cover": "Free before 10pm, $15 after, $10 advance (plus fees)",
+      "ticketUrl": "https://eaglebarwm.com/dice/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[36]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/toolshed/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One of the Featured / IncludeInEmail weekend parties (a standalone post with a slug-only URL, no date suffix). Description: \"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM TOOLSHED in Main Bar + CODE Bar + Nest | 9 PM – 3 AM Music By: DANNY VERDE GET TICKETS Free Before 10pm* | $15 After | $10 Advance ** DADDY POP Included Only Pre-purchased Tickets & VIP's Skip the Line Dress Code Enforced in the Code Bar 11 PM to close\". \"GET TICKETS\" links to the site's own /dice/ page (ticketUrl), not to dice.fm directly. The \"DADDY POP Included\" line refers to the same-night DADDY POP row in the Bear Cave (see traps). Feed end_date is the next day 03:00."
+    },
+    {
+      "id": "daddy-pop-fridays",
+      "kind": "series",
+      "title": "DADDY POP",
+      "startTime": "21:30",
+      "endTime": "02:30",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-2/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png",
+      "description": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Trevor Oldroyd Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3-2/\""
+          }
+        },
+        {
+          "startDate": "2026-09-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[13]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/"
+          }
+        },
+        {
+          "startDate": "2026-09-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[25]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/"
+          }
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[35]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/"
+          }
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[45]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/"
+          }
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[5]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/"
+          }
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[14]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/"
+          }
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[23]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/"
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[32]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/"
+          }
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[41]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/"
+          }
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/"
+          }
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[10]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/"
+          }
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[18]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/"
+          }
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[27]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/"
+          }
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[37]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-18/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-18/"
+          }
+        },
+        {
+          "startDate": "2026-12-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[45]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-25/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-25/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[13]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site publishes no cadence text and no repeat category for this title; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar mints only for a recurring event's occurrences (provisional ids ≥ 10,000,000), and the rule is proven from the listed dates. Friday DADDY POP is its own Tribe series (slug daddy-pop-5-3-3, occurrences Sep 18 2026 – Apr 30 2027, then it stops; the Sep 11 row is a standalone post, slug daddy-pop-5-3-3-2, id 266766). Every Friday from Sep 11 through Apr 30 2027 is listed — 34 rows in the feed; 16 fall in the window (Sep 11 – Dec 25). Bear Cave party alongside the Featured main-bar events (\"DADDY POP Included\" in their descriptions). Description says 9 PM – 2 AM but the feed's start/end are 21:30–02:30 on every row; the feed times are recorded. No cover stated on the row (\"Included in Cover\")."
+    },
+    {
+      "id": "daddy-pop-saturdays",
+      "kind": "series",
+      "title": "DADDY POP",
+      "startTime": "21:30",
+      "endTime": "02:30",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-2/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png",
+      "description": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Trevor Oldroyd Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+      "recurrenceStatedAs": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[4]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-2/\""
+          }
+        },
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[16]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/"
+          }
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[27]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/"
+          }
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[37]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/"
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[47]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/"
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[6]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/"
+          }
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[15]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/"
+          }
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[33]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-07/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-07/"
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[43]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/"
+          }
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[2]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/"
+          }
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[11]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/"
+          }
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[19]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/"
+          }
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[29]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/"
+          }
+        },
+        {
+          "startDate": "2026-12-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[38]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-19/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-19/"
+          }
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[46]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-26/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-26/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[16]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site publishes no cadence text and no repeat category for this title; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar mints only for a recurring event's occurrences (provisional ids ≥ 10,000,000), and the rule is proven from the listed dates. Saturday DADDY POP is a separate Tribe series (slug daddy-pop-5-3-2-3-2; the Sep 12 row is a standalone post, slug daddy-pop-5-3-2-3-2-2, id 266768) expanded through the end of the feed (Sep 2028, pages 8 and 11 verified). Every Saturday is listed EXCEPT 2026-10-31 (no DADDY POP row and no other row at all on Halloween) and 2027-11-06 — those dates are simply absent from the feed and are left out here. 21:30–02:30 on every in-window row (one 2027 row ends 03:30). 15 in-window occurrences (Sep 12 – Dec 26, Oct 31 absent)."
+    },
+    {
+      "id": "onyx-bar-night",
+      "kind": "series",
+      "title": "ONYX Bar Night",
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "website": "https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-09-12/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/04/BAONYX-DEEP-SOUTHR-NIGHT-1080-x-1080-px.png",
+      "description": "ONYX DEEP SOUTH BAR NIGHT in Bear Cave | 9 PM – 12 AM Second Saturday of Every Month",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "Second Saturday of Every Month",
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[2]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-09-12/\""
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[46]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-10-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-10-10/"
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[42]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-11-14/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-11-14/"
+          }
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[28]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-12-12/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/onyx-bar-night-2-2/2026-12-12/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[2].description",
+        "quote": "ONYX DEEP SOUTH BAR NIGHT in Bear Cave | 9 PM – 12 AM Second Saturday of Every Month"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Monthly Repeating\"; 14 rows Sep 12 2026 – Oct 9 2027 in pages 1–7 and the series continues to Sep 2028 (pages 8/11). All second Saturdays, 9 PM – midnight in the Bear Cave. Feed end_date is the next day 00:00."
+    },
+    {
+      "id": "sinful-sunday",
+      "kind": "series",
+      "title": "SINFUL SUNDAY",
+      "startTime": "17:00",
+      "endTime": "02:00",
+      "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4-3/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/Firefly_Gemini-Flash_Change-ADORA-to-AL-NOUVO-905946.png",
+      "description": "SUNDAY Happy Hour 5 PM – 9 PM CODE Bar Opens 5 PM | Tavern Opens 9 PM SINFUL SUNDAYS in Main Bar + CODE Bar | 8 PM – 2 AM Music by: AL NOUVO No Cover",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[5]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4-3/\""
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[17]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-09-20/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-09-20/"
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[28]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-09-27/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-09-27/"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[38]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-04/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-04/"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[48]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-11/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-11/"
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[7]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-18/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-18/"
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[16]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-25/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-10-25/"
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[24]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-01/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-01/"
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[34]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-08/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-08/"
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[44]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-15/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-15/"
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[3]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-22/"
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[12]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-29/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-11-29/"
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[20]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-06/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-06/"
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[30]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-13/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-13/"
+          }
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[39]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-20/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-20/"
+          }
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[47]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-27/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/sinful_sunday-11-21-4/2026-12-27/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[5].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; 16 rows, every Sunday Sep 13 – Dec 27 2026 (two Tribe series slugs, sinful_sunday-11-21-4-3 and sinful_sunday-11-21-4, cover the run; the feed stops at Dec 27). Feed start 17:00 (\"SUNDAY Happy Hour 5 PM – 9 PM CODE Bar Opens 5 PM\"); the party itself is \"SINFUL SUNDAYS in Main Bar + CODE Bar | 8 PM – 2 AM Music by: AL NOUVO No Cover\". 16 in-window occurrences."
+    },
+    {
+      "id": "jock-strap-night",
+      "kind": "series",
+      "title": "JOCK STRAP NIGHT",
+      "startTime": "19:00",
+      "endTime": "02:00",
+      "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-14/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/03/GRIND-MONDAYS_Square_1080x1080.jpg",
+      "description": "Happy Hour 7 PM – 9 PM JOCK STRAP NIGHT in CODE Bar | 9 PM – 2 AM $2.50 Well Tequila Drinks 9 PM to 2 AM HAPPY HOUR ALL NIGHT For Anyone Wearing Jock Strap + No Pants* No Cover *Happy Hour all Night rules are strictly enforced. *Not a requirement to enter.",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[6]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-14/\""
+          }
+        },
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[18]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-21/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-21/"
+          }
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[29]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-28/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-09-28/"
+          }
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[40]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-05/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-05/"
+          }
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[49]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-12/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-12/"
+          }
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[8]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-19/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-19/"
+          }
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[17]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-26/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-10-26/"
+          }
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[26]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-02/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-02/"
+          }
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[35]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-09/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-09/"
+          }
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[45]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-16/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-16/"
+          }
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[4]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-23/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-23/"
+          }
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[13]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-30/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-11-30/"
+          }
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[22]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-07/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-07/"
+          }
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[31]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-14/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-14/"
+          }
+        },
+        {
+          "startDate": "2026-12-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[40]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-21/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-21/"
+          }
+        },
+        {
+          "startDate": "2026-12-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[48]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-28/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/jock_strap_night-2-2-2-2-2-2-2-5-2-3/2026-12-28/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[6].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; every Monday from Sep 14 2026 through the end of the feed (Sep 2028; slug jock_strap_night-2-2-2-2-2-2-2-5-2-3). Feed start 19:00 (\"Happy Hour 7 PM – 9 PM\"); the night is \"JOCK STRAP NIGHT in CODE Bar | 9 PM – 2 AM $2.50 Well Tequila Drinks … HAPPY HOUR ALL NIGHT For Anyone Wearing Jock Strap + No Pants* No Cover\". Poster file is GRIND-MONDAYS. 16 in-window occurrences."
+    },
+    {
+      "id": "happy-hour-all-night",
+      "kind": "series",
+      "title": "HAPPY HOUR ALL NIGHT",
+      "startTime": "19:00",
+      "endTime": "02:00",
+      "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-15/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/01/BE-YOU-TUESDAYS_Square_1080x1080.jpg",
+      "description": "HAPPY HOUR ALL NIGHT in CODE Bar | 7 PM – 2 AM HALF PRICE DRINKS ALL NIGHT No Cover",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[7]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-15/\""
+          }
+        },
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[19]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-22/"
+          }
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[30]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-29/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-09-29/"
+          }
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[41]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-06/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-06/"
+          }
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[0]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-13/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-13/"
+          }
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[9]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-20/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-20/"
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[18]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-27/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-10-27/"
+          }
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[27]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-03/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-03/"
+          }
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[36]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-10/"
+          }
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[46]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-17/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-17/"
+          }
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[5]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-11-24/"
+          }
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[14]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-01/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-01/"
+          }
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[23]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-08/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-08/"
+          }
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[32]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-15/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-15/"
+          }
+        },
+        {
+          "startDate": "2026-12-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[41]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-22/"
+          }
+        },
+        {
+          "startDate": "2026-12-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[49]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-29/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/code_tuesday-2-2-2-2-2-2-3-4-2/2026-12-29/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[7].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; 16 rows, every Tuesday Sep 15 – Dec 29 2026 (slug code_tuesday-2-2-2-2-2-2-3-4-2; the feed stops at Dec 29). \"HAPPY HOUR ALL NIGHT in CODE Bar | 7 PM – 2 AM HALF PRICE DRINKS ALL NIGHT No Cover\". Poster file is BE-YOU-TUESDAYS. The same phrase \"HAPPY HOUR ALL NIGHT\" also appears inside the Monday/Wednesday/Thursday descriptions as a drink deal (see traps). 16 in-window occurrences."
+    },
+    {
+      "id": "underwear-singlet-night",
+      "kind": "series",
+      "title": "UNDERWEAR & SINGLET NIGHT",
+      "startTime": "19:00",
+      "endTime": "02:00",
+      "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-16/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/01/HUMP-WEDNESDAY_Square_1080x1080.jpg",
+      "description": "Happy Hour 7 PM – 9 PM UNDERWEAR & SINGLETS NIGHT in CODE Bar | 9 PM – 2 AM $2.50 Well Vodka Drinks 9 PM to 2 AM HAPPY HOUR ALL NIGHT For Anyone Wearing Singlets or Underwear + No Pants* No Cover *Happy Hour all Night rules are strictly enforced. *Not a requirement to enter.",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[9]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-16/\""
+          }
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[21]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-23/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-23/"
+          }
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[31]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-30/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-09-30/"
+          }
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[42]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-07/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-07/"
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[2]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-14/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-14/"
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[11]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-21/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-21/"
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[20]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-28/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-10-28/"
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[28]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-04/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-04/"
+          }
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[38]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-11/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-11/"
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[48]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-18/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-18/"
+          }
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[7]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-25/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-11-25/"
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[15]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-02/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-02/"
+          }
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[24]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-09/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-09/"
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[34]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-16/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-16/"
+          }
+        },
+        {
+          "startDate": "2026-12-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[43]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-23/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-23/"
+          }
+        },
+        {
+          "startDate": "2026-12-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=4",
+            "jsonPath": "$.events[0]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-30/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/leather-harness-night-13-3-2-4-2/2026-12-30/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[9].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; every Wednesday from Sep 16 2026 through the end of the feed (Sep 2028; slug leather-harness-night-13-3-2-4-2 — the slug is a leftover from an earlier name, the title is UNDERWEAR & SINGLET NIGHT, feed title \"UNDERWEAR &#038; SINGLET NIGHT\"). Feed start 19:00 (\"Happy Hour 7 PM – 9 PM\"); \"UNDERWEAR & SINGLETS NIGHT in CODE Bar | 9 PM – 2 AM $2.50 Well Vodka Drinks … No Cover\". Poster file is HUMP-WEDNESDAY. 16 in-window occurrences."
+    },
+    {
+      "id": "honey-pot",
+      "kind": "series",
+      "title": "HONEY POT",
+      "startTime": "18:00",
+      "endTime": "20:00",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg",
+      "description": "Happy Hour 5 PM – 9 PM CODE Bar Opens 5 PM | Bear Cave Opens 8 PM HONEY POT in Main Bar + CODE Bar Bears of South Florida Happy Hour Social 3rd WED Every Month | 6 – 8 pm *No Cover",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3WE",
+      "recurrenceStatedAs": "3rd WED Every Month",
+      "cover": "No Cover",
+      "occurrences": [
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[8]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/\""
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[10]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/"
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[47]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/"
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[33]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[8].description",
+        "quote": "Bears of South Florida Happy Hour Social 3rd WED Every Month | 6 – 8 pm *No Cover"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Monthly Repeating\"; 5 rows Sep 16 2026 – Jan 20 2027, all third Wednesdays, 6–8 PM. The only row family with a non-empty REST website field: https://eaglebarwm.com/event/bosfl-happy-hour/ (the original post; the occurrence rows live under slug bosfl-happy-hour-2-2-2). Bears of South Florida happy-hour social in Main Bar + CODE Bar; feed start 18:00 (the row's own \"Happy Hour 5 PM – 9 PM CODE Bar Opens 5 PM | Bear Cave Opens 8 PM\" preamble is the bar's hours). Kept as bear by the 2026-09-12 trial run. 4 in-window occurrences."
+    },
+    {
+      "id": "cigar-social",
+      "kind": "series",
+      "title": "CIGAR SOCIAL",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-09-17/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/06/Thurs1_NewWeekdays_EWM_design_1080x1080_square.jpg",
+      "description": "Happy Hour 7 PM – 9 PM CODE Bar Opens 7 PM | Tavern Opens 9 PM CIGAR SOCIAL in Smoking Lounge & Patio | 7 PM – 10 PM",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[10]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-09-17/\""
+          }
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[22]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-09-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-09-24/"
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[32]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-01/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-01/"
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[43]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-08/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-08/"
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[3]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-15/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-15/"
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[12]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-22/"
+          }
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[21]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-29/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-10-29/"
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[30]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-05/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-05/"
+          }
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[39]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-12/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-12/"
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[49]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-19/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-19/"
+          }
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[8]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-26/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-11-26/"
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[16]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-03/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-03/"
+          }
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[25]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-10/"
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[35]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-17/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/cigar-social-3-2-3-3-2-2/2026-12-17/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[10].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; 14 rows, every Thursday Sep 17 – Dec 17 2026 (slug cigar-social-3-2-3-3-2-2; the feed stops at Dec 17 — note HARNESS NIGHT, the other Thursday item, continues). \"CIGAR SOCIAL in Smoking Lounge & Patio | 7 PM – 10 PM\". 14 in-window occurrences."
+    },
+    {
+      "id": "harness-night",
+      "kind": "series",
+      "title": "HARNESS NIGHT",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-09-17/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/THURSTY-THURSDAY_Square_EWM_1080x1080.jpg",
+      "description": "Happy Hour 7 PM – 9 PM CODE Bar Opens 7 PM | Tavern Opens 9 PM HARNESS NIGHT in Main Bar + CODE Bar | 9 PM – 2 AM Music By: Trevor Oldroyd HAPPY HOUR ALL NIGHT For Anyone Wearing A Harness or Fetish Gear* No Cover *Happy Hour all Night rules are strictly enforced. *Not a requirement to enter.",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "occurrences": [
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[11]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-09-17/\""
+          }
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[23]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-09-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-09-24/"
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[33]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-01/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-01/"
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[44]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-08/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-08/"
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[4]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-15/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-15/"
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[13]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-22/"
+          }
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[22]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-29/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-10-29/"
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[31]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-05/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-05/"
+          }
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[40]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-12/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-12/"
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[0]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-19/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-19/"
+          }
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[9]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-26/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-11-26/"
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[17]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-03/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-03/"
+          }
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[26]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-10/"
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[36]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-17/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-17/"
+          }
+        },
+        {
+          "startDate": "2026-12-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[44]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-24/"
+          }
+        },
+        {
+          "startDate": "2026-12-31",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=4",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-31/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/edm-night-12-8-3-3/2026-12-31/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[11].categories[0].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Weekday Repeating\"; every Thursday from Sep 17 2026 through the end of the feed (Sep 2028; slug edm-night-12-8-3-3 — leftover slug, title HARNESS NIGHT). Feed start 21:00; \"HARNESS NIGHT in Main Bar + CODE Bar | 9 PM – 2 AM Music By: Trevor Oldroyd HAPPY HOUR ALL NIGHT For Anyone Wearing A Harness or Fetish Gear* No Cover\". Poster file is THURSTY-THURSDAY. 16 in-window occurrences."
+    },
+    {
+      "id": "bark-after-dark-4th-tuesday",
+      "kind": "series",
+      "title": "BARK AFTER DARK",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "website": "https://eaglebarwm.com/event/bark-after-dark-3-2/2026-09-22/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/10/Square_BARK-AFTER-DARK_1080x1080-2.jpg",
+      "description": "BARK AFTER DARK in MAIN Bar | 8 PM – 12 AM MOSH AREA w/ PADDING & TOYS HALF PRICE DRINKS ALL NIGHT No Cover",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4TU",
+      "recurrenceStatedAs": "Weekday Repeating",
+      "cover": "No Cover",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[20]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-3-2/2026-09-22/\""
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[19]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-3-2/2026-10-27/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bark-after-dark-3-2/2026-10-27/"
+          }
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[6]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-3-2/2026-11-24/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bark-after-dark-3-2/2026-11-24/"
+          }
+        },
+        {
+          "startDate": "2026-12-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[42]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-3-2/2026-12-22/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bark-after-dark-3-2/2026-12-22/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[20].categories[1].name",
+        "quote": "\"name\":\"Weekday Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "BARK AFTER DARK is published as TWO Tribe series with the same title and text. This one (slug bark-after-dark-3-2, categories IncludeInEmail + \"Weekday Repeating\") lists Sep 22, Oct 27, Nov 24, Dec 22 2026 and Jan 26 2027 — every fourth Tuesday, 8 PM – midnight (feed end_date next day 00:00). The category label says \"Weekday Repeating\" but the dates are monthly; the rule follows the dates. \"MOSH AREA w/ PADDING & TOYS HALF PRICE DRINKS ALL NIGHT No Cover\". 4 in-window occurrences."
+    },
+    {
+      "id": "bark-after-dark-2nd-tuesday",
+      "kind": "series",
+      "title": "BARK AFTER DARK",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "website": "https://eaglebarwm.com/event/bark-after-dark-2-2-2/2026-10-13/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/10/Square_BARK-AFTER-DARK_1080x1080.jpg",
+      "description": "BARK AFTER DARK in MAIN Bar | 8 PM – 12 AM MOSH AREA w/ PADDING & TOYS HALF PRICE DRINKS ALL NIGHT No Cover",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2TU",
+      "recurrenceStatedAs": "Monthly Repeating",
+      "cover": "No Cover",
+      "occurrences": [
+        {
+          "startDate": "2026-10-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[1]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-2-2-2/2026-10-13/\""
+          }
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[37]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/bark-after-dark-2-2-2/2026-11-10/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/bark-after-dark-2-2-2/2026-11-10/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "jsonPath": "$.events[1].categories[1].name",
+        "quote": "\"name\":\"Monthly Repeating\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The second BARK AFTER DARK series (slug bark-after-dark-2-2-2, categories IncludeInEmail + \"Monthly Repeating\"): Oct 13 and Nov 10 2026 only — second Tuesdays, same 8 PM – midnight and same text as the fourth-Tuesday series. Together the two series make BARK AFTER DARK a 2nd-and-4th-Tuesday night from October; the site publishes them as two objects, so they are two entries here. 2 in-window occurrences."
+    },
+    {
+      "id": "boots-on-the-ground",
+      "kind": "series",
+      "title": "BOOTS ON THE GROUND",
+      "startTime": "17:30",
+      "endTime": "18:30",
+      "website": "https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-10-04/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/BOOTS-ON-THE-GROUND-NEWSLETTER.png",
+      "description": "SUNDAY BOOTS ON THE GROUND Activist Collective for the Leather & Kink Community 5:30pm | in the Bear Cave We’re loud, proud, and laced up for liberation. Because our rights aren’t a fetish. They’re fundamental. You can learn more about Boots on the Ground at their website .   *The views expressed at this event are not necessarily those of the staff at Eagle Wilton Manors.",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SU",
+      "recurrenceStatedAs": "https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-10-04/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+            "jsonPath": "$.events[39]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-10-04/\""
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+            "jsonPath": "$.events[25]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-11-01/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-11-01/"
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=3",
+            "jsonPath": "$.events[21]",
+            "quote": "\"url\":\"https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-12-06/\""
+          },
+          "overrides": {
+            "website": "https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-12-06/"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[39]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/boots-on-the-ground-4-2-2/2026-10-04/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site publishes no cadence text and no repeat category for this title; the quoted evidence is Tribe's date-suffixed occurrence URL (/event/<slug>/<date>/), which The Events Calendar mints only for a recurring event's occurrences (provisional ids ≥ 10,000,000), and the rule is proven from the listed dates. Category IncludeInEmail only. 7 rows Oct 4 2026 – Apr 4 2027, all first Sundays, 5:30–6:30 PM in the Bear Cave. \"Activist Collective for the Leather & Kink Community\"; the description links https://Botgfl.com and carries the disclaimer \"*The views expressed at this event are not necessarily those of the staff at Eagle Wilton Manors.\" 3 in-window occurrences."
+    },
+    {
+      "id": "sf-foot-men-2026-09-19",
+      "kind": "single",
+      "title": "SF FOOT MEN",
+      "startTime": "17:00",
+      "endTime": "19:00",
+      "website": "https://eaglebarwm.com/event/sf-foot-men-3-2/2026-09-19/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/07-09-2026-SF-FEET-MEN_QUARTERLY_Square_1080x1080.jpg",
+      "description": "SOUTH FLORIDA FOOT MEN BAR NIGHT 5 PM – 7 PM Second Saturday of Every Month",
+      "startDate": "2026-09-19",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[14]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/sf-foot-men-3-2/2026-09-19/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "ONE listed date: Sat Sep 19 2026, 5–7 PM (slug sf-foot-men-3-2, a Tribe occurrence URL with date suffix, id 10018587). The description says \"SOUTH FLORIDA FOOT MEN BAR NIGHT 5 PM – 7 PM Second Saturday of Every Month\", but Sep 19 is the THIRD Saturday, the poster file is named 07-09-2026-SF-FEET-MEN_QUARTERLY, and no other date is listed anywhere in the 550 rows — so no monthly rule is asserted and it is a single; the blurb is a trap (see traps)."
+    },
+    {
+      "id": "holy-cross-std-testing-2026-11-05",
+      "kind": "single",
+      "title": "HOLY CROSS STD TESTING",
+      "startTime": "18:00",
+      "endTime": "20:00",
+      "website": "https://eaglebarwm.com/event/holy-cross-std-testing-6/2026-11-05/",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/05/26-11-05_HOLY-CROSS_Square_1080x1080.jpg",
+      "description": "HOLY CROSS STD TESTING in Bear Cave | 6 PM – 8 PM",
+      "startDate": "2026-11-05",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=2",
+        "jsonPath": "$.events[29]",
+        "quote": "\"url\":\"https://eaglebarwm.com/event/holy-cross-std-testing-6/2026-11-05/\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Thu Nov 5 2026, 6–8 PM in the Bear Cave (slug holy-cross-std-testing-6 — the -6 suffix shows earlier one-off posts, none upcoming). Health screening, not a party; one listed date → single."
+    }
+  ],
+  "traps": [
+    {
+      "id": "daddy-pop-included-blurb",
+      "kind": "recurring-blurb",
+      "label": "\"** DADDY POP Included\" inside every Featured party description (ENERGY, DRENCH, GRIP, SLICK, GROOVE, SNOUT, STEER, TOOLSHED)",
+      "why": "The Featured parties' text mentions the same-night Bear Cave DADDY POP as part of the ticket. DADDY POP already has its own row for that date (Friday and Saturday series); the phrase must not spawn a second DADDY POP record or be merged into the Featured party's title.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[0].description",
+        "quote": "DADDY POP Included"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "happy-hour-preamble",
+      "kind": "venue-header",
+      "label": "\"Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM\" / \"Happy Hour 7 PM – 9 PM CODE Bar Opens 7 PM | Tavern Opens 9 PM\" at the top of most descriptions",
+      "why": "The bar's opening hours are pasted ahead of the event's own line in the description of nearly every row. They are venue hours, not an event: a \"Happy Hour\" record or a start time of 5 PM for a 9 PM party would be wrong (the feed's own start_date already leans to the happy-hour time on the weekday series — recorded as published, noted per event).",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[0].description",
+        "quote": "Happy Hour 5 PM – 9 PM – CODE BAR Bear Cave Opens 8 PM"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "happy-hour-all-night-drink-deal",
+      "kind": "recurring-blurb",
+      "label": "\"HAPPY HOUR ALL NIGHT For Anyone Wearing Jock Strap + No Pants*\" (Mon), \"… Singlets or Underwear …\" (Wed), \"… A Harness or Fetish Gear*\" (Thu)",
+      "why": "The Tuesday event is TITLED \"HAPPY HOUR ALL NIGHT\"; the same phrase inside the Monday/Wednesday/Thursday descriptions is a drink deal for people in gear, not a second event on those nights. Title matching on the phrase would fold three series into the Tuesday one.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[6].description",
+        "quote": "HAPPY HOUR ALL NIGHT For Anyone Wearing Jock Strap + No Pants*"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "sf-foot-men-second-saturday-blurb",
+      "kind": "recurring-blurb",
+      "label": "\"SOUTH FLORIDA FOOT MEN BAR NIGHT 5 PM – 7 PM Second Saturday of Every Month\" on a row dated the THIRD Saturday (Sep 19) with a poster named …_QUARTERLY",
+      "why": "The description asserts a monthly second-Saturday rule that the site's own dates contradict (only Sep 19 is listed, in any of the 550 rows). The Sep 19 record is real and expected; a monthly recurrence derived from the blurb is not.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[13].description",
+        "quote": "SOUTH FLORIDA FOOT MEN BAR NIGHT 5 PM – 7 PM Second Saturday of Every Month"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "sep-11-rows-already-past",
+      "kind": "past-event",
+      "label": "ENERGY and DADDY POP on 2026-09-11 — the first two REST rows, over by recon",
+      "why": "REST's server-set start_date is 2026-09-11 04:00:00, so on Sep 12 the feed still returns Friday night; the ICS export and the /calendar2/ list both start at Sep 12. Extracting them is correct under allowPastEvents; they must keep the Sep 11 date.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.rest_url",
+        "quote": "start_date=2026-09-11 04:00:00"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "calendar2-empty-js-grid",
+      "kind": "navigation",
+      "label": "<div id='calendar'></div> — the Divi month grid on the configured page is empty in static HTML",
+      "why": "The grid is filled client-side; a static read of /calendar2/ sees only the 10-row list module below it and a \"Load More\" button. Not an event, and not evidence that the site has 10 events — the REST door is the complete listing.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/calendar2/",
+        "quote": "<div id='calendar'></div>"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "two-year-pre-expansion",
+      "kind": "duplicate-listing",
+      "label": "550 REST rows: the five permanent series pre-expanded weekly through 2028-09-11 (e.g. JOCK STRAP NIGHT ×105 occurrences)",
+      "why": "Each far-future row is a real occurrence the site lists, but 550 rows are 23 events. A run that writes one record per row (the 2026-09-12 trial wrote 346 from pages 1–7) is materializing two years of a weekly series; this file materializes only the window. Beyond-window rows are not wrong extractions, they are outside what this file asserts.",
+      "evidence": {
+        "url": "https://eaglebarwm.com/wp-json/tribe/events/v1/events?per_page=50&page=11",
+        "jsonPath": "$.events[49]",
+        "quote": "\"start_date\":\"2028-09-11 19:00:00\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "How far ahead series occurrences should be materialized is the scraper's policy, not the site's; the site's answer is two years."
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "DADDY POP Fridays (slug daddy-pop-5-3-3) stop after 2027-04-30 while DADDY POP Saturdays run to the end of the feed — is the Friday edition ending, or was the series simply created with a shorter horizon? Only the site owner knows; the file records what is listed.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    },
+    {
+      "q": "Weekday series start_date is the happy-hour time (19:00 / 17:00) while the description gives the event's own time (9 PM / 8 PM). Which should the calendar show as startTime? Recorded as published (feed start_date) with the description time in each note.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    },
+    {
+      "q": "REST pages 9–10 were closed by arithmetic (exactly 100 slots for 100 rows); a future recon with request budget should read them once to confirm.",
+      "raisedOn": "2026-09-12",
+      "blocking": false
+    }
+  ]
+}
