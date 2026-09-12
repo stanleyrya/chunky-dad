@@ -14285,6 +14285,33 @@ class AiWebParser {
     // published, and the caller runs it through the same title cleanups every
     // other title gets. Structured data enriches here; it never bypasses
     // extraction, which still ran and still decided.
+    adoptPageHeadingTitle(title, htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !title) return title;
+        // Segments and listing windows carry their own listing title; this is
+        // a single-page rule only.
+        if (htmlData.segmentListingTitle !== undefined || htmlData.segmentText !== undefined) return title;
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const titleTag = clean((html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || ['', ''])[1]);
+        const headings = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => clean(m[1])).filter(Boolean);
+        if (headings.length === 0 || !titleTag) return title;
+        const fold = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        const titleTagLead = fold(titleTag.split(/\s+[|\-–—:]\s+/)[0]);
+        const brandNames = this.getPageBrandNames(htmlData).map(fold);
+        // The event heading: an <h1> that leads the <title> tag and is not
+        // the site's own name. Exactly one, or nothing is decided.
+        const candidates = headings.filter(heading => {
+            const key = fold(heading);
+            return key && key.length >= 3 && key === titleTagLead && !brandNames.includes(key);
+        });
+        if (candidates.length !== 1) return title;
+        const heading = candidates[0];
+        const answer = fold(title);
+        const headingKey = fold(heading);
+        if (!answer || answer === headingKey || answer.includes(headingKey) || headingKey.includes(answer)) return title;
+        return heading;
+    }
+
     repairTruncatedTitleFromJsonLd(title, htmlData) {
         const original = String(title || '');
         const names = this.getPageJsonLdEventNames(htmlData);
@@ -18391,6 +18418,20 @@ TEXT:
             if (repairedTitle !== title) {
                 console.log(`🤖 AI Web: Restored truncated title "${title}" → "${repairedTitle}" (contained in the page's own JSON-LD event name)`);
                 title = repairedTitle;
+            }
+        }
+        // A single-event page's own heading names the event. When the page
+        // states one event heading (its <h1> that also leads the <title>
+        // tag) and the model answered with a phrase from the body instead
+        // ("Second Fridays" for thedallaseagle.com/events/bear-night/, whose
+        // <h1> and <title> say "Bear Night" — daily run 20260912-063741),
+        // the heading wins. A heading contained in the answer, or containing
+        // it, leaves the answer alone.
+        if (title) {
+            const headingTitle = this.adoptPageHeadingTitle(title, htmlData);
+            if (headingTitle !== title) {
+                console.log(`🏷️ TITLE: "${title}" → "${headingTitle}" — the page's own heading names the event (a body phrase is not its name)`);
+                title = headingTitle;
             }
         }
         // Strip a leading date phrase HERE rather than in the per-pass guard:

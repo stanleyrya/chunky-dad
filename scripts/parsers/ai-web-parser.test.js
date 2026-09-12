@@ -13144,6 +13144,21 @@ test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwo
   assert.equal(rows.find(r => r.title === 'CUBSCOUT').startDate.toISOString(), '2026-10-04T21:00:00.000Z', 'a timed row is untouched');
 });
 
+test('a single-event page\'s own heading names the event when the model answered with a body phrase', () => {
+  const parser = createParser();
+  const page = { url: 'https://venue.example/events/bear-night/', html: '<html><head><title>Bear Night | The Venue</title></head><body><h1>The Venue</h1><h1 class="mec-single-title">Bear Night</h1><p>Second Fridays we get hairy…</p></body></html>' };
+  assert.equal(parser.adoptPageHeadingTitle('Second Fridays', page), 'Bear Night');
+  assert.equal(parser.adoptPageHeadingTitle('Bear Night: Lumberjack Party', page), 'Bear Night: Lumberjack Party', 'an answer that extends the heading stands');
+  assert.equal(parser.adoptPageHeadingTitle('Bear', page), 'Bear', 'an answer the heading extends stands');
+  assert.equal(parser.adoptPageHeadingTitle('Second Fridays', { ...page, segmentListingTitle: 'x' }), 'Second Fridays', 'segments keep their listing title rule');
+  const twoHeadings = { url: page.url, html: '<html><head><title>Bear Night | The Venue</title></head><body><h1>Bear Night</h1><h1>Bear Night</h1></body></html>' };
+  assert.equal(parser.adoptPageHeadingTitle('Second Fridays', twoHeadings), 'Second Fridays', 'ambiguous headings decide nothing');
+  const originalLog = console.log; console.log = () => {};
+  let normalized;
+  try { normalized = parser.normalizeAiEvent({ title: 'Second Fridays', startDate: '2026-10-09', bar: 'The Venue' }, {}, page); } finally { console.log = originalLog; }
+  assert.equal(normalized.title, 'Bear Night');
+});
+
 test('a venue closure notice is not an event; markup inside HTML comments is not on the page; an all-day widget row has no clock', () => {
   const parser = createParser();
   for (const title of ['CLOSED FOR A PRIVATE EVENT', 'Closed for Labor Day', 'CLOSED DUE TO WEATHER', 'CLOSED for Pride Recovery!', 'We will reopen Tuesday', 'No events tonight!', 'Bar closed']) {
