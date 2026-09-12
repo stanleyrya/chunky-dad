@@ -13142,6 +13142,27 @@ test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwo
   assert.equal(rows.find(r => r.title === 'CUBSCOUT').startDate.toISOString(), '2026-10-04T21:00:00.000Z', 'a timed row is untouched');
 });
 
+test('a venue closure notice is not an event; markup inside HTML comments is not on the page; an all-day widget row has no clock', () => {
+  const parser = createParser();
+  for (const title of ['CLOSED FOR A PRIVATE EVENT', 'Closed for Labor Day', 'CLOSED DUE TO WEATHER', 'CLOSED for Pride Recovery!', 'We will reopen Tuesday', 'No events tonight!', 'Bar closed']) {
+    assert.equal(parser.isVenueClosureNoticeTitle(title), true, title);
+  }
+  for (const title of ['CLOSED CIRCUIT: a leather party', 'Behind Closed Doors', 'Bear Night', 'Open Bar Sunday']) {
+    assert.equal(parser.isVenueClosureNoticeTitle(title), false, title);
+  }
+  assert.equal(parser.normalizeAiEvent({ title: 'CLOSED FOR THANKSGIVING', startDate: '2026-11-26', bar: 'Rockbar' }, {}, { html: '', url: 'https://venue.example/' }), null, 'a closure notice yields no event');
+  assert.deepEqual(parser.extractElfsightWidgetIds('<div class="elfsight-app-e122bc50-bc4f-4cde-a6b9-ee6d4e31531a"></div><!-- <div class="elfsight-app-8c5b40b3-85f2-43cf-9a4c-d13aefd10dee"></div> -->'),
+    ['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'], 'the commented-out widget is not on the page');
+  const originalLog = console.log; console.log = () => {};
+  let allDay, timed;
+  try {
+    allDay = parser.buildEventFromElfsightRow({ name: 'CLOSED FOR A PRIVATE EVENT', isAllDay: true, start: { date: '2026-05-07', time: '23:33' }, end: { date: '2026-05-07', time: '23:33' }, timeZone: 'America/New_York' }, 'https://venue.example/calendar');
+    timed = parser.buildEventFromElfsightRow({ name: 'BEARS NIGHT OUT', isAllDay: false, start: { date: '2026-05-09', time: '21:00' }, end: { date: '2026-05-10', time: '02:00' }, timeZone: 'America/New_York' }, 'https://venue.example/calendar');
+  } finally { console.log = originalLog; }
+  assert.equal(allDay.startDate.toISOString(), '2026-05-07T04:00:00.000Z', 'an all-day row starts at the day\'s midnight, not its creation clock');
+  assert.equal(timed.startDate.toISOString(), '2026-05-10T01:00:00.000Z', 'a timed row keeps its clock');
+});
+
 test('a listing with no time adopts the single clock its own poster states — for this date, or undated', () => {
   const parser = createParser();
   const at = (day) => new Date(Date.UTC(2026, 8, day));

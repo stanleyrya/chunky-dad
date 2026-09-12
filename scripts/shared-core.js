@@ -14079,6 +14079,8 @@ class SharedCore {
             // stamps _pastSpanWithheld + the span-fully-past review flag)
             // and gated here, exactly like the recurring-series withhold.
             event?._pastSpanWithheld !== true &&
+            // No resolvable city → no calendar (stamp site: the same place).
+            event?._unresolvedCityWithheld !== true &&
             // A merge stamped _mergeNoOp writes nothing by definition — the
             // final payload is field-identical to the calendar record
             // (stamp site: buildAnalyzedCalendarEvent), so executing it
@@ -14143,6 +14145,7 @@ class SharedCore {
             '_festivalMatch',
             '_festivalContext',
             '_pastSpanWithheld',
+            '_unresolvedCityWithheld',
             '_mergeNoOp',
             '_duplicateOfKept',
             '_seriesAuthority',
@@ -14172,6 +14175,7 @@ class SharedCore {
         if (!event || typeof event !== 'object') return 'UNKNOWN';
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
+        if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
@@ -16461,6 +16465,20 @@ class SharedCore {
             if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
+            // UNRESOLVED CITY WITHHOLD — an event with no city has no
+            // calendar: the write would route to the UNKNOWN calendar name,
+            // which does not exist on chunky.dad (ursamen.org/ct-bear, audit
+            // 2026-09-12: "Connecticut Bear", city unknown, planned as NEW
+            // against a 404 unknown.ics). Flag, don't drop: the card stays in
+            // the results UI; only the calendar write is withheld.
+            {
+                const cityKey = String(analyzedEvent.city || '').trim().toLowerCase();
+                if (!cityKey || cityKey === 'unknown') {
+                    analyzedEvent._unresolvedCityWithheld = true;
+                    console.log(`🗺️ NO CITY: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — no resolvable city, so no calendar to write to; card kept in results`);
+                }
             }
 
             // Recurring series are display+export only: keep the card in the

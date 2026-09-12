@@ -1309,6 +1309,14 @@ class AiWebParser {
                 // og:image fill below, so an event whose structured data
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
+                // Closure notices are not events, on any structured route.
+                for (let index = structuredEvents.length - 1; index >= 0; index--) {
+                    const event = structuredEvents[index];
+                    if (event && this.isVenueClosureNoticeTitle(event.title)) {
+                        console.log(`🚪 CLOSED: "${event.title}" is a closure notice, not an event — dropped`);
+                        structuredEvents.splice(index, 1);
+                    }
+                }
                 structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
                 // Read the structured nodes' OWN artwork before anything
                 // judges it. Runs FIRST so the furniture rejection below and
@@ -2195,6 +2203,22 @@ class AiWebParser {
         return /\b\d{1,2}:\d{2}\b/.test(text)
             || /\b\d{1,2}\s*(?:am|pm)\b/i.test(text)
             || /[$€£]\s*\d/.test(text);
+    }
+
+    // "CLOSED FOR A PRIVATE EVENT", "Closed for Labor Day", "CLOSED DUE TO
+    // WEATHER", "CLOSED for Pride Recovery!", "We will reopen …": a venue
+    // announcing it is shut is not an event to attend. rockbarnyc.com's
+    // calendar widget carries nine such rows (one on a monthly rule) and a
+    // real party merged INTO one of them (audit 2026-09-12).
+    isVenueClosureNoticeTitle(title) {
+        const text = String(title || '').replace(/&#?[0-9a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+        if (!text) return false;
+        // "CLOSED CIRCUIT: a leather party" is a name; "CLOSED FOR …",
+        // "CLOSED X-MAS EVE", "Bar closed" are notices.
+        if (/^(?:bar\s+|venue\s+|we\s+are\s+|we're\s+)?closed(?:\s*[!.]*$|\s+(?:for|due|until|till|today|tonight|tomorrow|on|this|thru|through|thanksgiving|christmas|x-?mas|new\s+year|labou?r|memorial|easter|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i.test(text)) return true;
+        if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
+        if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
+        return false;
     }
 
     isVenueHoursNoticeTitle(title) {
@@ -5936,8 +5960,15 @@ class AiWebParser {
         const ids = new Set();
         const pattern = /elfsight-app-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
         let match;
-        while ((match = pattern.exec(String(html || ''))) !== null) ids.add(match[1].toLowerCase());
+        // Markup inside an HTML comment is not on the page: rockbarnyc.com
+        // keeps a retired 2024 calendar widget commented out, and its nine
+        // stale rows were read as live on every run (audit 2026-09-12).
+        while ((match = pattern.exec(this.stripHtmlComments(html))) !== null) ids.add(match[1].toLowerCase());
         return Array.from(ids);
+    }
+
+    stripHtmlComments(html) {
+        return String(html || '').replace(/<!--[\s\S]*?-->/g, ' ');
     }
 
     // The boot payload nests the settings under the widget's own id. Anything
@@ -5961,6 +5992,14 @@ class AiWebParser {
         const end = row.end && typeof row.end === 'object' ? row.end : {};
         if (!start.date) return null;
         const timezone = typeof row.timeZone === 'string' && row.timeZone.trim() ? row.timeZone.trim() : '';
+        // An all-day row's start.time is the moment the row was created
+        // (rockbarnyc.com: CLOSED FOR A PRIVATE EVENT at 23:33) — not a
+        // clock. All-day means the day, from midnight.
+        const isAllDay = row.isAllDay === true || row.allDay === true;
+        if (isAllDay) {
+            start.time = '00:00';
+            if (end && typeof end === 'object') end.time = '';
+        }
         const startDate = this.convertLocalDateTimeToUtc(`${start.date} ${start.time || '00:00'}:00`, timezone)
             || combineDateAndTime(start.date, start.time || '00:00');
         if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return null;
@@ -6155,7 +6194,7 @@ class AiWebParser {
     }
 
     isSquarespaceEventCollectionPage(html) {
-        const source = String(html || '');
+        const source = this.stripHtmlComments(html);
         if (!/Static\.SQUARESPACE_CONTEXT/.test(source)) return false;
         return /\bcollection-type-events\b/.test(source) || /\beventlist(--upcoming|--past)?\b/.test(source);
     }
@@ -6283,7 +6322,7 @@ class AiWebParser {
     // embed HTML entity-escaped (once or twice) inside a script payload, so
     // the search runs over the raw page and its unescaped forms.
     extractDiceWidgetConfig(html) {
-        const source = String(html || '');
+        const source = this.stripHtmlComments(html);
         if (!source) return null;
         const forms = [source];
         let decoded = this.decodeBasicEntities(source).replace(/\\"/g, '"');
@@ -18138,6 +18177,10 @@ TEXT:
         if (title && this.isNavigationLabelTitle(title)) {
             console.log(`🤖 AI Web: Title "${title}" is a navigation label, not an event name — treating the title as missing`);
             title = '';
+        }
+        if (title && this.isVenueClosureNoticeTitle(title)) {
+            console.log(`🚪 CLOSED: "${title}" is a closure notice, not an event — no event`);
+            return null;
         }
         // Restore a title extraction truncated, proven by containment in the
         // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).
