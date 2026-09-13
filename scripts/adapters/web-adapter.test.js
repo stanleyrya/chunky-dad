@@ -1067,3 +1067,31 @@ test('the run page memo stops taking entries at its byte budget instead of growi
     console.log = quiet;
   }
 });
+
+test('postForm replays a synthetic feed URL once per run too', async () => {
+  const adapter = new WebAdapter();
+  const calls = [];
+  const originalFetch = global.fetch;
+  global.fetch = async (url, init) => {
+    calls.push(`${init.method} ${url}`);
+    return { ok: true, status: 200, statusText: 'OK', headers: new Map(), text: async () => '{"month":"<div/>"}' };
+  };
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const body = 'action=mec_monthly_view_load_month&mec_year=2026&mec_month=11';
+    const options = { cacheUrl: 'https://eaglela.example/wp-admin/admin-ajax.php?mec_month_feed=2026-11' };
+    const first = await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, options);
+    const second = await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, options);
+    assert.equal(calls.length, 1, 'the month feed is replayed once');
+    assert.equal(second.text, first.text);
+    assert.equal(second.ok, true);
+    // A POST with no cacheUrl names no document and is never memoized
+    await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, {});
+    await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, {});
+    assert.equal(calls.length, 3);
+  } finally {
+    global.fetch = originalFetch;
+    console.log = quiet;
+  }
+});

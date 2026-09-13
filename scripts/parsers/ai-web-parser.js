@@ -2016,7 +2016,14 @@ class AiWebParser {
             const originalHtml = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
             promptHtmlData = {
                 ...htmlData,
-                html: ocrText ? `${ocrText}\n\n${originalHtml}` : originalHtml
+                html: ocrText ? `${ocrText}\n\n${originalHtml}` : originalHtml,
+                // The page WITHOUT the OCR transcript in front of it. Once the
+                // two are concatenated nothing downstream can tell the site's
+                // own words from a reading of its pictures, and a guard that
+                // asks "does the PAGE state this?" would answer yes to
+                // whatever vision just said (audit 2026-09-13: the flyer's
+                // misread "7:10PM" corroborated itself).
+                htmlWithoutOcr: originalHtml
             };
         }
 
@@ -18786,10 +18793,19 @@ TEXT:
         const minute = parseInt(match[2], 10);
         if (hour > 23 || minute > 59) return '';
         if (minute % 15 === 0) return '';
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        if (!html) return '';
+        if (!this.getSiteOwnHtml(htmlData)) return '';
         if (this.pageStatesClockTime(htmlData, `${hour}:${String(minute).padStart(2, '0')}`)) return '';
         return `the minute :${String(minute).padStart(2, '0')} is not a printed clock and the page states no such time`;
+    }
+
+    // The SITE'S OWN document, never the OCR transcript the extraction route
+    // prepends to it (see extractSingleEvent's htmlWithoutOcr). Any guard
+    // that asks "does the page corroborate this?" must read this, or a
+    // reading of a picture answers on the page's behalf.
+    getSiteOwnHtml(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return '';
+        if (typeof htmlData.htmlWithoutOcr === 'string') return htmlData.htmlWithoutOcr;
+        return typeof htmlData.html === 'string' ? htmlData.html : '';
     }
 
     // Does the page itself print this clock, in either 12h or 24h notation?
@@ -18798,7 +18814,7 @@ TEXT:
     pageStatesClockTime(htmlData, timeValue) {
         const match = String(timeValue || '').trim().match(/^(\d{1,2}):(\d{2})/);
         if (!match) return false;
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const html = this.getSiteOwnHtml(htmlData);
         if (!html) return false;
         const hour = parseInt(match[1], 10);
         const minute = match[2];

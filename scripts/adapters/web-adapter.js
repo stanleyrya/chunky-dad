@@ -1292,11 +1292,21 @@ class WebAdapter {
     async postForm(url, body, options = {}) {
         const pageCacheConfig = this.getPageCacheConfig();
         const cacheUrl = typeof options.cacheUrl === 'string' && options.cacheUrl ? options.cacheUrl : null;
+        // One read per URL per run reaches the replayed feeds too: a cacheUrl
+        // is a stable synthetic name for one response (the MEC month grid),
+        // and two configured URLs of one site replay exactly the same months.
+        const memoKey = cacheUrl ? `POST ${cacheUrl}` : '';
+        const memoized = this.readRunPageMemo(memoKey);
+        if (memoized) {
+            console.log(`🟢 Node.js: Feed already read this run — no re-read for ${cacheUrl}`);
+            return { ok: true, status: memoized.statusCode || 200, text: memoized.html };
+        }
         const canUseCache = pageCacheConfig.enabled && cacheUrl !== null;
         if (canUseCache) {
             const cachedPage = await this.readCachedPage(cacheUrl, pageCacheConfig);
             if (cachedPage) {
                 this.logPageCacheHit(cacheUrl, cachedPage, pageCacheConfig);
+                this.writeRunPageMemo(memoKey, cachedPage);
                 return {
                     ok: true,
                     status: cachedPage.statusCode || 200,
@@ -1328,12 +1338,15 @@ class WebAdapter {
         // Same transient-status contract as postJson: 5xx/429 throw with the
         // status stamped, everything else keeps the {ok:false} shape.
         this.throwIfRetryableHttpStatus('Form POST request', url, result.status, result.text);
-        if (canUseCache && result.ok && typeof result.text === 'string' && result.text.length > 0) {
-            await this.writeCachedPage(
-                cacheUrl,
-                { html: result.text, url: cacheUrl, statusCode: result.status, headers: {} },
-                pageCacheConfig
-            );
+        if (result.ok && typeof result.text === 'string' && result.text.length > 0) {
+            if (canUseCache) {
+                await this.writeCachedPage(
+                    cacheUrl,
+                    { html: result.text, url: cacheUrl, statusCode: result.status, headers: {} },
+                    pageCacheConfig
+                );
+            }
+            this.writeRunPageMemo(memoKey, { html: result.text, url: cacheUrl, statusCode: result.status });
         }
         return result;
     }

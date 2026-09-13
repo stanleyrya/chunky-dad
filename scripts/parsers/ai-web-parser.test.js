@@ -17826,6 +17826,12 @@ test('an off-quarter minute no page states is an OCR slip, not a start time', ()
   // Fails open with nothing to check against
   assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:10', null), '');
   assert.equal(parser.getUncorroboratedOddMinuteStartReason('', pageWithNoClock), '');
+  // The OCR transcript the extraction route prepends to the page is NOT the
+  // page: a misread cannot corroborate itself.
+  assert.match(parser.getUncorroboratedOddMinuteStartReason('19:10', {
+    html: 'OCR: MEET & GREET • 7:10PM\n\n' + pageWithNoClock.html,
+    htmlWithoutOcr: pageWithNoClock.html
+  }), /not a printed clock/);
 });
 
 test('normalizeAiEvent ships the date with no time when the clock is an OCR slip, and flags what it refused', () => {

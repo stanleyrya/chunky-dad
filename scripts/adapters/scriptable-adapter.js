@@ -1947,11 +1947,21 @@ class ScriptableAdapter {
       typeof options.cacheUrl === "string" && options.cacheUrl
         ? options.cacheUrl
         : null;
+    // One read per URL per run reaches the replayed feeds too: a cacheUrl is
+    // a stable synthetic name for one response, and two configured URLs of
+    // one site replay exactly the same months.
+    const memoKey = cacheUrl ? `POST ${cacheUrl}` : "";
+    const memoized = this.readRunPageMemo(memoKey);
+    if (memoized) {
+      console.log(`📱 Scriptable: Feed already read this run — no re-read for ${cacheUrl}`);
+      return { ok: true, status: memoized.statusCode || 200, text: memoized.html };
+    }
     const canUseCache = pageCacheConfig.enabled && cacheUrl !== null;
     if (canUseCache) {
       const cachedPage = await this.readCachedPage(cacheUrl, pageCacheConfig);
       if (cachedPage) {
         this.logPageCacheHit(cacheUrl, cachedPage, pageCacheConfig);
+        this.writeRunPageMemo(memoKey, cachedPage);
         return {
           ok: true,
           status: cachedPage.statusCode || 200,
@@ -1963,17 +1973,19 @@ class ScriptableAdapter {
       this.postFormOnce(url, body, options),
     );
     if (
-      canUseCache &&
       response &&
       response.ok &&
       typeof response.text === "string" &&
       response.text.length > 0
     ) {
-      await this.writeCachedPage(
-        cacheUrl,
-        { html: response.text, url: cacheUrl, statusCode: response.status, headers: {} },
-        pageCacheConfig,
-      );
+      if (canUseCache) {
+        await this.writeCachedPage(
+          cacheUrl,
+          { html: response.text, url: cacheUrl, statusCode: response.status, headers: {} },
+          pageCacheConfig,
+        );
+      }
+      this.writeRunPageMemo(memoKey, { html: response.text, url: cacheUrl, statusCode: response.status });
     }
     return response;
   }
