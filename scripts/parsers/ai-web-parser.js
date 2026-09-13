@@ -6989,7 +6989,18 @@ class AiWebParser {
         if (hasOccurrenceLinkObservations) {
             return { shape: 'occurrence-expanded', reason: 'the site publishes per-date ?occurrence= links' };
         }
-        const ARTIFACT_FIELDS = ['url', 'website', 'ticketUrl', 'image'];
+        // `_sourceRowId` is the feed's OWN per-row identity (Tockify eid.uid,
+        // an aggregator slug, a VEVENT UID — see getJsonApiRowIdentity). A
+        // feed that gives each date its own row id has published each date
+        // individually, which is precisely what "the site did the expansion
+        // for us" means — even when the aggregator's public URLs were dropped
+        // as untrustworthy pointers. (The Bear Calendar publishes 4 dated
+        // "Bears in Excess" rows, slugs bears-in-excess-2026/-2/-3/-4; with
+        // only public artifacts in view they read as one stated series and
+        // were synthesised into a withheld recurrence, audit 2026-09-13.)
+        // An id that is stable across dates (a Tockify series uid) stays
+        // invisible here — exactly the intended asymmetry.
+        const ARTIFACT_FIELDS = ['url', 'website', 'ticketUrl', 'image', '_sourceRowId'];
         for (const field of ARTIFACT_FIELDS) {
             const valuesByDate = new Map();
             for (const member of group.members) {
@@ -7007,7 +7018,7 @@ class AiWebParser {
                         if (!entries[j].has(value)) {
                             return {
                                 shape: 'occurrence-expanded',
-                                reason: `distinct per-date ${field} artifacts across ${valuesByDate.size} dates`
+                                reason: `distinct per-date ${field === '_sourceRowId' ? 'feed row id' : field} artifacts across ${valuesByDate.size} dates`
                             };
                         }
                     }
@@ -9420,6 +9431,62 @@ class AiWebParser {
         return obj;
     }
 
+    // THE FEED'S OWN ROW IDENTITY, or '' when the payload publishes none.
+    // Every structured feed names its rows: Tockify `eid` ({ uid, seq, tid,
+    // rid }), WordPress/Tribe `id`, an aggregator `slug`, a VEVENT `UID`
+    // (carried onto the row by shared-core's icsRecordToFeedRow). Two rows
+    // wearing DIFFERENT ids are two published events by definition, which is
+    // what the dedup guard (shared-core areDistinctPublishedFeedRows) and the
+    // cadence shape classifier both need.
+    //
+    // A COMPOSITE id is reduced to its stable event part: Tockify's `eid.uid`
+    // names the series while `tid`/`rid` name the occurrence, so a weekly
+    // party's 12 rows must share one id or every expanded calendar would read
+    // as 12 different events. Occurrence discriminators are therefore dropped
+    // and only the event-level member is kept.
+    getJsonApiRowIdentity(row) {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return '';
+        const view = this.unwrapJsonApiCandidate(row);
+        const scalar = (value) => {
+            if (typeof value === 'string') return value.trim();
+            if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+            return '';
+        };
+        for (const source of [row, view]) {
+            for (const key of Object.keys(source)) {
+                const normalized = this.normalizeJsonApiKey(key);
+                if (!/^(eid|uid|guid|slug|id|event_?id|identifier)$/.test(normalized)) continue;
+                const value = source[key];
+                const direct = scalar(value);
+                if (direct) return direct;
+                // Composite id object: keep only the event-level member.
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    for (const innerKey of Object.keys(value)) {
+                        const innerNormalized = this.normalizeJsonApiKey(innerKey);
+                        if (!/^(uid|id|guid|slug)$/.test(innerNormalized)) continue;
+                        const inner = scalar(value[innerKey]);
+                        if (inner) return inner;
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    // The feed a row came from: host + path, query dropped. A paged feed
+    // (tockify's ?startms= cursor, ?page=2) is ONE feed, so its pages must key
+    // alike — the guard only refuses to fold rows of the same feed.
+    getJsonApiFeedKey(sourceUrl) {
+        const text = typeof sourceUrl === 'string' ? sourceUrl.trim() : '';
+        if (!text) return '';
+        try {
+            const parsed = new URL(text);
+            return `${parsed.host.toLowerCase().replace(/^www\./, '')}${parsed.pathname.replace(/\/+$/, '')}`;
+        } catch (_) {
+            return '';
+        }
+    }
+
     // Rich-text values: a plain string, or Tockify's { text } envelope.
     // Deliberately NOT WordPress's { rendered }: a /wp-json posts list
     // ({ title: { rendered }, date }) is not a list of events, and accepting
@@ -10416,6 +10483,15 @@ class AiWebParser {
         // semantics as the JSON-LD path).
         if (start.timezoneUnresolved || (end.date && end.timezoneUnresolved)) {
             event._timezoneUnresolved = true;
+        }
+        // The feed's own row identity (see getJsonApiRowIdentity): internal
+        // underscore fields, so never serialized to notes, never a diff field
+        // — read only by the dedup guard and the cadence shape classifier.
+        const rowId = this.getJsonApiRowIdentity(obj);
+        const feedKey = this.getJsonApiFeedKey(sourceUrl);
+        if (rowId && feedKey) {
+            event._sourceRowId = rowId;
+            event._sourceRowFeed = feedKey;
         }
         return event;
     }
@@ -23009,6 +23085,64 @@ TEXT:
     // that keep multi-venue announcements (off-site street address), bars the
     // curated data or the page's own structured data corroborates, and the
     // venue's own name (casing normalized only) untouched.
+    // LISTING HOSTS ARE NEVER VENUE IDENTITY (called by shared-core's
+    // processParser between the venue-site consensus and identity passes —
+    // the first seam where every page of the run has been crawled).
+    //
+    // _venueSitePageHost exists so that a record carrying NO place at all can
+    // still be recognised as the twin of one scraped from the same VENUE site
+    // (#1539's "Eagle Karaoke"). A listing host breaks that premise: an
+    // aggregator, a promoter's roster, or a hosted-calendar feed publishes
+    // many different bars in many different cities, so "same host" says only
+    // "same publisher". Left unqualified it read as "same venue" and folded 63
+    // Thotyssey rows (tockify.com) and 4 The Bear Calendar rows
+    // (thebearcalendar.com) into other bars' listings — audit 2026-09-13.
+    //
+    // Two page-derived signals, no site names and no config:
+    //   1. some page of the host resolved siteRole 'organizer' (the same
+    //      determination that already blocks venue-address derivation — a
+    //      site that says it is an organizer is not a venue);
+    //   2. the host's OWN events name 3+ distinct bars — the identical 3+
+    //      fan-in convention deduplicateEvents uses to demote a shared URL to
+    //      a listing page.
+    // The stamp only ever REMOVES a merge axis, so a false positive costs a
+    // fold, never an invented one.
+    applyListingHostFlags(events) {
+        const eventList = Array.isArray(events) ? events : [];
+        if (eventList.length === 0) return;
+        const consensusByHost = this.lastVenueSiteConsensus || null;
+        const LISTING_DISTINCT_BAR_FANIN = 3;
+        const barKey = (value) => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const barsByHost = new Map();
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            const host = String(event._venueSitePageHost || '').trim().toLowerCase();
+            if (!host) continue;
+            if (!barsByHost.has(host)) barsByHost.set(host, new Set());
+            const key = barKey(event.bar);
+            if (key) barsByHost.get(host).add(key);
+        }
+        const listingHosts = new Set();
+        for (const [host, bars] of barsByHost) {
+            const entry = consensusByHost ? consensusByHost[host] : null;
+            const organizerRole = Boolean(entry && entry.blocked);
+            if (!organizerRole && bars.size < LISTING_DISTINCT_BAR_FANIN) continue;
+            listingHosts.add(host);
+            const reason = organizerRole
+                ? 'a page of the host resolved siteRole organizer'
+                : `its events name ${bars.size} distinct bars`;
+            console.log(`🏷️ LISTING HOST: ${host} is a listing host (${reason}) — the shared page host is not venue identity for dedup`);
+        }
+        if (listingHosts.size === 0) return;
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            const host = String(event._venueSitePageHost || '').trim().toLowerCase();
+            if (host && listingHosts.has(host)) event._venueSiteHostIsListing = true;
+        }
+    }
+
     applyVenueSiteIdentityCorrections(events, cityConfig = null) {
         const consensusByHost = this.lastVenueSiteConsensus;
         this.lastVenueSiteConsensus = null;
