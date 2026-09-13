@@ -5202,12 +5202,10 @@ class AiWebParser {
             }
             splitDays++;
             const daySource = segment && typeof segment.html === 'string' && segment.html ? segment.html : String(html || '');
-            for (const item of items) {
-                const itemHtml = daySource
-                    ? (this.extractRawHtmlForMultiEventSegment(daySource, item.ownLines) || daySource)
-                    : item.lines.join('\n');
-                output.push({ ...segment, lines: item.lines, html: itemHtml });
-            }
+            const itemHtmls = this.sliceDayHtmlForProgrammeItems(daySource, items);
+            items.forEach((item, index) => {
+                output.push({ ...segment, lines: item.lines, html: itemHtmls[index] || item.lines.join('\n') });
+            });
         }
         if (splitDays > 0) {
             console.log(`🤖 AI Web: Day-programme split: ${splitDays} date-headed day window(s) → ${output.length - (input.length - splitDays)} activity window(s), one per timed line (a day section lists events, it is not one event)`);
@@ -5219,6 +5217,52 @@ class AiWebParser {
             this.recordMultiEventSegmentationStats(Math.max(recordedDated, output.length), 'text splitter + day-programme split');
         }
         return output;
+    }
+
+    // The raw HTML each activity window keeps, cut from the day section's own
+    // HTML at the activity boundaries: item i runs from where its first line
+    // sits to where the NEXT activity's first line starts (item 1 also keeps
+    // everything above it — the day heading, its images and its untimed
+    // preamble). The prompt is built from this HTML, so handing every item the
+    // whole day's markup would show the model all of the day's activities and
+    // invite it to answer with a neighbour's — the fence-post failure that
+    // blends events. Items 2..n get the heading text prepended so the day is
+    // still named in what the model reads. Any item whose first line cannot be
+    // located falls back to the whole day (never less content than before).
+    sliceDayHtmlForProgrammeItems(dayHtml, items) {
+        const source = String(dayHtml || '');
+        const list = Array.isArray(items) ? items : [];
+        if (!source || list.length === 0) return list.map(() => source);
+        const positions = new Map();
+        for (const record of this.extractBodyPartRecords(source)) {
+            const key = this.datedContentCoverageKey(record && record.text);
+            if (key && !positions.has(key)) positions.set(key, record);
+        }
+        const starts = list.map(item => {
+            const firstOwnLine = Array.isArray(item.ownLines) ? item.ownLines[0] : '';
+            const record = positions.get(this.datedContentCoverageKey(firstOwnLine));
+            return record && Number.isFinite(record.rawStart) ? record.rawStart : null;
+        });
+        // Boundaries must be found and in document order to cut markup. When
+        // they are not — most often because the day window's "html" is the
+        // plain-text fallback extractRawHtmlForMultiEventSegment returns when
+        // it cannot locate its lines, where every record starts at 0 — the
+        // item's own LINES are the content. Only a day source that really is
+        // markup falls all the way back to the whole day, so no window ever
+        // ends up with less than it has today.
+        const boundariesUsable = starts.every((start, index) => start !== null
+            && (index === 0 || start > starts[index - 1]));
+        if (!boundariesUsable) {
+            const sourceIsMarkup = /<[a-z!/]/i.test(source);
+            return list.map(item => (sourceIsMarkup ? source : item.lines.join('\n')));
+        }
+        const header = list[0] && Array.isArray(list[0].lines) ? String(list[0].lines[0] || '') : '';
+        return list.map((item, index) => {
+            const from = index === 0 ? 0 : starts[index];
+            const to = index + 1 < starts.length ? starts[index + 1] : source.length;
+            const slice = source.slice(from, to);
+            return index === 0 || !header ? slice : `${header}\n${slice}`;
+        });
     }
 
     // The per-activity line groups of one day window, or null when the window

@@ -16918,6 +16918,45 @@ test('windows that are not multi-activity day sections are left exactly as they 
   assert.equal(split[0], singleListing, 'untouched windows are the SAME objects');
 });
 
+test('each activity window keeps only its own slice of the day — never the neighbours\' text', () => {
+  const parser = createParser();
+  const dayHtml = `<div class="day"><h3>JUEVES - 10</h3>
+    <p>13h: BEAR POOL PARTY en una lujosa villa en las colinas de Sitges</p>
+    <img src="/flyer-cruise.jpg" alt="cruise">
+    <p>20:30h a 03:00h BEARS on CRUISE Special Night con Dj James Munich</p>
+    <p>01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal</p></div>`;
+  const day = {
+    lines: ['JUEVES - 10', '13h: BEAR POOL PARTY en una lujosa villa en las colinas de Sitges',
+      '20:30h a 03:00h BEARS on CRUISE Special Night con Dj James Munich',
+      '01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal'],
+    html: dayHtml
+  };
+  const originalLog = console.log;
+  console.log = () => {};
+  let split;
+  try { split = parser.splitDayProgrammeSegments([day]); } finally { console.log = originalLog; }
+  assert.equal(split.length, 3);
+  const textOf = (segment) => parser.extractBodyParts(segment.html).join(' | ');
+  assert.match(textOf(split[0]), /BEAR POOL PARTY/);
+  assert.ok(!/BEARS on CRUISE/.test(textOf(split[0])), 'window 1 must not carry window 2 (fence-post blending)');
+  assert.match(textOf(split[1]), /BEARS on CRUISE/);
+  assert.ok(!/CAPITÁN/.test(textOf(split[1])));
+  assert.match(textOf(split[2]), /CAPITÁN/);
+  assert.ok(!/BEAR POOL PARTY/.test(textOf(split[2])));
+  // The day is still named in every window's content, and the flyer sitting
+  // between two activities stays with the one it precedes.
+  assert.ok(split.every(segment => /JUEVES - 10/.test(textOf(segment))));
+  assert.match(split[1].html, /flyer-cruise\.jpg/);
+
+  // A day whose window has no markup (the text fallback) slices by line.
+  const textDay = { lines: day.lines, html: day.lines.join('\n') };
+  console.log = () => {};
+  let textSplit;
+  try { textSplit = parser.splitDayProgrammeSegments([textDay]); } finally { console.log = originalLog; }
+  assert.equal(textSplit.length, 3);
+  assert.ok(!/CAPITÁN/.test(textSplit[1].html));
+});
+
 test('activityTextAfterTimePrefix strips only the leading clock, and a time-only line names nothing', () => {
   const parser = createParser();
   assert.equal(parser.activityTextAfterTimePrefix('20:30h a 03h Especial NOCHE BLANCA en Bear-Village'), 'Especial NOCHE BLANCA en Bear-Village');
