@@ -12725,14 +12725,20 @@ test('card-aligned segments survive when a card link and its date are sibling el
   const parser = createParser();
   const sourceUrl = 'https://eagle.example/events/';
 
-  // The failure this fixes: the container scan cannot see a whole card here.
+  // The failure this fixes: no container encloses a whole card here. The
+  // tooltip body does hold the title and the times, but the card's own
+  // hyperlink is its SIBLING, outside every container — so a container window
+  // can never recover the link, and the repeated-anchor path is what has to
+  // carry this shape.
   const containerGroups = parser.extractRepeatedMultiEventStructureGroups(SIBLING_CARD_LISTING_HTML)
     .filter(group => String(group.signature || '').startsWith('container:'));
-  const containerSegments = containerGroups
-    .map(group => parser.buildSegmentsFromStructureGroup(group))
-    .find(segments => segments.length >= 2);
-  assert.equal(containerSegments, undefined,
-    'no single container encloses one card on this shape — the repeated-anchor path is what has to carry it');
+  containerGroups.forEach(group => {
+    parser.buildSegmentsFromStructureGroup(group).forEach(segment => {
+      const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, sourceUrl);
+      assert.ok(!resourceLines.some(line => line.includes('/events/')),
+        `no container window can carry a card's own link on this shape, got ${JSON.stringify(resourceLines)}`);
+    });
+  });
 
   const segments = parser.buildStructuredMultiEventSegments(SIBLING_CARD_LISTING_HTML);
   assert.equal(segments.length, 3,
@@ -12761,6 +12767,141 @@ test('card-aligned segments survive when a card link and its date are sibling el
       assert.ok(!segment.lines.includes(end), `segment ${other + 1} must not carry card ${index + 1}'s end`);
     });
   });
+});
+
+// ---------------------------------------------------------------------------
+// The repeated card element IS the window.
+//
+// beefdip.com/planned-events (run 20260913): 21 <div class="event-card">, each
+// holding an <h3> title, a date/time line and a flyer, produced ZERO structured
+// groups. The page fell through to the flat text splitter, which opens a window
+// at every date line, so each card's title landed in the PREVIOUS window and
+// the run produced chimeras ("DINNER UNDER THE STARS" at the previous card's
+// noon, "Wild Trek ATV Tours" — a venue — as a title).
+// ---------------------------------------------------------------------------
+
+const SINGLE_CLASS_CARD_LISTING_HTML = `
+  <html><body>
+    <div class="accordion-panel"><a class="accordion-title">MONDAY JANUARY 25, 2027</a>
+      <div class="event-card"><div class="event-info">
+        <h3 class="event-title">FOAM POOL PARTY</h3>
+        <div class="event-time">Mon Jan 25 • Noon–6PM • Blue Chairs</div>
+        <p>Dive into waves of beats and bubbles at the poolside playground.</p>
+        <div class="event-badges">Pool Party</div></div>
+        <div class="event-flyer"><img src="https://beef.example/foam.webp" /></div></div>
+      <div class="event-card"><div class="event-info">
+        <h3 class="event-title">DINNER UNDER THE STARS</h3>
+        <div class="event-time">Mon Jan 25 • 7PM–9PM • The Tryst Hotel Restaurant</div>
+        <p>Take a breather and savor flavors before going back out.</p>
+        <div class="event-badges">OPT-IN Event</div></div>
+        <div class="event-flyer"><img src="https://beef.example/dinner.webp" /></div></div>
+      <div class="event-card"><div class="event-info">
+        <h3 class="event-title">FLOWER POWER DISCO</h3>
+        <div class="event-time">Mon Jan 25 • 10PM–5AM • CC Slaughters</div>
+        <p>Step into glitter, sequins, and pure disco heat until dawn.</p>
+        <div class="event-badges">Dance Party</div></div>
+        <div class="event-flyer"><img src="https://beef.example/disco.webp" /></div></div>
+    </div>
+  </body></html>`;
+
+test('a card whose only class is "event-card" is still a card', () => {
+  const parser = createParser();
+
+  // The gate that guards the signature has to agree with the signature: a
+  // quote is a token boundary, so `class="event-card"` is as much a card as
+  // `class="wrap event-card x"`.
+  assert.equal(parser.hasContainerStructureHint(' class="event-card"'), true);
+  assert.equal(parser.hasContainerStructureHint(' class="wrap event-card x"'), true);
+  assert.equal(parser.hasContainerStructureHint(' class="accordion-panel"'), false);
+
+  const groups = parser.extractRepeatedMultiEventStructureGroups(SINGLE_CLASS_CARD_LISTING_HTML);
+  const cardGroup = groups.find(group => group.signature === 'container:div:card.event');
+  assert.ok(cardGroup, `the repeated card element must form a group: ${JSON.stringify(groups.map(g => g.signature))}`);
+  assert.equal(cardGroup.entries.length, 3, 'one entry per card');
+
+  // Each entry is the WHOLE card — the old non-greedy scan stopped at the
+  // inner </div> and lost the flyer, the description and the badges.
+  cardGroup.entries.forEach(entry => {
+    assert.ok(/event-flyer/.test(entry.html), `each entry spans its card's flyer: ${entry.html.slice(0, 120)}`);
+  });
+
+  const segments = parser.buildStructuredMultiEventSegments(SINGLE_CLASS_CARD_LISTING_HTML);
+  assert.equal(segments.length, 3, `one window per card, got ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+  const expected = [
+    ['FOAM POOL PARTY', 'Mon Jan 25 • Noon–6PM • Blue Chairs'],
+    ['DINNER UNDER THE STARS', 'Mon Jan 25 • 7PM–9PM • The Tryst Hotel Restaurant'],
+    ['FLOWER POWER DISCO', 'Mon Jan 25 • 10PM–5AM • CC Slaughters']
+  ];
+  segments.forEach((segment, index) => {
+    const [title, when] = expected[index];
+    assert.equal(segment.lines[0], title, `window ${index + 1} opens on its own title`);
+    assert.ok(segment.lines.includes(when), `window ${index + 1} keeps its OWN time line: ${JSON.stringify(segment.lines)}`);
+    // The chimera this prevents: a neighbour's clock inside this window.
+    expected.forEach(([, otherWhen], other) => {
+      if (other === index) return;
+      assert.ok(!segment.lines.includes(otherWhen),
+        `window ${index + 1} must not carry card ${other + 1}'s time line`);
+    });
+  });
+});
+
+test('one card, one window: an entry naming itself once is never split at its own date line', () => {
+  const parser = createParser();
+  // The eaglebarwm.com/calendar2 shape: the card's day badge comes FIRST, the
+  // title second, its date line third. The text splitter opens a window at the
+  // date line, which strands the title in the half-window above it.
+  const cardHtml =
+    '<article class="event-card"><div class="callout_month">September</div>' +
+    '<div class="callout_weekDay">Sat</div>' +
+    '<h2 class="entry-title">DRENCH</h2>' +
+    '<span class="decm_date">Date Sep 12</span><span class="decm_time">Time 9:00 pm</span>' +
+    '<p>The monthly wet night takes over the whole bar and the patio.</p></article>';
+  assert.equal(parser.countMultiEventEntryTitleElements(cardHtml), 1);
+  assert.equal(parser.countMultiEventEntryTitleElements(cardHtml + cardHtml), 2);
+
+  const group = {
+    signature: 'container:article:card.event',
+    entries: [
+      { html: cardHtml, start: 0, end: cardHtml.length, kind: 'container' },
+      { html: cardHtml.replace(/DRENCH/, 'ONYX BAR NIGHT').replace(/Sep 12/g, 'Sep 13'), start: cardHtml.length, end: cardHtml.length * 2, kind: 'container' }
+    ],
+    eventLikeCount: 2
+  };
+  const result = parser.segmentStructureGroup(group);
+  assert.equal(result.segments.length, 2, `one window per card, got ${JSON.stringify(result.segments.map(s => s.lines))}`);
+  assert.ok(result.segments[0].lines.includes('DRENCH'), JSON.stringify(result.segments[0].lines));
+  assert.ok(result.segments[0].lines.some(line => line.includes('Date Sep 12')), JSON.stringify(result.segments[0].lines));
+});
+
+test('a group keeps the outermost entry of a nest, unless the outer one is only scaffolding', () => {
+  const parser = createParser();
+  const like = '<h3>Bear Night</h3><p>Saturday, October 4, 2026</p><p>A big night of music and dancing at the main bar downtown.</p>';
+  const notLike = '<span>&nbsp;</span>';
+
+  // thedallaseagle.com/events: an event-like card nesting event-like parts —
+  // the parts are the card's insides, not three more events.
+  const outerIsCard = [
+    { html: `<div>${like}</div>`, start: 0, end: 100, kind: 'container' },
+    { html: `<div>${like}</div>`, start: 10, end: 60, kind: 'container' },
+    { html: `<div>${like}</div>`, start: 200, end: 300, kind: 'container' }
+  ];
+  assert.deepEqual(
+    parser.keepOutermostGroupEntries(outerIsCard).map(entry => entry.start),
+    [0, 200],
+    'a card swallows its own insides');
+
+  // powerhousebar.com/events: a layout wrapper sharing the card's class. The
+  // wrapper is not the card — deleting the card in its favour would delete
+  // the only entry carrying the title and the date.
+  const outerIsWrapper = [
+    { html: `<div>${notLike}</div>`, start: 0, end: 100, kind: 'container' },
+    { html: `<div>${like}</div>`, start: 10, end: 60, kind: 'container' },
+    { html: `<div>${like}</div>`, start: 200, end: 300, kind: 'container' }
+  ];
+  assert.deepEqual(
+    parser.keepOutermostGroupEntries(outerIsWrapper).map(entry => entry.start),
+    [10, 200],
+    'the card takes the scaffolding wrapper\'s place');
 });
 
 // A repeated anchor only counts as a listing when it carries its own listing

@@ -76,6 +76,10 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
+// Class/data-attribute word parts that mark a repeated element as a candidate
+// event card. Shared by hasContainerStructureHint and getMultiEventStructureSignature
+// so the gate and the signature it guards always agree.
+const MULTI_EVENT_STRUCTURE_HINT_PARTS = /^(event|events|card|item|poster|photo|media|gallery|listing|list|slide|repeater|image|img)$/;
 const MULTI_EVENT_MISS_PROBE_ABORT = 'MULTI_EVENT_MISS_PROBE_ABORT';
 
 // Evidence-pointer rescue (LOG-ONLY observation phase): the extraction model
@@ -2900,10 +2904,21 @@ class AiWebParser {
             const bounds = this.findMultiEventSegmentTextBounds(html, segment.lines, records);
             return bounds && Number.isFinite(bounds.rawStart) ? bounds.rawStart : Number.POSITIVE_INFINITY;
         };
-        const merged = structured.map((segment, index) => ({ segment, position: positionOf(segment), index }))
+        let merged = structured.map((segment, index) => ({ segment, position: positionOf(segment), index }))
             .concat(unclaimed.map((segment, index) => ({ segment, position: positionOf(segment), index: structured.length + index })))
             .sort((a, b) => (a.position - b.position) || (a.index - b.index))
             .map(entry => entry.segment);
+
+        // The safety ceiling bounds SEGMENT CREATION, and this audit creates
+        // segments — a page already at the ceiling would otherwise leave it
+        // through the back door. Same no-silent-caps contract as the loop
+        // that produced the structured windows.
+        const segmentationCeiling = this.resolveMultiEventSegmentationCeiling();
+        if (merged.length > segmentationCeiling) {
+            this.logMultiEventSegmentBudget(segmentationCeiling, merged.length, 'structure group + coverage audit');
+            console.log(`🤖 AI Web: Segment cap reached (${segmentationCeiling}) — later content on this page was not segmented and will not produce events`);
+            merged = merged.slice(0, segmentationCeiling);
+        }
 
         const stats = this.lastMultiEventSegmentationStats;
         const recordedDated = stats && Number.isFinite(Number(stats.datedCandidateCount)) ? Number(stats.datedCandidateCount) : 0;
@@ -3497,44 +3512,46 @@ class AiWebParser {
             grouped.get(signature).push(entry);
         };
 
-        const containerPatterns = [
-            /<(section|article|li)\b([^>]*)>[\s\S]*?<\/\1>/gi,
-            /<(div)\b([^>]*)>[\s\S]*?<\/\1>/gi
-        ];
-
-        for (const pattern of containerPatterns) {
-            pattern.lastIndex = 0;
-            // Oversized containers are discarded as candidates, but the regex
-            // has already advanced past their ENTIRE body — so a page-level
-            // wrapper <section> would hide every per-card <article> inside it
-            // (MEC-style listings wrap all cards in one 80KB+ section, and the
-            // cards were never scanned: the winning group fell through to
-            // image-anchor fence-post slices that leak each neighbor's
-            // JSON-LD). Resume the scan just past the oversized container's
-            // opening tag instead, so its children get their own turn.
-            // lastIndex only ever moves forward, and the resume count is
-            // capped so pathologically nested markup stays linear.
-            let oversizedResumes = 0;
-            const maxOversizedResumes = 200;
+        // Scan OPENING TAGS only, and take each element's extent from a
+        // balanced-tag index built in one pass per tag name.
+        //
+        // The old scan ran `<tag ...>[\s\S]*?</tag>` over the page, which got
+        // two things wrong at once. A card that nests an element of its own
+        // name ended at the INNER close tag, so `<div class="event-card">
+        // <div class="event-info"><h3>TITLE</h3><div class="event-time">…</div>`
+        // lost its flyer, its description and its badges. And every match —
+        // including the ones immediately rejected for being oversized or for
+        // carrying no structure hint — had already advanced the regex past its
+        // whole body, so cards sitting inside a rejected wrapper were never
+        // offered as candidates at all (8 of the 21 event-cards on
+        // beefdip.com/planned-events fell into those gaps, and the surviving
+        // group lost to a fence-post anchor group whose every window carried
+        // the NEXT card's title). The oversized-resume hack patched one half
+        // of one of those two symptoms.
+        //
+        // An opening-tag scan consumes nothing, so a rejected wrapper can no
+        // longer hide its children, and the balanced index gives each element
+        // its real extent. Elements the page never closes have no balanced end
+        // and keep exactly the old non-greedy slice.
+        for (const tagName of ['section', 'article', 'li', 'div']) {
+            const ranges = this.buildContainerElementRanges(source, tagName);
+            const openPattern = new RegExp(`<(${tagName})\\b([^>]*)>`, 'gi');
             let match;
-            while ((match = pattern.exec(source)) !== null) {
-                const tagName = String(match[1] || '').toLowerCase();
+            while ((match = openPattern.exec(source)) !== null) {
                 const attrs = match[2] || '';
-                if (tagName === 'div' && !this.hasMultiEventStructureHint(attrs)) continue;
-                const containerHtml = match[0];
-                if (containerHtml.length > this.extractionLimits.multiEventMaxSegmentChars * 4) {
-                    const openTagEnd = containerHtml.indexOf('>');
-                    if (openTagEnd >= 0 && oversizedResumes < maxOversizedResumes) {
-                        oversizedResumes++;
-                        pattern.lastIndex = match.index + openTagEnd + 1;
-                    }
-                    continue;
-                }
+                if (/\/\s*$/.test(attrs)) continue;
+                if (tagName === 'div' && !this.hasContainerStructureHint(attrs)) continue;
+                const end = ranges.has(match.index)
+                    ? ranges.get(match.index)
+                    : this.findUnbalancedContainerEnd(source, match.index, tagName);
+                if (!(end > match.index)) continue;
+                const containerHtml = source.slice(match.index, end);
+                if (containerHtml.length > this.extractionLimits.multiEventMaxSegmentChars * 4) continue;
                 const signature = this.getMultiEventStructureSignature(tagName, attrs);
                 addCandidate(`container:${signature}`, {
                     html: containerHtml,
                     start: match.index,
-                    end: match.index + containerHtml.length,
+                    end,
                     kind: 'container'
                 });
             }
@@ -3545,19 +3562,125 @@ class AiWebParser {
         }
 
         return Array.from(grouped.entries())
-            .map(([signature, entries]) => ({
-                signature,
-                entries: entries.sort((a, b) => a.start - b.start),
-                eventLikeCount: entries.filter(entry => this.isMultiEventLikeHtml(entry.html)).length
-            }))
+            .map(([signature, entries]) => {
+                const outermost = this.keepOutermostGroupEntries(entries);
+                return {
+                    signature,
+                    entries: outermost,
+                    eventLikeCount: outermost.filter(entry => this.isMultiEventLikeHtml(entry.html)).length
+                };
+            })
             .filter(group => group.entries.length >= 2 && group.eventLikeCount >= 2)
             .sort((a, b) => {
+                // A card group is PREDOMINANTLY events; a scaffolding group
+                // merely contains them. Two real listings make the difference
+                // concrete: 3dollarbillbk.com/rsvp marks up 81 <article>
+                // cards, every one of them event-like, and also nests 271
+                // <li> items of which 82 are (one wrapper per card, plus the
+                // mini-calendar's day cells); massbearsandcubs.org/events is
+                // 52 of 52 <article> against 52 of 192 <li>. Ranking on raw
+                // event-like count alone hands both pages to the <li> group —
+                // by a single entry on the first — and they segment into
+                // windows holding a bare date and a clock time with no title
+                // anywhere (96 windows for 30 cards, 27 for 52).
+                //
+                // So a group whose entries are mostly NOT events ranks behind
+                // every group that is, however many events it happens to
+                // touch. Among groups of the same kind the old order stands,
+                // and a page whose only groups are scaffolding still gets the
+                // best of them.
+                const aIsCards = a.eventLikeCount * 2 >= a.entries.length;
+                const bIsCards = b.eventLikeCount * 2 >= b.entries.length;
+                if (aIsCards !== bIsCards) return aIsCards ? -1 : 1;
                 if (b.eventLikeCount !== a.eventLikeCount) return b.eventLikeCount - a.eventLikeCount;
                 if (b.entries.length !== a.entries.length) return b.entries.length - a.entries.length;
                 return a.entries[0].start - b.entries[0].start;
             });
     }
 
+
+    // How many times a card element names something: heading tags, plus the
+    // elements a page marks as a title without one. Two or more means the
+    // slice really does hold more than one thing; one or zero means it is a
+    // single card, whatever its text looks like line by line.
+    countMultiEventEntryTitleElements(html) {
+        const source = String(html || '');
+        if (!source) return 0;
+        const headings = source.match(/<h[1-6]\b[^>]*>/gi) || [];
+        const titled = source.match(/<[a-z0-9]+\b[^>]*\b(?:class|data-hook|data-testid)\s*=\s*["'][^"']*\btitle\b[^"']*["'][^>]*>/gi) || [];
+        // A heading that is itself the title-classed element must not count
+        // twice, so take whichever signal names more.
+        return Math.max(headings.length, titled.length);
+    }
+
+    // Sibling cards, never a card and its own insides. One event card is never
+    // inside another, so an entry contained by another entry of the SAME group
+    // is a part of it — the card's title block, its description, its badge row
+    // — and every such part becomes a second, third, fourth window over text a
+    // real window already owns. thedallaseagle.com/events is the worked case:
+    // its event divs nest three deep, so the group carried 175 entries for 29
+    // cards and segmented into 73 windows, one per fragment. Keep the
+    // outermost entry of each nest and the group is the card row it was meant
+    // to be. Groups whose entries are already siblings (every fence-post
+    // group, every flat card list) come back unchanged.
+    keepOutermostGroupEntries(entries) {
+        const sorted = (Array.isArray(entries) ? entries.slice() : [])
+            .sort((a, b) => (a.start - b.start) || (b.end - a.end));
+        const kept = [];
+        // Only an entry that reads as an event can stand in for its insides.
+        // Layout wrappers share a class with the card they wrap
+        // (powerhousebar.com/events: an <div class="…__event-wrapper
+        // tribe-common-g-col"> around a <div class="…__event-details
+        // tribe-common-g-col">) and the wrapper's own scanned text is markup
+        // noise, so treating it as the card would delete the only entry that
+        // carries the title and the date.
+        let cover = null;
+        let coverIsEvent = false;
+        for (const entry of sorted) {
+            const inside = cover && entry.start >= cover.start && entry.end <= cover.end;
+            if (inside && coverIsEvent) continue;
+            const isEvent = this.isMultiEventLikeHtml(entry.html);
+            if (inside) {
+                // The kept ancestor was scaffolding; this descendant is the
+                // card. Take its place rather than sitting beside it.
+                if (!isEvent) continue;
+                kept.pop();
+            }
+            kept.push(entry);
+            cover = entry;
+            coverIsEvent = isEvent;
+        }
+        return kept;
+    }
+
+    // Maps every balanced opening tag of `tagName` to the offset just past its
+    // matching close tag, in one linear pass over the page. Opens the markup
+    // never closes are simply absent from the map.
+    buildContainerElementRanges(source, tagName) {
+        const ranges = new Map();
+        const pattern = new RegExp(`<(/?)${tagName}\\b([^>]*)>`, 'gi');
+        const openStack = [];
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            if (match[1] === '/') {
+                const openStart = openStack.pop();
+                if (openStart !== undefined) ranges.set(openStart, match.index + match[0].length);
+            } else if (!/\/\s*$/.test(match[2] || '')) {
+                openStack.push(match.index);
+            }
+        }
+        return ranges;
+    }
+
+    // Fallback for an opening tag the page never balances (an unclosed <li> is
+    // the usual one): keep exactly what the old non-greedy regex produced —
+    // the slice up to the next close tag of the same name, if there is one.
+    findUnbalancedContainerEnd(source, start, tagName) {
+        const pattern = new RegExp(`</${tagName}\\s*>`, 'gi');
+        pattern.lastIndex = start;
+        const match = pattern.exec(source);
+        return match ? match.index + match[0].length : 0;
+    }
 
     buildSegmentsFromStructureGroup(group, options = {}) {
         return this.segmentStructureGroup(group, options).segments;
@@ -3657,7 +3780,19 @@ class AiWebParser {
             const isIdentifiedUnit = identifiedUnits[entryIndex] === true;
             if (isIdentifiedUnit) identifiedUnitCount++;
 
-            const splitSegments = this.buildTextMultiEventSegmentsFromLines(normalizedLines, entry.html);
+            // One card, one window. The text splitter opens a new window at a
+            // date line, which is right for a wall of prose and wrong INSIDE a
+            // card the page already bounded: a card reading
+            // "12 / September / Sat / DRENCH / Date Sep 12 Time 9:00 pm /
+            // More Info" splits at its own date line and DRENCH — the card's
+            // <h2> — is left behind in the half-window above, so every title
+            // ends up filed against the previous event (eaglebarwm.com/
+            // calendar2: 10 clean cards became 16 shifted windows). A card
+            // names itself exactly once, so when the entry holds at most one
+            // title element there is nothing inside it to split apart.
+            const splitSegments = this.countMultiEventEntryTitleElements(entry.html) > 1
+                ? this.buildTextMultiEventSegmentsFromLines(normalizedLines, entry.html)
+                : [];
             if (splitSegments.length > 1) {
                 // Split windows are slices of one entry, not the entry's own
                 // identity — the floor still applies to each of them.
@@ -3827,13 +3962,32 @@ class AiWebParser {
         return /(?:^|[\s_-])(event|events|card|item|poster|photo|media|gallery|listing|list|slide|repeater|image|img)(?:[\s_-]|$)/i.test(text);
     }
 
+    // The <div> gate for the container scan. It guards a SIGNATURE, so it has
+    // to agree with the signature builder — which tokenizes class/data-hook/
+    // role values and splits each token on - and _. The raw-attribute scan
+    // above does not: a quote is not a word boundary there, so a card whose
+    // only class is `class="event-card"` was rejected outright ("event" sits
+    // against a quote, "card" against a quote) while `class="wrap event-card
+    // x"` passed. beefdip.com/planned-events marks up all 21 of its cards the
+    // first way, so the page produced ZERO structured groups and fell through
+    // to the flat text splitter. Tokenize first, exactly like the signature
+    // does; markup carrying its hint elsewhere (id=, aria-*) still gets the
+    // raw scan as a fallback.
+    hasContainerStructureHint(attrs) {
+        const tokens = this.extractStructureTokens(attrs);
+        if (tokens.some(token => token.split(/[-_]+/).some(part => MULTI_EVENT_STRUCTURE_HINT_PARTS.test(part)))) {
+            return true;
+        }
+        return this.hasMultiEventStructureHint(attrs);
+    }
+
     getMultiEventStructureSignature(tagName, attrs) {
         const tag = String(tagName || '').toLowerCase() || 'node';
         const tokens = this.extractStructureTokens(attrs);
         const semanticParts = new Set();
         tokens.forEach(token => {
             token.split(/[-_]+/).forEach(part => {
-                if (/^(event|events|card|item|poster|photo|media|gallery|listing|list|slide|repeater|image|img)$/.test(part)) {
+                if (MULTI_EVENT_STRUCTURE_HINT_PARTS.test(part)) {
                     semanticParts.add(part);
                 }
             });
