@@ -3017,10 +3017,15 @@ class AiWebParser {
             if (!key || seenCompactKeys.has(key)) continue;
             seenCompactKeys.add(key);
             if (structuredKeySets.some(keySet => keySet.has(key))) continue;
-            unclaimedCompact.push({
-                lines: [line],
-                html: this.extractRawHtmlForMultiEventSegment(html, [line]) || line
-            });
+            const rowHtml = this.extractRawHtmlForMultiEventSegment(html, [line]) || line;
+            // A row with a date and a name but no time and no link is a
+            // fragment of an announcement, not a listing (owner, 2026-09-13:
+            // furball.nyc's ticker "isn't enough info and it will make the
+            // website look terrible") — only a timed or linked row is added.
+            const statesTime = /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}:\d{2}\b/i.test(line);
+            const carriesLink = /<a\b[^>]*\bhref=/i.test(rowHtml);
+            if (!statesTime && !carriesLink) continue;
+            unclaimedCompact.push({ lines: [line], html: rowHtml });
         }
         if (unclaimed.length === 0 && unclaimedCompact.length === 0) return structured;
 
@@ -6909,9 +6914,15 @@ class AiWebParser {
         // The map pin (mapLat/mapLng) is where the venue IS; markerLat/Lng is
         // the template's default marker (massbearsandcubs: every event carried
         // the New York default marker beside a Boston map pin, audit 2026-09-13).
+        // A location with no address at all is the template's untouched map,
+        // not a place: "Bear Pride Cruise 2026" (massbearsandcubs, run
+        // 20260913-152123) carried only 40.7207559, -74.0007613 — Squarespace's
+        // own New York default — and geocoded to 443–459 Broadway while its
+        // flyer says 60 Rowes Wharf, Boston.
         const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
-        const lat = pickCoordinate(location.mapLat, location.markerLat);
-        const lng = pickCoordinate(location.mapLng, location.markerLng);
+        const statesPlace = Boolean(clean(location.addressTitle) || addressParts.length > 0);
+        const lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
+        const lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
         if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
             event.location = `${lat}, ${lng}`;
         }
@@ -20040,6 +20051,63 @@ TEXT:
     // "doors 8:05" keeps its 8:05, a quarter-hour minute is never questioned,
     // and a run with no page HTML in hand changes nothing. Returns a reason
     // string when the time must not be adopted, '' otherwise.
+    // THE PAGE'S PRINTED START OUTRANKS A FLYER READING. bearracuda.com's
+    // Portland 17 page prints "Doors Open at 9:00 pm" and "Show at 11pm";
+    // its flyer's OCR reads "SHOW AT 1PM" (the 11 lost a digit), and
+    // extraction took 13:00 (run 20260913-150312). When the extracted start
+    // appears only in the OCR transcript, appears nowhere in the page's own
+    // printed text, and the page prints exactly one doors/start/party-
+    // labelled clock, that clock is the start. Returns "HH:MM" or ''.
+    getPagePrintedStartOverFlyerReading(startTimeRaw, htmlData) {
+        const startMatch = String(startTimeRaw || '').trim().match(/^(\d{2}):(\d{2})$/);
+        if (!startMatch) return '';
+        const segmentText = htmlData && typeof htmlData.segmentText === 'string' ? htmlData.segmentText.trim() : '';
+        const source = segmentText || (htmlData && typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (!source) return '';
+        const ocrText = this.splitOcrAndPageChunks(source)
+            .filter(chunk => chunk && chunk.corpus === 'ocr')
+            .map(chunk => chunk.text)
+            .join('\n');
+        if (!ocrText.trim() || !flyerOcrStatesClockTime(ocrText, startMatch[0])) return '';
+        const statements = this.splitHtmlIntoPrintedStatements(this.getDoorsVsPartyCorpus(htmlData));
+        if (statements.length === 0) return '';
+        const toMinutes = (hourText, minuteText, meridiem) => {
+            let hour = parseInt(hourText, 10);
+            const minute = minuteText ? parseInt(minuteText, 10) : 0;
+            if (meridiem) {
+                const ampm = meridiem.toLowerCase().replace(/\./g, '');
+                if (hour < 1 || hour > 12) return null;
+                if (ampm === 'pm' && hour !== 12) hour += 12;
+                if (ampm === 'am' && hour === 12) hour = 0;
+            }
+            return hour > 23 || minute > 59 ? null : (hour * 60) + minute;
+        };
+        const clock = '(\\d{1,2})(?::(\\d{2}))?\\s*([ap]\\.?m)\\b|\\b(\\d{1,2}):(\\d{2})\\b';
+        const readTimes = (text, prefix) => {
+            const found = new Set();
+            const re = new RegExp(`${prefix}(?:${clock})`, 'gi');
+            let match;
+            while ((match = re.exec(text)) !== null) {
+                const minutes = match[3]
+                    ? toMinutes(match[1], match[2], match[3])
+                    : toMinutes(match[4], match[5], '');
+                if (minutes !== null) found.add(minutes);
+            }
+            return found;
+        };
+        const extracted = (parseInt(startMatch[1], 10) * 60) + parseInt(startMatch[2], 10);
+        const startLabel = '\\b(?:doors?(?:\\s+open(?:s|ing)?)?|part(?:y|ies)|event|starts?|begins?)\\s*(?:[:@\\-–]|at\\b|from\\b)?\\s*';
+        const labelled = new Set();
+        for (const statement of statements) {
+            if (readTimes(statement, '').has(extracted)) return '';
+            for (const minutes of readTimes(statement, startLabel)) labelled.add(minutes);
+        }
+        if (labelled.size !== 1) return '';
+        const [minutes] = [...labelled];
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+    }
+
     getUncorroboratedOddMinuteStartReason(startTimeRaw, htmlData) {
         const match = String(startTimeRaw || '').trim().match(/^(\d{1,2}):(\d{2})/);
         if (!match) return '';
@@ -20794,6 +20862,11 @@ TEXT:
             // does not state either is not a duration the site claims, and
             // keeping it alone would print a span from midnight.
             if (endTimeRaw && !this.pageStatesClockTime(htmlData, endTimeRaw)) endTimeRaw = '';
+        }
+        const pagePrintedStart = this.getPagePrintedStartOverFlyerReading(startTimeRaw, htmlData);
+        if (pagePrintedStart) {
+            console.log(`🕒 AI Web: Start time ${startTimeRaw} for "${title || 'Unknown'}" is read only off the flyer; the page itself prints ${pagePrintedStart} — the page's clock ships`);
+            startTimeRaw = pagePrintedStart;
         }
 
         console.log(`🤖 AI Web: Date normalization — rawStartDate=${aiEvent.startDate}, rawStartTime=${aiEvent.startTime}, rawStart=${aiEvent.start}, rawEndDate=${aiEvent.endDate}, rawEndTime=${aiEvent.endTime}, rawEnd=${aiEvent.end}`);

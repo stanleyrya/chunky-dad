@@ -1590,26 +1590,13 @@ class ScriptableAdapter {
       city: typeof event.city === "string" ? event.city : "",
     };
     const verdicts = await this.loadBearVerdicts();
-    const entryShape = core.buildIdentityComparisonShape({
-      title: entry.title,
-      bar: entry.venue,
-      address: entry.address,
-      location: entry.location,
-      city: entry.city,
-    });
     const index = verdicts.findIndex(
       (existing) =>
         existing &&
         core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key &&
-        core.areIdentityPlacesSimilar(
-          core.buildIdentityComparisonShape({
-            title: existing.title,
-            bar: existing.venue,
-            address: existing.address,
-            location: existing.location,
-            city: existing.city,
-          }),
-          entryShape,
+        core.bearVerdictPlaceMatches(
+          { title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city },
+          existing,
         ),
     );
     if (index >= 0) {

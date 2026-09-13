@@ -17575,23 +17575,26 @@ test('a listing with one JSON-LD Event per card element is segmented by its card
   assert.deepEqual(parser.buildJsonLdCardSegments('<html><body><script type="application/ld+json">[{"@type":"Event","name":"A","startDate":"2026-09-12"},{"@type":"Event","name":"B","startDate":"2026-09-13"}]</script><div class="item">A</div><div class="item">B</div></body></html>'), []);
 });
 
-test('coverage audit: compact listing rows become one window each, straight from the corpus', () => {
+test('coverage audit: a compact row becomes a window only when it states a time or carries a link', () => {
   const parser = createParser();
-  const html = `<html><body>
+  // furball.nyc's header ticker: date + name + venue, nothing else. The
+  // owner ruled those rows are not events (2026-09-13) — the page's cards are.
+  const ticker = `<html><body>
     <div data-mesh-id="SITE_HEADERinlineContent"><p>9/5 FURBALL NOLA - Santos Bar</p><p>10/3 FURBALL DC - ICON</p><p>10/16 UNDERBEAR NYC - ROCKBAR</p></div>
     <h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p>
   </body></html>`;
   const nola = { lines: ['FURBALL NOLA', 'Southern Decadence', 'September 5, 2026', 'Santos Bar - New Orleans, LA'], html: '' };
-  const covered = parser.coverUnclaimedDatedWindows(html, [nola]);
-  assert.deepEqual(covered.map(s => s.lines.join(' | ')).sort(), [
-    '10/16 UNDERBEAR NYC - ROCKBAR',
-    '10/3 FURBALL DC - ICON',
-    '9/5 FURBALL NOLA - Santos Bar',
+  assert.deepEqual(parser.coverUnclaimedDatedWindows(ticker, [nola]).map(s => s.lines.join(' | ')), [
     'FURBALL NOLA | Southern Decadence | September 5, 2026 | Santos Bar - New Orleans, LA'
   ]);
-  // The short row ("10/3 FURBALL DC - ICON", 22 chars) is below the flat
-  // splitter's segment floor and the last row would have fused with the
-  // tagline below it — both are windows of their own here.
+  const listed = `<html><body>
+    <p>10/3 FURBALL DC - ICON 10pm</p><p><a href="https://tix.example/e/1">10/16 UNDERBEAR NYC - ROCKBAR</a></p>
+  </body></html>`;
+  assert.deepEqual(parser.coverUnclaimedDatedWindows(listed, [nola]).map(s => s.lines.join(' | ')).sort(), [
+    '10/16 UNDERBEAR NYC - ROCKBAR',
+    '10/3 FURBALL DC - ICON 10pm',
+    'FURBALL NOLA | Southern Decadence | September 5, 2026 | Santos Bar - New Orleans, LA'
+  ]);
 });
 
 test('a compact listing row is read without a model when extraction returns no date', () => {
@@ -18804,4 +18807,32 @@ test('a title that states the clock times an event the page left at midnight', (
   assert.equal(range.startDate.toISOString(), '2026-11-26T00:00:00.000Z');
   assert.equal(bare.startDate.toISOString(), '2026-11-26T00:00:00.000Z');
   assert.equal(timed.startDate.toISOString(), '2026-09-07T14:00:00.000Z');
+});
+
+test('Squarespace: a location with no address is the template default map, not a place', () => {
+  const parser = createParser();
+  const item = { id: 'c', title: 'Bear Pride Cruise 2026', startDate: 1780853400000, fullUrl: '/events/bear-pride-cruise-2026',
+    location: { mapZoom: 12, mapLat: 40.7207559, mapLng: -74.0007613, markerLat: 40.7207559, markerLng: -74.0007613, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } };
+  const event = parser.buildEventFromSquarespaceItem(item, 'https://www.massbearsandcubs.example/events');
+  assert.equal(event.location, undefined, 'run 20260913-152123 geocoded it to 443–459 Broadway, NYC');
+});
+
+test('a start read only off the flyer yields to the one start the page prints', () => {
+  const parser = createParser();
+  const html = [
+    'CONTENT',
+    'OCR_IMAGE_URL: https://bearracuda.example/portland.jpg',
+    'OCR_IMAGE_TEXT',
+    'SATURDAY SEPTEMBER 19TH, 2026',
+    'SHOW AT 1PM',
+    '<div><p>📅 September 19, 2026</p><p>Doors Open at 9:00 pm</p><p>Party Goes Until 2:00 am!</p><p>DJ Matt Stands</p><p>Show at 11pm w/Kharisma</p></div>'
+  ].join('\n');
+  assert.equal(parser.getPagePrintedStartOverFlyerReading('13:00', { html }), '21:00', 'run 20260913-150312');
+  assert.equal(parser.getPagePrintedStartOverFlyerReading('21:00', { html }), '', 'a start the page prints stays');
+  assert.equal(parser.getPagePrintedStartOverFlyerReading('13:00', { html: html.replace('Show at 11pm', 'Show at 1pm') }), '',
+    'the page printing the flyer\'s time is agreement');
+  assert.equal(parser.getPagePrintedStartOverFlyerReading('13:00', { html: html.replace('Party Goes Until 2:00 am!', 'Party starts at 10pm') }), '',
+    'two printed starts are ambiguous — nothing changes');
+  assert.equal(parser.getPagePrintedStartOverFlyerReading('13:00', { html: html.replace('SHOW AT 1PM', 'SHOW AT 11PM') }), '',
+    'a start the flyer never states is not a flyer reading');
 });
