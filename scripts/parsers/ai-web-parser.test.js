@@ -13175,7 +13175,9 @@ test('audit 2026-09-13 fixes: end-only offset-less dates, Squarespace map pin, F
   assert.equal(parser.buildEventFromSquarespaceItem(item, 'https://www.massbearsandcubs.example/events').location, '42.3513, -71.0656');
   // Cost text.
   assert.equal(parser.formatJsonApiPriceCover({ cost: 'Free' }), 'Free');
-  assert.equal(parser.formatJsonApiPriceCover({ cost: 'at door' }), '');
+  // Round 3: a stated cost that prints no amount is still the cover the
+  // venue published ("at door" on 45 of powerhousebar.com's 57 rows).
+  assert.equal(parser.formatJsonApiPriceCover({ cost: 'at door' }), 'at door');
   // Double-encoded entities.
   assert.equal(parser.decodeBasicEntities('UNDERWEAR &amp;#038; SINGLET NIGHT'), 'UNDERWEAR &amp;#038; SINGLET NIGHT', 'decodeBasicEntities keeps its decode-once contract');
   const wpRow = parser.buildEventFromJsonApiObject({ id: 7, title: 'UNDERWEAR &amp;#038; SINGLET NIGHT', start_date: '2026-10-14 21:00:00', venue: { venue: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'Wilton Manors' } }, 'https://eaglebarwm.com/wp-json/tribe/events/v1/events');
@@ -17612,4 +17614,86 @@ test('a DICE row that states a timezone but names no place keeps the wall clock 
     assert.equal(anchored._timezoneUnresolved, undefined);
     assert.equal(anchored.startDate.toISOString(), '2026-10-17T21:00:00.000Z');
   }
+});
+
+
+// --- Round-3 audit fixes (Tribe/Squarespace feed hygiene, 2026-09-13) ---
+
+test('applyJsonApiRowHorizon: a pre-expanded cadence stops at the horizon, singles and pairs do not', () => {
+  const parser = createParser();
+  const day = 24 * 60 * 60 * 1000;
+  const at = (days) => new Date(Date.now() + days * day).toISOString();
+  const row = (id, title, days) => ({ id, title, date: '2026-05-19 17:12:04', start_date: at(days) });
+  const payload = { events: [
+    // A weekly night the feed pre-expanded two years out: 3 rows inside the
+    // 90-day window, 2 past it.
+    row(1, 'DADDY POP', 7), row(2, 'DADDY POP', 14), row(3, 'DADDY POP', 21),
+    row(4, 'DADDY POP', 120), row(5, 'DADDY POP', 400),
+    // A one-off eight months out — never window-limited.
+    row(6, 'SNOUT', 240),
+    // A quarterly pair, both published individually — not yet a cadence.
+    row(7, 'The Playpen', 70), row(8, 'The Playpen', 160),
+    // A cadence that only BEGINS after the horizon keeps its first row.
+    row(9, 'WINTER BALL', 200), row(10, 'WINTER BALL', 230), row(11, 'WINTER BALL', 260)
+  ] };
+  const quiet = console.log; console.log = () => {};
+  try { parser.applyJsonApiRowHorizon(payload, 'https://eaglebarwm.example/wp-json/tribe/events/v1/events'); }
+  finally { console.log = quiet; }
+  const ids = payload.events.map(event => event.id);
+  assert.deepEqual(ids, [1, 2, 3, 6, 7, 8, 9], 'far-future occurrences of a pre-expanded cadence are the only rows dropped');
+});
+
+test('applyJsonApiRowHorizon leaves a feed with nothing past the horizon untouched', () => {
+  const parser = createParser();
+  const at = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const payload = { events: [{ id: 1, title: 'A', start_date: at(3) }, { id: 2, title: 'A', start_date: at(10) }] };
+  parser.applyJsonApiRowHorizon(payload, 'https://api.example/events');
+  assert.equal(payload.events.length, 2);
+});
+
+test('stripTrailingBrandSuffixFromTitle drops the site name the page template appended', () => {
+  const parser = createParser();
+  const brands = ['Mass Bears and Cubs'];
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Monthly Trivia — Mass Bears and Cubs', brands), 'Monthly Trivia');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('MA BEAR CONTEST: MEET & GREET — Mass Bears and Cubs', brands), 'MA BEAR CONTEST: MEET & GREET');
+  // Separators INSIDE the event's own name survive — only a spaced separator
+  // whose tail is the brand itself cuts.
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Alley Bears - Gear Night! — Mass Bears and Cubs', brands), 'Alley Bears - Gear Night!');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Bear Tea / Club Cafe — Mass Bears and Cubs', brands), 'Bear Tea / Club Cafe');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Bear Tea / Club Cafe', brands), 'Bear Tea / Club Cafe');
+  // The brand alone, and a brand-LEADING title, are left alone (a head must remain).
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Mass Bears and Cubs', brands), 'Mass Bears and Cubs');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Mass Bears and Cubs — Monthly Trivia', brands), 'Mass Bears and Cubs — Monthly Trivia');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('QTS: Brooklyn - Night Two', ['3 Dollar Bill']), 'QTS: Brooklyn - Night Two');
+  assert.equal(parser.stripTrailingBrandSuffixFromTitle('Anything', []), 'Anything');
+});
+
+test('applyFlyerTimeConflictFlag reads a wall-clock-labelled start verbatim, not through the zone', () => {
+  const parser = createFlyerConflictParser();
+  parser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: PLAYGROUND_TORONTO_FLYER_OCR_TEXT
+  });
+  // A Tribe row's 22:00 wall clock before shared-core re-anchors it: the
+  // digits are labelled UTC. Formatting it through America/Toronto used to
+  // read back 17:00 and flag a conflict the page never had.
+  const agreeing = {
+    title: 'ONYX Bar Night',
+    image: PLAYGROUND_TORONTO_FLYER_URL,
+    startDate: new Date('2025-12-06T22:00:00.000Z'),
+    timezone: 'America/Toronto',
+    _timezoneUnresolved: true
+  };
+  const quiet = console.log; console.log = () => {};
+  try { parser.applyFlyerTimeConflictFlag([agreeing]); } finally { console.log = quiet; }
+  assert.equal(agreeing._flyerTimeConflict, undefined, 'the page stated 22:00 — the same time the flyer prints');
+  assert.equal(parser.readStatedClockTime(agreeing, 'America/Toronto'), '22:00');
+
+  // A real conflict on the same unresolved shape still flags.
+  const conflicting = { ...agreeing, startDate: new Date('2025-12-06T10:00:00.000Z') };
+  delete conflicting._flyerTimeConflict;
+  const quiet2 = console.log; console.log = () => {};
+  try { parser.applyFlyerTimeConflictFlag([conflicting]); } finally { console.log = quiet2; }
+  assert.ok(conflicting._flyerTimeConflict, 'a genuine disagreement still flags');
+  assert.equal(conflicting._flyerTimeConflict.pageTime, '10:00');
 });

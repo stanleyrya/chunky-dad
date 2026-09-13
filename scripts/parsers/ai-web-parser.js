@@ -1090,6 +1090,10 @@ class AiWebParser {
                 // whose "UTC" instants are really the venue's wall clock is
                 // corrected against the site's own event page first.
                 jsonApiPayload = await this.collectJsonApiContinuation(jsonApiPayload, sourceUrl, httpAdapter);
+                // Paging stops AT the horizon; the rows a feed already
+                // pre-expanded past it are dropped here (see
+                // applyJsonApiRowHorizon).
+                jsonApiPayload = this.applyJsonApiRowHorizon(jsonApiPayload, sourceUrl);
                 jsonApiPayload = await this.reconcileJsonApiUtcLabels(jsonApiPayload, sourceUrl, httpAdapter);
             }
             const jsonApiCandidates = jsonApiPayload !== null
@@ -1355,6 +1359,20 @@ class AiWebParser {
                 // kept on an internal field because `source` is later
                 // stamped with the parser's name.
                 structuredEvents.forEach(event => { if (event && typeof event === 'object') event._titleFromListing = true; });
+                // …and the site's own name, when its page template appended it
+                // to that stated title, is not part of it (Squarespace item
+                // pages: JSON-LD name "Monthly Trivia — Mass Bears and Cubs").
+                const pageBrandNamesForTitles = this.getPageBrandNames(effectiveHtmlData);
+                if (pageBrandNamesForTitles.length > 0) {
+                    structuredEvents.forEach(event => {
+                        if (!event || typeof event !== 'object' || typeof event.title !== 'string') return;
+                        const stripped = this.stripTrailingBrandSuffixFromTitle(event.title, pageBrandNamesForTitles);
+                        if (stripped && stripped !== event.title) {
+                            console.log(`🏷️ TITLE: "${event.title}" → "${stripped}" — the trailing segment is the site's own name, appended by its page template`);
+                            event.title = stripped;
+                        }
+                    });
+                }
                 // Closure notices are not events, on any structured route.
                 for (let index = structuredEvents.length - 1; index >= 0; index--) {
                     const event = structuredEvents[index];
@@ -10060,6 +10078,85 @@ class AiWebParser {
         return `${match[1]}?${query.join('&')}`;
     }
 
+    // Title-ish key of a row, folded — the FAMILY a pre-expanded feed row
+    // belongs to. Same key resolution the builder uses (name/title, then
+    // VEVENT's `summary`).
+    jsonApiRowFamilyKey(row) {
+        const view = this.unwrapJsonApiCandidate(row);
+        let text = '';
+        for (const pattern of [/^(name|title)$/, /^summary$/]) {
+            for (const key of Object.keys(view)) {
+                if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                const value = this.jsonApiTextValue(view[key]);
+                if (value && value.trim()) { text = value; break; }
+            }
+            if (text) break;
+        }
+        return this.normalizeWhitespace(this.stripTags(text)).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    }
+
+    // The horizon is a ROW filter, not only a paging stop. A feed that
+    // pre-expands its recurring nights years ahead ships them on page ONE
+    // (eaglebarwm.com/wp-json/tribe: DADDY POP x90, HARNESS x57 through
+    // Oct 2027 — 163 kept records past the horizon, audit 2026-09-13), so
+    // stopping the pager changes nothing for them.
+    //
+    // What survives follows the source-expectations doctrine
+    // (data/source-expectations/README.md): a series' occurrences are
+    // materialized inside the ~90-day window, but "singles are never
+    // window-limited" — a one-off eight months out is a real listing the
+    // site published on purpose. A far-future row is therefore dropped
+    // only when its own title is a CADENCE the feed pre-expanded: three
+    // or more rows (a cadence needs three dates — the deriveCadenceRrule
+    // rule) of which at least two already fall inside the window, so the
+    // event reaches the calendar from those. Everything else survives —
+    // a one-off, a pair (powerhousebar.com's quarterly "The Playpen":
+    // 2026-11-25 + 2027-02-24, both published individually), and a
+    // cadence that only BEGINS after the horizon, which keeps its first
+    // occurrence so no event is lost outright.
+    applyJsonApiRowHorizon(payload, sourceUrl) {
+        const rowArray = this.findJsonApiRowArray(payload);
+        if (!rowArray || rowArray.rows.length === 0) return payload;
+        const horizonMillis = Date.now() + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+        const meta = rowArray.rows.map(row => ({
+            row,
+            start: this.jsonApiRowStartMillis(row),
+            family: this.jsonApiRowFamilyKey(row)
+        }));
+        const families = new Map();
+        for (const item of meta) {
+            if (!item.family || item.start === null) continue;
+            if (!families.has(item.family)) families.set(item.family, []);
+            families.get(item.family).push(item.start);
+        }
+        const kept = [];
+        const dropped = [];
+        for (const item of meta) {
+            if (item.start === null || item.start <= horizonMillis) { kept.push(item.row); continue; }
+            const starts = item.family ? families.get(item.family) : null;
+            // A one-off — and a pair, which is not yet a cadence — is never
+            // window-limited.
+            if (!starts || starts.length < 3) { kept.push(item.row); continue; }
+            const inside = starts.filter(start => start <= horizonMillis).length;
+            // Nothing (or a single stray) of this family inside the window:
+            // keep its earliest row so the event still reaches the calendar
+            // as a dated single.
+            if (inside < 2) {
+                if (item.start === Math.min(...starts.filter(start => start > horizonMillis))) kept.push(item.row);
+                else dropped.push(item);
+                continue;
+            }
+            dropped.push(item);
+        }
+        if (dropped.length === 0) return payload;
+        const families_ = new Set(dropped.map(item => item.family).filter(Boolean));
+        const furthest = new Date(Math.max(...dropped.map(item => item.start))).toISOString().slice(0, 10);
+        rowArray.rows.length = 0;
+        rowArray.rows.push(...kept);
+        console.log(`📄 FEED PAGES: ${sourceUrl} dropped ${dropped.length} pre-expanded occurrence row(s) of ${families_.size} repeating title(s) starting past the ${JSON_API_FEED_HORIZON_DAYS}-day horizon (furthest ${furthest}) — ${kept.length} row(s) kept`);
+        return payload;
+    }
+
     // A feed whose timed rows carry a UTC label ("…T19:00:00+00:00",
     // tz "UTC") but whose own event page prints the same digits as a
     // wall-clock time (JSON-LD startDate with no offset) is labelling the
@@ -10296,6 +10393,7 @@ class AiWebParser {
             const amounts = [];
             let currency = '';
             let statedFree = false;
+            let statedText = '';
             const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
             const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency)(_|$)|display/;
             const visit = (node, depth) => {
@@ -10328,6 +10426,21 @@ class AiWebParser {
                         // "Free" / "No cover" is a stated price too (Tribe cost
                         // text) — worth a cover of its own when no amount prints.
                         if (/^\s*(free|no cover|free entry|free admission)\s*[!.]?\s*$/i.test(decoded)) statedFree = true;
+                        // …and so is any other SHORT stated price phrase that
+                        // prints no amount: Tribe's `cost` carries the venue's
+                        // own words ("at door" on 45 of powerhousebar.com's 57
+                        // rows, "Donation", "Sliding scale"), which is exactly
+                        // what the cover field is for. Kept verbatim, first
+                        // one wins, and only a phrase short enough to BE a
+                        // price — a sentence is prose, not a cover.
+                        else if (!statedText) {
+                            const phrase = this.normalizeWhitespace(decoded).replace(/[!.]+$/, '').trim();
+                            if (phrase && phrase.length <= 24 && /[a-z]/i.test(phrase)
+                                && !/\d/.test(phrase) && !/https?:|@|[<>]/i.test(phrase)
+                                && phrase.split(/\s+/).length <= 3) {
+                                statedText = phrase;
+                            }
+                        }
                         for (const found of decoded.match(/\d+(?:[.,]\d{1,2})?/g) || []) {
                             const parsedAmount = Number(found.replace(',', '.'));
                             if (Number.isFinite(parsedAmount) && parsedAmount > 0) amounts.push(parsedAmount);
@@ -10340,7 +10453,7 @@ class AiWebParser {
                 }
             };
             visit(obj, 0);
-            if (amounts.length === 0) return statedFree ? 'Free' : '';
+            if (amounts.length === 0) return statedFree ? 'Free' : statedText;
             return this.formatCoverAmountRange(amounts, currency);
         } catch (error) {
             console.warn(`🤖 AI Web: JSON API price→cover mapping failed: ${error && error.message ? error.message : error}`);
@@ -18660,6 +18773,27 @@ TEXT:
     // flyer-stated date that contradicts the event's own → nothing. Stamps
     // the underscore channel only (_flyerTimeConflict, same convention as
     // _doorsTimeRejected); the site's value always ships unchanged.
+    // The clock the PAGE stated, as "HH:MM". A `_timezoneUnresolved` start is
+    // a wall clock labelled UTC — shared-core re-anchors it into the zone
+    // later — so formatting it through the zone reads back the shifted
+    // digits, not the ones the page printed (eaglebarwm.com's 21:00 rows
+    // rendered as 17:00 EDT / 16:00 EST and produced 27 false flyer-time
+    // conflicts, audit 2026-09-13). Read the UTC components verbatim in that
+    // case, exactly as getFlyerLocalDateCandidates already reads the date.
+    readStatedClockTime(event, timezone) {
+        if (!event || !event.startDate) return '';
+        if (event._timezoneUnresolved) {
+            const millis = this.core && typeof this.core.toEpochMillis === 'function'
+                ? this.core.toEpochMillis(event.startDate)
+                : null;
+            if (millis === null) return '';
+            const date = new Date(millis);
+            const pad = (value) => String(value).padStart(2, '0');
+            return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+        }
+        return this.core.formatLocalClockTime(event.startDate, timezone);
+    }
+
     applyFlyerTimeConflictFlag(events) {
         if (!Array.isArray(events) || events.length === 0) return;
         if (!this.core || typeof this.core.formatLocalClockTime !== 'function') return;
@@ -18677,7 +18811,7 @@ TEXT:
             if (!ocrText.trim()) continue;
             const reading = readFlyerStartTimeFromOcrText(ocrText);
             if (!reading) continue;
-            const pageTime = this.core.formatLocalClockTime(event.startDate, timezone);
+            const pageTime = this.readStatedClockTime(event, timezone);
             const pageMatch = /^(\d{2}):(\d{2})$/.exec(pageTime);
             if (!pageMatch) continue;
             // A local-midnight start is the missing-time default (extraction
@@ -18882,11 +19016,17 @@ TEXT:
         // published name verbatim, so it still has to face the leading-date
         // strip and the brand-suffix strip below — the same two cleanups the
         // structured-data path applies to JSON-LD titles.
+        // Set when the title below is the SOURCE'S OWN stated name (its
+        // JSON-LD Event name, or the page's own event heading) rather than a
+        // phrase the model composed. Carried onto the event as _titleStated
+        // so the AI trim pass leaves it alone — see findOverlongFields.
+        let titleStated = false;
         if (title) {
             const repairedTitle = this.repairTruncatedTitleFromJsonLd(title, htmlData);
             if (repairedTitle !== title) {
                 console.log(`🤖 AI Web: Restored truncated title "${title}" → "${repairedTitle}" (contained in the page's own JSON-LD event name)`);
                 title = repairedTitle;
+                titleStated = true;
             }
         }
         // A single-event page's own heading names the event. When the page
@@ -18901,6 +19041,7 @@ TEXT:
             if (headingTitle !== title) {
                 console.log(`🏷️ TITLE: "${title}" → "${headingTitle}" — the page's own heading names the event (a body phrase is not its name)`);
                 title = headingTitle;
+                titleStated = true;
             }
         }
         // Strip a leading date phrase HERE rather than in the per-pass guard:
@@ -18952,6 +19093,11 @@ TEXT:
             if (strippedTitle !== title) {
                 console.log(`🤖 AI Web: Stripping page brand from title "${title}" → "${strippedTitle}"`);
                 title = strippedTitle;
+            }
+            const withoutBrandSuffix = this.stripTrailingBrandSuffixFromTitle(title, pageBrandNames);
+            if (withoutBrandSuffix !== title) {
+                console.log(`🏷️ TITLE: "${title}" → "${withoutBrandSuffix}" — the trailing segment is the site's own name, appended by its page template`);
+                title = withoutBrandSuffix;
             }
         }
         if (title && bar) {
@@ -19622,6 +19768,7 @@ TEXT:
         if (pendingListedOccurrenceDates && pendingListedOccurrenceDates.length > 0) {
             event._listedOccurrenceDates = pendingListedOccurrenceDates;
         }
+        if (titleStated) event._titleStated = true;
 
         return event;
     }
@@ -20621,6 +20768,32 @@ TEXT:
         while (kept.length > 1 && this.matchesPageBrandName(kept[0], brandNames)) kept.shift();
         if (kept.length === parts.length) return text;
         return kept.join(' | ');
+    }
+
+    // Strip a trailing " — <site name>" appended by the site's own templates.
+    // Squarespace item pages publish "<event> — <site name>" as the page
+    // <title> AND as the JSON-LD Event `name` ("Monthly Trivia — Mass Bears
+    // and Cubs", audit 2026-09-13), so the suffix reached the calendar on
+    // every crawled item while the feed row of the same event stayed clean —
+    // one series wearing two names. The brand is read from the page's own
+    // markup (og:site_name / JSON-LD Organization — extractPageBrandNames),
+    // never a list of sites.
+    //
+    // Only a SPACED separator splits (" — ", " – ", " | ", " - ", " · "), so
+    // hyphenated and slashed names ("Alley Bears - Gear Night!", "Bear Tea /
+    // Club Cafe") survive; the tail must be the brand outright, and a head
+    // must remain.
+    stripTrailingBrandSuffixFromTitle(title, brandNames) {
+        const original = String(title || '');
+        if (!Array.isArray(brandNames) || brandNames.length === 0) return original;
+        let text = this.normalizeWhitespace(original);
+        for (let round = 0; round < 3; round++) {
+            const match = /^(.*\S)\s+[|\u2013\u2014\u2015\u00b7\u2022\u00bb-]\s+(\S.*)$/.exec(text);
+            if (!match) break;
+            if (!this.matchesPageBrandName(match[2], brandNames)) break;
+            text = match[1].trim();
+        }
+        return text || original;
     }
 
     // Emoji/pictograph-stripped view of a title — identical to SharedCore's
