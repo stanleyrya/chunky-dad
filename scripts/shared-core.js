@@ -1318,23 +1318,40 @@ class SharedCore {
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
         if (!eventKey) return null;
-        const eventShape = this.buildIdentityComparisonShape(event);
         for (const entry of store) {
             if (!entry || typeof entry !== 'object') continue;
             if (entry.verdict !== 'bear' && entry.verdict !== 'not_bear') continue;
             const entryKey = this.getBearVerdictTitleKey(entry.title, [entry.venue]);
             if (!entryKey || entryKey !== eventKey) continue;
-            const entryShape = this.buildIdentityComparisonShape({
-                title: entry.title,
-                bar: entry.venue,
-                address: entry.address,
-                location: entry.location,
-                city: entry.city
-            });
-            if (!this.areIdentityPlacesSimilar(eventShape, entryShape)) continue;
+            if (!this.bearVerdictPlaceMatches(event, entry)) continue;
             return entry;
         }
         return null;
+    }
+
+    // Place half of the verdict-store identity. Venue identity when either
+    // side knows its place; when NEITHER does, the same city stands in. A
+    // venue site that never names itself ("Dolly and the DJ" on
+    // thelumberyardbar.com, stored four times at venue "" between 2026-08-20
+    // and 2026-09-13) otherwise stores a verdict nothing can ever match, and
+    // the AI re-judges the party every run.
+    bearVerdictPlaceMatches(event, entry) {
+        if (!event || !entry) return false;
+        const eventShape = this.buildIdentityComparisonShape(event);
+        const entryShape = this.buildIdentityComparisonShape({
+            title: entry.title,
+            bar: entry.venue,
+            address: entry.address,
+            location: entry.location,
+            city: entry.city
+        });
+        if (this.areIdentityPlacesSimilar(eventShape, entryShape)) return true;
+        const placeless = (record, bar) => !String(bar || '').trim()
+            && !String(record.address || '').trim()
+            && !String(record.location || '').trim();
+        if (!placeless(event, event.bar || event.venue) || !placeless(entry, entry.venue)) return false;
+        const city = (value) => String(value || '').trim().toLowerCase();
+        return Boolean(city(event.city)) && city(event.city) !== 'unknown' && city(event.city) === city(entry.city);
     }
 
     // Provenance (pinSource/addressSource) follows the finalized value: whichever
@@ -4677,7 +4694,36 @@ class SharedCore {
             // plus a subtitle. thedallaseagle.com's "Bear Night" post opens
             // with "Second Fridays…", and the crawled page's AI read won the
             // merge over the grid's own title (daily run 20260912-063741).
-            if (context && context.records && context.records.a && context.records.b) {
+            // Calendar merges are exempt: a saved title carries no listing
+            // flag, so this rung read "BEEFMINCE x RVT" (an aggregator feed
+            // row) as outranking the calendar's "BEEFMINCE Brief Encounter"
+            // (DICE's own JSON-LD) and renamed it (run 20260913-163245).
+            const statedTitleSides = context && context.sideLabels && typeof context.sideLabels === 'object'
+                ? context.sideLabels : null;
+            const calendarMerge = Boolean(statedTitleSides
+                && (statedTitleSides.a === 'calendar' || statedTitleSides.b === 'calendar'));
+            // …and a third party's listing never renames a saved event it did
+            // not create: the scraped record was read off a page that is
+            // neither the event's own site nor its ticket page, and it carries
+            // a different key than the one the calendar record was saved
+            // under. Left to arbitration, the AI renamed "BEEFMINCE Brief
+            // Encounter" to The Bear Calendar's "BEEFMINCE x RVT" and the
+            // promoter's own run would rename it back — every run. A site
+            // renaming its OWN event (same host) still arbitrates.
+            if (calendarMerge && context.records && context.records.a && context.records.b) {
+                const calendarSide = statedTitleSides.a === 'calendar' ? 'a' : 'b';
+                const saved = context.records[calendarSide];
+                const scraped = context.records[calendarSide === 'a' ? 'b' : 'a'];
+                const savedKey = String((saved && saved.key) || '').trim();
+                const scrapedKey = String((scraped && scraped.key) || '').trim();
+                if (savedKey && scrapedKey && savedKey !== scrapedKey && this.isThirdPartyListingRecord(scraped)) {
+                    return {
+                        winner: calendarSide,
+                        reason: 'a third-party listing never renames a saved event'
+                    };
+                }
+            }
+            if (!calendarMerge && context && context.records && context.records.a && context.records.b) {
                 const structuredSources = new Set(['mec', 'jsonld', 'json-ld', 'json-api', 'squarespace', 'wix', 'elfsight', 'dice']);
                 const isStructured = (record) => Boolean(record && (record._titleFromListing === true
                     || (typeof record.source === 'string' && structuredSources.has(record.source.toLowerCase()))));
@@ -15328,7 +15374,7 @@ class SharedCore {
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
-        if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement-only listing row — no time, no ticket link)';
+        if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
@@ -15522,11 +15568,44 @@ class SharedCore {
         for (const festival of this.festivals) {
             if (!festival || !festival.name) continue;
             if (!this.areTitlesSimilar(event.title, festival.name)) continue;
+            // The umbrella IS the festival: its own name, or a record spanning
+            // days. A one-night party whose title merely carries the festival
+            // name ("The Belly Party - SPOOKY BEAR!", Red Room, 9pm, run
+            // 20260913-152123) is a sub-event and saves like any other.
+            if (!this.isCuratedFestivalUmbrellaShape(event, festival)) continue;
             if (!this.festivalCityAgrees(event, festival)) continue;
             if (!this.eventOverlapsFestivalWindow(event, festival)) continue;
             return festival;
         }
         return null;
+    }
+
+    // TRUE when a record was read off a page that is neither its own site nor
+    // its ticket page: an aggregator's listing (thebearcalendar.com carrying
+    // a beefmince.com party sold on dice.fm). Fails closed — no source page,
+    // or no own link to compare against, is not evidence of a third party.
+    isThirdPartyListingRecord(record) {
+        if (!record || typeof record !== 'object') return false;
+        const pageHost = this.getHostFromUrl(record._sourcePageUrl || '') || String(record._venueSitePageHost || '').trim().toLowerCase();
+        if (!pageHost) return false;
+        const ownHosts = [record.website, record.url, record.ticketUrl]
+            .map(value => (typeof value === 'string' ? this.getHostFromUrl(value.trim()) : ''))
+            .filter(Boolean);
+        if (ownHosts.length === 0) return false;
+        return !ownHosts.some(host => this.areUrlHostsSameSite(host, pageHost));
+    }
+
+    // TRUE when a title-similar record is the festival itself rather than a
+    // party inside it: the same name once years and punctuation are folded
+    // away, or a span of at least a day.
+    isCuratedFestivalUmbrellaShape(event, festival) {
+        const fold = (value) => this.decodeBasicHtmlEntities(String(value || '')).toLowerCase()
+            .replace(/\b(?:19|20)\d{2}\b/g, ' ')
+            .replace(/[^a-z0-9]+/g, '');
+        if (fold(event.title) && fold(event.title) === fold(festival.name)) return true;
+        const start = this.toEpochMillis(event.startDate);
+        const end = this.toEpochMillis(event.endDate);
+        return start !== null && end !== null && end - start >= 24 * 60 * 60 * 1000;
     }
 
     // Path portion of an http(s) URL for identity-prefix comparison:
@@ -17669,14 +17748,23 @@ class SharedCore {
             // 2026-09-12 run: "I'm concerned they aren't real"). Flag, don't
             // drop: the card stays in results; the calendar write waits until
             // a venue or ticket page corroborates it (a time or a ticket link).
+            // The same holds for a dated record that names no place at all
+            // (no address, no pin): furball.nyc's hero tagline "where bears
+            // dance" over "SEPTEMBER 18!!!" came out as an all-day party at
+            // "Furball" — the promoter's own name — in every Furball run since
+            // 20260913-012655.
             {
                 const segment = analyzedEvent._multiEventSegment;
                 const oneLineRow = segment && typeof segment === 'object' && Number(segment.lineCount) === 1;
+                const placeless = Boolean(segment && typeof segment === 'object')
+                    && !String(analyzedEvent.address || '').trim()
+                    && !this.isCoordinatePair(analyzedEvent.location);
                 const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
                 const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
-                if (oneLineRow && noTime && noTicket) {
+                if ((oneLineRow || placeless) && noTime && noTicket) {
                     analyzedEvent._announcementOnlyWithheld = true;
-                    console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is a one-line listing row with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
+                    const shape = oneLineRow ? 'a one-line listing row' : 'a dated record with no place';
+                    console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is ${shape} with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
                 }
             }
 
@@ -19239,9 +19327,16 @@ class SharedCore {
         // "…/e/<slug>/tickets" — bearracuda.com's stub vs its sickening
         // page's JSON-LD, audit 2026-09-13: the pair was vetoed as two
         // different ticket links and the enrich child dropped).
+        // A short link ("link.dice.fm/P0194faadd01": one opaque letters-and-
+        // digits token) names no event path — it redirects to one — so it
+        // can neither agree nor disagree with a canonical ticket page (The
+        // Bear Calendar's BEEFMINCE x RVT vs the calendar's
+        // dice.fm/event/yoepxa-…, same bar, same 10pm, run 20260913-154402).
         const ticketKey = (url) => {
             const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
             if (!match) return '';
+            const shortToken = match[2].replace(/\/+$/, '').match(/^\/([A-Za-z0-9]{6,16})$/);
+            if (shortToken && /\d/.test(shortToken[1]) && /[a-z]/i.test(shortToken[1])) return '';
             const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
             return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };

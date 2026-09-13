@@ -22420,3 +22420,103 @@ test('a promoter registry site claims its own host only from a bare root', () =>
     'a profile ON a platform never makes the whole platform host a promoter site');
   assert.equal(core.resolvePromoterEntryBySiteHost('https://www.rockbarnyc.com/calendar'), null);
 });
+
+test('festival umbrella: a one-night party carrying the festival name is a sub-event, not the umbrella', () => {
+  const core = createFestivalCore();
+  assert.equal(core.findCuratedFestivalMatch({
+    title: 'The Belly Party - SPOOKY BEAR!',
+    startDate: '2026-10-31T01:00:00.000Z',
+    endDate: '2026-10-31T05:00:00.000Z',
+    city: 'unknown'
+  }), null, 'run 20260913-152123: Red Room, 9pm — saves like any party');
+  const named = core.findCuratedFestivalMatch({
+    title: 'Spooky Bear 2026',
+    startDate: '2026-10-30T20:00:00.000Z',
+    endDate: '2026-10-30T23:00:00.000Z',
+    city: 'unknown'
+  });
+  assert.equal(named && named.key, 'spooky-bear', 'the festival\'s own name is the umbrella whatever its span');
+  const spanning = core.findCuratedFestivalMatch({
+    title: 'Spooky Bear Weekend Pass',
+    startDate: '2026-10-29T20:00:00.000Z',
+    endDate: '2026-11-01T20:00:00.000Z',
+    city: 'unknown'
+  });
+  assert.equal(spanning && spanning.key, 'spooky-bear', 'a record spanning days is the umbrella');
+});
+
+test('verdict store: a verdict on a venue-less event matches that title in the same city', () => {
+  const core = createCore();
+  core.bearVerdicts = [{ verdict: 'not_bear', stampedAt: '2026-09-13T13:18:22.998Z', title: 'Dolly and the DJ', venue: '', address: '', location: '', city: 'seattle' }];
+  const found = core.findStoredBearVerdict({ title: 'Dolly and the DJ', city: 'seattle' });
+  assert.equal(found && found.verdict, 'not_bear', 'run 20260913-151918 re-judged it by AI after the tap');
+  assert.equal(core.findStoredBearVerdict({ title: 'Dolly and the DJ', city: 'portland' }), null, 'another city is another party');
+  assert.equal(core.findStoredBearVerdict({ title: 'Dolly and the DJ', city: '' }), null, 'no city, no match');
+  assert.equal(core.findStoredBearVerdict({ title: 'Dolly and the DJ', city: 'seattle', bar: 'Pony' }), null,
+    'an event that names its venue never inherits a venue-less verdict');
+});
+
+test('a ticket short link neither agrees nor disagrees with the canonical ticket page', () => {
+  const core = createCore();
+  const at = (iso) => new Date(iso);
+  const place = { bar: 'Royal Vauxhall Tavern', address: '372 Kennington Ln, London, United Kingdom SE11 5HY', location: '51.4863391, -0.1217784', timezone: 'Europe/London' };
+  const bearCalendar = { ...place, title: 'BEEFMINCE x RVT', startDate: at('2026-09-19T21:00:00.000Z'), endDate: at('2026-09-20T03:00:00.000Z'), ticketUrl: 'https://link.dice.fm/P0194faadd01' };
+  const calendar = { ...place, title: 'BEEFMINCE Brief Encounter', startDate: at('2026-09-19T21:00:00.000Z'), endDate: at('2026-09-20T03:00:00.000Z'), ticketUrl: 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets' };
+  assert.equal(core.getSameEventIdentitySignal(bearCalendar, calendar), 'place-exact-start', 'run 20260913-154402 planned it as NEW');
+  const otherEvent = { ...calendar, ticketUrl: 'https://dice.fm/event/abc123-another-night' };
+  assert.equal(core.getSameEventIdentitySignal({ ...bearCalendar, ticketUrl: 'https://dice.fm/event/zzz-beefmince-other' }, otherEvent), null,
+    'two canonical ticket pages still contradict');
+});
+
+test('stated-title rung never renames a calendar record', () => {
+  const core = createCore();
+  const feedRow = { title: 'BEEFMINCE x RVT', _titleFromListing: true, source: 'ai-web' };
+  const saved = { title: 'BEEFMINCE Brief Encounter' };
+  const calendarVerdict = core.resolveConflictDeterministically('title', 'BEEFMINCE Brief Encounter', 'BEEFMINCE x RVT',
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: saved, b: feedRow } });
+  assert.ok(!calendarVerdict || calendarVerdict.winner !== 'b', 'run 20260913-163245 renamed the saved title to the aggregator row');
+  const enrichVerdict = core.resolveConflictDeterministically('title', 'Second Fridays', 'Bear Night',
+    { sideLabels: { a: 'existing', b: 'incoming' }, records: { a: { title: 'Second Fridays' }, b: { title: 'Bear Night', _titleFromListing: true } } });
+  assert.equal(enrichVerdict && enrichVerdict.winner, 'b', 'between two scrapes the listing still wins');
+});
+
+test('a dated record with no place, no time and no ticket link is withheld as an announcement', async () => {
+  const core = createFestivalCore([]);
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'where bears dance',
+    bar: 'Furball',
+    _multiEventSegment: { lineCount: 5 },
+    startDate: '2026-09-18T04:00:00.000Z',
+    endDate: '2026-09-19T03:59:59.000Z',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true
+  }, {
+    title: 'UNDERBEAR NYC',
+    bar: 'Rockbar',
+    _multiEventSegment: { lineCount: 7 },
+    address: '185 Christopher St, New York, NY',
+    startDate: '2026-09-18T04:00:00.000Z',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true
+  }], buildFestivalPrepAdapter(), {});
+  assert.equal(analyzed.find(e => e.title === 'where bears dance')._announcementOnlyWithheld, true, 'furball.nyc hero tagline');
+  assert.ok(!analyzed.find(e => e.title === 'UNDERBEAR NYC')._announcementOnlyWithheld, 'a card naming its place is not an announcement');
+});
+
+test('a third-party listing never renames a saved event; a site renaming its own event still can', () => {
+  const core = createCore();
+  const saved = { title: 'BEEFMINCE Brief Encounter', key: 'beefmince-brief-encounter|2026-09-19|royal vauxhall tavern' };
+  const aggregatorRow = { title: 'BEEFMINCE x RVT', key: 'beefmince-x-rvt|2026-09-19|royal vauxhall tavern', _titleFromListing: true,
+    _sourcePageUrl: 'https://thebearcalendar.com/events/', website: 'https://beefmince.com/events', ticketUrl: 'https://link.dice.fm/P0194faadd01' };
+  assert.deepEqual(core.resolveConflictDeterministically('title', saved.title, aggregatorRow.title,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: saved, b: aggregatorRow } }),
+    { winner: 'a', reason: 'a third-party listing never renames a saved event' });
+  const ownRename = { title: 'MEAT MARKET', key: 'meat-market|2026-11-01|', _sourcePageUrl: 'https://www.clubchub.example/events', website: 'https://www.clubchub.example/event-details/meat-market' };
+  const verdict = core.resolveConflictDeterministically('title', 'Wig Out', ownRename.title,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'Wig Out', key: 'wig-out|2026-11-01|' }, b: ownRename } });
+  assert.ok(!verdict || verdict.reason !== 'a third-party listing never renames a saved event', 'the site\'s own rename is not a third party');
+});
