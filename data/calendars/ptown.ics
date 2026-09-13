@@ -6,34 +6,34 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-provincetown
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260717T020000Z
-DTSTAMP:20260812T054150Z
-UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
-CREATED:20260701T132043Z
-DESCRIPTION:description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n
- LIMITED CLOTHES CHECK (FIRST COME\, FIRST SERVED)\n$5 DISCOUNT WITH BEAR TA
- GS\nbar: REDROOM\naddress: 258 Commercial St\, Provincetown\, MA 02657\ntim
- ezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/f
- urballnyc/UnderbearNYC-bear-week-2026\ninstagram: https://instagram.com/fur
- ballnyc/\nimage: https://static.wixstatic.com/media/238fae_ccecfe5565134a15
- b54c70f056f0e4c0~mv2.png/v1/fill/w_296\,h_476\,al_c\,q_85\,usm_0.66_1.00_0.
- 01\,enc_avif\,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\
- ncover: $5 DISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nfavicon: https://l
- inktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20
- PROVINCETOWN%2C%20MA\nkey: riptide|2026-07-17|redroom
-LAST-MODIFIED:20260712T000449Z
-LOCATION:42.0510476\, -70.1876737
+DTSTART:20260712T020000Z
+DTSTAMP:20260913T140602Z
+UID:D0D6C7F9-24C0-48F2-B9AB-8F785BF13389
+CREATED:20260701T132042Z
+DESCRIPTION:description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O
+ PENING PARTY\nbar: Boatslip\naddress: 161 Commercial St\, Provincetown\, MA
+  02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.co
+ m/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-202
+ 6\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixs
+ tatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_5
+ 60\,h_700\,al_c\,q_85\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_4a
+ 9e61a8ba4b43bd857ed15af7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE R
+ EGISTRANTS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nweb
+ site: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Boatslip%2C%20161%20Commercial%20St\nkey: furball|2026-07-12|boa
+ tslip
+LAST-MODIFIED:20260712T000448Z
+LOCATION:42.0470329\, -70.1901852
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Riptide
+SUMMARY:FURBALL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260819T020000Z
-DTSTAMP:20260812T054150Z
+DTSTAMP:20260913T140602Z
 UID:42DA779D-6393-4D26-B639-49FBB415029D
 CREATED:20260811T142850Z
 DESCRIPTION:description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2
@@ -57,27 +57,57 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260712T020000Z
-DTSTAMP:20260812T054150Z
-UID:D0D6C7F9-24C0-48F2-B9AB-8F785BF13389
-CREATED:20260701T132042Z
-DESCRIPTION:description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O
- PENING PARTY\nbar: Boatslip\naddress: 161 Commercial St\, Provincetown\, MA
-  02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.co
- m/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-202
- 6\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixs
- tatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_5
- 60\,h_700\,al_c\,q_85\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_4a
- 9e61a8ba4b43bd857ed15af7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE R
- EGISTRANTS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nweb
- site: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=Boatslip%2C%20161%20Commercial%20St\nkey: furball|2026-07-12|boa
- tslip
-LAST-MODIFIED:20260712T000448Z
-LOCATION:42.0470329\, -70.1901852
+DTSTART:20260718T020000Z
+DTEND:20260718T030000Z
+DTSTAMP:20260913T140602Z
+UID:A648996C-FBF3-4F80-B009-64E0FB665858
+CREATED:20260913T132708Z
+DESCRIPTION:description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We 
+ celebrate big bodies and the people who love them\, creating nightlife wher
+ e size isn’t a side note—it’s the spotlight. BELLY\\: Thick\, Juicy\, and U
+ napologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please em
+ ail Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial S
+ treet\, Provincetown\, MA\, 02657\nwebsite: https://www.massbearsandcubs.or
+ g/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com
+ /content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BEL
+ LY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.clu
+ b/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v
+ 1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRA
+ M+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https:/
+ /www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|
+ red room\nbearSource: keyword\nshortName: THE BELLY PARTY
+LAST-MODIFIED:20260913T132708Z
+LOCATION:42.0510351\, -70.1876798
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FURBALL
+SUMMARY:The Belly Party (Bear Week)
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260717T020000Z
+DTSTAMP:20260913T140602Z
+UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
+CREATED:20260701T132043Z
+DESCRIPTION:description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n
+ LIMITED CLOTHES CHECK (FIRST COME\, FIRST SERVED)\n$5 DISCOUNT WITH BEAR TA
+ GS\nbar: REDROOM\naddress: 258 Commercial St\, Provincetown\, MA 02657\ntim
+ ezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/f
+ urballnyc/UnderbearNYC-bear-week-2026\ninstagram: https://instagram.com/fur
+ ballnyc/\nimage: https://static.wixstatic.com/media/238fae_ccecfe5565134a15
+ b54c70f056f0e4c0~mv2.png/v1/fill/w_296\,h_476\,al_c\,q_85\,usm_0.66_1.00_0.
+ 01\,enc_avif\,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\
+ ncover: $5 DISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nfavicon: https://l
+ inktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20
+ PROVINCETOWN%2C%20MA\nkey: riptide|2026-07-17|redroom
+LAST-MODIFIED:20260712T000449Z
+LOCATION:42.0510476\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Riptide
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

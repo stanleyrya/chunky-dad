@@ -6,8 +6,793 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-boston
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART:20260823T010000Z
+DTEND:20260823T060000Z
+DTSTAMP:20260913T140602Z
+UID:12D038B4-9EB2-4AAD-88B9-BB0D55BD5F6B
+CREATED:20260913T132644Z
+DESCRIPTION:description: Alley Bears! Join Mass Bears and Cubs for Alley Be
+ ars\, our monthly bar night at the Alley Bar! Start off with cocktails and 
+ conversation at the downstairs bar beginning at 9\, and then we'll be movin
+ g upstairs to the dance floor starting at 10. No cover\, 21+\nbar: The Alle
+ y Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02108\nwebsite: https://www.mas
+ sbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-ax
+ cak-zh9dz\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f96
+ 03f6ecaf1e6c7/1786918639287-DDJT6RFRNQ5YXFA9WY59/INSTAGRAM.png\nimageSource
+ : json-api\npinSource: page\naddressSource: page\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: alley-bears|2
+ 026-08-23|the alley bar\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132644Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261115T170000Z
+DTEND:20261115T213000Z
+DTSTAMP:20260913T140602Z
+UID:C812956C-A553-430D-8D32-034D61D1FCF1
+CREATED:20260913T132633Z
+DESCRIPTION:bar: Club Cafe\naddress: 209 Columbus Avenue Boston\, Massachus
+ etts\, 02116 United States\nimage: https://images.squarespace-cdn.com/conte
+ nt/v1/6631a0e7f9603f6ecaf1e6c7/1788985781733-JOS8YWKYEKC37MHG09E3/Bear+Bout
+ ique+IG.jpg\ntimezone: America/New_York\nimageVertical: https://images.squa
+ respace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788985781733-JOS8YWKYE
+ KC37MHG09E3/Bear+Boutique+IG.jpg\naddressSource: page\nwebsite: https://www
+ .massbearsandcubs.org/events/bear-boutique\ngmaps: https://www.google.com/m
+ aps/search/?api=1&query=42.3483941%2C-71.0723921\npinSource: geocoded-exact
+ \nkey: bear-boutique|2026-11-15|club cafe\ndescription: Bear Boutique retur
+ ns to Club Café on Sunday\, November 15\, 2026. Mass Bears and Cubs’ annual
+  marketplace opens the holiday shopping season!\nimageSource: json-api\nbea
+ rSource: keyword\nshortName: BEAR BOUTIQUE
+LAST-MODIFIED:20260913T132633Z
+LOCATION:42.3483941\, -71.0723921
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Boutique
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260524T010000Z
+DTEND:20260524T060000Z
+DTSTAMP:20260913T140602Z
+UID:78780DC3-7985-4A40-91EB-0025A8E237EE
+CREATED:20260913T132703Z
+DESCRIPTION:description: Alley Bears! Join Mass Bears and Cubs for Alley Be
+ ars\, our monthly bar night at the Alley Bar! Start off with cocktails and 
+ conversation at the downstairs bar beginning at 9\, and then we'll be movin
+ g upstairs to the dance floor starting at 10. No cover\, 21+\nbar: The Alle
+ y Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02108\nwebsite: https://www.mas
+ sbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae\nimage: 
+ https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1764
+ 902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.png\nimageSource: json-api\ni
+ mageHorizontal: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603
+ f6ecaf1e6c7/1764902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.png\npinSourc
+ e: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=p
+ lace_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: alley-bears|2026-05-24|the alley 
+ bar\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132703Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260603T230000Z
+DTEND:20260604T010000Z
+DTSTAMP:20260913T140602Z
+UID:2B6ACC92-A63C-4FF9-B81F-980D3DD268BD
+CREATED:20260913T132701Z
+DESCRIPTION:description: Join us for our Meet and Greet kickoff for New Eng
+ land Bear Pride 2026! Learn more about MBC\, connect with current members a
+ nd board members\, and be part of the excitement as we prepare for the very
+  first New England Bear Pride.\nbar: The Alley\naddress: 14 Pi Alley\, Bost
+ on\, MA\, 02108\nwebsite: https://www.massbearsandcubs.org/events/monthly-m
+ embership-meetings-c2j2s-mh34s-etr7g-ag59f\nimage: https://images.squarespa
+ ce-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1776459218806-LVVFT70GBT2230
+ TQOHMA/MEET%26GREET+INSTA.jpg\nimageSource: json-api\nticketUrl: https://ww
+ w.eventbrite.com/e/new-england-bear-pride-meet-and-greet-hosted-by-mass-bea
+ rs-and-cubs-tickets-1989266154618\nimageVertical: https://images.squarespac
+ e-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1776459218806-LVVFT70GBT2230T
+ QOHMA/MEET%26GREET+INSTA.jpg\npinSource: page\naddressSource: page\ngmaps: 
+ https://www.google.com/maps/search/?api=1&query=42.3581324%2C-71.0588204\nk
+ ey: meet-greet-bear-pride-kickoff|2026-06-03|the alley\nbearSource: keyword
+ \nshortName: MEET & GREET
+LAST-MODIFIED:20260913T132701Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Meet & Greet Bear Pride Kickoff
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261025T200000Z
+DTEND:20261026T000000Z
+DTSTAMP:20260913T140602Z
+UID:1BB9DD4B-CD79-4693-A06B-3146718B7202
+CREATED:20260913T132632Z
+DESCRIPTION:bar: Dorchester Brewing Company\naddress: 1250 Massachusetts Av
+ enue Boston\, MA\, 02125 United States\nimage: https://images.squarespace-c
+ dn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1765045071710-1K7706KECPUA2YK73M
+ PT/dotbrewing.png\ntimezone: America/New_York\naddressSource: page\nwebsite
+ : https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872m
+ e-9w83d-x943p-yecy3-exe4j-32h44-7enkh\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=Dorchester%20Brewing%20Company%2C%201250%20Massachusetts
+ %20Avenue%20Boston%2C%20MA%2C%2002125%20United%20States\npinSource: geocode
+ d-exact\nkey: bears-brews-boys|2026-10-25|dorchester brewing company\ndescr
+ iption: Bears\, Brews & Boys is a fun\, inclusive monthly social event host
+ ed by Mass Bears and Cubs in partnership with Dorchester Brewing Company. E
+ ach month features a different theme\, great music\, craft drinks\, and a r
+ elaxed\, queer-friendly atmosphere. Guests can also enjoy raffles that help
+  raise money for local charities. Open to all adults 21+\, it’s a welcoming
+  space to connect\, socialize\, and support the community.\nimageSource: js
+ on-api\nbarSource: geo-poi\nbearSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132632Z
+LOCATION:42.3221646\, -71.0625839
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T200000Z
+DTEND:20260817T020000Z
+DTSTAMP:20260913T140602Z
+UID:D8DDCD63-4E8C-4794-B720-68D6568F6D99
+CREATED:20260913T132646Z
+DESCRIPTION:description: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nbar: Club Cafe\naddress: 209 Col
+ umbus Avenue\, Boston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.o
+ rg/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t\nimage: ht
+ tps://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/2fdadc
+ 1c-5a35-473d-83d1-07b6d2cf5609/4.png\nimageSource: json-api\npinSource: pag
+ e\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&qu
+ ery=42.3486155%2C-71.0723826\nkey: bear-tea-club-cafe|2026-08-16|club cafe\
+ nbearSource: keyword\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132646Z
+LOCATION:42.3486155\, -71.0723826
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260606T220000Z
+DTEND:20260607T040000Z
+DTSTAMP:20260913T140602Z
+UID:C02A00FD-D164-41A2-9BAA-E1C42D113752
+CREATED:20260913T132659Z
+DESCRIPTION:description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We 
+ celebrate big bodies and the people who love them\, creating nightlife wher
+ e size isn’t a side note—it’s the spotlight. BELLY\\: Thick\, Juicy\, and U
+ napologetic. 🍑\nbar: Jacques Cabaret\naddress: 79 Broadway Street\, Boston
+ \, MA\, 02116\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1
+ -pl3n8\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f
+ 6ecaf1e6c7/1776899903804-A38K3O2JVTO1Y25IO3AB/BELLYFLYER-+%28Instagram+Post
+ +%2845%29%29.jpg\nimageSource: json-api\nticketUrl: https://www.eventbrite.
+ com/e/belly-pride-tickets-1988365931025\npinSource: page\naddressSource: pa
+ ge\ngmaps: https://www.google.com/maps/search/?api=1&query=42.349943%2C-71.
+ 06749169999999\nkey: the-belly-party|2026-06-06|jacques cabaret\nbearSource
+ : ai\nshortName: BELLY PARTY
+LAST-MODIFIED:20260913T132659Z
+LOCATION:42.349943\, -71.06749169999999
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Belly Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260828T230000Z
+DTEND:20260829T040000Z
+DTSTAMP:20260913T140602Z
+UID:67A99941-D45A-49F5-89CB-EDADD838C705
+CREATED:20260913T132643Z
+DESCRIPTION:description: Mass bears and cubs is hosting a Jock party to rai
+ se money for Queer History Boston. Join host Diva Corvette at Jacques on Fr
+ iday\, August 28 \, featuring jockstrap models\, raffles\, a jockstrap auct
+ ion\, drinks\, and music by DJ Brian Halligan !\nbar: JACQUE'S Cabaret\nadd
+ ress: 79 Broadway Street\, Boston\, Massachusetts\, 02116\nwebsite: https:/
+ /www.massbearsandcubs.org/events/jocks-at-jacques\nimage: https://images.sq
+ uarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1787326509267-O4DUAWC
+ J6ZY53H15X140/1.png\nimageSource: json-api\nticketUrl: https://www.eventbri
+ te.com/e/jocks-at-jacques-tickets-1997052100592?aff=ebdssbdestsearch\nimage
+ Vertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf
+ 1e6c7/1787326509267-O4DUAWCJ6ZY53H15X140/1.png\npinSource: page\naddressSou
+ rce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.349943
+ %2C-71.06749169999999\nkey: jocks-at-jacques|2026-08-28|jacque's cabaret\nb
+ earSource: keyword\nshortName: JOCKS AT JACQUES
+LAST-MODIFIED:20260913T132643Z
+LOCATION:42.349943\, -71.06749169999999
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Jocks at Jacques
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T210000Z
+DTEND:20261130T010000Z
+DTSTAMP:20260913T140602Z
+UID:19D6E0A2-34AA-4066-9483-4FA86410EF7C
+CREATED:20260913T132638Z
+DESCRIPTION:description: Bears\, Brews & Boys is a fun\, inclusive monthly 
+ social event hosted by Mass Bears and Cubs in partnership with Dorchester B
+ rewing Company. Each month features a different theme\, great music\, craft
+  drinks\, and a relaxed\, queer-friendly atmosphere. Guests can also enjoy 
+ raffles that help raise money for local charities. Open to all adults 21+\,
+  it’s a welcoming space to connect\, socialize\, and support the community.
+ \nbar: Dorchester Brewing Company\naddress: 1250 Massachusetts Avenue\, Bos
+ ton\, MA\, 02125\nwebsite: https://www.massbearsandcubs.org/events/bears-br
+ ews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh-mkzk5\nimage
+ : https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/17
+ 65045071710-1K7706KECPUA2YK73MPT/dotbrewing.png\nimageSource: json-api\npin
+ Source: page\naddressSource: page\ngmaps: https://www.google.com/maps/searc
+ h/?api=1&query=42.32216710000001%2C-71.0621278\nkey: bears-brews-boys|2026-
+ 11-29|dorchester brewing company\nbearSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132638Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260821T000000Z
+DTEND:20260821T020000Z
+DTSTAMP:20260913T140602Z
+UID:375B9ED2-0A76-4782-9CE4-544536DD7D00
+CREATED:20260913T132645Z
+DESCRIPTION:description: Join us for this month's MBC Trivia Night at the A
+ lley Bar\, Always the 3rd Thursday of the month. Gather your friends and fo
+ rm a team\, or join a team at the bar. Arrive a little early for pre-game s
+ ocializing over cocktails! Cash prizes for the top three teams\, plus a few
+  extra surprises!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\,
+  02108\nwebsite: https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jx
+ hwl-4ywba-tg9eg-226p3-bzlx7-bwrz3\nimage: https://images.squarespace-cdn.co
+ m/content/v1/6631a0e7f9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/
+ 3.png\nimageSource: json-api\npinSource: page\naddressSource: page\ngmaps: 
+ https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\n
+ key: monthly-trivia|2026-08-21|the alley bar\nbearSource: ai\nshortName: MO
+ NTHLY TRIVIA
+LAST-MODIFIED:20260913T132645Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T200000Z
+DTEND:20260921T020000Z
+DTSTAMP:20260913T140602Z
+UID:2C9CEFD4-764D-4F5C-8EE9-7CE3967FFF49
+CREATED:20260913T132618Z
+DESCRIPTION:bar: Club Cafe\naddress: 209 Columbus Avenue Boston\, MA\, 0211
+ 6 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a
+ 0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d-83d1-07b6d2cf5609/4.png\ntimezone: A
+ merica/New_York\naddressSource: page\nwebsite: https://www.massbearsandcubs
+ .org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hy9mp\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723
+ 921\npinSource: geocoded-exact\nkey: bear-tea-club-cafe|2026-09-20|club caf
+ e\ndescription: Join us every third Sunday Bear Tea from 4–10 p.m. Come ear
+ ly to enjoy Club Café’s Sunday Funday half-price menu before the music kick
+ s in. Each month brings something special\, from community fundraisers to g
+ reat raffle prizes. Dance the evening away with DJ Darrin Friedman \, spinn
+ ing hits from the ’70s to today.\nimageSource: json-api\nbearSource: keywor
+ d\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132618Z
+LOCATION:42.3483941\, -71.0723921
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea / Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261016T000000Z
+DTEND:20261016T020000Z
+DTSTAMP:20260913T140602Z
+UID:5F316215-0EA4-4F67-9E5C-A8BDB4619395
+CREATED:20260913T132623Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, MA\, 02108 Un
+ ited States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f
+ 9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/3.png\ntimezone: Ameri
+ ca/New_York\naddressSource: page\nwebsite: https://www.massbearsandcubs.org
+ /events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff\ngm
+ aps: https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBk
+ JKM\npinSource: curated\nkey: monthly-trivia|2026-10-16|the alley bar\ndesc
+ ription: Join us for this month's MBC Trivia Night at the Alley Bar\, Alway
+ s the 3rd Thursday of the month. Gather your friends and form a team\, or j
+ oin a team at the bar. Arrive a little early for pre-game socializing over 
+ cocktails! Cash prizes for the top three teams\, plus a few extra surprises
+ !\nimageSource: json-api\nbarSource: curated\nbearSource: ai\nshortName: MO
+ NTHLY TRIVIA
+LAST-MODIFIED:20260913T132624Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260830T200000Z
+DTEND:20260831T000000Z
+DTSTAMP:20260913T140602Z
+UID:7FFBCBC7-5B12-4BD5-8318-466037D82086
+CREATED:20260913T132642Z
+DESCRIPTION:description: Bears\, Brews & Boys is a fun\, inclusive monthly 
+ social event hosted by Mass Bears and Cubs in partnership with Dorchester B
+ rewing Company. Each month features a different theme\, great music\, craft
+  drinks\, and a relaxed\, queer-friendly atmosphere. Guests can also enjoy 
+ raffles that help raise money for local charities. Open to all adults 21+\,
+  it’s a welcoming space to connect\, socialize\, and support the community.
+ \nbar: Dorchester Brewing Company\naddress: 1250 Massachusetts Avenue\, Bos
+ ton\, MA\, 02125\nwebsite: https://www.massbearsandcubs.org/events/bears-br
+ ews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j\nimage: https://images.s
+ quarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1765045071710-1K7706
+ KECPUA2YK73MPT/dotbrewing.png\nimageSource: json-api\npinSource: page\naddr
+ essSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.
+ 32216710000001%2C-71.0621278\nkey: bears-brews-boys|2026-08-30|dorchester b
+ rewing company\nbearSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132642Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260719T200000Z
+DTEND:20260720T020000Z
+DTSTAMP:20260913T140602Z
+UID:0F34E43B-4BC3-4D63-A0BB-6EC858C266BC
+CREATED:20260913T132649Z
+DESCRIPTION:description: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nbar: Club Cafe\naddress: 209 Col
+ umbus Avenue\, Boston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.o
+ rg/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb\nimage: https://
+ images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/2fdadc1c-5a3
+ 5-473d-83d1-07b6d2cf5609/4.png\nimageSource: json-api\npinSource: page\nadd
+ ressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42
+ .3486155%2C-71.0723826\nkey: bear-tea-club-cafe|2026-07-19|club cafe\nbearS
+ ource: keyword\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132650Z
+LOCATION:42.3486155\, -71.0723826
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260918T000000Z
+DTEND:20260918T020000Z
+DTSTAMP:20260913T140602Z
+UID:BA164BAA-727C-4417-B2B8-221F7C8AE8CA
+CREATED:20260913T132616Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, MA\, 02108 Un
+ ited States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f
+ 9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/3.png\ntimezone: Ameri
+ ca/New_York\naddressSource: page\nwebsite: https://www.massbearsandcubs.org
+ /events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8\ngmaps: h
+ ttps://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\np
+ inSource: curated\nkey: monthly-trivia|2026-09-18|the alley bar\ndescriptio
+ n: Join us for this month's MBC Trivia Night at the Alley Bar\, Always the 
+ 3rd Thursday of the month. Gather your friends and form a team\, or join a 
+ team at the bar. Arrive a little early for pre-game socializing over cockta
+ ils! Cash prizes for the top three teams\, plus a few extra surprises!\nima
+ geSource: json-api\nbarSource: curated\nbearSource: ai\nshortName: MONTHLY 
+ TRIVIA
+LAST-MODIFIED:20260913T132617Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261120T010000Z
+DTEND:20261120T030000Z
+DTSTAMP:20260913T140602Z
+UID:257AC6CB-CC96-446D-8D4E-AD9D396DFEC9
+CREATED:20260913T132635Z
+DESCRIPTION:description: Join us for this month's MBC Trivia Night at the A
+ lley Bar\, Always the 3rd Thursday of the month. Gather your friends and fo
+ rm a team\, or join a team at the bar. Arrive a little early for pre-game s
+ ocializing over cocktails! Cash prizes for the top three teams\, plus a few
+  extra surprises!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\,
+  02108\nwebsite: https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jx
+ hwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3\nimage: https://images.
+ squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/4f24c456-5509-488d-
+ b824-89f297e89246/3.png\nimageSource: json-api\npinSource: page\naddressSou
+ rce: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4R
+ w44kRAxo45UBkJKM\nkey: monthly-trivia|2026-11-20|the alley bar\nbearSource:
+  ai\nshortName: MONTHLY TRIVIA
+LAST-MODIFIED:20260913T132636Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260628T010000Z
+DTEND:20260628T060000Z
+DTSTAMP:20260913T140602Z
+UID:F2B0CB9F-7ECF-40F1-83C1-737B3B6B742A
+CREATED:20260913T132654Z
+DESCRIPTION:description: Alley Bears! Join Mass Bears and Cubs for Alley Be
+ ars\, our monthly bar night at the Alley Bar! Start off with cocktails and 
+ conversation at the downstairs bar beginning at 9\, and then we'll be movin
+ g upstairs to the dance floor starting at 10. No cover\, 21+\nbar: The Alle
+ y Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02108\nwebsite: https://www.mas
+ sbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92\ni
+ mage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c
+ 7/1764902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.png\nimageSource: json-
+ api\nimageHorizontal: https://images.squarespace-cdn.com/content/v1/6631a0e
+ 7f9603f6ecaf1e6c7/1764902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.png\npi
+ nSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/plac
+ e/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: alley-bears|2026-06-28|the 
+ alley bar\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132654Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260517T200000Z
+DTEND:20260518T020000Z
+DTSTAMP:20260913T140602Z
+UID:EE0BF0AB-BF79-4990-AA18-DC47930789B0
+CREATED:20260913T132705Z
+DESCRIPTION:description: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nbar: Club Cafe\naddress: 209 Col
+ umbus Avenue\, Boston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.o
+ rg/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6\nimage: https://images.squar
+ espace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d-83d1-
+ 07b6d2cf5609/4.png\nimageSource: json-api\npinSource: page\naddressSource: 
+ page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.3486155%2C-
+ 71.0723826\nkey: bear-tea-club-cafe|2026-05-17|club cafe\nbearSource: keywo
+ rd\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132705Z
+LOCATION:42.3486155\, -71.0723826
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260614T160000Z
+DTEND:20260614T210000Z
+DTSTAMP:20260913T140602Z
+UID:ADE1F25B-C00E-455E-9181-C1213DB78BD7
+CREATED:20260913T132658Z
+DESCRIPTION:description: Pride Bearzaar\, Mass Bears and Cubs’ newest commu
+ nity marketplace event/bazaar\, takes place on June 14\, 2026\, as part of 
+ New England Bear Pride! Being held at Dorchester Brewing\, and opening to t
+ he public at noon\, it runs until 5 p.m. And we will have a special edition
+  of Bears\, Brews & Boys that evening!\nbar: Dorchester Brewing Company\nad
+ dress: 1250 Massachusetts Avenue\, Boston\, MA\, 02125\nwebsite: https://ww
+ w.massbearsandcubs.org/events/bearzaar\nimage: https://images.squarespace-c
+ dn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1778540200565-FFHLGVMO9J0LTZKWA4
+ 2Q/Bearzaar+insta.png\nimageSource: json-api\nimageVertical: https://images
+ .squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1778540200565-FFHL
+ GVMO9J0LTZKWA42Q/Bearzaar+insta.png\npinSource: page\naddressSource: page\n
+ gmaps: https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C
+ -71.0621278\nkey: bearzaar|2026-06-14|dorchester brewing company\nbearSourc
+ e: keyword\nshortName: BEARZAAR
+LAST-MODIFIED:20260913T132658Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearzaar!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261115T210000Z
+DTEND:20261116T030000Z
+DTSTAMP:20260913T140602Z
+UID:2827C404-AE55-4028-B5F2-BAFF3B2EDB8C
+CREATED:20260913T132634Z
+DESCRIPTION:bar: Club Cafe\naddress: 209 Columbus Avenue Boston\, MA\, 0211
+ 6 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a
+ 0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d-83d1-07b6d2cf5609/4.png\ntimezone: A
+ merica/New_York\naddressSource: page\nwebsite: https://www.massbearsandcubs
+ .org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-jcydj\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723
+ 921\npinSource: geocoded-exact\nkey: bear-tea-club-cafe|2026-11-15|club caf
+ e\ndescription: Join us every third Sunday Bear Tea from 4–10 p.m. Come ear
+ ly to enjoy Club Café’s Sunday Funday half-price menu before the music kick
+ s in. Each month brings something special\, from community fundraisers to g
+ reat raffle prizes. Dance the evening away with DJ Darrin Friedman \, spinn
+ ing hits from the ’70s to today.\nimageSource: json-api\nbearSource: keywor
+ d\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132635Z
+LOCATION:42.3483941\, -71.0723921
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260712T000000Z
+DTSTAMP:20260913T140602Z
+UID:CC8842D5-A647-458C-B91D-5AC85610F88A
+CREATED:20260913T132652Z
+DESCRIPTION:description: Thick\, Juicy\, and Unapologetic.\nbar: Jacques' C
+ abaret\naddress: 79 Broadway Street\, Boston\, MA 02116\nticketUrl: https:/
+ /www.eventbrite.com/e/the-belly-party-tickets-1992454124923\nimage: https:/
+ /images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/17822495986
+ 74-DGETBOL8K52HXA5GVHZC/711.png\ntimezone: America/New_York\nimageVertical:
+  https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/178
+ 2249598674-DGETBOL8K52HXA5GVHZC/711.png\nwebsite: https://www.massbearsandc
+ ubs.org/events/bellyparty1-pl3n8-apggw\naddressSource: page\ngmaps: https:/
+ /www.google.com/maps/search/?api=1&query=Jacques'%20Cabaret%2C%2079%20Broad
+ way%20Street%2C%20Boston%2C%20MA%2002116\npinSource: geocoded-exact\nkey: t
+ he-belly-party|2026-07-12|jacques' cabaret\nimageSource: json-api\nbarSourc
+ e: geo-poi\nbearSource: ai\nshortName: BELLY PARTY
+LAST-MODIFIED:20260913T132652Z
+LOCATION:42.3499774\, -71.0674461
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Belly Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260628T200000Z
+DTEND:20260629T000000Z
+DTSTAMP:20260913T140602Z
+UID:0A00BFA7-79D2-4976-AA86-184C62931FF0
+CREATED:20260913T132653Z
+DESCRIPTION:description: Bears\, Brews & Boys is a fun\, inclusive monthly 
+ social event hosted by Mass Bears and Cubs in partnership with Dorchester B
+ rewing Company. Each month features a different theme\, great music\, craft
+  drinks\, and a relaxed\, queer-friendly atmosphere. Guests can also enjoy 
+ raffles that help raise money for local charities. Open to all adults 21+\,
+  it’s a welcoming space to connect\, socialize\, and support the community.
+ \nbar: Dorchester Brewing Company\naddress: 1250 Massachusetts Avenue\, Bos
+ ton\, MA\, 02125\nwebsite: https://www.massbearsandcubs.org/events/bears-br
+ ews-boys-smd42-eb7p7-872me-9w83d-x943p\nimage: https://images.squarespace-c
+ dn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1765045071710-1K7706KECPUA2YK73M
+ PT/dotbrewing.png\nimageSource: json-api\npinSource: page\naddressSource: p
+ age\ngmaps: https://www.google.com/maps/search/?api=1&query=42.322167100000
+ 01%2C-71.0621278\nkey: bears-brews-boys|2026-06-28|dorchester brewing compa
+ ny\nbearSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132653Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260726T020000Z
+DTEND:20260726T070000Z
+DTSTAMP:20260913T140602Z
+UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
+CREATED:20260724T182614Z
+DESCRIPTION:description: Bear Week Return\nUNDERWEAR & GEAR PARTY\nCLOTHES 
+ CHECK\nbar: Legacy\naddress: 79 Warrenton St\, Boston\, MA 02116\ntimezone:
+  America/New_York\nticketUrl: https://www.ticketweb.com/event/furball-bosto
+ n-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\nimage: https://
+ static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png\
+ ncover: GAYMAFIABOSTON.COM FURBALL.NYC\nwebsite: https://furball.nyc\ninsta
+ gram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: http
+ s://linktr.ee/furballnyc\nbearSource: keyword\nkey: furball-boston|2026-07-
+ 26|legacy\npinSource: curated\naddressSource: curated\nimageSource: page\nb
+ arSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=4
+ 2.3499063%2C-71.0658453
+LAST-MODIFIED:20260801T210103Z
+LOCATION:42.3499063\, -71.0658453
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Boston
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261220T210000Z
+DTEND:20261221T030000Z
+DTSTAMP:20260913T140602Z
+UID:B081203E-9FE3-4545-8408-F7BBDED53BDD
+CREATED:20260913T132640Z
+DESCRIPTION:description: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nbar: Club Cafe\naddress: 209 Col
+ umbus Avenue\, Boston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.o
+ rg/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-65clr\nima
+ ge: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/
+ 2fdadc1c-5a35-473d-83d1-07b6d2cf5609/4.png\nimageSource: json-api\npinSourc
+ e: page\naddressSource: page\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=42.3486155%2C-71.0723826\nkey: bear-tea-club-cafe|2026-12-20|club
+  cafe\nbearSource: keyword\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132640Z
+LOCATION:42.3486155\, -71.0723826
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260510T000000Z
+DTEND:20260510T040000Z
+DTSTAMP:20260913T140602Z
+UID:8C579A50-3D9F-4CC5-8B05-62F24388D634
+CREATED:20260913T132706Z
+DESCRIPTION:description: Mass Bears and Cubs is teaming up with Henry Paqui
+ n Presents to bring you The BELLY Party. BELLY is more than just a night ou
+ t. It is a space to feel confident\, free\, and celebrated exactly as you a
+ re. No judgment\, just good music\, good people\, and a whole lot of love. 
+ MBC Members get one Free entry to BELLY per year. Please email Members@mass
+ bearsandcubs.org‍\nbar: Jacques Cabaret\naddress: 79 Broadway Street\, Bost
+ on\, MA\, 02116\nwebsite: https://www.massbearsandcubs.org/events/bellypart
+ y1\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6eca
+ f1e6c7/1776553141350-REO6DQ1W93RF3ILHF2IJ/BELLYFLYER-+%28Instagram+Post+%28
+ 45%29%29.jpg\nimageSource: json-api\nticketUrl: https://www.eventbrite.com/
+ e/the-belly-party-tickets-1987758020749?aff=oddtdtcreator&keep_tld=true\npi
+ nSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=42.349943%2C-71.06749169999999\nkey: the-belly-party|2026-0
+ 5-10|jacques cabaret\nbearSource: ai\nshortName: BELLY PARTY
+LAST-MODIFIED:20260913T132707Z
+LOCATION:42.349943\, -71.06749169999999
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Belly Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261010T230000Z
+DTEND:20261011T040000Z
+DTSTAMP:20260913T140602Z
+UID:5CE373DE-7341-4B48-8FDD-569AC8D2C1DB
+CREATED:20260913T132622Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, MA\, 02108 Un
+ ited States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f
+ 9603f6ecaf1e6c7/1788710519978-CYIYJKOWBJ49WYHNBNJO/contest.png\ntimezone: A
+ merica/New_York\nimageVertical: https://images.squarespace-cdn.com/content/
+ v1/6631a0e7f9603f6ecaf1e6c7/1788710519978-CYIYJKOWBJ49WYHNBNJO/contest.png\
+ naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/ma-b
+ ear-contest-2027\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ
+ DzxFQ4Rw44kRAxo45UBkJKM\npinSource: curated\nkey: ma-bear-contest-2027|2026
+ -10-10|the alley bar\ndescription: The Massachusetts Bear Contest Weekend a
+ t the Alley Bar arrives October 9-10\, 2026! Yes\, we did say “Massachusett
+ s Bear!”\nticketUrl: https://www.eventbrite.com/e/massachusetts-bear-2027-c
+ ontest-tickets-2000202025101\ncover: $20-$150\nimageHorizontal: https://img
+ .evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192993968%2F251111215592
+ %2F1%2Foriginal.20260908-182100?crop=focalpoint&fit=crop&w=940&auto=format%
+ 2Ccompress&q=75&sharp=10&fp-x=0.015&fp-y=0.503&s=0ac61d13976f5b5f61bd2c5a84
+ 2c5332\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nsho
+ rtName: MA BEAR CONTEST
+LAST-MODIFIED:20260913T132622Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MA Bear Contest 2027
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260531T200000Z
+DTEND:20260601T000000Z
+DTSTAMP:20260913T140602Z
+UID:D0350931-F1E8-4248-A5E2-36EBD7619160
+CREATED:20260913T132702Z
+DESCRIPTION:description: Bears\, Brews & Boys is a fun\, inclusive monthly 
+ social event hosted by Mass Bears and Cubs in partnership with Dorchester B
+ rewing Company. Each month features a different theme\, great music\, craft
+  drinks\, and a relaxed\, queer-friendly atmosphere. Guests can also enjoy 
+ raffles that help raise money for local charities. Open to all adults 21+\,
+  it’s a welcoming space to connect\, socialize\, and support the community.
+ \nbar: Dorchester Brewing Company\naddress: 1250 Massachusetts Avenue\, Bos
+ ton\, MA\, 02125\nwebsite: https://www.massbearsandcubs.org/events/bears-br
+ ews-boys-smd42-eb7p7-872me-9w83d\nimage: https://images.squarespace-cdn.com
+ /content/v1/6631a0e7f9603f6ecaf1e6c7/1765045071710-1K7706KECPUA2YK73MPT/dot
+ brewing.png\nimageSource: json-api\npinSource: page\naddressSource: page\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-
+ 71.0621278\nkey: bears-brews-boys|2026-05-31|dorchester brewing company\nbe
+ arSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132702Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260717T000000Z
+DTEND:20260717T020000Z
+DTSTAMP:20260913T140602Z
+UID:839B4453-D45C-4D6E-B43C-3A6C56BE787E
+CREATED:20260913T132651Z
+DESCRIPTION:description: Join us for this month's MBC Trivia Night at the A
+ lley Bar\, Always the 3rd Thursday of the month. Gather your friends and fo
+ rm a team\, or join a team at the bar. Arrive a little early for pre-game s
+ ocializing over cocktails! Cash prizes for the top three teams\, plus a few
+  extra surprises!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\,
+  02108\nwebsite: https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jx
+ hwl-4ywba-tg9eg-226p3-bzlx7\nimage: https://images.squarespace-cdn.com/cont
+ ent/v1/6631a0e7f9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/3.png\
+ nimageSource: json-api\npinSource: page\naddressSource: page\ngmaps: https:
+ //www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: m
+ onthly-trivia|2026-07-17|the alley bar\nbearSource: ai\nshortName: MONTHLY 
+ TRIVIA
+LAST-MODIFIED:20260913T132651Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260816T020000Z
-DTSTAMP:20260817T005449Z
+DTSTAMP:20260913T140602Z
 UID:9BFAC10A-73DA-4703-8B46-EEC0A0AC0C4C
 CREATED:20260811T142853Z
 DESCRIPTION:description: Dog Days Pup Party\nbar: Legacy\naddress: 79 Warre
@@ -31,27 +816,401 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260726T020000Z
-DTEND:20260726T070000Z
-DTSTAMP:20260817T005449Z
-UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
-CREATED:20260724T182614Z
-DESCRIPTION:description: Bear Week Return\nUNDERWEAR & GEAR PARTY\nCLOTHES 
- CHECK\nbar: Legacy\naddress: 79 Warrenton St\, Boston\, MA 02116\ntimezone:
-  America/New_York\nticketUrl: https://www.ticketweb.com/event/furball-bosto
- n-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\nimage: https://
- static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png\
- ncover: GAYMAFIABOSTON.COM FURBALL.NYC\nwebsite: https://furball.nyc\ninsta
- gram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: http
- s://linktr.ee/furballnyc\nbearSource: keyword\nkey: furball-boston|2026-07-
- 26|legacy\npinSource: curated\naddressSource: curated\nimageSource: page\nb
- arSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=4
- 2.3499063%2C-71.0658453
-LAST-MODIFIED:20260801T210103Z
-LOCATION:42.3499063\, -71.0658453
+DTSTART:20260913T000000Z
+DTEND:20260913T040000Z
+DTSTAMP:20260913T140602Z
+UID:641D4C88-3454-4114-8B94-A83EE91E3490
+CREATED:20260913T132615Z
+DESCRIPTION:bar: Jacques Cabaret\naddress: 79 Broadway Street Boston\, MA\,
+  02116 United States\nimage: https://images.squarespace-cdn.com/content/v1/
+ 6631a0e7f9603f6ecaf1e6c7/1787064667040-F8PWSYM6FXWEM290IRM4/BELLYFLYER-+%28
+ Instagram+Post+%2845%29%29.png\ntimezone: America/New_York\ncover: $20\nadd
+ ressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellypar
+ ty1-pl3n8-apggw-tea6t\ngmaps: https://www.google.com/maps/search/?api=1&que
+ ry=Jacques%20Cabaret%2C%2079%20Broadway%20Street%20Boston%2C%20MA%2C%200211
+ 6%20United%20States\npinSource: geocoded-exact\nkey: the-belly-party|2026-0
+ 9-13|jacques cabaret\ndescription: ✨ BELLY is more than a party—it’s a MOVE
+ MENT. ✨We celebrate big bodies and the people who love them\, creating nigh
+ tlife where size isn’t a side note—it’s the spotlight. BELLY\\: Thick\, Jui
+ cy\, and Unapologetic. 🍑\nticketUrl: https://www.eventbrite.com/e/the-bell
+ y-party-tickets-1992454124923\nimageSource: json-api\nbarSource: geo-poi\nb
+ earSource: ai\nshortName: BELLY PARTY
+LAST-MODIFIED:20260913T132616Z
+LOCATION:42.3499774\, -71.0674461
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FURBALL Boston
+SUMMARY:The Belly Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260726T010000Z
+DTEND:20260726T060000Z
+DTSTAMP:20260913T140602Z
+UID:B07273C7-2214-4637-B393-29DC16BB9AFB
+CREATED:20260913T132648Z
+DESCRIPTION:description: Alley Bears! Join Mass Bears and Cubs for Alley Be
+ ars\, our monthly bar night at the Alley Bar! Start off with cocktails and 
+ conversation at the downstairs bar beginning at 9\, and then we'll be movin
+ g upstairs to the dance floor starting at 10. No cover\, 21+\nbar: The Alle
+ y Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02108\nwebsite: https://www.mas
+ sbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-ax
+ cak\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ec
+ af1e6c7/1764902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.png\nimageSource:
+  json-api\nimageHorizontal: https://images.squarespace-cdn.com/content/v1/6
+ 631a0e7f9603f6ecaf1e6c7/1764902055942-57UP5E6C5TLW82HKDJTA/alleybears1227.p
+ ng\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/map
+ s/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: alley-bears|2026-07-2
+ 6|the alley bar\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132649Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261010T000000Z
+DTEND:20261010T040000Z
+DTSTAMP:20260913T140602Z
+UID:1251A717-D94B-47C9-A62D-C33F3BE05AD6
+CREATED:20260913T132621Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, Massachusetts
+ \, 02108 United States\nimage: https://images.squarespace-cdn.com/content/v
+ 1/6631a0e7f9603f6ecaf1e6c7/1788385145899-OCFWCHXG5XDGI6VER4O5/MA+Bear+2027+
+ save+the+date+.png\ntimezone: America/New_York\nimageVertical: https://imag
+ es.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788385145899-OC
+ FWCHXG5XDGI6VER4O5/MA+Bear+2027+save+the+date+.png\naddressSource: page\nwe
+ bsite: https://www.massbearsandcubs.org/events/ma-bear-contest-meet-greet\n
+ gmaps: https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45U
+ BkJKM\npinSource: curated\nkey: ma-bear-contest-meet-greet|2026-10-10|the a
+ lley bar\ndescription: Join us as we kick off the MA Bear Contest 2027 ! Co
+ ntest Weekend at the alley and you can meet the contestants.\nimageSource: 
+ json-api\nbarSource: curated\nbearSource: keyword\nshortName: MA BEAR CONTE
+ ST
+LAST-MODIFIED:20260913T132621Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MA BEAR CONTEST: MEET & GREET
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260619T000000Z
+DTEND:20260619T020000Z
+DTSTAMP:20260913T140602Z
+UID:C3C548E2-BDFC-4E10-8453-5098E02EDBE8
+CREATED:20260913T132656Z
+DESCRIPTION:description: Join us for a special edition of Bear Trivia as we
+  celebrate New England Bear Pride with our host Dave Sawyer. Doors open at 
+ 8 PM\, and as always\, there’s no cover. Gather your crew\, grab a drink\, 
+ and put your knowledge to the test with fun\, campy\, and competitive round
+ s of trivia. Whether you're a trivia pro or just here for the vibes\, it’s 
+ the perfect way to connect\, laugh\, and celebrate the bear community.\nbar
+ : The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02108\nwebsite: https
+ ://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3\
+ nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e
+ 6c7/1776462505599-IQDO9OLYGD5UTMOTDEN3/BEAR+TRIVIA+INSTA.jpg\nimageSource: 
+ json-api\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631
+ a0e7f9603f6ecaf1e6c7/1776462505599-IQDO9OLYGD5UTMOTDEN3/BEAR+TRIVIA+INSTA.j
+ pg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/map
+ s/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: bear-pride-trivia|202
+ 6-06-19|the alley bar\nbearSource: keyword\nshortName: BEAR PRIDE
+LAST-MODIFIED:20260913T132657Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Pride Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T020000Z
+DTEND:20261129T050000Z
+DTSTAMP:20260913T140602Z
+UID:5D26AE28-637B-478F-8DE9-00CAED261A42
+CREATED:20260913T132637Z
+DESCRIPTION:description: Join Mass Bears and Cubs for Alley Bears\, our mon
+ thly bar Gear night at the Alley Bar! Start off with cocktails and conversa
+ tion at the downstairs bar beginning at 9\, and then we'll be moving upstai
+ rs to the dance floor starting at 9PM. No cover\, 21+ Gear is required to P
+ arty Upstairs!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02
+ 108\nwebsite: https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjr
+ wg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn\nimage: https://images.s
+ quarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708069785-7D00G1
+ ZOHYTPRTAHA8JF/3.jpg\nimageSource: json-api\nimageVertical: https://images.
+ squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708069785-7D00G
+ 1ZOHYTPRTAHA8JF/3.jpg\npinSource: page\naddressSource: page\ngmaps: https:/
+ /www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: al
+ ley-bears-gear-night|2026-11-29|the alley bar\nbearSource: keyword\nshortNa
+ me: ALLEY BEARS
+LAST-MODIFIED:20260913T132637Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears - Gear Night!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261018T200000Z
+DTEND:20261019T020000Z
+DTSTAMP:20260913T140602Z
+UID:95D5581F-97D1-412D-A3AE-648F513FC21E
+CREATED:20260913T132625Z
+DESCRIPTION:bar: Club Cafe\naddress: 209 Columbus Avenue Boston\, MA\, 0211
+ 6 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a
+ 0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d-83d1-07b6d2cf5609/4.png\ntimezone: A
+ merica/New_York\naddressSource: page\nwebsite: https://www.massbearsandcubs
+ .org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723
+ 921\npinSource: geocoded-exact\nkey: bear-tea-meet-ma-bear-2027!|2026-10-18
+ |club cafe\ndescription: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nimageSource: json-api\nbearSourc
+ e: keyword\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132625Z
+LOCATION:42.3483941\, -71.0723921
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea - Meet MA Bear 2027!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261025T000000Z
+DTEND:20261025T040000Z
+DTSTAMP:20260913T140602Z
+UID:41B8DE89-E55A-45B5-8338-399F17CC2541
+CREATED:20260913T132631Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, MA\, 02108 Un
+ ited States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f
+ 9603f6ecaf1e6c7/1788707874753-4HY95LPGAIFN9YL9E95B/2.jpg\ntimezone: America
+ /New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/663
+ 1a0e7f9603f6ecaf1e6c7/1788707874753-4HY95LPGAIFN9YL9E95B/2.jpg\naddressSour
+ ce: page\nwebsite: https://www.massbearsandcubs.org/events/alley-bears-mkp8
+ l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj\ngmaps: https://www.googl
+ e.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\npinSource: curate
+ d\nkey: alley-bears-gear-night|2026-10-25|the alley bar\ndescription: Join 
+ Mass Bears and Cubs for Alley Bears\, our monthly bar Gear night at the All
+ ey Bar! Start off with cocktails and conversation at the downstairs bar beg
+ inning at 9\, and then we'll be moving upstairs to the dance floor starting
+  at 9PM. No cover\, 21+ Gear is required to Party Upstairs!\nimageSource: j
+ son-api\nbarSource: curated\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132631Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears - Gear Night
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261218T010000Z
+DTEND:20261218T030000Z
+DTSTAMP:20260913T140602Z
+UID:EB96BE72-A854-403C-881C-33CA239ADA5F
+CREATED:20260913T132639Z
+DESCRIPTION:description: Join us for this month's MBC Trivia Night at the A
+ lley Bar\, Always the 3rd Thursday of the month. Gather your friends and fo
+ rm a team\, or join a team at the bar. Arrive a little early for pre-game s
+ ocializing over cocktails! Cash prizes for the top three teams\, plus a few
+  extra surprises!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\,
+  02108\nwebsite: https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jx
+ hwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3-74hmk\nimage: https://i
+ mages.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/4f24c456-5509
+ -488d-b824-89f297e89246/3.png\nimageSource: json-api\npinSource: page\naddr
+ essSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJD
+ zxFQ4Rw44kRAxo45UBkJKM\nkey: monthly-trivia|2026-12-18|the alley bar\nbearS
+ ource: ai\nshortName: MONTHLY TRIVIA
+LAST-MODIFIED:20260913T132639Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260621T200000Z
+DTEND:20260622T020000Z
+DTSTAMP:20260913T140602Z
+UID:5A30FA4C-4855-4709-8D8C-E9D4576864D4
+CREATED:20260913T132655Z
+DESCRIPTION:description: Join us every third Sunday Bear Tea from 4–10 p.m.
+  Come early to enjoy Club Café’s Sunday Funday half-price menu before the m
+ usic kicks in. Each month brings something special\, from community fundrai
+ sers to great raffle prizes. Dance the evening away with DJ Darrin Friedman
+  \, spinning hits from the ’70s to today.\nbar: Club Cafe\naddress: 209 Col
+ umbus Avenue\, Boston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.o
+ rg/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj\nimage: https://images
+ .squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/2fdadc1c-5a35-473d
+ -83d1-07b6d2cf5609/4.png\nimageSource: json-api\npinSource: page\naddressSo
+ urce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.34861
+ 55%2C-71.0723826\nkey: bear-tea-club-cafe|2026-06-21|club cafe\nbearSource:
+  keyword\nshortName: BEAR TEA
+LAST-MODIFIED:20260913T132655Z
+LOCATION:42.3486155\, -71.0723826
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea /Club Cafe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260522T000000Z
+DTEND:20260522T020000Z
+DTSTAMP:20260913T140602Z
+UID:417FCCDA-3749-4184-A038-F6EF515F65FE
+CREATED:20260913T132704Z
+DESCRIPTION:description: Join us for this month's MBC Trivia Night at the A
+ lley Bar\, Always the 3rd Thursday of the month. Gather your friends and fo
+ rm a team\, or join a team at the bar. Arrive a little early for pre-game s
+ ocializing over cocktails! Cash prizes for the top three teams\, plus a few
+  extra surprises!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\,
+  02108\nwebsite: https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jx
+ hwl-4ywba-tg9eg\nimage: https://images.squarespace-cdn.com/content/v1/6631a
+ 0e7f9603f6ecaf1e6c7/4f24c456-5509-488d-b824-89f297e89246/3.png\nimageSource
+ : json-api\npinSource: page\naddressSource: page\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nkey: monthly-trivi
+ a|2026-05-22|the alley bar\nbearSource: ai\nshortName: MONTHLY TRIVIA
+LAST-MODIFIED:20260913T132704Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Monthly Trivia
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260726T200000Z
+DTEND:20260727T000000Z
+DTSTAMP:20260913T140602Z
+UID:CBF36EDD-5CFB-4B3E-9B1A-A1EB3AE48CC4
+CREATED:20260913T132647Z
+DESCRIPTION:description: Bears\, Brews & Boys is a fun\, inclusive monthly 
+ social event hosted by Mass Bears and Cubs in partnership with Dorchester B
+ rewing Company. Each month features a different theme\, great music\, craft
+  drinks\, and a relaxed\, queer-friendly atmosphere. Guests can also enjoy 
+ raffles that help raise money for local charities. Open to all adults 21+\,
+  it’s a welcoming space to connect\, socialize\, and support the community.
+  Sponsored by Club Cafe\nbar: Dorchester Brewing Company\naddress: 1250 Mas
+ sachusetts Avenue\, Boston\, MA\, 02125\nwebsite: https://www.massbearsandc
+ ubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3\nimage:
+  https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/176
+ 5045071710-1K7706KECPUA2YK73MPT/dotbrewing.png\nimageSource: json-api\npinS
+ ource: page\naddressSource: page\ngmaps: https://www.google.com/maps/search
+ /?api=1&query=42.32216710000001%2C-71.0621278\nkey: bears-brews-boys|2026-0
+ 7-26|dorchester brewing company\nbearSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260913T132647Z
+LOCATION:42.32216710000001\, -71.0621278
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears\, Brews & Boys
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261227T020000Z
+DTEND:20261227T050000Z
+DTSTAMP:20260913T140602Z
+UID:54406DC6-4DAA-4164-A46D-C68CE5281D95
+CREATED:20260913T132641Z
+DESCRIPTION:description: Join Mass Bears and Cubs for Alley Bears\, our mon
+ thly bar Gear night at the Alley Bar! Start off with cocktails and conversa
+ tion at the downstairs bar beginning at 9\, and then we'll be moving upstai
+ rs to the dance floor starting at 9PM. No cover\, 21+ Gear is required to P
+ arty Upstairs!\nbar: The Alley Bar\naddress: 14 Pi Alley\, Boston\, MA\, 02
+ 108\nwebsite: https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjr
+ wg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn-yaf87\nimage: https://im
+ ages.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708131478-
+ FYE8K8XEJG5TC1JDSC6Z/4.jpg\nimageSource: json-api\nimageVertical: https://i
+ mages.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788708131478
+ -FYE8K8XEJG5TC1JDSC6Z/4.jpg\npinSource: page\naddressSource: page\ngmaps: h
+ ttps://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\nk
+ ey: alley-bears-gear-night|2026-12-27|the alley bar\nbearSource: keyword\ns
+ hortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132641Z
+LOCATION:42.3581324\, -71.0588204
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears - Gear Night!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260927T010000Z
+DTEND:20260927T040000Z
+DTSTAMP:20260913T140602Z
+UID:35048165-065C-458A-9B7D-8C8C9DF9FC08
+CREATED:20260913T132620Z
+DESCRIPTION:bar: The Alley Bar\naddress: 14 Pi Alley Boston\, MA\, 02108 Un
+ ited States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f
+ 9603f6ecaf1e6c7/1788707749387-3PXCA0EPIWV229753JD9/1.jpg\ntimezone: America
+ /New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/663
+ 1a0e7f9603f6ecaf1e6c7/1788707749387-3PXCA0EPIWV229753JD9/1.jpg\naddressSour
+ ce: page\nwebsite: https://www.massbearsandcubs.org/events/alley-bears-mkp8
+ l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78\ngmaps: https://www.google.com/
+ maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM\npinSource: curated\nkey
+ : alley-bears-gear-night|2026-09-27|the alley bar\ndescription: Join Mass B
+ ears and Cubs for Alley Bears\, our monthly bar Gear night at the Alley Bar
+ ! Start off with cocktails and conversation at the downstairs bar beginning
+  at 9\, and then we'll be moving upstairs to the dance floor starting at 9P
+ M. No cover\, 21+ Gear is required to Party Upstairs!\nimageSource: json-ap
+ i\nbarSource: curated\nbearSource: keyword\nshortName: ALLEY BEARS
+LAST-MODIFIED:20260913T132620Z
+LOCATION:42.358084\, -71.0587317
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Alley Bears - Gear Night!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260606T180000Z
+DTEND:20260606T220000Z
+DTSTAMP:20260913T140602Z
+UID:096421F9-F24C-4E0C-A441-0C194352D662
+CREATED:20260913T132700Z
+DESCRIPTION:description: Celebrate Pride with Woof\\: Pride Block Party\, a
+  welcoming space for the LGBTQ+ community\, allies\, bears\, cubs\, and eve
+ ryone in between. Get ready to celebrate Pride like never before at Woof\\:
+  Pride Block Party a high-energy\, open-air celebration bringing together t
+ he LGBTQ+ community\, allies\, and especially the bears\, cubs\, and everyo
+ ne who loves them.\nbar: JACQUES' CABARET\naddress: 79 Broadway Street\, Bo
+ ston\, MA\, 02116\nwebsite: https://www.massbearsandcubs.org/events/woof-bl
+ ock-party\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f96
+ 03f6ecaf1e6c7/1778689756293-SDTPBDDK3EZGG39Z3UQI/1.png\nimageSource: json-a
+ pi\nticketUrl: https://www.eventbrite.com/e/woof-pride-block-party-tickets-
+ 1987460355424?utm-campaign=social&utm-content=attendeeshare&utm-medium=disc
+ overy&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimageVertical: http
+ s://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/17786897
+ 56293-SDTPBDDK3EZGG39Z3UQI/1.png\npinSource: page\naddressSource: page\ngma
+ ps: https://www.google.com/maps/search/?api=1&query=42.349943%2C-71.0674916
+ 9999999\nkey: woof-block-party|2026-06-06|jacques' cabaret\nbearSource: key
+ word\nshortName: WOOF
+LAST-MODIFIED:20260913T132700Z
+LOCATION:42.349943\, -71.06749169999999
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:WOOF: BLOCK PARTY
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

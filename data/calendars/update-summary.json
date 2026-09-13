@@ -51,8 +51,8 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 2605,
-      "eventCount": 2
+      "dataLength": 60018,
+      "eventCount": 43
     },
     "brighton": {
       "name": "Brighton",
@@ -129,13 +129,13 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 38481,
+      "dataLength": 38479,
       "eventCount": 32
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 19498,
+      "dataLength": 19599,
       "eventCount": 11
     },
     "madrid": {
@@ -183,7 +183,7 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 3340,
+      "dataLength": 3287,
       "eventCount": 2
     },
     "paris": {
@@ -195,7 +195,7 @@
     "philly": {
       "name": "Philadelphia",
       "status": "success",
-      "dataLength": 7279,
+      "dataLength": 7321,
       "eventCount": 5
     },
     "phoenix": {
@@ -219,8 +219,8 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 3921,
-      "eventCount": 3
+      "dataLength": 5481,
+      "eventCount": 4
     },
     "pv": {
       "name": "Puerto Vallarta",
@@ -255,13 +255,13 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 25767,
+      "dataLength": 25822,
       "eventCount": 18
     },
     "sitges": {
       "name": "Sitges",
       "status": "success",
-      "dataLength": 61686,
+      "dataLength": 61753,
       "eventCount": 53
     },
     "tokyo": {
