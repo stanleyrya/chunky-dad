@@ -498,6 +498,15 @@ const scraperConfig = {
       // the saved value. Date/time fields and empty/TBA calendar values are always
       // exempt — a rescheduled event must still move.
       calendarStickinessEnforced: false,
+      // Calendar-merge arbitration (owner decision 2026-09-12). "deterministic":
+      // source authority decides every field — equivalent values are no change,
+      // the event's own page/feed/ticket page updates the calendar, a promoter's
+      // Instagram beats a venue's, websites rank by what they are, text that
+      // extends the stored value replaces it, anything else keeps the calendar
+      // and is recorded as contested; only `description` between two
+      // third-party copies still reaches the AI. "ai": the old position-biased
+      // arbiter for every field — the one-line revert.
+      merge: { arbitration: "deterministic" },
       bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
       // Overlong-field trim pipeline: one AI call per event batches every
       // overlong scraped field (title/description/shortName); answers are

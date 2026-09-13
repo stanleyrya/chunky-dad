@@ -1003,3 +1003,95 @@ test('downscaleImageBufferForOcr falls back LOUDLY to the original buffer on und
   const result = await adapter.downscaleImageBufferForOcr(garbage, 1024, 'https://cdn.example/garbage.bin');
   assert.equal(result, garbage, 'undecodable bytes degrade to the pre-fix payload, never throw');
 });
+
+// ---------------------------------------------------------------------------
+// One read per URL per run: the in-memory memo in front of fetchData.
+// ---------------------------------------------------------------------------
+
+test('fetchData reads a URL once per run and serves every repeat from memory', async () => {
+  const adapter = new WebAdapter();
+  const calls = [];
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      text: async () => '<html><body>one</body></html>'
+    };
+  };
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const first = await adapter.fetchData('https://eaglela.example/events/b-bar/');
+    // The SAME document under a hash and an empty query is the same read
+    const second = await adapter.fetchData('https://eaglela.example/events/b-bar/#poster');
+    const third = await adapter.fetchData('https://eaglela.example/events/b-bar/');
+    assert.equal(calls.length, 1, 'the URL is fetched exactly once');
+    assert.equal(second.html, first.html);
+    assert.equal(third.html, first.html);
+    // Each caller gets its own object — a stamp on one never reaches the next
+    second.html = 'mutated';
+    const fourth = await adapter.fetchData('https://eaglela.example/events/b-bar/');
+    assert.equal(fourth.html, '<html><body>one</body></html>');
+    // A different occurrence of the same page is a different URL, and a POST
+    // (a month-feed replay) is never memoized
+    await adapter.fetchData('https://eaglela.example/events/b-bar/?occurrence=2026-11-26');
+    await adapter.fetchData('https://eaglela.example/admin-ajax.php', { method: 'POST', body: 'mec_month=1' });
+    await adapter.fetchData('https://eaglela.example/admin-ajax.php', { method: 'POST', body: 'mec_month=1' });
+    assert.equal(calls.length, 4);
+  } finally {
+    global.fetch = originalFetch;
+    console.log = quiet;
+  }
+});
+
+test('the run page memo stops taking entries at its byte budget instead of growing without bound', () => {
+  const adapter = new WebAdapter();
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const big = 'x'.repeat(9 * 1024 * 1024);
+    for (let index = 0; index < 6; index++) {
+      adapter.writeRunPageMemo(`https://example.test/${index}`, { html: big });
+    }
+    assert.ok(adapter._runPageMemo.size <= 3, 'the budget caps what is held');
+    assert.equal(adapter.readRunPageMemo('https://example.test/0').html.length, big.length);
+    // Nothing empty or bodiless is ever memoized
+    adapter.writeRunPageMemo('', { html: 'x' });
+    adapter.writeRunPageMemo('https://example.test/empty', { html: '' });
+    assert.equal(adapter.readRunPageMemo('https://example.test/empty'), null);
+  } finally {
+    console.log = quiet;
+  }
+});
+
+test('postForm replays a synthetic feed URL once per run too', async () => {
+  const adapter = new WebAdapter();
+  const calls = [];
+  const originalFetch = global.fetch;
+  global.fetch = async (url, init) => {
+    calls.push(`${init.method} ${url}`);
+    return { ok: true, status: 200, statusText: 'OK', headers: new Map(), text: async () => '{"month":"<div/>"}' };
+  };
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const body = 'action=mec_monthly_view_load_month&mec_year=2026&mec_month=11';
+    const options = { cacheUrl: 'https://eaglela.example/wp-admin/admin-ajax.php?mec_month_feed=2026-11' };
+    const first = await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, options);
+    const second = await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, options);
+    assert.equal(calls.length, 1, 'the month feed is replayed once');
+    assert.equal(second.text, first.text);
+    assert.equal(second.ok, true);
+    // A POST with no cacheUrl names no document and is never memoized
+    await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, {});
+    await adapter.postForm('https://eaglela.example/wp-admin/admin-ajax.php', body, {});
+    assert.equal(calls.length, 3);
+  } finally {
+    global.fetch = originalFetch;
+    console.log = quiet;
+  }
+});

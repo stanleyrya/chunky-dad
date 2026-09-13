@@ -22,6 +22,10 @@ const PAGE_CACHE_TRUNCATED_PREFIX_LENGTH = 80;
 // Originally only the cache read was bounded; the 2026-08 scheduled-run hang
 // proved EVERY fs op against an evicted file can wedge (see boundedSharedFsOp).
 const SHARED_CACHE_READ_TIMED_OUT = Symbol('shared-cache-read-timed-out');
+// Byte budget for the one-read-per-URL-per-run memo (see getRunPageMemoKey).
+// Generous enough to hold every page of a normal venue run and small enough
+// that a hundreds-of-pages crawl cannot eat the process.
+const RUN_PAGE_MEMO_MAX_BYTES = 24 * 1024 * 1024;
 // Copy of the Scriptable adapter's SIMPLE_URL_PARSE_REGEX (device-parity page
 // cache keys — see getDeviceParityPageCachePathParts).
 // Captures: 1=scheme, 2=authority, 3=path, 4=query (without fragment).
@@ -928,9 +932,67 @@ class WebAdapter {
         console.log(`🖥️ WebAdapter: ⚠️ Unrecognized city "${key}" has no configured calendar — routed to "${target.name}" (no calendar name is ever invented from a city string)`);
     }
 
+    // ONE READ PER URL PER RUN. The disk page cache makes a second read of
+    // the same document cheap, so nothing ever counted them: eaglela.com was
+    // read 133 times for 85 distinct URLs in one run (audit 2026-09-13) —
+    // both configured URLs replayed the same MEC month feeds and re-enriched
+    // the same event pages, and the crawl then read pages the grid had
+    // already produced events from. Each of those re-reads carries real work
+    // behind it (JSON-LD re-parsing, whole AI extraction passes), so the memo
+    // sits at the fetch seam where every route passes.
+    //
+    // Bounded on purpose: a run that crawls hundreds of pages must not hold
+    // all of them, so the memo stops taking new entries past a byte budget
+    // and simply behaves as it did before. GET-only, body-free, and keyed by
+    // the same normalized URL the disk cache uses, so "…/x" and "…/x?" are
+    // one document and a POST feed replay is never memoized.
+    getRunPageMemoKey(url, options) {
+        if ((options && options.method ? String(options.method) : 'GET').toUpperCase() !== 'GET') return '';
+        if (options && options.body) return '';
+        if (typeof options?.isCacheableResponse === 'function') return '';
+        try {
+            return this.normalizePageCacheUrl(url) || String(url || '');
+        } catch (_) {
+            return String(url || '');
+        }
+    }
+
+    readRunPageMemo(key) {
+        if (!key || !this._runPageMemo) return null;
+        const entry = this._runPageMemo.get(key);
+        // A shallow copy: consumers may stamp their own fields on the response
+        // object, and the disk cache handed each caller a fresh one.
+        return entry ? { ...entry } : null;
+    }
+
+    writeRunPageMemo(key, responseData) {
+        if (!key || !responseData || typeof responseData.html !== 'string' || !responseData.html) return;
+        if (!this._runPageMemo) {
+            this._runPageMemo = new Map();
+            this._runPageMemoBytes = 0;
+        }
+        if (this._runPageMemo.has(key)) return;
+        const size = responseData.html.length;
+        if (this._runPageMemoBytes + size > RUN_PAGE_MEMO_MAX_BYTES) {
+            if (!this._runPageMemoFullLogged) {
+                this._runPageMemoFullLogged = true;
+                console.log(`🟢 Node.js: Run page memo full at ${this._runPageMemo.size} page(s) — later pages are re-read from the page cache as before`);
+            }
+            return;
+        }
+        this._runPageMemoBytes += size;
+        this._runPageMemo.set(key, { ...responseData });
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const memoKey = this.getRunPageMemoKey(url, options);
+            const memoized = this.readRunPageMemo(memoKey);
+            if (memoized) {
+                console.log(`🟢 Node.js: Page already read this run — no re-read for ${url}`);
+                return memoized;
+            }
             const pageCacheConfig = this.getPageCacheConfig();
             const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
             // Optional caller hook (options.isCacheableResponse): a response it
@@ -943,6 +1005,7 @@ class WebAdapter {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
                 if (cachedPage && isCacheableResponse(cachedPage)) {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
+                    this.writeRunPageMemo(memoKey, cachedPage);
                     return cachedPage;
                 }
             }
@@ -984,6 +1047,7 @@ class WebAdapter {
                 if (canUseCache && isCacheableResponse(responseData)) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
                 }
+                this.writeRunPageMemo(memoKey, responseData);
 
                 return responseData;
             } else {
@@ -1228,11 +1292,21 @@ class WebAdapter {
     async postForm(url, body, options = {}) {
         const pageCacheConfig = this.getPageCacheConfig();
         const cacheUrl = typeof options.cacheUrl === 'string' && options.cacheUrl ? options.cacheUrl : null;
+        // One read per URL per run reaches the replayed feeds too: a cacheUrl
+        // is a stable synthetic name for one response (the MEC month grid),
+        // and two configured URLs of one site replay exactly the same months.
+        const memoKey = cacheUrl ? `POST ${cacheUrl}` : '';
+        const memoized = this.readRunPageMemo(memoKey);
+        if (memoized) {
+            console.log(`🟢 Node.js: Feed already read this run — no re-read for ${cacheUrl}`);
+            return { ok: true, status: memoized.statusCode || 200, text: memoized.html };
+        }
         const canUseCache = pageCacheConfig.enabled && cacheUrl !== null;
         if (canUseCache) {
             const cachedPage = await this.readCachedPage(cacheUrl, pageCacheConfig);
             if (cachedPage) {
                 this.logPageCacheHit(cacheUrl, cachedPage, pageCacheConfig);
+                this.writeRunPageMemo(memoKey, cachedPage);
                 return {
                     ok: true,
                     status: cachedPage.statusCode || 200,
@@ -1264,12 +1338,15 @@ class WebAdapter {
         // Same transient-status contract as postJson: 5xx/429 throw with the
         // status stamped, everything else keeps the {ok:false} shape.
         this.throwIfRetryableHttpStatus('Form POST request', url, result.status, result.text);
-        if (canUseCache && result.ok && typeof result.text === 'string' && result.text.length > 0) {
-            await this.writeCachedPage(
-                cacheUrl,
-                { html: result.text, url: cacheUrl, statusCode: result.status, headers: {} },
-                pageCacheConfig
-            );
+        if (result.ok && typeof result.text === 'string' && result.text.length > 0) {
+            if (canUseCache) {
+                await this.writeCachedPage(
+                    cacheUrl,
+                    { html: result.text, url: cacheUrl, statusCode: result.status, headers: {} },
+                    pageCacheConfig
+                );
+            }
+            this.writeRunPageMemo(memoKey, { html: result.text, url: cacheUrl, statusCode: result.status });
         }
         return result;
     }

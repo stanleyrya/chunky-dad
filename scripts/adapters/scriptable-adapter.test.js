@@ -1998,9 +1998,11 @@ test('run 20260722-150336 case: pinSource preserve geocoded-exact → curated re
     existing: 'geocoded-exact', scraped: 'curated', final: 'curated'
   }));
 
-  assert.ok(rows.includes('PROVENANCE UPGRADED (geocoded-exact → curated)'), rows);
-  assert.ok(rows.includes('#34c759'), 'renders in the informational green style');
-  assert.ok(!rows.includes('PRESERVE FAILED'), 'must NOT be reported as a failure');
+  // Bookkeeping that only got better is not a diff (owner 2026-09-12:
+  // "save what is needed, just don't show it as a diff to me").
+  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
+  assert.ok(!rows.includes('pinSource'), 'no row at all for a provenance upgrade');
+  assert.ok(!rows.includes('PRESERVE FAILED'));
   assert.ok(!rows.includes('⚠️'), 'no warning icon for an upgrade');
 });
 
@@ -2042,7 +2044,8 @@ test('an equal-tier provenance change (venue-site → geo-poi, same corroborated
     existing: 'venue-site', scraped: 'geo-poi', final: 'geo-poi'
   }));
 
-  assert.ok(rows.includes('PROVENANCE UPGRADED (venue-site → geo-poi)'), rows);
+  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
+  assert.ok(!rows.includes('barSource'), 'no row at all for an equal-tier provenance change');
   assert.ok(!rows.includes('PRESERVE FAILED'));
   assert.ok(!rows.includes('⚠️'));
 });
