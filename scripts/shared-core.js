@@ -207,6 +207,9 @@ function urlPartsEndInAssetExtension(parts) {
 }
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
+// Fields that hold a link to a PAGE (not an asset): two spellings of one page
+// are one value — see isSameLinkTarget.
+const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']);
 
 // Placeholder-image vocabulary for getPlaceholderImageUrlReason below. Words a
 // file can be NAMED that mean "there is no picture here" — the 1x1 spacer /
@@ -3713,6 +3716,27 @@ class SharedCore {
         return `${match[1].toLowerCase().replace(/^www\./, '')}${match[2].replace(/\/+$/, '').toLowerCase()}`;
     }
 
+    // Do two link values address the SAME page — differing only in scheme, a
+    // "www." prefix, a trailing slash, case or tracking params? Query strings
+    // that carry real meaning are kept (getUrlDedupeKey strips only tracking
+    // params), so two crops of one image or two filtered listings still
+    // differ. Not a conflict, and it must never reach the arbiter: handed
+    // https://www.sickening.events/e/…/tickets against
+    // https://sickening.events/e/…/tickets the model invented a preference
+    // ("version-one includes the 'www' subdomain, making it the more complete
+    // and canonical URL") and reversed itself two merges later in the same
+    // run (goldiloxx audit 2026-09-13).
+    isSameLinkTarget(valueA, valueB) {
+        const key = (value) => {
+            const raw = typeof value === 'string' ? value.trim() : '';
+            if (!/^https?:\/\//i.test(raw)) return '';
+            return this.getUrlDedupeKey(raw).replace(/^https?:\/\//i, '');
+        };
+        const keyA = key(valueA);
+        const keyB = key(valueB);
+        return Boolean(keyA) && keyA === keyB;
+    }
+
     // What a website link IS: the promoter's registry site (4), an event
     // page on the event's own site (3), an event page elsewhere (2), a
     // ticketing/social platform link or a bare site root (1).
@@ -3824,6 +3848,15 @@ class SharedCore {
 
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
+        // SAME PAGE, TWO SPELLINGS. Before any ranking rung: a link field
+        // whose two candidates differ only in scheme/www/trailing slash/case
+        // is not a disagreement at all. Keeping the existing spelling is the
+        // stable answer (and the calendar side on calendar merges), which
+        // also stops the value churning between runs. Link fields only —
+        // image slots keep their query-bearing crops arbitrating below.
+        if (LINK_IDENTITY_MERGE_FIELDS.has(fieldName) && this.isSameLinkTarget(valueA, valueB)) {
+            return { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' };
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -7149,6 +7182,19 @@ class SharedCore {
                     : null;
                 if (extractionSummary && extractionSummary.source) {
                     await displayAdapter.logInfo(`SYSTEM: ${url} extraction summary: source=${extractionSummary.source}, aiPasses=${Number(extractionSummary.aiPasses) || 0}, ocrImages=${Number(extractionSummary.ocrImages) || 0} → ${eventCount} event${eventCount === 1 ? '' : 's'}`);
+                    // The same fact, stamped on the records themselves
+                    // (underscore field — never serialized to notes or merged
+                    // as a field). Duplicate folding reads it to decide which
+                    // side owns the shipped record's provenance: a structured
+                    // reader saw the page's own machine-readable answer, an AI
+                    // pass read whatever text the page happened to render.
+                    if (Array.isArray(parseResult.events)) {
+                        for (const parsedEvent of parseResult.events) {
+                            if (parsedEvent && typeof parsedEvent === 'object' && !parsedEvent._extractionSource) {
+                                parsedEvent._extractionSource = extractionSummary.source;
+                            }
+                        }
+                    }
                 }
 
                 if (discoveryTreeCollector && segmentCount > 0) {
@@ -10702,6 +10748,28 @@ class SharedCore {
             mergedEvent._seriesInfo = existingEvent._seriesInfo;
         }
 
+        // WHICH RECORD IS THE SHIPPED ONE? The fold's base is whatever record
+        // arrived last, so the page crawled last stamps its own provenance on
+        // an event whose every field came from somewhere better: goldiloxx's
+        // final Chicago record pointed at /e/…-2/resend, a ticket-utility
+        // skeleton the AI read, while its fields came from the listing's
+        // JSON-LD (audit 2026-09-13). A STRUCTURED read (the site's own
+        // machine-readable answer: json-api, jsonld, a platform widget feed)
+        // outranks an AI/OCR read of rendered text, so when exactly one side
+        // is structured its provenance stamps win. Fields are unaffected —
+        // the priority/arbitration loop below decides every one of those.
+        const structuredRankExisting = this.getRecordExtractionRank(existingEvent);
+        const structuredRankNew = this.getRecordExtractionRank(newEvent);
+        if (structuredRankExisting > structuredRankNew) {
+            for (const provenanceField of ['_sourcePageUrl', '_extractionSource', '_pageClassification']) {
+                if (existingEvent[provenanceField] !== undefined) {
+                    mergedEvent[provenanceField] = existingEvent[provenanceField];
+                } else {
+                    delete mergedEvent[provenanceField];
+                }
+            }
+        }
+
         // Helper function to check if a value is empty/null/undefined
         const isEmpty = (value) => {
             return value === null || value === undefined || value === '' ||
@@ -11191,8 +11259,44 @@ class SharedCore {
                 console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
             }
         }
-        
+
+        // NOTES FOLLOW THE MERGED FIELDS. notes is a serialization of the
+        // record, written by the normalizers before dedup — so the base
+        // record's copy survived every fold and shipped facts the merge had
+        // already overruled (goldiloxx audit 2026-09-13: the final Chicago
+        // record's top-level fields were repaired over seven merge rounds
+        // while its notes still read address "Jackhammer, Chicago, IL",
+        // instagram thehole_chicago and a sharer.php facebook link). Rebuild
+        // from the merged object, the same way the calendar merge does in its
+        // step 5. Only when a side actually carried notes — a record with
+        // none stays without.
+        if (typeof this.formatEventNotes === 'function'
+            && ((typeof existingEvent.notes === 'string' && existingEvent.notes)
+                || (typeof newEvent.notes === 'string' && newEvent.notes))) {
+            try {
+                const rebuiltNotes = this.formatEventNotes(mergedEvent);
+                if (typeof rebuiltNotes === 'string' && rebuiltNotes) mergedEvent.notes = rebuiltNotes;
+            } catch (error) {
+                console.warn(`⚠️ SharedCore: Could not rebuild merged notes for "${mergedEvent.title || 'event'}" — keeping the base record's copy: ${error && error.message ? error.message : error}`);
+            }
+        }
+
         return mergedEvent;
+    }
+
+    // How authoritative is the pathway that produced this record? 2 = a
+    // STRUCTURED read of the site's own machine-readable data (json-api,
+    // JSON-LD, a platform's events widget/feed), 1 = an AI/OCR read of
+    // rendered text, 0 = unknown (records from parsers that report no
+    // extraction summary — they rank equal, so every rule keyed on this one
+    // fails open).
+    getRecordExtractionRank(record) {
+        const source = record && typeof record._extractionSource === 'string'
+            ? record._extractionSource.trim().toLowerCase()
+            : '';
+        if (!source) return 0;
+        if (source === 'ai' || source === 'ocr') return 1;
+        return 2;
     }
 
     // Create complete merged event object that represents exactly what will be saved

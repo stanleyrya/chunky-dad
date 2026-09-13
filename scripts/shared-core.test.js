@@ -1459,10 +1459,17 @@ test('guardrail: same-host deep-vs-deep and root-vs-root URLs still go to the AI
     core.resolveConflictDeterministically('ticketUrl',
       'https://bearracuda.com/events/portland/', 'https://bearracuda.com/tickets/portland/'),
     null, 'both deep → arbitrate');
-  assert.equal(
+  // Two spellings of ONE root (scheme + www + trailing slash) are not a
+  // conflict at all — the same-link rung answers before any ranking rung
+  // and the pair never reaches the AI.
+  assert.deepEqual(
     core.resolveConflictDeterministically('website',
       'https://bearracuda.com/', 'http://www.bearracuda.com'),
-    null, 'both root → arbitrate');
+    { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' });
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://bearracuda.com/', 'https://bearracuda-events.com/'),
+    null, 'two DIFFERENT roots → arbitrate');
   assert.equal(
     core.resolveConflictDeterministically('website',
       'https://bearracuda.com/', 'https://bearracuda.com/?p=1'),
@@ -21746,4 +21753,74 @@ test('scraped records get the AM/PM span correction before dedup, so the twins a
   const again = core.applyOvernightSpanCorrections([venuePage, feedRow, weekender]);
   assert.equal(again, 0);
   assert.equal(venuePage._sanityFlags.length, 1);
+});
+
+test('two spellings of one link are one value and never reach the arbiter', () => {
+  const core = createCore();
+  // www / trailing slash / scheme / case / tracking params.
+  assert.equal(core.isSameLinkTarget('https://www.sickening.events/e/goldiloxx-chicago-2/tickets',
+    'https://sickening.events/e/goldiloxx-chicago-2/tickets'), true);
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1/', 'http://www.X.example/e/1'), true);
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1?utm_source=ig', 'https://x.example/e/1'), true);
+  // A different page, or a query that means something, is still a conflict.
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1', 'https://x.example/e/2'), false);
+  assert.equal(core.isSameLinkTarget('https://x.example/e?id=1', 'https://x.example/e?id=2'), false);
+  assert.equal(core.isSameLinkTarget('not a url', 'also not a url'), false);
+
+  for (const field of ['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']) {
+    const decision = core.resolveConflictDeterministically(field,
+      'https://sickening.events/e/goldiloxx-chicago-2/tickets',
+      'https://www.sickening.events/e/goldiloxx-chicago-2/tickets');
+    assert.equal(decision && decision.winner, 'a', field);
+    assert.match(decision.reason, /same link, different spelling/);
+  }
+  // Image slots are untouched by this rung — their query strings are crops,
+  // not noise, so the image rules below still decide them on their merits.
+  const imageDecision = core.resolveConflictDeterministically('image',
+    'https://cdn.example/flyer.jpg?w=600', 'https://www.cdn.example/flyer.jpg?w=1200');
+  assert.equal(imageDecision.winner, 'b');
+  assert.doesNotMatch(imageDecision.reason, /same link, different spelling/);
+});
+
+test('duplicate folding: the structured record owns the provenance, and notes are rebuilt from the merged fields', async () => {
+  const core = createCore();
+  const structured = {
+    title: 'GOLDILOXX Chicago',
+    source: 'ai-web',
+    _extractionSource: 'jsonld',
+    _sourcePageUrl: 'https://sickening.events/e/goldiloxx-chicago',
+    _pageClassification: 'event-page',
+    bar: 'Jackhammer',
+    address: '6406 North Clark Street, Chicago, IL 60626',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    notes: 'bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626'
+  };
+  const aiSkeleton = {
+    title: 'GOLDILOXX Chicago',
+    source: 'ai-web',
+    _extractionSource: 'ai',
+    _sourcePageUrl: 'https://sickening.events/e/goldiloxx-chicago-2/resend',
+    _pageClassification: 'event-page',
+    bar: 'Jackhammer',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    notes: 'bar: Jackhammer\naddress: Jackhammer, Chicago, IL'
+  };
+
+  assert.equal(core.getRecordExtractionRank(structured), 2);
+  assert.equal(core.getRecordExtractionRank(aiSkeleton), 1);
+  assert.equal(core.getRecordExtractionRank({}), 0, 'no summary → equal rank, every rule fails open');
+
+  // The AI skeleton arrives LAST, so it is the fold's base — but the shipped
+  // record must still point at the page the facts came from.
+  const merged = await core.mergeParsedEvents(structured, aiSkeleton, {});
+  assert.equal(merged._sourcePageUrl, 'https://sickening.events/e/goldiloxx-chicago');
+  assert.equal(merged._extractionSource, 'jsonld');
+  // notes follow the merged fields, not the base record's stale copy.
+  assert.match(merged.notes, /6406 North Clark Street/);
+  assert.doesNotMatch(merged.notes, /address: Jackhammer, Chicago, IL/);
+
+  // Two records of equal rank leave the base's provenance alone (fail open).
+  const bothAi = await core.mergeParsedEvents(
+    { ...structured, _extractionSource: 'ai' }, aiSkeleton, {});
+  assert.equal(bothAi._sourcePageUrl, 'https://sickening.events/e/goldiloxx-chicago-2/resend');
 });
