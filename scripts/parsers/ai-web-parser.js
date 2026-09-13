@@ -19011,6 +19011,37 @@ TEXT:
         return text;
     }
 
+    // Join runs of THREE OR MORE consecutive single letters into one word:
+    // "FURBALL D A L L A S" → "FURBALL DALLAS". A tracking effect on a flyer
+    // survives OCR and plain-text reads as separate letters, and every
+    // downstream comparison (dedup name affinity, merge title rungs, the
+    // calendar) then sees six words that are not words. Two-letter runs are
+    // left alone — "D J" is rare and "A B" could be real — and a lone
+    // article never matches. Letters only; digits and punctuation end a run.
+    collapseLetterSpacedTitleWords(value) {
+        const text = String(value || '');
+        if (!text.trim()) return text;
+        const isSingleLetter = (token) => /^[A-Za-z\u00C0-\u024F]$/.test(token);
+        const out = [];
+        let run = [];
+        const flush = () => {
+            if (run.length >= 3) out.push(run.join(''));
+            else out.push(...run);
+            run = [];
+        };
+        for (const token of text.trim().split(/\s+/)) {
+            if (isSingleLetter(token)) {
+                run.push(token);
+                continue;
+            }
+            flush();
+            out.push(token);
+        }
+        flush();
+        const joined = out.join(' ');
+        return joined === text.trim() ? text : joined;
+    }
+
     // The evidence-gate-dropped STATED start-date value retained on the event
     // (the __droppedFieldValues memo the per-snippet validation accumulates,
     // keyed by normalized field name), if any. Read-only observation input
@@ -19030,6 +19061,41 @@ TEXT:
         return '';
     }
 
+    // WHAT THIS EVENT ITSELF PRINTS, for the doors-vs-party rule below: the
+    // record's own segment text when it has one (the segment's page lines,
+    // built OCR-free on purpose — see getSegmentPageText), else the page's
+    // own text. In BOTH cases the OCR regions are removed:
+    // splitOcrAndPageChunks separates the machine-embedded flyer blocks
+    // (OCR_IMAGE_URL/OCR_IMAGE_TEXT) from the published words.
+    //
+    // Why OCR is excluded. A flyer's "DOORS: 9PM • PARTY: 10PM" is the
+    // night's door/music timetable printed on artwork — and the artwork
+    // travels: furball.nyc's NOLA flyer was paired to the card AND, by text
+    // similarity, to the one-line ticker row that has no artwork of its own,
+    // so a time read off a picture moved two records' starts off the 21:00
+    // the site, the ticket page and data/source-expectations all state (run
+    // 20260913-012112, log 201/281). The evidence gate already refuses
+    // end-times cited to that same flyer marker; a promoted START is the
+    // same kind of claim. The rule stays alive for pages that PRINT both
+    // statements in the event's own words, which is where it can be checked.
+    getDoorsVsPartyCorpus(htmlData) {
+        const segmentText = htmlData && typeof htmlData.segmentText === 'string'
+            ? htmlData.segmentText.trim()
+            : '';
+        const source = segmentText
+            || (htmlData && typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (!source) return '';
+        const pageOnly = this.splitOcrAndPageChunks(source)
+            .filter(chunk => chunk && chunk.corpus === 'page')
+            .map(chunk => chunk.text)
+            .join('\n');
+        if (!pageOnly.trim()) return '';
+        // Markup is KEPT: splitHtmlIntoPrintedStatements needs the block
+        // boundaries to tell one printed statement from the next, and strips
+        // the tags itself once they are marked.
+        return pageOnly;
+    }
+
     // Doors-vs-party disambiguation (run 20260811-102550, FURBALL NOLA): the
     // flyer prints "DOORS: 9PM • PARTY: 10PM" and extraction adopted 21:00
     // (the DOORS time) as startTime — the event starts when the party starts,
@@ -19038,13 +19104,19 @@ TEXT:
     // later than X, and the extracted startTime equals X, the start is
     // promoted to Y.
     //
-    // The two times must be printed TOGETHER (audit 2026-09-13, BEARRACUDA
-    // Portland 17): that page says "Doors Open at 9:00 pm Party Goes Until
-    // 3:00 am!" in its header and, three blocks lower under "Music &
-    // Entertainment", "DJ Matt Stands Show at 11pm w/Kharisma" — a SEGMENT
-    // inside the night, not its start. Scanning the whole page paired them
-    // and moved the party from 9pm to 11pm. For the same reason "show" is no
-    // longer a start word at all: a show/performance happens during an event.
+    // The corpus is the event's own PRINTED text — its segment when it has
+    // one, and never a flyer's OCR (audit 2026-09-13, FURBALL: furball.nyc
+    // prints no timetable at all; "DOORS: 9PM • PARTY: 10PM" exists only on
+    // the NOLA flyer, which the image pairing attached to two records, so a
+    // time read off a picture moved a ticker row that has no artwork).
+    //
+    // The two times must also be printed TOGETHER (audit 2026-09-13,
+    // BEARRACUDA Portland 17): that page says "Doors Open at 9:00 pm Party
+    // Goes Until 3:00 am!" in its header and, three blocks lower under
+    // "Music & Entertainment", "DJ Matt Stands Show at 11pm w/Kharisma" — a
+    // SEGMENT inside the night, not its start. Scanning the whole page paired
+    // them and moved the party from 9pm to 11pm. For the same reason "show"
+    // is no longer a start word at all: a show happens during an event.
     //
     // Fails closed on any ambiguity (no statement names both, more than one
     // statement does, several distinct times inside it, Y not after X, or the
@@ -19054,9 +19126,9 @@ TEXT:
         const normalizedStart = String(startTimeRaw || '').trim();
         const startMatch = normalizedStart.match(/^(\d{2}):(\d{2})$/);
         if (!startMatch) return '';
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        if (!html) return '';
-        const statements = this.splitHtmlIntoPrintedStatements(html);
+        const corpus = this.getDoorsVsPartyCorpus(htmlData);
+        if (!corpus) return '';
+        const statements = this.splitHtmlIntoPrintedStatements(corpus);
         if (statements.length === 0) return '';
         // A time token: "9PM", "9:30 PM", or 24h "21:00".
         const timeToken = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)|(\\d{1,2}):(\\d{2})';
@@ -19526,6 +19598,20 @@ TEXT:
             if (withoutVenue !== title) {
                 console.log(`🤖 AI Web: Stripping venue tail from title "${title}" → "${withoutVenue}" (bar is "${bar}")`);
                 title = withoutVenue;
+            }
+        }
+        // TRACKING IS NOT SPELLING. Flyers set a word in wide letter-spacing
+        // and the OCR/text read comes back as separate letters —
+        // furball.nyc's Dallas card reads "FURBALL D A L L A S". The site
+        // means one word; the calendar would ship six. Typography only: three
+        // or more single letters in a row is a tracking effect, never prose
+        // ("A Night of…" keeps its article, because that run is one letter
+        // long).
+        if (title) {
+            const unspaced = this.collapseLetterSpacedTitleWords(title);
+            if (unspaced !== title) {
+                console.log(`🏷️ TITLE: "${title}" → "${unspaced}" — a run of single letters is letter-spacing, not words`);
+                title = unspaced;
             }
         }
         // Site-tagline backstop (the primary guard runs at pass-result time in

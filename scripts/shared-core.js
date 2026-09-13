@@ -26,6 +26,18 @@ const ADAPTIVE_CRAWL_DEPTH = 'adaptive';
 // Hard cap on adaptive crawl chains: pages this many hops from a root never
 // have their links followed, no matter how they classify.
 const ADAPTIVE_CRAWL_MAX_HOPS = 4;
+// The default discovery budget for one page's outbound links. It bounds
+// DISCOVERY — following links to see what is behind them.
+const DISCOVERY_CRAWL_MAX_URLS = 12;
+// A link that is an already-extracted event's OWN page is not discovery: the
+// listing already told us that event exists, and the page behind the link is
+// the row's own detail/ticket page. Those links get their own, larger budget
+// so the discovery cap cannot starve a listing of its own contents —
+// thedallaseagle.com's grid published 152 occurrences and linked 15 of their
+// event pages, and the cap read 12 of them and dropped 3 (run 20260913).
+// Still bounded: a listing that links hundreds of rows must not turn one page
+// into hundreds of fetches.
+const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // Learned dead ends record the extraction CAPABILITY they were confirmed
 // under. When a new capability lands — a page shape that used to yield
 // nothing now can — every inferred dead end confirmed before it is retried
@@ -221,6 +233,13 @@ const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']
 // Fields that hold a link to a PAGE (not an asset): two spellings of one page
 // are one value — see isSameLinkTarget.
 const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']);
+// Fields the CONFIGURED listing owns: what the event is CALLED, what it LOOKS
+// LIKE, and when it ENDS. A crawl/enrich page (a ticket page, a discovered
+// detail page) may fill these when the listing left them blank, but it never
+// replaces a value the listing stated — see the listing-authority rung in
+// mergeParsedEvents. Everything else (ticketUrl, cover, address, description,
+// bar…) still merges by the ordinary rules: that is what enrichment is for.
+const LISTING_AUTHORITY_FIELDS = new Set(['title', 'image', 'imageVertical', 'imageHorizontal', 'endDate']);
 
 // Placeholder-image vocabulary for getPlaceholderImageUrlReason below. Words a
 // file can be NAMED that mean "there is no picture here" — the 1x1 spacer /
@@ -6005,6 +6024,24 @@ class SharedCore {
     // config and never re-routed. Generic host classification only —
     // PLATFORM_IDENTITY_HOSTS / TICKETING_PLATFORM_HOSTS / opaque-shortlink
     // URL shape; nothing per venue.
+    // A bare domain root (no path, no query) on a host that is NEITHER the
+    // page this record was read from NOR the promoter's own curated identity:
+    // somebody else's front door. Used by the identity ladder above to rank
+    // an event's own page above the source's site above a co-promoter's.
+    // Fails closed — an unparseable value, any path segment, a query string,
+    // or a missing source-page stamp all return false and change nothing.
+    isForeignBareRootIdentityUrl(event, value, curatedWebsite) {
+        const parts = this.getUrlRuleParts(value);
+        if (!parts) return false;
+        if (parts.segments.length > 0 || parts.hasQuery) return false;
+        const sourceHost = this.getHostFromUrl(event && event._sourcePageUrl)
+            .toLowerCase().replace(/^www\./, '');
+        if (!sourceHost || parts.host === sourceHost) return false;
+        const curatedHost = this.getHostFromUrl(curatedWebsite).toLowerCase().replace(/^www\./, '');
+        if (curatedHost && parts.host === curatedHost) return false;
+        return true;
+    }
+
     canonicalizeIdentityLinks(events) {
         if (!Array.isArray(events) || events.length === 0) return;
         for (const event of events) {
@@ -6058,7 +6095,29 @@ class SharedCore {
                 // The page itself said this URL is where you BUY — a ticket
                 // vendor no host list knows yet (markTicketRoleUrl).
                 || this.isTicketRoleUrl(event, website);
-            if (!isPlatform) continue; // rung 2: a real page-stated site is kept
+            if (!isPlatform) {
+                // Rung 2 (a real page-stated site is kept) has one exception:
+                // a BARE ROOT on somebody else's host. website/url is the
+                // event's IDENTITY — it drives the card's favicon and the
+                // dedup's event-page rung — and the ranking is: the event's
+                // OWN page (any host, because it names the event) > the
+                // source's own site > anyone else's front door. A co-promoter
+                // named in the card's text lands at the bottom: furball.nyc's
+                // UNDERBEAR 9/18 shipped website https://theurbanbear.com, the
+                // weekend co-promoter's homepage (and a known dead end), while
+                // its five siblings carried the Furball identity (run
+                // 20260913-012112). Shape only — bare root, foreign host, a
+                // curated identity available; a deep URL is somebody's event
+                // page and is always kept.
+                if (curatedWebsite && curatedWebsite !== website
+                    && this.isForeignBareRootIdentityUrl(event, website, curatedWebsite)) {
+                    event.website = curatedWebsite;
+                    if (!event._staticFields) event._staticFields = {};
+                    event._staticFields.website = curatedWebsite;
+                    console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — a bare root on another organiser's host is a co-promoter's front door, not this event's page`);
+                }
+                continue;
+            }
             if (this.isCuratedPlatformSelfIdentityUrl(event, website)) continue;
 
             // Route the platform link off `website` without losing it: social
@@ -7321,11 +7380,16 @@ class SharedCore {
         foreignOrgDropCollector = null,
         // Linked-ICS-feed discovery (report-only): { seen: Set, findings: [] }
         // scoped to one parser run — see collectIcsFeedFindings.
-        icsFeedCollector = null
+        icsFeedCollector = null,
+        // URL dedupe keys of the links in `urls` that are PAGES OF EVENTS the
+        // parent page already published (a row's own detail page, an event's
+        // own ticket link). They are enrichment, not discovery, and spend
+        // their own budget — see limitAdditionalUrls.
+        enrichmentUrlKeys = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
-            ? this.limitAdditionalUrls(urls, parserConfig)
+            ? this.limitAdditionalUrls(urls, parserConfig, enrichmentUrlKeys)
             : (Array.isArray(urls) ? urls : []);
 
         if (currentDepth > 0) {
@@ -7537,6 +7601,19 @@ class SharedCore {
                     parsedEvents.forEach(event => {
                         if (!event._sourcePageUrl) {
                             event._sourcePageUrl = url;
+                        }
+                        // WHERE IN THE CRAWL did this record come from? A
+                        // CONFIGURED page (depth 0) is the source's own
+                        // listing — the thing the owner pointed the parser
+                        // at, and the only page that speaks for this source.
+                        // Every deeper page is a CRAWL page: a ticket page an
+                        // event linked, a detail page discovery found. Both
+                        // kinds enrich, but only the listing gets to NAME the
+                        // event (see the listing-authority rung in
+                        // mergeParsedEvents). Underscore field — never
+                        // serialized into notes/schema, never merged as data.
+                        if (!event._pageOrigin) {
+                            event._pageOrigin = currentDepth === 0 ? 'listing' : 'crawl';
                         }
                     });
                     // A page that describes exactly ONE event IS that event's
@@ -7782,6 +7859,9 @@ class SharedCore {
                             discoveryOnly,
                             discoveryTreeCollector,
                             enrichOnlyByUrl: ticketEnrichByUrl,
+                            // Every URL in this batch is an event's own ticket
+                            // link, so the discovery cap must not cut it.
+                            enrichmentUrlKeys: new Set(Object.keys(ticketEnrichByUrl)),
                             enrichDropCollector,
                             crawlErrorCollector,
                             crawlGoneCollector,
@@ -7831,8 +7911,25 @@ class SharedCore {
                                 }
                             }
                         }
+                        // Which of these links are the listing's OWN rows?
+                        // A link that equals an event this page just published
+                        // (its website/url, after the identity fold) is that
+                        // row's own page: reading it enriches a row we already
+                        // have, it does not discover a new one. Page-derived —
+                        // the set comes from this page's own extraction, never
+                        // from a URL pattern or a site name.
+                        const rowPageKeys = new Set();
+                        for (const pageEvent of pageEventsForEnrich) {
+                            for (const candidate of [pageEvent && pageEvent.website, pageEvent && pageEvent.url]) {
+                                const link = typeof candidate === 'string' ? candidate.trim() : '';
+                                if (!link || !/^https?:\/\//i.test(link)) continue;
+                                const rowKey = this.getUrlDedupeKey(link);
+                                if (rowKey) rowPageKeys.add(rowKey);
+                            }
+                        }
                         await this.crawlUrlsForEvents({
                             urls: enqueueUrls,
+                            enrichmentUrlKeys: rowPageKeys.size > 0 ? rowPageKeys : null,
                             allEvents,
                             parsers,
                             parserConfig,
@@ -7936,20 +8033,49 @@ class SharedCore {
         }
     }
 
-    limitAdditionalUrls(additionalLinks, parserConfig) {
+    // The crawl budget for one batch of links. `enrichmentUrlKeys` (URL dedupe
+    // keys) names the links that are NOT discovery: the pages of events the
+    // parent page already published — a row's own detail page, an event's own
+    // ticket link. Those spend a separate, larger budget, so a listing's own
+    // contents are never cut to make room for links to nowhere. An explicitly
+    // configured maxAdditionalUrls stays absolute (a parser that says "follow
+    // 3" follows 3, and 0 means none): the split only applies to the default.
+    limitAdditionalUrls(additionalLinks, parserConfig, enrichmentUrlKeys = null) {
         if (!Array.isArray(additionalLinks) || additionalLinks.length === 0) {
             return [];
         }
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
-        let maxUrls = 12;
+        let maxUrls = DISCOVERY_CRAWL_MAX_URLS;
+        let budgetIsDefault = true;
         if (configuredMaxUrls === null) {
             maxUrls = Infinity;
+            budgetIsDefault = false;
         } else if (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0) {
             maxUrls = configuredMaxUrls;
+            budgetIsDefault = false;
         }
-        return Number.isFinite(maxUrls)
-            ? additionalLinks.slice(0, maxUrls)
-            : additionalLinks;
+        if (!Number.isFinite(maxUrls)) return additionalLinks;
+        const keys = enrichmentUrlKeys instanceof Set ? enrichmentUrlKeys : null;
+        if (!budgetIsDefault || !keys || keys.size === 0) {
+            return additionalLinks.slice(0, maxUrls);
+        }
+        const enrichment = [];
+        const discovery = [];
+        for (const link of additionalLinks) {
+            const key = this.getUrlDedupeKey(link);
+            if (key && keys.has(key)) enrichment.push(link);
+            else discovery.push(link);
+        }
+        if (enrichment.length === 0) return additionalLinks.slice(0, maxUrls);
+        const keptEnrichment = enrichment.slice(0, LISTING_ROW_PAGE_CRAWL_MAX);
+        const kept = keptEnrichment.concat(discovery.slice(0, maxUrls));
+        if (kept.length > maxUrls) {
+            console.log(`🗂️ SharedCore: Crawl budget: ${keptEnrichment.length} link(s) are pages of events this listing already published — enriching those first, plus up to ${maxUrls} discovery link(s)`);
+        }
+        // Preserve the caller's ordering among the kept links so the crawl
+        // still walks the page top-down.
+        const keptSet = new Set(kept);
+        return additionalLinks.filter(link => keptSet.has(link));
     }
 
     // Adaptive crawl follow rules — the parent page's classification decides:
@@ -11068,6 +11194,17 @@ class SharedCore {
                 mergedEvent._ticketRoleUrls.push(stamp);
             }
         }
+        // LISTING AUTHORITY IS STICKY. Once a listing record's title/image/end
+        // have survived a fold, the folded record still carries them — so the
+        // next crawl-page record must lose to it too. Without this carry the
+        // base spread ({ ...newEvent }) would relabel the merged record
+        // 'crawl' and the second enrich page could overwrite what the first
+        // one was refused. A record with no stamp at all (calendar records,
+        // parsers that never crawl) stays unstamped: every rule keyed on this
+        // one fails open.
+        if (existingEvent && existingEvent._pageOrigin === 'listing') {
+            mergedEvent._pageOrigin = 'listing';
+        }
         // Same carry for field-trim records: an existing-only _fieldTrims
         // would otherwise be lost before evidence lines render.
         if (!mergedEvent._fieldTrims && existingEvent && Array.isArray(existingEvent._fieldTrims) && existingEvent._fieldTrims.length > 0) {
@@ -11333,6 +11470,45 @@ class SharedCore {
                         newValue: newValue,
                         chosenValue: chosenValue,
                         reason: 'timezone-anchored date wins over wall-clock (_timezoneUnresolved) date'
+                    });
+                    return;
+                }
+            }
+
+            // LISTING AUTHORITY. An enrich/crawl page — a ticket page an event
+            // linked, a detail page discovery found — fills BLANKS on the
+            // listing record (the empty-loses rule below does that, and this
+            // rung deliberately stays out of its way by requiring both sides
+            // non-empty). What it must never do is RENAME or RE-ILLUSTRATE an
+            // event the configured source already stated. Two runs on
+            // 2026-09-13 showed exactly that: furball.nyc's Dallas card was
+            // retitled "FURBALL Dallas Underwear + Gear Party featuring DJ
+            // GSP" and re-imaged with img.evbuc.com because the Eventbrite
+            // page reached by enrich-only crawl is itself structured, so the
+            // "listing's own stated title" and "event page's own artwork"
+            // rungs crowned the ticket page; and 3dollarbillbk.com's "QTS:
+            // Brooklyn" lost its published flyer and its 04:00 end to a
+            // dice.fm crop and dice's 03:00. Page-derived and generic: the
+            // stamp is crawl depth (0 = a URL the parser was configured with),
+            // nothing per site. Fails open — an unstamped side (calendar
+            // records, parsers that never crawl) decides nothing here.
+            if (LISTING_AUTHORITY_FIELDS.has(fieldName)
+                && !isEmpty(existingValue) && !isEmpty(newValue)
+                && this.isGenuineFieldConflict(fieldName, existingValue, newValue)) {
+                const existingIsListing = existingEvent._pageOrigin === 'listing';
+                const newIsListing = newEvent._pageOrigin === 'listing';
+                const existingIsCrawl = existingEvent._pageOrigin === 'crawl';
+                const newIsCrawl = newEvent._pageOrigin === 'crawl';
+                if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
+                    const chosenValue = existingIsListing ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🔒 MERGE: "${mergeEventTitle}" field=${fieldName} kept the configured listing's own value — an enrich/crawl page fills blanks, it never restates the listing`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'listing authority: a crawl/enrich page never replaces a value the configured listing stated'
                     });
                     return;
                 }
