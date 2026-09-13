@@ -2507,8 +2507,18 @@ test('resolveExplicitSourceYear accepts only a verbatim, high-confidence four-di
   assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 100), 2021);
   // Other printed forms of the same year.
   assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'January 31, 2021', 90), 2021);
-  // Hedged confidence stays repairable.
-  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 89), null);
+  // Hedged confidence on a year only just past stays repairable: sites leave
+  // LAST year's label on this year's page and those must re-anchor, not drop.
+  const lastYear = new Date().getFullYear() - 1;
+  assert.equal(parser.resolveExplicitSourceYear(`${lastYear}-01-31`, `SUNDAY/DOMINGO 01.31.${lastYear}`, 89), null);
+  // But a quoted year two or more years past is an ARCHIVE at any confidence:
+  // re-anchoring it invents a future event (bearssitges' 2019 news post shipped
+  // as a 2026 month-long event from a confidence-70 quote of "… Week 2019").
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 89), 2021);
+  assert.equal(parser.resolveExplicitSourceYear('2019-09-01', 'Sitges Bears Week 2019 (implied September 2019)', 70), 2019);
+  // A FUTURE year under the confidence floor is still a guess the window
+  // repair may fix.
+  assert.equal(parser.resolveExplicitSourceYear(`${new Date().getFullYear() + 1}-01-31`, `January 31, ${new Date().getFullYear() + 1}`, 50), null);
   // A year the model did NOT quote is a guess — exactly what the window repair
   // exists for ("Sat, Aug 22" hallucinated as 2024).
   assert.equal(parser.resolveExplicitSourceYear('2024-08-22', 'Sat, Aug 22', 100), null);
@@ -2517,7 +2527,7 @@ test('resolveExplicitSourceYear accepts only a verbatim, high-confidence four-di
   // No year in the value at all, and junk input.
   assert.equal(parser.resolveExplicitSourceYear('Aug 22', 'Sat, Aug 22 2026', 100), null);
   assert.equal(parser.resolveExplicitSourceYear(null, null, 100), null);
-  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', undefined), null);
+  assert.equal(parser.resolveExplicitSourceYear(`${lastYear}-01-31`, `SUNDAY/DOMINGO 01.31.${lastYear}`, undefined), null);
 });
 
 test('normalizeEventDates never relocates an explicitly stated year — it reports the event as archival', () => {
@@ -8958,9 +8968,10 @@ test('multilingual signals stay conservative: no mid-sentence weekdays, bare mon
 
 test('Sitges-shaped multi-event page splits into per-day segments with September anchoring', () => {
   const parser = createParser();
+  const programmeYear = new Date().getFullYear();
   const lines = [
     'PROGRAMA oficial',
-    'BEARS SITGES WEEK 2026',
+    `BEARS SITGES WEEK ${programmeYear}`,
     'Del 3 al 13 de SEPTIEMBRE',
     'JUEVES- 03',
     '19h. INAUGURACIÓN BEARS SITGES WEEK Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
@@ -8983,18 +8994,19 @@ test('Sitges-shaped multi-event page splits into per-day segments with September
     .filter(header => segments.some(segment => segment.lines[0] === header));
   assert.equal(headed.length, 4, `each day heading should start a segment, got ${JSON.stringify(segments.map(s => s.lines[0]))}`);
 
-  // Page-level anchor: single unambiguous month from the range phrase, no year stated
+  // Page-level anchor: single unambiguous month from the range phrase; the
+  // year comes from the header line the phrase sits under.
   const ctx = parser.derivePageDateContext(html);
   assert.ok(ctx, 'page date context derived');
   assert.equal(ctx.month, 9);
-  assert.equal(ctx.year, null, 'no year stated in the range phrase');
+  assert.equal(ctx.year, programmeYear, "the programme header's own year anchors the page");
 
   // Day-only headings inherit the month; the segment carrying the range phrase itself does not anchor
   const sabado = segments.find(segment => segment.lines[0] === 'SÁBADO - 05');
   const contextLine = parser.buildSegmentDateContextLine(sabado, ctx);
-  assert.ok(contextLine.startsWith('SEGMENT_DATE_CONTEXT: September 5 '), `got: ${contextLine}`);
+  assert.ok(contextLine.startsWith(`SEGMENT_DATE_CONTEXT: September 5, ${programmeYear}`), `got: ${contextLine}`);
   const segmentHtmlData = parser.buildMultiEventSegmentHtmlData({ html, url: 'https://bearssitges.example/programa/' }, sabado, 2, segments.length, [], ctx);
-  assert.ok(segmentHtmlData.html.includes('SEGMENT_DATE_CONTEXT: September 5 '), 'anchor line rides into the segment prompt html');
+  assert.ok(segmentHtmlData.html.includes(`SEGMENT_DATE_CONTEXT: September 5, ${programmeYear}`), 'anchor line rides into the segment prompt html');
   assert.equal(segmentHtmlData.segmentDateContext, contextLine);
 
   const intro = segments.find(segment => segment.lines.some(l => l === 'Del 3 al 13 de SEPTIEMBRE'));
@@ -16764,6 +16776,182 @@ test('coverage audit: when the text tier disagrees wholesale, nothing is added a
   try { merged = parser.coverUnclaimedDatedWindows('<html></html>', structured); } finally { console.log = originalLog; }
   assert.equal(merged, structured, 'the structured result stands, byte-identical');
   assert.ok(logs.some(line => /disagrees with structured segmentation wholesale/.test(line) && /12 unclaimed vs 2 structured/.test(line)));
+});
+
+// ---------------------------------------------------------------------------
+// Tier selection by COVERAGE of dated content. bearssitges.org/bears-sitges-week
+// (run 2026-09-13): a two-card "Novedades y Noticias" sidebar won structured
+// segmentation, the wholesale-disagreement branch above added nothing, and the
+// page's whole 11-day programme was never segmented — 0 of 48 events, and the
+// one record shipped was a 2020 news post. A structured tier that spans a
+// sliver of the page's dated content is not that page's segmentation.
+// ---------------------------------------------------------------------------
+
+function buildProgrammePageHtml(year = new Date().getFullYear()) {
+  const lines = [
+    'PROGRAMA oficial',
+    `BEARS SITGES WEEK ${year}`,
+    'Del 3 al 13 de SEPTIEMBRE',
+    'JUEVES- 03',
+    '19h. INAUGURACIÓN BEARS SITGES WEEK Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
+    '20 h: Ruta del OSO en «Bares Sponsors» — Bears Bar y Bears Dance Bar',
+    'VIERNES - 04',
+    '18h : Inauguración Exposición por Blanca de Nicolas en Espai Joan Tarrida',
+    '20:30h a 03:30h: OPENING «EARLY-VILLAGE» en Bear-Village con DJ Radio Chí',
+    'SÁBADO - 05',
+    '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO',
+    '21h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village',
+    'DOMINGO - 06',
+    '10h a 21h BEARS SITGES MARKET en Hotel Calipolis con muchos vendors',
+    '20:30h a 03h NOCHE ESPECIAL «IBC Palm Springs» en Bear-Village'
+  ];
+  const news = [
+    'Aprobacion de la Bears Sitges Week como evento de interes',
+    'Por bearssitges | 2020-04-01T10:00:00+00:00 | Categorías: Noticias',
+    'Los chicos de «Where The Bears Are» en la Sitges Bears Week 2019',
+    'Por bearssitges | marzo 25th, 2020 | Categorías: Noticias'
+  ];
+  return `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}
+    <div class="sidebar">${news.map(l => `<p>${l}</p>`).join('\n')}</div></body></html>`;
+}
+
+test('segmentation tier is chosen by coverage of dated content, not by "structured found two windows"', () => {
+  const parser = createParser();
+  const html = buildProgrammePageHtml();
+  // The structured tier reports the two sidebar news cards — the exact shape
+  // that won on bearssitges.org.
+  const sidebarCards = [
+    { lines: ['Aprobacion de la Bears Sitges Week como evento de interes', 'Por bearssitges | 2020-04-01T10:00:00+00:00 | Categorías: Noticias'], html: '' },
+    { lines: ['Los chicos de «Where The Bears Are» en la Sitges Bears Week 2019', 'Por bearssitges | marzo 25th, 2020 | Categorías: Noticias'], html: '' }
+  ];
+  parser.buildStructuredMultiEventSegments = () => sidebarCards;
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (...args) => logs.push(args.join(' '));
+  let segments;
+  try { segments = parser.computeMultiEventSegments(html, 'https://programme.example/'); } finally { console.log = originalLog; }
+  const heads = segments.map(segment => segment.lines[0]);
+  assert.ok(heads.includes('JUEVES- 03') && heads.includes('DOMINGO - 06'),
+    `the programme's day windows must survive, got ${JSON.stringify(heads)}`);
+  assert.ok(!segments.some(segment => segment.lines[0].startsWith('Aprobacion')),
+    'the sidebar cards must not be the page segmentation');
+  assert.ok(logs.some(line => /segmenting this page with the TEXT tier instead/.test(line)), 'the flip is logged');
+});
+
+test('a structured tier that spans the page\'s dated content keeps winning', () => {
+  const parser = createParser();
+  const html = buildProgrammePageHtml();
+  // Two cards that TILE the programme (first spans the first half, second the
+  // rest): this is the Squarespace/Wix collection shape, where the text
+  // splitter re-slices the very same lines and must not take over.
+  const tiling = [
+    { lines: ['JUEVES- 03', '19h. INAUGURACIÓN BEARS SITGES WEEK Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre', '20:30h a 03:30h: OPENING «EARLY-VILLAGE» en Bear-Village con DJ Radio Chí'], html: '' },
+    { lines: ['SÁBADO - 05', '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO', '20:30h a 03h NOCHE ESPECIAL «IBC Palm Springs» en Bear-Village'], html: '' }
+  ];
+  parser.buildStructuredMultiEventSegments = () => tiling;
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (...args) => logs.push(args.join(' '));
+  let segments;
+  try { segments = parser.computeMultiEventSegments(html, 'https://programme.example/'); } finally { console.log = originalLog; }
+  assert.ok(!logs.some(line => /segmenting this page with the TEXT tier instead/.test(line)), 'no flip');
+  // The structured windows stand (the coverage audit may still ADD an
+  // unclaimed dated window — that path is unchanged), and they are NOT split.
+  for (const card of tiling) {
+    assert.ok(segments.some(segment => segment.lines[0] === card.lines[0] && segment.lines.length === card.lines.length),
+      `structured window ${card.lines[0]} survives whole`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// One event per timed line: extraction is one-event-per-window, so a day
+// section of a festival programme could only ever yield ONE of its activities.
+// ---------------------------------------------------------------------------
+
+test('a day-programme window opens one window per timed activity, each keeping the day heading', () => {
+  const parser = createParser();
+  const day = {
+    lines: [
+      'MIÉRCOLES - 09',
+      'Osos en la Playa: Recomendamos la Playa Bassa Rodona',
+      '10h a 21h',
+      '16h a 20:30h BEAR TEA-DANCE en el RoofTop del Hotel MiM **Plazas Limitadas**',
+      '18h a 21h Entrega y Venta de BEARS SITGES PACKS en el Hotel Calipolis',
+      '(Tickets para la ZONA VIP del Bear-Village en www.bearsevents.com)',
+      '01h «MEET MARKET Party» Compra tu entrada AQUÍ'
+    ],
+    html: ''
+  };
+  const originalLog = console.log;
+  console.log = () => {};
+  let split;
+  try { split = parser.splitDayProgrammeSegments([day]); } finally { console.log = originalLog; }
+  assert.equal(split.length, 3, `one window per timed activity, got ${JSON.stringify(split.map(s => s.lines))}`);
+  assert.ok(split.every(segment => segment.lines[0] === 'MIÉRCOLES - 09'), 'every window keeps the day heading (its date)');
+  // The day's untimed prose preamble rides with the first activity; a bare
+  // "10h a 21h" names nothing, so it never opens a window of its own.
+  assert.ok(split[0].lines.includes('Osos en la Playa: Recomendamos la Playa Bassa Rodona'));
+  assert.ok(split[0].lines.includes('10h a 21h'));
+  assert.ok(split[0].lines.some(line => line.includes('BEAR TEA-DANCE')));
+  // A note line rides with the activity it follows, not with the next one.
+  assert.ok(split[1].lines.some(line => line.includes('ZONA VIP')));
+  assert.ok(split[2].lines.some(line => line.includes('MEET MARKET')));
+  assert.ok(split.every(segment => segment.lines.filter(line => parser.isTimePrefixedActivityLine(line)
+    && parser.activityTextAfterTimePrefix(line).length >= 8).length === 1), 'one named activity per window');
+});
+
+test('windows that are not multi-activity day sections are left exactly as they were', () => {
+  const parser = createParser();
+  // One listing that happens to print two times is NOT a day programme.
+  const singleListing = { lines: ['Saturday, September 12, 2026', '10:00 PM Doors', 'BEARS ON CRUISE at the Eagle'], html: '' };
+  // A day section with a single named activity stays whole.
+  const oneActivity = { lines: ['DOMINGO - 06', '20:30h a 03h EARLY-VILLAGE en Bear-Village. Entrada Libre'], html: '' };
+  // A window whose head is not a date is not a day section at all.
+  const notDateHeaded = { lines: ['Upcoming parties', '21h Fiesta uno en el bar', '23h Fiesta dos en el bar'], html: '' };
+  const input = [singleListing, oneActivity, notDateHeaded];
+  const originalLog = console.log;
+  console.log = () => {};
+  let split;
+  try { split = parser.splitDayProgrammeSegments(input); } finally { console.log = originalLog; }
+  assert.equal(split.length, input.length);
+  assert.deepEqual(split.map(s => s.lines), input.map(s => s.lines));
+  assert.equal(split[0], singleListing, 'untouched windows are the SAME objects');
+});
+
+test('activityTextAfterTimePrefix strips only the leading clock, and a time-only line names nothing', () => {
+  const parser = createParser();
+  assert.equal(parser.activityTextAfterTimePrefix('20:30h a 03h Especial NOCHE BLANCA en Bear-Village'), 'Especial NOCHE BLANCA en Bear-Village');
+  assert.equal(parser.activityTextAfterTimePrefix('19h. INAUGURACIÓN BEARS SITGES WEEK'), 'INAUGURACIÓN BEARS SITGES WEEK');
+  assert.equal(parser.activityTextAfterTimePrefix('9:00 p.m. to 3:00 a.m. BEARS on CRUISE'), 'BEARS on CRUISE');
+  assert.equal(parser.activityTextAfterTimePrefix('10h a 21h'), '');
+  assert.equal(parser.activityTextAfterTimePrefix('Osos en la Playa'), '', 'untimed lines have no activity text here');
+});
+
+// ---------------------------------------------------------------------------
+// The programme header's own year anchors the page.
+// ---------------------------------------------------------------------------
+
+test('derivePageDateContext takes its year from the header line touching the date phrase — and only that line', () => {
+  const parser = createParser();
+  const year = new Date().getFullYear();
+  const wrap = (lines) => `<html><body>${lines.map(l => `<p>${l}</p>`).join('')}</body></html>`;
+
+  const adjacent = parser.derivePageDateContext(wrap(['PROGRAMA oficial', `BEARS SITGES WEEK ${year}`, 'Del 3 al 13 de SEPTIEMBRE', 'JUEVES- 03']));
+  assert.equal(adjacent.year, year, 'the line immediately above the range phrase states the year');
+
+  // A stale year further down the programme (this page really does print
+  // "INAUGURACIÓN BEARS SITGES WEEK 2025" inside its 2026 schedule) is not
+  // adjacent and must not anchor the page.
+  const stale = parser.derivePageDateContext(wrap(['PROGRAMA oficial', 'Del 3 al 13 de SEPTIEMBRE', '(Bear-Village abierto del 4 al 13)', 'JUEVES- 03', `19h. INAUGURACIÓN BEARS SITGES WEEK ${year - 1}`]));
+  assert.equal(stale.year, null, 'only the touching header line counts');
+
+  // A past year on the touching line is not a programme year either.
+  const past = parser.derivePageDateContext(wrap([`ARCHIVO ${year - 3}`, 'Del 3 al 13 de SEPTIEMBRE']));
+  assert.equal(past.year, null);
+
+  // Neighbours that disagree leave the page year-less, as before.
+  const conflicting = parser.derivePageDateContext(wrap([`BEARS SITGES WEEK ${year}`, 'Del 3 al 13 de SEPTIEMBRE', `Entradas ${year + 1}`]));
+  assert.equal(conflicting.year, null);
 });
 
 test('an invisible anchor never stands in as a segment\'s link', () => {

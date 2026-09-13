@@ -2687,17 +2687,116 @@ class AiWebParser {
         const cardSegments = this.buildJsonLdCardSegments(html);
         if (cardSegments.length >= 2) {
             console.log(`🧩 JSON-LD CARDS: ${cardSegments.length} card window(s), one per JSON-LD event element — the card element is the window, never a date line`);
+            if (this.structuredTierUndercoversDatedContent(html, cardSegments, 'JSON-LD card')) {
+                return this.buildTextTierSegments(html, sourceUrl, ocrResults);
+            }
             const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
             return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
         }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
+            if (this.structuredTierUndercoversDatedContent(html, structuredSegments, 'structured')) {
+                return this.buildTextTierSegments(html, sourceUrl, ocrResults);
+            }
             const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
             return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
         }
 
-        const textSegments = this.buildFlatTextMultiEventSegments(html);
+        return this.buildTextTierSegments(html, sourceUrl, ocrResults);
+    }
+
+    // The text tier as the page's segmentation: the flat splitter's windows,
+    // with festival day-sections opened into one window per timed activity
+    // (see splitDayProgrammeSegments).
+    buildTextTierSegments(html, sourceUrl = '', ocrResults = []) {
+        const textSegments = this.splitDayProgrammeSegments(this.buildFlatTextMultiEventSegments(html), html);
         return this.attachSequentialImageHintsToSegments(html, textSegments, sourceUrl, ocrResults);
+    }
+
+    // Tier selection by COVERAGE of the page's dated content, not by "the
+    // first tier that found two windows".
+    //
+    // A structured tier used to win the moment it produced two windows, and
+    // the text tier was then only AUDITED (coverUnclaimedDatedWindows), which
+    // on a wholesale disagreement adds nothing. bearssitges.org/bears-sitges-week
+    // (run 2026-09-13) is what that costs: the winning "structured" group was
+    // the two-card "Novedades y Noticias" sidebar, so the whole 11-day
+    // programme — 11 weekday headings and 41 time-prefixed activity lines —
+    // was never segmented at all and the page produced one event, a 2020 news
+    // post. 0 of 48.
+    //
+    // The deterministic second opinion is coverage: count the page's DATED
+    // CONTENT lines (a line carrying a date signal, or opening with a clock
+    // time) and ask how many of them each tier's windows actually contain. A
+    // structured tier that owns a small fraction of what the text tier owns is
+    // not "the page's own segmentation with a few cards missing" — it is a
+    // widget on a page whose content lives elsewhere.
+    //
+    // Coverage is measured by POSITION, not by matching line text: a window
+    // owns the stretch of page it spans, whether or not its own trimmed line
+    // list repeats every line in it. That distinction is the whole test.
+    // Squarespace/Wix collections (www.3dollarbillbk.com/rsvp: 30 card windows,
+    // 87 text windows, no window-level overlap at all) tile the listing region,
+    // so almost every dated line on the page falls INSIDE some card — the
+    // cards are the page's segmentation and this must not fire. A sidebar
+    // widget spans a few hundred bytes and leaves the programme outside every
+    // window. So: fire only when the structured tier spans under a quarter of
+    // the page's dated content lines while the text tier spans most of them.
+    structuredTierUndercoversDatedContent(html, structuredSegments, tierLabel = 'structured') {
+        const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
+        if (structured.length === 0) return false;
+        const records = this.extractBodyPartRecords(html);
+        const datedRecords = records.filter(record => record
+            && (this.hasMultiEventDateSignal(record.text) || this.isTimePrefixedActivityLine(record.text)));
+        // Too few dated lines to measure coverage with: the audit path keeps
+        // its existing behaviour.
+        if (datedRecords.length < 8) return false;
+        const textSegments = this.buildFlatTextMultiEventSegments(html, { recordStats: false });
+        if (textSegments.length < 2) return false;
+
+        const structuredCovered = this.countDatedRecordsInsideSegments(structured, datedRecords, records);
+        const structuredShare = structuredCovered / datedRecords.length;
+        if (structuredShare >= 0.25) return false;
+        const textCovered = this.countDatedRecordsInsideSegments(textSegments, datedRecords, records);
+        if (textCovered < datedRecords.length * 0.5 || textCovered < structuredCovered * 2) return false;
+
+        console.log(`🤖 AI Web: Coverage audit: the ${tierLabel} tier's ${structured.length} window(s) span ${structuredCovered} of this page's ${datedRecords.length} dated content line(s); the text splitter's ${textSegments.length} window(s) span ${textCovered} — segmenting this page with the TEXT tier instead`);
+        return true;
+    }
+
+    // How many of `datedRecords` fall inside the page span of any segment. A
+    // segment's span is the first-to-last page position of the lines it does
+    // hold — lines are matched on their first 60 characters so a line one tier
+    // trimmed still locates itself (findMultiEventSegmentTextBounds cannot be
+    // used here: it needs EVERY line of the window to match, which trimming
+    // routinely breaks).
+    countDatedRecordsInsideSegments(segments, datedRecords, records) {
+        const positions = new Map();
+        for (const record of Array.isArray(records) ? records : []) {
+            const key = this.datedContentCoverageKey(record && record.text);
+            if (key && !positions.has(key)) positions.set(key, record);
+        }
+        const ranges = [];
+        for (const segment of Array.isArray(segments) ? segments : []) {
+            let start = Number.POSITIVE_INFINITY;
+            let end = Number.NEGATIVE_INFINITY;
+            for (const line of (segment && Array.isArray(segment.lines) ? segment.lines : [])) {
+                const record = positions.get(this.datedContentCoverageKey(line));
+                if (!record) continue;
+                if (Number.isFinite(record.rawStart)) start = Math.min(start, record.rawStart);
+                if (Number.isFinite(record.rawEnd)) end = Math.max(end, record.rawEnd);
+            }
+            if (Number.isFinite(start) && Number.isFinite(end) && end >= start) ranges.push([start, end]);
+        }
+        if (ranges.length === 0) return 0;
+        return datedRecords.filter(record => Number.isFinite(record.rawStart)
+            && ranges.some(([start, end]) => record.rawStart >= start && record.rawStart <= end)).length;
+    }
+
+    // Positional match key for a page line: normalized, lowercased, first 60
+    // characters, so the same line locates itself whichever tier trimmed it.
+    datedContentCoverageKey(line) {
+        return this.normalizeWhitespace(String(line || '')).toLowerCase().slice(0, 60);
     }
 
     // Coverage invariant for structured segmentation: every dated, titled
@@ -5060,6 +5159,96 @@ class AiWebParser {
         return normalizedLines.filter(line => this.isTimePrefixedActivityLine(line)).length >= 3;
     }
 
+    // The activity a time-prefixed line names, with its leading clock token(s)
+    // removed ("20:30h a 03h Especial NOCHE BLANCA…" → "Especial NOCHE
+    // BLANCA…"). '' when the line is only a time ("10h a 21h"), which is a
+    // heading for the line that follows, not an activity of its own.
+    activityTextAfterTimePrefix(value) {
+        const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u200e\u200f\ufeff]/g, ' '));
+        if (!line || !this.isTimePrefixedActivityLine(line)) return '';
+        const timeToken = '\\d{1,2}(?:[:.]\\d{2})?\\s*(?:h|a\\.?\\s?m\\.?|p\\.?\\s?m\\.?)?';
+        const pattern = new RegExp(`^${timeToken}(?:\\s*(?:a|to|-|–|—|hasta|until|y)\\s*${timeToken})?`, 'i');
+        return this.normalizeWhitespace(line.replace(pattern, '').replace(/^[\s:.,;·–—-]+/, ''));
+    }
+
+    // One event per timed line: a festival programme's DAY section is not one
+    // event, it is the day's list of them.
+    //
+    // Extraction is one-event-per-window by design, so a day window ("JUEVES -
+    // 10" + six timed activities) can only ever yield one event — the ceiling
+    // that made bearssitges.org 11-of-48 at best even once its programme was
+    // segmented at all. A day section states its date ONCE in the heading and
+    // then opens each activity with a clock time, so the split is
+    // deterministic: every time-prefixed line that names something (see
+    // activityTextAfterTimePrefix) opens a window, that window keeps the day's
+    // heading as its first line (so the date context, date signal and
+    // day-of-month anchoring are unchanged), and untimed lines ride with the
+    // activity they follow — notes, ticket links and the day's untimed prose
+    // preamble, which rides with the first activity.
+    //
+    // Conservative on purpose: only date-HEADED windows with at least two
+    // named timed activities split, so a single listing that happens to print
+    // "doors" and "show" times stays one window.
+    splitDayProgrammeSegments(segments, html = '') {
+        const input = Array.isArray(segments) ? segments : [];
+        if (input.length === 0) return input;
+        const output = [];
+        let splitDays = 0;
+        for (const segment of input) {
+            const items = this.splitDayProgrammeLines(segment && Array.isArray(segment.lines) ? segment.lines : []);
+            if (!items) {
+                output.push(segment);
+                continue;
+            }
+            splitDays++;
+            const daySource = segment && typeof segment.html === 'string' && segment.html ? segment.html : String(html || '');
+            for (const item of items) {
+                const itemHtml = daySource
+                    ? (this.extractRawHtmlForMultiEventSegment(daySource, item.ownLines) || daySource)
+                    : item.lines.join('\n');
+                output.push({ ...segment, lines: item.lines, html: itemHtml });
+            }
+        }
+        if (splitDays > 0) {
+            console.log(`🤖 AI Web: Day-programme split: ${splitDays} date-headed day window(s) → ${output.length - (input.length - splitDays)} activity window(s), one per timed line (a day section lists events, it is not one event)`);
+            // The miss budget is sized from the LAST recorded segmentation
+            // stat; without this the page would keep the day-window count and
+            // starve its own activity windows of AI calls.
+            const stats = this.lastMultiEventSegmentationStats;
+            const recordedDated = stats && Number.isFinite(Number(stats.datedCandidateCount)) ? Number(stats.datedCandidateCount) : 0;
+            this.recordMultiEventSegmentationStats(Math.max(recordedDated, output.length), 'text splitter + day-programme split');
+        }
+        return output;
+    }
+
+    // The per-activity line groups of one day window, or null when the window
+    // is not a day section with at least two named timed activities.
+    splitDayProgrammeLines(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (!this.segmentIsDateHeadedSchedule(normalizedLines)) return null;
+        const header = normalizedLines[0];
+        const items = [];
+        const preamble = [];
+        for (const line of normalizedLines.slice(1)) {
+            const isOpener = this.isTimePrefixedActivityLine(line)
+                && this.activityTextAfterTimePrefix(line).length >= this.extractionLimits.multiEventTitleMinChars;
+            if (isOpener) {
+                items.push([line]);
+            } else if (items.length === 0) {
+                preamble.push(line);
+            } else {
+                items[items.length - 1].push(line);
+            }
+        }
+        if (items.length < 2) return null;
+        return items.map((ownLines, index) => ({
+            ownLines,
+            lines: index === 0 ? [header, ...preamble, ...ownLines] : [header, ...ownLines]
+        }));
+    }
+
     // A compact event line combines date + event name (and often venue) in a single line,
     // e.g. "7/25 Pride Dance @ Eagle Bar" or "Aug 8 - Summer Party @ Metro".
     isCompactEventLine(value) {
@@ -5340,7 +5529,7 @@ class AiWebParser {
             `|\\b(${monthName})\\.?\\s*(\\d{1,2})\\b(?:\\s*,?\\s*(\\d{4}))?`, 'g'
         );
 
-        const collect = (pattern, foldedLine, rawLine, sink) => {
+        const collect = (pattern, foldedLine, rawLine, sink, lineIndex) => {
             pattern.lastIndex = 0;
             let match;
             while ((match = pattern.exec(foldedLine)) !== null) {
@@ -5351,6 +5540,7 @@ class AiWebParser {
                 sink.push({
                     month,
                     year: yearGroups.length > 0 ? parseInt(yearGroups[0], 10) : null,
+                    lineIndex,
                     phrase: rawLine.length <= 80 ? rawLine : this.trimToMaxLength(rawLine, 80)
                 });
             }
@@ -5358,12 +5548,13 @@ class AiWebParser {
 
         const rangeMatches = [];
         const fullDateMatches = [];
-        for (const rawLine of lines) {
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const rawLine = lines[lineIndex];
             const foldedLine = this.foldDiacritics(rawLine);
-            collect(wordRangePattern, foldedLine, rawLine, rangeMatches);
-            collect(dashRangePattern, foldedLine, rawLine, rangeMatches);
+            collect(wordRangePattern, foldedLine, rawLine, rangeMatches, lineIndex);
+            collect(dashRangePattern, foldedLine, rawLine, rangeMatches, lineIndex);
             if (rangeMatches.length === 0) {
-                collect(fullDatePattern, foldedLine, rawLine, fullDateMatches);
+                collect(fullDatePattern, foldedLine, rawLine, fullDateMatches, lineIndex);
             }
         }
 
@@ -5382,14 +5573,51 @@ class AiWebParser {
             }
             const winners = matches.filter(m => m.month === topMonth);
             const years = Array.from(new Set(winners.map(m => m.year).filter(y => Number.isFinite(y))));
+            const statedYear = years.length === 1 ? years[0] : null;
             return {
                 month: topMonth,
-                year: years.length === 1 ? years[0] : null,
+                year: statedYear !== null ? statedYear : this.resolveAdjacentHeaderYear(lines, winners),
                 phrase: winners[0].phrase
             };
         };
 
         return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+    }
+
+    // The programme's own header block states the year on the line ABOVE its
+    // date range: "PROGRAMA oficial / BEARS SITGES WEEK 2026 / Del 3 al 13 de
+    // SEPTIEMBRE". Reading only the range phrase left the page year-less, so
+    // every day heading anchored to a month with no year and the model was
+    // free to supply one (bearssitges run 2026-09-13: a context-prep pass
+    // asserted 2024 for "Del 3 al 13 de SEPTIEMBRE").
+    //
+    // Only the lines IMMEDIATELY touching the date phrase count. That is the
+    // header block the phrase belongs to — never the hero, never a sidebar
+    // post, never a stale year further down the programme ("INAUGURACIÓN
+    // BEARS SITGES WEEK 2025", three lines below the phrase on the same
+    // page). A neighbour qualifies only when it states exactly one 4-digit
+    // year, carries no month name of its own (that is a date phrase, and the
+    // patterns above already read it), and the year is not already past; if
+    // the neighbours disagree, the page stays year-less as before.
+    resolveAdjacentHeaderYear(lines, winners) {
+        const vocab = this.getMultilingualDateVocabulary();
+        const currentYear = new Date().getFullYear();
+        const found = new Set();
+        for (const winner of Array.isArray(winners) ? winners : []) {
+            if (!Number.isFinite(winner.lineIndex)) continue;
+            for (const neighbourIndex of [winner.lineIndex - 1, winner.lineIndex + 1]) {
+                const neighbour = lines[neighbourIndex];
+                if (!neighbour) continue;
+                const folded = this.foldDiacritics(neighbour);
+                if (vocab.monthNamePattern.test(folded)) continue;
+                const yearTokens = Array.from(new Set(neighbour.match(/\b(?:19|20)\d{2}\b/g) || []));
+                if (yearTokens.length !== 1) continue;
+                const year = parseInt(yearTokens[0], 10);
+                if (!Number.isFinite(year) || year < currentYear || year > currentYear + 5) continue;
+                found.add(year);
+            }
+        }
+        return found.size === 1 ? Array.from(found)[0] : null;
     }
 
     // The SEGMENT_DATE_CONTEXT prompt/evidence line for one segment: its
@@ -19455,6 +19683,25 @@ TEXT:
         const confidentEnough = typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= minConfidence;
         const evidenceText = String(evidence || '');
         if (confidentEnough && evidenceText && evidenceText.includes(valueYearMatch[0])) return year;
+
+        // Asymmetry between the two ways a year can be wrong. Re-anchoring a
+        // LONG-past year invents a future event that no source states; leaving
+        // it archival only drops a record the page itself dates to an archive.
+        // bearssitges.org (run 2026-09-13) shipped its news sidebar's "Los
+        // chicos de «Where The Bears Are» en la Sitges Bears Week 2019" as a
+        // 2026-09-01 → 2026-09-30 event: the model gave startDate 2019-09-01
+        // with evidence quoting "Sitges Bears Week 2019" at confidence 70, one
+        // notch under the floor, so the window repair walked it forward seven
+        // years — while the sibling post's 2020 byline was correctly dropped.
+        // A year the model both used AND quoted, two or more years past, is an
+        // archive. The one-year-stale case stays repairable on purpose: sites
+        // leave LAST year's label on this year's page ("INAUGURACIÓN BEARS
+        // SITGES WEEK 2025" sits inside this same page's 2026 programme), and
+        // those must still be re-anchored, not dropped.
+        if (evidenceText && evidenceText.includes(valueYearMatch[0])) {
+            const staleYears = new Date().getFullYear() - year;
+            if (staleYears >= 2) return year;
+        }
 
         // The model's quoted snippet is not the only witness. Rockbar run
         // 20260829-110754: six passes read BEARS NIGHT OUT's date; four quoted
