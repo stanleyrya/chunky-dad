@@ -4065,8 +4065,17 @@ class SharedCore {
             // replacing a platform link) is allowed, and platform-vs-platform
             // falls through to the rungs below.
             if (fieldName === 'website' || fieldName === 'url') {
-                const platformA = isPlatformIdentityHost(urlA.host);
-                const platformB = isPlatformIdentityHost(urlB.host);
+                // A URL the PAGE labelled a ticket page counts as a platform
+                // link here even when its host is on no list — that is the
+                // whole point of the label (markTicketRoleUrl). Cubhouse's
+                // calendar held tickets.taverngroupevents.com as `website`
+                // from an earlier run, and with nothing to classify it the
+                // arbitration model kept choosing it over the promoter's own
+                // curated link, every run.
+                const platformA = isPlatformIdentityHost(urlA.host)
+                    || this.isTicketRoleUrlInMergeContext(context, valueA);
+                const platformB = isPlatformIdentityHost(urlB.host)
+                    || this.isTicketRoleUrlInMergeContext(context, valueB);
                 // The non-platform side wins even as a BARE root (2026-08-02;
                 // this rung previously required it to be pathed, arguing a
                 // root would send people to a front door instead of the
@@ -5719,7 +5728,10 @@ class SharedCore {
         if (!Array.isArray(events) || events.length === 0) return;
         const classifications = urlClassifications && typeof urlClassifications === 'object' ? urlClassifications : {};
         const aggregatorHosts = new Set();
+        const classificationByPageKey = new Map();
         for (const url of Object.keys(classifications)) {
+            const pageKey = this.getUrlDedupeKey(url);
+            if (pageKey) classificationByPageKey.set(pageKey, classifications[url]);
             // A root read as a machine feed classifies by its content
             // (multi-event-page), but the host is still the aggregator the
             // config's URL rules say it is — the pointer rule keys on that.
@@ -5737,6 +5749,20 @@ class SharedCore {
             const sourceHost = this.getHostFromUrl(sourcePageUrl).toLowerCase().replace(/^www\./, '');
             if (!sourceHost || !aggregatorHosts.has(sourceHost)) continue;
             const sourcePageKey = this.getUrlDedupeKey(sourcePageUrl);
+            // …but only for a page that IS an aggregator listing. A promoter
+            // whose HOMEPAGE is a link list still publishes real detail pages
+            // on that host, and bearracuda.com/events/<slug>/ is the event's
+            // own page, not a copy of a listing: clearing it here cost all 7
+            // events their deep URL, after which the registry filled the
+            // blank with the domain ROOT and every run proposed root-vs-page
+            // against the calendar (run 20260913-012005). The run's own
+            // classification of THIS page decides; an unclassified page falls
+            // back to the host rule exactly as before.
+            const sourceClassification = classificationByPageKey.get(sourcePageKey) || '';
+            if (sourceClassification && sourceClassification !== 'link-aggregator'
+                && this.classifyUrlByRules(sourcePageUrl) !== 'link-aggregator') {
+                continue;
+            }
             const websiteIsOwnSourcePage = Boolean(website) && this.getUrlDedupeKey(website) === sourcePageKey;
             const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
             const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);
@@ -5808,6 +5834,105 @@ class SharedCore {
         const query = String(url || '').match(/\?([^#]*)/);
         if (!query) return false;
         return query[1].split('&').some(pair => /^(q|s|search|query|keyword|keywords|term)=/i.test(pair));
+    }
+
+    // Is this URL a TICKETING/SOCIAL PLATFORM link rather than an identity
+    // link? The classification canonicalizeIdentityLinks has always used
+    // (PLATFORM_IDENTITY_HOSTS / TICKETING_PLATFORM_HOSTS / opaque shortlink
+    // shape), minus the platform organizer HOME page, which is a promoter's
+    // real presence. Named so the crawl-time "one event on the page" rule can
+    // ask the same question the identity ladder asks later.
+    isPlatformIdentityLinkUrl(url) {
+        const value = String(url || '').trim();
+        if (!value) return false;
+        const host = this.getHostFromUrl(value).toLowerCase().replace(/^www\./, '');
+        if (!host) return false;
+        const parts = this.getUrlRuleParts(value);
+        const isPlatform = isPlatformIdentityHost(host)
+            || this.isKnownTicketingPlatformHost(host)
+            || (parts ? this.isOpaqueShortlinkUrlParts(parts) : false);
+        if (!isPlatform) return false;
+        return !this.isPlatformOrganizerHomeUrl(value);
+    }
+
+    // May this sole event on a page take that page as its `website`?
+    // '' = no; otherwise the reason: 'blank' (nothing to displace),
+    // 'bare-root' (a same-site front door buries the event's own page), or
+    // 'platform' — a ticketing/social PLATFORM link is not a website either,
+    // so it loses to the event's own page exactly like a bare root does.
+    // Without the platform rung the rule was skipped whenever extraction had
+    // parked a ticket link in `website` (bearracuda.com, run 20260913-012005:
+    // all 7 events carried the sickening.events link and not one "takes its
+    // own page" line fired; canonicalizeIdentityLinks then cleared the
+    // platform link after dedup, far too late, and the records shipped the
+    // promoter's domain ROOT instead of /events/<slug>/). The page we crawled
+    // must not itself be a platform page, or this would just swap one
+    // platform link for another; a curated platform self-presence stands.
+    resolveOwnPageWebsiteDisplacement(event, pageUrl) {
+        const url = String(pageUrl || '').trim();
+        if (!url) return '';
+        const existingUrl = event && typeof event.website === 'string' ? event.website.trim() : '';
+        if (!existingUrl) return 'blank';
+        if (this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) return 'bare-root';
+        if (this.isPlatformIdentityLinkUrl(existingUrl)
+            && !this.isPlatformIdentityLinkUrl(url)
+            && !this.isCuratedPlatformSelfIdentityUrl(event, existingUrl)) {
+            return 'platform';
+        }
+        return '';
+    }
+
+    // PAGE-DERIVED ticket role. A host allowlist (PLATFORM_IDENTITY_HOSTS)
+    // re-breaks with every new ticket vendor — the comment above that list
+    // records Eventbrite doing it on 2026-07-30, and Cubhouse's
+    // tickets.taverngroupevents.com did it again on 2026-09-13: the SPA door
+    // labelled the page a TICKET page ("ticketUrl ← the page the door was
+    // found behind"), the same URL became the event's `website`, and because
+    // the vendor's host is on no list the curated identity link never
+    // applied and the final build dropped the ticketUrl instead of the
+    // website. So the label travels with the URL: whatever labelled a URL a
+    // ticket link (a data door onto a ticket-events API, a JSON-LD offer)
+    // stamps it here, and the identity ladder reads the stamp, never a host
+    // list. A ticket PLATFORM page is a perfectly good `ticketUrl` — it is
+    // only barred from being the identity `website`.
+    markTicketRoleUrl(event, url, reason = '') {
+        if (!event || typeof event !== 'object') return;
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        if (!key) return;
+        if (!Array.isArray(event._ticketRoleUrls)) event._ticketRoleUrls = [];
+        if (event._ticketRoleUrls.some(entry => entry && entry.key === key)) return;
+        event._ticketRoleUrls.push({ key, reason: String(reason || '') });
+    }
+
+    // Was this URL labelled a ticket link by a page-derived signal on THIS
+    // event? Stamp-only on purpose: a bare path guess ("/tickets") would
+    // demote a venue's own ticket page out of `website`, which is the
+    // opposite failure.
+    isTicketRoleUrl(event, url) {
+        const stamps = event && Array.isArray(event._ticketRoleUrls) ? event._ticketRoleUrls : null;
+        if (!stamps || stamps.length === 0) return false;
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        if (!key) return false;
+        return stamps.some(entry => entry && entry.key === key);
+    }
+
+    // The same question during a two-sided merge: the label lives on the
+    // record that saw the page (the scraped side), while the value it
+    // describes can arrive from either side — the calendar stores whatever an
+    // earlier run wrote there.
+    isTicketRoleUrlInMergeContext(context, value) {
+        const records = context && context.records && typeof context.records === 'object' ? context.records : null;
+        if (!records) return false;
+        return this.isTicketRoleUrl(records.a, value) || this.isTicketRoleUrl(records.b, value);
+    }
+
+    // Why the stamp says so — for the log line that acts on it.
+    getTicketRoleUrlReason(event, url) {
+        const stamps = event && Array.isArray(event._ticketRoleUrls) ? event._ticketRoleUrls : null;
+        if (!stamps) return '';
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        const hit = key ? stamps.find(entry => entry && entry.key === key) : null;
+        return hit && hit.reason ? hit.reason : '';
     }
 
     clearNonIdentityLinkFields(event, label = 'event') {
@@ -5929,11 +6054,11 @@ class SharedCore {
             const host = this.getHostFromUrl(website).toLowerCase().replace(/^www\./, '');
             if (!host) continue;
             const parts = this.getUrlRuleParts(website);
-            const isPlatform = isPlatformIdentityHost(host)
-                || this.isKnownTicketingPlatformHost(host)
-                || (parts ? this.isOpaqueShortlinkUrlParts(parts) : false);
+            const isPlatform = this.isPlatformIdentityLinkUrl(website)
+                // The page itself said this URL is where you BUY — a ticket
+                // vendor no host list knows yet (markTicketRoleUrl).
+                || this.isTicketRoleUrl(event, website);
             if (!isPlatform) continue; // rung 2: a real page-stated site is kept
-            if (this.isPlatformOrganizerHomeUrl(website)) continue;
             if (this.isCuratedPlatformSelfIdentityUrl(event, website)) continue;
 
             // Route the platform link off `website` without losing it: social
@@ -7317,7 +7442,16 @@ class SharedCore {
                     httpAdapter
                 });
 
-                if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
+                // Every crawled page's classification, not only the roots':
+                // the aggregator-pointer pass needs to know what the page an
+                // EVENT came from is, and a promoter whose homepage is a link
+                // list still publishes real detail pages on that host
+                // (bearracuda.com/events/<slug>/). A deeper page that is
+                // itself a link list now names its host as an aggregator too,
+                // which only matters for events extracted FROM that page —
+                // the pass keys on each event's own page classification.
+                if (urlClassifications && typeof urlClassifications === 'object'
+                    && (currentDepth === 0 || !(url in urlClassifications))) {
                     urlClassifications[url] = pageClassification;
                 }
 
@@ -7427,13 +7561,24 @@ class SharedCore {
                     if (parsedEvents.length === 1) {
                         const soleEvent = parsedEvents[0];
                         const existingUrl = typeof soleEvent.website === 'string' ? soleEvent.website.trim() : '';
-                        if (!existingUrl || this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) {
+                        const displacement = this.resolveOwnPageWebsiteDisplacement(soleEvent, url);
+                        const platformWebsiteLosesToOwnPage = displacement === 'platform';
+                        if (displacement) {
+                            if (platformWebsiteLosesToOwnPage) {
+                                // Flag, don't drop: the displaced platform
+                                // link is a ticket link, so it parks in an
+                                // EMPTY ticketUrl (a real one is never
+                                // overwritten) — the same routing
+                                // canonicalizeIdentityLinks uses.
+                                const existingTicketUrl = typeof soleEvent.ticketUrl === 'string' ? soleEvent.ticketUrl.trim() : '';
+                                if (!existingTicketUrl) soleEvent.ticketUrl = existingUrl;
+                            }
                             soleEvent.website = url;
                             if (soleEvent._staticFields
                                 && Object.prototype.hasOwnProperty.call(soleEvent._staticFields, 'website')) {
                                 delete soleEvent._staticFields.website;
                             }
-                            console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl})` : ''} — one event on the page`);
+                            console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl}${platformWebsiteLosesToOwnPage ? ', a ticketing/social platform link' : ''})` : ''} — one event on the page`);
                         }
                     }
                     // Cross-org crawl guard: a DISCOVERED page whose site curated
@@ -7627,7 +7772,12 @@ class SharedCore {
                             mainConfig,
                             parserName: urlParserName,
                             allowParserAutoSwitch,
-                            urlClassifications: null,
+                            // The crawl's own page classifications travel down
+                            // with it: the aggregator-pointer pass asks what
+                            // the page an EVENT came from is, and events come
+                            // from deeper pages far more often than from a
+                            // configured root.
+                            urlClassifications,
                             includeInlineInput: false,
                             discoveryOnly,
                             discoveryTreeCollector,
@@ -7694,7 +7844,12 @@ class SharedCore {
                             mainConfig,
                             parserName: urlParserName,
                             allowParserAutoSwitch,
-                            urlClassifications: null,
+                            // The crawl's own page classifications travel down
+                            // with it: the aggregator-pointer pass asks what
+                            // the page an EVENT came from is, and events come
+                            // from deeper pages far more often than from a
+                            // configured root.
+                            urlClassifications,
                             includeInlineInput: false,
                             discoveryOnly,
                             discoveryTreeCollector,
@@ -10903,6 +11058,16 @@ class SharedCore {
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
             mergedEvent._promoter = existingEvent._promoter;
         }
+        // Same carry for page-derived ticket-role labels: the two records may
+        // have learned the label on different pages, and the identity ladder
+        // that reads it runs after this merge.
+        for (const stamp of (Array.isArray(existingEvent && existingEvent._ticketRoleUrls) ? existingEvent._ticketRoleUrls : [])) {
+            if (!stamp || !stamp.key) continue;
+            if (!Array.isArray(mergedEvent._ticketRoleUrls)) mergedEvent._ticketRoleUrls = [];
+            if (!mergedEvent._ticketRoleUrls.some(entry => entry && entry.key === stamp.key)) {
+                mergedEvent._ticketRoleUrls.push(stamp);
+            }
+        }
         // Same carry for field-trim records: an existing-only _fieldTrims
         // would otherwise be lost before evidence lines render.
         if (!mergedEvent._fieldTrims && existingEvent && Array.isArray(existingEvent._fieldTrims) && existingEvent._fieldTrims.length > 0) {
@@ -12304,6 +12469,14 @@ class SharedCore {
         }
         if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
             finalEvent._organizer = newEvent._organizer;
+        }
+        // Same carry for the page-derived ticket-role labels: the final-build
+        // LINKS pass is the backstop for merged objects, and without the
+        // label it cannot tell which of two identical URLs is the ticket page
+        // (Cubhouse, run 20260913-023558: the merged event dropped the
+        // ticketUrl and published the vendor page as `website`).
+        if (Array.isArray(newEvent._ticketRoleUrls) && newEvent._ticketRoleUrls.length > 0) {
+            finalEvent._ticketRoleUrls = newEvent._ticketRoleUrls;
         }
         // Same carry for the report-only flyer-vs-page time-conflict stamp
         // (parser-side applyFlyerTimeConflictFlag): getEventSanityFlags reads
@@ -16755,7 +16928,14 @@ class SharedCore {
                         (websiteHost && this.areUrlHostsSameSite(ticketParts.host, websiteHost))
                         || (sourcePageHost && this.areUrlHostsSameSite(ticketParts.host, sourcePageHost));
                     const buriesEventPage = this.isBareRootBuryingSameSiteEventPage(canonicalWebsite, ticketUrl);
-                    if (onCrawledSite && (!canonicalWebsite || buriesEventPage)) {
+                    // …unless the page itself labelled this URL a ticket page
+                    // (markTicketRoleUrl). A ticketing vendor's own app is
+                    // "the crawled site" whenever the parser's root IS that
+                    // vendor, and promoting its checkout page to `website`
+                    // would re-create exactly the confusion the stamp exists
+                    // to end.
+                    const ticketRoleStamped = this.isTicketRoleUrl(analyzedEvent, ticketUrl);
+                    if (onCrawledSite && !ticketRoleStamped && (!canonicalWebsite || buriesEventPage)) {
                         analyzedEvent.website = ticketUrl;
                         analyzedEvent.url = ticketUrl;
                         delete analyzedEvent.ticketUrl;
@@ -16794,11 +16974,29 @@ class SharedCore {
                     : (typeof analyzedEvent.url === 'string' ? analyzedEvent.url.trim() : '');
                 const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
                 if (ticketUrl && canonicalWebsite && ticketUrl === canonicalWebsite) {
-                    delete analyzedEvent.ticketUrl;
-                    notesNeedRebuild = true;
-                    console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
-                    this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
-                        'ticketUrl dropped at final build — byte-identical to the canonical website');
+                    // WHICH of the two twins survives is decided by the page,
+                    // not by field order: when the URL was labelled a ticket
+                    // page (markTicketRoleUrl — a data door onto a ticketing
+                    // API, a JSON-LD offer), the ticket role is the true one
+                    // and `website` is the copy. Keeping the website instead
+                    // published Cubhouse's vendor page as the promoter's
+                    // identity link and threw the ticket link away (run
+                    // 20260913-012005).
+                    if (this.isTicketRoleUrl(analyzedEvent, ticketUrl)) {
+                        delete analyzedEvent.website;
+                        delete analyzedEvent.url;
+                        notesNeedRebuild = true;
+                        const reason = this.getTicketRoleUrlReason(analyzedEvent, ticketUrl);
+                        console.log(`🔗 LINKS: dropped website duplicating ticketUrl for "${analyzedEvent.title || 'event'}" — the page labelled ${ticketUrl} a ticket page${reason ? ` (${reason})` : ''}, and a ticket page is not an identity link`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'website',
+                            'website dropped at final build — byte-identical to a page-labelled ticketUrl');
+                    } else {
+                        delete analyzedEvent.ticketUrl;
+                        notesNeedRebuild = true;
+                        console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'ticketUrl dropped at final build — byte-identical to the canonical website');
+                    }
                 }
             }
 

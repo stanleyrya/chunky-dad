@@ -6602,8 +6602,27 @@ test('doors-vs-party: ambiguity fails closed, non-doors starts untouched', () =>
   );
   // Two distinct party-side times → no promotion.
   assert.equal(
-    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 10PM\nSHOW: 11PM' }),
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 10PM\nPARTY: 11PM' }),
     '', 'multiple candidate party times must change nothing'
+  );
+  // A SHOW is a segment inside the night, never its start (audit
+  // 2026-09-13, BEARRACUDA Portland 17: "Doors Open at 9:00 pm" in the
+  // header and "DJ Matt Stands Show at 11pm" under Music & Entertainment
+  // moved the party's start to 23:00).
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM\nSHOW: 11PM' }),
+    '', 'a show time is not the start of the event'
+  );
+  // The doors time and the party time must be printed TOGETHER: found in
+  // separate blocks they are two unrelated facts about a page.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: '<p>Doors open at 9pm</p><p>Music &amp; Entertainment</p><p>Party starts at 10pm</p>' }),
+    '', 'a doors time and a party time in different blocks do not pair'
+  );
+  // Inline markup inside one block does NOT split the statement.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: '<p>DOORS: <span>9PM</span> &bull; PARTY: <strong>10PM</strong></p>' }),
+    '22:00', 'inline tags keep one printed statement whole'
   );
   // Extracted start is NOT the doors time → no promotion.
   assert.equal(
@@ -8015,6 +8034,107 @@ test('JSON-API price mapping: generic key patterns, cents handling, currency, an
   assert.equal(parser.formatJsonApiPriceCover({ price: 0 }), '');
   assert.equal(parser.formatJsonApiPriceCover({ display_price_cents: 2748, tax_rate: 5, service_fee: 3 }), '');
   assert.equal(parser.formatJsonApiPriceCover(null), '');
+});
+
+test('JSON-API price mapping: sold-out and closed tiers never widen the cover', () => {
+  const parser = createParser();
+  // Cubhouse's Halloween payload (cached 2026-09-10), verbatim shape: only
+  // General Admission was still for sale — "Tonight Only" closed on Aug 29
+  // and both cheaper tiers were sold out (quantity_sold === quantity_total).
+  // The run shipped "$15-$30".
+  const cubhouse = {
+    ticketTypes: [
+      { name: 'Tonight Only', price_cents: 1500, quantity_total: 30, quantity_sold: 30, sales_close_at: '2026-08-29 06:00:00+00' },
+      { name: 'Advance', price_cents: 2500, quantity_total: 30, quantity_sold: 30, sales_close_at: '2026-10-30 06:00:00+00' },
+      { name: 'General Admission', price_cents: 3000, quantity_total: 390, quantity_sold: 37, sales_close_at: '2026-10-31 06:00:00+00' }
+    ]
+  };
+  assert.equal(parser.formatJsonApiPriceCover(cubhouse), '$30',
+    'only the buyable tier makes the cover');
+  // Every generic availability spelling, one tier each.
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, sold_out: true }, { price: 20 }] }), '$20');
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, availability: 'SoldOut' }, { price: 20 }] }), '$20');
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, available: false }, { price: 20 }] }), '$20');
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, quantity_remaining: 0 }, { price: 20 }] }), '$20');
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, sale_ends: '2020-01-01T00:00:00Z' }, { price: 20 }] }), '$20');
+  // A window that has not OPENED yet is still this event's price.
+  assert.equal(parser.formatJsonApiPriceCover({ t: [{ price: 10, sales_open_at: '2099-01-01T00:00:00Z' }, { price: 20 }] }), '$10-$20');
+  // Nothing on sale → the full stated range still backs the cover (the same
+  // fallback formatJsonLdOffersCover uses).
+  assert.equal(parser.formatJsonApiPriceCover({
+    t: [{ price: 15, sold_out: true }, { price: 30, sold_out: true }]
+  }), '$15-$30');
+  // A payload with no availability keys has no opinion — fail open.
+  assert.equal(parser.formatJsonApiPriceCover({ ticket_options: [{ price_cents: 2500 }, { price_cents: 3500 }] }), '$25-$35');
+});
+
+test('image candidates: og:image metadata siblings, directories and templates are never fetched', () => {
+  const parser = createParser();
+  // bearracuda.com, 4 guaranteed-failing downloads per page per run: the
+  // og:image:type VALUE resolved against the page URL, two image-ish
+  // DIRECTORIES, and a JSON-LD SearchAction template.
+  const html = [
+    '<meta property="og:image" content="https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle.jpg" />',
+    '<meta property="og:image:type" content="image/jpeg" />',
+    '<meta property="og:image:width" content="1200" />',
+    '<meta property="og:image:alt" content="Bearracuda Seattle" />',
+    '<img src="https://s.w.org/images/core/emoji/17.0.2/72x72/" />',
+    '<img src="https://bearracuda.com/wp-content/plugins/x/img/image-masking/svg-shapes/" />',
+    '<img src="https://bearracuda.com/?s={search_term_string}" />'
+  ].join('\n');
+  const urls = parser.extractOrderedImageUrlsFromHtml(html, 'https://bearracuda.com/events/7days/');
+  assert.deepEqual(urls, ['https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle.jpg'],
+    `only the real flyer survives: ${JSON.stringify(urls)}`);
+  assert.equal(parser.hasLikelyImageUrl('https://s.w.org/images/core/emoji/17.0.2/72x72/'), false,
+    'a directory is not an image');
+  assert.equal(parser.hasLikelyImageUrl('https://cdn.example/img/{width}/flyer'), false,
+    'a template is not a URL');
+  assert.equal(parser.hasLikelyImageUrl('https://cdn.example/img/flyer'), true,
+    'a real extension-less image path still passes');
+});
+
+test('image fetch failures: 404/410 and non-file 403s are remembered, bot-walls are not', () => {
+  const parser = createParser();
+  const fail = (message) => new Error(message);
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('Failed to fetch image as base64: HTTP 404'),
+    'https://bearracuda.com/events/7days/image/jpeg'), 'image-404');
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('HTTP 410'), 'https://x.example/a.jpg'), 'image-410');
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('HTTP 403'),
+    'https://s.w.org/images/core/emoji/17.0.2/svg/'), 'image-403');
+  // A 403 on a real image FILE is usually a bot-wall that clears later.
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('HTTP 403'), 'https://x.example/flyer.jpg'), '');
+  // Everything else is retried exactly as before.
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('HTTP 503'), 'https://x.example/flyer.jpg'), '');
+  assert.equal(parser.classifyPermanentImageFetchFailure(fail('socket hang up'), 'https://x.example/flyer.jpg'), '');
+});
+
+test('DATE ORPHAN reads the event LOCAL day, not its UTC day', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    // 21:00 America/Los_Angeles on Sep 12 = 04:00 UTC Sep 13. The page says
+    // September 12 — and said so all along (bearracuda, audit 2026-09-13).
+    parser.reportPageDateConflict(
+      new Date('2026-09-13T04:00:00.000Z'),
+      { html: '<p>Seattle — September 12, 2026 — doors 9pm</p>' },
+      'America/Los_Angeles',
+      'BEARRACUDA Seattle'
+    );
+    assert.equal(logs.length, 0, `no flag for a page that states the local day: ${logs.join(' | ')}`);
+    // A page that states dates, just never this event's, still reports.
+    parser.reportPageDateConflict(
+      new Date('2026-09-13T04:00:00.000Z'),
+      { html: '<p>February 1, 2025</p>' },
+      'America/Los_Angeles',
+      'BEARRACUDA Seattle'
+    );
+    assert.ok(logs.some(line => line.includes('DATE ORPHAN') && line.includes('2026-09-12')),
+      `the orphan is reported with the LOCAL day: ${logs.join(' | ')}`);
+  } finally {
+    console.log = originalLog;
+  }
 });
 
 test('linearizeJsonForPrompt emits keyPath lines for scalar leaves, skipping null/empty and stripping tags', () => {

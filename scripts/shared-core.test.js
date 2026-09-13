@@ -14289,6 +14289,56 @@ test('final build drops a ticketUrl byte-identical to the canonical website', as
     `got: ${JSON.stringify(lines)}`);
 });
 
+test('final build keeps a door-labelled ticketUrl and drops the website copy', async () => {
+  // Cubhouse, run 20260913-012005: the SPA door labelled
+  // tickets.taverngroupevents.com/<slug> a TICKET page, the same URL became
+  // the event's website, and this pass deleted the ticketUrl — publishing a
+  // ticket vendor as the promoter's identity link. The page's own label
+  // decides which twin survives; no host list is consulted.
+  const core = createFinalBuildCore();
+  const link = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const event = {
+    title: 'Halloween Cubhouse',
+    startDate: new Date('2026-10-31T01:00:00.000Z'),
+    city: 'philly',
+    website: link,
+    url: link,
+    ticketUrl: link
+  };
+  core.markTicketRoleUrl(event, link, 'a data door onto its ticketing API');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.ticketUrl, link, 'the ticket role survives — it is what the page stated');
+  assert.equal(analyzed.website, undefined, 'the website copy goes instead');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: dropped website duplicating ticketUrl')),
+    `got: ${JSON.stringify(lines)}`);
+});
+
+test('canonicalizeIdentityLinks: a door-labelled ticket page yields to the curated identity link, whatever the host', () => {
+  // The host allowlist re-breaks with every new ticket vendor (Eventbrite
+  // 2026-07-30, tickets.taverngroupevents.com 2026-09-13). The page-derived
+  // stamp travels with the URL instead.
+  const core = createRegistryCore([
+    { name: 'CUBHOUSE', shortName: 'CUBHOUSE', website: 'https://linktr.ee/cubhouse', bearAffinity: 'always' }
+  ]);
+  const ticketPage = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const stamped = { title: 'Halloween Cubhouse', website: ticketPage, ticketUrl: ticketPage, _promoter: 'CUBHOUSE' };
+  const unstamped = { title: 'Halloween Cubhouse', website: ticketPage, ticketUrl: ticketPage, _promoter: 'CUBHOUSE' };
+  core.markTicketRoleUrl(stamped, ticketPage, 'a data door onto its ticketing API');
+  core.canonicalizeIdentityLinks([stamped, unstamped]);
+  assert.equal(stamped.website, 'https://linktr.ee/cubhouse',
+    'the curated identity link replaces a page-labelled ticket page');
+  assert.equal(stamped.ticketUrl, ticketPage, 'the ticket link is kept, not dropped');
+  assert.equal(unstamped.website, ticketPage,
+    'without the page-derived label an unknown host is still a real site — no host guessing');
+});
+
 // ---------------------------------------------------------------------------
 // Post-merge deterministic rewrites must RECORD themselves in _mergeDecisions
 // (run 20260815-083809, "TWISTED BEAR San Francisco Debut"): the merge-time
@@ -14815,6 +14865,30 @@ test('website merge: a BARE promoter root beats a platform deep link (audit pair
     core.resolveConflictDeterministically('website',
       'https://dice.fm/event/abcdef', 'https://www.eventbrite.com/e/tickets-1234'),
     null, 'platform-vs-platform falls through');
+});
+
+test('website merge: a page-LABELLED ticket page loses to the identity link on any host', () => {
+  // Cubhouse, run 20260913-023558: the calendar held
+  // tickets.taverngroupevents.com/<slug> as `website` from an earlier run.
+  // No host list knows that vendor, so the arbitration model kept choosing
+  // it over the promoter's curated linktr.ee — every run, forever. The page
+  // itself had said the URL was a ticket page (its SPA door), and that label
+  // rides on the scraped record.
+  const core = createCore();
+  const vendor = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const identity = 'https://linktr.ee/cubhouse';
+  const scraped = { title: 'Halloween Cubhouse', website: identity, ticketUrl: vendor };
+  core.markTicketRoleUrl(scraped, vendor, 'a data door onto its ticketing API');
+  const context = { records: { a: { title: 'Halloween Cubhouse', website: vendor }, b: scraped } };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website', vendor, identity, context),
+    { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' },
+    'the labelled ticket page loses even though its host is on no list');
+  // Without the label the same pair is a genuine question — no host guessing.
+  assert.equal(
+    core.resolveConflictDeterministically('website', vendor, identity,
+      { records: { a: {}, b: {} } }),
+    null, 'an unlabelled unknown host still arbitrates');
 });
 
 test('URL merge: a static asset URL never beats a real page for website/url/ticketUrl', () => {
@@ -18770,6 +18844,60 @@ test('applyAggregatorWebsitePointers clears self-referential pointers on offer-l
   assert.equal(outboundWebsite.website, 'https://www.leipzig-baeren.de/party/#ticketshop', 'an outbound website is never cleared');
   assert.equal(venueSelfPointer.website, 'https://eaglela.com/events/gear-night/', 'venue-site self-pointers are untouched');
   assert.equal(venueSelfPointer.url, 'https://eaglela.com/events/gear-night/', 'venue-site url alias is untouched');
+});
+
+test('one event on the page: a platform website is displaced by the page itself', () => {
+  const core = createCore();
+  const page = 'https://bearracuda.com/events/7days/';
+  // The rule used to fire only on a blank or a same-site bare root, so an
+  // extraction that parked the ticket link in `website` skipped it entirely.
+  assert.equal(core.resolveOwnPageWebsiteDisplacement({ website: '' }, page), 'blank');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement({ website: 'https://bearracuda.com' }, page), 'bare-root');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://sickening.events/e/bearracuda-seattle-7days' }, page), 'platform');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://www.instagram.com/bearracuda' }, page), 'platform');
+  // A page the site actually named is never displaced…
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://massive.club/calendar/bearracuda' }, page), '');
+  // …and a platform page never swaps one platform link for another.
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://www.instagram.com/bearracuda' },
+    'https://sickening.events/e/bearracuda-seattle-7days'), '');
+});
+
+test('applyAggregatorWebsitePointers leaves a real event page on an aggregator HOST alone', () => {
+  // bearracuda.com's homepage is a link list, so its host counted as an
+  // aggregator and every event's own page — bearracuda.com/events/<slug>/,
+  // classified event-page by this very run — was cleared as a "self-pointer".
+  // The registry then filled the blank with the domain ROOT, and all 7
+  // records shipped the root while the calendar held the deep URL (run
+  // 20260913-012005). The page's own classification decides.
+  const core = createCore();
+  const urlClassifications = {
+    'https://bearracuda.com/': 'link-aggregator',
+    'https://bearracuda.com/events/7days/': 'event-page'
+  };
+  const ownPage = {
+    title: 'BEARRACUDA: Seattle',
+    website: 'https://bearracuda.com/events/7days/',
+    url: 'https://bearracuda.com/events/7days/',
+    ticketUrl: 'https://sickening.events/e/bearracuda-seattle-7days',
+    _sourcePageUrl: 'https://bearracuda.com/events/7days/'
+  };
+  // The aggregator page itself still behaves exactly as before.
+  const listingPage = {
+    title: 'BEARRACUDA: Somewhere',
+    website: 'https://bearracuda.com/',
+    url: 'https://bearracuda.com/',
+    ticketUrl: 'https://sickening.events/e/bearracuda-somewhere',
+    _sourcePageUrl: 'https://bearracuda.com/'
+  };
+  core.applyAggregatorWebsitePointers([ownPage, listingPage], urlClassifications);
+  assert.equal(ownPage.website, 'https://bearracuda.com/events/7days/',
+    'an event page on the aggregator host keeps its own URL');
+  assert.equal(listingPage.website, '',
+    'the listing page itself is still a copy, not the pointer');
 });
 
 // ---------------------------------------------------------------------------

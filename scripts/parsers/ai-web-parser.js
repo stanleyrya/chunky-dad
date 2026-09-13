@@ -4521,6 +4521,7 @@ class AiWebParser {
             while ((match = pattern.exec(source)) !== null) {
                 const attributeValue = String(match[1] || '').trim();
                 if (!attributeValue) continue;
+                if (this.isMetaImageMetadataAttribute(source, match.index)) continue;
                 if (pattern.source.includes('srcset')) {
                     this.splitSrcsetIntoUrlCandidates(attributeValue).forEach(candidate => {
                         addImageRecord(candidate, match.index, pattern.lastIndex);
@@ -10548,25 +10549,38 @@ class AiWebParser {
     // min==max → "$25"; range → "$25-$35"; a non-USD currency key renders
     // "25 EUR" style. Empty string when the object states no price (the
     // search-endpoint shape) — fail open, never fabricate.
+    // Availability, mirroring formatJsonLdOffersCover: a tier that is sold
+    // out or whose sales window has CLOSED is not a price anyone can pay, so
+    // it never widens the cover. Cubhouse's Halloween party (run
+    // 20260913-012005) published "$15-$30" from three tiers of which only the
+    // $30 one was still for sale — the $15 tier's window had closed two weeks
+    // earlier and both cheaper tiers were sold out (quantity_sold ===
+    // quantity_total). When NO tier is available the full range still backs
+    // the cover (an all-sold-out event still has a stated price).
     formatJsonApiPriceCover(obj) {
         try {
             const amounts = [];
+            const unavailableAmounts = [];
             let currency = '';
             let statedFree = false;
             let statedText = '';
             const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
             const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency)(_|$)|display/;
-            const visit = (node, depth) => {
+            const visit = (node, depth, ancestorUnavailable = false) => {
                 if (!node || depth > 3) return;
                 if (Array.isArray(node)) {
-                    node.forEach(item => visit(item, depth + 1));
+                    node.forEach(item => visit(item, depth + 1, ancestorUnavailable));
                     return;
                 }
                 if (typeof node !== 'object') return;
+                // The tier's own sibling keys decide whether it is buyable;
+                // an unavailable ANCESTOR (a sold-out performance holding
+                // ticket options) carries down to everything inside it.
+                const unavailable = ancestorUnavailable || Boolean(this.jsonApiTierIsUnavailable(node));
                 for (const [key, value] of Object.entries(node)) {
                     const normalizedKey = this.normalizeJsonApiKey(key);
                     if (value && typeof value === 'object') {
-                        visit(value, depth + 1);
+                        visit(value, depth + 1, unavailable);
                         continue;
                     }
                     // A 3-letter code beats a symbol met earlier (Tribe lists
@@ -10603,22 +10617,98 @@ class AiWebParser {
                         }
                         for (const found of decoded.match(/\d+(?:[.,]\d{1,2})?/g) || []) {
                             const parsedAmount = Number(found.replace(',', '.'));
-                            if (Number.isFinite(parsedAmount) && parsedAmount > 0) amounts.push(parsedAmount);
+                            if (Number.isFinite(parsedAmount) && parsedAmount > 0) {
+                                (unavailable ? unavailableAmounts : amounts).push(parsedAmount);
+                            }
                         }
                         continue;
                     }
                     const amount = Number(String(value === null || value === undefined ? '' : value).trim());
                     if (!Number.isFinite(amount) || amount <= 0) continue;
-                    amounts.push(/cents/.test(normalizedKey) ? amount / 100 : amount);
+                    (unavailable ? unavailableAmounts : amounts)
+                        .push(/cents/.test(normalizedKey) ? amount / 100 : amount);
                 }
             };
             visit(obj, 0);
-            if (amounts.length === 0) return statedFree ? 'Free' : statedText;
-            return this.formatCoverAmountRange(amounts, currency);
+            // Buyable tiers define the cover; with none left, every stated
+            // price backs it (same fallback as formatJsonLdOffersCover).
+            const selected = amounts.length > 0 ? amounts : unavailableAmounts;
+            if (selected.length === 0) return statedFree ? 'Free' : statedText;
+            if (amounts.length > 0 && unavailableAmounts.length > 0) {
+                console.log(`🤖 AI Web: JSON API cover ignored ${unavailableAmounts.length} tier price(s) the payload marks sold out or past their sales window`);
+            }
+            return this.formatCoverAmountRange(selected, currency);
         } catch (error) {
             console.warn(`🤖 AI Web: JSON API price→cover mapping failed: ${error && error.message ? error.message : error}`);
             return '';
         }
+    }
+
+    // Is this JSON-API object a ticket tier nobody can buy any more? Pure
+    // key-SHAPE recognition, never a vendor schema, and every rung needs the
+    // payload to SAY so — an object with none of these keys has no opinion
+    // and its price counts (fail open):
+    //   • an explicit flag: sold_out/soldOut true, availability naming
+    //     "sold out", available/on_sale/in_stock false;
+    //   • exhausted stock: quantity_sold >= quantity_total, or a
+    //     remaining/available count of 0;
+    //   • a sales window that has already CLOSED (sales_close_at, sale_ends,
+    //     valid_through, available_until… earlier than now).
+    // A window that has not OPENED yet is deliberately not excluded: a
+    // pre-sale price is still this event's price.
+    jsonApiTierIsUnavailable(node) {
+        if (!node || typeof node !== 'object' || Array.isArray(node)) return false;
+        let total = null;
+        let sold = null;
+        const now = Date.now();
+        for (const [key, value] of Object.entries(node)) {
+            if (value && typeof value === 'object') continue;
+            const normalizedKey = this.normalizeJsonApiKey(key);
+            const text = value === null || value === undefined ? '' : String(value).trim();
+            if (/(^|_)(sold_?out)(_|$)/.test(normalizedKey) && (value === true || /^(1|true|yes)$/i.test(text))) return true;
+            if (/(^|_)availability(_|$)/.test(normalizedKey) && /sold\s*_?out/i.test(text)) return true;
+            if (/(^|_)(available|on_sale|purchasable|in_stock|is_active|active)(_|$)/.test(normalizedKey)
+                && (value === false || /^(0|false|no)$/i.test(text))) return true;
+            if (/(^|_)(quantity_total|total_quantity|capacity|inventory_total)(_|$)/.test(normalizedKey)) {
+                const parsed = Number(text);
+                if (Number.isFinite(parsed)) total = parsed;
+                continue;
+            }
+            if (/(^|_)(quantity_sold|sold_quantity|sold_count|tickets_sold|quantity_claimed)(_|$)/.test(normalizedKey)) {
+                const parsed = Number(text);
+                if (Number.isFinite(parsed)) sold = parsed;
+                continue;
+            }
+            if (/(^|_)(quantity_available|available_quantity|quantity_remaining|remaining_quantity|tickets_remaining|remaining|available_count)(_|$)/.test(normalizedKey)) {
+                const parsed = Number(text);
+                if (Number.isFinite(parsed) && parsed <= 0) return true;
+                continue;
+            }
+            if (/(sales?_(close|end)|(^|_)(close|end)_sales?)|valid_through|available_until|(^|_)(on_sale|sale)_end/.test(normalizedKey)) {
+                const closesAt = this.parseJsonApiInstantMillis(text);
+                if (closesAt !== null && closesAt < now) return true;
+            }
+        }
+        return total !== null && sold !== null && total > 0 && sold >= total;
+    }
+
+    // "2026-08-29 06:00:00+00" / ISO / epoch seconds or millis → epoch ms, or
+    // null when the value is not a timestamp. Space-separated Postgres
+    // timestamps and 2-digit offsets are normalized before parsing because
+    // Date.parse rejects them on some platforms.
+    parseJsonApiInstantMillis(value) {
+        const text = String(value === null || value === undefined ? '' : value).trim();
+        if (!text) return null;
+        if (/^\d{9,13}$/.test(text)) {
+            const numeric = Number(text);
+            return text.length <= 10 ? numeric * 1000 : numeric;
+        }
+        if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return null;
+        const normalized = text
+            .replace(/^(\d{4}-\d{2}-\d{2})[ ](\d{2}:\d{2})/, '$1T$2')
+            .replace(/([+-]\d{2})$/, '$1:00');
+        const parsed = Date.parse(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
     }
 
     // Does the page state this cover amount only as a prize? Every mention
@@ -10709,6 +10799,12 @@ class AiWebParser {
             if (!event.ticketUrl && pageUrl) {
                 event.ticketUrl = pageUrl;
                 console.log(`🚪 SPA DOOR: "${event.title}" ticketUrl ← the page the door was found behind: ${pageUrl}`);
+            }
+            // The door is the page's OWN statement that this URL is where you
+            // buy — carry that role with the URL so the identity ladder never
+            // has to recognise the vendor's host (SharedCore.markTicketRoleUrl).
+            if (pageUrl && this.core && typeof this.core.markTicketRoleUrl === 'function') {
+                this.core.markTicketRoleUrl(event, pageUrl, 'a data door onto its ticketing API');
             }
             if (event.bar && !event.address && directory.length > 0) {
                 const hit = this.matchBundleVenueDirectoryEntry(event.bar, directory);
@@ -12840,6 +12936,22 @@ class AiWebParser {
         } catch (error) {
             console.warn(`🚨 AI Web: OCR image download failed for ${normalizedUrl} after ${Date.now() - downloadStart}ms: ${error.message}`);
             this.failedImageDownloadUrls.set(normalizedUrl, error && error.message ? error.message : 'image download failed');
+            // A download that can never succeed is a deterministic failure
+            // like a context overflow, so it is also remembered ACROSS runs:
+            // bearracuda.com re-fetched the same four dead image URLs on
+            // every page of every run (~20 s and four 404/403 round-trips,
+            // audit 2026-09-13). 404/410 are recorded unconditionally — the
+            // resource is gone; 403 only for a URL that is not even an image
+            // FILE (a directory or extension-less path), because a 403 on a
+            // real flyer is usually a bot-wall that clears later and must
+            // never be written off forever.
+            const failureKind = this.classifyPermanentImageFetchFailure(error, normalizedUrl);
+            if (failureKind && !healContext) {
+                const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify({ failureKind }));
+                if (cachePath) {
+                    console.warn(`🤖 AI Web: Cached OCR failure (${failureKind}) for ${normalizedUrl} so it is not re-fetched`);
+                }
+            }
             throw error;
         }
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars) for ${normalizedUrl} (downloaded in ${Date.now() - downloadStart}ms)`);
@@ -17416,6 +17528,7 @@ TEXT:
             for (const match of html.matchAll(pattern)) {
                 const attributeValue = String(match[1] || '').trim();
                 if (!attributeValue) continue;
+                if (this.isMetaImageMetadataAttribute(html, match.index)) continue;
                 if (pattern.source.includes('srcset')) {
                     this.splitSrcsetIntoUrlCandidates(attributeValue).forEach(candidate => {
                         rawCandidates.add(candidate);
@@ -17460,11 +17573,58 @@ TEXT:
         return imageUrls;
     }
 
+    // A download failure that will still be a failure next run: HTTP 404/410
+    // (the resource is gone) and HTTP 403 on a URL that is not an image file
+    // at all (a directory such as "…/emoji/17.0.2/72x72/"). Anything else —
+    // timeouts, 5xx, connection resets, a 403 on a real .jpg — returns '' and
+    // is retried as before. Reads only the adapter's own error text, which
+    // carries the status ("Failed to fetch image as base64: HTTP 404").
+    classifyPermanentImageFetchFailure(error, imageUrl) {
+        const message = String((error && error.message) || error || '');
+        const status = (message.match(/\b(?:HTTP|status(?:\s*code)?)[\s:]*([1-5]\d{2})\b/i) || [])[1];
+        if (!status) return '';
+        if (status === '404' || status === '410') return `image-${status}`;
+        if (status === '403' && !this.hasSupportedImageFilenameAtEnd(imageUrl)) return 'image-403';
+        return '';
+    }
+
+    // Is this `content="…"` the og:image family's METADATA rather than a
+    // URL? og:image / og:image:url / og:image:secure_url carry the picture;
+    // og:image:type ("image/jpeg"), :width, :height and :alt carry facts
+    // ABOUT it. Resolving one of those against the page URL manufactures a
+    // guaranteed-404 image candidate — bearracuda.com spent ~2.3 s per page
+    // fetching "https://bearracuda.com/events/<slug>/image/jpeg", 7 pages a
+    // run (audit 2026-09-13). Reads the enclosing tag's own property/name.
+    isMetaImageMetadataAttribute(source, matchIndex) {
+        const text = String(source || '');
+        const index = Number(matchIndex);
+        if (!Number.isFinite(index) || index < 0) return false;
+        const tagStart = text.lastIndexOf('<', index);
+        if (tagStart < 0) return false;
+        const tagEnd = text.indexOf('>', index);
+        const tag = text.slice(tagStart, tagEnd < 0 ? index : tagEnd);
+        if (!/^<\s*meta\b/i.test(tag)) return false;
+        const key = (tag.match(/\b(?:property|name|itemprop)\s*=\s*["']([^"']+)["']/i) || [])[1];
+        if (!key) return false;
+        return /[:_-](?:type|width|height|alt)$/i.test(String(key).trim());
+    }
+
     hasLikelyImageUrl(url) {
-        const parsed = this.parseUrlComponents(String(url || ''));
+        const raw = String(url || '');
+        const parsed = this.parseUrlComponents(raw);
         if (!parsed) return false;
         const path = String(parsed.pathname || '').toLowerCase();
         const search = String(parsed.search || '').toLowerCase();
+        // A DIRECTORY is not an image. "…/img/image-masking/svg-shapes/" and
+        // "https://s.w.org/images/core/emoji/17.0.2/72x72/" are image-ish
+        // FOLDERS that wordpress themes print as base paths; fetching them
+        // cost bearracuda.com three guaranteed 404/403 downloads per page,
+        // every page, every run (audit 2026-09-13).
+        if (!path || path.endsWith('/')) return false;
+        // A TEMPLATE, not a URL: "?s={search_term_string}" (JSON-LD
+        // SearchAction), "{width}x{height}" CDN patterns. The braces are
+        // never percent-encoded by a site that means them literally.
+        if (/[{}]/.test(raw)) return false;
         if (this.proxyImagePathPrefixes.some(prefix => {
             const normalizedPrefix = String(prefix || '').replace(/\?.*$/, '').toLowerCase();
             return normalizedPrefix && path.startsWith(normalizedPrefix);
@@ -18873,20 +19033,31 @@ TEXT:
     // Doors-vs-party disambiguation (run 20260811-102550, FURBALL NOLA): the
     // flyer prints "DOORS: 9PM • PARTY: 10PM" and extraction adopted 21:00
     // (the DOORS time) as startTime — the event starts when the party starts,
-    // not when the doors open. Deterministic and page-derived: when the
-    // event's own source corpus states exactly ONE doors time X and exactly
-    // ONE distinct party/show/start time Y later than X, and the extracted
-    // startTime equals X, the start is promoted to Y. Fails closed on any
-    // ambiguity (multiple distinct doors or party times, Y not after X, or
-    // the extracted start not matching the doors time) — then nothing
-    // changes. Returns the promoted "HH:MM" or '' when no promotion applies.
+    // not when the doors open. Deterministic and page-derived: when ONE
+    // printed STATEMENT names both a doors time X and a party/start time Y
+    // later than X, and the extracted startTime equals X, the start is
+    // promoted to Y.
+    //
+    // The two times must be printed TOGETHER (audit 2026-09-13, BEARRACUDA
+    // Portland 17): that page says "Doors Open at 9:00 pm Party Goes Until
+    // 3:00 am!" in its header and, three blocks lower under "Music &
+    // Entertainment", "DJ Matt Stands Show at 11pm w/Kharisma" — a SEGMENT
+    // inside the night, not its start. Scanning the whole page paired them
+    // and moved the party from 9pm to 11pm. For the same reason "show" is no
+    // longer a start word at all: a show/performance happens during an event.
+    //
+    // Fails closed on any ambiguity (no statement names both, more than one
+    // statement does, several distinct times inside it, Y not after X, or the
+    // extracted start not matching the doors time) — then nothing changes.
+    // Returns the promoted "HH:MM" or '' when no promotion applies.
     resolveDoorsVsPartyStartTime(startTimeRaw, htmlData) {
         const normalizedStart = String(startTimeRaw || '').trim();
         const startMatch = normalizedStart.match(/^(\d{2}):(\d{2})$/);
         if (!startMatch) return '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         if (!html) return '';
-        const corpus = this.stripTags(html);
+        const statements = this.splitHtmlIntoPrintedStatements(html);
+        if (statements.length === 0) return '';
         // A time token: "9PM", "9:30 PM", or 24h "21:00".
         const timeToken = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)|(\\d{1,2}):(\\d{2})';
         const toMinutes = (match) => {
@@ -18904,21 +19075,44 @@ TEXT:
             if (hour > 23 || minute > 59) return null;
             return (hour * 60) + minute;
         };
-        const collectTimes = (labelPattern) => {
+        const collectTimes = (labelPattern, text) => {
             const times = new Set();
             const re = new RegExp(`(?:${labelPattern})\\s*(?:${timeToken})`, 'gi');
             let match;
-            while ((match = re.exec(corpus)) !== null) {
+            while ((match = re.exec(text)) !== null) {
                 const minutes = toMinutes(match);
                 if (minutes !== null) times.add(minutes);
             }
             return times;
         };
         // Linguistic-generic label vocabulary (no per-site terms): doors on
-        // one side, party/show/start statements on the other.
-        const doorsTimes = collectTimes('\\bdoors?\\s*(?:[:@]|at\\b|open(?:s|ed|ing)?\\b\\s*(?:[:@]|at\\b)?)');
-        const partyTimes = collectTimes('\\b(?:part(?:y|ies)|show|event|music)\\s*(?:[:@]|at\\b|starts?\\s*(?:[:@]|at\\b)?)|\\bstart(?:s|ed|ing)?\\s*(?:[:@]|at\\b)');
-        // Fail closed: exactly one of each, distinct, party strictly later.
+        // one side, party/start statements on the other. "show" and
+        // "performance" are deliberately absent — they name something that
+        // happens INSIDE the night (a DJ set, a drag number), never when the
+        // night begins.
+        const doorsLabel = '\\bdoors?\\s*(?:[:@]|at\\b|open(?:s|ed|ing)?\\b\\s*(?:[:@]|at\\b)?)';
+        const partyLabel = '\\b(?:part(?:y|ies)|event|music)\\s*(?:[:@]|at\\b|starts?\\s*(?:[:@]|at\\b)?)|\\bstart(?:s|ed|ing)?\\s*(?:[:@]|at\\b)';
+        // The pairing must be printed as ONE statement: a doors time and a
+        // party time in the same block of text are two halves of the same
+        // sentence about this event; found in different blocks they are two
+        // unrelated facts about a page.
+        const pairings = [];
+        const allDoorsTimes = new Set();
+        const allPartyTimes = new Set();
+        for (const statement of statements) {
+            const doorsTimes = collectTimes(doorsLabel, statement);
+            const partyTimes = collectTimes(partyLabel, statement);
+            doorsTimes.forEach(value => allDoorsTimes.add(value));
+            partyTimes.forEach(value => allPartyTimes.add(value));
+            if (doorsTimes.size > 0 && partyTimes.size > 0) pairings.push({ doorsTimes, partyTimes });
+        }
+        // Fail closed on ambiguity anywhere on the page (a second doors or
+        // party time means we cannot tell whose start we matched), then on
+        // the pairing itself: exactly one statement naming both, one time on
+        // each side, party strictly later.
+        if (allDoorsTimes.size !== 1 || allPartyTimes.size !== 1) return '';
+        if (pairings.length !== 1) return '';
+        const { doorsTimes, partyTimes } = pairings[0];
         if (doorsTimes.size !== 1 || partyTimes.size !== 1) return '';
         const doors = [...doorsTimes][0];
         const party = [...partyTimes][0];
@@ -18927,6 +19121,18 @@ TEXT:
         if (startMinutes !== doors) return '';
         const pad = (value) => String(value).padStart(2, '0');
         return `${pad(Math.floor(party / 60))}:${pad(party % 60)}`;
+    }
+
+    // One printed STATEMENT per entry. Block-level tag boundaries, <br> and
+    // hard line breaks end a statement; INLINE tags (span/a/strong/em…) never
+    // do, so "DOORS: <span>9PM</span>" stays whole. Tags are stripped after
+    // the boundaries are marked, so attribute text cannot fuse two blocks.
+    splitHtmlIntoPrintedStatements(html) {
+        const blockBoundary = /<\s*\/?\s*(?:br|hr|p|div|li|ul|ol|dl|dt|dd|tr|td|th|table|h[1-6]|section|article|header|footer|main|aside|nav|blockquote|figure|figcaption|form|fieldset|pre|address)\b[^>]*>/gi;
+        return this.stripTags(String(html || '').replace(blockBoundary, '\n'))
+            .split(/[\r\n]+/)
+            .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
+            .filter(Boolean);
     }
 
     // The event's local start date and the previous day, as {year, month,
@@ -21690,18 +21896,22 @@ TEXT:
         if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
         const text = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         if (!text) return false;
-        // The event's LOCAL calendar day, not the UTC one: a 21:00 Chicago
-        // party is 02:00 UTC the next morning, so the UTC reading asked the
-        // page about a day it never advertised and every past-midnight event
-        // read as an orphan (goldiloxx audit 2026-09-13).
-        const local = this.getLocalDateParts(startDate, timezone) || {
+        // The day the PAGE prints is the event's LOCAL day, not its UTC one:
+        // a 21:00 PDT party is 04:00 UTC the next morning, so reading the date
+        // with getUTCDate() reported every US evening event as an orphan
+        // (goldiloxx and bearracuda, audit 2026-09-13).
+        // getFlyerLocalDateCandidates does that Intl read, carries the
+        // after-midnight night-before candidate, and falls back to the UTC
+        // parts exactly as this did when no timezone resolved.
+        const localDates = this.getFlyerLocalDateCandidates({ startDate, timezone }) || [];
+        const primary = localDates[0] || {
             year: startDate.getUTCFullYear(),
             month: startDate.getUTCMonth() + 1,
             day: startDate.getUTCDate()
         };
-        const month = String(local.month).padStart(2, '0');
-        const day = String(local.day).padStart(2, '0');
-        const currentYear = local.year;
+        const month = String(primary.month).padStart(2, '0');
+        const day = String(primary.day).padStart(2, '0');
+        const currentYear = primary.year;
         const stated = [];
         for (let year = currentYear - 2; year <= currentYear + 2; year++) {
             if (this.sourceStatesValueYear(`${year}-${month}-${day}`, text)) stated.push(year);
@@ -21711,6 +21921,16 @@ TEXT:
             return false;
         }
         if (stated.length > 0) return false;
+        // An after-midnight start belongs to the night before, and that is the
+        // date its page prints — the second candidate states this event's day
+        // just as truly.
+        for (const candidate of localDates.slice(1)) {
+            const candidateMonth = String(candidate.month).padStart(2, '0');
+            const candidateDay = String(candidate.day).padStart(2, '0');
+            for (let year = candidate.year - 2; year <= candidate.year + 2; year++) {
+                if (this.sourceStatesValueYear(`${year}-${candidateMonth}-${candidateDay}`, text)) return false;
+            }
+        }
         // ORPHAN DATE: the page states dates, just never this one. That is the
         // shape a stale flyer makes — beefdip.com advertises Jan 23-31 2027
         // while its gallery still carries last year's Feb 1-2 posters, and the
