@@ -21563,3 +21563,91 @@ test('same venue at the same start instant is one event, whatever each record ca
   // No place on one side → inconclusive.
   assert.equal(core.getSameEventIdentitySignal({ title: 'A', startDate: at('2026-10-11T04:00:00.000Z') }, named), null);
 });
+
+// ---------------------------------------------------------------------------
+// ONE END CONTRACT (2026-09-13). "No end stated" travels as a MISSING end all
+// the way to the last step of analysis, where exactly one default is written.
+// ---------------------------------------------------------------------------
+
+test('a zero-length or inverted scraped end is read as no end stated', () => {
+  const core = createCore();
+  const zero = { title: 'A', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-13T20:00:00.000Z') };
+  const inverted = { title: 'B', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-13T19:00:00.000Z') };
+  const real = { title: 'C', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-14T02:00:00.000Z') };
+  const none = { title: 'D', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: null };
+  assert.equal(core.clearDegenerateScrapedEnds([zero, inverted, real, none]), 2);
+  assert.equal(zero.endDate, null);
+  assert.equal(zero._endDateMissing, 'zero-length');
+  assert.equal(inverted.endDate, null);
+  assert.equal(inverted._endDateMissing, 'inverted');
+  assert.equal(real.endDate.toISOString(), '2026-09-14T02:00:00.000Z', 'a real span is untouched');
+  assert.equal(none.endDate, null);
+  assert.equal(none._endDateMissing, undefined);
+});
+
+test('the no-end default is written once, stamped, and only over a missing end', () => {
+  const core = createCore();
+  const missing = { title: 'BEAR BASH', startDate: new Date('2026-10-09T20:00:00.000Z'), endDate: null };
+  assert.equal(core.applyDefaultEventEnd(missing), true);
+  assert.equal(missing.endDate.toISOString(), '2026-10-09T23:00:00.000Z');
+  assert.equal(missing._endDateDefaulted, true);
+  assert.equal(core.applyDefaultEventEnd(missing), false, 'idempotent');
+  const stated = { title: 'X', startDate: new Date('2026-10-09T20:00:00.000Z'), endDate: new Date('2026-10-10T04:00:00.000Z') };
+  assert.equal(core.applyDefaultEventEnd(stated), false);
+  assert.equal(stated.endDate.toISOString(), '2026-10-10T04:00:00.000Z');
+  assert.equal(core.applyDefaultEventEnd({ title: 'Y', startDate: null }), false, 'no start → nothing to default from');
+  assert.equal(core.isDefaultShapedEnd(missing.startDate, missing.endDate), true);
+  assert.equal(core.isDefaultShapedEnd(stated.startDate, stated.endDate), false);
+});
+
+test('a stated end replaces a stored default-shaped end without arbitration', async () => {
+  const core = createCore();
+  const calendarEvent = {
+    title: 'FURBALL NOLA',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    location: '29.96,-90.06',
+    notes: 'bar: Oak Barrel Saloon'
+  };
+  const scraped = buildScrapedEvent({
+    title: 'FURBALL NOLA',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z')
+  });
+  const merged = await core.createFinalEventObject(calendarEvent, scraped, {});
+  assert.equal(new Date(merged.endDate).toISOString(), '2026-09-05T09:00:00.000Z');
+  const realEndCalendar = { ...calendarEvent, endDate: new Date('2026-09-05T08:00:00.000Z') };
+  const mergedReal = await core.createFinalEventObject(realEndCalendar, { ...scraped }, {});
+  assert.notEqual(new Date(mergedReal.endDate).toISOString(), '2026-09-05T09:00:00.000Z');
+});
+
+test("a same-host URL carrying the event's own date beats the undated standing page", () => {
+  const core = createCore();
+  const records = {
+    a: { title: 'HORSE MEAT DISCO', startDate: new Date('2026-09-13T19:00:00.000Z'), timezone: 'Europe/London' },
+    b: { title: 'HORSE MEAT DISCO', startDate: new Date('2026-09-13T19:00:00.000Z'), timezone: 'Europe/London' }
+  };
+  const context = { records, sideLabels: { a: 'existing', b: 'incoming' } };
+  const dated = 'https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-13-20-00';
+  const undated = 'https://www.eaglelondon.com/horse-meat-disco';
+  const forward = core.resolveConflictDeterministically('website', dated, undated, context);
+  assert.equal(forward && forward.winner, 'a');
+  const reverse = core.resolveConflictDeterministically('website', undated, dated, context);
+  assert.equal(reverse && reverse.winner, 'b', 'symmetric — no flip-flop across sibling records');
+  const slashed = core.resolveConflictDeterministically('website', 'https://www.eaglelondon.com/events/2026/09/13/hmd', undated, context);
+  assert.equal(slashed && slashed.winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://www.eaglelondon.com/our-nights', undated, context), null);
+});
+
+test('a promoter registry site claims its own host only from a bare root', () => {
+  const core = createCore();
+  core.promoters = [
+    { name: 'Bear it MTL', website: 'https://www.bearitmtl.com' },
+    { name: 'Megawoof America', website: 'https://linktr.ee/megawoof_america' }
+  ];
+  const own = core.resolvePromoterEntryBySiteHost('https://www.bearitmtl.com/event/ensemble/');
+  assert.equal(own && own.name, 'Bear it MTL');
+  assert.equal(core.resolvePromoterEntryBySiteHost('https://linktr.ee/someone-else'), null,
+    'a profile ON a platform never makes the whole platform host a promoter site');
+  assert.equal(core.resolvePromoterEntryBySiteHost('https://www.rockbarnyc.com/calendar'), null);
+});

@@ -2616,7 +2616,7 @@ test('extraction flattens field objects through weekday pinning and normalizeAiE
   }, {}, null, null, null);
   assert.ok(normalized);
   assert.equal(normalized.startDate.toISOString().slice(0, 10), '2025-10-11');
-  assert.equal(normalized.endDate.toISOString().slice(0, 10), '2025-10-11');
+  assert.equal(normalized.endDate, null, 'no end stated → no end (the pin only has to hold the START year)');
 });
 
 // ---------------------------------------------------------------------------
@@ -3952,14 +3952,18 @@ test('normalizeEventDates rolls a same-year Jan 1 end across the year boundary',
   assert.equal(result.startDate.toISOString(), '2026-12-31T22:00:00.000Z');
   assert.equal(result.endDate.toISOString(), '2027-01-01T02:00:00.000Z', 'the end must land on Jan 1 of the NEXT year');
 
-  // A weekday-pinned end is deterministic — never bumped; existing collapse applies.
+  // A weekday-pinned end is deterministic — never bumped. It used to collapse
+  // onto the start; under the one end contract (2026-09-13) an end that cannot
+  // be made sense of is read as NONE STATED instead, because a zero-length span
+  // is a lie the calendar renders as an instant. The single default span is
+  // written later, once, by SharedCore.applyDefaultEventEnd.
   const pinnedEnd = parser.normalizeEventDates(new Date(start), new Date(wrongEnd), { start: true, end: true });
-  assert.equal(pinnedEnd.endDate.toISOString(), '2026-12-31T22:00:00.000Z', 'pinned ends keep the collapse-to-start behavior');
+  assert.equal(pinnedEnd.endDate, null, 'an unresolvable end is no end, never a zero-length span');
 
-  // An end genuinely months before the start (not a year-boundary tail) still collapses.
+  // An end genuinely months before the start (not a year-boundary tail): same.
   const farEnd = parser.normalizeEventDates(
     new Date(start), new Date(Date.UTC(2026, 5, 1, 2, 0, 0)), { start: true });
-  assert.equal(farEnd.endDate.toISOString(), '2026-12-31T22:00:00.000Z', 'non-NYE past ends keep today\'s behavior');
+  assert.equal(farEnd.endDate, null, 'non-NYE past ends are dropped, not collapsed');
 });
 
 test('normalizeAiEvent keeps Dec 31 22:00 -> Jan 1 02:00 in the next year (endTime rollover path)', () => {
@@ -6575,9 +6579,10 @@ test('doors-vs-party: FURBALL NOLA start 21:00 (doors) is promoted to 22:00 (par
     // 2026-09-06T02:00:00.000Z (9PM doors) instead.
     assert.equal(event.startDate.toISOString(), '2026-09-06T03:00:00.000Z',
       'start must be the PARTY time (22:00 local), not the doors time');
-    // No end was stated: the end matches the start exactly (the existing
-    // ambiguous-end convention) — no invented 10PM end survives anywhere.
-    assert.equal(event.endDate.getTime(), event.startDate.getTime(), 'no end is invented');
+    // No end was stated: the end is ABSENT (one end contract, 2026-09-13 —
+    // it used to be collapsed onto the start, which the calendar renders as an
+    // instant). No invented 10PM end survives anywhere either.
+    assert.equal(event.endDate, null, 'no end is invented');
   });
   assert.ok(
     logs.some(l => l.includes('promoted start to the party/show time 22:00 (doors-vs-party disambiguation)')),
@@ -8757,7 +8762,7 @@ test('day-phrase synthesis: "every Friday" and "2nd Saturday" variants, includin
   assert.ok(close);
   assert.equal(close.recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR');
   assert.equal(close.startDate.toISOString(), '2026-08-08T03:00:00.000Z', 'next Friday Aug 7, 8pm PDT');
-  assert.equal(close.endDate.toISOString(), close.startDate.toISOString(), 'no end claim → existing defaulting');
+  assert.equal(close.endDate, null, 'no end claim → no end here; the single default span is written at write time');
 });
 
 test('day-phrase synthesis fails closed on multiple distinct day patterns in one segment', () => {
@@ -17162,4 +17167,106 @@ test('an event page with exactly one outbound ticketing-platform event link has 
   const homeOnly = { title: 'X' };
   parser.adoptPageTicketLink(homeOnly, page(['https://www.ticketmaster.com/']));
   assert.equal(homeOnly.ticketUrl, undefined, 'a platform homepage is not an event link');
+});
+
+// ---------------------------------------------------------------------------
+// ONE END CONTRACT: a page that states no closing time yields NO end, never a
+// zero-length span (the fabrication that made every Eagle London / Rockbar /
+// Furball record trip the end-not-after-start sanity flag).
+// ---------------------------------------------------------------------------
+test('normalizeAiEvent leaves endDate empty when the page states no end', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const noEnd = parser.normalizeAiEvent(
+    { title: 'BEAR BASH', startDate: '2026-10-09', startTime: '21:00', address: '125 Christopher St, New York, NY 10014' },
+    {}, null, cityConfig, null
+  );
+  assert.ok(noEnd, 'event should normalize');
+  assert.equal(noEnd.endDate, null, 'no end evidence → no end, never endDate = startDate');
+  const withEnd = parser.normalizeAiEvent(
+    { title: 'BEAR BASH', startDate: '2026-10-09', startTime: '21:00', endTime: '02:00', address: '125 Christopher St, New York, NY 10014' },
+    {}, null, cityConfig, null
+  );
+  assert.ok(withEnd.endDate instanceof Date, 'a stated end still materializes');
+  assert.ok(withEnd.endDate.getTime() > withEnd.startDate.getTime());
+});
+
+// ---------------------------------------------------------------------------
+// LISTING/WIDGET CHROME IN FEED DESCRIPTIONS
+// ---------------------------------------------------------------------------
+test('a calendar widget block is not a description; prose with an inline link is', () => {
+  const parser = createParser();
+  // Shape of a WordPress/Tribe REST description: schedule strip, organizer
+  // card, map embed, subscribe dropdown — and no prose at all.
+  const chromeOnly = `
+    <div class="tribe-events-schedule"><p><span></span><span> @ </span><span></span></p></div>
+    <div class="tribe-block__organizer__details"><div><h3>Armada Montréal Rugby</h3></div>
+      <p><a href="https://www.armadamontreal.com/">View Organisateur Website</a></p></div>
+    <div class="tribe-block__venue"><div><iframe title="Google maps iframe" src="https://maps.example"></iframe></div></div>
+    <div class="tribe-events-c-subscribe-dropdown">
+      <button
+         class="tribe-events-c-subscribe-dropdown__button-text"
+      >
+         Ajouter au calendrier            </button>
+      <ul><li><a href="">Google Agenda</a></li><li><a href="">iCalendar</a></li>
+          <li><a href="">Outlook 365</a></li><li><a href="">Outlook Live</a></li></ul>
+    </div>`;
+  const labelKeys = parser.collectJsonApiRowLabelKeys({
+    title: 'PLAYERS',
+    organizer: [{ organizer: 'Armada Montréal Rugby' }],
+    venue: { venue: 'Diamant Rouge' }
+  });
+  assert.equal(parser.cleanJsonApiDescription(chromeOnly, labelKeys).description, '',
+    'separator glyph, menu labels and the row’s own organizer card are all chrome');
+
+  const prose = `<div class="tribe-events-schedule"><span> @ </span></div>
+    <p class="wp-block-paragraph">Big bear night with DJ X. <a href="/t">Tickets here</a></p>
+    <div class="subscribe"><a href="#">Add to calendar</a><a href="#">Google Calendar</a></div>`;
+  assert.equal(parser.cleanJsonApiDescription(prose, labelKeys).description,
+    'Big bear night with DJ X. Tickets here',
+    'a paragraph that merely CONTAINS a link is prose and survives whole');
+
+  assert.equal(parser.cleanJsonApiDescription('Just a plain sentence about the party.', labelKeys).description,
+    'Just a plain sentence about the party.', 'plain text passes through untouched');
+
+  // The row's own TITLE is not a label key — it routinely opens a real
+  // description ("DADDY POP in Bear Cave | 9 PM – 2 AM").
+  assert.equal(parser.cleanJsonApiDescription('<p>PLAYERS in the back bar | 9 PM</p>', labelKeys).description,
+    'PLAYERS in the back bar | 9 PM');
+});
+
+test('a description block repeated across a feed’s rows is chrome', () => {
+  const parser = createParser();
+  const rows = [
+    { title: 'A', description: 'Doors at nine. Subscribe to our calendar', _descriptionChunks: ['Doors at nine.', 'Subscribe to our calendar'] },
+    { title: 'B', description: 'Bring a harness. Subscribe to our calendar', _descriptionChunks: ['Bring a harness.', 'Subscribe to our calendar'] }
+  ];
+  assert.equal(parser.stripRepeatedFeedDescriptionChunks(rows), 2);
+  assert.equal(rows[0].description, 'Doors at nine.');
+  assert.equal(rows[1].description, 'Bring a harness.');
+  assert.equal(rows[0]._descriptionChunks, undefined, 'internal field never escapes the builder');
+  // One row says nothing about repetition.
+  const single = [{ title: 'A', description: 'Subscribe to our calendar', _descriptionChunks: ['Subscribe to our calendar'] }];
+  assert.equal(parser.stripRepeatedFeedDescriptionChunks(single), 0);
+  assert.equal(single[0].description, 'Subscribe to our calendar');
+});
+
+// ---------------------------------------------------------------------------
+// SITE ROLE: a registered promoter's own host is an own-site role, so a feed
+// row's own /event/<slug>/ page becomes the event's website instead of the
+// registry's bare root.
+// ---------------------------------------------------------------------------
+test('a curated promoter’s own host resolves the page site role', () => {
+  const parser = createParser();
+  parser.core.promoters = [
+    { name: 'Bear it MTL', website: 'https://www.bearitmtl.com' },
+    { name: 'Megawoof America', website: 'https://linktr.ee/megawoof_america' }
+  ];
+  const own = { url: 'https://www.bearitmtl.com/wp-json/tribe/events/v1/events', html: '<html></html>' };
+  assert.equal(parser.resolvePageSiteRole(own, {}), 'organizer');
+  assert.equal(own.pageSiteRoleReason, 'promoter registry "Bear it MTL"');
+  const platform = { url: 'https://linktr.ee/someone-else', html: '<html></html>' };
+  assert.equal(parser.resolvePageSiteRole(platform, {}), '', 'a platform profile claims no host');
+  const unrelated = { url: 'https://www.rockbarnyc.com/calendar', html: '<html></html>' };
+  assert.equal(parser.resolvePageSiteRole(unrelated, {}), '');
 });
