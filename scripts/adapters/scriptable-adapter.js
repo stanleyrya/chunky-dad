@@ -382,6 +382,10 @@ const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
 const SIMPLE_URL_PARSE_REGEX =
   /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
+// Byte budget for the one-read-per-URL-per-run memo (see getRunPageMemoKey).
+// The phone has far less headroom than the Mac, so this is deliberately a
+// quarter of the Node budget: enough for a venue run, never enough to matter.
+const RUN_PAGE_MEMO_MAX_BYTES = 6 * 1024 * 1024;
 const HEADER_LOGO_URL = "https://chunky.dad/favicons/logo-hero.png";
 const HEADER_LOGO_CACHE_FILE = "logo-hero.png";
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2036,8 +2040,56 @@ class ScriptableAdapter {
     return true;
   }
 
+  // ONE READ PER URL PER RUN — the Scriptable twin of WebAdapter's run page
+  // memo (see its getRunPageMemoKey for the audit evidence and the bounds).
+  // The disk cache makes a second read look cheap, which is exactly why
+  // nothing ever counted them; the work behind each re-read is not cheap.
+  getRunPageMemoKey(url, options) {
+    if ((options && options.method ? String(options.method) : "GET").toUpperCase() !== "GET") return "";
+    if (options && options.body) return "";
+    if (options && typeof options.isCacheableResponse === "function") return "";
+    try {
+      return this.normalizePageCacheUrl(url) || String(url || "");
+    } catch (_) {
+      return String(url || "");
+    }
+  }
+
+  readRunPageMemo(key) {
+    if (!key || !this._runPageMemo) return null;
+    const entry = this._runPageMemo.get(key);
+    // A shallow copy: consumers may stamp their own fields on the response
+    // object, and the disk cache handed each caller a fresh one.
+    return entry ? { ...entry } : null;
+  }
+
+  writeRunPageMemo(key, responseData) {
+    if (!key || !responseData || typeof responseData.html !== "string" || !responseData.html) return;
+    if (!this._runPageMemo) {
+      this._runPageMemo = new Map();
+      this._runPageMemoBytes = 0;
+    }
+    if (this._runPageMemo.has(key)) return;
+    const size = responseData.html.length;
+    if (this._runPageMemoBytes + size > RUN_PAGE_MEMO_MAX_BYTES) {
+      if (!this._runPageMemoFullLogged) {
+        this._runPageMemoFullLogged = true;
+        console.log(`📱 Scriptable: Run page memo full at ${this._runPageMemo.size} page(s) — later pages are re-read from the page cache as before`);
+      }
+      return;
+    }
+    this._runPageMemoBytes += size;
+    this._runPageMemo.set(key, { ...responseData });
+  }
+
   async fetchData(url, options = {}) {
     try {
+      const memoKey = this.getRunPageMemoKey(url, options);
+      const memoized = this.readRunPageMemo(memoKey);
+      if (memoized) {
+        console.log(`📱 Scriptable: Page already read this run — no re-read for ${url}`);
+        return memoized;
+      }
       const pageCacheConfig = this.getPageCacheConfig();
       const canUseCache =
         pageCacheConfig.enabled &&
@@ -2054,6 +2106,7 @@ class ScriptableAdapter {
         const cachedPage = await this.readCachedPage(url, pageCacheConfig);
         if (cachedPage && isCacheableResponse(cachedPage)) {
           this.logPageCacheHit(url, cachedPage, pageCacheConfig);
+          this.writeRunPageMemo(memoKey, cachedPage);
           return cachedPage;
         }
       }
@@ -2105,6 +2158,7 @@ class ScriptableAdapter {
       if (canUseCache && isCacheableResponse(responseData)) {
         await this.writeCachedPage(url, responseData, pageCacheConfig);
       }
+      this.writeRunPageMemo(memoKey, responseData);
 
       return responseData;
     } catch (error) {
