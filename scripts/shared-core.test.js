@@ -491,6 +491,47 @@ test('festival context never overrides a record whose own address names another 
   assert.equal(core.textMentionsCity('Brooklyn, New York, NY', 'nyc'), true);
 });
 
+// A clock is only a time once it has a place. beefdip.com's 2027 programme
+// states no city the parser can resolve, so every record was stored as
+// wall-clock components labeled UTC and flagged for re-anchoring. The city
+// then arrived from the curated festival umbrella — AFTER LocationNormalizer
+// had already run — and nothing converted the dates: the whole week shipped
+// six hours early (9PM on the page written as 21:00Z, read back as 3PM in
+// Puerto Vallarta).
+test('a city inherited from a curated festival re-anchors wall-clock dates, like any other resolved city', () => {
+  const core = new SharedCore({ pv: { timezone: 'America/Mexico_City', patterns: ['puerto vallarta', 'pv'] } }, { eventSchema: EventSchema });
+  const festival = { key: 'beefdip', name: 'BeefDip Bear Week', cityKey: 'pv', nextDates: { start: '2027-01-23', end: '2027-01-31' } };
+  const originalLog = console.log; console.log = () => {};
+  let event, alreadyAnchored;
+  try {
+    // 21:00 local, stored as 21:00Z and flagged.
+    event = {
+      title: 'PRE WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 23, 21, 0, 0)),
+      endDate: new Date(Date.UTC(2027, 0, 24, 0, 0, 0)),
+      _timezoneUnresolved: true
+    };
+    core.applyCuratedFestivalContext(event, festival);
+
+    // A record that never needed re-anchoring is untouched.
+    alreadyAnchored = {
+      title: 'WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 24, 21, 0, 0))
+    };
+    core.applyCuratedFestivalContext(alreadyAnchored, festival);
+  } finally { console.log = originalLog; }
+
+  assert.equal(event.city, 'pv');
+  assert.equal(event._timezoneUnresolved, undefined, 'the re-anchor clears the flag');
+  assert.equal(event.timezone, 'America/Mexico_City');
+  assert.equal(core.formatLocalClockTime(event.startDate, 'America/Mexico_City'), '21:00',
+    `21:00 on the page must read back as 21:00 locally, got ${event.startDate.toISOString()}`);
+  assert.equal(alreadyAnchored.startDate.toISOString(), '2027-01-24T21:00:00.000Z',
+    'a record with no wall-clock flag is never converted');
+});
+
 // Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide
 // crop of the SAME 2026 asset both sides agreed was `image`; the AI kept the
 // calendar's 2024 attachment instead, calling 768x461 "higher resolution" than
@@ -1459,10 +1500,17 @@ test('guardrail: same-host deep-vs-deep and root-vs-root URLs still go to the AI
     core.resolveConflictDeterministically('ticketUrl',
       'https://bearracuda.com/events/portland/', 'https://bearracuda.com/tickets/portland/'),
     null, 'both deep → arbitrate');
-  assert.equal(
+  // Two spellings of ONE root (scheme + www + trailing slash) are not a
+  // conflict at all — the same-link rung answers before any ranking rung
+  // and the pair never reaches the AI.
+  assert.deepEqual(
     core.resolveConflictDeterministically('website',
       'https://bearracuda.com/', 'http://www.bearracuda.com'),
-    null, 'both root → arbitrate');
+    { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' });
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://bearracuda.com/', 'https://bearracuda-events.com/'),
+    null, 'two DIFFERENT roots → arbitrate');
   assert.equal(
     core.resolveConflictDeterministically('website',
       'https://bearracuda.com/', 'https://bearracuda.com/?p=1'),
@@ -3829,6 +3877,116 @@ test('mergeParsedEvents: an empty location loses to the non-empty side (text and
   assert.equal(keptCoords.location, '33.8226, -84.3510');
 
   assert.equal(adapter.calls.length, 0, 'location resolves deterministically without AI');
+});
+
+// ---------------------------------------------------------------------------
+// LISTING AUTHORITY (audit round 2, runs 20260913-012112 / 20260913-012121).
+// An enrich/crawl page fills blanks on the configured listing's record; it
+// never renames or re-illustrates an event the listing already stated.
+//   furball.nyc: the Dallas card was retitled "FURBALL Dallas Underwear +
+//   Gear Party featuring DJ GSP" and re-imaged with img.evbuc.com, because
+//   the Eventbrite page reached by enrich-only crawl is itself structured.
+//   3dollarbillbk.com: "QTS: Brooklyn" lost its published flyer and its
+//   04:00 end to a dice.fm crop and dice's 03:00.
+// ---------------------------------------------------------------------------
+
+test('mergeParsedEvents: a crawl page fills the listing\'s blanks but never restates its title, image or end', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+
+  const listing = {
+    title: 'FURBALL Dallas',
+    image: 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg',
+    imageSource: 'page',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T07:00:00.000Z'),
+    cover: '',
+    ticketUrl: '',
+    source: 'ai-web',
+    _extractionSource: 'ai',
+    _pageOrigin: 'listing',
+    _sourcePageUrl: 'https://www.furball.nyc/',
+    _fieldPriorities: priorities
+  };
+  const ticketPage = {
+    title: 'FURBALL Dallas Underwear + Gear Party featuring DJ GSP',
+    image: 'https://img.evbuc.com/original.20260824-022906?w=940',
+    imageSource: 'jsonld',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T06:00:00.000Z'),
+    cover: '$19.32-$25.09',
+    ticketUrl: 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    source: 'ai-web',
+    _extractionSource: 'jsonld',
+    _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities
+  };
+
+  const merged = await core.mergeParsedEvents(listing, ticketPage, { httpAdapter: adapter });
+  assert.equal(merged.title, 'FURBALL Dallas', 'the listing names its own event');
+  assert.equal(merged.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg',
+    'the listing\'s own artwork survives the ticket page\'s jsonld image');
+  assert.equal(merged.endDate.toISOString(), '2026-09-19T07:00:00.000Z', 'the listing\'s stated end survives');
+  // Enrichment still works: blanks are filled from the crawl page.
+  assert.equal(merged.cover, '$19.32-$25.09', 'a blank cover is filled by the ticket page');
+  assert.equal(merged.ticketUrl, 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    'a blank ticketUrl is filled by the ticket page');
+  assert.equal(adapter.calls.length, 0, 'the rung is deterministic — no AI arbitration');
+
+  // Direction-independent: the same pair with the listing arriving second.
+  const flipped = await core.mergeParsedEvents(ticketPage, listing, { httpAdapter: adapter });
+  assert.equal(flipped.title, 'FURBALL Dallas', 'order does not decide authority');
+  assert.equal(flipped.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg');
+  assert.equal(flipped.endDate.toISOString(), '2026-09-19T07:00:00.000Z');
+
+  // And the authority is STICKY: a second crawl page cannot overwrite what
+  // the first one was refused.
+  const secondCrawl = {
+    ...ticketPage,
+    title: 'QTS: Brooklyn (dice)',
+    image: 'https://dice-media.imgix.net/attachments/2026-08-18/32eda118.jpg?rect=0,216,1080,648'
+  };
+  const twice = await core.mergeParsedEvents(merged, secondCrawl, { httpAdapter: adapter });
+  assert.equal(twice.title, 'FURBALL Dallas', 'the folded record still carries listing authority');
+  assert.equal(twice.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg');
+});
+
+test('mergeParsedEvents: listing authority fails open when only one side is stamped', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'incoming', value: 'crawled title', reason: 'more descriptive' }
+  });
+  const build = (overrides) => ({
+    title: 'listing title',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T07:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities,
+    ...overrides
+  });
+  // Two listing records (the ticker row + the card on one site) never decide
+  // by this rung — they are the same authority.
+  const bothListings = await core.mergeParsedEvents(
+    build({ _pageOrigin: 'listing' }),
+    build({ _pageOrigin: 'listing', title: 'crawled title' }),
+    { httpAdapter: adapter }
+  );
+  assert.equal(bothListings.title, 'crawled title', 'two listing records are the same authority');
+  assert.ok(adapter.calls.length > 0, 'same-authority title conflicts still arbitrate as before');
+
+  // An unstamped side (a calendar record, a parser that never crawls) is not
+  // a crawl page — the rung must not fire.
+  const unstamped = await core.mergeParsedEvents(
+    build({ _pageOrigin: 'listing' }),
+    build({ title: 'crawled title' }),
+    { httpAdapter: adapter }
+  );
+  assert.equal(unstamped.title, 'crawled title', 'an unstamped side keeps today\'s behaviour');
 });
 
 test('mergeParsedEvents: coordinates beat text and degenerate ends lose, without AI', async () => {
@@ -8193,6 +8351,43 @@ test('dead-end store: ad-classified pages are stored regardless of links; unknow
   assert.ok('https://ads.example/promo' in results.deadEndStore);
 });
 
+// CRAWL BUDGET: a listing's own rows are not discovery (audit round 2,
+// thedallaseagle.com). The MEC grid published 152 occurrences and the page
+// linked 15 of their event pages; the flat 12-URL discovery cap read 12 and
+// dropped 3. A link that IS an already-extracted event's own page enriches a
+// row we already have — it gets its own budget, and discovery keeps the 12.
+test('limitAdditionalUrls: the listing\'s own row pages are not cut by the discovery cap', () => {
+  const core = createCore();
+  const rowPages = Array.from({ length: 15 }, (_, i) => `https://www.thedallaseagle.com/events/night-${i + 1}/`);
+  const discovery = Array.from({ length: 20 }, (_, i) => `https://www.thedallaseagle.com/other-${i + 1}/`);
+  const rowKeys = new Set(rowPages.map(url => core.getUrlDedupeKey(url)));
+
+  // Default budget: every row page survives, discovery is still capped at 12.
+  const kept = core.limitAdditionalUrls(rowPages.concat(discovery), {}, rowKeys);
+  assert.equal(kept.filter(url => rowKeys.has(core.getUrlDedupeKey(url))).length, 15,
+    'all 15 of the listing\'s own event pages are followed');
+  assert.equal(kept.length, 27, '15 row pages + the 12 discovery links');
+  assert.deepEqual(kept.slice(0, 15), rowPages, 'the page\'s own ordering is preserved');
+
+  // No row-page keys → the flat cap, byte-for-byte as before.
+  assert.equal(core.limitAdditionalUrls(discovery, {}).length, 12, 'plain discovery is still capped at 12');
+  assert.equal(core.limitAdditionalUrls(discovery, {}, new Set()).length, 12, 'an empty set changes nothing');
+
+  // An explicitly configured budget stays absolute — including 0.
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: 3 }, rowKeys).length, 3,
+    'a parser that says "follow 3" follows 3');
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: 0 }, rowKeys).length, 0,
+    'a parser that says "follow none" follows none');
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: null }, rowKeys).length, 15,
+    'null still means unlimited');
+
+  // Bounded: a listing that links hundreds of rows cannot fan out forever.
+  const manyRows = Array.from({ length: 120 }, (_, i) => `https://www.thedallaseagle.com/events/row-${i}/`);
+  const manyKeys = new Set(manyRows.map(url => core.getUrlDedupeKey(url)));
+  assert.equal(core.limitAdditionalUrls(manyRows, {}, manyKeys).length, 40,
+    'the row-page budget has its own ceiling');
+});
+
 test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser tags uniqueValidCount', () => {
   const core = deadEndCore();
   core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: {} });
@@ -11355,6 +11550,130 @@ test('cross-source signal: venue identity via _venueSitePageHost when one record
   assert.equal(core.getCrossSourceDuplicateSignal(detail, { ...listing, _venueSitePageHost: undefined }), null);
 });
 
+test('cross-source signal: a listing host is never venue identity, and a place contradiction outranks the shared host', () => {
+  const core = createDallasCore();
+  // Literal thotyssey/tockify shapes (audit 2026-09-13): one aggregator feed,
+  // two different NYC bars, both stamped with the aggregator's host.
+  const tys = {
+    title: "Tonight at Ty's", bar: "Ty's", city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: 'tockify.com'
+  };
+  const gym = {
+    title: 'Tonight at GYM Bar', bar: 'Gym Sportsbar', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: 'tockify.com'
+  };
+  // Two bars that differ: the shared host says "same publisher", not "same venue"
+  assert.equal(core.getCrossSourceVenueIdentity(tys, gym), null);
+  assert.equal(core.getCrossSourceDuplicateSignal(tys, gym), null);
+  // Different addresses contradict just as loudly, even with no bar named
+  const oslo = {
+    title: 'Bear Cave', address: 'Nedre Slottsgate 2E, 0153 Oslo, Norway', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _venueSitePageHost: 'thebearcalendar.com'
+  };
+  const dc = {
+    title: 'Bear Cave Underwear Party', address: '1335 Green Court NW, Washington DC', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _venueSitePageHost: 'thebearcalendar.com'
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(oslo, dc), null);
+  // A record that names NO place at all is exactly what the host axis is for —
+  // it still pairs on a venue site...
+  const barless = {
+    title: 'Karaoke', city: 'unknown', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST
+  };
+  const eagle = {
+    title: 'Eagle Karaoke', bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: EAGLE_HOST
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(barless, eagle), 'venue-site');
+  // ...and stops pairing the moment the host is flagged a listing host
+  assert.equal(core.getCrossSourceVenueIdentity({ ...barless, _venueSiteHostIsListing: true }, eagle), null);
+  assert.equal(core.getCrossSourceVenueIdentity(barless, { ...eagle, _venueSiteHostIsListing: true }), null);
+});
+
+test('cross-source title tokens: weekday and relative-day words name the slot, not the event', () => {
+  const core = createDallasCore();
+  assert.deepEqual(core.getCrossSourceTitleTokens('Bear Cave Friday at The 244 Spot'), ['bear', 'cave', '244', 'spot']);
+  // A row titled only by its slot carries no name at all — every caller fails closed
+  assert.deepEqual(core.getCrossSourceTitleTokens('Friday at The Eagle NYC', ['eaglenyc', 'theeaglenyc']), []);
+  assert.deepEqual(core.getCrossSourceTitleTokens('Tonight'), []);
+  // Cadence stripping never eats a real name
+  assert.deepEqual(core.getCrossSourceTitleTokens('Jockstrap Wednesday'), ['jockstrap']);
+});
+
+test('dedup: two rows of ONE feed carrying different row ids are two published events', () => {
+  const core = createDallasCore();
+  const base = {
+    bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: EAGLE_HOST,
+    _sourceRowFeed: 'tockify.com/api/ngevent'
+  };
+  const rowA = { ...base, title: 'Bear Night', _sourceRowId: '22092' };
+  const rowB = { ...base, title: 'Bear Night Karaoke', _sourceRowId: '17601' };
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, rowB), true);
+  assert.equal(core.getCrossSourceDuplicateSignal(rowA, rowB), null);
+  assert.equal(core.getSameEventIdentitySignal(rowA, rowB), null);
+  // The SAME row id (two occurrences of one series row, a stub + its detail)
+  // is not vetoed, and neither is a pair from two different feeds
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowId: '22092' }), false);
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowFeed: 'thebearcalendar.com/feed.json' }), false);
+  // Fail closed in both directions: a missing id asserts nothing
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowId: '' }), false);
+  assert.equal(core.getCrossSourceDuplicateSignal(rowA, { ...rowB, _sourceRowId: undefined }), 'venue+night+title-subset');
+});
+
+test('title-token corpus: a word the source prints across its own calendar is not an event name', () => {
+  const core = createDallasCore();
+  // Literal eaglela.com shapes (audit 2026-09-13): two published posts on one
+  // night whose titles share only the venue's programme vocabulary.
+  const night = (day, hour, minute = 0) => new Date(Date.UTC(2026, 9, day, hour, minute));
+  const at = (title, day, hour, slug) => ({
+    title, bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: night(day, hour), _venueSitePageHost: EAGLE_HOST,
+    _sourcePageUrl: `https://${EAGLE_HOST}/events/${slug}/`
+  });
+  const cruise = at('CRUISE LA', 17, 5);            // local midnight — no time stated
+  const contest = at('CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST', 18, 0, 'cruise-la-contest-2');
+  const bbar = at('B BAR', 26, 5, 'b-bar');
+  const thanksgiving = at('HAPPY THANKSGIVING - BAR OPENS AT 6PM', 26, 5, 'happy-thanksgiving');
+  const onyxA = at('ONYX', 11, 5, 'onyx-2');
+  const onyxB = at('ONYX', 11, 5, 'onyx-listing');
+
+  // Before the corpus is known both pairs fold — the shipped bug
+  assert.equal(core.getSameEventIdentitySignal(cruise, contest, { requireCloseStartTimes: false }), 'place-day-name');
+  assert.equal(core.getCrossSourceDuplicateSignal(bbar, thanksgiving), 'venue+night+title-subset');
+
+  const corpus = [cruise, contest, bbar, thanksgiving, onyxA, onyxB,
+    at('CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET', 16, 5),
+    at('CRUISE NIGHT', 6, 5),
+    at('HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA - BAR OPENS AT 6PM', 25, 5),
+    at('LABOR DAY BEER BUST BAR OPENS AT 2PM', 7, 5),
+    at('ONYX: 11 YEAR ANNIVERSARY', 13, 5)];
+  core.applyTitleTokenCorpusFlags(corpus);
+  // "cruise" names four different parties on this calendar, "bar" four titles
+  assert.equal(cruise._titleTokenDocFreq.cruise, 4);
+  assert.equal(bbar._titleTokenDocFreq.bar, 4);
+  // …so neither pair is one event any more
+  assert.equal(core.getSameEventIdentitySignal(cruise, contest, { requireCloseStartTimes: false }), null);
+  assert.equal(core.getCrossSourceDuplicateSignal(bbar, thanksgiving), null);
+  // A repeated event is ONE distinct title, so its own name stays distinctive
+  assert.equal(onyxA._titleTokenDocFreq.onyx, 2);
+  assert.equal(core.getCrossSourceDuplicateSignal(onyxA, onyxB), 'venue+night+title-subset');
+  // Entity/punctuation variants of one name reduce to the same tokens and are
+  // never judged by this rung
+  const calfA = at('CALF B&B EVENT', 20, 5, 'calf-bb-event');
+  const calfB = at('CALF B&#038;B EVENT', 20, 5, 'calf-bb-event');
+  core.applyTitleTokenCorpusFlags(corpus.concat([calfA, calfB]));
+  assert.equal(core.getCrossSourceDuplicateSignal(calfA, calfB), 'venue+night+title-subset');
+  // Fails OPEN with no corpus stamp: unstamped records keep the old behaviour
+  assert.equal(core.getCrossSourceDuplicateSignal(
+    { ...bbar, _titleTokenDocFreq: undefined },
+    { ...thanksgiving, _titleTokenDocFreq: undefined }
+  ), 'venue+night+title-subset');
+});
+
 test('cross-source signal: fails closed on disjoint titles, different nights, and empty titles', () => {
   const core = createDallasCore();
   const base = { bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _venueSitePageHost: EAGLE_HOST };
@@ -11568,6 +11887,26 @@ test('findOverlongFields: under-limit events are empty, overlong titles are dete
   assert.equal(shortNames.length, 1);
   assert.equal(shortNames[0].field, 'shortName');
   assert.equal(shortNames[0].maxChars, 30);
+});
+
+test('findOverlongFields: a title the source STATED is never offered to the trim pass', () => {
+  const core = createCore();
+  const defaults = core.getTrimConfig(buildTrimParserConfig());
+  const stated = 'ButtTootKing 2026: Lydia B Kollins, Suzie Toot, and Kori King';
+  assert.ok(stated.length > 60);
+  // The AI pass cut this one at a separator and dropped a headliner
+  // (3 Dollar Bill, audit 2026-09-13). A feed/listing row's own title, and a
+  // title taken from a JSON-LD name or the page's own heading, ship in full.
+  assert.deepEqual(core.findOverlongFields({ title: stated, _titleFromListing: true }, defaults), []);
+  assert.deepEqual(core.findOverlongFields({ title: stated, _titleStated: true }, defaults), []);
+  // A title the MODEL composed is still trimmable, and the exemption is for
+  // the title only — an overlong description on a stated-title event is not.
+  assert.equal(core.findOverlongFields({ title: stated }, defaults).length, 1);
+  const longDescription = 'x'.repeat(700);
+  assert.deepEqual(
+    core.findOverlongFields({ title: stated, description: longDescription, _titleFromListing: true }, defaults),
+    [{ field: 'description', value: longDescription, maxChars: 600 }]
+  );
 });
 
 test('isVerbatimTrimAnswer: case-sensitive contiguous substring, non-empty, within limit, strictly shorter', () => {
@@ -14188,6 +14527,56 @@ test('final build drops a ticketUrl byte-identical to the canonical website', as
     `got: ${JSON.stringify(lines)}`);
 });
 
+test('final build keeps a door-labelled ticketUrl and drops the website copy', async () => {
+  // Cubhouse, run 20260913-012005: the SPA door labelled
+  // tickets.taverngroupevents.com/<slug> a TICKET page, the same URL became
+  // the event's website, and this pass deleted the ticketUrl — publishing a
+  // ticket vendor as the promoter's identity link. The page's own label
+  // decides which twin survives; no host list is consulted.
+  const core = createFinalBuildCore();
+  const link = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const event = {
+    title: 'Halloween Cubhouse',
+    startDate: new Date('2026-10-31T01:00:00.000Z'),
+    city: 'philly',
+    website: link,
+    url: link,
+    ticketUrl: link
+  };
+  core.markTicketRoleUrl(event, link, 'a data door onto its ticketing API');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.ticketUrl, link, 'the ticket role survives — it is what the page stated');
+  assert.equal(analyzed.website, undefined, 'the website copy goes instead');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: dropped website duplicating ticketUrl')),
+    `got: ${JSON.stringify(lines)}`);
+});
+
+test('canonicalizeIdentityLinks: a door-labelled ticket page yields to the curated identity link, whatever the host', () => {
+  // The host allowlist re-breaks with every new ticket vendor (Eventbrite
+  // 2026-07-30, tickets.taverngroupevents.com 2026-09-13). The page-derived
+  // stamp travels with the URL instead.
+  const core = createRegistryCore([
+    { name: 'CUBHOUSE', shortName: 'CUBHOUSE', website: 'https://linktr.ee/cubhouse', bearAffinity: 'always' }
+  ]);
+  const ticketPage = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const stamped = { title: 'Halloween Cubhouse', website: ticketPage, ticketUrl: ticketPage, _promoter: 'CUBHOUSE' };
+  const unstamped = { title: 'Halloween Cubhouse', website: ticketPage, ticketUrl: ticketPage, _promoter: 'CUBHOUSE' };
+  core.markTicketRoleUrl(stamped, ticketPage, 'a data door onto its ticketing API');
+  core.canonicalizeIdentityLinks([stamped, unstamped]);
+  assert.equal(stamped.website, 'https://linktr.ee/cubhouse',
+    'the curated identity link replaces a page-labelled ticket page');
+  assert.equal(stamped.ticketUrl, ticketPage, 'the ticket link is kept, not dropped');
+  assert.equal(unstamped.website, ticketPage,
+    'without the page-derived label an unknown host is still a real site — no host guessing');
+});
+
 // ---------------------------------------------------------------------------
 // Post-merge deterministic rewrites must RECORD themselves in _mergeDecisions
 // (run 20260815-083809, "TWISTED BEAR San Francisco Debut"): the merge-time
@@ -14714,6 +15103,30 @@ test('website merge: a BARE promoter root beats a platform deep link (audit pair
     core.resolveConflictDeterministically('website',
       'https://dice.fm/event/abcdef', 'https://www.eventbrite.com/e/tickets-1234'),
     null, 'platform-vs-platform falls through');
+});
+
+test('website merge: a page-LABELLED ticket page loses to the identity link on any host', () => {
+  // Cubhouse, run 20260913-023558: the calendar held
+  // tickets.taverngroupevents.com/<slug> as `website` from an earlier run.
+  // No host list knows that vendor, so the arbitration model kept choosing
+  // it over the promoter's curated linktr.ee — every run, forever. The page
+  // itself had said the URL was a ticket page (its SPA door), and that label
+  // rides on the scraped record.
+  const core = createCore();
+  const vendor = 'https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7';
+  const identity = 'https://linktr.ee/cubhouse';
+  const scraped = { title: 'Halloween Cubhouse', website: identity, ticketUrl: vendor };
+  core.markTicketRoleUrl(scraped, vendor, 'a data door onto its ticketing API');
+  const context = { records: { a: { title: 'Halloween Cubhouse', website: vendor }, b: scraped } };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website', vendor, identity, context),
+    { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' },
+    'the labelled ticket page loses even though its host is on no list');
+  // Without the label the same pair is a genuine question — no host guessing.
+  assert.equal(
+    core.resolveConflictDeterministically('website', vendor, identity,
+      { records: { a: {}, b: {} } }),
+    null, 'an unlabelled unknown host still arbitrates');
 });
 
 test('URL merge: a static asset URL never beats a real page for website/url/ticketUrl', () => {
@@ -18671,6 +19084,60 @@ test('applyAggregatorWebsitePointers clears self-referential pointers on offer-l
   assert.equal(venueSelfPointer.url, 'https://eaglela.com/events/gear-night/', 'venue-site url alias is untouched');
 });
 
+test('one event on the page: a platform website is displaced by the page itself', () => {
+  const core = createCore();
+  const page = 'https://bearracuda.com/events/7days/';
+  // The rule used to fire only on a blank or a same-site bare root, so an
+  // extraction that parked the ticket link in `website` skipped it entirely.
+  assert.equal(core.resolveOwnPageWebsiteDisplacement({ website: '' }, page), 'blank');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement({ website: 'https://bearracuda.com' }, page), 'bare-root');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://sickening.events/e/bearracuda-seattle-7days' }, page), 'platform');
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://www.instagram.com/bearracuda' }, page), 'platform');
+  // A page the site actually named is never displaced…
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://massive.club/calendar/bearracuda' }, page), '');
+  // …and a platform page never swaps one platform link for another.
+  assert.equal(core.resolveOwnPageWebsiteDisplacement(
+    { website: 'https://www.instagram.com/bearracuda' },
+    'https://sickening.events/e/bearracuda-seattle-7days'), '');
+});
+
+test('applyAggregatorWebsitePointers leaves a real event page on an aggregator HOST alone', () => {
+  // bearracuda.com's homepage is a link list, so its host counted as an
+  // aggregator and every event's own page — bearracuda.com/events/<slug>/,
+  // classified event-page by this very run — was cleared as a "self-pointer".
+  // The registry then filled the blank with the domain ROOT, and all 7
+  // records shipped the root while the calendar held the deep URL (run
+  // 20260913-012005). The page's own classification decides.
+  const core = createCore();
+  const urlClassifications = {
+    'https://bearracuda.com/': 'link-aggregator',
+    'https://bearracuda.com/events/7days/': 'event-page'
+  };
+  const ownPage = {
+    title: 'BEARRACUDA: Seattle',
+    website: 'https://bearracuda.com/events/7days/',
+    url: 'https://bearracuda.com/events/7days/',
+    ticketUrl: 'https://sickening.events/e/bearracuda-seattle-7days',
+    _sourcePageUrl: 'https://bearracuda.com/events/7days/'
+  };
+  // The aggregator page itself still behaves exactly as before.
+  const listingPage = {
+    title: 'BEARRACUDA: Somewhere',
+    website: 'https://bearracuda.com/',
+    url: 'https://bearracuda.com/',
+    ticketUrl: 'https://sickening.events/e/bearracuda-somewhere',
+    _sourcePageUrl: 'https://bearracuda.com/'
+  };
+  core.applyAggregatorWebsitePointers([ownPage, listingPage], urlClassifications);
+  assert.equal(ownPage.website, 'https://bearracuda.com/events/7days/',
+    'an event page on the aggregator host keeps its own URL');
+  assert.equal(listingPage.website, '',
+    'the listing page itself is still a copy, not the pointer');
+});
+
 // ---------------------------------------------------------------------------
 // junk-title (sanity rule 8) + its write withhold, and template-entry
 // filtering — fix wave 4. junk-title is the ONE enforced sanity code:
@@ -19427,6 +19894,50 @@ test('canonicalizeIdentityLinks: registry identity fills an EMPTY website (ladde
   assert.equal(blank.website, 'https://beefmince.com', 'the curated identity link fills the blank');
   assert.equal(blank._staticFields.website, 'https://beefmince.com', 'the fill is branding — static-marked');
   assert.equal(noMatch.website, undefined, 'no promoter, no page site → empty is correct');
+});
+
+// A CO-PROMOTER'S FRONT DOOR IS NOT THIS EVENT'S LINK (run 20260913-012112).
+// furball.nyc's UNDERBEAR 9/18 card names the weekend's co-promoter in its
+// text; the model read "theurbanbear.com" and the record shipped it as the
+// event's identity — a bare root on somebody else's host (and a known dead
+// end), while its five siblings carried the Furball identity. Ranking: the
+// event's own page > the source's own site > anyone else's front door.
+test('canonicalizeIdentityLinks: a co-promoter bare root loses to the curated identity, a deep page does not', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const coPromoterRoot = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const ownEventPage = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com/events/urban-bear-weekend-2026',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const ownSiteRoot = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://beefmince.com',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const unstamped = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com'
+  };
+  core.canonicalizeIdentityLinks([coPromoterRoot, ownEventPage, ownSiteRoot, unstamped]);
+  assert.equal(coPromoterRoot.website, 'https://beefmince.com',
+    'a foreign bare root gives way to the curated identity');
+  assert.equal(coPromoterRoot._staticFields.website, 'https://beefmince.com',
+    'the replacement is branding — static-marked, like every other registry fill');
+  assert.equal(ownEventPage.website, 'https://theurbanbear.com/events/urban-bear-weekend-2026',
+    'a deep URL is an event page and outranks everything');
+  assert.equal(ownSiteRoot.website, 'https://beefmince.com',
+    'the source\'s own root is kept, not "replaced"');
+  assert.equal(unstamped.website, 'https://theurbanbear.com',
+    'no source-page stamp → the rule fails closed and changes nothing');
 });
 
 test('final merge: the pasted BEEFMINCE x RVT rows are gone at the source', async () => {
@@ -21479,7 +21990,86 @@ test('a bare site root in ticketUrl is a website, not a ticket link', () => {
     const real = { title: 'X', ticketUrl: 'https://theurbanbear.com/events/underbear' };
     core.clearNonIdentityLinkFields(real, real.title);
     assert.equal(real.ticketUrl, 'https://theurbanbear.com/events/underbear');
+    // …and on a ticket VENDOR the brand label IS the listing: a branded
+    // subdomain root is the seller's page, not a site's front door (run
+    // 20260913-012333: westernxposurefall2026.eventbrite.com and
+    // xxl2026.eventbrite.com were deleted as "bare site roots").
+    const vendor = { title: 'Western Xposure: Fall 2026', ticketUrl: 'https://westernxposurefall2026.eventbrite.com/', website: 'https://westernxposure.example' };
+    core.clearNonIdentityLinkFields(vendor, vendor.title);
+    assert.equal(vendor.ticketUrl, 'https://westernxposurefall2026.eventbrite.com/');
+    // The same shape on the platform's regional domains (one vendor, many
+    // domains) — and never the platform's own root.
+    const regional = { title: 'Bear Bash', ticketUrl: 'https://bearbash2026.eventbrite.ca/', website: 'https://bearbash.example' };
+    core.clearNonIdentityLinkFields(regional, regional.title);
+    assert.equal(regional.ticketUrl, 'https://bearbash2026.eventbrite.ca/');
+    const platformRoot = { title: 'Y', ticketUrl: 'https://www.eventbrite.com/', website: 'https://promoter.example' };
+    core.clearNonIdentityLinkFields(platformRoot, platformRoot.title);
+    assert.equal(platformRoot.ticketUrl, '', "the vendor's own home page is not one event's ticket link");
   } finally { console.log = originalLog; }
+});
+
+test('a place names its clock even when no calendar covers it', () => {
+  const core = createCore();
+  const at = new Date('2026-10-08T12:00:00Z');
+  const zone = (place) => {
+    const resolved = core.resolveIanaTimezoneFromPlace(place, at);
+    return resolved ? resolved.timezone : '';
+  };
+  // The zone's own exemplar city, with the country narrowing the match.
+  assert.equal(zone({ city: 'Prague', country: 'Czechia' }), 'Europe/Prague');
+  assert.equal(zone({ city: 'Sydney', region: 'NSW', country: 'Australia' }), 'Australia/Sydney');
+  assert.equal(zone({ city: 'Toronto' }), 'America/Toronto');
+  // A trailing qualifier still finds the city ("Brisbane City").
+  assert.equal(zone({ city: 'Brisbane City', region: 'QLD', country: 'Australia' }), 'Australia/Brisbane');
+  // A city whose name belongs to a zone in ANOTHER country is refused, not
+  // crossed (Vancouver WA is not America/Vancouver).
+  assert.equal(zone({ city: 'Vancouver', region: 'WA', country: 'United States' }), '');
+  // A country that keeps one clock names it; one that spans offsets does not.
+  assert.equal(zone({ city: 'Cologne', country: 'Germany' }), 'Europe/Berlin');
+  assert.equal(zone({ city: 'Edinburgh', country: 'United Kingdom' }), 'Europe/London');
+  assert.equal(zone({ city: 'Maspalomas', region: 'Gran Canaria', country: 'Spain' }), '', 'the Canaries keep a different clock from Madrid');
+  assert.equal(zone({ city: 'Westfield', region: 'IN', country: 'United States' }), '');
+  // Nothing stated, nothing resolved.
+  assert.equal(core.resolveIanaTimezoneFromPlace({ city: '', region: '', country: '' }), null);
+  assert.equal(core.resolveIanaTimezoneFromPlace(null), null);
+});
+
+test('calendar merges are decided by source authority, deterministically', () => {
+  const core = createCore();
+  const ctx = (scraped, extra = {}) => ({ sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'X' }, b: scraped }, arbitrationMode: 'deterministic', ...extra });
+  const ownPage = { title: 'Bear Night', _sourcePageUrl: 'https://venue.example/events/bear-night/', _venueSitePageHost: 'venue.example', _staticFields: { website: 'https://promoter.example', instagram: 'https://instagram.com/promoter' }, bar: 'The Venue' };
+  const aggregator = { title: 'Bear Night', _sourcePageUrl: 'https://aggregator.example/events/bear-night/', _staticFields: { website: 'https://promoter.example', instagram: 'https://instagram.com/promoter' }, bar: 'The Venue' };
+  // Equivalent values are no change.
+  assert.equal(core.resolveConflictDeterministically('title', 'UNDERBEAR: HEAT WAVE', 'UNDERBEAR HEATWAVE', ctx(aggregator)).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://venue.example/events/cub-scout-3/', 'https://venue.example/events/cub-scout-3/?occurrence=2026-10-02', ctx(aggregator)).winner, 'a', 'a query variant of the stored link is not a change');
+  // Instagram: the promoter's registry handle wins; a venue handle never replaces it.
+  assert.equal(core.resolveConflictDeterministically('instagram', 'https://www.instagram.com/thevenue', 'https://instagram.com/promoter', ctx(aggregator)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('instagram', 'https://instagram.com/promoter', 'https://www.instagram.com/thevenue', ctx(aggregator)).winner, 'a');
+  // Website ranks by what it is.
+  assert.equal(core.resolveConflictDeterministically('website', 'https://www.eventbrite.com/e/x-123', 'https://promoter.example/events/bear-night', ctx(aggregator)).winner, 'b', 'promoter site beats a platform link');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://venue.example/events/bear-night/', 'https://aggregator.example/events/bear-night/', ctx(aggregator)).winner, 'a', 'own event page beats an aggregator copy');
+  // Times: the event's own page updates the calendar; a flyer or wall-clock guess never does; equal authority keeps the calendar.
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx(ownPage)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx({ ...ownPage, _startTimeFromFlyer: true })).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('startDate', new Date('2026-10-10T02:00:00Z'), new Date('2026-10-10T03:00:00Z'), ctx(aggregator)).winner, 'a');
+  // Text: extension replaces; own page replaces; two third-party copies keep the calendar (description alone may go to the AI).
+  assert.equal(core.resolveConflictDeterministically('title', 'BEARRACUDA: Seattle💦', 'Bearracuda Seattle: 7 DAY LOAD', ctx(aggregator)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(aggregator)).winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(ownPage)).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('description', 'A monthly social for friendly fauna.', 'DJs spin a short set.', ctx(aggregator)), null, 'two third-party descriptions are left to the AI');
+  assert.equal(core.resolveConflictDeterministically('description', 'A monthly social.', 'Go-go bears and more.', ctx(ownPage)).winner, 'b');
+  // The switch: "ai" restores the old arbiter (this rung steps aside).
+  assert.equal(core.resolveConflictDeterministically('address', '1681 Rue Sainte-Catherine Est', '1171 Rue Ste Catherine Est, Montréal, QC', ctx(aggregator, { arbitrationMode: 'ai' })), null);
+});
+
+test('a listing\'s stated title beats a title read from body text, unless the body title extends it', () => {
+  const core = createCore();
+  const grid = { title: 'Bear Night', source: 'mec' };
+  const page = { title: 'Second Fridays' };
+  assert.deepEqual(core.resolveConflictDeterministically('title', 'Second Fridays', 'Bear Night', { records: { a: page, b: grid }, sideLabels: { a: 'existing', b: 'incoming' } }),
+    { winner: 'b', reason: 'the listing\'s own stated title beats a title read from body text' });
+  assert.equal(core.resolveConflictDeterministically('title', 'Bear Night: Lumberjack Party', 'Bear Night', { records: { a: { title: 'Bear Night: Lumberjack Party' }, b: grid }, sideLabels: { a: 'existing', b: 'incoming' } }),
+    null, 'a body title that extends the stated one is left to the ordinary rungs');
 });
 
 test('a trim answer that ends on a separator or conjunction loses that dangling tail', () => {
@@ -21537,6 +22127,10 @@ test('same venue at the same start instant is one event, whatever each record ca
   const dolly = { title: 'Dolly Disco', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://eventim.us/wafform.aspx?_act=eventdashboard&_pky=704326' };
   assert.equal(core.getSameEventIdentitySignal(wanted, dolly), null, 'shared pin never outranks two different rooms');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '', address: '' }, { ...dolly, bar: '', address: '' }), null, 'two different ticket links alone contradict');
+  // A purchase sub-path of the same ticket page is the same ticket link.
+  const stubTix = { title: 'Bearracuda Portland Oct', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://sickening.events/e/bearracuda-portland-oct' };
+  const childTix = { title: 'Bearracuda Portland: Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://sickening.events/e/bearracuda-portland-oct/tickets' };
+  assert.equal(core.getSameEventIdentitySignal(childTix, stubTix), 'place-exact-start', '/tickets is the same ticket page');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null, 'same bar, different street numbers still contradict');
   assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null,
     'one-sided place evidence is no contradiction, but "WANTED" and "Dolly Disco" are unrelated names — two rooms, not one party');
@@ -21550,6 +22144,25 @@ test('same venue at the same start instant is one event, whatever each record ca
   const stub = { title: 'October', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://tickets.example/e/pdx-oct' };
   const child = { title: 'Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', _sourcePageUrl: 'https://tickets.example/e/pdx-oct' };
   assert.equal(core.getSameEventIdentitySignal(child, stub), 'place-exact-start');
+  // …but two cards scraped off the SAME listing were not reached through each
+  // other. Both carry that listing as their website, which made every pair on
+  // the page "share lineage" and left nothing standing between neighbouring
+  // cards: beefdip.com/planned-events folded JUNGLE LUST into TIDAL WAVE,
+  // FURBALL GEAR NIGHT into MAD.BEAR FOAM POOL PARTY, and WELCOME PARTY into a
+  // badge line, all in one run.
+  const listing = 'https://beefdip.example/planned-events/';
+  const jungle = { title: 'JUNGLE LUST – NEON BEACH PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  const tidal = { title: 'TIDAL WAVE – FUNDRAISER POOL PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  assert.equal(core.recordsShareLinkLineage(jungle, tidal), false, 'one page is not a link between its own cards');
+  // The listing itself is already excluded as an event-page identity by the
+  // batch's fan-in guard (3+ records share it), exactly as deduplicateEvents
+  // computes it — so the place rung is what these two reach.
+  const listingHostPath = core.getEventPageUrlIdentity(jungle).hostPath;
+  assert.equal(
+    core.getSameEventIdentitySignal(jungle, tidal, { excludedUrlIdentityHostPaths: new Set([listingHostPath]) }),
+    null, 'two unrelated cards from one listing are two events');
+  // The real lineage shape still holds when the pages differ.
+  assert.equal(core.recordsShareLinkLineage(child, stub), true);
   assert.equal(core.namesHaveAffinity({ title: 'GOLDII.OXX' }, { title: 'GOLDILOXX Chicago' }), true);
   assert.equal(core.namesHaveAffinity({ title: 'Bear Party Saturday' }, { title: 'Bear Night Saturday' }), false, 'generic words are not affinity');
   // Hours apart at one venue on one night are two events (the Montréal case).
@@ -21562,4 +22175,210 @@ test('same venue at the same start instant is one event, whatever each record ca
   assert.equal(core.getSameEventIdentitySignal(placeholder, other), null);
   // No place on one side → inconclusive.
   assert.equal(core.getSameEventIdentitySignal({ title: 'A', startDate: at('2026-10-11T04:00:00.000Z') }, named), null);
+});
+
+// ── The AM/PM span fix runs on the SCRAPED records, before dedup ──────────
+// Run 20260913-0120 (BEEFMINCE Sitges): the venue page's JSON-LD carried a pm
+// typo (01:00→18:00) while the DICE feed row said 01:00→06:00. The correction
+// existed only in the calendar stage, so the run output shipped a 17h span AND
+// the two records disagreed about endDate — which handed the field to the AI
+// arbitrator, which chose the plausible end for DISCO and the 17h one for MEET
+// MARKET, with a fabricated rationale, from the same pair of shapes.
+test('scraped records get the AM/PM span correction before dedup, so the twins agree', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const venuePage = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T18:00:00+02:00'),   // pm typo at the source
+    timezone: 'Europe/Madrid'
+  };
+  const feedRow = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T06:00:00+02:00'),
+    timezone: 'Europe/Madrid'
+  };
+  const corrected = core.applyOvernightSpanCorrections([venuePage, feedRow]);
+  assert.equal(corrected, 1, 'only the broken record is touched');
+  assert.equal(venuePage.endDate.toISOString(), feedRow.endDate.toISOString(),
+    'both records now state the same 5h overnight end — nothing left for an arbitrator to pick between');
+  assert.ok(venuePage._sanityFlags.some(flag => flag.code === 'overnight-span-corrected'),
+    'the correction is on the record for the results UI to show');
+  assert.equal(feedRow._sanityFlags, undefined, 'a plausible span is never stamped');
+
+  // A span a clean -12h does NOT explain keeps its stated value and its
+  // report-only flag (flag, don't drop).
+  const weekender = {
+    title: 'BEEFMINCE x Butlins',
+    startDate: new Date('2027-01-29T18:00:00Z'),
+    endDate: new Date('2027-02-01T18:00:00Z'),
+    _timezoneUnresolved: true
+  };
+  core.applyOvernightSpanCorrections([weekender]);
+  assert.equal(weekender.endDate.toISOString(), '2027-02-01T18:00:00.000Z', 'a 72h span is not an AM/PM slip');
+  assert.ok(weekender._sanityFlags.some(flag => flag.code === 'improbable-overnight-span'),
+    'a wall-clock record reads its local hours off its own components — the flag is not lost with the zone');
+
+  // Idempotent: a second pass neither re-flags nor re-corrects.
+  const again = core.applyOvernightSpanCorrections([venuePage, feedRow, weekender]);
+  assert.equal(again, 0);
+  assert.equal(venuePage._sanityFlags.length, 1);
+});
+
+test('two spellings of one link are one value and never reach the arbiter', () => {
+  const core = createCore();
+  // www / trailing slash / scheme / case / tracking params.
+  assert.equal(core.isSameLinkTarget('https://www.sickening.events/e/goldiloxx-chicago-2/tickets',
+    'https://sickening.events/e/goldiloxx-chicago-2/tickets'), true);
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1/', 'http://www.X.example/e/1'), true);
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1?utm_source=ig', 'https://x.example/e/1'), true);
+  // A different page, or a query that means something, is still a conflict.
+  assert.equal(core.isSameLinkTarget('https://x.example/e/1', 'https://x.example/e/2'), false);
+  assert.equal(core.isSameLinkTarget('https://x.example/e?id=1', 'https://x.example/e?id=2'), false);
+  assert.equal(core.isSameLinkTarget('not a url', 'also not a url'), false);
+
+  for (const field of ['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']) {
+    const decision = core.resolveConflictDeterministically(field,
+      'https://sickening.events/e/goldiloxx-chicago-2/tickets',
+      'https://www.sickening.events/e/goldiloxx-chicago-2/tickets');
+    assert.equal(decision && decision.winner, 'a', field);
+    assert.match(decision.reason, /same link, different spelling/);
+  }
+  // Image slots are untouched by this rung — their query strings are crops,
+  // not noise, so the image rules below still decide them on their merits.
+  const imageDecision = core.resolveConflictDeterministically('image',
+    'https://cdn.example/flyer.jpg?w=600', 'https://www.cdn.example/flyer.jpg?w=1200');
+  assert.equal(imageDecision.winner, 'b');
+  assert.doesNotMatch(imageDecision.reason, /same link, different spelling/);
+});
+
+test('duplicate folding: the structured record owns the provenance, and notes are rebuilt from the merged fields', async () => {
+  const core = createCore();
+  const structured = {
+    title: 'GOLDILOXX Chicago',
+    source: 'ai-web',
+    _extractionSource: 'jsonld',
+    _sourcePageUrl: 'https://sickening.events/e/goldiloxx-chicago',
+    _pageClassification: 'event-page',
+    bar: 'Jackhammer',
+    address: '6406 North Clark Street, Chicago, IL 60626',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    notes: 'bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626'
+  };
+  const aiSkeleton = {
+    title: 'GOLDILOXX Chicago',
+    source: 'ai-web',
+    _extractionSource: 'ai',
+    _sourcePageUrl: 'https://sickening.events/e/goldiloxx-chicago-2/resend',
+    _pageClassification: 'event-page',
+    bar: 'Jackhammer',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    notes: 'bar: Jackhammer\naddress: Jackhammer, Chicago, IL'
+  };
+
+  assert.equal(core.getRecordExtractionRank(structured), 2);
+  assert.equal(core.getRecordExtractionRank(aiSkeleton), 1);
+  assert.equal(core.getRecordExtractionRank({}), 0, 'no summary → equal rank, every rule fails open');
+
+  // The AI skeleton arrives LAST, so it is the fold's base — but the shipped
+  // record must still point at the page the facts came from.
+  const merged = await core.mergeParsedEvents(structured, aiSkeleton, {});
+  assert.equal(merged._sourcePageUrl, 'https://sickening.events/e/goldiloxx-chicago');
+  assert.equal(merged._extractionSource, 'jsonld');
+  // notes follow the merged fields, not the base record's stale copy.
+  assert.match(merged.notes, /6406 North Clark Street/);
+  assert.doesNotMatch(merged.notes, /address: Jackhammer, Chicago, IL/);
+
+  // Two records of equal rank leave the base's provenance alone (fail open).
+  const bothAi = await core.mergeParsedEvents(
+    { ...structured, _extractionSource: 'ai' }, aiSkeleton, {});
+  assert.equal(bothAi._sourcePageUrl, 'https://sickening.events/e/goldiloxx-chicago-2/resend');
+});
+
+// ---------------------------------------------------------------------------
+// ONE END CONTRACT (2026-09-13). "No end stated" travels as a MISSING end all
+// the way to the last step of analysis, where exactly one default is written.
+// ---------------------------------------------------------------------------
+
+test('a zero-length or inverted scraped end is read as no end stated', () => {
+  const core = createCore();
+  const zero = { title: 'A', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-13T20:00:00.000Z') };
+  const inverted = { title: 'B', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-13T19:00:00.000Z') };
+  const real = { title: 'C', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: new Date('2026-09-14T02:00:00.000Z') };
+  const none = { title: 'D', startDate: new Date('2026-09-13T20:00:00.000Z'), endDate: null };
+  assert.equal(core.clearDegenerateScrapedEnds([zero, inverted, real, none]), 2);
+  assert.equal(zero.endDate, null);
+  assert.equal(zero._endDateMissing, 'zero-length');
+  assert.equal(inverted.endDate, null);
+  assert.equal(inverted._endDateMissing, 'inverted');
+  assert.equal(real.endDate.toISOString(), '2026-09-14T02:00:00.000Z', 'a real span is untouched');
+  assert.equal(none.endDate, null);
+  assert.equal(none._endDateMissing, undefined);
+});
+
+test('the no-end default is written once, stamped, and only over a missing end', () => {
+  const core = createCore();
+  const missing = { title: 'BEAR BASH', startDate: new Date('2026-10-09T20:00:00.000Z'), endDate: null };
+  assert.equal(core.applyDefaultEventEnd(missing), true);
+  assert.equal(missing.endDate.toISOString(), '2026-10-09T23:00:00.000Z');
+  assert.equal(missing._endDateDefaulted, true);
+  assert.equal(core.applyDefaultEventEnd(missing), false, 'idempotent');
+  const stated = { title: 'X', startDate: new Date('2026-10-09T20:00:00.000Z'), endDate: new Date('2026-10-10T04:00:00.000Z') };
+  assert.equal(core.applyDefaultEventEnd(stated), false);
+  assert.equal(stated.endDate.toISOString(), '2026-10-10T04:00:00.000Z');
+  assert.equal(core.applyDefaultEventEnd({ title: 'Y', startDate: null }), false, 'no start → nothing to default from');
+  assert.equal(core.isDefaultShapedEnd(missing.startDate, missing.endDate), true);
+  assert.equal(core.isDefaultShapedEnd(stated.startDate, stated.endDate), false);
+});
+
+test('a stated end replaces a stored default-shaped end without arbitration', async () => {
+  const core = createCore();
+  const calendarEvent = {
+    title: 'FURBALL NOLA',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    location: '29.96,-90.06',
+    notes: 'bar: Oak Barrel Saloon'
+  };
+  const scraped = buildScrapedEvent({
+    title: 'FURBALL NOLA',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z')
+  });
+  const merged = await core.createFinalEventObject(calendarEvent, scraped, {});
+  assert.equal(new Date(merged.endDate).toISOString(), '2026-09-05T09:00:00.000Z');
+  const realEndCalendar = { ...calendarEvent, endDate: new Date('2026-09-05T08:00:00.000Z') };
+  const mergedReal = await core.createFinalEventObject(realEndCalendar, { ...scraped }, {});
+  assert.notEqual(new Date(mergedReal.endDate).toISOString(), '2026-09-05T09:00:00.000Z');
+});
+
+test("a same-host URL carrying the event's own date beats the undated standing page", () => {
+  const core = createCore();
+  const records = {
+    a: { title: 'HORSE MEAT DISCO', startDate: new Date('2026-09-13T19:00:00.000Z'), timezone: 'Europe/London' },
+    b: { title: 'HORSE MEAT DISCO', startDate: new Date('2026-09-13T19:00:00.000Z'), timezone: 'Europe/London' }
+  };
+  const context = { records, sideLabels: { a: 'existing', b: 'incoming' } };
+  const dated = 'https://www.eaglelondon.com/event-details/horse-meat-disco-2026-09-13-20-00';
+  const undated = 'https://www.eaglelondon.com/horse-meat-disco';
+  const forward = core.resolveConflictDeterministically('website', dated, undated, context);
+  assert.equal(forward && forward.winner, 'a');
+  const reverse = core.resolveConflictDeterministically('website', undated, dated, context);
+  assert.equal(reverse && reverse.winner, 'b', 'symmetric — no flip-flop across sibling records');
+  const slashed = core.resolveConflictDeterministically('website', 'https://www.eaglelondon.com/events/2026/09/13/hmd', undated, context);
+  assert.equal(slashed && slashed.winner, 'a');
+  assert.equal(core.resolveConflictDeterministically('website', 'https://www.eaglelondon.com/our-nights', undated, context), null);
+});
+
+test('a promoter registry site claims its own host only from a bare root', () => {
+  const core = createCore();
+  core.promoters = [
+    { name: 'Bear it MTL', website: 'https://www.bearitmtl.com' },
+    { name: 'Megawoof America', website: 'https://linktr.ee/megawoof_america' }
+  ];
+  const own = core.resolvePromoterEntryBySiteHost('https://www.bearitmtl.com/event/ensemble/');
+  assert.equal(own && own.name, 'Bear it MTL');
+  assert.equal(core.resolvePromoterEntryBySiteHost('https://linktr.ee/someone-else'), null,
+    'a profile ON a platform never makes the whole platform host a promoter site');
+  assert.equal(core.resolvePromoterEntryBySiteHost('https://www.rockbarnyc.com/calendar'), null);
 });

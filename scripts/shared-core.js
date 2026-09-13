@@ -26,6 +26,18 @@ const ADAPTIVE_CRAWL_DEPTH = 'adaptive';
 // Hard cap on adaptive crawl chains: pages this many hops from a root never
 // have their links followed, no matter how they classify.
 const ADAPTIVE_CRAWL_MAX_HOPS = 4;
+// The default discovery budget for one page's outbound links. It bounds
+// DISCOVERY — following links to see what is behind them.
+const DISCOVERY_CRAWL_MAX_URLS = 12;
+// A link that is an already-extracted event's OWN page is not discovery: the
+// listing already told us that event exists, and the page behind the link is
+// the row's own detail/ticket page. Those links get their own, larger budget
+// so the discovery cap cannot starve a listing of its own contents —
+// thedallaseagle.com's grid published 152 occurrences and linked 15 of their
+// event pages, and the cap read 12 of them and dropped 3 (run 20260913).
+// Still bounded: a listing that links hundreds of rows must not turn one page
+// into hundreds of fetches.
+const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // Learned dead ends record the extraction CAPABILITY they were confirmed
 // under. When a new capability lands — a page shape that used to yield
 // nothing now can — every inferred dead end confirmed before it is retried
@@ -105,8 +117,14 @@ const ADDRESS_STREET_TYPE_TOKENS = [
 // domain root on a non-ticketing host; hosts missing from this list (or any
 // non-ticketing candidate with a real path) simply fall through to AI
 // arbitration — nothing is ever dropped or blocked for not being listed here.
+// A platform's REGIONAL domains are the same platform: eventbrite.ca sells
+// the same ticket eventbrite.com does (they are already listed together in
+// PLATFORM_IDENTITY_HOSTS, so leaving them out here made the two lists
+// disagree about one vendor).
 const TICKETING_PLATFORM_HOSTS = [
-    'sickening.events', 'eventbrite.com', 'tixr.com', 'ticketmaster.com',
+    'sickening.events', 'eventbrite.com', 'eventbrite.co.uk', 'eventbrite.ca',
+    'eventbrite.com.au', 'eventbrite.ie', 'eventbrite.de', 'eventbrite.fr',
+    'eventbrite.es', 'eventbrite.nl', 'tixr.com', 'ticketmaster.com',
     'ticketleap.com', 'dice.fm', 'eventeny.com', 'showclix.com'
 ];
 
@@ -206,7 +224,28 @@ function urlPartsEndInAssetExtension(parts) {
     return ASSET_URL_PATH_EXTENSIONS.some(ext => lastSegment.endsWith(ext));
 }
 
+// TRUE when a URL's PATH spells out one of the given calendar dates. Digits
+// only (separators are normalized away), so /event-details/x-2026-09-13-20-00,
+// /events/2026/09/13/x and /e/20260913-x all match "2026-09-13". Query strings
+// are ignored: a date there is a listing filter, not the page's identity.
+function urlPathCarriesAnyDateToken(parts, dateTokens) {
+    if (!parts || !Array.isArray(parts.segments) || parts.segments.length === 0) return false;
+    if (!Array.isArray(dateTokens) || dateTokens.length === 0) return false;
+    const digits = parts.segments.join('/').replace(/[^0-9]/g, '');
+    return dateTokens.some(token => token && digits.includes(token));
+}
+
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
+// Fields that hold a link to a PAGE (not an asset): two spellings of one page
+// are one value — see isSameLinkTarget.
+const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']);
+// Fields the CONFIGURED listing owns: what the event is CALLED, what it LOOKS
+// LIKE, and when it ENDS. A crawl/enrich page (a ticket page, a discovered
+// detail page) may fill these when the listing left them blank, but it never
+// replaces a value the listing stated — see the listing-authority rung in
+// mergeParsedEvents. Everything else (ticketUrl, cover, address, description,
+// bar…) still merges by the ordinary rules: that is what enrichment is for.
+const LISTING_AUTHORITY_FIELDS = new Set(['title', 'image', 'imageVertical', 'imageHorizontal', 'endDate']);
 
 // Placeholder-image vocabulary for getPlaceholderImageUrlReason below. Words a
 // file can be NAMED that mean "there is no picture here" — the 1x1 spacer /
@@ -320,6 +359,32 @@ const TITLE_DATE_MONTH_PART = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?
 const TITLE_DATE_DAY_PART = '(\\d{1,2})(?:st|nd|rd|th)?';
 const TITLE_DATE_YEAR_PART = '(?:,?\\s+(\\d{4}))?';
 
+// Calendar-generic CADENCE words: a weekday name (singular or plural), or a
+// relative-day/period word. On a listing every row is titled by the slot it
+// fills ("Tonight at Ty's", "Friday at The Eagle NYC", "Saturday Night
+// Karaoke at GYM Bar" — thotyssey's tockify feed, audit 2026-09-13), so these
+// tokens say WHEN, never WHICH event. They are dropped from the cross-source
+// title-token set exactly like stopwords, and — unlike city tokens — with no
+// fallback: a title made of nothing but cadence words carries no name at all,
+// and every caller of getCrossSourceTitleTokens fails closed on an empty set.
+const CADENCE_TITLE_TOKENS = new Set([
+    'monday', 'mondays', 'tuesday', 'tuesdays', 'wednesday', 'wednesdays',
+    'thursday', 'thursdays', 'friday', 'fridays', 'saturday', 'saturdays',
+    'sunday', 'sundays',
+    'today', 'tonight', 'tomorrow', 'tonite',
+    'weekly', 'monthly', 'biweekly', 'daily', 'annual', 'annually'
+]);
+
+// How many of a source's OWN distinct titles a token may appear in before it
+// stops naming an event. A venue prints its programme vocabulary across its
+// whole calendar — eaglela.com publishes "CRUISE LA", "CRUISE LA LEATHER &
+// BOOTBLACK 2027 MEET & GREET", "CRUISE LA ... CONTEST" and "CRUISE NIGHT"
+// (four different parties), and the word "BAR" in four more — so a token at
+// that fan-in says WHOSE calendar this is, never WHICH event. Three is the
+// same fan-in convention deduplicateEvents already uses to demote a shared
+// URL to a listing page and applyListingHostFlags uses to demote a host.
+const TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES = 3;
+
 // Legalese phrase shapes for the title-looks-like-boilerplate sanity flag.
 // A generic legalese phrase table is DATA (like ADDRESS_STREET_TYPE_TOKENS
 // above), not per-page hardcoding: these are ticketing-terms markers that no
@@ -355,6 +420,23 @@ const SANITY_MAX_EVENT_DURATION_DAYS = 10;
 // late). Owner-tunable via config.sanity.pastSpanWithholdDays (0 restores
 // the flag-everything-past behavior).
 const SANITY_PAST_SPAN_WITHHOLD_DAYS = 30;
+
+// THE ONE DEFAULT END. A source that states a start and no closing time is
+// the normal case for nightlife (Eagle LA: "BAR OPENS 2PM"; Eagle London:
+// "Cosy Bear runs from 9 to 11pm … From 11pm until late"; Rockbar's widget
+// defaults every row's end to its start). Parsers therefore emit NO end at
+// all — a gap, not a zero-length span — and the merge layer keeps whatever
+// end the calendar already stored for it.
+//
+// A CREATE has no calendar side to borrow from, and EventKit refuses to save
+// an event without an end ("No end date has been set."), so exactly one
+// default is materialized, in exactly one place (applyDefaultEventEnd),
+// at the very END of analysis: start + this many hours, stamped
+// `_endDateDefaulted` so the results UI, the provenance table and the
+// calendar merge can all tell a default from a stated end. Three hours is
+// the median stated span of the events that DO publish an end.
+const DEFAULT_MISSING_END_DURATION_HOURS = 3;
+const DEFAULT_MISSING_END_DURATION_MS = DEFAULT_MISSING_END_DURATION_HOURS * 60 * 60 * 1000;
 
 class SharedCore {
     constructor(cities, options = {}) {
@@ -565,6 +647,153 @@ class SharedCore {
                 : null;
         }
         return null;
+    }
+
+    /**
+     * A place → a real IANA zone, decided from the tz database ICU already
+     * ships. The configured cities carry their own zones (getCityTimezone),
+     * but a source that lists the whole world names places no calendar of
+     * ours has ever heard of — thebearcalendar.com's feed states city/region/
+     * country on every row, and 27 of 68 records shipped with no timezone at
+     * all, so their wall clocks were stored as UTC (a 19:00 Sydney party at
+     * 05:00 the next day, Prague two hours out, Toronto four).
+     *
+     * Two rungs, both data-driven — nothing per city, country or source:
+     *   1. THE ZONE'S OWN EXEMPLAR CITY. Every IANA id ends in the city that
+     *      keeps that clock ("Europe/Prague", "Australia/Sydney",
+     *      "America/Toronto"). The place's city text is matched against those
+     *      names (diacritic-folded, word windows so "Brisbane City" finds
+     *      Australia/Brisbane); a stated country NARROWS the match and, when
+     *      no zone of that country matches, REFUSES it — "Vancouver, WA, US"
+     *      must not become America/Vancouver.
+     *   2. THE COUNTRY'S OWN CLOCK, but only when the country keeps ONE: when
+     *      every zone of the country reads the same offset at that instant
+     *      (Germany, Norway, the UK), the country names the clock and any of
+     *      its zones anchors the wall time identically. A country that spans
+     *      offsets (the US, Australia, Spain with the Canaries) resolves
+     *      nothing — a wrong zone is worse than an unresolved one.
+     *
+     * Returns { timezone, basis } or null. Fails closed (null) on any runtime
+     * without the ICU data — the caller keeps whatever it had.
+     */
+    resolveIanaTimezoneFromPlace(place, atDate = null) {
+        const city = place && typeof place === 'object' ? String(place.city || '').trim() : '';
+        const region = place && typeof place === 'object' ? String(place.region || '').trim() : '';
+        const country = place && typeof place === 'object' ? String(place.country || '').trim() : '';
+        if (!city && !region && !country) return null;
+        const zonesByCity = this.getIanaZonesByExemplarCity();
+        if (!zonesByCity || zonesByCity.size === 0) return null;
+        const countryZones = this.getIanaZonesForCountryName(country);
+        const cityHit = this.matchIanaZoneByExemplarCity(city, zonesByCity, countryZones)
+            || this.matchIanaZoneByExemplarCity(region, zonesByCity, countryZones);
+        if (cityHit) return { timezone: cityHit, basis: 'exemplar city' };
+        if (countryZones.length === 0) return null;
+        const when = atDate instanceof Date && !isNaN(atDate.getTime()) ? atDate : new Date();
+        const offsets = countryZones.map(zone => this.getTimezoneOffsetMinutes(when, zone));
+        if (offsets.some(offset => !Number.isFinite(offset))) return null;
+        if (new Set(offsets).size !== 1) return null;
+        return { timezone: countryZones.slice().sort()[0], basis: 'country clock' };
+    }
+
+    // Exemplar-city index of the tz database: folded city name → zone ids.
+    // Built once per process from ICU's own list; empty (and inert) wherever
+    // Intl.supportedValuesOf is missing.
+    getIanaZonesByExemplarCity() {
+        if (this._ianaZonesByExemplarCity) return this._ianaZonesByExemplarCity;
+        const index = new Map();
+        try {
+            if (typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function') {
+                for (const zone of Intl.supportedValuesOf('timeZone')) {
+                    const exemplar = this.foldPlaceName(String(zone).split('/').pop().replace(/_/g, ' '));
+                    if (!exemplar) continue;
+                    if (!index.has(exemplar)) index.set(exemplar, []);
+                    index.get(exemplar).push(zone);
+                }
+            }
+        } catch (_) { /* no ICU zone list — the resolver stays inert */ }
+        this._ianaZonesByExemplarCity = index;
+        return index;
+    }
+
+    // The zones a country keeps, from its own ICU region data. The country is
+    // named in English by the feeds we read; the code it maps to comes from
+    // ICU's region display names (inverted once), never a hand-written table.
+    getIanaZonesForCountryName(country) {
+        const folded = this.foldPlaceName(country);
+        if (!folded) return [];
+        if (!this._ianaZonesByCountry) this._ianaZonesByCountry = new Map();
+        if (this._ianaZonesByCountry.has(folded)) return this._ianaZonesByCountry.get(folded);
+        let zones = [];
+        try {
+            const code = this.getRegionCodeForCountryName(folded);
+            if (code && typeof Intl !== 'undefined' && typeof Intl.Locale === 'function') {
+                const locale = new Intl.Locale(`und-${code}`);
+                if (typeof locale.getTimeZones === 'function') {
+                    zones = (locale.getTimeZones() || []).filter(zone => typeof zone === 'string');
+                }
+            }
+        } catch (_) { zones = []; }
+        this._ianaZonesByCountry.set(folded, zones);
+        return zones;
+    }
+
+    // ICU region display names, inverted: "germany" → "DE". Built once.
+    getRegionCodeForCountryName(foldedCountry) {
+        if (!this._regionCodeByCountryName) {
+            const index = new Map();
+            try {
+                if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+                    const names = new Intl.DisplayNames(['en'], { type: 'region' });
+                    for (let first = 65; first <= 90; first++) {
+                        for (let second = 65; second <= 90; second++) {
+                            const code = String.fromCharCode(first) + String.fromCharCode(second);
+                            let name = '';
+                            try { name = names.of(code) || ''; } catch (_) { continue; }
+                            if (!name || name === code) continue;
+                            const folded = this.foldPlaceName(name);
+                            if (folded && !index.has(folded)) index.set(folded, code);
+                        }
+                    }
+                }
+            } catch (_) { /* no ICU region names — the country rung stays inert */ }
+            this._regionCodeByCountryName = index;
+        }
+        return this._regionCodeByCountryName.get(foldedCountry) || '';
+    }
+
+    // "Brisbane City" → Australia/Brisbane: every window of consecutive words
+    // in the place text is looked up, longest first, so a city that trails a
+    // qualifier still finds its zone. A window matching SEVERAL zones (after
+    // the country narrowing) is ambiguous and answers nothing.
+    matchIanaZoneByExemplarCity(text, zonesByCity, countryZones) {
+        const words = this.foldPlaceName(text).split(' ').filter(Boolean);
+        if (words.length === 0) return '';
+        const windows = [];
+        for (let size = words.length; size >= 1; size--) {
+            for (let start = 0; start + size <= words.length; start++) {
+                windows.push(words.slice(start, start + size).join(' '));
+            }
+        }
+        for (const window of windows) {
+            if (window.length < 3) continue;
+            const matches = zonesByCity.get(window);
+            if (!matches || matches.length === 0) continue;
+            const narrowed = countryZones.length > 0
+                ? matches.filter(zone => countryZones.includes(zone))
+                : matches;
+            // The name belongs to a city in ANOTHER country (Vancouver WA vs
+            // America/Vancouver): refuse it rather than cross a continent.
+            if (countryZones.length > 0 && narrowed.length === 0) return '';
+            if (narrowed.length === 1) return narrowed[0];
+            return '';
+        }
+        return '';
+    }
+
+    // Place-name folding: diacritics dropped, punctuation collapsed to single
+    // spaces (so "Cádiz" and "St. John's" compare as written).
+    foldPlaceName(value) {
+        return this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
     }
 
     warnOnce(key, message) {
@@ -1214,6 +1443,72 @@ class SharedCore {
         const startMs = this.toEpochMillis(event && event.startDate);
         const endMs = this.toEpochMillis(event && event.endDate);
         return startMs !== null && endMs !== null && endMs <= startMs;
+    }
+
+    // ONE END CONTRACT, STEP 1 (pipeline-wide, every producer).
+    //
+    // A scraped end that is <= the scraped start is not an end: it is either a
+    // parser that had no end evidence (the pre-2026-09-13 `endDate ||
+    // new Date(startDate)` fabrication), or a widget whose row defaults `end`
+    // to `start` (Elfsight: WOODSTOCK 22:00-22:00, and 10 more Rockbar rows).
+    // Both mean "no closing time stated", so the whole pipeline downstream —
+    // merge, sanity, ICS, the write plan — should see a MISSING end, which it
+    // already handles correctly (`📅 MERGE: … kept from calendar (scrape found
+    // none)`, the universal empty-loses rule). Clearing it here, once, before
+    // the filters and the merges, is what makes "no end stated" and "the event
+    // is an instant" distinguishable at last. Report is one line per run.
+    clearDegenerateScrapedEnds(events) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        let cleared = 0;
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (!this.hasDegenerateEnd(event)) continue;
+            const inverted = this.toEpochMillis(event.endDate) < this.toEpochMillis(event.startDate);
+            event.endDate = null;
+            // Provenance for the results UI / evidence lines: the record HAD a
+            // degenerate end and it was read as "none stated", not dropped.
+            event._endDateMissing = inverted ? 'inverted' : 'zero-length';
+            cleared++;
+        }
+        if (cleared > 0) {
+            console.log(`🕓 END: ${cleared} record(s) carried an end at or before their own start — read as "no end stated" (a zero-length span is never data)`);
+        }
+        return cleared;
+    }
+
+    // ONE END CONTRACT, STEP 2 (the only place an end is ever invented).
+    //
+    // Runs at the END of analysis, after every merge has had its say, so it
+    // only ever fills a record that has no end from ANY side — a CREATE off a
+    // page that states none. The value is start + DEFAULT_MISSING_END_DURATION
+    // and it is STAMPED (`_endDateDefaulted`), so:
+    //   - the sanity pass sees a positive span instead of flagging every
+    //     no-end event `end-not-after-start`;
+    //   - EventKit gets the end it requires instead of refusing the write;
+    //   - a later run that finds a REAL end replaces it (the stored default is
+    //     recognizable by its exact offset — see the endDate rung in
+    //     createFinalEventObject).
+    applyDefaultEventEnd(event) {
+        if (!event || typeof event !== 'object') return false;
+        const startMs = this.toEpochMillis(event.startDate);
+        if (startMs === null) return false;
+        if (!this.isEmptyArbitrationValue(event.endDate) && this.toEpochMillis(event.endDate) !== null) return false;
+        event.endDate = new Date(startMs + DEFAULT_MISSING_END_DURATION_MS);
+        event._endDateDefaulted = true;
+        console.log(`🕓 END: "${event.title || 'Unknown'}" states no end — writing the default ${DEFAULT_MISSING_END_DURATION_HOURS}h span (replaced by any stated end a later run finds)`);
+        return true;
+    }
+
+    // TRUE when a value pair is exactly the shape applyDefaultEventEnd writes:
+    // an end sitting precisely DEFAULT_MISSING_END_DURATION after its own
+    // start. The calendar cannot carry the `_endDateDefaulted` stamp (notes
+    // never serialize dates), so the default's own arithmetic IS its
+    // provenance marker on a stored record.
+    isDefaultShapedEnd(startValue, endValue) {
+        const startMs = this.toEpochMillis(startValue);
+        const endMs = this.toEpochMillis(endValue);
+        if (startMs === null || endMs === null) return false;
+        return (endMs - startMs) === DEFAULT_MISSING_END_DURATION_MS;
     }
 
     isEmptyArbitrationValue(value) {
@@ -2190,14 +2485,13 @@ class SharedCore {
         //    merge) — a CREATE never passes through either, so 48 of the 134
         //    distinct events analyzed on 2026-08-02 reached the write plan
         //    with startDate === endDate and nothing said so anywhere.
-        //    Deliberately REPORT-ONLY, and deliberately NOT a repair: for many
-        //    of these the page genuinely states a start and no end (Eagle LA
-        //    flyers: "BAR OPENS 2PM", "9PM EVERY SUNDAY", "$8 COVER - 8PM"),
-        //    so inventing a duration would be fabricating data, and dropping
-        //    the event would lose a real night. What is wrong is that "no end
-        //    stated" and "the end really equals the start" are indistinguishable
-        //    downstream — this flag makes the population visible so the upstream
-        //    materialization can be fixed with evidence.
+        //    Still REPORT-ONLY. Since 2026-09-13 the population it exposed is
+        //    fixed upstream rather than here: "no end stated" now travels as a
+        //    MISSING end (clearDegenerateScrapedEnds, and parsers that emit
+        //    none), and exactly one default span is materialized at the end of
+        //    analysis (applyDefaultEventEnd) — so this flag fires only for a
+        //    record whose SOURCE really states an end at or before its start,
+        //    which is the artifact it was written to catch.
         if (this.hasDegenerateEnd(event)) {
             const zeroLength = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs === startMs;
             flags.push({
@@ -2471,38 +2765,83 @@ class SharedCore {
         //     improbable span for the owner to notice. Fails closed without
         //     an event timezone: a wrong-zone local hour would manufacture
         //     false positives.
-        if (typeof event.timezone === 'string' && event.timezone) {
-            const overnightStartMs = toMs(event.startDate);
-            const overnightEndMs = toMs(event.endDate);
-            if (Number.isFinite(overnightStartMs) && Number.isFinite(overnightEndMs)
-                && overnightEndMs > overnightStartMs) {
-                const overnightOffsetMin = this.getTimezoneOffsetMinutes(new Date(overnightStartMs), event.timezone);
-                if (overnightOffsetMin !== null) {
-                    const overnightLocal = new Date(overnightStartMs + (overnightOffsetMin * 60000));
-                    const localStartHour = overnightLocal.getUTCHours();
-                    const localStartMinute = overnightLocal.getUTCMinutes();
-                    const spanHours = (overnightEndMs - overnightStartMs) / (60 * 60 * 1000);
-                    // An EXACT-midnight start is a date-only listing (festival
-                    // campouts, contest weekends), not a typed clock time - FURBALL
-                    // CAMP's 72h weekend flagged every run as a 'typo' it is not.
-                    // A real small-hours typo carries a real time (1AM, 2:30AM).
-                    const isDateOnlyListing = localStartHour === 0 && localStartMinute === 0;
-                    if (!isDateOnlyListing && localStartHour <= 5 && spanHours > 8) {
-                        flags.push({
-                            code: 'improbable-overnight-span',
-                            detail: `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`
-                        });
-                    } else if (!isDateOnlyListing && localStartHour >= 18 && spanHours > 12) {
-                        flags.push({
-                            code: 'improbable-overnight-span',
-                            detail: `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`
-                        });
-                    }
-                }
-            }
-        }
+        const overnightDetail = this.describeImprobableOvernightSpan(event);
+        if (overnightDetail) flags.push({ code: 'improbable-overnight-span', detail: overnightDetail });
 
         return flags;
+    }
+
+    // Rule 11's detector, factored out so the SAME shape test can run on a
+    // scraped record before dedup (applyOvernightSpanCorrections) and on the
+    // merged calendar candidate. Returns the flag detail string, or '' when
+    // the span is plausible / undecidable.
+    describeImprobableOvernightSpan(event) {
+        if (!event || typeof event !== 'object') return '';
+        // Fails closed without an event timezone: a wrong-zone local hour
+        // would manufacture false positives. A record still carrying
+        // wall-clock components labeled UTC (_timezoneUnresolved) reads its
+        // own local hours straight off those components.
+        const timezone = event._timezoneUnresolved
+            ? 'UTC'
+            : (typeof event.timezone === 'string' && event.timezone ? event.timezone : '');
+        if (!timezone) return '';
+        const startMs = this.toEpochMillis(event.startDate);
+        const endMs = this.toEpochMillis(event.endDate);
+        if (startMs === null || endMs === null || endMs <= startMs) return '';
+        const offsetMin = this.getTimezoneOffsetMinutes(new Date(startMs), timezone);
+        if (offsetMin === null) return '';
+        const local = new Date(startMs + (offsetMin * 60000));
+        const localStartHour = local.getUTCHours();
+        const localStartMinute = local.getUTCMinutes();
+        const spanHours = (endMs - startMs) / (60 * 60 * 1000);
+        // An EXACT-midnight start is a date-only listing (festival campouts,
+        // contest weekends), not a typed clock time - FURBALL CAMP's 72h
+        // weekend flagged every run as a 'typo' it is not. A real small-hours
+        // typo carries a real time (1AM, 2:30AM).
+        if (localStartHour === 0 && localStartMinute === 0) return '';
+        if (localStartHour <= 5 && spanHours > 8) {
+            return `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`;
+        }
+        if (localStartHour >= 18 && spanHours > 12) {
+            return `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`;
+        }
+        return '';
+    }
+
+    /**
+     * Run the approved AM/PM span correction on SCRAPED records, before dedup
+     * and before anything merges them.
+     *
+     * The correction already existed, but only in the calendar stage — so the
+     * run output (the results UI, the expectation diff, every consumer that is
+     * not a calendar write) still shipped the broken span, and worse: the two
+     * records of one event disagreed about the end, which handed endDate to
+     * the position-biased AI merge arbitrator. Run 20260913-0120, BEEFMINCE
+     * Sitges: the venue page's JSON-LD said 01:00→18:00 (a pm typo — the
+     * sibling nights say 06:00) while the DICE feed row said 01:00→06:00;
+     * DISCO's arbitration chose the plausible end and MEET MARKET's chose the
+     * 17h one, with a fabricated rationale, for the same pair of shapes.
+     * Correcting each record where it is BUILT makes the two agree, so no
+     * arbitration happens at all.
+     *
+     * Report-only in spirit and deterministic: only a clean -12h slip that
+     * lands in a plausible overnight window is applied (exactly what
+     * applyOvernightSpanCorrection has always allowed); anything it cannot
+     * explain keeps the report-only flag and its stated value.
+     */
+    applyOvernightSpanCorrections(events) {
+        let corrected = 0;
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            const detail = this.describeImprobableOvernightSpan(event);
+            if (!detail) continue;
+            if (!Array.isArray(event._sanityFlags)) event._sanityFlags = [];
+            if (event._sanityFlags.some(flag => flag
+                && (flag.code === 'improbable-overnight-span' || flag.code === 'overnight-span-corrected'))) continue;
+            event._sanityFlags.push({ code: 'improbable-overnight-span', detail });
+            if (this.applyOvernightSpanCorrection(event)) corrected++;
+        }
+        return corrected;
     }
 
     // TRUE only when the event's whole span is provably behind analysis
@@ -3260,6 +3599,29 @@ class SharedCore {
         return matches.length === 1 ? matches[0] : null;
     }
 
+    // The registered promoter whose OWN SITE this page belongs to, or null.
+    //
+    // A registry `website` that is a bare domain root IS that promoter's site;
+    // one with a path is a profile ON someone else's platform
+    // (linktr.ee/<handle>, events.humanitix.com/<slug>) and claims only that
+    // sub-path — the same specificity rule buildCrawlOwnershipClaims uses — so
+    // it never makes the whole host a promoter site. Feeds the parser's
+    // site-role resolution: on a promoter's own site a feed row's own page IS
+    // the event's page (bearitmtl.com shipped `website: https://www.bearitmtl.com`
+    // on every event while each row carried /event/<slug>/, audit 2026-09-13).
+    resolvePromoterEntryBySiteHost(url) {
+        const host = this.getHostFromUrl(url);
+        if (!host || !Array.isArray(this.promoters)) return null;
+        for (const entry of this.promoters) {
+            const website = entry && typeof entry.website === 'string' ? entry.website.trim() : '';
+            if (!website) continue;
+            const parts = this.getUrlRuleParts(website);
+            if (!parts || parts.segments.length > 0) continue;
+            if (this.areUrlHostsSameSite(host, parts.host)) return entry;
+        }
+        return null;
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
@@ -3570,6 +3932,26 @@ class SharedCore {
         return `${parts.host}/${parts.segments.join('/')}`;
     }
 
+    // The calendar dates THIS event can be spelled with, as digit strings
+    // ("20260913"), for the same-host own-page rung. Both merge sides describe
+    // one event, so both contribute; each contributes its UTC day and — when
+    // its timezone resolves — its LOCAL day, because a late-night start lands
+    // on the next UTC day while the site's URL uses the local one.
+    getEventUrlDateTokens(context) {
+        const records = context && context.records ? context.records : null;
+        if (!records) return [];
+        const tokens = new Set();
+        for (const record of [records.a, records.b]) {
+            if (!record || typeof record !== 'object') continue;
+            const startMs = this.toEpochMillis(record.startDate);
+            if (startMs === null) continue;
+            tokens.add(new Date(startMs).toISOString().split('T')[0].replace(/-/g, ''));
+            const localParts = this.getMergeLocalStartParts(record);
+            if (localParts && localParts.localDay) tokens.add(localParts.localDay.replace(/-/g, ''));
+        }
+        return [...tokens];
+    }
+
     // See the orientation-slot rung in resolveConflictDeterministically.
     resolveOrientationImageConflict(valueA, valueB, context) {
         const records = context && context.records ? context.records : null;
@@ -3593,6 +3975,154 @@ class SharedCore {
             winner: matchesA ? 'a' : 'b',
             reason: "orientation slot cut from the event's own primary artwork beats a different asset"
         };
+    }
+
+    resolveMergeArbitrationMode(context) {
+        if (context && typeof context.arbitrationMode === 'string') return context.arbitrationMode;
+        const config = context && context.config && typeof context.config === 'object' ? context.config : null;
+        const merge = config && config.merge && typeof config.merge === 'object' ? config.merge : (config && config.config && config.config.merge) || null;
+        // No config at all (isolated callers, tests) keeps the legacy arbiter;
+        // the shipped config names the mode explicitly.
+        if (!merge || typeof merge.arbitration !== 'string') return 'ai';
+        return merge.arbitration.toLowerCase() === 'ai' ? 'ai' : 'deterministic';
+    }
+
+    // === Calendar-merge authority rules (owner decision 2026-09-12) ===
+    // The AI arbiter is position-biased and re-judged the same pair every
+    // run (title 117×, description 144×, address 142× in one daily run,
+    // flipping sides). Calendar merges are now decided by SOURCE
+    // AUTHORITY, deterministically: equivalent values are no change; the
+    // event's OWN page (the promoter's or venue's site, its feed or grid
+    // row, its ticket page) updates the calendar; a promoter's Instagram
+    // beats a venue's; a website ranks by what it is; text that EXTENDS the
+    // stored value replaces it; everything else keeps the calendar and is
+    // recorded as contested. Only `description` may still reach the AI —
+    // and only when neither side is the event's own page.
+    scrapedRecordIsOwnPage(record) {
+        if (!record || typeof record !== 'object') return false;
+        if (record._titleFromListing === true) return true;
+        const sourceHost = this.getHostFromUrl(record._sourcePageUrl || '').toLowerCase().replace(/^www\./, '');
+        if (!sourceHost) return false;
+        const venueHost = String(record._venueSitePageHost || '').toLowerCase().replace(/^www\./, '');
+        if (venueHost && sourceHost === venueHost) return true;
+        const promoterSite = record._staticFields && typeof record._staticFields.website === 'string' ? record._staticFields.website : '';
+        const promoterHost = this.getHostFromUrl(promoterSite).toLowerCase().replace(/^www\./, '');
+        if (promoterHost && sourceHost === promoterHost) return true;
+        if (typeof this.isKnownTicketingPlatformHost === 'function' && this.isKnownTicketingPlatformHost(sourceHost)
+            && record._pageClassification === 'event-page') return true;
+        return false;
+    }
+
+    mergeTextEquivalent(a, b) {
+        const fold = (value) => String(value || '').toLowerCase().replace(/&#?[0-9a-z]+;/gi, ' ').replace(/[^a-z0-9]+/g, '');
+        const foldedA = fold(a);
+        const foldedB = fold(b);
+        return Boolean(foldedA) && foldedA === foldedB;
+    }
+
+    mergeTextExtends(shorter, longer) {
+        const fold = (value) => String(value || '').toLowerCase().replace(/&#?[0-9a-z]+;/gi, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+        const a = fold(shorter);
+        const b = fold(longer);
+        return Boolean(a) && Boolean(b) && b.length > a.length && b.includes(a);
+    }
+
+    canonicalMergeUrl(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        return `${match[1].toLowerCase().replace(/^www\./, '')}${match[2].replace(/\/+$/, '').toLowerCase()}`;
+    }
+
+    // Do two link values address the SAME page — differing only in scheme, a
+    // "www." prefix, a trailing slash, case or tracking params? Query strings
+    // that carry real meaning are kept (getUrlDedupeKey strips only tracking
+    // params), so two crops of one image or two filtered listings still
+    // differ. Not a conflict, and it must never reach the arbiter: handed
+    // https://www.sickening.events/e/…/tickets against
+    // https://sickening.events/e/…/tickets the model invented a preference
+    // ("version-one includes the 'www' subdomain, making it the more complete
+    // and canonical URL") and reversed itself two merges later in the same
+    // run (goldiloxx audit 2026-09-13).
+    isSameLinkTarget(valueA, valueB) {
+        const key = (value) => {
+            const raw = typeof value === 'string' ? value.trim() : '';
+            if (!/^https?:\/\//i.test(raw)) return '';
+            return this.getUrlDedupeKey(raw).replace(/^https?:\/\//i, '');
+        };
+        const keyA = key(valueA);
+        const keyB = key(valueB);
+        return Boolean(keyA) && keyA === keyB;
+    }
+
+    // What a website link IS: the promoter's registry site (4), an event
+    // page on the event's own site (3), an event page elsewhere (2), a
+    // ticketing/social platform link or a bare site root (1).
+    rankMergeWebsite(value, record, promoterHost) {
+        const canonical = this.canonicalMergeUrl(value);
+        if (!canonical) return 0;
+        const host = canonical.split('/')[0];
+        const hasPath = canonical.includes('/');
+        const social = /(^|\.)(instagram|facebook|twitter|x|tiktok|linktr)\.(com|ee)$/i.test(host);
+        const platform = typeof this.isKnownTicketingPlatformHost === 'function' && this.isKnownTicketingPlatformHost(host);
+        if (promoterHost && host === promoterHost) return hasPath ? 4 : 3.5;
+        const venueHost = record && record._venueSitePageHost ? String(record._venueSitePageHost).toLowerCase().replace(/^www\./, '') : '';
+        if (venueHost && host === venueHost && hasPath) return 3;
+        if (social || platform || !hasPath) return 1;
+        return 2;
+    }
+
+    resolveCalendarMergeByAuthority(fieldName, calendarValue, scraperValue, context) {
+        const scraped = context.records.b;
+        const promoterSite = scraped && scraped._staticFields && typeof scraped._staticFields.website === 'string' ? scraped._staticFields.website : '';
+        const promoterHost = this.getHostFromUrl(promoterSite).toLowerCase().replace(/^www\./, '');
+        const ownPage = this.scrapedRecordIsOwnPage(scraped);
+        const isText = ['title', 'description', 'address', 'bar', 'shortName'].includes(fieldName);
+        const isUrl = ['website', 'ticketUrl', 'image', 'instagram', 'facebook', 'gmaps'].includes(fieldName);
+        const isDate = fieldName === 'startDate' || fieldName === 'endDate';
+
+        if (isUrl && this.canonicalMergeUrl(calendarValue) && this.canonicalMergeUrl(calendarValue) === this.canonicalMergeUrl(scraperValue)) {
+            return { winner: 'a', reason: 'equivalent links — no change' };
+        }
+        if (isText && this.mergeTextEquivalent(calendarValue, scraperValue)) {
+            return { winner: 'a', reason: 'equivalent text — no change' };
+        }
+
+        if (fieldName === 'instagram') {
+            const registry = scraped && scraped._staticFields && typeof scraped._staticFields.instagram === 'string' ? scraped._staticFields.instagram : '';
+            const handle = (value) => (String(value || '').match(/instagram\.com\/([^/?#]+)/i) || [, String(value || '').replace(/^@/, '')])[1].toLowerCase().replace(/\/+$/, '');
+            if (registry) {
+                if (handle(scraperValue) === handle(registry)) return { winner: 'b', reason: "the promoter's own Instagram (registry) beats the venue's" };
+                if (handle(calendarValue) === handle(registry)) return { winner: 'a', reason: "the promoter's own Instagram (registry) is already stored" };
+            }
+            const barKey = this.normalizeIdentityText(scraped && scraped.bar);
+            const scrapedIsVenue = barKey && handle(scraperValue).replace(/[^a-z0-9]/g, '').includes(barKey.replace(/[^a-z0-9]/g, '').slice(0, 6));
+            if (scrapedIsVenue) return { winner: 'a', reason: "a venue's Instagram never replaces the stored promoter handle" };
+            return { winner: 'a', reason: 'contested Instagram (equal authority) — calendar kept, flagged' };
+        }
+
+        if (fieldName === 'website') {
+            const rankA = this.rankMergeWebsite(calendarValue, scraped, promoterHost);
+            const rankB = this.rankMergeWebsite(scraperValue, scraped, promoterHost);
+            if (rankB > rankA) return { winner: 'b', reason: `website ranks higher (${rankB} vs ${rankA}: promoter site > own event page > other event page > platform/root)` };
+            return { winner: 'a', reason: rankA > rankB ? `stored website ranks higher (${rankA} vs ${rankB})` : 'same website rank — calendar kept' };
+        }
+
+        if (isDate) {
+            if (scraped && scraped._startTimeFromFlyer === true) return { winner: 'a', reason: 'a flyer-read time never replaces the stored time' };
+            if (scraped && scraped._timezoneUnresolved === true) return { winner: 'a', reason: 'a wall-clock guess never replaces an anchored time' };
+            if (ownPage) return { winner: 'b', reason: "the event's own page states it — calendar updated" };
+            return { winner: 'a', reason: 'contested time (equal authority) — calendar kept, flagged' };
+        }
+
+        if (isText) {
+            if (this.mergeTextExtends(calendarValue, scraperValue)) return { winner: 'b', reason: 'scraped text extends the stored value' };
+            if (fieldName === 'title' && scraped && scraped._titleFromListing === true) return { winner: 'b', reason: "the listing's own stated title" };
+            if (ownPage) return { winner: 'b', reason: "the event's own page states it — calendar updated" };
+            if (fieldName === 'description') return null; // the AI may judge two third-party copies
+            return { winner: 'a', reason: `contested ${fieldName} (equal authority) — calendar kept, flagged` };
+        }
+        return null;
     }
 
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
@@ -3636,6 +4166,15 @@ class SharedCore {
 
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
+        // SAME PAGE, TWO SPELLINGS. Before any ranking rung: a link field
+        // whose two candidates differ only in scheme/www/trailing slash/case
+        // is not a disagreement at all. Keeping the existing spelling is the
+        // stable answer (and the calendar side on calendar merges), which
+        // also stops the value churning between runs. Link fields only —
+        // image slots keep their query-bearing crops arbitrating below.
+        if (LINK_IDENTITY_MERGE_FIELDS.has(fieldName) && this.isSameLinkTarget(valueA, valueB)) {
+            return { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' };
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -3664,6 +4203,32 @@ class SharedCore {
                 if (rootB && !rootA && urlA.segments.length > 0) {
                     return { winner: 'a', reason: 'same-host deeper URL beats domain root' };
                 }
+                // Own-page rung (2026-09-13, eaglelondon.com HORSE MEAT DISCO):
+                // both candidates pathed on ONE host — the venue's site — and
+                // one of them carries THIS event's own date in its path
+                // (/event-details/horse-meat-disco-2026-09-13-20-00) while the
+                // other is the undated standing page for the night
+                // (/horse-meat-disco). The dated URL is the event's own page;
+                // the undated one describes the series. Arbitration had no way
+                // to see that and flip-flopped across sibling records of the
+                // same run (ATHENA and 3310 kept event-details, HMD swapped to
+                // the blurb page), so `website` churned every run. Ranking:
+                // the event's own page > the venue's listing > the venue root.
+                // Fails closed — no date in either path, a date in both, or an
+                // undateable record all fall through.
+                if (fieldName === 'website' || fieldName === 'url') {
+                    const eventDateTokens = this.getEventUrlDateTokens(context);
+                    if (eventDateTokens.length > 0) {
+                        const datedA = urlPathCarriesAnyDateToken(urlA, eventDateTokens);
+                        const datedB = urlPathCarriesAnyDateToken(urlB, eventDateTokens);
+                        if (datedA !== datedB) {
+                            return {
+                                winner: datedA ? 'a' : 'b',
+                                reason: "same-host URL carrying this event's own date is its own event page"
+                            };
+                        }
+                    }
+                }
             }
             // Cross-host website/url rungs. Rung 1: a bare homepage never
             // beats an event-specific page even ACROSS hosts — the deeper URL
@@ -3682,8 +4247,17 @@ class SharedCore {
             // replacing a platform link) is allowed, and platform-vs-platform
             // falls through to the rungs below.
             if (fieldName === 'website' || fieldName === 'url') {
-                const platformA = isPlatformIdentityHost(urlA.host);
-                const platformB = isPlatformIdentityHost(urlB.host);
+                // A URL the PAGE labelled a ticket page counts as a platform
+                // link here even when its host is on no list — that is the
+                // whole point of the label (markTicketRoleUrl). Cubhouse's
+                // calendar held tickets.taverngroupevents.com as `website`
+                // from an earlier run, and with nothing to classify it the
+                // arbitration model kept choosing it over the promoter's own
+                // curated link, every run.
+                const platformA = isPlatformIdentityHost(urlA.host)
+                    || this.isTicketRoleUrlInMergeContext(context, valueA);
+                const platformB = isPlatformIdentityHost(urlB.host)
+                    || this.isTicketRoleUrlInMergeContext(context, valueB);
                 // The non-platform side wins even as a BARE root (2026-08-02;
                 // this rung previously required it to be pathed, arguing a
                 // root would send people to a front door instead of the
@@ -4081,6 +4655,31 @@ class SharedCore {
                     };
                 }
             }
+            // A title the site's own listing states (a month grid cell, a
+            // feed row, JSON-LD) beats a phrase the model lifted from a
+            // page's body — unless the model's title is the listing's title
+            // plus a subtitle. thedallaseagle.com's "Bear Night" post opens
+            // with "Second Fridays…", and the crawled page's AI read won the
+            // merge over the grid's own title (daily run 20260912-063741).
+            if (context && context.records && context.records.a && context.records.b) {
+                const structuredSources = new Set(['mec', 'jsonld', 'json-ld', 'json-api', 'squarespace', 'wix', 'elfsight', 'dice']);
+                const isStructured = (record) => Boolean(record && (record._titleFromListing === true
+                    || (typeof record.source === 'string' && structuredSources.has(record.source.toLowerCase()))));
+                const structuredA = isStructured(context.records.a);
+                const structuredB = isStructured(context.records.b);
+                if (structuredA !== structuredB) {
+                    const fold = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                    const stated = structuredA ? valueA : valueB;
+                    const derived = structuredA ? valueB : valueA;
+                    const derivedExtends = fold(stated) && fold(derived).includes(fold(stated)) && fold(derived).length > fold(stated).length;
+                    if (!derivedExtends) {
+                        return {
+                            winner: structuredA ? 'a' : 'b',
+                            reason: 'the listing\'s own stated title beats a title read from body text'
+                        };
+                    }
+                }
+            }
             // Title doctrine rung: the venue's name belongs in the bar field,
             // not the title (run 20260725-170926: "…Singlet Night at the
             // Dallas Eagle" vs "Singlet Night with DJ Drew G" — the venue-free
@@ -4427,6 +5026,17 @@ class SharedCore {
                     reason: 'case-only variants — kept less-uppercased form'
                 };
             }
+        }
+        // Source-authority fallback (calendar merges only, config
+        // merge.arbitration "deterministic"): what every rung above left
+        // undecided is decided here instead of by the AI — see
+        // resolveCalendarMergeByAuthority.
+        if (context && context.sideLabels && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped'
+            && context.records && context.records.a && context.records.b
+            && !this.isEmptyArbitrationValue(valueA) && !this.isEmptyArbitrationValue(valueB)
+            && this.resolveMergeArbitrationMode(context) === 'deterministic') {
+            const byAuthority = this.resolveCalendarMergeByAuthority(fieldName, valueA, valueB, context);
+            if (byAuthority) return byAuthority;
         }
         return null;
     }
@@ -5100,6 +5710,22 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyVenueSiteAddressConsensus === 'function') {
             aiWebParser.applyVenueSiteAddressConsensus(allEvents, mainConfig?.cities || null);
         }
+        // Listing-host flags (deterministic, page-derived): a host whose own
+        // pages resolved siteRole 'organizer', or whose events name 3+
+        // distinct bars, publishes many venues — its shared page host is not
+        // venue identity for dedup. Runs BEFORE the identity pass (which
+        // consumes the consensus stash this reads) and before every consumer
+        // of getCrossSourceVenueIdentity.
+        if (aiWebParser && typeof aiWebParser.applyListingHostFlags === 'function') {
+            aiWebParser.applyListingHostFlags(allEvents);
+        }
+        // Title-token corpus frequencies (deterministic, page-derived): with
+        // every title this source published in view, stamp how many of its
+        // own DISTINCT titles carry each of a record's title tokens. The
+        // fuzzy title rungs of dedup and of the calendar merge read the stamp
+        // so they never pair two events on a word the venue prints all over
+        // its calendar. Must run before dedup and before analyzeEventAction.
+        this.applyTitleTokenCorpusFlags(allEvents);
         // Venue-site identity corrections (deterministic, curated-anchored):
         // when a crawled site's identity is established — venue role seen,
         // unique curated-bar name match, address agreement — flyer-subtitle
@@ -5148,6 +5774,14 @@ class SharedCore {
         // original source). Generic signal only — no per-site rules.
         this.applyAggregatorWebsitePointers(allEvents, urlClassifications);
 
+        // AM/PM span slips are repaired HERE, on the scraped records, rather
+        // than only on the merged calendar candidate: the run output must
+        // never carry a 17h "overnight" span, and two records of one event
+        // must not disagree about the end (that disagreement is what hands
+        // endDate to the position-biased AI arbitrator). See
+        // applyOvernightSpanCorrections.
+        this.applyOvernightSpanCorrections(allEvents);
+
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events. Enforce-mode bear-check drops are carried
@@ -5158,6 +5792,11 @@ class SharedCore {
         // website reads as full, rather than dropping them at scrape time.
         const keepPastEvents = effectiveParserConfig.allowPastEvents
             || Boolean(mainConfig && mainConfig.config && mainConfig.config.allowPastEvents);
+        // ONE END CONTRACT, step 1: a zero-length/inverted end is "no end
+        // stated" for EVERY producer (AI extraction, Elfsight/Tribe/MEC rows,
+        // JSON-LD). Before the filters and every merge, so nothing downstream
+        // ever sees a fabricated instant.
+        this.clearDegenerateScrapedEnds(allEvents);
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, keepPastEvents);
         // Curated promoter registry pass (before the bear check so a matched
         // promoter's bearAffinity can steer per-event trust): match each
@@ -5278,7 +5917,10 @@ class SharedCore {
         if (!Array.isArray(events) || events.length === 0) return;
         const classifications = urlClassifications && typeof urlClassifications === 'object' ? urlClassifications : {};
         const aggregatorHosts = new Set();
+        const classificationByPageKey = new Map();
         for (const url of Object.keys(classifications)) {
+            const pageKey = this.getUrlDedupeKey(url);
+            if (pageKey) classificationByPageKey.set(pageKey, classifications[url]);
             // A root read as a machine feed classifies by its content
             // (multi-event-page), but the host is still the aggregator the
             // config's URL rules say it is — the pointer rule keys on that.
@@ -5296,6 +5938,20 @@ class SharedCore {
             const sourceHost = this.getHostFromUrl(sourcePageUrl).toLowerCase().replace(/^www\./, '');
             if (!sourceHost || !aggregatorHosts.has(sourceHost)) continue;
             const sourcePageKey = this.getUrlDedupeKey(sourcePageUrl);
+            // …but only for a page that IS an aggregator listing. A promoter
+            // whose HOMEPAGE is a link list still publishes real detail pages
+            // on that host, and bearracuda.com/events/<slug>/ is the event's
+            // own page, not a copy of a listing: clearing it here cost all 7
+            // events their deep URL, after which the registry filled the
+            // blank with the domain ROOT and every run proposed root-vs-page
+            // against the calendar (run 20260913-012005). The run's own
+            // classification of THIS page decides; an unclassified page falls
+            // back to the host rule exactly as before.
+            const sourceClassification = classificationByPageKey.get(sourcePageKey) || '';
+            if (sourceClassification && sourceClassification !== 'link-aggregator'
+                && this.classifyUrlByRules(sourcePageUrl) !== 'link-aggregator') {
+                continue;
+            }
             const websiteIsOwnSourcePage = Boolean(website) && this.getUrlDedupeKey(website) === sourcePageKey;
             const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
             const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);
@@ -5369,6 +6025,117 @@ class SharedCore {
         return query[1].split('&').some(pair => /^(q|s|search|query|keyword|keywords|term)=/i.test(pair));
     }
 
+    // Is this URL a TICKETING/SOCIAL PLATFORM link rather than an identity
+    // link? The classification canonicalizeIdentityLinks has always used
+    // (PLATFORM_IDENTITY_HOSTS / TICKETING_PLATFORM_HOSTS / opaque shortlink
+    // shape), minus the platform organizer HOME page, which is a promoter's
+    // real presence. Named so the crawl-time "one event on the page" rule can
+    // ask the same question the identity ladder asks later.
+    isPlatformIdentityLinkUrl(url) {
+        const value = String(url || '').trim();
+        if (!value) return false;
+        const host = this.getHostFromUrl(value).toLowerCase().replace(/^www\./, '');
+        if (!host) return false;
+        const parts = this.getUrlRuleParts(value);
+        const isPlatform = isPlatformIdentityHost(host)
+            || this.isKnownTicketingPlatformHost(host)
+            || (parts ? this.isOpaqueShortlinkUrlParts(parts) : false);
+        if (!isPlatform) return false;
+        return !this.isPlatformOrganizerHomeUrl(value);
+    }
+
+    // May this sole event on a page take that page as its `website`?
+    // '' = no; otherwise the reason: 'blank' (nothing to displace),
+    // 'bare-root' (a same-site front door buries the event's own page), or
+    // 'platform' — a ticketing/social PLATFORM link is not a website either,
+    // so it loses to the event's own page exactly like a bare root does.
+    // Without the platform rung the rule was skipped whenever extraction had
+    // parked a ticket link in `website` (bearracuda.com, run 20260913-012005:
+    // all 7 events carried the sickening.events link and not one "takes its
+    // own page" line fired; canonicalizeIdentityLinks then cleared the
+    // platform link after dedup, far too late, and the records shipped the
+    // promoter's domain ROOT instead of /events/<slug>/). The page we crawled
+    // must not itself be a platform page, or this would just swap one
+    // platform link for another; a curated platform self-presence stands.
+    resolveOwnPageWebsiteDisplacement(event, pageUrl) {
+        const url = String(pageUrl || '').trim();
+        if (!url) return '';
+        const existingUrl = event && typeof event.website === 'string' ? event.website.trim() : '';
+        if (!existingUrl) return 'blank';
+        if (this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) return 'bare-root';
+        if (this.isPlatformIdentityLinkUrl(existingUrl)
+            && !this.isPlatformIdentityLinkUrl(url)
+            && !this.isCuratedPlatformSelfIdentityUrl(event, existingUrl)) {
+            return 'platform';
+        }
+        return '';
+    }
+
+    // PAGE-DERIVED ticket role. A host allowlist (PLATFORM_IDENTITY_HOSTS)
+    // re-breaks with every new ticket vendor — the comment above that list
+    // records Eventbrite doing it on 2026-07-30, and Cubhouse's
+    // tickets.taverngroupevents.com did it again on 2026-09-13: the SPA door
+    // labelled the page a TICKET page ("ticketUrl ← the page the door was
+    // found behind"), the same URL became the event's `website`, and because
+    // the vendor's host is on no list the curated identity link never
+    // applied and the final build dropped the ticketUrl instead of the
+    // website. So the label travels with the URL: whatever labelled a URL a
+    // ticket link (a data door onto a ticket-events API, a JSON-LD offer)
+    // stamps it here, and the identity ladder reads the stamp, never a host
+    // list. A ticket PLATFORM page is a perfectly good `ticketUrl` — it is
+    // only barred from being the identity `website`.
+    markTicketRoleUrl(event, url, reason = '') {
+        if (!event || typeof event !== 'object') return;
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        if (!key) return;
+        if (!Array.isArray(event._ticketRoleUrls)) event._ticketRoleUrls = [];
+        if (event._ticketRoleUrls.some(entry => entry && entry.key === key)) return;
+        event._ticketRoleUrls.push({ key, reason: String(reason || '') });
+    }
+
+    // Was this URL labelled a ticket link by a page-derived signal on THIS
+    // event? Stamp-only on purpose: a bare path guess ("/tickets") would
+    // demote a venue's own ticket page out of `website`, which is the
+    // opposite failure.
+    isTicketRoleUrl(event, url) {
+        const stamps = event && Array.isArray(event._ticketRoleUrls) ? event._ticketRoleUrls : null;
+        if (!stamps || stamps.length === 0) return false;
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        if (!key) return false;
+        return stamps.some(entry => entry && entry.key === key);
+    }
+
+    // The same question during a two-sided merge: the label lives on the
+    // record that saw the page (the scraped side), while the value it
+    // describes can arrive from either side — the calendar stores whatever an
+    // earlier run wrote there.
+    isTicketRoleUrlInMergeContext(context, value) {
+        const records = context && context.records && typeof context.records === 'object' ? context.records : null;
+        if (!records) return false;
+        return this.isTicketRoleUrl(records.a, value) || this.isTicketRoleUrl(records.b, value);
+    }
+
+    // Why the stamp says so — for the log line that acts on it.
+    getTicketRoleUrlReason(event, url) {
+        const stamps = event && Array.isArray(event._ticketRoleUrls) ? event._ticketRoleUrls : null;
+        if (!stamps) return '';
+        const key = this.getUrlDedupeKey(String(url || '').trim());
+        const hit = key ? stamps.find(entry => entry && entry.key === key) : null;
+        return hit && hit.reason ? hit.reason : '';
+    }
+
+    // A URL whose host is a BRANDED SUBDOMAIN of a known ticketing platform
+    // (westernxposurefall2026.eventbrite.com, xxl2026.eventbrite.com — and the
+    // same shape on the platform's regional domains). The vendor gave that
+    // label to one seller's listing, so the "bare root" there is a sales page,
+    // not a site's front door. Exact platform hosts (eventbrite.com itself)
+    // are NOT this: their root is the vendor's home page.
+    isTicketingPlatformSubdomainUrl(url) {
+        const host = this.getHostFromUrl(String(url || '')).toLowerCase().replace(/^www\./, '');
+        if (!host || !this.isKnownTicketingPlatformHost(host)) return false;
+        return TICKETING_PLATFORM_HOSTS.every(platform => host !== platform);
+    }
+
     clearNonIdentityLinkFields(event, label = 'event') {
         const cleared = [];
         if (!event || typeof event !== 'object') return cleared;
@@ -5386,10 +6153,15 @@ class SharedCore {
                 // (sickening.events/events?q=goldiloxx shipped as a ticketUrl,
                 // run 20260910-215043).
                 reason = 'a search/listing page';
-            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)) {
+            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)
+                && !this.isTicketingPlatformSubdomainUrl(value)) {
                 // A bare site root is a website, never a ticket link (furball
                 // .nyc: "VISIT THEURBANBEAR.COM" on the flyer became UNDERBEAR's
                 // ticketUrl). Flag, don't drop: it moves to an empty website.
+                // Exempt above: on a ticket VENDOR the bare root is not a site
+                // root at all — the brand label IS the listing
+                // (westernxposurefall2026.eventbrite.com), so the rule that
+                // protects venue sites was deleting real ticket links.
                 if (!(typeof event.website === 'string' && event.website.trim())) {
                     event.website = value;
                     console.log(`🔗 LINKS: moved ${value} from ticketUrl to website for "${label}" — a bare site root is a website, not a ticket link`);
@@ -5439,6 +6211,24 @@ class SharedCore {
     // config and never re-routed. Generic host classification only —
     // PLATFORM_IDENTITY_HOSTS / TICKETING_PLATFORM_HOSTS / opaque-shortlink
     // URL shape; nothing per venue.
+    // A bare domain root (no path, no query) on a host that is NEITHER the
+    // page this record was read from NOR the promoter's own curated identity:
+    // somebody else's front door. Used by the identity ladder above to rank
+    // an event's own page above the source's site above a co-promoter's.
+    // Fails closed — an unparseable value, any path segment, a query string,
+    // or a missing source-page stamp all return false and change nothing.
+    isForeignBareRootIdentityUrl(event, value, curatedWebsite) {
+        const parts = this.getUrlRuleParts(value);
+        if (!parts) return false;
+        if (parts.segments.length > 0 || parts.hasQuery) return false;
+        const sourceHost = this.getHostFromUrl(event && event._sourcePageUrl)
+            .toLowerCase().replace(/^www\./, '');
+        if (!sourceHost || parts.host === sourceHost) return false;
+        const curatedHost = this.getHostFromUrl(curatedWebsite).toLowerCase().replace(/^www\./, '');
+        if (curatedHost && parts.host === curatedHost) return false;
+        return true;
+    }
+
     canonicalizeIdentityLinks(events) {
         if (!Array.isArray(events) || events.length === 0) return;
         for (const event of events) {
@@ -5488,11 +6278,33 @@ class SharedCore {
             const host = this.getHostFromUrl(website).toLowerCase().replace(/^www\./, '');
             if (!host) continue;
             const parts = this.getUrlRuleParts(website);
-            const isPlatform = isPlatformIdentityHost(host)
-                || this.isKnownTicketingPlatformHost(host)
-                || (parts ? this.isOpaqueShortlinkUrlParts(parts) : false);
-            if (!isPlatform) continue; // rung 2: a real page-stated site is kept
-            if (this.isPlatformOrganizerHomeUrl(website)) continue;
+            const isPlatform = this.isPlatformIdentityLinkUrl(website)
+                // The page itself said this URL is where you BUY — a ticket
+                // vendor no host list knows yet (markTicketRoleUrl).
+                || this.isTicketRoleUrl(event, website);
+            if (!isPlatform) {
+                // Rung 2 (a real page-stated site is kept) has one exception:
+                // a BARE ROOT on somebody else's host. website/url is the
+                // event's IDENTITY — it drives the card's favicon and the
+                // dedup's event-page rung — and the ranking is: the event's
+                // OWN page (any host, because it names the event) > the
+                // source's own site > anyone else's front door. A co-promoter
+                // named in the card's text lands at the bottom: furball.nyc's
+                // UNDERBEAR 9/18 shipped website https://theurbanbear.com, the
+                // weekend co-promoter's homepage (and a known dead end), while
+                // its five siblings carried the Furball identity (run
+                // 20260913-012112). Shape only — bare root, foreign host, a
+                // curated identity available; a deep URL is somebody's event
+                // page and is always kept.
+                if (curatedWebsite && curatedWebsite !== website
+                    && this.isForeignBareRootIdentityUrl(event, website, curatedWebsite)) {
+                    event.website = curatedWebsite;
+                    if (!event._staticFields) event._staticFields = {};
+                    event._staticFields.website = curatedWebsite;
+                    console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — a bare root on another organiser's host is a co-promoter's front door, not this event's page`);
+                }
+                continue;
+            }
             if (this.isCuratedPlatformSelfIdentityUrl(event, website)) continue;
 
             // Route the platform link off `website` without losing it: social
@@ -6755,11 +7567,16 @@ class SharedCore {
         foreignOrgDropCollector = null,
         // Linked-ICS-feed discovery (report-only): { seen: Set, findings: [] }
         // scoped to one parser run — see collectIcsFeedFindings.
-        icsFeedCollector = null
+        icsFeedCollector = null,
+        // URL dedupe keys of the links in `urls` that are PAGES OF EVENTS the
+        // parent page already published (a row's own detail page, an event's
+        // own ticket link). They are enrichment, not discovery, and spend
+        // their own budget — see limitAdditionalUrls.
+        enrichmentUrlKeys = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
-            ? this.limitAdditionalUrls(urls, parserConfig)
+            ? this.limitAdditionalUrls(urls, parserConfig, enrichmentUrlKeys)
             : (Array.isArray(urls) ? urls : []);
 
         if (currentDepth > 0) {
@@ -6876,7 +7693,16 @@ class SharedCore {
                     httpAdapter
                 });
 
-                if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
+                // Every crawled page's classification, not only the roots':
+                // the aggregator-pointer pass needs to know what the page an
+                // EVENT came from is, and a promoter whose homepage is a link
+                // list still publishes real detail pages on that host
+                // (bearracuda.com/events/<slug>/). A deeper page that is
+                // itself a link list now names its host as an aggregator too,
+                // which only matters for events extracted FROM that page —
+                // the pass keys on each event's own page classification.
+                if (urlClassifications && typeof urlClassifications === 'object'
+                    && (currentDepth === 0 || !(url in urlClassifications))) {
                     urlClassifications[url] = pageClassification;
                 }
 
@@ -6908,6 +7734,19 @@ class SharedCore {
                     : null;
                 if (extractionSummary && extractionSummary.source) {
                     await displayAdapter.logInfo(`SYSTEM: ${url} extraction summary: source=${extractionSummary.source}, aiPasses=${Number(extractionSummary.aiPasses) || 0}, ocrImages=${Number(extractionSummary.ocrImages) || 0} → ${eventCount} event${eventCount === 1 ? '' : 's'}`);
+                    // The same fact, stamped on the records themselves
+                    // (underscore field — never serialized to notes or merged
+                    // as a field). Duplicate folding reads it to decide which
+                    // side owns the shipped record's provenance: a structured
+                    // reader saw the page's own machine-readable answer, an AI
+                    // pass read whatever text the page happened to render.
+                    if (Array.isArray(parseResult.events)) {
+                        for (const parsedEvent of parseResult.events) {
+                            if (parsedEvent && typeof parsedEvent === 'object' && !parsedEvent._extractionSource) {
+                                parsedEvent._extractionSource = extractionSummary.source;
+                            }
+                        }
+                    }
                 }
 
                 if (discoveryTreeCollector && segmentCount > 0) {
@@ -6950,6 +7789,19 @@ class SharedCore {
                         if (!event._sourcePageUrl) {
                             event._sourcePageUrl = url;
                         }
+                        // WHERE IN THE CRAWL did this record come from? A
+                        // CONFIGURED page (depth 0) is the source's own
+                        // listing — the thing the owner pointed the parser
+                        // at, and the only page that speaks for this source.
+                        // Every deeper page is a CRAWL page: a ticket page an
+                        // event linked, a detail page discovery found. Both
+                        // kinds enrich, but only the listing gets to NAME the
+                        // event (see the listing-authority rung in
+                        // mergeParsedEvents). Underscore field — never
+                        // serialized into notes/schema, never merged as data.
+                        if (!event._pageOrigin) {
+                            event._pageOrigin = currentDepth === 0 ? 'listing' : 'crawl';
+                        }
                     });
                     // A page that describes exactly ONE event IS that event's
                     // page, so it can name itself. The structured-data routes
@@ -6973,13 +7825,24 @@ class SharedCore {
                     if (parsedEvents.length === 1) {
                         const soleEvent = parsedEvents[0];
                         const existingUrl = typeof soleEvent.website === 'string' ? soleEvent.website.trim() : '';
-                        if (!existingUrl || this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) {
+                        const displacement = this.resolveOwnPageWebsiteDisplacement(soleEvent, url);
+                        const platformWebsiteLosesToOwnPage = displacement === 'platform';
+                        if (displacement) {
+                            if (platformWebsiteLosesToOwnPage) {
+                                // Flag, don't drop: the displaced platform
+                                // link is a ticket link, so it parks in an
+                                // EMPTY ticketUrl (a real one is never
+                                // overwritten) — the same routing
+                                // canonicalizeIdentityLinks uses.
+                                const existingTicketUrl = typeof soleEvent.ticketUrl === 'string' ? soleEvent.ticketUrl.trim() : '';
+                                if (!existingTicketUrl) soleEvent.ticketUrl = existingUrl;
+                            }
                             soleEvent.website = url;
                             if (soleEvent._staticFields
                                 && Object.prototype.hasOwnProperty.call(soleEvent._staticFields, 'website')) {
                                 delete soleEvent._staticFields.website;
                             }
-                            console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl})` : ''} — one event on the page`);
+                            console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl}${platformWebsiteLosesToOwnPage ? ', a ticketing/social platform link' : ''})` : ''} — one event on the page`);
                         }
                     }
                     // Cross-org crawl guard: a DISCOVERED page whose site curated
@@ -7173,11 +8036,19 @@ class SharedCore {
                             mainConfig,
                             parserName: urlParserName,
                             allowParserAutoSwitch,
-                            urlClassifications: null,
+                            // The crawl's own page classifications travel down
+                            // with it: the aggregator-pointer pass asks what
+                            // the page an EVENT came from is, and events come
+                            // from deeper pages far more often than from a
+                            // configured root.
+                            urlClassifications,
                             includeInlineInput: false,
                             discoveryOnly,
                             discoveryTreeCollector,
                             enrichOnlyByUrl: ticketEnrichByUrl,
+                            // Every URL in this batch is an event's own ticket
+                            // link, so the discovery cap must not cut it.
+                            enrichmentUrlKeys: new Set(Object.keys(ticketEnrichByUrl)),
                             enrichDropCollector,
                             crawlErrorCollector,
                             crawlGoneCollector,
@@ -7227,8 +8098,25 @@ class SharedCore {
                                 }
                             }
                         }
+                        // Which of these links are the listing's OWN rows?
+                        // A link that equals an event this page just published
+                        // (its website/url, after the identity fold) is that
+                        // row's own page: reading it enriches a row we already
+                        // have, it does not discover a new one. Page-derived —
+                        // the set comes from this page's own extraction, never
+                        // from a URL pattern or a site name.
+                        const rowPageKeys = new Set();
+                        for (const pageEvent of pageEventsForEnrich) {
+                            for (const candidate of [pageEvent && pageEvent.website, pageEvent && pageEvent.url]) {
+                                const link = typeof candidate === 'string' ? candidate.trim() : '';
+                                if (!link || !/^https?:\/\//i.test(link)) continue;
+                                const rowKey = this.getUrlDedupeKey(link);
+                                if (rowKey) rowPageKeys.add(rowKey);
+                            }
+                        }
                         await this.crawlUrlsForEvents({
                             urls: enqueueUrls,
+                            enrichmentUrlKeys: rowPageKeys.size > 0 ? rowPageKeys : null,
                             allEvents,
                             parsers,
                             parserConfig,
@@ -7240,7 +8128,12 @@ class SharedCore {
                             mainConfig,
                             parserName: urlParserName,
                             allowParserAutoSwitch,
-                            urlClassifications: null,
+                            // The crawl's own page classifications travel down
+                            // with it: the aggregator-pointer pass asks what
+                            // the page an EVENT came from is, and events come
+                            // from deeper pages far more often than from a
+                            // configured root.
+                            urlClassifications,
                             includeInlineInput: false,
                             discoveryOnly,
                             discoveryTreeCollector,
@@ -7327,20 +8220,49 @@ class SharedCore {
         }
     }
 
-    limitAdditionalUrls(additionalLinks, parserConfig) {
+    // The crawl budget for one batch of links. `enrichmentUrlKeys` (URL dedupe
+    // keys) names the links that are NOT discovery: the pages of events the
+    // parent page already published — a row's own detail page, an event's own
+    // ticket link. Those spend a separate, larger budget, so a listing's own
+    // contents are never cut to make room for links to nowhere. An explicitly
+    // configured maxAdditionalUrls stays absolute (a parser that says "follow
+    // 3" follows 3, and 0 means none): the split only applies to the default.
+    limitAdditionalUrls(additionalLinks, parserConfig, enrichmentUrlKeys = null) {
         if (!Array.isArray(additionalLinks) || additionalLinks.length === 0) {
             return [];
         }
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
-        let maxUrls = 12;
+        let maxUrls = DISCOVERY_CRAWL_MAX_URLS;
+        let budgetIsDefault = true;
         if (configuredMaxUrls === null) {
             maxUrls = Infinity;
+            budgetIsDefault = false;
         } else if (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0) {
             maxUrls = configuredMaxUrls;
+            budgetIsDefault = false;
         }
-        return Number.isFinite(maxUrls)
-            ? additionalLinks.slice(0, maxUrls)
-            : additionalLinks;
+        if (!Number.isFinite(maxUrls)) return additionalLinks;
+        const keys = enrichmentUrlKeys instanceof Set ? enrichmentUrlKeys : null;
+        if (!budgetIsDefault || !keys || keys.size === 0) {
+            return additionalLinks.slice(0, maxUrls);
+        }
+        const enrichment = [];
+        const discovery = [];
+        for (const link of additionalLinks) {
+            const key = this.getUrlDedupeKey(link);
+            if (key && keys.has(key)) enrichment.push(link);
+            else discovery.push(link);
+        }
+        if (enrichment.length === 0) return additionalLinks.slice(0, maxUrls);
+        const keptEnrichment = enrichment.slice(0, LISTING_ROW_PAGE_CRAWL_MAX);
+        const kept = keptEnrichment.concat(discovery.slice(0, maxUrls));
+        if (kept.length > maxUrls) {
+            console.log(`🗂️ SharedCore: Crawl budget: ${keptEnrichment.length} link(s) are pages of events this listing already published — enriching those first, plus up to ${maxUrls} discovery link(s)`);
+        }
+        // Preserve the caller's ordering among the kept links so the crawl
+        // still walks the page top-down.
+        const keptSet = new Set(kept);
+        return additionalLinks.filter(link => keptSet.has(link));
     }
 
     // Adaptive crawl follow rules — the parent page's classification decides:
@@ -9244,9 +10166,20 @@ class SharedCore {
     findOverlongFields(event, trimConfig) {
         const overlong = [];
         if (!event || typeof event !== 'object' || !trimConfig || !trimConfig.limits) return overlong;
+        // A title the SOURCE stated — a feed/listing row's own title
+        // (_titleFromListing), a JSON-LD Event name, a single-event page's
+        // own heading (_titleStated) — is the publisher's exact name and is
+        // never rewritten by the AI trim pass. The pass cuts at a separator,
+        // which drops billed acts ("ButtTootKing 2026: Lydia B Kollins,
+        // Suzie Toot, and Kori King" lost "and Kori King"; Thotyssey's
+        // "Urban Bear Weekend Street Fair" lost the street fair — audit
+        // 2026-09-13). An overlong stated title ships in full; only a title
+        // the model itself composed is trimmable.
+        const titleIsStated = Boolean(event._titleFromListing === true || event._titleStated === true);
         for (const field of ['title', 'description', 'shortName']) {
             const maxChars = trimConfig.limits[field];
             if (!Number.isFinite(maxChars) || maxChars <= 0) continue;
+            if (field === 'title' && titleIsStated) continue;
             const raw = event[field];
             if (raw === null || raw === undefined) continue;
             const value = String(raw).trim();
@@ -10024,7 +10957,11 @@ class SharedCore {
                 // same promoter on the same night. Veto the merge when both records
                 // carry place info and the places don't match; merge otherwise
                 // (identity match or inconclusive = previous behavior).
-                if (this.areEventsDistinctByPlace(event, keyMatch)) {
+                // …and a feed that gave the two rows different ids has already
+                // stated they are different events (areDistinctPublishedFeedRows),
+                // which vetoes the key collision exactly like a place mismatch.
+                if (this.areEventsDistinctByPlace(event, keyMatch)
+                    || this.areDistinctPublishedFeedRows(event, keyMatch)) {
                     // The base-key holder is at a different venue, but a previous veto may
                     // have parked another record of THIS event under a suffixed key
                     // ("key--2", "key--3", ...). Walk the whole collision chain before
@@ -10034,6 +10971,7 @@ class SharedCore {
                     for (const [existingKey, holder] of seen) {
                         if (holder === keyMatch) continue;
                         if (existingKey !== key && !existingKey.startsWith(`${key}--`)) continue;
+                        if (this.areDistinctPublishedFeedRows(event, holder)) continue;
                         if (!this.areEventsDistinctByPlace(event, holder)) {
                             chainMatch = holder;
                             break;
@@ -10422,9 +11360,37 @@ class SharedCore {
         if (!mergedEvent._organizer && existingEvent && typeof existingEvent._organizer === 'string' && existingEvent._organizer) {
             mergedEvent._organizer = existingEvent._organizer;
         }
+        // Same carry for the feed's own row identity: a listing stub merged
+        // onto a feed row must keep the row id, or the "two rows of one feed
+        // are two events" guard goes blind for every later comparison.
+        if (!mergedEvent._sourceRowId && existingEvent && existingEvent._sourceRowId) {
+            mergedEvent._sourceRowId = existingEvent._sourceRowId;
+            mergedEvent._sourceRowFeed = existingEvent._sourceRowFeed;
+        }
         // Same carry for the matched-promoter identity stamp (_promoter).
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
             mergedEvent._promoter = existingEvent._promoter;
+        }
+        // Same carry for page-derived ticket-role labels: the two records may
+        // have learned the label on different pages, and the identity ladder
+        // that reads it runs after this merge.
+        for (const stamp of (Array.isArray(existingEvent && existingEvent._ticketRoleUrls) ? existingEvent._ticketRoleUrls : [])) {
+            if (!stamp || !stamp.key) continue;
+            if (!Array.isArray(mergedEvent._ticketRoleUrls)) mergedEvent._ticketRoleUrls = [];
+            if (!mergedEvent._ticketRoleUrls.some(entry => entry && entry.key === stamp.key)) {
+                mergedEvent._ticketRoleUrls.push(stamp);
+            }
+        }
+        // LISTING AUTHORITY IS STICKY. Once a listing record's title/image/end
+        // have survived a fold, the folded record still carries them — so the
+        // next crawl-page record must lose to it too. Without this carry the
+        // base spread ({ ...newEvent }) would relabel the merged record
+        // 'crawl' and the second enrich page could overwrite what the first
+        // one was refused. A record with no stamp at all (calendar records,
+        // parsers that never crawl) stays unstamped: every rule keyed on this
+        // one fails open.
+        if (existingEvent && existingEvent._pageOrigin === 'listing') {
+            mergedEvent._pageOrigin = 'listing';
         }
         // Same carry for field-trim records: an existing-only _fieldTrims
         // would otherwise be lost before evidence lines render.
@@ -10436,6 +11402,28 @@ class SharedCore {
         // UI chip/grouping and the saved-series protection still see it.
         if (!mergedEvent._seriesInfo && existingEvent && existingEvent._seriesInfo && typeof existingEvent._seriesInfo === 'object') {
             mergedEvent._seriesInfo = existingEvent._seriesInfo;
+        }
+
+        // WHICH RECORD IS THE SHIPPED ONE? The fold's base is whatever record
+        // arrived last, so the page crawled last stamps its own provenance on
+        // an event whose every field came from somewhere better: goldiloxx's
+        // final Chicago record pointed at /e/…-2/resend, a ticket-utility
+        // skeleton the AI read, while its fields came from the listing's
+        // JSON-LD (audit 2026-09-13). A STRUCTURED read (the site's own
+        // machine-readable answer: json-api, jsonld, a platform widget feed)
+        // outranks an AI/OCR read of rendered text, so when exactly one side
+        // is structured its provenance stamps win. Fields are unaffected —
+        // the priority/arbitration loop below decides every one of those.
+        const structuredRankExisting = this.getRecordExtractionRank(existingEvent);
+        const structuredRankNew = this.getRecordExtractionRank(newEvent);
+        if (structuredRankExisting > structuredRankNew) {
+            for (const provenanceField of ['_sourcePageUrl', '_extractionSource', '_pageClassification']) {
+                if (existingEvent[provenanceField] !== undefined) {
+                    mergedEvent[provenanceField] = existingEvent[provenanceField];
+                } else {
+                    delete mergedEvent[provenanceField];
+                }
+            }
         }
 
         // Helper function to check if a value is empty/null/undefined
@@ -10669,6 +11657,45 @@ class SharedCore {
                         newValue: newValue,
                         chosenValue: chosenValue,
                         reason: 'timezone-anchored date wins over wall-clock (_timezoneUnresolved) date'
+                    });
+                    return;
+                }
+            }
+
+            // LISTING AUTHORITY. An enrich/crawl page — a ticket page an event
+            // linked, a detail page discovery found — fills BLANKS on the
+            // listing record (the empty-loses rule below does that, and this
+            // rung deliberately stays out of its way by requiring both sides
+            // non-empty). What it must never do is RENAME or RE-ILLUSTRATE an
+            // event the configured source already stated. Two runs on
+            // 2026-09-13 showed exactly that: furball.nyc's Dallas card was
+            // retitled "FURBALL Dallas Underwear + Gear Party featuring DJ
+            // GSP" and re-imaged with img.evbuc.com because the Eventbrite
+            // page reached by enrich-only crawl is itself structured, so the
+            // "listing's own stated title" and "event page's own artwork"
+            // rungs crowned the ticket page; and 3dollarbillbk.com's "QTS:
+            // Brooklyn" lost its published flyer and its 04:00 end to a
+            // dice.fm crop and dice's 03:00. Page-derived and generic: the
+            // stamp is crawl depth (0 = a URL the parser was configured with),
+            // nothing per site. Fails open — an unstamped side (calendar
+            // records, parsers that never crawl) decides nothing here.
+            if (LISTING_AUTHORITY_FIELDS.has(fieldName)
+                && !isEmpty(existingValue) && !isEmpty(newValue)
+                && this.isGenuineFieldConflict(fieldName, existingValue, newValue)) {
+                const existingIsListing = existingEvent._pageOrigin === 'listing';
+                const newIsListing = newEvent._pageOrigin === 'listing';
+                const existingIsCrawl = existingEvent._pageOrigin === 'crawl';
+                const newIsCrawl = newEvent._pageOrigin === 'crawl';
+                if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
+                    const chosenValue = existingIsListing ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🔒 MERGE: "${mergeEventTitle}" field=${fieldName} kept the configured listing's own value — an enrich/crawl page fills blanks, it never restates the listing`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'listing authority: a crawl/enrich page never replaces a value the configured listing stated'
                     });
                     return;
                 }
@@ -10927,8 +11954,44 @@ class SharedCore {
                 console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
             }
         }
-        
+
+        // NOTES FOLLOW THE MERGED FIELDS. notes is a serialization of the
+        // record, written by the normalizers before dedup — so the base
+        // record's copy survived every fold and shipped facts the merge had
+        // already overruled (goldiloxx audit 2026-09-13: the final Chicago
+        // record's top-level fields were repaired over seven merge rounds
+        // while its notes still read address "Jackhammer, Chicago, IL",
+        // instagram thehole_chicago and a sharer.php facebook link). Rebuild
+        // from the merged object, the same way the calendar merge does in its
+        // step 5. Only when a side actually carried notes — a record with
+        // none stays without.
+        if (typeof this.formatEventNotes === 'function'
+            && ((typeof existingEvent.notes === 'string' && existingEvent.notes)
+                || (typeof newEvent.notes === 'string' && newEvent.notes))) {
+            try {
+                const rebuiltNotes = this.formatEventNotes(mergedEvent);
+                if (typeof rebuiltNotes === 'string' && rebuiltNotes) mergedEvent.notes = rebuiltNotes;
+            } catch (error) {
+                console.warn(`⚠️ SharedCore: Could not rebuild merged notes for "${mergedEvent.title || 'event'}" — keeping the base record's copy: ${error && error.message ? error.message : error}`);
+            }
+        }
+
         return mergedEvent;
+    }
+
+    // How authoritative is the pathway that produced this record? 2 = a
+    // STRUCTURED read of the site's own machine-readable data (json-api,
+    // JSON-LD, a platform's events widget/feed), 1 = an AI/OCR read of
+    // rendered text, 0 = unknown (records from parsers that report no
+    // extraction summary — they rank equal, so every rule keyed on this one
+    // fails open).
+    getRecordExtractionRank(record) {
+        const source = record && typeof record._extractionSource === 'string'
+            ? record._extractionSource.trim().toLowerCase()
+            : '';
+        if (!source) return 0;
+        if (source === 'ai' || source === 'ocr') return 1;
+        return 2;
     }
 
     // Create complete merged event object that represents exactly what will be saved
@@ -11070,7 +12133,10 @@ class SharedCore {
             barNames: [calendarObject.bar, scraperObject.bar],
             eventTitle: mergeTitle,
             sideLabels: { a: 'calendar', b: 'scraped' },
-            records: { a: calendarObject, b: scraperObject }
+            records: { a: calendarObject, b: scraperObject },
+            // config.merge.arbitration: "deterministic" (default) | "ai" — the
+            // one-line revert to the position-biased arbiter.
+            arbitrationMode: this.resolveMergeArbitrationMode({ config: (options && (options.globalConfig || options.mainConfig || options.config)) || null })
         };
         // OCR title-evidence preload: both primary-image candidates' flyer
         // texts (verdict store or disk cache), read before the sync ladder.
@@ -11139,6 +12205,21 @@ class SharedCore {
             console.warn(`⚠️ MERGE: "${mergeTitle}" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end`);
         }
 
+        // ONE END CONTRACT, step 3: a STATED end always replaces a DEFAULTED
+        // one. The calendar cannot carry the `_endDateDefaulted` stamp (notes
+        // never serialize dates), so a stored end sitting exactly
+        // DEFAULT_MISSING_END_DURATION after its own start is read as the
+        // default this pipeline itself wrote, and this run's real end wins
+        // deterministically instead of going to position-biased arbitration.
+        // Fails closed: no scraped end, a degenerate one, or a stored end of
+        // any other length all fall through unchanged.
+        const scrapedEndMs = this.toEpochMillis(scraperObject.endDate);
+        const scrapedStartMs = this.toEpochMillis(scraperObject.startDate);
+        const statedEndReplacesDefaultEnd = !keepCalendarEndOverDegenerateScrape
+            && scrapedEndMs !== null && scrapedStartMs !== null && scrapedEndMs > scrapedStartMs
+            && this.isDefaultShapedEnd(calendarObject.startDate, calendarObject.endDate)
+            && scrapedEndMs !== calendarEndMs;
+
         // Apply merge logic for each field
         for (const fieldName of allFields) {
             // Skip internal fields. 'url' is an alias/view of 'website' (folded
@@ -11166,6 +12247,21 @@ class SharedCore {
 
             if (fieldName === 'endDate' && keepCalendarEndOverDegenerateScrape) {
                 mergedObject[fieldName] = calendarValue;
+                continue;
+            }
+
+            if (fieldName === 'endDate' && statedEndReplacesDefaultEnd) {
+                mergedObject[fieldName] = scraperValue;
+                clobberedFields.push(fieldName);
+                console.log(`🕓 MERGE: "${mergeTitle}" stated end replaces the stored ${DEFAULT_MISSING_END_DURATION_HOURS}h default end`);
+                aiDecisionRecords.push({
+                    field: fieldName,
+                    existingValue: calendarValue,
+                    newValue: scraperValue,
+                    chosenValue: scraperValue,
+                    reason: `stored end is the ${DEFAULT_MISSING_END_DURATION_HOURS}h no-end default — a stated end always replaces it`,
+                    source: 'deterministic'
+                });
                 continue;
             }
 
@@ -11736,6 +12832,14 @@ class SharedCore {
         }
         if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
             finalEvent._organizer = newEvent._organizer;
+        }
+        // Same carry for the page-derived ticket-role labels: the final-build
+        // LINKS pass is the backstop for merged objects, and without the
+        // label it cannot tell which of two identical URLs is the ticket page
+        // (Cubhouse, run 20260913-023558: the merged event dropped the
+        // ticketUrl and published the vendor page as `website`).
+        if (Array.isArray(newEvent._ticketRoleUrls) && newEvent._ticketRoleUrls.length > 0) {
+            finalEvent._ticketRoleUrls = newEvent._ticketRoleUrls;
         }
         // Same carry for the report-only flyer-vs-page time-conflict stamp
         // (parser-side applyFlyerTimeConflictFlag): getEventSanityFlags reads
@@ -14091,6 +15195,7 @@ class SharedCore {
             event?._pastSpanWithheld !== true &&
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
+            event?._announcementOnlyWithheld !== true &&
             // A merge stamped _mergeNoOp writes nothing by definition — the
             // final payload is field-identical to the calendar record
             // (stamp site: buildAnalyzedCalendarEvent), so executing it
@@ -14156,6 +15261,8 @@ class SharedCore {
             '_festivalContext',
             '_pastSpanWithheld',
             '_unresolvedCityWithheld',
+            '_announcementOnlyWithheld',
+            '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
             '_seriesAuthority',
@@ -14186,6 +15293,7 @@ class SharedCore {
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
+        if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement-only listing row — no time, no ticket link)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
@@ -14529,6 +15637,18 @@ class SharedCore {
                 event.timezone = timezone;
                 context.inheritedTimezone = true;
             }
+        }
+        // A clock is only a time once it has a place. The parser stores an
+        // extracted local time as wall-clock components labeled UTC and flags
+        // the record for re-anchoring; LocationNormalizer converts those the
+        // moment it resolves a city. This runs AFTER the normalizer, so a
+        // record that gets its city here got it too late — and beefdip.com's
+        // whole 2027 programme shipped six hours early (9PM printed on the
+        // page written as 21:00Z, read back as 3PM in Puerto Vallarta). A
+        // city is a city whenever it arrives: re-anchor here on exactly the
+        // same terms.
+        if (event._timezoneUnresolved && (context.inheritedCity || context.inheritedTimezone)) {
+            this.resolveWallClockDates(event);
         }
         event._festivalContext = context;
         return context;
@@ -16183,7 +17303,14 @@ class SharedCore {
                         (websiteHost && this.areUrlHostsSameSite(ticketParts.host, websiteHost))
                         || (sourcePageHost && this.areUrlHostsSameSite(ticketParts.host, sourcePageHost));
                     const buriesEventPage = this.isBareRootBuryingSameSiteEventPage(canonicalWebsite, ticketUrl);
-                    if (onCrawledSite && (!canonicalWebsite || buriesEventPage)) {
+                    // …unless the page itself labelled this URL a ticket page
+                    // (markTicketRoleUrl). A ticketing vendor's own app is
+                    // "the crawled site" whenever the parser's root IS that
+                    // vendor, and promoting its checkout page to `website`
+                    // would re-create exactly the confusion the stamp exists
+                    // to end.
+                    const ticketRoleStamped = this.isTicketRoleUrl(analyzedEvent, ticketUrl);
+                    if (onCrawledSite && !ticketRoleStamped && (!canonicalWebsite || buriesEventPage)) {
                         analyzedEvent.website = ticketUrl;
                         analyzedEvent.url = ticketUrl;
                         delete analyzedEvent.ticketUrl;
@@ -16222,11 +17349,29 @@ class SharedCore {
                     : (typeof analyzedEvent.url === 'string' ? analyzedEvent.url.trim() : '');
                 const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
                 if (ticketUrl && canonicalWebsite && ticketUrl === canonicalWebsite) {
-                    delete analyzedEvent.ticketUrl;
-                    notesNeedRebuild = true;
-                    console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
-                    this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
-                        'ticketUrl dropped at final build — byte-identical to the canonical website');
+                    // WHICH of the two twins survives is decided by the page,
+                    // not by field order: when the URL was labelled a ticket
+                    // page (markTicketRoleUrl — a data door onto a ticketing
+                    // API, a JSON-LD offer), the ticket role is the true one
+                    // and `website` is the copy. Keeping the website instead
+                    // published Cubhouse's vendor page as the promoter's
+                    // identity link and threw the ticket link away (run
+                    // 20260913-012005).
+                    if (this.isTicketRoleUrl(analyzedEvent, ticketUrl)) {
+                        delete analyzedEvent.website;
+                        delete analyzedEvent.url;
+                        notesNeedRebuild = true;
+                        const reason = this.getTicketRoleUrlReason(analyzedEvent, ticketUrl);
+                        console.log(`🔗 LINKS: dropped website duplicating ticketUrl for "${analyzedEvent.title || 'event'}" — the page labelled ${ticketUrl} a ticket page${reason ? ` (${reason})` : ''}, and a ticket page is not an identity link`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'website',
+                            'website dropped at final build — byte-identical to a page-labelled ticketUrl');
+                    } else {
+                        delete analyzedEvent.ticketUrl;
+                        notesNeedRebuild = true;
+                        console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'ticketUrl dropped at final build — byte-identical to the canonical website');
+                    }
                 }
             }
 
@@ -16419,6 +17564,11 @@ class SharedCore {
             // calendar execution by filterEventsForExecution; nothing about
             // that changes _action or this stamping, and the card stays in
             // the results UI.
+            // ONE END CONTRACT, step 2: the only place an end is invented.
+            // After every merge (so a stored end always wins over the
+            // default) and before the sanity pass (so "no end stated" stops
+            // being reported as a zero-duration event).
+            this.applyDefaultEventEnd(analyzedEvent);
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             // A SECOND approval now exists: overnight-span-corrected (rule 11
             // enforce, owner-approved 2026-08-24) - a clean -12h AM/PM slip is
@@ -16475,6 +17625,24 @@ class SharedCore {
             if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
+            // ANNOUNCEMENT-ONLY WITHHOLD — a one-line listing row ("10/3
+            // FURBALL DC - ICON") states a date and a place and nothing else:
+            // no time, no ticket page, no copy. It is the promoter's
+            // announcement, not yet a published event (owner review of the
+            // 2026-09-12 run: "I'm concerned they aren't real"). Flag, don't
+            // drop: the card stays in results; the calendar write waits until
+            // a venue or ticket page corroborates it (a time or a ticket link).
+            {
+                const segment = analyzedEvent._multiEventSegment;
+                const oneLineRow = segment && typeof segment === 'object' && Number(segment.lineCount) === 1;
+                const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
+                const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
+                if (oneLineRow && noTime && noTicket) {
+                    analyzedEvent._announcementOnlyWithheld = true;
+                    console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is a one-line listing row with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
+                }
             }
 
             // UNRESOLVED CITY WITHHOLD — an event with no city has no
@@ -17658,6 +18826,10 @@ class SharedCore {
         if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
             return null;
         }
+        // Two different rows of one structured feed are two published events
+        // (see areDistinctPublishedFeedRows) — no identity signal below may
+        // weld them together.
+        if (this.areDistinctPublishedFeedRows(newEvent, existingEvent)) return null;
         const requireCloseStartTimes = options.requireCloseStartTimes !== false;
         const incoming = this.buildIdentityComparisonShape(newEvent);
         const existing = this.buildIdentityComparisonShape(existingEvent);
@@ -17746,9 +18918,21 @@ class SharedCore {
         const startsAreClose = this.areDatesEqual(incoming.startDate, existing.startDate, 120);
         const startsAreCompatible = startsAreClose
             || (!requireCloseStartTimes && this.hasMissingTimeStartPlaceholder(newEvent, existingEvent));
+        // …and the names must actually NAME something. areTitlesSimilar's
+        // containment rung ("Megawoof" inside "Megawoof: DURO") reads a
+        // strict prefix as the same event, which is right when the prefix is
+        // the party's name and wrong when it is the venue's own vocabulary:
+        // "CRUISE LA" sits inside "CRUISE LA LEATHER AND BOOTBLACK 2027
+        // CONTEST", and eaglela.com publishes both as separate posts on the
+        // same night (audit 2026-09-13 — the shorter event's 10/17
+        // occurrence was lost). When everything the two names share is a
+        // token the source prints across 3+ of its own titles, this rung has
+        // no evidence; the stronger rungs above (ticket url, event page url,
+        // same instant + link lineage) are untouched.
         if (startsAreCompatible &&
             this.areIdentityPlacesSimilar(incoming, existing) &&
-            this.areIdentityNamesSimilar(incoming, existing)) {
+            this.areIdentityNamesSimilar(incoming, existing) &&
+            !this.titleAffinityIsCorpusGeneric(newEvent, existingEvent)) {
             return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';
         }
 
@@ -17941,6 +19125,16 @@ class SharedCore {
         const linksOf = (event) => [event && event.ticketUrl, event && event.website, event && event.url].map(key).filter(Boolean);
         const sourceA = key(eventA && eventA._sourcePageUrl);
         const sourceB = key(eventB && eventB._sourcePageUrl);
+        // Lineage means one record was REACHED THROUGH the other's link, and
+        // that presupposes two different pages. Two cards scraped off the SAME
+        // listing both carry that listing as their website — so every pair on
+        // the page "shared lineage" with every other, and the place+exact-start
+        // rung had nothing left standing between two neighbouring cards.
+        // beefdip.com/planned-events lost three real events that way in one
+        // run: JUNGLE LUST folded into TIDAL WAVE, FURBALL GEAR NIGHT into
+        // MAD.BEAR FOAM POOL PARTY, WELCOME PARTY into a badge line. Neither
+        // card was reached through the other; they were both simply there.
+        if (sourceA && sourceB && sourceA === sourceB) return false;
         return Boolean((sourceA && linksOf(eventB).includes(sourceA)) || (sourceB && linksOf(eventA).includes(sourceB)));
     }
 
@@ -18006,9 +19200,15 @@ class SharedCore {
             && !(streetA.includes(streetB) || streetB.includes(streetA))) {
             return true;
         }
+        // A purchase sub-path is the same ticket page ("…/e/<slug>" and
+        // "…/e/<slug>/tickets" — bearracuda.com's stub vs its sickening
+        // page's JSON-LD, audit 2026-09-13: the pair was vetoed as two
+        // different ticket links and the enrich child dropped).
         const ticketKey = (url) => {
             const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
-            return match ? `${match[1].replace(/^www\./i, '')}${match[2].replace(/\/+$/, '')}`.toLowerCase() : '';
+            if (!match) return '';
+            const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
+            return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };
         const ticketA = ticketKey(eventA && eventA.ticketUrl);
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
@@ -18312,6 +19512,27 @@ class SharedCore {
     // literally named the venue — "Bain Mathieu, 2915 Rue Ontario E").
     // Multi-token names only, fail closed: single-word bar names like
     // "Eagle" collide with street names.
+    // TWO ROWS OF ONE FEED ARE TWO EVENTS. A structured feed publishes its own
+    // per-row identity (Tockify `eid.uid`, a Tribe/WordPress `id`, an
+    // aggregator `slug`, a VEVENT `UID`); the JSON-API reader carries it on
+    // the internal `_sourceRowId`/`_sourceRowFeed` pair (underscore fields are
+    // excluded from notes, diffs and merge field loops). When two records come
+    // from the SAME feed (same host+path) and the feed gave them DIFFERENT
+    // ids, the publisher has stated they are different events — no similarity
+    // heuristic may fold them. Fails closed in both directions: a missing id
+    // or a different feed asserts nothing, and the stub-plus-detail-page pair
+    // (only one side is a feed row) is untouched.
+    areDistinctPublishedFeedRows(eventA, eventB) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return false;
+        const feedA = String(eventA._sourceRowFeed || '').trim();
+        const feedB = String(eventB._sourceRowFeed || '').trim();
+        if (!feedA || !feedB || feedA !== feedB) return false;
+        const idA = String(eventA._sourceRowId || '').trim();
+        const idB = String(eventB._sourceRowId || '').trim();
+        if (!idA || !idB) return false;
+        return idA !== idB;
+    }
+
     getCrossSourceVenueIdentity(eventA, eventB) {
         if (!eventA || !eventB) return null;
         const barA = this.normalizeBarNameKey(eventA.bar);
@@ -18335,7 +19556,27 @@ class SharedCore {
         }
         const hostA = String(eventA._venueSitePageHost || '').trim().toLowerCase();
         const hostB = String(eventB._venueSitePageHost || '').trim().toLowerCase();
-        if (hostA && hostB && hostA === hostB) return 'venue-site';
+        if (hostA && hostB && hostA === hostB) {
+            // A LISTING host is never venue identity (audit 2026-09-13:
+            // tockify.com stamped on 327/327 Thotyssey rows and
+            // thebearcalendar.com on 64/68, so "published on the same feed"
+            // read as "at the same venue" — 63 and 4 real events were folded
+            // into other bars' listings). The stamp is set by the ai-web
+            // parser's applyListingHostFlags from page-derived signals only
+            // (siteRole 'organizer', or the host's own events naming 3+
+            // distinct bars — the same 3+ fan-in convention deduplicateEvents
+            // uses to demote a shared URL to a listing page).
+            if (eventA._venueSiteHostIsListing === true || eventB._venueSiteHostIsListing === true) return null;
+            // Sharing a page host is the WEAKEST axis, so a place
+            // CONTRADICTION overrules it: when both sides name a bar (or both
+            // name an address) and they disagree, the pair is two venues that
+            // happen to publish on one site. Fail closed — the axis exists for
+            // the record that names NO place at all (#1539's "Eagle Karaoke"),
+            // and that case is untouched.
+            if (barA && barB && barA !== barB) return null;
+            if (addressA && addressB && addressA !== addressB) return null;
+            return 'venue-site';
+        }
         return null;
     }
 
@@ -18373,6 +19614,11 @@ class SharedCore {
         for (const token of scopedTokens) {
             if (token.length <= 1) continue;
             if (stopwords.has(token)) continue;
+            // Cadence words name the SLOT, not the event (see
+            // CADENCE_TITLE_TOKENS) — dropped with no fallback so a purely
+            // cadence-named listing row ("Friday at The Eagle NYC") yields no
+            // tokens and can never subset-match another bar's row.
+            if (CADENCE_TITLE_TOKENS.has(token)) continue;
             if (token.length >= 3 && keys.some(key => key.includes(token))) continue;
             if (!tokensWithCity.includes(token)) tokensWithCity.push(token);
             if (token.length >= 3 && cityTokens.has(token)) continue;
@@ -18388,6 +19634,120 @@ class SharedCore {
     // "new" are never treated as city tokens, and 2-char forms ("la") are
     // skipped so French/Spanish articles in titles survive. Cached per cities
     // object (set once in the constructor).
+    // A TOKEN THE SOURCE PRINTS ON MANY OF ITS OWN TITLES NAMES NO EVENT.
+    // Stamps each record with the document frequency of its own title tokens
+    // inside the corpus of titles the SAME source published this run:
+    // `_titleTokenDocFreq` = { token: how many distinct titles carry it }.
+    // "Distinct title" is the token sequence, not the raw string, so three
+    // records of one party (and its HTML-entity variants) count once while
+    // four different parties that all start "CRUISE LA" count four.
+    //
+    // Underscore field: never written to notes, never a diff field, never
+    // merged — pure in-run observation, exactly like _venueSiteHostIsListing.
+    // Run once per parser with every event of that source in view (the same
+    // seam as applyListingHostFlags), BEFORE dedup and before the calendar
+    // merge, because "how often does this source say this word" cannot be
+    // answered from a pair of records.
+    applyTitleTokenCorpusFlags(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        const hostOf = (event) => {
+            const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
+            const host = String(source).includes('/')
+                ? this.getHostFromUrl(String(source))
+                : String(source);
+            return String(host || '').trim().toLowerCase().replace(/^www\./, '');
+        };
+        const tokensOf = (event) => {
+            const venueKeys = [
+                this.normalizeBarNameKey(event && event.bar),
+                String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            ].filter(Boolean);
+            return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
+        };
+        // host → token → Set of distinct token-sequences carrying it
+        const corpora = new Map();
+        const tokenCache = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const tokens = tokensOf(event);
+            tokenCache.set(event, tokens);
+            if (tokens.length === 0) continue;
+            const host = hostOf(event);
+            if (!corpora.has(host)) corpora.set(host, new Map());
+            const corpus = corpora.get(host);
+            const titleKey = tokens.join(' ');
+            for (const token of tokens) {
+                if (!corpus.has(token)) corpus.set(token, new Set());
+                corpus.get(token).add(titleKey);
+            }
+        }
+        for (const event of events) {
+            const tokens = tokenCache.get(event);
+            if (!tokens || tokens.length === 0) continue;
+            const corpus = corpora.get(hostOf(event));
+            if (!corpus) continue;
+            const freq = {};
+            for (const token of tokens) {
+                const titles = corpus.get(token);
+                freq[token] = titles ? titles.size : 1;
+            }
+            event._titleTokenDocFreq = freq;
+        }
+    }
+
+    // Does the pair share at least one title token that is DISTINCTIVE in the
+    // source's own corpus (see applyTitleTokenCorpusFlags)? A token is judged
+    // by the WORST (highest) frequency either side knows for it, so a word
+    // that is programme vocabulary on either source proves nothing on either.
+    // Fails OPEN when neither record carries a corpus stamp — a calendar
+    // record, a unit test, or a parser whose run never reached the stamping
+    // pass keeps the behaviour it had before this existed.
+    hasDistinctiveSharedTitleTokens(eventA, eventB, sharedTokens) {
+        if (!Array.isArray(sharedTokens) || sharedTokens.length === 0) return true;
+        const freq = (event, token) => {
+            const map = event && typeof event._titleTokenDocFreq === 'object' && event._titleTokenDocFreq
+                ? event._titleTokenDocFreq
+                : null;
+            const value = map ? map[token] : undefined;
+            return Number.isFinite(value) ? value : null;
+        };
+        let sawCorpus = false;
+        for (const token of sharedTokens) {
+            const a = freq(eventA, token);
+            const b = freq(eventB, token);
+            if (a === null && b === null) continue;
+            sawCorpus = true;
+            const worst = Math.max(a === null ? 0 : a, b === null ? 0 : b);
+            if (worst < TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES) return true;
+        }
+        return !sawCorpus;
+    }
+
+    // TRUE when two records are named DIFFERENTLY and everything their names
+    // share is their source's own programme vocabulary — "CRUISE LA" against
+    // "CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST" (audit 2026-09-13: two
+    // published eaglela.com posts, one night, folded into one event and the
+    // shorter one's occurrence lost), "B BAR" against "HAPPY THANKSGIVING –
+    // BAR OPENS AT 6PM". Titles that reduce to the SAME token sequence are
+    // not affected — entity and punctuation variants of one name are still
+    // one name — and neither is a pair with no corpus knowledge.
+    titleAffinityIsCorpusGeneric(eventA, eventB) {
+        const venueKeys = [
+            this.normalizeBarNameKey(eventA && eventA.bar),
+            this.normalizeBarNameKey(eventB && eventB.bar),
+            String((eventA && eventA._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+            String((eventB && eventB._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        ].filter(Boolean);
+        const tokensA = this.getCrossSourceTitleTokens((eventA && (eventA.title || eventA.name)) || '', venueKeys);
+        const tokensB = this.getCrossSourceTitleTokens((eventB && (eventB.title || eventB.name)) || '', venueKeys);
+        if (tokensA.length === 0 || tokensB.length === 0) return false;
+        if (tokensA.length === tokensB.length && tokensA.every(token => tokensB.includes(token))) return false;
+        const setB = new Set(tokensB);
+        const shared = tokensA.filter(token => setB.has(token));
+        if (shared.length === 0) return false;
+        return !this.hasDistinctiveSharedTitleTokens(eventA, eventB, shared);
+    }
+
     getCityAliasTokenSet() {
         const source = this.cities && typeof this.cities === 'object' ? this.cities : null;
         if (!source) return new Set();
@@ -18417,6 +19777,7 @@ class SharedCore {
     // two REAL events (an early show and a late party are common).
     getCrossSourceDuplicateSignal(eventA, eventB) {
         if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        if (this.areDistinctPublishedFeedRows(eventA, eventB)) return null;
         if (!this.getCrossSourceVenueIdentity(eventA, eventB)) return null;
         const nightA = this.getEventNightKey(eventA);
         if (!nightA) return null;
@@ -18435,6 +19796,13 @@ class SharedCore {
         const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
         const longerSet = new Set(longer);
         if (!shorter.every(token => longerSet.has(token))) return null;
+        // A SUBSET OF THE SOURCE'S OWN VOCABULARY IS NOT A NAME. "B BAR"
+        // reduces to the single token "bar", which eaglela.com prints on four
+        // of its titles, so it subsets into "HAPPY THANKSGIVING – BAR OPENS
+        // AT 6PM" and a real 11/26 event vanished (audit 2026-09-13). Equal
+        // token sequences (entity/punctuation variants of one name) never
+        // reach this test.
+        if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(eventA, eventB, shorter)) return null;
         return 'venue+night+title-subset';
     }
 
@@ -18484,6 +19852,10 @@ class SharedCore {
         const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
         const longerSet = new Set(longer);
         if (!shorter.every(token => longerSet.has(token))) return null;
+        // Same corpus-distinctiveness rung as getCrossSourceDuplicateSignal:
+        // a shorter title made only of the source's programme vocabulary is
+        // not evidence that these two records are one event.
+        if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(newEvent, existingEvent, shorter)) return null;
         return 'place+day+title-subset';
     }
 
