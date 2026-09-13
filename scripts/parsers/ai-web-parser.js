@@ -207,6 +207,10 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 // expectations document.
 const JSON_API_FEED_HORIZON_DAYS = 90;
 const JSON_API_FEED_MAX_PAGES = 6;
+// A Wix Events list widget ships only its FIRST page inside the page's warmup
+// blob; the rest is fetched by the widget itself. Same page budget as the JSON
+// feeds above, and the same 90-day horizon.
+const WIX_EVENTS_MAX_PAGES = 6;
 const JSON_API_SERIES_MAX_OCCURRENCES = 6;
 // Distinct MEC event pages read per grid for their wall-clock times.
 const MEC_EVENT_PAGE_ENRICH_CAP = 60;
@@ -1136,7 +1140,7 @@ class AiWebParser {
             }
             // Wix Events sites ship their whole upcoming list in the page's
             // own warmup blob (see collectWixEventListEvents).
-            const wixEvents = this.collectWixEventListEvents(html, sourceUrl, parserConfig);
+            const wixEvents = await this.collectWixEventListEvents(html, sourceUrl, parserConfig, httpAdapter);
             if (wixEvents.length > 0) {
                 console.log(`🟪 WIX EVENTS: built ${wixEvents.length} event(s) from the page's own events widget for ${sourceUrl}`);
             }
@@ -9033,17 +9037,23 @@ class AiWebParser {
     // No tickets array exists per row on a listing page, so these records carry
     // no cover; the detail-page path remains the only source of sticker prices.
     extractWixServerEventList(html) {
-        if (!html || typeof html !== 'string') return [];
+        return this.findWixWarmupEventListNodes(this.parseWixWarmupBlob(html))
+            .map(node => this.buildWixServerEventRecord(node, []))
+            .filter(record => record && (record.slug || record.title));
+    }
+
+    // The <script id="wix-warmup-data"> blob itself. Anything absent,
+    // unparseable or odd-shaped means "no server data" and returns null.
+    parseWixWarmupBlob(html) {
+        if (!html || typeof html !== 'string') return null;
         try {
             const startMatch = html.match(/<script\b[^>]*\bid=["']wix-warmup-data["'][^>]*>/i);
-            if (!startMatch) return [];
+            if (!startMatch) return null;
             const jsonString = this.extractJsonObject(html, startMatch.index + startMatch[0].length);
-            if (!jsonString) return [];
-            return this.findWixWarmupEventListNodes(JSON.parse(jsonString))
-                .map(node => this.buildWixServerEventRecord(node, []))
-                .filter(record => record && (record.slug || record.title));
+            if (!jsonString) return null;
+            return JSON.parse(jsonString);
         } catch (error) {
-            return [];
+            return null;
         }
     }
 
@@ -9052,8 +9062,19 @@ class AiWebParser {
     // either. Shape guard: a `.events.events` array whose members look like
     // event nodes (a title or a scheduling block).
     findWixWarmupEventListNodes(warmup) {
-        const collected = [];
-        if (!warmup || typeof warmup !== 'object') return collected;
+        return this.findWixEventListSections(warmup)
+            .reduce((collected, section) => collected.concat(section.rows), []);
+    }
+
+    // The same walk, keeping each widget's own state: the rows it printed, the
+    // `hasMore` flag beside them, the component id and settings the widget was
+    // configured with, and the signed app `instance` the page was served with.
+    // Those four are exactly what the widget needs to ask its own server for
+    // the NEXT page (see continueWixEventList) — all page-derived, nothing
+    // named after a site.
+    findWixEventListSections(warmup) {
+        const sections = [];
+        if (!warmup || typeof warmup !== 'object') return sections;
         const apps = warmup.appsWarmupData && typeof warmup.appsWarmupData === 'object'
             ? Object.values(warmup.appsWarmupData)
             : [];
@@ -9061,18 +9082,134 @@ class AiWebParser {
             if (!app || typeof app !== 'object') continue;
             for (const section of Object.values(app)) {
                 if (!section || typeof section !== 'object') continue;
-                const list = section.events && typeof section.events === 'object'
-                    ? section.events.events
-                    : null;
-                if (!Array.isArray(list)) continue;
-                for (const node of list) {
-                    if (node && typeof node === 'object' && (node.title || node.scheduling)) {
-                        collected.push(node);
-                    }
-                }
+                const state = section.events && typeof section.events === 'object' ? section.events : null;
+                if (!state || !Array.isArray(state.events)) continue;
+                const rows = state.events.filter(node => node && typeof node === 'object' && (node.title || node.scheduling));
+                if (rows.length === 0) continue;
+                const component = section.component && typeof section.component === 'object' ? section.component : {};
+                const settings = component.settings && typeof component.settings === 'object' ? component.settings : {};
+                const siteSettings = section.siteSettings && typeof section.siteSettings === 'object' ? section.siteSettings : {};
+                const instance = section.instance && typeof section.instance === 'object' ? section.instance : {};
+                sections.push({
+                    state,
+                    rows,
+                    settings,
+                    compId: typeof component.id === 'string' ? component.id : '',
+                    instance: typeof instance.instance === 'string' ? instance.instance : '',
+                    locale: (typeof siteSettings.language === 'string' && siteSettings.language)
+                        ? siteSettings.language
+                        : (typeof siteSettings.locale === 'string' ? siteSettings.locale : '')
+                });
             }
         }
-        return collected;
+        return sections;
+    }
+
+    // A Wix Events list widget prints only its FIRST page into the warmup blob
+    // — eaglemanchester.com published 18 rows there and `hasMore: true`, while
+    // the list held 31. The remaining rows live behind the request the
+    // widget's own "Load More" makes (events-widgetController: loadEvents →
+    // GET /_api/wix-one-events-server/web/paginated-events/viewer with
+    // {offset, limit, filterType, recurringFilter, locale, compId} and the
+    // page's signed app instance as the Authorization header). When the blob
+    // says there is more (hasMore, or a total above the rows it carries),
+    // replay that request against the page's OWN origin until the widget says
+    // it is done. Same conventions as the paged JSON feeds: stop at the
+    // 90-day horizon, at a page that adds nothing, or after
+    // WIX_EVENTS_MAX_PAGES. Rows are appended to the section's own array, so
+    // every reader sees one list; any failure keeps the rows already in hand.
+    async continueWixEventList(section, sourceUrl, httpAdapter) {
+        if (!section || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return 0;
+        const origin = (String(sourceUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        if (!origin || !section.instance || !section.compId) return 0;
+        const state = section.state || {};
+        const declaredTotal = Number(state.total);
+        const wantsMore = state.hasMore === true
+            || (Number.isFinite(declaredTotal) && declaredTotal > section.rows.length);
+        if (!wantsMore) return 0;
+        // The widget's own page size — the server chose it, so ask for the
+        // same window rather than inventing one.
+        const limit = section.rows.length;
+        if (!(limit > 0)) return 0;
+        const horizonMillis = Date.now() + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+        const seen = new Set(section.rows.map(row => this.wixEventRowKey(row)));
+        let total = Number.isFinite(declaredTotal) ? declaredTotal : null;
+        let offset = section.rows.length;
+        let pagesRead = 0;
+        let added = 0;
+        for (let page = 0; page < WIX_EVENTS_MAX_PAGES; page++) {
+            const lastRow = section.rows[section.rows.length - 1];
+            const lastConfig = lastRow && lastRow.scheduling && typeof lastRow.scheduling.config === 'object'
+                ? lastRow.scheduling.config
+                : {};
+            const lastStart = this.parseWixExactInstant(lastConfig.startDate);
+            if (lastStart && lastStart.getTime() > horizonMillis) break;
+            let payload = null;
+            const pageUrl = this.buildWixEventsPageUrl(origin, section, offset, limit);
+            try {
+                const response = await httpAdapter.fetchData(pageUrl, {
+                    headers: {
+                        Accept: 'application/json, text/plain, */*',
+                        Authorization: section.instance
+                    }
+                });
+                payload = JSON.parse(response && typeof response.html === 'string' ? response.html : '');
+            } catch (error) {
+                console.warn(`🟪 WIX EVENTS: the widget's own next page could not be read (${error.message}) — ${section.rows.length} row(s) kept`);
+                break;
+            }
+            const rows = payload && Array.isArray(payload.events) ? payload.events : null;
+            if (!rows || rows.length === 0) break;
+            pagesRead += 1;
+            if (Number.isFinite(Number(payload.total))) total = Number(payload.total);
+            let addedHere = 0;
+            for (const row of rows) {
+                if (!row || typeof row !== 'object' || !(row.title || row.scheduling)) continue;
+                const key = this.wixEventRowKey(row);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                section.rows.push(row);
+                addedHere += 1;
+            }
+            offset += rows.length;
+            added += addedHere;
+            if (addedHere === 0) break;
+            if (payload.hasMore !== true) break;
+            if (total !== null && section.rows.length >= total) break;
+        }
+        if (pagesRead > 0) {
+            const totalSuffix = total !== null ? ` of ${total} the widget claims` : '';
+            console.log(`🟪 WIX EVENTS: the widget's own pager served ${pagesRead} more page(s) for ${sourceUrl} — ${added} row(s) added, ${section.rows.length} in all${totalSuffix} (horizon ${JSON_API_FEED_HORIZON_DAYS} days)`);
+        }
+        return added;
+    }
+
+    // The widget's request, rebuilt from the widget's own state. Every
+    // parameter is read from the page (filter from the printed list state,
+    // recurring filter and component id from the component, locale from the
+    // site settings); nothing is guessed and no host is named.
+    buildWixEventsPageUrl(origin, section, offset, limit) {
+        const params = [`offset=${offset}`, `limit=${limit}`];
+        const filterType = Number(section.state && section.state.filterType);
+        if (Number.isFinite(filterType)) params.push(`filterType=${filterType}`);
+        const recurringFilter = Number(section.settings && section.settings.recurringFilter);
+        if (Number.isFinite(recurringFilter)) params.push(`recurringFilter=${recurringFilter}`);
+        const categoryId = section.settings && typeof section.settings.categoryId === 'string' ? section.settings.categoryId : '';
+        if (categoryId) params.push(`categoryId=${encodeURIComponent(categoryId)}`);
+        if (section.locale) params.push(`locale=${encodeURIComponent(section.locale)}`);
+        params.push('fetchBadges=true');
+        params.push('draft=false');
+        params.push(`compId=${encodeURIComponent(section.compId)}`);
+        return `${origin}/_api/wix-one-events-server/web/paginated-events/viewer?${params.join('&')}`;
+    }
+
+    // Identity of a widget row across pages: the event id when the server
+    // gives one, else the slug and start instant it printed.
+    wixEventRowKey(row) {
+        if (!row || typeof row !== 'object') return '';
+        if (typeof row.id === 'string' && row.id) return row.id;
+        const config = row.scheduling && typeof row.scheduling.config === 'object' ? row.scheduling.config : {};
+        return `${String(row.slug || row.title || '').toLowerCase()}|${String(config.startDate || '')}`;
     }
 
     // A Wix Events listing page is its own machine door: the warmup blob
@@ -9082,14 +9219,21 @@ class AiWebParser {
     // 13 merges for 3 events, audit 2026-09-12). Only on the configured
     // entry page (the blob rides on every page), and only when the page's
     // own links show where event pages live, is the slug made a link.
-    collectWixEventListEvents(html, sourceUrl, parserConfig) {
+    async collectWixEventListEvents(html, sourceUrl, parserConfig, httpAdapter) {
         if (!html || !sourceUrl || !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return [];
-        const records = this.extractWixServerEventList(html).filter(record => record && record.title && record.startDateUtc instanceof Date);
+        const sections = this.findWixEventListSections(this.parseWixWarmupBlob(html));
+        if (sections.length === 0) return [];
+        // The blob is page one; the widget knows whether there is more.
+        for (const section of sections) {
+            await this.continueWixEventList(section, sourceUrl, httpAdapter);
+        }
+        const records = sections
+            .reduce((rows, section) => rows.concat(section.rows), [])
+            .map(node => this.buildWixServerEventRecord(node, []))
+            .filter(record => record && record.title && record.startDateUtc instanceof Date);
         if (records.length === 0) return [];
         const origin = (String(sourceUrl).match(/^https?:\/\/[^/?#]+/i) || [''])[0];
-        // The site's own event-page route, learned from its links.
-        const routeMatch = String(html).match(/href=["'](?:https?:\/\/[^/"']+)?(\/[a-z0-9-]*event[a-z0-9-]*\/)[a-z0-9-]+["']/i);
-        const route = routeMatch ? routeMatch[1] : '';
+        const route = this.deriveWixEventRouteFromSlugs(html, records.map(record => record.slug));
         const events = [];
         const seen = new Set();
         for (const record of records) {
@@ -9097,20 +9241,30 @@ class AiWebParser {
             if (seen.has(key)) continue;
             seen.add(key);
             const pageUrl = route && record.slug ? `${origin}${route}${record.slug}` : '';
+            // Everything the widget's own row publishes — the blob is server
+            // state, not a guess, and dropping half of it made the bear check
+            // judge titles alone.
             const event = {
                 title: record.title,
-                description: '',
+                description: record.description || '',
                 startDate: record.startDateUtc,
                 endDate: record.endDateUtc instanceof Date && record.endDateUtc.getTime() > record.startDateUtc.getTime() ? record.endDateUtc : null,
                 timezone: record.timezone || null,
-                bar: '',
+                bar: record.venueName || '',
                 address: record.address || '',
                 url: pageUrl || sourceUrl,
                 website: pageUrl || sourceUrl,
                 source: 'wix'
             };
             if (record.coordinates) event.location = record.coordinates;
-            if (record.cover) event.cover = record.cover;
+            if (record.cover) {
+                event.cover = record.cover;
+                // Fee-inclusive summary prices are the same fidelity as
+                // JSON-LD offers: a detail page's base sticker prices may
+                // still upgrade them.
+                if (record.coverIsFeeInclusive) event._coverFromJsonLdOffers = true;
+            }
+            if (record.ticketUrl) event.ticketUrl = record.ticketUrl;
             if (record.image) {
                 event.image = record.image;
                 event.imageSource = 'json-api';
@@ -9118,6 +9272,34 @@ class AiWebParser {
             events.push(event);
         }
         return events;
+    }
+
+    // Where this site's event pages live, learned from the links that carry
+    // the widget's OWN slugs. The word "event" in a path is not evidence:
+    // eaglemanchester.com's first such href points at a CMS photo gallery at
+    // /event-details-2/, while the widget's pages are at /event-details/ —
+    // every record shipped a 404 website until the slugs decided it. The route
+    // most of the widget's slugs are linked under wins; the old
+    // first-"event"-href heuristic stays as the fallback for layouts that
+    // print no links at all.
+    deriveWixEventRouteFromSlugs(html, slugs) {
+        const wanted = new Set((Array.isArray(slugs) ? slugs : [])
+            .filter(slug => typeof slug === 'string' && slug)
+            .map(slug => slug.toLowerCase()));
+        const counts = new Map();
+        if (wanted.size > 0) {
+            const linkPattern = /href=["'](?:https?:\/\/[^/"']+)?(\/[^"'?#]*\/)([A-Za-z0-9._~%-]+)["'?#]/gi;
+            let match;
+            while ((match = linkPattern.exec(html)) !== null) {
+                if (!wanted.has(match[2].toLowerCase())) continue;
+                counts.set(match[1], (counts.get(match[1]) || 0) + 1);
+            }
+        }
+        if (counts.size > 0) {
+            return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+        }
+        const routeMatch = String(html).match(/href=["'](?:https?:\/\/[^/"']+)?(\/[a-z0-9-]*event[a-z0-9-]*\/)[a-z0-9-]+["']/i);
+        return routeMatch ? routeMatch[1] : '';
     }
 
     buildWixServerEventRecord(node, tickets) {
@@ -9140,9 +9322,27 @@ class AiWebParser {
             : {};
         const timeZoneId = clean(scheduling.timeZoneId);
 
+        const registration = node.registration && typeof node.registration === 'object' ? node.registration : {};
+        const external = registration.external && typeof registration.external === 'object' ? registration.external : {};
+        // Base sticker prices when the detail page's tickets[] is in hand;
+        // otherwise the row's own fee-inclusive summary (see
+        // formatWixTicketingSummaryCover).
+        const ticketCover = this.formatWixTicketPriceRange(tickets);
+        const summaryCover = ticketCover ? null : this.formatWixTicketingSummaryCover(registration.ticketing);
+
         const record = {
             title: clean(node.title) || null,
             slug: clean(node.slug) || null,
+            description: clean(node.description) || null,
+            // The venue as the row names it, with the city trap guarded
+            // (pickWixVenueName).
+            venueName: this.pickWixVenueName(location, fullAddress),
+            // An externally ticketed event (registration type 3) points at the
+            // vendor — the only ticket link a list row carries.
+            ticketUrl: clean(external.registration)
+                ? (this.normalizeHttpUrlValue(clean(external.registration)) || null)
+                : null,
+            coverIsFeeInclusive: summaryCover ? true : null,
             // OpenStreetMapNormalizer stores event.location as `${lat}, ${lng}` —
             // match it byte-for-byte so merge comparisons treat both the same.
             coordinates: pair ? `${pair.lat}, ${pair.lng}` : null,
@@ -9151,7 +9351,7 @@ class AiWebParser {
             endDateUtc: this.parseWixExactInstant(scheduling.endDate),
             address: clean(location.address) || clean(fullAddress.formattedAddress) || null,
             city: clean(fullAddress.city).toLowerCase() || null,
-            cover: this.formatWixTicketPriceRange(tickets),
+            cover: ticketCover || summaryCover,
             // The listing's own artwork (mainImage): a card read from a text
             // window on the homepage has no image of its own, while the
             // warmup row beside it names the flyer (CHUNK NYE, run
@@ -9160,6 +9360,63 @@ class AiWebParser {
             image: this.normalizeHttpUrlValue(clean(node.mainImage && typeof node.mainImage === 'object' ? node.mainImage.url : '')) || null
         };
         return Object.values(record).some(value => value !== null) ? record : null;
+    }
+
+    // location.name is the venue on most rows ("The Eagle Bar") but some rows
+    // carry a PLACE there instead — three eaglemanchester.com rows say
+    // "Manchester", which is the city its own address already names. A name
+    // the row's own address calls its city, region, country or postcode is
+    // therefore not a venue; anything else (including "Eagle Bar Manchester")
+    // is. Page-derived both ways: the address is the row's own.
+    pickWixVenueName(location, fullAddress) {
+        const name = typeof location.name === 'string' ? this.normalizeWhitespace(location.name) : '';
+        if (!name) return null;
+        const normalized = name.trim().toLowerCase();
+        const places = [fullAddress.city, fullAddress.postalCode, fullAddress.country, fullAddress.countryFullname];
+        if (Array.isArray(fullAddress.subdivisions)) {
+            for (const subdivision of fullAddress.subdivisions) {
+                if (subdivision && typeof subdivision === 'object') places.push(subdivision.name, subdivision.code);
+            }
+        }
+        for (const place of places) {
+            if (typeof place === 'string' && place.trim().toLowerCase() === normalized) return null;
+        }
+        return name;
+    }
+
+    // registration.ticketing is the widget's own price SUMMARY
+    // ("lowestPrice": "£8", "highestPrice": "£10"), the only price a LIST row
+    // carries — fee-inclusive totals, the same fidelity the JSON-LD offers
+    // path already accepts, so it goes through the same formatter and is
+    // flagged upgradeable. Free RSVP rows publish "£0" and make no cover,
+    // exactly as a $0 ticket does.
+    formatWixTicketingSummaryCover(ticketing) {
+        if (!ticketing || typeof ticketing !== 'object') return null;
+        const currency = String(ticketing.currency || '').trim().toUpperCase();
+        const amounts = [ticketing.lowestPrice, ticketing.highestPrice]
+            .map(value => this.parseWixFormattedPrice(value))
+            .filter(amount => amount !== null);
+        if (amounts.length === 0) return null;
+        return this.formatWixTicketPriceRange(
+            amounts.map(amount => ({ price: { amount: String(amount), currency } }))
+        );
+    }
+
+    // "£8", "$10.50", "1.234,56" — the digits are the price. A comma before
+    // exactly two trailing digits with no decimal point is a decimal comma.
+    parseWixFormattedPrice(value) {
+        const raw = String(value === null || value === undefined ? '' : value).trim();
+        const match = raw.match(/\d[\d.,\s]*/);
+        if (!match) return null;
+        let digits = match[0].replace(/\s/g, '');
+        if (/,\d{2}$/.test(digits) && !/\.\d/.test(digits)) {
+            digits = digits.replace(/\./g, '').replace(',', '.');
+        } else {
+            digits = digits.replace(/,/g, '');
+        }
+        if (!/\d/.test(digits)) return null;
+        const amount = Number(digits);
+        return Number.isFinite(amount) ? amount : null;
     }
 
     // Only explicit-offset/Z timestamps are exact instants; wall-clock strings
@@ -10508,10 +10765,14 @@ class AiWebParser {
         // exact UTC instants replacing _timezoneUnresolved wall-clock dates below.
         // A cover extracted by OCR/AI (no flag) is independent evidence and is
         // NEVER overridden.
-        if (record.cover && (isEmpty(event.cover) || event._coverFromJsonLdOffers)) {
+        // A record whose own cover is the fee-inclusive SUMMARY is no upgrade
+        // over an offers cover — it fills a blank, and stays flagged so real
+        // sticker prices can still replace it.
+        if (record.cover && (isEmpty(event.cover) || (event._coverFromJsonLdOffers && !record.coverIsFeeInclusive))) {
             (isEmpty(event.cover) ? filled : upgraded).push('cover');
             event.cover = record.cover;
-            delete event._coverFromJsonLdOffers;
+            if (record.coverIsFeeInclusive) event._coverFromJsonLdOffers = true;
+            else delete event._coverFromJsonLdOffers;
         }
         fill('address', record.address);
         if (record.city && isEmpty(event.city)) {
