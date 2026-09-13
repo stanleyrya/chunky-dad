@@ -1926,6 +1926,7 @@ class AiWebParser {
                         // to read and 9 events shipped with no venue at all.
                         text: this.trimToMaxLength(segment.lines.join(' \u2022 '), 600)
                     };
+                    this.applyCardStatedDateOverFlyerDate(event, segment.lines, pageDateContext);
                     events.push(event);
                 }
             } catch (err) {
@@ -18252,6 +18253,122 @@ TEXT:
         if (startMinutes !== doors) return '';
         const pad = (value) => String(value).padStart(2, '0');
         return `${pad(Math.floor(party / 60))}:${pad(party % 60)}`;
+    }
+
+    // The page-anchor vocabulary plus every month's three-letter prefix. The
+    // shared table deliberately omits English abbreviations — English rides
+    // the original English-only patterns everywhere else — but a card line is
+    // exactly where "Mon Jan 25 • Noon–6PM" lives, and it is the only place
+    // this event's real date is stated. Derived from the month names already
+    // in the table, never hand-listed, and a prefix two months would share
+    // (French "juin"/"juillet" both give "jui") is dropped rather than
+    // guessed.
+    getCardDateVocabulary() {
+        if (this._cardDateVocabulary) return this._cardDateVocabulary;
+        const vocab = this.getMultilingualDateVocabulary();
+        const monthsByName = { ...vocab.monthsByName };
+        const prefixes = new Map();
+        for (const [name, month] of Object.entries(vocab.monthsByName)) {
+            if (name.length <= 3) continue;
+            const prefix = name.slice(0, 3);
+            if (prefix in monthsByName) continue;
+            if (prefixes.has(prefix) && prefixes.get(prefix) !== month) {
+                prefixes.set(prefix, null);
+                continue;
+            }
+            prefixes.set(prefix, month);
+        }
+        for (const [prefix, month] of prefixes.entries()) {
+            if (month) monthsByName[prefix] = month;
+        }
+        this._cardDateVocabulary = {
+            monthsByName,
+            monthAlternation: Object.keys(monthsByName).sort((a, b) => b.length - a.length).join('|')
+        };
+        return this._cardDateVocabulary;
+    }
+
+    // The dates a card's OWN text states, as {month, day, year|null}. Same
+    // vocabulary the page-level anchor uses, so it reads every supported
+    // language — but it keeps the day of the month, which the anchor
+    // discards.
+    collectCardStatedDates(lines) {
+        const vocab = this.getCardDateVocabulary();
+        const monthName = `(?:${vocab.monthAlternation})`;
+        const pattern = new RegExp(
+            `\\b(\\d{1,2})(?:er|re|e|o|º|ª|st|nd|rd|th)?\\.?\\s*(?:de\\s+|di\\s+|of\\s+|d['’]\\s*)?(${monthName})\\b(?:\\s*(?:de\\s+|,)?\\s*(\\d{4}))?` +
+            `|\\b(${monthName})\\.?\\s*(\\d{1,2})\\b(?:\\s*,?\\s*(\\d{4}))?`, 'g');
+        const dates = [];
+        for (const rawLine of (Array.isArray(lines) ? lines : [])) {
+            const folded = this.foldDiacritics(this.normalizeWhitespace(rawLine));
+            if (!folded) continue;
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(folded)) !== null) {
+                const month = vocab.monthsByName[match[2] || match[4]];
+                const day = parseInt(match[1] || match[5], 10);
+                const yearText = match[3] || match[6];
+                if (!month || !Number.isFinite(day) || day < 1 || day > 31) continue;
+                dates.push({ month, day, year: yearText ? parseInt(yearText, 10) : null });
+            }
+        }
+        return dates;
+    }
+
+    // A page that prints a date for its card has said when the event is. The
+    // flyer beside it is artwork, and artwork is routinely LAST YEAR's:
+    // beefdip.com/planned-events runs its 2027 programme under 21 flyers
+    // named `2026-01-DD …webp` that print 2026 weekday+date pairs, and 16 of
+    // 29 kept records came back dated to the previous edition — real events,
+    // filed a year and a day off, where nobody will ever see them.
+    //
+    // So the flyer's date is evidence only while it AGREES. On disagreement
+    // the card's own line wins and the record is moved back onto it, clock
+    // and duration intact. Fails closed at every step: the card must state
+    // exactly one date (a description naming a second date decides nothing),
+    // the year must come from the card itself or from the page's own
+    // month-matching year anchor (never invented), and the correction must
+    // be a whole number of days inside a year — past that the two dates are
+    // not two readings of one event.
+    applyCardStatedDateOverFlyerDate(event, segmentLines, pageDateContext) {
+        if (!event || !event.startDate) return false;
+        if (!this.core || typeof this.core.toEpochMillis !== 'function') return false;
+        const stated = this.collectCardStatedDates(segmentLines);
+        if (stated.length === 0) return false;
+        const distinct = new Set(stated.map(date => `${date.month}-${date.day}`));
+        if (distinct.size !== 1) return false;
+
+        const card = stated.find(date => Number.isFinite(date.year)) || stated[0];
+        const local = this.getFlyerLocalDateCandidates(event);
+        if (!local || !local[0]) return false;
+        const actual = local[0];
+
+        const year = Number.isFinite(card.year)
+            ? card.year
+            : (pageDateContext && pageDateContext.month === card.month && Number.isFinite(pageDateContext.year)
+                ? pageDateContext.year
+                : null);
+        if (!Number.isFinite(year)) return false;
+        if (actual.year === year && actual.month === card.month && actual.day === card.day) return false;
+
+        const dayMs = this.extractionLimits.millisPerDay;
+        const shiftDays = Math.round(
+            (Date.UTC(year, card.month - 1, card.day) - Date.UTC(actual.year, actual.month - 1, actual.day)) / dayMs);
+        if (shiftDays === 0 || Math.abs(shiftDays) > 366) return false;
+
+        const shift = (value) => {
+            if (!value) return value;
+            const millis = this.core.toEpochMillis(value);
+            if (millis === null) return value;
+            const moved = new Date(millis + (shiftDays * dayMs));
+            return this.core.isDateLike(value) ? moved : moved.toISOString();
+        };
+        const before = event.startDate;
+        event.startDate = shift(event.startDate);
+        event.endDate = shift(event.endDate);
+        const iso = (value) => this.core.isDateLike(value) ? value.toISOString() : String(value);
+        console.log(`📅 AI Web: Card date wins over artwork for "${event.title || 'Unknown'}" — the card states ${card.month}/${card.day}, the record read ${actual.month}/${actual.day}; moved ${iso(before)} → ${iso(event.startDate)}`);
+        return true;
     }
 
     // The event's local start date and the previous day, as {year, month,

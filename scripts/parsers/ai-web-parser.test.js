@@ -12862,6 +12862,51 @@ test('a card whose only class is "event-card" is still a card', () => {
   });
 });
 
+// beefdip.com/planned-events runs its 2027 programme under flyers that are
+// last year's edition — named `2026-01-DD …webp` and printing 2026 weekday+
+// date pairs. 16 of 29 kept records came back dated to the previous edition:
+// real events, filed a year and a day off.
+test('the card\'s own date beats its artwork\'s', () => {
+  const parser = createParser();
+  const cardLines = [
+    'FOAM POOL PARTY',
+    'Mon Jan 25 • Noon–6PM • Blue Chairs',
+    'Dive into waves of beats and bubbles at the poolside playground.'
+  ];
+  const pageDateContext = { month: 1, year: 2027, phrase: 'SATURDAY JANUARY 23, 2027' };
+
+  // The flyer's date, a year and a day off the card's.
+  const event = {
+    title: 'FOAM POOL PARTY',
+    startDate: new Date(Date.UTC(2026, 0, 26, 12, 0, 0)),
+    endDate: new Date(Date.UTC(2026, 0, 26, 18, 0, 0)),
+    _timezoneUnresolved: true
+  };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(event, cardLines, pageDateContext), true);
+  assert.equal(event.startDate.toISOString(), '2027-01-25T12:00:00.000Z', 'moved onto the card\'s date');
+  assert.equal(event.endDate.toISOString(), '2027-01-25T18:00:00.000Z', 'the clock and the duration survive');
+
+  // Agreement is not a conflict: nothing moves.
+  const agreeing = { title: 'FOAM POOL PARTY', startDate: new Date(Date.UTC(2027, 0, 25, 12, 0, 0)), _timezoneUnresolved: true };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(agreeing, cardLines, pageDateContext), false);
+  assert.equal(agreeing.startDate.toISOString(), '2027-01-25T12:00:00.000Z');
+
+  // Fails closed: a card naming two different dates decides nothing…
+  const twoDates = { title: 'X', startDate: new Date(Date.UTC(2026, 0, 26, 12, 0, 0)), _timezoneUnresolved: true };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(
+    twoDates, cardLines.concat(['Tickets on sale since Dec 1']), pageDateContext), false);
+  // …and neither does a card with no year anywhere to take one from.
+  const noYear = { title: 'X', startDate: new Date(Date.UTC(2026, 0, 26, 12, 0, 0)), _timezoneUnresolved: true };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(noYear, cardLines, null), false);
+  assert.equal(noYear.startDate.toISOString(), '2026-01-26T12:00:00.000Z');
+
+  // The card may carry its own year, and then the page anchor is not needed.
+  const ownYear = { title: 'X', startDate: new Date(Date.UTC(2026, 0, 26, 12, 0, 0)), _timezoneUnresolved: true };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(
+    ownYear, ['SPLASH!', 'Tuesday January 26, 2027 • 11AM'], pageDateContext), true);
+  assert.equal(ownYear.startDate.toISOString(), '2027-01-26T12:00:00.000Z');
+});
+
 test('one card, one window: an entry naming itself once is never split at its own date line', () => {
   const parser = createParser();
   // The eaglebarwm.com/calendar2 shape: the card's day badge comes FIRST, the
