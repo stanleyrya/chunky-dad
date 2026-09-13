@@ -369,6 +369,16 @@ const CADENCE_TITLE_TOKENS = new Set([
     'weekly', 'monthly', 'biweekly', 'daily', 'annual', 'annually'
 ]);
 
+// How many of a source's OWN distinct titles a token may appear in before it
+// stops naming an event. A venue prints its programme vocabulary across its
+// whole calendar — eaglela.com publishes "CRUISE LA", "CRUISE LA LEATHER &
+// BOOTBLACK 2027 MEET & GREET", "CRUISE LA ... CONTEST" and "CRUISE NIGHT"
+// (four different parties), and the word "BAR" in four more — so a token at
+// that fan-in says WHOSE calendar this is, never WHICH event. Three is the
+// same fan-in convention deduplicateEvents already uses to demote a shared
+// URL to a listing page and applyListingHostFlags uses to demote a host.
+const TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES = 3;
+
 // Legalese phrase shapes for the title-looks-like-boilerplate sanity flag.
 // A generic legalese phrase table is DATA (like ADDRESS_STREET_TYPE_TOKENS
 // above), not per-page hardcoding: these are ticketing-terms markers that no
@@ -5556,6 +5566,13 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyListingHostFlags === 'function') {
             aiWebParser.applyListingHostFlags(allEvents);
         }
+        // Title-token corpus frequencies (deterministic, page-derived): with
+        // every title this source published in view, stamp how many of its
+        // own DISTINCT titles carry each of a record's title tokens. The
+        // fuzzy title rungs of dedup and of the calendar merge read the stamp
+        // so they never pair two events on a word the venue prints all over
+        // its calendar. Must run before dedup and before analyzeEventAction.
+        this.applyTitleTokenCorpusFlags(allEvents);
         // Venue-site identity corrections (deterministic, curated-anchored):
         // when a crawled site's identity is established — venue role seen,
         // unique curated-bar name match, address agreement — flyer-subtitle
@@ -18719,9 +18736,21 @@ class SharedCore {
         const startsAreClose = this.areDatesEqual(incoming.startDate, existing.startDate, 120);
         const startsAreCompatible = startsAreClose
             || (!requireCloseStartTimes && this.hasMissingTimeStartPlaceholder(newEvent, existingEvent));
+        // …and the names must actually NAME something. areTitlesSimilar's
+        // containment rung ("Megawoof" inside "Megawoof: DURO") reads a
+        // strict prefix as the same event, which is right when the prefix is
+        // the party's name and wrong when it is the venue's own vocabulary:
+        // "CRUISE LA" sits inside "CRUISE LA LEATHER AND BOOTBLACK 2027
+        // CONTEST", and eaglela.com publishes both as separate posts on the
+        // same night (audit 2026-09-13 — the shorter event's 10/17
+        // occurrence was lost). When everything the two names share is a
+        // token the source prints across 3+ of its own titles, this rung has
+        // no evidence; the stronger rungs above (ticket url, event page url,
+        // same instant + link lineage) are untouched.
         if (startsAreCompatible &&
             this.areIdentityPlacesSimilar(incoming, existing) &&
-            this.areIdentityNamesSimilar(incoming, existing)) {
+            this.areIdentityNamesSimilar(incoming, existing) &&
+            !this.titleAffinityIsCorpusGeneric(newEvent, existingEvent)) {
             return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';
         }
 
@@ -19413,6 +19442,120 @@ class SharedCore {
     // "new" are never treated as city tokens, and 2-char forms ("la") are
     // skipped so French/Spanish articles in titles survive. Cached per cities
     // object (set once in the constructor).
+    // A TOKEN THE SOURCE PRINTS ON MANY OF ITS OWN TITLES NAMES NO EVENT.
+    // Stamps each record with the document frequency of its own title tokens
+    // inside the corpus of titles the SAME source published this run:
+    // `_titleTokenDocFreq` = { token: how many distinct titles carry it }.
+    // "Distinct title" is the token sequence, not the raw string, so three
+    // records of one party (and its HTML-entity variants) count once while
+    // four different parties that all start "CRUISE LA" count four.
+    //
+    // Underscore field: never written to notes, never a diff field, never
+    // merged — pure in-run observation, exactly like _venueSiteHostIsListing.
+    // Run once per parser with every event of that source in view (the same
+    // seam as applyListingHostFlags), BEFORE dedup and before the calendar
+    // merge, because "how often does this source say this word" cannot be
+    // answered from a pair of records.
+    applyTitleTokenCorpusFlags(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        const hostOf = (event) => {
+            const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
+            const host = String(source).includes('/')
+                ? this.getHostFromUrl(String(source))
+                : String(source);
+            return String(host || '').trim().toLowerCase().replace(/^www\./, '');
+        };
+        const tokensOf = (event) => {
+            const venueKeys = [
+                this.normalizeBarNameKey(event && event.bar),
+                String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            ].filter(Boolean);
+            return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
+        };
+        // host → token → Set of distinct token-sequences carrying it
+        const corpora = new Map();
+        const tokenCache = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const tokens = tokensOf(event);
+            tokenCache.set(event, tokens);
+            if (tokens.length === 0) continue;
+            const host = hostOf(event);
+            if (!corpora.has(host)) corpora.set(host, new Map());
+            const corpus = corpora.get(host);
+            const titleKey = tokens.join(' ');
+            for (const token of tokens) {
+                if (!corpus.has(token)) corpus.set(token, new Set());
+                corpus.get(token).add(titleKey);
+            }
+        }
+        for (const event of events) {
+            const tokens = tokenCache.get(event);
+            if (!tokens || tokens.length === 0) continue;
+            const corpus = corpora.get(hostOf(event));
+            if (!corpus) continue;
+            const freq = {};
+            for (const token of tokens) {
+                const titles = corpus.get(token);
+                freq[token] = titles ? titles.size : 1;
+            }
+            event._titleTokenDocFreq = freq;
+        }
+    }
+
+    // Does the pair share at least one title token that is DISTINCTIVE in the
+    // source's own corpus (see applyTitleTokenCorpusFlags)? A token is judged
+    // by the WORST (highest) frequency either side knows for it, so a word
+    // that is programme vocabulary on either source proves nothing on either.
+    // Fails OPEN when neither record carries a corpus stamp — a calendar
+    // record, a unit test, or a parser whose run never reached the stamping
+    // pass keeps the behaviour it had before this existed.
+    hasDistinctiveSharedTitleTokens(eventA, eventB, sharedTokens) {
+        if (!Array.isArray(sharedTokens) || sharedTokens.length === 0) return true;
+        const freq = (event, token) => {
+            const map = event && typeof event._titleTokenDocFreq === 'object' && event._titleTokenDocFreq
+                ? event._titleTokenDocFreq
+                : null;
+            const value = map ? map[token] : undefined;
+            return Number.isFinite(value) ? value : null;
+        };
+        let sawCorpus = false;
+        for (const token of sharedTokens) {
+            const a = freq(eventA, token);
+            const b = freq(eventB, token);
+            if (a === null && b === null) continue;
+            sawCorpus = true;
+            const worst = Math.max(a === null ? 0 : a, b === null ? 0 : b);
+            if (worst < TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES) return true;
+        }
+        return !sawCorpus;
+    }
+
+    // TRUE when two records are named DIFFERENTLY and everything their names
+    // share is their source's own programme vocabulary — "CRUISE LA" against
+    // "CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST" (audit 2026-09-13: two
+    // published eaglela.com posts, one night, folded into one event and the
+    // shorter one's occurrence lost), "B BAR" against "HAPPY THANKSGIVING –
+    // BAR OPENS AT 6PM". Titles that reduce to the SAME token sequence are
+    // not affected — entity and punctuation variants of one name are still
+    // one name — and neither is a pair with no corpus knowledge.
+    titleAffinityIsCorpusGeneric(eventA, eventB) {
+        const venueKeys = [
+            this.normalizeBarNameKey(eventA && eventA.bar),
+            this.normalizeBarNameKey(eventB && eventB.bar),
+            String((eventA && eventA._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+            String((eventB && eventB._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        ].filter(Boolean);
+        const tokensA = this.getCrossSourceTitleTokens((eventA && (eventA.title || eventA.name)) || '', venueKeys);
+        const tokensB = this.getCrossSourceTitleTokens((eventB && (eventB.title || eventB.name)) || '', venueKeys);
+        if (tokensA.length === 0 || tokensB.length === 0) return false;
+        if (tokensA.length === tokensB.length && tokensA.every(token => tokensB.includes(token))) return false;
+        const setB = new Set(tokensB);
+        const shared = tokensA.filter(token => setB.has(token));
+        if (shared.length === 0) return false;
+        return !this.hasDistinctiveSharedTitleTokens(eventA, eventB, shared);
+    }
+
     getCityAliasTokenSet() {
         const source = this.cities && typeof this.cities === 'object' ? this.cities : null;
         if (!source) return new Set();
@@ -19461,6 +19604,13 @@ class SharedCore {
         const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
         const longerSet = new Set(longer);
         if (!shorter.every(token => longerSet.has(token))) return null;
+        // A SUBSET OF THE SOURCE'S OWN VOCABULARY IS NOT A NAME. "B BAR"
+        // reduces to the single token "bar", which eaglela.com prints on four
+        // of its titles, so it subsets into "HAPPY THANKSGIVING – BAR OPENS
+        // AT 6PM" and a real 11/26 event vanished (audit 2026-09-13). Equal
+        // token sequences (entity/punctuation variants of one name) never
+        // reach this test.
+        if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(eventA, eventB, shorter)) return null;
         return 'venue+night+title-subset';
     }
 
@@ -19510,6 +19660,10 @@ class SharedCore {
         const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
         const longerSet = new Set(longer);
         if (!shorter.every(token => longerSet.has(token))) return null;
+        // Same corpus-distinctiveness rung as getCrossSourceDuplicateSignal:
+        // a shorter title made only of the source's programme vocabulary is
+        // not evidence that these two records are one event.
+        if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(newEvent, existingEvent, shorter)) return null;
         return 'place+day+title-subset';
     }
 
