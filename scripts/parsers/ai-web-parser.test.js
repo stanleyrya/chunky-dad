@@ -17163,3 +17163,132 @@ test('an event page with exactly one outbound ticketing-platform event link has 
   parser.adoptPageTicketLink(homeOnly, page(['https://www.ticketmaster.com/']));
   assert.equal(homeOnly.ticketUrl, undefined, 'a platform homepage is not an event link');
 });
+
+// ── DICE rows: tier prices, crop fallbacks, unanchored zones ──────────────
+// Run 20260913-0120 (C'mon Everybody, BEEFMINCE): the partners feed states
+// `price: null` on 32/32 rows while 30 of them price their tiers, publishes
+// the same artwork in four renditions, and labels placeless rows with a zone
+// from the wrong country.
+
+function diceRow(overrides = {}) {
+  return {
+    name: 'GRUNT (SF)',
+    description: 'A party.',
+    date: '2026-09-20T02:30:00Z',
+    date_end: '2026-09-20T08:00:00Z',
+    timezone: 'America/New_York',
+    currency: 'USD',
+    price: null,
+    venues: [{ name: "C'mon Everybody" }],
+    location: { street: '325 Franklin Avenue', city: 'New York', country: 'United States', zip: '11238', lat: 40.6883003, lng: -73.9568077 },
+    ...overrides
+  };
+}
+
+test('a DICE row with no headline price takes its cover from the ticket tiers', () => {
+  const parser = createParser();
+  const source = 'https://cmoneverybody.example/events';
+
+  // One tier: the fee-inclusive total in minor units.
+  const single = parser.buildEventFromDiceRow(diceRow({ ticket_types: [{ price: { total: 2678, fees: 678, face_value: 2000 }, sold_out: false }] }), source);
+  assert.equal(single.cover, '$26.78', 'total is what the buyer pays — fees included, minor units divided out');
+
+  // Several tiers: the honest walk-up range.
+  const tiers = parser.buildEventFromDiceRow(diceRow({ ticket_types: [
+    { price: { total: 2678 }, sold_out: false },
+    { price: { total: 4017 }, sold_out: false },
+    { price: { total: 6695 }, sold_out: false }
+  ] }), source);
+  assert.equal(tiers.cover, '$26.78-$66.95');
+
+  // Sold-out tiers never set the price a walk-up would pay…
+  const partlySold = parser.buildEventFromDiceRow(diceRow({ ticket_types: [
+    { price: { total: 1000 }, sold_out: true },
+    { price: { total: 1200 }, sold_out: false }
+  ] }), source);
+  assert.equal(partlySold.cover, '$12', 'the sold-out cheap tier is gone — $12 is the real door price');
+
+  // …unless every tier is sold out, when they are all the event had.
+  const allSold = parser.buildEventFromDiceRow(diceRow({ ticket_types: [{ price: { total: 3206 }, sold_out: true }] }), source);
+  assert.equal(allSold.cover, '$32.06');
+
+  // face_value only answers when no total is published.
+  const faceOnly = parser.buildEventFromDiceRow(diceRow({ ticket_types: [{ price: { face_value: 1000 } }] }), source);
+  assert.equal(faceOnly.cover, '$10');
+
+  // The row's own currency, and a free tier is not a price.
+  const euros = parser.buildEventFromDiceRow(diceRow({ currency: 'EUR', ticket_types: [{ price: { total: 2000 } }] }), source);
+  assert.equal(euros.cover, '20 EUR');
+  const free = parser.buildEventFromDiceRow(diceRow({ ticket_types: [{ price: { total: 0 } }] }), source);
+  assert.equal(free.cover, undefined, 'a 0 tier states no cover — never fabricate "$0"');
+  const priceless = parser.buildEventFromDiceRow(diceRow({ ticket_types: [] }), source);
+  assert.equal(priceless.cover, undefined);
+
+  // A stated headline price still wins — tiers only fill the blank.
+  const headline = parser.buildEventFromDiceRow(diceRow({ price: 2500, ticket_types: [{ price: { total: 9900 } }] }), source);
+  assert.equal(headline.cover, '$25');
+});
+
+test("a rejected image crop falls back to the row's other renditions of the same artwork", () => {
+  const parser = createParser();
+  const source = 'https://cmoneverybody.example/events';
+  const file = 'https://media.example/attachments/grunt.jpg';
+  const event = parser.buildEventFromDiceRow(diceRow({
+    ticket_types: [],
+    event_images: { portrait: `${file}?rect=249,0,634,1153`, square: `${file}?rect=0,52,1755,1755`, landscape: `${file}?rect=0,571,1755,1053` },
+    images: [file]
+  }), source);
+  assert.equal(event.image, `${file}?rect=249,0,634,1153`, 'portrait is still the first choice');
+  assert.deepEqual(event._imageAlternates, [`${file}?rect=0,571,1755,1053`, `${file}?rect=0,52,1755,1755`, file]);
+
+  // The vision pass rejects the narrow portrait crop as a textless thumbnail.
+  parser.getNonEventImageOcrReason = (url) => url.includes('rect=249') ? 'the vision pass classified it as thumbnail with no readable text' : '';
+  parser.rejectNonEventImageValues(event, { url: source, html: '' });
+  assert.equal(event.image, `${file}?rect=0,571,1755,1053`, 'the next rendition of the same artwork, not an imageless event');
+  assert.equal(event.imageSource, 'json-api');
+
+  // When every rendition is rejected the event stays imageless — the
+  // fallback never smuggles known furniture back in.
+  const allBad = parser.buildEventFromDiceRow(diceRow({ ticket_types: [], event_images: { portrait: `${file}?rect=1`, square: `${file}?rect=2` } }), source);
+  parser.getNonEventImageOcrReason = () => 'the vision pass classified it as logo with no readable text';
+  parser.rejectNonEventImageValues(allBad, { url: source, html: '' });
+  assert.equal(allBad.image, undefined);
+  assert.equal(allBad.imageSource, undefined);
+});
+
+test('a DICE row that states a timezone but names no place keeps the wall clock instead', () => {
+  const parser = createParser();
+  const source = 'https://beefmince.example/events';
+
+  // Placeless linkout row: the feed labels a Sitges night Africa/Algiers.
+  const placeless = parser.buildEventFromDiceRow({
+    name: 'BEEFMINCE Sitges - Disco', date: '2026-09-11T00:00:00Z', date_end: '2026-09-11T05:00:00Z',
+    timezone: 'Africa/Algiers', currency: 'EUR', price: 2000, venues: [], location: {}
+  }, source);
+  assert.equal(placeless.timezone, null, 'a zone stated against no place is not shipped as fact');
+  assert.equal(placeless._timezoneUnresolved, true);
+  assert.equal(placeless.startDate.toISOString(), '2026-09-11T01:00:00.000Z', 'wall clock the feed itself prints: 01:00');
+  assert.equal(placeless.endDate.toISOString(), '2026-09-11T06:00:00.000Z');
+
+  // …and the place that IS resolved later anchors it (the venue page's zone,
+  // a curated bar's city, a merged twin — resolveWallClockDates is the seam).
+  placeless.timezone = 'Europe/Madrid';
+  parser.core.resolveWallClockDates(placeless);
+  assert.equal(placeless.timezone, 'Europe/Madrid');
+  assert.equal(placeless.startDate.toISOString(), '2026-09-10T23:00:00.000Z', "01:00 in Sitges, the site's own wall clock");
+
+  // A row with any place evidence keeps its stated zone and real instant.
+  for (const place of [{ venues: [{ name: 'The Royal Vauxhall Tavern' }], location: {} },
+    { venues: [], location: { city: 'London' } },
+    { venues: [], location: { country: 'United Kingdom' } },
+    { venues: [], location: { street: '372 Kennington Lane' } },
+    { venues: [], location: { lat: 51.4863391, lng: -0.1217784 } }]) {
+    const anchored = parser.buildEventFromDiceRow({
+      name: 'BEEFMINCE x RVT', date: '2026-10-17T21:00:00Z', date_end: '2026-10-18T03:00:00Z',
+      timezone: 'Europe/London', currency: 'GBP', price: 1200, ...place
+    }, source);
+    assert.equal(anchored.timezone, 'Europe/London');
+    assert.equal(anchored._timezoneUnresolved, undefined);
+    assert.equal(anchored.startDate.toISOString(), '2026-10-17T21:00:00.000Z');
+  }
+});
