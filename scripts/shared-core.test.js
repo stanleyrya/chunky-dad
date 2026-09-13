@@ -11436,6 +11436,56 @@ test('dedup: two rows of ONE feed carrying different row ids are two published e
   assert.equal(core.getCrossSourceDuplicateSignal(rowA, { ...rowB, _sourceRowId: undefined }), 'venue+night+title-subset');
 });
 
+test('title-token corpus: a word the source prints across its own calendar is not an event name', () => {
+  const core = createDallasCore();
+  // Literal eaglela.com shapes (audit 2026-09-13): two published posts on one
+  // night whose titles share only the venue's programme vocabulary.
+  const night = (day, hour, minute = 0) => new Date(Date.UTC(2026, 9, day, hour, minute));
+  const at = (title, day, hour, slug) => ({
+    title, bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: night(day, hour), _venueSitePageHost: EAGLE_HOST,
+    _sourcePageUrl: `https://${EAGLE_HOST}/events/${slug}/`
+  });
+  const cruise = at('CRUISE LA', 17, 5);            // local midnight — no time stated
+  const contest = at('CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST', 18, 0, 'cruise-la-contest-2');
+  const bbar = at('B BAR', 26, 5, 'b-bar');
+  const thanksgiving = at('HAPPY THANKSGIVING - BAR OPENS AT 6PM', 26, 5, 'happy-thanksgiving');
+  const onyxA = at('ONYX', 11, 5, 'onyx-2');
+  const onyxB = at('ONYX', 11, 5, 'onyx-listing');
+
+  // Before the corpus is known both pairs fold — the shipped bug
+  assert.equal(core.getSameEventIdentitySignal(cruise, contest, { requireCloseStartTimes: false }), 'place-day-name');
+  assert.equal(core.getCrossSourceDuplicateSignal(bbar, thanksgiving), 'venue+night+title-subset');
+
+  const corpus = [cruise, contest, bbar, thanksgiving, onyxA, onyxB,
+    at('CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET', 16, 5),
+    at('CRUISE NIGHT', 6, 5),
+    at('HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA - BAR OPENS AT 6PM', 25, 5),
+    at('LABOR DAY BEER BUST BAR OPENS AT 2PM', 7, 5),
+    at('ONYX: 11 YEAR ANNIVERSARY', 13, 5)];
+  core.applyTitleTokenCorpusFlags(corpus);
+  // "cruise" names four different parties on this calendar, "bar" four titles
+  assert.equal(cruise._titleTokenDocFreq.cruise, 4);
+  assert.equal(bbar._titleTokenDocFreq.bar, 4);
+  // …so neither pair is one event any more
+  assert.equal(core.getSameEventIdentitySignal(cruise, contest, { requireCloseStartTimes: false }), null);
+  assert.equal(core.getCrossSourceDuplicateSignal(bbar, thanksgiving), null);
+  // A repeated event is ONE distinct title, so its own name stays distinctive
+  assert.equal(onyxA._titleTokenDocFreq.onyx, 2);
+  assert.equal(core.getCrossSourceDuplicateSignal(onyxA, onyxB), 'venue+night+title-subset');
+  // Entity/punctuation variants of one name reduce to the same tokens and are
+  // never judged by this rung
+  const calfA = at('CALF B&B EVENT', 20, 5, 'calf-bb-event');
+  const calfB = at('CALF B&#038;B EVENT', 20, 5, 'calf-bb-event');
+  core.applyTitleTokenCorpusFlags(corpus.concat([calfA, calfB]));
+  assert.equal(core.getCrossSourceDuplicateSignal(calfA, calfB), 'venue+night+title-subset');
+  // Fails OPEN with no corpus stamp: unstamped records keep the old behaviour
+  assert.equal(core.getCrossSourceDuplicateSignal(
+    { ...bbar, _titleTokenDocFreq: undefined },
+    { ...thanksgiving, _titleTokenDocFreq: undefined }
+  ), 'venue+night+title-subset');
+});
+
 test('cross-source signal: fails closed on disjoint titles, different nights, and empty titles', () => {
   const core = createDallasCore();
   const base = { bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _venueSitePageHost: EAGLE_HOST };
