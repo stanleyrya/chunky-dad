@@ -22110,6 +22110,44 @@ test('crawl: a multi-event page\'s events have their ticket links followed for e
   assert.ok(!titles.includes('Sibling that must not appear'));
 });
 
+test('regenerated bookkeeping is written, never a reason to write', () => {
+  const core = createCore();
+  // The literal 2026-09-13 case: the calendar's stored key was built from the
+  // short title it holds, the run rebuilt it from the listing's longer one,
+  // and nothing a reader can see differed. That event filed a full UPDATE and
+  // its own comparison chip read "no changes".
+  const calendarNotes = [
+    'description: MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY',
+    'address: 1123 Folsom Street, San Francisco, CA 94103',
+    'key: megawoof|2026-10-18|',
+    'bearSource: keyword'
+  ].join('\n');
+  const rebuiltNotes = [
+    'description: MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY',
+    'address: 1123 Folsom Street, San Francisco, CA 94103',
+    'key: megawoof-san-francisco-11-year-anniversary|2026-10-18|',
+    'bearSource: keyword'
+  ].join('\n');
+  assert.equal(core.notesProjectionsMatch(calendarNotes, rebuiltNotes), true,
+    'a rebuilt key and a re-stamped provenance line are not a change worth a write');
+
+  // Anything a reader can see still writes.
+  const realChange = rebuiltNotes.replace('address: 1123 Folsom Street, San Francisco, CA 94103',
+    'address: 1347 Folsom Street, San Francisco, CA 94103');
+  assert.equal(core.notesProjectionsMatch(calendarNotes, realChange), false, 'a moved venue is a real change');
+  const added = calendarNotes + '\ncover: $15';
+  assert.equal(core.notesProjectionsMatch(calendarNotes, added), false, 'a newly known cover is a real change');
+  // A record this scraper has never stamped still gets its key written: that
+  // line is how later runs find the event again.
+  assert.equal(core.notesProjectionsMatch('', 'key: x|2026-10-18|'), false,
+    'first-time stamping is a real write');
+  assert.equal(core.notesProjectionsMatch('bar: Nova PDX', 'bar: Nova PDX\nkey: x|2026-10-18|'), false,
+    'a calendar record with notes but no key of ours is stamped too');
+  // The owner's manual verdict is never bookkeeping.
+  assert.equal(core.notesProjectionsMatch(calendarNotes, calendarNotes.replace('bearSource: keyword', 'bearSource: manual-bear (tapped)')), false,
+    'a verdict line always writes');
+});
+
 test('same venue at the same start instant is one event, whatever each record calls it', () => {
   const core = createCore();
   const at = (iso) => new Date(iso);

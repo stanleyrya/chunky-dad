@@ -247,6 +247,22 @@ const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'inst
 // bar…) still merges by the ordinary rules: that is what enrichment is for.
 const LISTING_AUTHORITY_FIELDS = new Set(['title', 'image', 'imageVertical', 'imageHorizontal', 'endDate']);
 
+// Notes lines the scraper REGENERATES every run and the results UI refuses to
+// render as a diff row (owner review 2026-09-12: "save what is needed, just
+// don't show it as a diff to me"): the dedup key, the derived maps link and
+// favicon, the timezone resolved from the city, and the provenance
+// companions. They are still written whenever a write happens — they are just
+// not, by themselves, a reason to write. Without this, a key line rebuilt from
+// a longer title filed a full UPDATE whose own comparison chip read "no
+// changes": 104 of 613 merge cards across the September runs were exactly
+// that, and the reviewer could not see why any of them were there.
+// bearSource is deliberately ABSENT: it carries the owner's manual verdict,
+// and his verdicts always land (see the fail-closed no-op test).
+const REGENERATED_NOTES_KEYS = new Set([
+    'key', 'gmaps', 'favicon', 'timezone',
+    'barSource', 'pinSource', 'addressSource', 'imageSource'
+]);
+
 // Placeholder-image vocabulary for getPlaceholderImageUrlReason below. Words a
 // file can be NAMED that mean "there is no picture here" — the 1x1 spacer /
 // lazy-load / tracking pixel. Whole tokens only (see the caller), so a real
@@ -12906,13 +12922,32 @@ class SharedCore {
     // bearSource line, a sanity-driven note line must always land in the
     // calendar). Fail closed: anything not provably identical writes.
     notesProjectionsMatch(existingNotes, mergedNotes) {
-        const toSortedLines = (value) => String(value === null || value === undefined ? '' : value)
+        const isRegeneratedBookkeeping = (line) => {
+            const colon = line.indexOf(':');
+            if (colon <= 0) return false;
+            return REGENERATED_NOTES_KEYS.has(line.slice(0, colon).trim());
+        };
+        const allLines = (value) => String(value === null || value === undefined ? '' : value)
             .replace(/\r\n?/g, '\n')
             .split('\n')
-            .filter(line => line.trim() !== '')
+            .map(line => line.trim())
+            .filter(line => line !== '');
+        // A calendar record that carries NONE of this bookkeeping has never
+        // been stamped by a run: writing it the first time is the point (the
+        // dedup key is how later runs find the event), so it counts as a
+        // change. Only a record already carrying bookkeeping may have it
+        // rewritten silently.
+        const existingLinesAll = allLines(existingNotes);
+        const mergedLinesAll = allLines(mergedNotes);
+        const existingWasStamped = existingLinesAll.some(isRegeneratedBookkeeping);
+        const mergedStamps = mergedLinesAll.some(isRegeneratedBookkeeping);
+        if (!existingWasStamped && mergedStamps) return false;
+        const toSortedLines = (lines) => lines
+            // Regenerated bookkeeping is written, never a reason to write.
+            .filter(line => !isRegeneratedBookkeeping(line))
             .sort();
-        const existingLines = toSortedLines(existingNotes);
-        const mergedLines = toSortedLines(mergedNotes);
+        const existingLines = toSortedLines(existingLinesAll);
+        const mergedLines = toSortedLines(mergedLinesAll);
         if (existingLines.length !== mergedLines.length) return false;
         return existingLines.every((line, index) => line === mergedLines[index]);
     }

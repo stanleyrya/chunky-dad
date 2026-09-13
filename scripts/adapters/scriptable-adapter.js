@@ -12377,11 +12377,21 @@ class ScriptableAdapter {
     );
     let comparisonHtml = "";
     if (showComparison) {
+      // A card that sits in the merge pile is, by definition, going to be
+      // written — so its chip must never read "no changes" (owner, 2026-09-13:
+      // "Events to merge (adding info) shows events that have no changes").
+      // Zero CHANGED FIELDS with a write still pending means the change is in
+      // the notes, which this table deliberately does not render.
+      const writePending =
+        event._mergeNoOp === false &&
+        this.normalizeIntentAction(event) === "merge";
       const diffChip =
         changedFieldCount === null
           ? ""
           : changedFieldCount === 0
-            ? '<span class="merge-diff-chip merge-diff-none">• no changes</span>'
+            ? (writePending
+                ? '<span class="merge-diff-chip merge-diff-changed">• notes only</span>'
+                : '<span class="merge-diff-chip merge-diff-none">• no changes</span>')
             : `<span class="merge-diff-chip merge-diff-changed">• ${changedFieldCount} changed</span>`;
       const eventId =
         event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
