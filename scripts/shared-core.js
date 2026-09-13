@@ -320,6 +320,22 @@ const TITLE_DATE_MONTH_PART = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?
 const TITLE_DATE_DAY_PART = '(\\d{1,2})(?:st|nd|rd|th)?';
 const TITLE_DATE_YEAR_PART = '(?:,?\\s+(\\d{4}))?';
 
+// Calendar-generic CADENCE words: a weekday name (singular or plural), or a
+// relative-day/period word. On a listing every row is titled by the slot it
+// fills ("Tonight at Ty's", "Friday at The Eagle NYC", "Saturday Night
+// Karaoke at GYM Bar" — thotyssey's tockify feed, audit 2026-09-13), so these
+// tokens say WHEN, never WHICH event. They are dropped from the cross-source
+// title-token set exactly like stopwords, and — unlike city tokens — with no
+// fallback: a title made of nothing but cadence words carries no name at all,
+// and every caller of getCrossSourceTitleTokens fails closed on an empty set.
+const CADENCE_TITLE_TOKENS = new Set([
+    'monday', 'mondays', 'tuesday', 'tuesdays', 'wednesday', 'wednesdays',
+    'thursday', 'thursdays', 'friday', 'fridays', 'saturday', 'saturdays',
+    'sunday', 'sundays',
+    'today', 'tonight', 'tomorrow', 'tonite',
+    'weekly', 'monthly', 'biweekly', 'daily', 'annual', 'annually'
+]);
+
 // Legalese phrase shapes for the title-looks-like-boilerplate sanity flag.
 // A generic legalese phrase table is DATA (like ADDRESS_STREET_TYPE_TOKENS
 // above), not per-page hardcoding: these are ticketing-terms markers that no
@@ -5263,6 +5279,15 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyVenueSiteAddressConsensus === 'function') {
             aiWebParser.applyVenueSiteAddressConsensus(allEvents, mainConfig?.cities || null);
         }
+        // Listing-host flags (deterministic, page-derived): a host whose own
+        // pages resolved siteRole 'organizer', or whose events name 3+
+        // distinct bars, publishes many venues — its shared page host is not
+        // venue identity for dedup. Runs BEFORE the identity pass (which
+        // consumes the consensus stash this reads) and before every consumer
+        // of getCrossSourceVenueIdentity.
+        if (aiWebParser && typeof aiWebParser.applyListingHostFlags === 'function') {
+            aiWebParser.applyListingHostFlags(allEvents);
+        }
         // Venue-site identity corrections (deterministic, curated-anchored):
         // when a crawled site's identity is established — venue role seen,
         // unique curated-bar name match, address agreement — flyer-subtitle
@@ -10187,7 +10212,11 @@ class SharedCore {
                 // same promoter on the same night. Veto the merge when both records
                 // carry place info and the places don't match; merge otherwise
                 // (identity match or inconclusive = previous behavior).
-                if (this.areEventsDistinctByPlace(event, keyMatch)) {
+                // …and a feed that gave the two rows different ids has already
+                // stated they are different events (areDistinctPublishedFeedRows),
+                // which vetoes the key collision exactly like a place mismatch.
+                if (this.areEventsDistinctByPlace(event, keyMatch)
+                    || this.areDistinctPublishedFeedRows(event, keyMatch)) {
                     // The base-key holder is at a different venue, but a previous veto may
                     // have parked another record of THIS event under a suffixed key
                     // ("key--2", "key--3", ...). Walk the whole collision chain before
@@ -10197,6 +10226,7 @@ class SharedCore {
                     for (const [existingKey, holder] of seen) {
                         if (holder === keyMatch) continue;
                         if (existingKey !== key && !existingKey.startsWith(`${key}--`)) continue;
+                        if (this.areDistinctPublishedFeedRows(event, holder)) continue;
                         if (!this.areEventsDistinctByPlace(event, holder)) {
                             chainMatch = holder;
                             break;
@@ -10584,6 +10614,13 @@ class SharedCore {
         // by the field loop below, so an existing-only _organizer would be lost.
         if (!mergedEvent._organizer && existingEvent && typeof existingEvent._organizer === 'string' && existingEvent._organizer) {
             mergedEvent._organizer = existingEvent._organizer;
+        }
+        // Same carry for the feed's own row identity: a listing stub merged
+        // onto a feed row must keep the row id, or the "two rows of one feed
+        // are two events" guard goes blind for every later comparison.
+        if (!mergedEvent._sourceRowId && existingEvent && existingEvent._sourceRowId) {
+            mergedEvent._sourceRowId = existingEvent._sourceRowId;
+            mergedEvent._sourceRowFeed = existingEvent._sourceRowFeed;
         }
         // Same carry for the matched-promoter identity stamp (_promoter).
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
@@ -17846,6 +17883,10 @@ class SharedCore {
         if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
             return null;
         }
+        // Two different rows of one structured feed are two published events
+        // (see areDistinctPublishedFeedRows) — no identity signal below may
+        // weld them together.
+        if (this.areDistinctPublishedFeedRows(newEvent, existingEvent)) return null;
         const requireCloseStartTimes = options.requireCloseStartTimes !== false;
         const incoming = this.buildIdentityComparisonShape(newEvent);
         const existing = this.buildIdentityComparisonShape(existingEvent);
@@ -18506,6 +18547,27 @@ class SharedCore {
     // literally named the venue — "Bain Mathieu, 2915 Rue Ontario E").
     // Multi-token names only, fail closed: single-word bar names like
     // "Eagle" collide with street names.
+    // TWO ROWS OF ONE FEED ARE TWO EVENTS. A structured feed publishes its own
+    // per-row identity (Tockify `eid.uid`, a Tribe/WordPress `id`, an
+    // aggregator `slug`, a VEVENT `UID`); the JSON-API reader carries it on
+    // the internal `_sourceRowId`/`_sourceRowFeed` pair (underscore fields are
+    // excluded from notes, diffs and merge field loops). When two records come
+    // from the SAME feed (same host+path) and the feed gave them DIFFERENT
+    // ids, the publisher has stated they are different events — no similarity
+    // heuristic may fold them. Fails closed in both directions: a missing id
+    // or a different feed asserts nothing, and the stub-plus-detail-page pair
+    // (only one side is a feed row) is untouched.
+    areDistinctPublishedFeedRows(eventA, eventB) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return false;
+        const feedA = String(eventA._sourceRowFeed || '').trim();
+        const feedB = String(eventB._sourceRowFeed || '').trim();
+        if (!feedA || !feedB || feedA !== feedB) return false;
+        const idA = String(eventA._sourceRowId || '').trim();
+        const idB = String(eventB._sourceRowId || '').trim();
+        if (!idA || !idB) return false;
+        return idA !== idB;
+    }
+
     getCrossSourceVenueIdentity(eventA, eventB) {
         if (!eventA || !eventB) return null;
         const barA = this.normalizeBarNameKey(eventA.bar);
@@ -18529,7 +18591,27 @@ class SharedCore {
         }
         const hostA = String(eventA._venueSitePageHost || '').trim().toLowerCase();
         const hostB = String(eventB._venueSitePageHost || '').trim().toLowerCase();
-        if (hostA && hostB && hostA === hostB) return 'venue-site';
+        if (hostA && hostB && hostA === hostB) {
+            // A LISTING host is never venue identity (audit 2026-09-13:
+            // tockify.com stamped on 327/327 Thotyssey rows and
+            // thebearcalendar.com on 64/68, so "published on the same feed"
+            // read as "at the same venue" — 63 and 4 real events were folded
+            // into other bars' listings). The stamp is set by the ai-web
+            // parser's applyListingHostFlags from page-derived signals only
+            // (siteRole 'organizer', or the host's own events naming 3+
+            // distinct bars — the same 3+ fan-in convention deduplicateEvents
+            // uses to demote a shared URL to a listing page).
+            if (eventA._venueSiteHostIsListing === true || eventB._venueSiteHostIsListing === true) return null;
+            // Sharing a page host is the WEAKEST axis, so a place
+            // CONTRADICTION overrules it: when both sides name a bar (or both
+            // name an address) and they disagree, the pair is two venues that
+            // happen to publish on one site. Fail closed — the axis exists for
+            // the record that names NO place at all (#1539's "Eagle Karaoke"),
+            // and that case is untouched.
+            if (barA && barB && barA !== barB) return null;
+            if (addressA && addressB && addressA !== addressB) return null;
+            return 'venue-site';
+        }
         return null;
     }
 
@@ -18567,6 +18649,11 @@ class SharedCore {
         for (const token of scopedTokens) {
             if (token.length <= 1) continue;
             if (stopwords.has(token)) continue;
+            // Cadence words name the SLOT, not the event (see
+            // CADENCE_TITLE_TOKENS) — dropped with no fallback so a purely
+            // cadence-named listing row ("Friday at The Eagle NYC") yields no
+            // tokens and can never subset-match another bar's row.
+            if (CADENCE_TITLE_TOKENS.has(token)) continue;
             if (token.length >= 3 && keys.some(key => key.includes(token))) continue;
             if (!tokensWithCity.includes(token)) tokensWithCity.push(token);
             if (token.length >= 3 && cityTokens.has(token)) continue;
@@ -18611,6 +18698,7 @@ class SharedCore {
     // two REAL events (an early show and a late party are common).
     getCrossSourceDuplicateSignal(eventA, eventB) {
         if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        if (this.areDistinctPublishedFeedRows(eventA, eventB)) return null;
         if (!this.getCrossSourceVenueIdentity(eventA, eventB)) return null;
         const nightA = this.getEventNightKey(eventA);
         if (!nightA) return null;

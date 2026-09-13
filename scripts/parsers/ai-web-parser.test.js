@@ -14467,6 +14467,101 @@ test('applyDerivedCadenceStamps: renumbered slugs classify occurrence-expanded �
     `shape line expected, got: ${JSON.stringify(logs)}`);
 });
 
+// The Bear Calendar (audit 2026-09-13) publishes four DATED "Bears in Excess"
+// rows — slugs bears-in-excess-2026/-2/-3/-4 — whose public URLs are dropped
+// as untrustworthy aggregator pointers. With no public artifact left the
+// family read as a stated series and was synthesised into ONE withheld
+// recurrence, deleting three published events. The feed's own per-row id is
+// the artifact the pointer-dropping threw away.
+test('applyDerivedCadenceStamps: distinct per-date FEED ROW IDS are per-date artifacts, even with no public URL', () => {
+  const parser = createParser();
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: '',
+      _sourceRowFeed: 'thebearcalendar.com/feed.json',
+      _sourceRowId: index === 0 ? 'karaoke-2026' : `karaoke-2026-${index + 1}`
+    }));
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, undefined, 'no series conversion — the site already expanded it');
+    assert.ok(record._seriesInfo, 'family metadata instead of a stamp');
+  }
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded')
+    && line.includes('distinct per-date feed row id artifacts')),
+    `shape line expected, got: ${JSON.stringify(logs)}`);
+});
+
+// A row id that is STABLE across dates (Tockify's eid.uid names the series,
+// not the occurrence) proves nothing per-date — the stated-series flow holds.
+test('applyDerivedCadenceStamps: a feed row id shared by every date is not a per-date artifact', () => {
+  const parser = createParser();
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map(date =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: 'https://fixture-eagle.example/events/karaoke/',
+      _sourceRowFeed: 'tockify.com/api/ngevent',
+      _sourceRowId: '17601'
+    }));
+  withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'one series uid across dates stays stated-series');
+  }
+});
+
+test('getJsonApiRowIdentity: reads the feed\'s own row id and reduces a composite id to its event part', () => {
+  const parser = createParser();
+  // Tockify: eid = { uid (the EVENT), seq/tid/rid (the OCCURRENCE) }
+  assert.equal(parser.getJsonApiRowIdentity({ eid: { uid: '17601', seq: 0, tid: 1788984000000, rid: 0 }, content: { summary: { text: 'Tonight at GYM Bar' } } }), '17601');
+  // Aggregator slug, WordPress/Tribe numeric id, VEVENT UID via the ICS door
+  assert.equal(parser.getJsonApiRowIdentity({ slug: 'bears-in-excess-2026-2', title: 'Bears in Excess' }), 'bears-in-excess-2026-2');
+  assert.equal(parser.getJsonApiRowIdentity({ id: 4821, title: 'BEEFMINCE' }), '4821');
+  assert.equal(parser.getJsonApiRowIdentity({ uid: 'abc123@thebearcalendar.com', title: 'Furry Friday' }), 'abc123@thebearcalendar.com');
+  // No id published → fail closed
+  assert.equal(parser.getJsonApiRowIdentity({ title: 'Bear Night' }), '');
+  assert.equal(parser.getJsonApiRowIdentity(null), '');
+});
+
+test('getJsonApiFeedKey: a paged feed is ONE feed — the query is dropped, the path is not', () => {
+  const parser = createParser();
+  assert.equal(parser.getJsonApiFeedKey('https://tockify.com/api/ngevent?calname=thotyssey&max=100'), 'tockify.com/api/ngevent');
+  assert.equal(parser.getJsonApiFeedKey('https://tockify.com/api/ngevent?startms=1789000000000'), 'tockify.com/api/ngevent');
+  assert.equal(parser.getJsonApiFeedKey('https://www.thebearcalendar.com/feed.json'), 'thebearcalendar.com/feed.json');
+  assert.notEqual(parser.getJsonApiFeedKey('https://example.test/feed-a.json'), parser.getJsonApiFeedKey('https://example.test/feed-b.json'));
+  assert.equal(parser.getJsonApiFeedKey('not a url'), '');
+});
+
+test('applyListingHostFlags: a host publishing many bars, or one that called itself an organizer, is a listing host', () => {
+  const parser = createParser();
+  // Three distinct bars on ONE host — the same 3+ fan-in convention dedup uses
+  const aggregator = ['Ty\'s', 'Gym Sportsbar', 'The Eagle NYC'].map(bar =>
+    ({ title: `Tonight at ${bar}`, bar, _venueSitePageHost: 'tockify.com' }));
+  // A real venue site: one bar, plus a record that names no bar at all
+  const venueSite = [
+    { title: 'KARAOKE', bar: 'Fixture Eagle', _venueSitePageHost: 'fixture-eagle.example' },
+    { title: 'Eagle Karaoke', _venueSitePageHost: 'fixture-eagle.example' }
+  ];
+  const events = [...aggregator, ...venueSite];
+  const logs = withCapturedLogs(() => parser.applyListingHostFlags(events));
+  for (const event of aggregator) assert.equal(event._venueSiteHostIsListing, true);
+  for (const event of venueSite) assert.equal(event._venueSiteHostIsListing, undefined, 'a one-venue host keeps its identity axis');
+  assert.ok(logs.some(line => line.includes('🏷️ LISTING HOST: tockify.com') && line.includes('3 distinct bars')),
+    `listing-host line expected, got: ${JSON.stringify(logs)}`);
+
+  // The organizer siteRole the venue-address harvest already resolves is the
+  // second, independent signal — no bar count needed.
+  const organizerParser = createParser();
+  organizerParser.lastVenueSiteConsensus = { 'promoter.example': { blocked: true } };
+  const organizerEvents = [
+    { title: 'BEARRACUDA', bar: 'Fixture Hall', _venueSitePageHost: 'promoter.example' },
+    { title: 'BEARRACUDA Seattle', _venueSitePageHost: 'promoter.example' }
+  ];
+  withCapturedLogs(() => organizerParser.applyListingHostFlags(organizerEvents));
+  for (const event of organizerEvents) assert.equal(event._venueSiteHostIsListing, true);
+});
+
 // Stamping-path coverage (stated-series shape): the SAME multi-date family
 // with NO per-date artifacts — every record pointing at the one page that
 // states the schedule — still stamps the derived rule and mints the collapse

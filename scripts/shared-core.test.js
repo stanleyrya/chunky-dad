@@ -11355,6 +11355,80 @@ test('cross-source signal: venue identity via _venueSitePageHost when one record
   assert.equal(core.getCrossSourceDuplicateSignal(detail, { ...listing, _venueSitePageHost: undefined }), null);
 });
 
+test('cross-source signal: a listing host is never venue identity, and a place contradiction outranks the shared host', () => {
+  const core = createDallasCore();
+  // Literal thotyssey/tockify shapes (audit 2026-09-13): one aggregator feed,
+  // two different NYC bars, both stamped with the aggregator's host.
+  const tys = {
+    title: "Tonight at Ty's", bar: "Ty's", city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: 'tockify.com'
+  };
+  const gym = {
+    title: 'Tonight at GYM Bar', bar: 'Gym Sportsbar', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: 'tockify.com'
+  };
+  // Two bars that differ: the shared host says "same publisher", not "same venue"
+  assert.equal(core.getCrossSourceVenueIdentity(tys, gym), null);
+  assert.equal(core.getCrossSourceDuplicateSignal(tys, gym), null);
+  // Different addresses contradict just as loudly, even with no bar named
+  const oslo = {
+    title: 'Bear Cave', address: 'Nedre Slottsgate 2E, 0153 Oslo, Norway', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _venueSitePageHost: 'thebearcalendar.com'
+  };
+  const dc = {
+    title: 'Bear Cave Underwear Party', address: '1335 Green Court NW, Washington DC', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _venueSitePageHost: 'thebearcalendar.com'
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(oslo, dc), null);
+  // A record that names NO place at all is exactly what the host axis is for —
+  // it still pairs on a venue site...
+  const barless = {
+    title: 'Karaoke', city: 'unknown', startDate: new Date('2026-08-01T02:00:00.000Z'),
+    _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST
+  };
+  const eagle = {
+    title: 'Eagle Karaoke', bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: EAGLE_HOST
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(barless, eagle), 'venue-site');
+  // ...and stops pairing the moment the host is flagged a listing host
+  assert.equal(core.getCrossSourceVenueIdentity({ ...barless, _venueSiteHostIsListing: true }, eagle), null);
+  assert.equal(core.getCrossSourceVenueIdentity(barless, { ...eagle, _venueSiteHostIsListing: true }), null);
+});
+
+test('cross-source title tokens: weekday and relative-day words name the slot, not the event', () => {
+  const core = createDallasCore();
+  assert.deepEqual(core.getCrossSourceTitleTokens('Bear Cave Friday at The 244 Spot'), ['bear', 'cave', '244', 'spot']);
+  // A row titled only by its slot carries no name at all — every caller fails closed
+  assert.deepEqual(core.getCrossSourceTitleTokens('Friday at The Eagle NYC', ['eaglenyc', 'theeaglenyc']), []);
+  assert.deepEqual(core.getCrossSourceTitleTokens('Tonight'), []);
+  // Cadence stripping never eats a real name
+  assert.deepEqual(core.getCrossSourceTitleTokens('Jockstrap Wednesday'), ['jockstrap']);
+});
+
+test('dedup: two rows of ONE feed carrying different row ids are two published events', () => {
+  const core = createDallasCore();
+  const base = {
+    bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: EAGLE_HOST,
+    _sourceRowFeed: 'tockify.com/api/ngevent'
+  };
+  const rowA = { ...base, title: 'Bear Night', _sourceRowId: '22092' };
+  const rowB = { ...base, title: 'Bear Night Karaoke', _sourceRowId: '17601' };
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, rowB), true);
+  assert.equal(core.getCrossSourceDuplicateSignal(rowA, rowB), null);
+  assert.equal(core.getSameEventIdentitySignal(rowA, rowB), null);
+  // The SAME row id (two occurrences of one series row, a stub + its detail)
+  // is not vetoed, and neither is a pair from two different feeds
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowId: '22092' }), false);
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowFeed: 'thebearcalendar.com/feed.json' }), false);
+  // Fail closed in both directions: a missing id asserts nothing
+  assert.equal(core.areDistinctPublishedFeedRows(rowA, { ...rowB, _sourceRowId: '' }), false);
+  assert.equal(core.getCrossSourceDuplicateSignal(rowA, { ...rowB, _sourceRowId: undefined }), 'venue+night+title-subset');
+});
+
 test('cross-source signal: fails closed on disjoint titles, different nights, and empty titles', () => {
   const core = createDallasCore();
   const base = { bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _venueSitePageHost: EAGLE_HOST };
