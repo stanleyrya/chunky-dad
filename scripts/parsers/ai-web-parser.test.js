@@ -7889,6 +7889,90 @@ test('a feed row names its city without an address, keeps ticket over its own ur
   assert.equal(ownPageOnly.city, 'portland');
 });
 
+test('a feed row that names a place no calendar covers still states its clock', () => {
+  const parser = createParser();
+  const build = (row) => parser.buildEventFromJsonApiObject(row, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+
+  // The zone comes from the row's own place, through the tz database — the
+  // city is not configured, and the record may well be withheld for that, but
+  // the instant it carries is the right one.
+  assert.equal(build({ title: 'Bear Hangout', start: '2026-09-24T18:00:00', city: 'Prague', country: 'Czechia' }).timezone, 'Europe/Prague');
+  assert.equal(build({ title: 'Furry Friday', start: '2026-09-18T19:00:00', city: 'Sydney', region: 'NSW', country: 'Australia' }).timezone, 'Australia/Sydney');
+  assert.equal(build({ title: 'Weekly Bear Social', start: '2026-09-14T15:30:00', city: 'Toronto' }).timezone, 'America/Toronto');
+  // A country that keeps one clock names it even for a city no zone is named after.
+  assert.equal(build({ title: 'BEAR BASH COLOGNE', start: '2026-10-03T20:00:00', city: 'Cologne', country: 'Germany' }).timezone, 'Europe/Berlin');
+  // A country that spans offsets resolves nothing — a wrong zone is worse.
+  assert.equal(build({ title: 'Sticky Rice', start: '2026-10-03T20:00:00', city: 'Palm Springs', region: 'CA', country: 'United States' }).timezone, undefined);
+  // A stated zone always wins over the place.
+  assert.equal(build({ title: 'Bear Pub', start: '2026-10-03T20:00:00', city: 'Oslo', country: 'Norway', tz: 'Europe/Berlin' }).timezone, 'Europe/Berlin');
+});
+
+test('an all-day feed row stays a day: local midnight in its own zone, never midnight UTC', () => {
+  const parser = createParser();
+  const row = {
+    title: 'Bear Frolic', start: '2026-10-08T00:00:00+00:00', end: '2026-10-12T23:59:59+00:00',
+    all_day: true, city: 'Ottawa', region: 'ON', country: 'Canada', tz: 'America/Toronto'
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
+  assert.equal(event.startDate.toISOString(), '2026-10-08T00:00:00.000Z', 'the stated day, as a wall clock');
+  assert.equal(event.endDate.toISOString(), '2026-10-12T23:59:59.000Z');
+  assert.equal(event._timezoneUnresolved, true, 'handed to the zone to anchor, not shipped as an instant');
+  parser.core.resolveWallClockDates(event);
+  assert.equal(event.startDate.toISOString(), '2026-10-08T04:00:00.000Z', 'midnight in Toronto, not midnight UTC');
+  assert.equal(event.endDate.toISOString(), '2026-10-13T03:59:59.000Z');
+
+  // The flag is read wherever the row puts it, including inside a
+  // when-container, and only a literal true counts.
+  const nested = parser.buildEventFromJsonApiObject({
+    summary: { text: 'Pride Weekend' }, when: { start: { millis: Date.UTC(2026, 9, 8, 4, 0), tzid: 'America/Toronto' }, allDay: true }
+  }, 'https://tockify.example/api/ngevent', null);
+  assert.equal(nested.startDate.toISOString(), '2026-10-08T00:00:00.000Z');
+  assert.equal(nested._timezoneUnresolved, true);
+  const timed = parser.buildEventFromJsonApiObject({ title: 'Night', start: '2026-10-08T22:00:00Z', all_day: 'false' },
+    'https://feed.example/api/events', null);
+  assert.equal(timed.startDate.toISOString(), '2026-10-08T22:00:00.000Z', 'a string "false" never makes a day event');
+});
+
+test('a feed row publishes its artwork in any shape: object, list, nested rendition set', () => {
+  const parser = createParser();
+  const build = (row) => parser.buildEventFromJsonApiObject({ title: 'Poster', start: '2026-10-08T22:00:00Z', ...row },
+    'https://feed.example/api/events', null);
+
+  assert.equal(build({ image: 'https://cdn.example/a.jpg' }).image, 'https://cdn.example/a.jpg');
+  assert.equal(build({ image: { url: 'https://cdn.example/b.jpg', width: 1200, height: 800 } }).image, 'https://cdn.example/b.jpg');
+
+  // WordPress: the top-level URL is the original (no stated size), the nested
+  // set are scaled renditions — the original wins, the rest are the crop
+  // fallbacks the image gate falls back on.
+  const wordpress = build({ featured_image: { source_url: 'https://cdn.example/full.jpg', media_details: { sizes: {
+    medium: { source_url: 'https://cdn.example/m.jpg', width: 300, height: 200 },
+    large: { source_url: 'https://cdn.example/l.jpg', width: 1024, height: 683 }
+  } } } });
+  assert.equal(wordpress.image, 'https://cdn.example/full.jpg');
+  assert.deepEqual(wordpress._imageAlternates, ['https://cdn.example/l.jpg', 'https://cdn.example/m.jpg'], 'largest rendition first');
+
+  // A set of variants that all state their size: the biggest is the artwork.
+  const variants = build({ image_sets: [{ variants: [
+    { href: 'https://cdn.example/512.jpg', width: 512, height: 512 },
+    { href: 'https://cdn.example/1024.jpg', width: 1024, height: 1024 }
+  ] }] });
+  assert.equal(variants.image, 'https://cdn.example/1024.jpg');
+  assert.deepEqual(variants._imageAlternates, ['https://cdn.example/512.jpg']);
+  assert.equal(variants.imageSource, 'json-api');
+
+  // A plain list of crops keeps the publisher's own order.
+  assert.equal(build({ images: ['https://cdn.example/p.jpg', 'https://cdn.example/s.jpg'] }).image, 'https://cdn.example/p.jpg');
+
+  // An image set that publishes ids and sizes but no URL anywhere: no URL can
+  // be invented for it, so the row stays imageless rather than guessing a CDN.
+  const idOnly = build({ imageSets: [{ ownerId: '56b4', id: '6777', width: 1000, height: 1000, masterFormat: 'jpg' }] });
+  assert.equal(idOnly.image, '');
+  assert.equal(idOnly.imageSource, undefined);
+
+  // A flyer_url is still never the ticket link.
+  assert.equal(build({ flyer_url: 'https://cdn.example/flyer.jpg' }).ticketUrl, '');
+});
+
 test('a WordPress/Tribe REST row: start_date beats the post date, the nested venue is the place, the image object and entity-encoded cost are read, organizer[] is not a performance list', () => {
   const parser = createParser();
   const row = {
@@ -17872,13 +17956,21 @@ test("a rejected image crop falls back to the row's other renditions of the same
   assert.equal(event.image, `${file}?rect=0,571,1755,1053`, 'the next rendition of the same artwork, not an imageless event');
   assert.equal(event.imageSource, 'json-api');
 
-  // When every rendition is rejected the event stays imageless — the
-  // fallback never smuggles known furniture back in.
+  // When every rendition is rejected the row keeps the one its publisher
+  // chose: the feed nominated this artwork for this event, and "thumbnail" is
+  // a verdict about how the picture LOOKS, not about whose picture it is.
   const allBad = parser.buildEventFromDiceRow(diceRow({ ticket_types: [], event_images: { portrait: `${file}?rect=1`, square: `${file}?rect=2` } }), source);
   parser.getNonEventImageOcrReason = () => 'the vision pass classified it as logo with no readable text';
   parser.rejectNonEventImageValues(allBad, { url: source, html: '' });
-  assert.equal(allBad.image, undefined);
-  assert.equal(allBad.imageSource, undefined);
+  assert.equal(allBad.image, `${file}?rect=1`, "the publisher's own artwork is never furniture");
+  assert.equal(allBad.imageSource, 'json-api');
+
+  // An image WE picked off the page has no such standing — the furniture gate
+  // still empties the slot.
+  const scraped = { title: 'Scraped', image: 'https://media.example/footer-logo.png', imageSource: 'page' };
+  parser.rejectNonEventImageValues(scraped, { url: source, html: '' });
+  assert.equal(scraped.image, undefined);
+  assert.equal(scraped.imageSource, undefined);
 });
 
 test('a DICE row that states a timezone but names no place keeps the wall clock instead', () => {

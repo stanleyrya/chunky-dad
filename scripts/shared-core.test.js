@@ -21949,7 +21949,48 @@ test('a bare site root in ticketUrl is a website, not a ticket link', () => {
     const real = { title: 'X', ticketUrl: 'https://theurbanbear.com/events/underbear' };
     core.clearNonIdentityLinkFields(real, real.title);
     assert.equal(real.ticketUrl, 'https://theurbanbear.com/events/underbear');
+    // …and on a ticket VENDOR the brand label IS the listing: a branded
+    // subdomain root is the seller's page, not a site's front door (run
+    // 20260913-012333: westernxposurefall2026.eventbrite.com and
+    // xxl2026.eventbrite.com were deleted as "bare site roots").
+    const vendor = { title: 'Western Xposure: Fall 2026', ticketUrl: 'https://westernxposurefall2026.eventbrite.com/', website: 'https://westernxposure.example' };
+    core.clearNonIdentityLinkFields(vendor, vendor.title);
+    assert.equal(vendor.ticketUrl, 'https://westernxposurefall2026.eventbrite.com/');
+    // The same shape on the platform's regional domains (one vendor, many
+    // domains) — and never the platform's own root.
+    const regional = { title: 'Bear Bash', ticketUrl: 'https://bearbash2026.eventbrite.ca/', website: 'https://bearbash.example' };
+    core.clearNonIdentityLinkFields(regional, regional.title);
+    assert.equal(regional.ticketUrl, 'https://bearbash2026.eventbrite.ca/');
+    const platformRoot = { title: 'Y', ticketUrl: 'https://www.eventbrite.com/', website: 'https://promoter.example' };
+    core.clearNonIdentityLinkFields(platformRoot, platformRoot.title);
+    assert.equal(platformRoot.ticketUrl, '', "the vendor's own home page is not one event's ticket link");
   } finally { console.log = originalLog; }
+});
+
+test('a place names its clock even when no calendar covers it', () => {
+  const core = createCore();
+  const at = new Date('2026-10-08T12:00:00Z');
+  const zone = (place) => {
+    const resolved = core.resolveIanaTimezoneFromPlace(place, at);
+    return resolved ? resolved.timezone : '';
+  };
+  // The zone's own exemplar city, with the country narrowing the match.
+  assert.equal(zone({ city: 'Prague', country: 'Czechia' }), 'Europe/Prague');
+  assert.equal(zone({ city: 'Sydney', region: 'NSW', country: 'Australia' }), 'Australia/Sydney');
+  assert.equal(zone({ city: 'Toronto' }), 'America/Toronto');
+  // A trailing qualifier still finds the city ("Brisbane City").
+  assert.equal(zone({ city: 'Brisbane City', region: 'QLD', country: 'Australia' }), 'Australia/Brisbane');
+  // A city whose name belongs to a zone in ANOTHER country is refused, not
+  // crossed (Vancouver WA is not America/Vancouver).
+  assert.equal(zone({ city: 'Vancouver', region: 'WA', country: 'United States' }), '');
+  // A country that keeps one clock names it; one that spans offsets does not.
+  assert.equal(zone({ city: 'Cologne', country: 'Germany' }), 'Europe/Berlin');
+  assert.equal(zone({ city: 'Edinburgh', country: 'United Kingdom' }), 'Europe/London');
+  assert.equal(zone({ city: 'Maspalomas', region: 'Gran Canaria', country: 'Spain' }), '', 'the Canaries keep a different clock from Madrid');
+  assert.equal(zone({ city: 'Westfield', region: 'IN', country: 'United States' }), '');
+  // Nothing stated, nothing resolved.
+  assert.equal(core.resolveIanaTimezoneFromPlace({ city: '', region: '', country: '' }), null);
+  assert.equal(core.resolveIanaTimezoneFromPlace(null), null);
 });
 
 test('calendar merges are decided by source authority, deterministically', () => {
