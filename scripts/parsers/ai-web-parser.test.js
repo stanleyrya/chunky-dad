@@ -968,7 +968,9 @@ test('extractEventsFromJsonLd builds a complete event from ticketing-page struct
   assert.equal(event.endDate.toISOString(), '2026-07-18T10:00:00.000Z');
   assert.equal(event._timezoneUnresolved, undefined);
   assert.equal(event.bar, 'Nova PDX');
-  assert.equal(event.address, '722 East Burnside Street, Portland, OR, 97214');
+  // Region + postal code join with a SPACE, the form every postal
+  // convention (and the calendar) uses — see formatJsonLdAddress.
+  assert.equal(event.address, '722 East Burnside Street, Portland, OR 97214');
   assert.equal(event.ticketUrl, 'https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets');
   assert.equal(event.image, 'https://res.cloudinary.example/cover.webp');
   assert.match(event.description, /Harnesses, Jockstraps & Fetish Gear/);
@@ -1003,7 +1005,7 @@ test('formatJsonLdAddress never duplicates locality/region already inside the st
       addressRegion: 'AZ',
       postalCode: '85004'
     }, clean),
-    '123 Main St, Phoenix, AZ, 85004'
+    '123 Main St, Phoenix, AZ 85004'
   );
 
   // Token guard: the region "NY" is NOT "present" just because the street
@@ -13197,6 +13199,108 @@ test('social share endpoints are not profiles, and ticket-utility pages are neve
   assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago/resend', 'https://sickening.events/events?q=goldiloxx').reason, 'ticket-utility-page');
   assert.equal(parser.validateEventUrl('https://www.eventbrite.com/e/x-123/refund', 'https://x.example/').reason, 'ticket-utility-page');
   assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago', 'https://sickening.events/events?q=goldiloxx').valid, true);
+});
+
+test('link hygiene: profile-shaped socials outrank post/app links, ticketing utility routes and calendar exports never crawl', () => {
+  const parser = createParser();
+
+  // Fix 1 — RANK, not first-come. A post permalink and an event page both
+  // precede the promoter's profile in the markup.
+  const links = parser.extractLinksFromPage(
+    '<a href="https://www.instagram.com/p/DAbCdEf/">post</a>'
+    + '<a href="https://www.facebook.com/events/123456/">the event</a>'
+    + '<a href="https://www.instagram.com/goldiloxx__">IG</a>'
+    + '<a href="https://www.facebook.com/goldiloxxparty">FB</a>',
+    'https://sickening.events/e/goldiloxx-chicago');
+  assert.equal(links.instagram, 'https://www.instagram.com/goldiloxx__');
+  assert.equal(links.facebook, 'https://www.facebook.com/goldiloxxparty');
+  // With no profile-shaped link anywhere, the non-share link still wins (fail open).
+  const fallback = parser.extractLinksFromPage(
+    '<a href="https://www.facebook.com/events/123456/">the event</a>',
+    'https://sickening.events/e/goldiloxx-chicago');
+  assert.equal(fallback.facebook, 'https://www.facebook.com/events/123456/');
+  assert.equal(parser.isProfileShapedSocialUrl('https://www.instagram.com/goldiloxx__/'), true);
+  assert.equal(parser.isProfileShapedSocialUrl('https://instagram.com/explore'), false);
+  assert.equal(parser.isProfileShapedSocialUrl('https://instagram.com/goldiloxx?hl=en'), false);
+
+  // Fix 2 — the rest of the ticket-plumbing verbs.
+  for (const tail of ['transfer', 'order', 'orders', 'order-status', 'receipt', 'confirm', 'confirmation']) {
+    assert.equal(
+      parser.validateEventUrl(`https://sickening.events/e/goldiloxx-chicago/${tail}`, 'https://sickening.events/events').reason,
+      'ticket-utility-page', tail);
+  }
+  // Calendar-EXPORT endpoints and third-party calendar UIs are not pages.
+  for (const url of [
+    'https://sickening.events/download.php?format=icalendar&text=GOLDILOXX%20Chicago',
+    'https://sickening.events/download.php?format=outlook&text=GOLDILOXX%20Chicago',
+    'https://calendar.yahoo.com/?v=60&title=GOLDILOXX%20Chicago&st=20260920T020000Z',
+    'https://www.google.com/calendar/render?action=TEMPLATE&text=GOLDILOXX'
+  ]) {
+    assert.equal(parser.validateEventUrl(url, 'https://sickening.events/events').valid, false, url);
+  }
+  // Squarespace's ?format=json door is untouched — it renders a page, not a calendar.
+  assert.equal(parser.validateEventUrl('https://venue.example/events/party?format=json', 'https://venue.example/events').valid, true);
+
+  // Fix 2 — discoveryAllowedPatterns reads host+path, never the query: the
+  // promoter's name inside an export link's title param must not admit it.
+  const cfg = { name: 'Goldiloxx', discoveryAllowedPatterns: ['goldiloxx'] };
+  assert.equal(
+    parser.validateEventUrl('https://sickening.events/events?q=goldiloxx&page=2', 'https://sickening.events/e/goldiloxx-chicago', cfg).reason,
+    'not-in-allowed-patterns');
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago-2', 'https://sickening.events/events', cfg).valid, true);
+});
+
+test('a guessed year yields to the year the page states beside the same month and day', () => {
+  const parser = createParser();
+  parser.now = () => new Date('2026-09-13T00:00:00Z');
+  const htmlData = { html: '<p>Join us Saturday, September 19, 2026 at Jackhammer.</p>' };
+
+  // The flyer says "SAT SEP 19"; the model supplied 2024.
+  const guessed = new Date(Date.UTC(2024, 8, 20, 2, 0));  // 2024-09-19 21:00 America/Chicago
+  const adopted = parser.adoptPageStatedYearForDate(guessed, htmlData, 'America/Chicago', 'GOLDILOXX Chicago');
+  assert.deepEqual(adopted, { year: 2026, guessedYear: 2024 });
+
+  // Nothing to adopt when the page says nothing about that day…
+  assert.equal(parser.adoptPageStatedYearForDate(guessed, { html: '<p>See you soon.</p>' }, 'America/Chicago', 'x'), null);
+  // …or when it already agrees with the guess.
+  assert.equal(
+    parser.adoptPageStatedYearForDate(new Date(Date.UTC(2026, 8, 20, 2, 0)), htmlData, 'America/Chicago', 'x'),
+    null);
+  // The event's LOCAL day is what gets looked up: reading the UTC day would
+  // ask the page about September 20, which it never mentions.
+  assert.deepEqual(parser.getLocalDateParts(guessed, 'America/Chicago'), { year: 2024, month: 9, day: 19 });
+});
+
+test('a past-midnight start is no longer a DATE ORPHAN, and a real orphan is reported', () => {
+  const parser = createParser();
+  const htmlData = { html: '<p>Saturday, September 19, 2026 — doors 9PM</p>' };
+  // 2026-09-19 21:00 America/Chicago = 2026-09-20T02:00Z. The page states the 19th.
+  assert.equal(
+    parser.reportPageDateConflict(new Date(Date.UTC(2026, 8, 20, 2, 0)), htmlData, 'America/Chicago', 'GOLDILOXX Chicago'),
+    false);
+  // A date the page never states, on a page that does state dates, is an orphan.
+  assert.equal(
+    parser.reportPageDateConflict(new Date(Date.UTC(2026, 10, 15, 2, 0)), htmlData, 'America/Chicago', 'Phantom'),
+    true);
+  // A page that states no dates at all has no opinion.
+  assert.equal(
+    parser.reportPageDateConflict(new Date(Date.UTC(2026, 10, 15, 2, 0)), { html: '<p>Flyers only</p>' }, 'America/Chicago', 'Phantom'),
+    false);
+});
+
+test('a broken image URL is downloaded once per run, not once per page', async () => {
+  const parser = createParser();
+  let attempts = 0;
+  const httpAdapter = {
+    fetchImageAsBase64: async () => {
+      attempts++;
+      throw new Error('Failed to fetch image as base64: HTTP 404');
+    }
+  };
+  for (let i = 0; i < 3; i++) {
+    await assert.rejects(() => parser.requestAndCacheOcrResult('https://chrome.example/ticket2.png', {}, 'ocr', httpAdapter));
+  }
+  assert.equal(attempts, 1, 'the 404 is remembered for the rest of the run');
 });
 
 test('a venue closure notice is not an event; markup inside HTML comments is not on the page; an all-day widget row has no clock', () => {

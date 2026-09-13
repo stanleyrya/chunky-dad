@@ -8806,6 +8806,18 @@ class AiWebParser {
                     accumulated.push(part);
                 }
             }
+            // POSTAL CODE JOINS WITH A SPACE, not a comma. Every postal
+            // convention writes the region and the code as one unit ("New York
+            // NY 10036", "Chicago IL 60626") and that is the form already on
+            // the calendar, so comma-joining it made every run report an
+            // address change and hand the arbiter a pair it kept calling "same
+            // address, kept the more complete form" (goldiloxx audit
+            // 2026-09-13). Only the LAST part is re-joined, and only when the
+            // structured data supplied it as the postal code.
+            const postalCode = clean(address.postalCode);
+            if (postalCode && accumulated.length > 1 && accumulated[accumulated.length - 1] === postalCode) {
+                accumulated.splice(-2, 2, `${accumulated[accumulated.length - 2]} ${postalCode}`);
+            }
             return accumulated.join(', ');
         }
         return '';
@@ -12108,6 +12120,20 @@ class AiWebParser {
         if (!normalizedUrl) {
             throw new Error('Missing image URL');
         }
+        // PER-RUN MEMORY OF DEAD IMAGES. A site's chrome (a masthead, a
+        // "buy tickets" badge) is on every page it serves, so a broken one is
+        // re-downloaded once per page — sickeningevents.com/ticket2.png 404'd
+        // three times in one goldiloxx run, ~1.5s each (audit 2026-09-13).
+        // The failure is a property of the URL, not of the page that linked
+        // it; remember it for this run and fail fast. Run-scoped on purpose:
+        // nothing is persisted, so the next run re-checks and a restored
+        // image comes straight back.
+        if (!this.failedImageDownloadUrls) this.failedImageDownloadUrls = new Map();
+        const priorFailure = this.failedImageDownloadUrls.get(normalizedUrl);
+        if (priorFailure) {
+            console.log(`🚫 AI Web: Skipping ${normalizedUrl} — its download already failed this run (${priorFailure})`);
+            throw new Error(priorFailure);
+        }
         const downloadStart = Date.now();
         let base64Image;
         // Out-param: the adapters cap the longest side at 1024 before handing
@@ -12121,6 +12147,7 @@ class AiWebParser {
             base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds, undefined, imageMeta);
         } catch (error) {
             console.warn(`🚨 AI Web: OCR image download failed for ${normalizedUrl} after ${Date.now() - downloadStart}ms: ${error.message}`);
+            this.failedImageDownloadUrls.set(normalizedUrl, error && error.message ? error.message : 'image download failed');
             throw error;
         }
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars) for ${normalizedUrl} (downloaded in ${Date.now() - downloadStart}ms)`);
@@ -12374,7 +12401,7 @@ class AiWebParser {
         {
             const segments = lowerPath.split('/').filter(Boolean);
             const last = segments.length > 0 ? segments[segments.length - 1] : '';
-            if (/^(?:resend|refund|refunds|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
+            if (/^(?:resend|refund|refunds|transfer|transfers|order|orders|order-status|receipt|receipts|confirm|confirmation|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
         }
@@ -12496,6 +12523,10 @@ class AiWebParser {
             'campaign-archive.com',
             'linksynergy.com',
             'calendar.google.com',
+            // The other "add to calendar" destinations the same widget row
+            // emits (calendar.yahoo.com/?v=60&title=…&st=… occupied a
+            // discovery slot on every goldiloxx event page, audit 2026-09-13).
+            'calendar.yahoo.com',
             'sellticketsapp.com',
             'wix.com',
             'wixapps.net',
@@ -12579,6 +12610,16 @@ class AiWebParser {
         // `action=TEMPLATE` twin is already blocked by the google.com host
         // entry; matching it here covers the other providers that use it.
         if (lowerPath.endsWith('.ics')
+            // "Add to calendar" EXPORT endpoints: a generator script whose
+            // query names the calendar format it renders
+            // (sickening.events/download.php?format=icalendar|outlook — 2 of
+            // the 4 discovery slots on every goldiloxx event page, audit
+            // 2026-09-13), and the third-party calendar UIs that the same
+            // widget row links out to. Query-SHAPE and calendar-host only,
+            // no site is named; the google.com twin is already covered by the
+            // google.com host entry below.
+            || /[?&]format=(?:ical(?:endar)?|ics|outlook|vcs|webcal)(?:[&#]|$)/.test(lowerUrl)
+            || /\/calendar\/render(?:[/?#]|$)/.test(lowerUrl)
             || /[?&](?:outlook-)?ical=1(?!\d)/.test(lowerUrl)
             || /[?&]tribe-bar-date=/.test(lowerUrl)
             || /[?&]rru=add(?:subscription|event)/.test(lowerUrl)
@@ -12648,7 +12689,15 @@ class AiWebParser {
         // Configured start URLs never pass through this function, so the
         // listing page itself is unaffected. Blocks still win over allows.
         const configAllowedPatterns = Array.isArray(parserConfig.discoveryAllowedPatterns) ? parserConfig.discoveryAllowedPatterns : [];
-        if (configAllowedPatterns.length > 0 && !this.matchesDiscoveryAllowedPattern(lowerUrl, configAllowedPatterns)) {
+        // Matched against HOST + PATH, never the query string: an
+        // add-to-calendar or share link carries the event's TITLE in its
+        // query, so "goldiloxx" matched calendar.yahoo.com/?…&title=GOLDILOXX
+        // and download.php?format=…&text=GOLDILOXX%20Chicago and let both
+        // occupy discovery slots meant for event pages (audit 2026-09-13).
+        // The allowlist is about which PAGES this parser may follow; a page is
+        // named by its host and path.
+        const lowerHostAndPath = `${(parsedUrl.hostname || '').toLowerCase()}${lowerPath}`;
+        if (configAllowedPatterns.length > 0 && !this.matchesDiscoveryAllowedPattern(lowerHostAndPath, configAllowedPatterns)) {
             return { valid: false, reason: 'not-in-allowed-patterns' };
         }
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
@@ -18864,6 +18913,36 @@ TEXT:
             ? aiEvent.__explicitSourceYears
             : {};
 
+        // PAGE-STATED YEAR. A flyer says "SAT SEP 19"; it never says which
+        // year, so the model supplies one — 2024 on goldiloxx's Chicago card
+        // (audit 2026-09-13) — and adjustLikelyEventYear then walks that guess
+        // to whatever year lands nearest today. The page itself was saying
+        // 2026 beside that same September 19 the whole time. When the year on
+        // this date is a GUESS (no weekday pin, no explicitly stated source
+        // year) and the page states exactly ONE year beside this event's own
+        // month and day, adopt it and hold it like any stated year. This is
+        // not the report-only date CONFLICT case above: there is no second
+        // stated year to prefer over, only a blank the page can fill.
+        const startYearIsStated = Boolean(effectivePinnedYears.start)
+            || this.dateCarriesExplicitYear(finalStartDate, explicitSourceYears.start);
+        if (!startYearIsStated) {
+            const adopted = this.adoptPageStatedYearForDate(finalStartDate, htmlData, timezone, title);
+            if (adopted) {
+                const yearDelta = adopted.year - adopted.guessedYear;
+                const shiftYear = (date) => {
+                    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return date;
+                    const shifted = new Date(date);
+                    shifted.setUTCFullYear(shifted.getUTCFullYear() + yearDelta);
+                    return shifted;
+                };
+                const endWasStated = Boolean(effectivePinnedYears.end)
+                    || this.dateCarriesExplicitYear(finalEndDate, explicitSourceYears.end);
+                finalStartDate = shiftYear(finalStartDate);
+                if (!endWasStated) finalEndDate = shiftYear(finalEndDate);
+                explicitSourceYears.start = finalStartDate instanceof Date ? finalStartDate.getUTCFullYear() : adopted.year;
+            }
+        }
+
         let { startDate, endDate, archivalSourceYear } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears, explicitSourceYears);
         console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
 
@@ -19015,7 +19094,25 @@ TEXT:
         // to a widget). A precedence rule that trusts either one by nature
         // breaks the site that is broken the other way, so this counts the
         // conflicts and changes nothing.
-        this.reportPageDateConflict(startDate, htmlData, timezone, title);
+        const startDateIsOrphan = this.reportPageDateConflict(startDate, htmlData, timezone, title);
+        // DATE ORPHAN + an invented year + nothing but a flyer to read it off:
+        // the record is a date this page never states, built on a year nobody
+        // stated, from OCR of an image. goldiloxx's "GOLDII.OXX" was exactly
+        // that shape (audit 2026-09-13) and only survived review because it
+        // folded into a real event — on a page carrying a neighbouring flyer
+        // the same mechanics FABRICATE one. Every condition must hold: the
+        // page states dates (the orphan test's own precondition), it never
+        // states this one, this segment had no structured data to check
+        // against, its dates came from OCR, and the year was neither pinned
+        // nor stated — so there is no evidence left for this date at all.
+        if (startDateIsOrphan
+            && !startYearIsStated
+            && !this.dateCarriesExplicitYear(startDate, explicitSourceYears.start)
+            && !hasStructuredData
+            && Boolean(dataFlags.ocr)) {
+            console.warn(`📅 AI Web: Dropping "${title}" — its date appears nowhere in the page's own text and rests on an OCR read with no stated year (nothing corroborates ${startDate instanceof Date ? startDate.toISOString().slice(0, 10) : startDate})`);
+            return null;
+        }
         let pendingListedOccurrenceDates = null;
         const listedDates = this.readListedOccurrenceDates(aiEvent, startDate, endDate, htmlData);
         if (listedDates) {
@@ -20743,34 +20840,105 @@ TEXT:
         events.push(...additions);
     }
 
+    // A date's calendar parts IN THE EVENT'S OWN ZONE. A 21:00 Chicago party
+    // is stored as 02:00 UTC the NEXT day, so reading getUTCDate() asks the
+    // page about a day it never advertised — the day after the party.
+    // Falls back to the UTC parts when no zone is known (the wall-clock
+    // fallback stores local components labeled UTC, so they already are the
+    // local parts) or when Intl is unavailable.
+    getLocalDateParts(dateObj, timezone) {
+        if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return null;
+        const utcParts = {
+            year: dateObj.getUTCFullYear(),
+            month: dateObj.getUTCMonth() + 1,
+            day: dateObj.getUTCDate()
+        };
+        if (!timezone) return utcParts;
+        if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return utcParts;
+        try {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = formatter.formatToParts(dateObj);
+            const read = (type) => {
+                const part = parts.find(entry => entry.type === type);
+                return part ? parseInt(part.value, 10) : NaN;
+            };
+            const local = { year: read('year'), month: read('month'), day: read('day') };
+            if (![local.year, local.month, local.day].every(Number.isFinite)) return utcParts;
+            return local;
+        } catch (_) {
+            return utcParts;
+        }
+    }
+
+    // Which year does the page state beside THIS date's month and day? Returns
+    // { year, guessedYear } when exactly one candidate year in the search
+    // window is stated in the page's own prose and it differs from the year
+    // the extraction guessed — null in every ambiguous case (no page text, no
+    // month/day match anywhere, several stated years, or the guess already
+    // agrees). Same narrow "stated beside its own month and day" test
+    // resolveExplicitSourceYear uses, so a copyright line can never pin a
+    // date.
+    adoptPageStatedYearForDate(startDate, htmlData, timezone, title) {
+        if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return null;
+        const text = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!text) return null;
+        const local = this.getLocalDateParts(startDate, timezone);
+        if (!local) return null;
+        const month = String(local.month).padStart(2, '0');
+        const day = String(local.day).padStart(2, '0');
+        const guessedYear = local.year;
+        const stated = [];
+        for (let year = guessedYear - 2; year <= guessedYear + 2; year++) {
+            if (this.sourceStatesValueYear(`${year}-${month}-${day}`, text)) stated.push(year);
+        }
+        if (stated.length !== 1 || stated[0] === guessedYear) return null;
+        console.log(`📅 AI Web: "${title || 'event'}" carried no year of its own — the page states ${stated[0]}-${month}-${day}, adopting it over the guessed ${guessedYear}`);
+        return { year: stated[0], guessedYear };
+    }
+
     // Correct an event's YEAR to the one the page states next to its own
     // month and day. Returns the input unchanged whenever anything is
     // ambiguous: no page text, no month/day match, the extracted year already
     // stated, or more than one candidate year adjacent to that date.
     reportPageDateConflict(startDate, htmlData, timezone, title) {
-        if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return;
+        if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
         const text = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        if (!text) return;
-        const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(startDate.getUTCDate()).padStart(2, '0');
-        const currentYear = startDate.getUTCFullYear();
+        if (!text) return false;
+        // The event's LOCAL calendar day, not the UTC one: a 21:00 Chicago
+        // party is 02:00 UTC the next morning, so the UTC reading asked the
+        // page about a day it never advertised and every past-midnight event
+        // read as an orphan (goldiloxx audit 2026-09-13).
+        const local = this.getLocalDateParts(startDate, timezone) || {
+            year: startDate.getUTCFullYear(),
+            month: startDate.getUTCMonth() + 1,
+            day: startDate.getUTCDate()
+        };
+        const month = String(local.month).padStart(2, '0');
+        const day = String(local.day).padStart(2, '0');
+        const currentYear = local.year;
         const stated = [];
         for (let year = currentYear - 2; year <= currentYear + 2; year++) {
             if (this.sourceStatesValueYear(`${year}-${month}-${day}`, text)) stated.push(year);
         }
         if (stated.length === 1 && stated[0] !== currentYear) {
             console.log(`📅 DATE CONFLICT: "${title || 'event'}" is dated ${currentYear}-${month}-${day} but the page states ${stated[0]}-${month}-${day} (report-only — neither source is authoritative by nature)`);
-            return;
+            return false;
         }
-        if (stated.length > 0) return;
+        if (stated.length > 0) return false;
         // ORPHAN DATE: the page states dates, just never this one. That is the
         // shape a stale flyer makes — beefdip.com advertises Jan 23-31 2027
         // while its gallery still carries last year's Feb 1-2 posters, and the
         // events those posters produce correspond to nothing the site is
         // currently saying. A page that states NO dates has no opinion and
         // raises nothing here: its flyers are the only record (Lumberyard).
-        if (!this.pageTextStatesAnyDate(text)) return;
-        console.log(`📅 DATE ORPHAN: "${title || 'event'}" is dated ${currentYear}-${month}-${day}, which appears nowhere in this page's own text (report-only)`);
+        if (!this.pageTextStatesAnyDate(text)) return false;
+        console.log(`📅 DATE ORPHAN: "${title || 'event'}" is dated ${currentYear}-${month}-${day}, which appears nowhere in this page's own text`);
+        return true;
     }
 
     // Does this page's text state any date at all?
@@ -24716,6 +24884,20 @@ TEXT:
         return isMapsGoogleHost || isMapsAppHost || isGoogleMapsPath;
     }
 
+    // Is this social URL shaped like a PROFILE (one path segment, no query)
+    // rather than a post, an event, a share widget or an app banner? Uses the
+    // same handle vocabulary normalizeSocialProfileKey enforces, so the static
+    // field extractor and the profile-key comparisons agree on what a profile
+    // is.
+    isProfileShapedSocialUrl(url) {
+        const parsed = this.parseUrlComponents(String(url || '').trim());
+        if (!parsed) return false;
+        if (String(parsed.search || '').replace(/^\?/, '')) return false;
+        const segments = String(parsed.pathname || '').split('/').filter(Boolean);
+        if (segments.length !== 1) return false;
+        return Boolean(this.normalizeSocialProfileKey(url));
+    }
+
     extractLinksFromPage(html, sourceUrl) {
         if (!html) return { instagram: '', facebook: '', gmaps: '' };
         const links = [];
@@ -24731,6 +24913,17 @@ TEXT:
         let instagram = '';
         let facebook = '';
         let gmaps = '';
+        // Social links are RANKED, not first-come. A page links its profile
+        // beside share widgets, post permalinks, app banners and embeds, and
+        // "first href on the page" took whichever the template happened to
+        // render first — goldiloxx's Chicago record took the basement bar's
+        // instagram.com/thehole_chicago/ and a facebook.com/sharer.php?u=…
+        // (audit 2026-09-13). A PROFILE is a single path segment with no
+        // query, the same shape normalizeSocialProfileKey recognises; it
+        // outranks any other link on the platform's host, and the first
+        // candidate of a rank still wins so page order decides ties.
+        let instagramRank = 0;
+        let facebookRank = 0;
 
         for (const link of links) {
             const normalized = this.normalizeUrl(link, sourceUrl);
@@ -24750,10 +24943,19 @@ TEXT:
             const socialPath = (() => { try { return new URL(normalized).pathname.toLowerCase(); } catch (_) { return ''; } })();
             if ((isInstagram || isFacebook) && /^\/(?:sharer(?:\.php)?|share|dialog|login|intent|plugins|embed|oauth|privacy|policies|help|tr|v\d+\.\d+)(?:\/|$)/.test(socialPath)) continue;
             const isGoogleMaps = this.isGoogleMapsUrl(parsedUrl);
-            if (!instagram && isInstagram) instagram = normalized;
-            if (!facebook && isFacebook) facebook = normalized;
+            if (isInstagram || isFacebook) {
+                const rank = this.isProfileShapedSocialUrl(normalized) ? 2 : 1;
+                if (isInstagram && rank > instagramRank) {
+                    instagram = normalized;
+                    instagramRank = rank;
+                }
+                if (isFacebook && rank > facebookRank) {
+                    facebook = normalized;
+                    facebookRank = rank;
+                }
+            }
             if (!gmaps && isGoogleMaps) gmaps = normalized;
-            if (instagram && facebook && gmaps) break;
+            if (instagramRank === 2 && facebookRank === 2 && gmaps) break;
         }
 
         return { instagram, facebook, gmaps };
