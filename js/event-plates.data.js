@@ -2,7 +2,7 @@
 // faviconPlate per event-website domain; the homepage reads it to tint
 // each bear-run icon's plate (see js/compact-card-renderer.js).
 window.EVENT_PLATES = {
- "generatedAt": "2026-09-11",
+ "generatedAt": "2026-09-13",
  "domains": {
   "furball.nyc": "#ffffff",
   "bearracuda.com": "#fffefe",
@@ -10,6 +10,7 @@ window.EVENT_PLATES = {
   "folsomeurope.berlin": "#000000",
   "pigberlin.de": "#ffffff",
   "beefmince.com": "#ffffff",
+  "massbearsandcubs.org": "#ffffff",
   "linktr.ee": "#ffffff",
   "jackhammerchicago.com": "#000000",
   "chunk-party.com": "#ffffff",

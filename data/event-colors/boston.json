@@ -1,5 +1,255 @@
 [
   {
+    "slug": "alley-bears-348a2b06",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#563363:20:9 #33252a:18:2 #14121b:16:2 #923265:13:14 #ac4aac:9:18",
+    "accent": "#ac4aac"
+  },
+  {
+    "slug": "alley-bears-3c341d80",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#563363:20:9 #33252a:18:2 #14121b:16:2 #923265:13:14 #ac4aac:9:18",
+    "accent": "#ac4aac"
+  },
+  {
+    "slug": "alley-bears-440df96c",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-zh9dz",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "alley-bears-54705121",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#563363:20:9 #33252a:18:2 #14121b:16:2 #923265:13:14 #ac4aac:9:18",
+    "accent": "#ac4aac"
+  },
+  {
+    "slug": "alley-bears-gear-night-10941397",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "alley-bears-gear-night-3a878726",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "alley-bears-gear-night-41c432c9",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn-yaf87",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "alley-bears-gear-night-4756d515",
+    "url": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak-pwm78-b8yfj-hsspn",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bear-boutique-40086bd8",
+    "url": "https://www.massbearsandcubs.org/events/bear-boutique",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#efe0cd:55:3 #d6b598:17:5 #6c5643:10:4 #d56c3b:1:15",
+    "accent": "#d56c3b"
+  },
+  {
+    "slug": "bear-pride-trivia-0b40f02d",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#bd8856:58:9 #945e3c:12:9 #dbbd85:9:8 #673626:8:7 #4a1909:5:8",
+    "accent": "#bd8856"
+  },
+  {
+    "slug": "bear-tea-club-cafe-0c79d326",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-10663097",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-jcydj",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-4ce9c162",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-50f3f739",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hy9mp",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-59c0098c",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-65clr",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-6c481352",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-club-cafe-7f4a2834",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bear-tea-meet-ma-bear-2027-6dc1840f",
+    "url": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#633c4b:19:6 #432433:17:5 #7b6473:16:4 #ab8394:14:5 #bc3249:8:17",
+    "accent": "#bc3249"
+  },
+  {
+    "slug": "bears-brews-boys-107b9a08",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bears-brews-boys-15ee544e",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh-mkzk5",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bears-brews-boys-29ef85d5",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bears-brews-boys-2fd58ecc",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bears-brews-boys-3f92f7c3",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bears-brews-boys-7d5995be",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "bearzaar-6f01c7aa",
+    "url": "https://www.massbearsandcubs.org/events/bearzaar",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b9987e:36:5 #815e44:22:6 #dbbda3:17:5 #5e391f:8:7",
+    "accent": "#b9987e"
+  },
+  {
     "slug": "furball-3a9e89bc",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",
@@ -18,5 +268,165 @@
     "paletteSource": "flyer",
     "palette": "#020101:27:1 #130401:20:3 #db8c64:13:11 #a35b3a:12:10 #f4cb5b:5:14",
     "accent": "#db8c64"
+  },
+  {
+    "slug": "jocks-at-jacques-3300bbe2",
+    "url": "https://www.massbearsandcubs.org/events/jocks-at-jacques",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#020101:45:1 #3b2523:14:3 #231513:13:2 #b89180:9:5 #6c3733:7:8",
+    "accent": "#6c3733"
+  },
+  {
+    "slug": "ma-bear-contest-2027-0c9c4404",
+    "url": "https://www.massbearsandcubs.org/events/ma-bear-contest-2027",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2c231b:17:2 #6b564a:16:3 #4a352a:16:4 #9c7967:15:5",
+    "accent": "#9c7967"
+  },
+  {
+    "slug": "ma-bear-contest-meet-greet-35227083",
+    "url": "https://www.massbearsandcubs.org/events/ma-bear-contest-meet-greet",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3b2d23:18:3 #634b3d:16:4 #826e62:16:3 #aa8572:9:5",
+    "accent": "#aa8572"
+  },
+  {
+    "slug": "meet-greet-bear-pride-kickoff-29daa6ff",
+    "url": "https://www.massbearsandcubs.org/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#713c12:25:9 #e5bb91:22:7 #432a26:20:4 #9b734d:11:7 #ca946e:7:8",
+    "accent": "#713c12"
+  },
+  {
+    "slug": "monthly-trivia-150f5f6a",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-20f16044",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-30dc52c6",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-491bdcb1",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3-ptdw8-xf7ff-t38z3-74hmk",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-5ff28e31",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7-bwrz3",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-6946288f",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "monthly-trivia-6a8b1f61",
+    "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
+    "slug": "the-belly-party-03a64a44",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000001:34:1 #593ccc:14:21 #19103f:13:9 #e5492c:13:20 #ecd64c:9:15",
+    "accent": "#593ccc"
+  },
+  {
+    "slug": "the-belly-party-1498392b",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000001:33:0 #eeeef0:14:0 #bc97e5:13:12 #3d3693:8:15 #8462de:8:18",
+    "accent": "#8462de"
+  },
+  {
+    "slug": "the-belly-party-222ab11c",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#295395:19:12 #ab9e9b:17:2 #3b6ca6:17:11 #31345f:14:7",
+    "accent": "#295395"
+  },
+  {
+    "slug": "the-belly-party-5fdc38fe",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:39:0 #f1f1ee:13:0 #1b1414:11:1 #731d24:4:12",
+    "accent": "#731d24"
+  },
+  {
+    "slug": "woof-block-party-39ece189",
+    "url": "https://www.massbearsandcubs.org/events/woof-block-party",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#8d512b:28:10 #ad6a3f:21:10 #593321:14:6 #b4926d:8:7 #fada8e:3:10",
+    "accent": "#8d512b"
   }
 ]

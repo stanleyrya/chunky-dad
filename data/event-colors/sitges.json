@@ -280,6 +280,36 @@
     "accent": "#1701aa"
   },
   {
+    "slug": "beefmince-sitges-beefmince-disco-511f64f9",
+    "url": "https://sitgesbearcave.com/event/thursday-beefmince-disco/",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:52:0 #fbf9f7:13:0 #bf97a0:7:5 #edbc21:6:16 #af3c1f:6:16",
+    "accent": "#edbc21"
+  },
+  {
+    "slug": "beefmince-sitges-sports-zone-6972e7c6",
+    "url": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:19:0 #998676:15:3 #13100d:14:1 #ddc36c:8:11 #8c0c2b:8:16",
+    "accent": "#8c0c2b"
+  },
+  {
+    "slug": "beefmince-sitges-the-big-ball-13a48cc3",
+    "url": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:44:0 #948b76:12:3 #1a1916:10:1 #ecc41d:5:17 #ba142b:2:19",
+    "accent": "#ecc41d"
+  },
+  {
     "slug": "beefmince-sports-zone-6972e7c6",
     "url": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
     "faviconBg": "#060606",

@@ -34,5 +34,15 @@
     "paletteSource": "flyer",
     "palette": "#141b1c:28:1 #2aa4db:21:13 #1d6d92:12:9 #eca48b:7:9 #af694e:7:10",
     "accent": "#2aa4db"
+  },
+  {
+    "slug": "the-belly-party-bear-week-68204385",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ac0f11:20:19 #f4f4f3:16:0 #830308:14:15 #c45b5c:12:13 #53090a:12:11",
+    "accent": "#ac0f11"
   }
 ]
