@@ -17801,3 +17801,85 @@ test('applyFlyerTimeConflictFlag reads a wall-clock-labelled start verbatim, not
   assert.ok(conflicting._flyerTimeConflict, 'a genuine disagreement still flags');
   assert.equal(conflicting._flyerTimeConflict.pageTime, '10:00');
 });
+
+test('an off-quarter minute no page states is an OCR slip, not a start time', () => {
+  const parser = createParser();
+  // Literal eaglela.com shape (audit 2026-09-13): the shared Cruise LA flyer
+  // prints "7-10PM" and vision reads "7:10PM"; the event page states no clock
+  // at all, so 19:10 is nobody's claim.
+  const pageWithNoClock = { html: '<html><body><h1>CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST</h1><p>Oct 17</p></body></html>' };
+  assert.match(
+    parser.getUncorroboratedOddMinuteStartReason('19:10', pageWithNoClock),
+    /not a printed clock/);
+  // Quarter hours are never questioned
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:00', pageWithNoClock), '');
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:15', pageWithNoClock), '');
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:30', pageWithNoClock), '');
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:45', pageWithNoClock), '');
+  // …and a page that PRINTS the odd clock keeps it, in either notation
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:10', {
+    html: '<html><body><p>Doors 7:10 PM sharp</p></body></html>'
+  }), '');
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:10', {
+    html: '<script type="application/ld+json">{"startDate":"2026-10-17T19:10"}</script>'
+  }), '');
+  // Fails open with nothing to check against
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('19:10', null), '');
+  assert.equal(parser.getUncorroboratedOddMinuteStartReason('', pageWithNoClock), '');
+});
+
+test('normalizeAiEvent ships the date with no time when the clock is an OCR slip, and flags what it refused', () => {
+  const parser = createParser();
+  const quiet = console.log; console.log = () => {};
+  let event; let stated;
+  try {
+    const htmlData = { html: '<html><body><h1>CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST</h1><p>October 17</p></body></html>' };
+    event = parser.normalizeAiEvent(
+      { title: 'CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST', startDate: '2026-10-17', startTime: '19:10', endTime: '02:00' },
+      { name: 'Eagle LA' }, htmlData, null, null);
+    // A corroborated odd minute is untouched
+    stated = parser.normalizeAiEvent(
+      { title: 'DOORS SHARP', startDate: '2026-10-17', startTime: '19:10' },
+      { name: 'Eagle LA' }, { html: '<p>doors at 7:10pm</p>' }, null, null);
+  } finally { console.log = quiet; }
+  assert.equal(event.startDate.toISOString(), '2026-10-17T00:00:00.000Z');
+  assert.equal(event._impossibleClockRejected, '19:10');
+  // The end came off the same reading and the page states it no more than the
+  // start — it goes with it rather than printing a span from midnight
+  assert.equal(event.endDate.toISOString(), '2026-10-17T00:00:00.000Z');
+  assert.equal(stated.startDate.toISOString(), '2026-10-17T19:10:00.000Z');
+  assert.equal(stated._impossibleClockRejected, undefined);
+});
+
+test('a title that states the clock times an event the page left at midnight', () => {
+  const parser = createParser();
+  const midnight = (title, extra = {}) => ({
+    title,
+    startDate: new Date(Date.UTC(2026, 10, 26, 0, 0)),
+    _timezoneUnresolved: true,
+    ...extra
+  });
+  const thanksgiving = midnight('HAPPY THANKSGIVING – BAR OPENS AT 6PM');
+  const holidays = midnight('HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA – BAR OPENS AT 6PM');
+  // Fail closed: two clocks name a range, a bare number is not an hour, and a
+  // record that already states a time is never re-timed.
+  const range = midnight('BEER BUST 2PM-8PM');
+  const bare = midnight('EAGLE LA 53rd TOAST TO THE SEASON');
+  const timed = {
+    title: 'LABOR DAY BEER BUST BAR OPENS AT 2PM',
+    startDate: new Date(Date.UTC(2026, 8, 7, 14, 0)),
+    _timezoneUnresolved: true
+  };
+  const quiet = console.log; console.log = () => {};
+  let adopted;
+  try {
+    adopted = parser.adoptTitleStatedClockForPlaceholderTimes([thanksgiving, holidays, range, bare, timed]);
+  } finally { console.log = quiet; }
+  assert.equal(adopted, 2);
+  assert.equal(thanksgiving.startDate.toISOString(), '2026-11-26T18:00:00.000Z');
+  assert.equal(thanksgiving._startTimeFromTitle, true);
+  assert.equal(holidays.startDate.toISOString(), '2026-11-26T18:00:00.000Z');
+  assert.equal(range.startDate.toISOString(), '2026-11-26T00:00:00.000Z');
+  assert.equal(bare.startDate.toISOString(), '2026-11-26T00:00:00.000Z');
+  assert.equal(timed.startDate.toISOString(), '2026-09-07T14:00:00.000Z');
+});

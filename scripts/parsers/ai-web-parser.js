@@ -1388,6 +1388,10 @@ class AiWebParser {
                 // instead of from the shape of its URL.
                 const structuredArtworkOcrCount = await this.vetStructuredEventArtwork(
                     structuredEvents, parserConfig, httpAdapter);
+                // The site's OWN words come first: a title that states the
+                // clock ("HAPPY THANKSGIVING – BAR OPENS AT 6PM") outranks
+                // any reading of a picture.
+                this.adoptTitleStatedClockForPlaceholderTimes(structuredEvents);
                 // A listing that states no time may have a poster that does
                 // (see adoptFlyerClockForPlaceholderTimes).
                 this.adoptFlyerClockForPlaceholderTimes(structuredEvents);
@@ -18763,6 +18767,46 @@ TEXT:
         return `${pad(Math.floor(party / 60))}:${pad(party % 60)}`;
     }
 
+    // AN OCR SLIP IS NOT A CLOCK. Vision reads a poster's "7-10PM" (a
+    // RANGE) as "7:10PM", and that misreading walked straight into the start
+    // time of two published events (audit 2026-09-13, eaglela.com's shared
+    // Cruise LA flyer: 19:10 on both the meet & greet and the contest, whose
+    // own block says "DOORS AT 8PM"). A clock a human printed lands on a
+    // quarter hour — :00, :15, :30, :45 — so any other minute needs the PAGE
+    // to corroborate it: the site's own words (its text, its JSON-LD, its
+    // microdata) stating that same clock, in either 12h or 24h notation.
+    // Deliberately narrow and deliberately fail-open: a page that states
+    // "doors 8:05" keeps its 8:05, a quarter-hour minute is never questioned,
+    // and a run with no page HTML in hand changes nothing. Returns a reason
+    // string when the time must not be adopted, '' otherwise.
+    getUncorroboratedOddMinuteStartReason(startTimeRaw, htmlData) {
+        const match = String(startTimeRaw || '').trim().match(/^(\d{1,2}):(\d{2})/);
+        if (!match) return '';
+        const hour = parseInt(match[1], 10);
+        const minute = parseInt(match[2], 10);
+        if (hour > 23 || minute > 59) return '';
+        if (minute % 15 === 0) return '';
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return '';
+        if (this.pageStatesClockTime(htmlData, `${hour}:${String(minute).padStart(2, '0')}`)) return '';
+        return `the minute :${String(minute).padStart(2, '0')} is not a printed clock and the page states no such time`;
+    }
+
+    // Does the page itself print this clock, in either 12h or 24h notation?
+    // Reads the raw HTML (so an ISO "…T19:10" in JSON-LD counts as the site
+    // stating it) and the stripped text. FALSE with no HTML in hand.
+    pageStatesClockTime(htmlData, timeValue) {
+        const match = String(timeValue || '').trim().match(/^(\d{1,2}):(\d{2})/);
+        if (!match) return false;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return false;
+        const hour = parseInt(match[1], 10);
+        const minute = match[2];
+        const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+        const stated = new RegExp(`(?:^|[^\\d:])(?:${hour}|${hour12})\\s*[:.]\\s*${minute}(?!\\d)`);
+        return stated.test(html) || stated.test(this.stripTags(html));
+    }
+
     // The event's local start date and the previous day, as {year, month,
     // day} — the two dates its own flyer may legitimately name (a start
     // after local midnight belongs to the prior night's artwork). Null when
@@ -19334,9 +19378,23 @@ TEXT:
             : '';
 
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
-        const startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
+        let startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
-        const endTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.endTime, aiEvent.end, ''));
+        let endTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.endTime, aiEvent.end, ''));
+        // An OCR slip is not a clock (see getUncorroboratedOddMinuteStartReason):
+        // an off-quarter minute no page states is dropped back to the
+        // missing-time default rather than shipped as a start. Flag, don't
+        // drop — the rejected reading is stamped on the event below.
+        const oddMinuteReason = this.getUncorroboratedOddMinuteStartReason(startTimeRaw, htmlData);
+        const oddMinuteRejected = oddMinuteReason ? startTimeRaw : '';
+        if (oddMinuteReason) {
+            console.log(`🕒 AI Web: Refused start time ${startTimeRaw} for "${title || 'Unknown'}" — ${oddMinuteReason}; the date ships with no time`);
+            startTimeRaw = '';
+            // The END came off the same unreliable reading. An end the page
+            // does not state either is not a duration the site claims, and
+            // keeping it alone would print a span from midnight.
+            if (endTimeRaw && !this.pageStatesClockTime(htmlData, endTimeRaw)) endTimeRaw = '';
+        }
 
         console.log(`🤖 AI Web: Date normalization — rawStartDate=${aiEvent.startDate}, rawStartTime=${aiEvent.startTime}, rawStart=${aiEvent.start}, rawEndDate=${aiEvent.endDate}, rawEndTime=${aiEvent.endTime}, rawEnd=${aiEvent.end}`);
         console.log(`🤖 AI Web: Parsed raw values — startDateRaw=${startDateRaw instanceof Date ? startDateRaw.toISOString() : startDateRaw}, startTimeRaw=${startTimeRaw}, endDateRaw=${endDateRaw instanceof Date ? endDateRaw.toISOString() : endDateRaw}, endTimeRaw=${endTimeRaw}`);
@@ -19356,8 +19414,11 @@ TEXT:
 
         // Check if start/end were explicitly provided (full datetime format)
         // These contain full datetime like "2026-05-12T22:30" or "2026-05-12 22:30" - use directly without combining
-        const startProvided = aiEvent.start && this.parseDateValue(aiEvent.start, timezone) !== null;
-        const endProvided = aiEvent.end && this.parseDateValue(aiEvent.end, timezone) !== null;
+        // A refused odd-minute clock (above) must not slip back in through the
+        // full-datetime route: dropping the "provided" shortcut sends the pair
+        // down the split-field path, where the date survives without the time.
+        const startProvided = !oddMinuteReason && aiEvent.start && this.parseDateValue(aiEvent.start, timezone) !== null;
+        const endProvided = !(oddMinuteReason && !endTimeRaw) && aiEvent.end && this.parseDateValue(aiEvent.end, timezone) !== null;
 
         // Combine date and time if we have split fields
         // If start/end was provided, use them directly; otherwise combine split fields
@@ -19796,6 +19857,13 @@ TEXT:
         if (doorsPromotedStart) {
             event._doorsTimeRejected = startTimeRaw;
             event._doorsTimePromoted = doorsPromotedStart;
+        }
+
+        // Flag, don't drop: the refused off-quarter clock stays on the record
+        // (underscore field — internal, never notes, never a diff field) so a
+        // reader can see WHY the event ships date-only.
+        if (oddMinuteRejected) {
+            event._impossibleClockRejected = oddMinuteRejected;
         }
 
         // Stamp the derived organizer as internal metadata (underscore fields are
@@ -21273,6 +21341,51 @@ TEXT:
     // names no date at all. eaglela.com prints no times anywhere in its
     // grids or event pages; the flyers do ("CUBCAKE SEP 11 9pm $8"). A
     // poster naming a different date, or several clocks, decides nothing.
+    // THE SITE'S OWN TITLE IS A CLOCK SOURCE, and a stronger one than any
+    // picture: eaglela.com dates "HAPPY THANKSGIVING – BAR OPENS AT 6PM" and
+    // "HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA – BAR OPENS AT 6PM" with no
+    // time anywhere in the grid or on the event page, while the venue has
+    // literally written the hour in the event's name (audit 2026-09-13: both
+    // shipped at midnight). Deterministic and fail-closed: only records that
+    // state no time at all, only a title stating EXACTLY ONE clock (two
+    // clocks name a range or two rooms and decide nothing), and only a
+    // meridiem-qualified clock — a bare "2" in a title is a number, not an
+    // hour. No end is invented: a title says when the doors open, never when
+    // the night stops.
+    adoptTitleStatedClockForPlaceholderTimes(events) {
+        if (!Array.isArray(events)) return 0;
+        let adopted = 0;
+        for (const event of events) {
+            if (!event || !this.isMidnightWallClock(event.startDate, event)) continue;
+            const title = this.decodeBasicEntities(String((event && event.title) || ''));
+            if (!title.trim()) continue;
+            const pattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+            const clocks = [];
+            let match;
+            while ((match = pattern.exec(title)) !== null) {
+                let hour = parseInt(match[1], 10);
+                const minute = match[2] ? parseInt(match[2], 10) : 0;
+                if (hour > 12 || minute > 59) continue;
+                const meridiem = match[3].toLowerCase();
+                if (meridiem === 'pm' && hour < 12) hour += 12;
+                if (meridiem === 'am' && hour === 12) hour = 0;
+                clocks.push({ hour, minute, raw: match[0] });
+            }
+            const distinct = new Set(clocks.map(clock => `${clock.hour}:${clock.minute}`));
+            if (clocks.length === 0 || distinct.size !== 1) continue;
+            const day = event.startDate;
+            event.startDate = new Date(Date.UTC(
+                day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), clocks[0].hour, clocks[0].minute));
+            if (event.endDate instanceof Date && event.endDate.getTime() <= event.startDate.getTime()) {
+                event.endDate = new Date(event.startDate);
+            }
+            event._startTimeFromTitle = true;
+            adopted++;
+            console.log(`🕒 TITLE CLOCK: "${event.title}" listed with no time — its own title states ${clocks[0].raw}; start set to ${String(clocks[0].hour).padStart(2, '0')}:${String(clocks[0].minute).padStart(2, '0')} wall clock`);
+        }
+        return adopted;
+    }
+
     adoptFlyerClockForPlaceholderTimes(events) {
         if (!Array.isArray(events)) return 0;
         const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
