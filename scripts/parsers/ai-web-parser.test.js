@@ -18624,6 +18624,58 @@ test('a curated promoter’s own host resolves the page site role', () => {
   assert.equal(parser.resolvePageSiteRole(unrelated, {}), '');
 });
 
+test('a feed that publishes image ids learns its CDN shape from the calendar\'s own page', async () => {
+  const parser = createParser();
+  // tockify.com/api/ngevent hands out {ownerId, id, width, height} and no URL
+  // anywhere in 168KB of payload — the template lives only in the front end,
+  // and the CDN host differs between calendars, so nothing but the page can
+  // say it. Thotyssey shipped 327 events with no artwork because of it.
+  const row = {
+    eid: { uid: 'x1' }, when: { start: { millis: 1789250400000 } },
+    content: {
+      summary: 'Early Sundays at Stonewall',
+      place: 'Stonewall Inn', address: '53 Christopher St, New York, NY',
+      imageSets: [{ ownerId: 'owner123456', id: 'asset7890abcd', width: 879, height: 858, masterFormat: 'jpg' }]
+    }
+  };
+  const source = 'https://tockify.example/api/ngevent?max=100&calname=thotyssey&tags=bears';
+  const quiet = console.log; console.log = () => {};
+  let event;
+  try {
+    event = parser.buildEventFromJsonApiObject(row, source, null);
+  } finally { console.log = quiet; }
+  assert.ok(!event.image, 'no URL can be invented from the payload alone');
+  assert.deepEqual(event._imageIdRecords, [{ id: 'asset7890abcd', ownerId: 'owner123456', width: 879, height: 858, format: 'jpg' }]);
+
+  // The calendar's own page renders the shape, at several sizes.
+  const page = `<html><body>
+    <img src="https://cdn.example/owner123456/asset7890abcd/scaled_768.jpg">
+    <img src="https://cdn.example/owner123456/other0000000/scaled_1024.jpg">
+    <img src="https://cdn.example/owner123456/other1111111/scaled_256.jpg">
+  </body></html>`;
+  const asked = [];
+  const adapter = { fetchData: async (url) => { asked.push(url); return url === 'https://tockify.example/thotyssey' ? { html: page } : { html: '' }; } };
+  const quiet2 = console.log; console.log = () => {};
+  try {
+    await parser.resolveJsonApiImageIdUrls([event], source, adapter);
+  } finally { console.log = quiet2; }
+  assert.ok(asked.includes('https://tockify.example/thotyssey'), "the feed's own query names the page");
+  // 879px master: the 1024 rendition does not exist, so the largest that fits wins.
+  assert.equal(event.image, 'https://cdn.example/owner123456/asset7890abcd/scaled_768.jpg');
+  assert.equal(event.imageSource, 'json-api');
+  assert.deepEqual(event._imageAlternates, ['https://cdn.example/owner123456/asset7890abcd/scaled_256.jpg']);
+
+  // Fail open: a page that renders none of these ids teaches nothing and
+  // changes nothing, and the site is asked only once per run.
+  const other = parser.buildEventFromJsonApiObject(row, source, null);
+  const blind = { fetchData: async () => ({ html: '<html><body>no artwork here</body></html>' }) };
+  const quiet3 = console.log; console.log = () => {};
+  try {
+    await parser.resolveJsonApiImageIdUrls([other], 'https://elsewhere.example/api/ngevent?calname=nobody', blind);
+  } finally { console.log = quiet3; }
+  assert.ok(!other.image, 'a page that renders none of these ids teaches nothing');
+});
+
 test('a date computed from a recurrence the page states is never an orphan', () => {
   const parser = createParser();
   // thelumberyardbar.com publishes nothing but weeklies — "QUEERAOKE every

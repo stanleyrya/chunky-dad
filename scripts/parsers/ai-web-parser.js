@@ -1210,6 +1210,7 @@ class AiWebParser {
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
+            await this.resolveJsonApiImageIdUrls(jsonApiEvents, sourceUrl, httpAdapter);
             // On a venue's or promoter's own site (config siteRole, or the
             // page's derived role), a feed row's own page IS the event's page
             // (powerhousebar.com: 57 events all pointing at the homepage,
@@ -11203,6 +11204,188 @@ class AiWebParser {
     // registrable domain are FETCHED and adopted only when the page answers
     // for this event by name: verified, not fabricated. Bounded — three
     // shapes per event, six fetches per page.
+    // Image members that name an asset but no URL: {ownerId, id, width,
+    // height, masterFormat}. Only records carrying an id-shaped value and at
+    // least one dimension qualify, so a stray object never becomes an image.
+    collectJsonApiImageIdRecords(view, keyPattern) {
+        const records = [];
+        const seen = new Set();
+        const idShape = /^[A-Za-z0-9][A-Za-z0-9_-]{7,}$/;
+        const visit = (value, depth, keyed) => {
+            if (!value || depth > 4) return;
+            if (Array.isArray(value)) {
+                for (const item of value) visit(item, depth + 1, keyed);
+                return;
+            }
+            if (typeof value !== 'object') return;
+            let id = '';
+            let ownerId = '';
+            let width = 0;
+            let height = 0;
+            let format = '';
+            for (const key of Object.keys(value)) {
+                const normalizedKey = this.normalizeJsonApiKey(key);
+                const member = value[key];
+                if (member && typeof member === 'object') {
+                    visit(member, depth + 1, keyed || keyPattern.test(normalizedKey));
+                    continue;
+                }
+                const text = typeof member === 'string' ? member.trim() : '';
+                if (/^id$/.test(normalizedKey) && idShape.test(text)) id = text;
+                if (/^(owner_id|account_id|user_id|space_id)$/.test(normalizedKey) && idShape.test(text)) ownerId = text;
+                if (/^(width|w)$/.test(normalizedKey)) width = Number(member) > 0 ? Number(member) : width;
+                if (/^(height|h)$/.test(normalizedKey)) height = Number(member) > 0 ? Number(member) : height;
+                if (/(^|_)format$/.test(normalizedKey) && /^[a-z]{3,4}$/i.test(text)) format = text.toLowerCase();
+            }
+            if (!id || !(keyed || keyPattern.test('image')) || (width <= 0 && height <= 0)) return;
+            if (seen.has(id)) return;
+            seen.add(id);
+            records.push({ id, ownerId, width, height, format });
+        };
+        for (const key of Object.keys(view)) {
+            const normalizedKey = this.normalizeJsonApiKey(key);
+            if (!keyPattern.test(normalizedKey)) continue;
+            visit(view[key], 0, true);
+        }
+        return records;
+    }
+
+    // A feed that publishes image IDS and no URLs hides its CDN template in
+    // its own front end. Rather than remember one platform's template — the
+    // hardcoding this project refuses — the shape is LEARNED from the
+    // calendar's own rendered page: fetch it once, find any URL containing an
+    // id the feed just handed us, and read the template off that URL
+    // (tockify.com renders "<cdn>/<ownerId>/<id>/scaled_<width>.jpg", and the
+    // CDN host differs between calendars, so nothing but the page can say it).
+    //
+    // The page is found from the feed URL's own query: an endpoint that names
+    // its calendar ("calname=thotyssey") names a page of that name on the same
+    // site. Sizes are whatever the page renders — a rendition larger than the
+    // master does not exist (scaled_1024 of an 807px image is a 403), so each
+    // row takes the largest rendered size that fits its own width, and the
+    // rest ride along as crop fallbacks. One page read per host per run;
+    // every failure leaves the rows exactly as they were.
+    async resolveJsonApiImageIdUrls(events, sourceUrl, httpAdapter) {
+        if (!Array.isArray(events) || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const pending = events.filter(event => event && !event.image && Array.isArray(event._imageIdRecords) && event._imageIdRecords.length > 0);
+        if (pending.length === 0) return;
+        const parts = String(sourceUrl || '').match(/^(https?):\/\/([^/?#]+)([^?#]*)(?:\?([^#]*))?/i);
+        if (!parts) return;
+        const [, scheme, host, , query] = parts;
+        if (!this._imageTemplateMemory) this._imageTemplateMemory = new Map();
+        const memoryKey = host.toLowerCase();
+        let learned = this._imageTemplateMemory.get(memoryKey);
+        if (learned === undefined) {
+            learned = await this.learnImageUrlTemplateFromSite(pending, `${scheme}://${host}`, query, httpAdapter);
+            this._imageTemplateMemory.set(memoryKey, learned || null);
+        }
+        if (!learned) return;
+        let filled = 0;
+        for (const event of pending) {
+            const record = event._imageIdRecords[0];
+            if (!record || (!record.ownerId && learned.template.includes('{ownerId}'))) continue;
+            const sizes = learned.sizes.filter(size => !(record.width > 0) || size <= record.width);
+            const ordered = (sizes.length > 0 ? sizes : [Math.min(...learned.sizes)]).slice().sort((a, b) => b - a);
+            const build = (size) => learned.template
+                .replace('{ownerId}', record.ownerId)
+                .replace('{id}', record.id)
+                .replace('{size}', String(size));
+            const urls = ordered.map(build).filter(Boolean);
+            if (urls.length === 0) continue;
+            event.image = urls[0];
+            event.imageSource = 'json-api';
+            if (urls.length > 1) event._imageAlternates = urls.slice(1);
+            delete event._imageIdRecords;
+            filled++;
+        }
+        if (filled > 0) {
+            console.log(`🖼️ AI Web: Learned this calendar's image URL shape from ${learned.pageUrl} (${learned.template}) — ${filled} row(s) that published only image ids now carry their artwork`);
+        }
+    }
+
+    // The learning half: try the pages the feed's own query names, and read
+    // the template off the first URL that carries one of these ids.
+    async learnImageUrlTemplateFromSite(events, origin, query, httpAdapter) {
+        const ids = new Map();
+        for (const event of events) {
+            for (const record of event._imageIdRecords) {
+                if (record && record.id && !ids.has(record.id)) ids.set(record.id, record);
+            }
+        }
+        if (ids.size === 0) return null;
+        const slugs = [];
+        for (const pair of String(query || '').split('&')) {
+            const value = decodeURIComponent((pair.split('=')[1] || '').trim());
+            if (/^[a-z0-9][a-z0-9_-]{2,60}$/i.test(value) && !/^\d+$/.test(value) && !slugs.includes(value)) slugs.push(value);
+        }
+        const candidates = [];
+        for (const slug of slugs.slice(0, 3)) {
+            candidates.push(`${origin}/${slug}`);
+        }
+        for (const candidate of candidates) {
+            let body = '';
+            try {
+                const response = await httpAdapter.fetchData(candidate);
+                body = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            if (!body) continue;
+            const template = this.readImageUrlTemplateFromPage(body, ids);
+            if (template) return { ...template, pageUrl: candidate };
+        }
+        return null;
+    }
+
+    // Turn one rendered URL into a template. The asset id becomes {id}, the
+    // owner id {ownerId} when the URL carries it, and the one number that is
+    // not part of an id becomes {size}; every size the page renders is
+    // collected so a row can pick one its own master actually has.
+    readImageUrlTemplateFromPage(body, ids) {
+        const source = String(body || '');
+        for (const [id, record] of ids) {
+            const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const match = source.match(new RegExp(`https?://[^"'\\s\\\\<>]*${escaped}[^"'\\s\\\\<>]*`, 'i'));
+            if (!match) continue;
+            let template = match[0];
+            if (record.ownerId && template.includes(record.ownerId)) {
+                template = template.split(record.ownerId).join('{ownerId}');
+            }
+            template = template.split(id).join('{id}');
+            const sizeMatch = template.match(/(\d{2,4})(?=\D*$)/);
+            if (!sizeMatch) continue;
+            const sizes = new Set([Number(sizeMatch[1])]);
+            const withPlaceholders = template.replace(sizeMatch[1], '{size}');
+            // Every size this page renders for the same shape: the template is
+            // rebuilt as a pattern by escaping its literal parts and letting
+            // the ids and the size stand in as groups.
+            const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const familySource = withPlaceholders
+                .split(/(\{ownerId\}|\{id\}|\{size\})/)
+                .map(part => {
+                    if (part === '{size}') return '(\\d{2,4})';
+                    if (part === '{ownerId}' || part === '{id}') return '[A-Za-z0-9_-]+';
+                    return escape(part);
+                })
+                .join('');
+            try {
+                const familyPattern = new RegExp(familySource, 'gi');
+                let found;
+                while ((found = familyPattern.exec(source)) !== null) {
+                    const size = Number(found[1]);
+                    if (Number.isFinite(size) && size > 0) sizes.add(size);
+                    if (sizes.size > 12) break;
+                }
+            } catch (_) {
+                // An unusable family pattern just means one size is known.
+            }
+            template = template.replace(sizeMatch[1], '{size}');
+            if (!template.includes('{id}') || !template.includes('{size}')) continue;
+            return { template, sizes: Array.from(sizes).sort((a, b) => a - b) };
+        }
+        return null;
+    }
+
     async resolveJsonApiSlugLinks(events, sourceUrl, httpAdapter) {
         if (!Array.isArray(events) || events.length === 0 || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
         const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i);
@@ -11674,6 +11857,14 @@ class AiWebParser {
         if (rruleValue) event._jsonApiRrule = rruleValue.trim();
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
+        // An image set that publishes only IDS (owner + asset + dimensions,
+        // no URL anywhere) leaves its CDN template to the site's own front
+        // end. The ids are kept so resolveJsonApiImageIdUrls can learn that
+        // template from the calendar's own rendered page and fill them in.
+        if (!event.image) {
+            const idRecords = this.collectJsonApiImageIdRecords(view, imageKeyPattern);
+            if (idRecords.length > 0) event._imageIdRecords = idRecords;
+        }
         if (event.image) {
             event.imageSource = 'json-api';
             // The row's OTHER renditions of the same artwork, for the image
