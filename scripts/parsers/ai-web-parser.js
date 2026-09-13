@@ -10599,6 +10599,121 @@ class AiWebParser {
         return null;
     }
 
+    // Does the row SAY it is an all-day entry? The flag sits on the row
+    // (`all_day`, `allDay`, `isAllDay`) or inside its when-container
+    // (Tockify's `when.allDay`), so one level of nesting is read too. Only a
+    // literal true counts — a string "false" or a 0 never makes a day event.
+    jsonApiRowStatesAllDay(view) {
+        const isAllDayKey = (key) => /^(all_?day|is_all_?day|whole_?day)$/.test(this.normalizeJsonApiKey(key));
+        for (const key of Object.keys(view || {})) {
+            if (isAllDayKey(key) && view[key] === true) return true;
+            const member = view[key];
+            if (!member || typeof member !== 'object' || Array.isArray(member)) continue;
+            for (const innerKey of Object.keys(member)) {
+                if (isAllDayKey(innerKey) && member[innerKey] === true) return true;
+            }
+        }
+        return false;
+    }
+
+    // The CALENDAR DAY an instant falls on, read in the zone the row states
+    // (UTC when it states none — an all-day row's own label). Returns
+    // { year, month, day } or null.
+    jsonApiCalendarDayParts(date, zone) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+        let text = '';
+        if (this.core && typeof this.core.normalizeEventDateLocal === 'function') {
+            text = this.core.normalizeEventDateLocal(date, zone || 'UTC') || '';
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) text = date.toISOString().slice(0, 10);
+        const [year, month, day] = text.split('-').map(Number);
+        if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+        return { year, month, day };
+    }
+
+    /**
+     * Every image URL an event-like JSON object publishes under its image-ish
+     * keys, best rendition first.
+     *
+     * Feeds state artwork in every shape there is: a bare URL string, an
+     * object ({ url } / { src } / { href } / { source_url } / { secure_url }),
+     * a LIST of crops, or an image SET whose members are one picture at
+     * several widths (WordPress `sizes`, JSON:API `formats`, Tockify
+     * `imageSets`). Until 2026-09-13 this builder read only "a string, or an
+     * object's url/src/source_url member", so every list-shaped payload
+     * shipped imageless even though the row published its poster.
+     *
+     * Ordering: a candidate whose payload STATES width/height is ranked by
+     * that area; one that states none is treated as the original (feeds put
+     * the uncropped URL at the top level and the scaled renditions in the
+     * nested set), so the largest/original wins the `image` slot and the rest
+     * become the row's crop fallbacks via _imageAlternates — the same channel
+     * the DICE reader already feeds, never a second one.
+     *
+     * A member with no URL anywhere (an image set that publishes only ids and
+     * dimensions and leaves its CDN template to the site's own front end)
+     * yields nothing: no URL can be invented for it.
+     */
+    collectJsonApiImageCandidates(view, keyPattern) {
+        const candidates = [];
+        const seen = new Set();
+        const urlMemberKey = /^(url|src|href|source_url|secure_url|image_url|link|original|full|large)$/;
+        const dimension = (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) && number > 0 ? number : 0;
+        };
+        const push = (raw, width, height) => {
+            const normalized = this.normalizeHttpUrlValue(String(raw || '').trim()) || '';
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            // No stated size = the original rendition (see ordering note).
+            const area = width > 0 && height > 0 ? width * height : Number.POSITIVE_INFINITY;
+            candidates.push({ url: normalized, area });
+        };
+        const visit = (value, depth) => {
+            if (value === null || value === undefined || depth > 4) return;
+            if (typeof value === 'string') {
+                if (/^https?:\/\//i.test(value.trim())) push(value, 0, 0);
+                return;
+            }
+            if (Array.isArray(value)) {
+                for (const item of value) visit(item, depth + 1);
+                return;
+            }
+            if (typeof value !== 'object') return;
+            let width = 0;
+            let height = 0;
+            let own = '';
+            for (const key of Object.keys(value)) {
+                const normalizedKey = this.normalizeJsonApiKey(key);
+                const member = value[key];
+                if (!own && urlMemberKey.test(normalizedKey) && typeof member === 'string'
+                    && /^https?:\/\//i.test(member.trim())) {
+                    own = member;
+                }
+                if (/^(width|w)$/.test(normalizedKey)) width = dimension(member);
+                if (/^(height|h)$/.test(normalizedKey)) height = dimension(member);
+            }
+            if (own) push(own, width, height);
+            // Nested renditions (sizes / variants / formats / thumbnails): the
+            // members are read with the same rules, one level deeper.
+            for (const key of Object.keys(value)) {
+                const member = value[key];
+                if (member && typeof member === 'object') visit(member, depth + 1);
+            }
+        };
+        for (const key of Object.keys(view || {})) {
+            if (!keyPattern.test(this.normalizeJsonApiKey(key))) continue;
+            visit(view[key], 0);
+        }
+        return candidates
+            .map((candidate, index) => ({ candidate, index }))
+            .sort((a, b) => (a.candidate.area === b.candidate.area
+                ? a.index - b.index
+                : b.candidate.area - a.candidate.area))
+            .map(entry => entry.candidate);
+    }
+
     // Field mapping from one event-like JSON object, case/snake/camel-
     // insensitive first match. Shares the JSON-LD path's cleaning
     // (tag-strip + entity-decode), date parsing (trailing-Z instants are
@@ -10669,6 +10784,29 @@ class AiWebParser {
         if (!title || !start.date) return null;
         const end = firstDateBy((key, value) => this.jsonApiEndDateFromEntry(key, value));
 
+        // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
+        // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
+        // stored as that instant it reads as the previous evening everywhere
+        // west of Greenwich (The Bear Calendar's Bear Frolic: 10/07 20:00 in
+        // its own Toronto) and as a timed midnight event rather than a day.
+        // Keep the stated day and hand it to the row's own zone through the
+        // wall-clock channel every offset-less value already uses: midnight
+        // local through 23:59:59 local, never midnight UTC.
+        if (start.date && this.jsonApiRowStatesAllDay(view)) {
+            const zone = start.timezone || '';
+            const startDay = this.jsonApiCalendarDayParts(start.date, zone);
+            if (startDay) {
+                start.date = new Date(Date.UTC(startDay.year, startDay.month - 1, startDay.day, 0, 0, 0));
+                // The zone the row states is KEPT — it is what anchors the day
+                // (resolveWallClockDates reads event.timezone first); only the
+                // instant becomes a wall clock.
+                start.timezoneUnresolved = true;
+                const endDay = (end.date ? this.jsonApiCalendarDayParts(end.date, end.timezone || zone) : null) || startDay;
+                end.date = new Date(Date.UTC(endDay.year, endDay.month - 1, endDay.day, 23, 59, 59));
+                end.timezoneUnresolved = true;
+            }
+        }
+
         // Cancelled rows stay in feeds (Tockify keeps status.name='cancelled';
         // schema.org uses eventStatus 'EventCancelled'). Structured events skip
         // normalizeAiEvent, so this is the only place to honour it.
@@ -10732,13 +10870,12 @@ class AiWebParser {
         }
 
         const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
-        // An image member may be an object ({ url, sizes… } — WordPress/Tribe).
-        const imageHttpString = (value) => isHttpString(value)
-            || (value && typeof value === 'object' && !Array.isArray(value) && isHttpString(value.url || value.src || value.source_url));
-        const rawImageValue = firstValue(imageKeyPattern, imageHttpString);
-        const rawImage = typeof rawImageValue === 'string' ? rawImageValue : (rawImageValue ? (rawImageValue.url || rawImageValue.src || rawImageValue.source_url) : '');
-        const image = rawImage
-            ? (this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(rawImage) || '') || '')
+        // Objects, sets and nested rendition lists all read the same way (see
+        // collectJsonApiImageCandidates); the best rendition is the image and
+        // the rest ride along as crop fallbacks.
+        const imageCandidates = this.collectJsonApiImageCandidates(view, imageKeyPattern);
+        const image = imageCandidates.length > 0
+            ? (this.upgradeCdnThumbnailUrl(imageCandidates[0].url) || imageCandidates[0].url)
             : '';
         // Ticket link: absolute http(s) only, image-ish keys excluded (a
         // flyer_url must never become the ticketUrl). Slugs and other relative
@@ -10819,6 +10956,13 @@ class AiWebParser {
         // data the API itself published. Absent image → no stamp (fail open).
         if (event.image) {
             event.imageSource = 'json-api';
+            // The row's OTHER renditions of the same artwork, for the image
+            // gate to fall back on when the vision pass rejects the chosen
+            // crop (see adoptAlternateImageCrop). Display-only channel.
+            const alternates = imageCandidates.slice(1)
+                .map(candidate => candidate.url)
+                .filter(url => url && url !== event.image);
+            if (alternates.length > 0) event._imageAlternates = alternates;
         }
         // Price → cover from the payload's own price-ish keys (generic
         // pattern harvest, see formatJsonApiPriceCover). Stamped with the
@@ -10832,7 +10976,9 @@ class AiWebParser {
         }
         // Timezone: an IANA name in the payload is authoritative; otherwise the
         // address→city resolution below may supply the city's timezone.
-        const timezoneValue = firstValue(/time_?zone/,
+        // `tz` is the short spelling feeds use for the same key (the FEED
+        // CLOCK reconciliation already reads it as the row's zone).
+        const timezoneValue = firstValue(/^tz$|time_?zone/,
             (value) => typeof value === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(value.trim()));
         if (timezoneValue) {
             event.timezone = timezoneValue.trim();
@@ -10844,11 +10990,10 @@ class AiWebParser {
         // City from the address, else from the payload's own city/region/
         // country keys ("Sydney, NSW, Australia") — an aggregator row names
         // its city without an address.
-        const placeText = [
-            clean(firstValue(/(^|_)(city|locality|town)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)(region|state|province)$/, isNonEmptyString)),
-            clean(firstValue(/(^|_)country$/, isNonEmptyString))
-        ].filter(Boolean).join(', ');
+        const placeCity = clean(venueField(/^(city|locality|town)$/) || firstValue(/(^|_)(city|locality|town)$/, isNonEmptyString));
+        const placeRegion = clean(venueField(/^(region|state|province|state_province)$/) || firstValue(/(^|_)(region|state|province)$/, isNonEmptyString));
+        const placeCountry = clean(venueField(/^(country|country_name)$/) || firstValue(/(^|_)country$/, isNonEmptyString));
+        const placeText = [placeCity, placeRegion, placeCountry].filter(Boolean).join(', ');
         if (cityConfig) {
             const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
                 || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '');
@@ -10857,6 +11002,33 @@ class AiWebParser {
                 if (!event.timezone) {
                     const timezone = this.getTimezoneForCity(cityKey, cityConfig);
                     if (timezone) event.timezone = timezone;
+                }
+            }
+        }
+        // A ROW THAT NAMES ITS PLACE STATES ITS CLOCK, even when no calendar
+        // of ours covers that place. A world-wide feed lists Prague, Oslo,
+        // Sydney and Toronto; none is a configured city, so the wall clock
+        // used to be stored as UTC and the instant was hours wrong (run
+        // 20260913-012333: 27 of 68 The Bear Calendar records had no
+        // timezone). The zone comes from the row's own city/region/country
+        // through the tz database ICU ships (resolveIanaTimezoneFromPlace) —
+        // no per-source table — and is stamped even when the city itself
+        // stays unresolved: a record withheld for having no city must still
+        // carry the right instant.
+        if (!event.timezone && this.core && typeof this.core.resolveIanaTimezoneFromPlace === 'function') {
+            const resolved = this.core.resolveIanaTimezoneFromPlace(
+                { city: placeCity, region: placeRegion, country: placeCountry },
+                start.date instanceof Date ? start.date : null
+            );
+            if (resolved && resolved.timezone) {
+                event.timezone = resolved.timezone;
+                // One line per place, not per row: a feed states the same
+                // city on dozens of rows.
+                if (!this.jsonApiPlaceZoneLogged) this.jsonApiPlaceZoneLogged = new Set();
+                const placeLabel = [placeCity, placeRegion, placeCountry].filter(Boolean).join(', ');
+                if (!this.jsonApiPlaceZoneLogged.has(`${placeLabel}|${resolved.timezone}`)) {
+                    this.jsonApiPlaceZoneLogged.add(`${placeLabel}|${resolved.timezone}`);
+                    console.log(`🕒 FEED CLOCK: rows stating "${placeLabel}" carry no zone — reading their clock in ${resolved.timezone} (${resolved.basis}), e.g. "${title}"`);
                 }
             }
         }
@@ -22151,6 +22323,17 @@ TEXT:
         return tokens.every(token => corpus.some(brand => brand.includes(token)));
     }
 
+    // Provenance stamps that mean "the source published this picture for this
+    // event": a feed row's own artwork (json-api — the JSON-API, Squarespace,
+    // Wix, DICE and Elfsight readers all stamp it), or a page's own JSON-LD
+    // ImageObject. `og-image` and `page` are OUR choices off the page and stay
+    // subject to every image gate.
+    isPublisherSuppliedImageSource(imageSource) {
+        const stamp = String(imageSource || '').trim().toLowerCase();
+        if (!stamp) return false;
+        return stamp === 'json-api' || stamp === 'json-ld' || stamp === 'jsonld';
+    }
+
     rejectNonEventImageValues(event, htmlData = null) {
         if (!event || typeof event !== 'object') return event;
         for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
@@ -22158,6 +22341,23 @@ TEXT:
             if (!value) continue;
             const reason = this.getNonEventImageOcrReason(value, htmlData);
             if (!reason) continue;
+            // ARTWORK THE SOURCE ITSELF PUBLISHED IS NEVER FURNITURE. This
+            // gate exists for images WE picked off a page (a footer logo the
+            // segment prompt handed back as a flyer); a picture the site's own
+            // structured data or feed row nominates for this event is its
+            // editorial choice, and the vision pass calling it a "thumbnail"
+            // is a verdict about the picture's LOOK, not about whose picture
+            // it is (run 20260913-012121: 3 Dollar Bill's own poster for "THE
+            // AUD BALL: MARIO" — a Mario teaser with no legible copy — was
+            // deleted, and the record shipped imageless).
+            // The row's other renditions still get first refusal: when the
+            // publisher offered several crops, a rendition the vision pass has
+            // NOT rejected is the better picture (the DICE crop fallback).
+            if (field === 'image' && this.isPublisherSuppliedImageSource(event.imageSource)) {
+                if (this.adoptAlternateImageCrop(event, value, htmlData)) continue;
+                console.log(`🤖 AI Web: Kept publisher-supplied ${field} ${value} for "${event.title || ''}" — ${reason}, but the source's own structured data (${event.imageSource}) published it for this event; the furniture gate judges page-scraped images only`);
+                continue;
+            }
             console.log(`🤖 AI Web: Rejected non-event ${field} ${value} for "${event.title || ''}" — ${reason}`);
             delete event[field];
             if (field === 'image') delete event.imageSource;

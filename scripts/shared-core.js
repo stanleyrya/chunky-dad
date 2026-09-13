@@ -105,8 +105,14 @@ const ADDRESS_STREET_TYPE_TOKENS = [
 // domain root on a non-ticketing host; hosts missing from this list (or any
 // non-ticketing candidate with a real path) simply fall through to AI
 // arbitration — nothing is ever dropped or blocked for not being listed here.
+// A platform's REGIONAL domains are the same platform: eventbrite.ca sells
+// the same ticket eventbrite.com does (they are already listed together in
+// PLATFORM_IDENTITY_HOSTS, so leaving them out here made the two lists
+// disagree about one vendor).
 const TICKETING_PLATFORM_HOSTS = [
-    'sickening.events', 'eventbrite.com', 'tixr.com', 'ticketmaster.com',
+    'sickening.events', 'eventbrite.com', 'eventbrite.co.uk', 'eventbrite.ca',
+    'eventbrite.com.au', 'eventbrite.ie', 'eventbrite.de', 'eventbrite.fr',
+    'eventbrite.es', 'eventbrite.nl', 'tixr.com', 'ticketmaster.com',
     'ticketleap.com', 'dice.fm', 'eventeny.com', 'showclix.com'
 ];
 
@@ -584,6 +590,153 @@ class SharedCore {
                 : null;
         }
         return null;
+    }
+
+    /**
+     * A place → a real IANA zone, decided from the tz database ICU already
+     * ships. The configured cities carry their own zones (getCityTimezone),
+     * but a source that lists the whole world names places no calendar of
+     * ours has ever heard of — thebearcalendar.com's feed states city/region/
+     * country on every row, and 27 of 68 records shipped with no timezone at
+     * all, so their wall clocks were stored as UTC (a 19:00 Sydney party at
+     * 05:00 the next day, Prague two hours out, Toronto four).
+     *
+     * Two rungs, both data-driven — nothing per city, country or source:
+     *   1. THE ZONE'S OWN EXEMPLAR CITY. Every IANA id ends in the city that
+     *      keeps that clock ("Europe/Prague", "Australia/Sydney",
+     *      "America/Toronto"). The place's city text is matched against those
+     *      names (diacritic-folded, word windows so "Brisbane City" finds
+     *      Australia/Brisbane); a stated country NARROWS the match and, when
+     *      no zone of that country matches, REFUSES it — "Vancouver, WA, US"
+     *      must not become America/Vancouver.
+     *   2. THE COUNTRY'S OWN CLOCK, but only when the country keeps ONE: when
+     *      every zone of the country reads the same offset at that instant
+     *      (Germany, Norway, the UK), the country names the clock and any of
+     *      its zones anchors the wall time identically. A country that spans
+     *      offsets (the US, Australia, Spain with the Canaries) resolves
+     *      nothing — a wrong zone is worse than an unresolved one.
+     *
+     * Returns { timezone, basis } or null. Fails closed (null) on any runtime
+     * without the ICU data — the caller keeps whatever it had.
+     */
+    resolveIanaTimezoneFromPlace(place, atDate = null) {
+        const city = place && typeof place === 'object' ? String(place.city || '').trim() : '';
+        const region = place && typeof place === 'object' ? String(place.region || '').trim() : '';
+        const country = place && typeof place === 'object' ? String(place.country || '').trim() : '';
+        if (!city && !region && !country) return null;
+        const zonesByCity = this.getIanaZonesByExemplarCity();
+        if (!zonesByCity || zonesByCity.size === 0) return null;
+        const countryZones = this.getIanaZonesForCountryName(country);
+        const cityHit = this.matchIanaZoneByExemplarCity(city, zonesByCity, countryZones)
+            || this.matchIanaZoneByExemplarCity(region, zonesByCity, countryZones);
+        if (cityHit) return { timezone: cityHit, basis: 'exemplar city' };
+        if (countryZones.length === 0) return null;
+        const when = atDate instanceof Date && !isNaN(atDate.getTime()) ? atDate : new Date();
+        const offsets = countryZones.map(zone => this.getTimezoneOffsetMinutes(when, zone));
+        if (offsets.some(offset => !Number.isFinite(offset))) return null;
+        if (new Set(offsets).size !== 1) return null;
+        return { timezone: countryZones.slice().sort()[0], basis: 'country clock' };
+    }
+
+    // Exemplar-city index of the tz database: folded city name → zone ids.
+    // Built once per process from ICU's own list; empty (and inert) wherever
+    // Intl.supportedValuesOf is missing.
+    getIanaZonesByExemplarCity() {
+        if (this._ianaZonesByExemplarCity) return this._ianaZonesByExemplarCity;
+        const index = new Map();
+        try {
+            if (typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function') {
+                for (const zone of Intl.supportedValuesOf('timeZone')) {
+                    const exemplar = this.foldPlaceName(String(zone).split('/').pop().replace(/_/g, ' '));
+                    if (!exemplar) continue;
+                    if (!index.has(exemplar)) index.set(exemplar, []);
+                    index.get(exemplar).push(zone);
+                }
+            }
+        } catch (_) { /* no ICU zone list — the resolver stays inert */ }
+        this._ianaZonesByExemplarCity = index;
+        return index;
+    }
+
+    // The zones a country keeps, from its own ICU region data. The country is
+    // named in English by the feeds we read; the code it maps to comes from
+    // ICU's region display names (inverted once), never a hand-written table.
+    getIanaZonesForCountryName(country) {
+        const folded = this.foldPlaceName(country);
+        if (!folded) return [];
+        if (!this._ianaZonesByCountry) this._ianaZonesByCountry = new Map();
+        if (this._ianaZonesByCountry.has(folded)) return this._ianaZonesByCountry.get(folded);
+        let zones = [];
+        try {
+            const code = this.getRegionCodeForCountryName(folded);
+            if (code && typeof Intl !== 'undefined' && typeof Intl.Locale === 'function') {
+                const locale = new Intl.Locale(`und-${code}`);
+                if (typeof locale.getTimeZones === 'function') {
+                    zones = (locale.getTimeZones() || []).filter(zone => typeof zone === 'string');
+                }
+            }
+        } catch (_) { zones = []; }
+        this._ianaZonesByCountry.set(folded, zones);
+        return zones;
+    }
+
+    // ICU region display names, inverted: "germany" → "DE". Built once.
+    getRegionCodeForCountryName(foldedCountry) {
+        if (!this._regionCodeByCountryName) {
+            const index = new Map();
+            try {
+                if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+                    const names = new Intl.DisplayNames(['en'], { type: 'region' });
+                    for (let first = 65; first <= 90; first++) {
+                        for (let second = 65; second <= 90; second++) {
+                            const code = String.fromCharCode(first) + String.fromCharCode(second);
+                            let name = '';
+                            try { name = names.of(code) || ''; } catch (_) { continue; }
+                            if (!name || name === code) continue;
+                            const folded = this.foldPlaceName(name);
+                            if (folded && !index.has(folded)) index.set(folded, code);
+                        }
+                    }
+                }
+            } catch (_) { /* no ICU region names — the country rung stays inert */ }
+            this._regionCodeByCountryName = index;
+        }
+        return this._regionCodeByCountryName.get(foldedCountry) || '';
+    }
+
+    // "Brisbane City" → Australia/Brisbane: every window of consecutive words
+    // in the place text is looked up, longest first, so a city that trails a
+    // qualifier still finds its zone. A window matching SEVERAL zones (after
+    // the country narrowing) is ambiguous and answers nothing.
+    matchIanaZoneByExemplarCity(text, zonesByCity, countryZones) {
+        const words = this.foldPlaceName(text).split(' ').filter(Boolean);
+        if (words.length === 0) return '';
+        const windows = [];
+        for (let size = words.length; size >= 1; size--) {
+            for (let start = 0; start + size <= words.length; start++) {
+                windows.push(words.slice(start, start + size).join(' '));
+            }
+        }
+        for (const window of windows) {
+            if (window.length < 3) continue;
+            const matches = zonesByCity.get(window);
+            if (!matches || matches.length === 0) continue;
+            const narrowed = countryZones.length > 0
+                ? matches.filter(zone => countryZones.includes(zone))
+                : matches;
+            // The name belongs to a city in ANOTHER country (Vancouver WA vs
+            // America/Vancouver): refuse it rather than cross a continent.
+            if (countryZones.length > 0 && narrowed.length === 0) return '';
+            if (narrowed.length === 1) return narrowed[0];
+            return '';
+        }
+        return '';
+    }
+
+    // Place-name folding: diacritics dropped, punctuation collapsed to single
+    // spaces (so "Cádiz" and "St. John's" compare as written).
+    foldPlaceName(value) {
+        return this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
     }
 
     warnOnce(key, message) {
@@ -5643,6 +5796,18 @@ class SharedCore {
         return query[1].split('&').some(pair => /^(q|s|search|query|keyword|keywords|term)=/i.test(pair));
     }
 
+    // A URL whose host is a BRANDED SUBDOMAIN of a known ticketing platform
+    // (westernxposurefall2026.eventbrite.com, xxl2026.eventbrite.com — and the
+    // same shape on the platform's regional domains). The vendor gave that
+    // label to one seller's listing, so the "bare root" there is a sales page,
+    // not a site's front door. Exact platform hosts (eventbrite.com itself)
+    // are NOT this: their root is the vendor's home page.
+    isTicketingPlatformSubdomainUrl(url) {
+        const host = this.getHostFromUrl(String(url || '')).toLowerCase().replace(/^www\./, '');
+        if (!host || !this.isKnownTicketingPlatformHost(host)) return false;
+        return TICKETING_PLATFORM_HOSTS.every(platform => host !== platform);
+    }
+
     clearNonIdentityLinkFields(event, label = 'event') {
         const cleared = [];
         if (!event || typeof event !== 'object') return cleared;
@@ -5660,10 +5825,15 @@ class SharedCore {
                 // (sickening.events/events?q=goldiloxx shipped as a ticketUrl,
                 // run 20260910-215043).
                 reason = 'a search/listing page';
-            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)) {
+            } else if (field === 'ticketUrl' && /^https?:\/\/[^/?#]+\/?$/i.test(value)
+                && !this.isTicketingPlatformSubdomainUrl(value)) {
                 // A bare site root is a website, never a ticket link (furball
                 // .nyc: "VISIT THEURBANBEAR.COM" on the flyer became UNDERBEAR's
                 // ticketUrl). Flag, don't drop: it moves to an empty website.
+                // Exempt above: on a ticket VENDOR the bare root is not a site
+                // root at all — the brand label IS the listing
+                // (westernxposurefall2026.eventbrite.com), so the rule that
+                // protects venue sites was deleting real ticket links.
                 if (!(typeof event.website === 'string' && event.website.trim())) {
                     event.website = value;
                     console.log(`🔗 LINKS: moved ${value} from ticketUrl to website for "${label}" — a bare site root is a website, not a ticket link`);
