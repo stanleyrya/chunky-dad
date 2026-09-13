@@ -6547,7 +6547,16 @@ test('start-marker detection: doors/party/show colon labels detected, end-side s
   assert.ok(!parser.evidenceCitesStartMarker(''));
 });
 
-test('doors-vs-party: FURBALL NOLA start 21:00 (doors) is promoted to 22:00 (party), end stays absent', () => {
+// The same night as the page itself would print it: the doors/party
+// timetable in the listing's own words, no flyer involved. This is the shape
+// the promotion still applies to — a claim anyone reading the page can check.
+const FURBALL_NOLA_PAGE_TEXT = [
+  'FURBALL NOLA', 'Southern Decadence', 'September 5, 2026',
+  'Santos Bar - New Orleans, LA',
+  'DOORS: 9PM • PARTY: 10PM'
+].join('\n');
+
+test('doors-vs-party: a start at a PAGE-PRINTED doors time is promoted to the party time', () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();
   const cityConfig = {
@@ -6568,13 +6577,12 @@ test('doors-vs-party: FURBALL NOLA start 21:00 (doors) is promoted to 22:00 (par
         address: '1135 DECATUR ST'
       },
       {},
-      { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+      { html: FURBALL_NOLA_PAGE_TEXT, url: 'https://www.furball.nyc' },
       cityConfig,
       null
     );
     assert.ok(event, 'the event survives normalization');
-    // 10PM CDT (UTC-5) on Sep 5 = 03:00 UTC Sep 6 — the run shipped
-    // 2026-09-06T02:00:00.000Z (9PM doors) instead.
+    // 10PM CDT (UTC-5) on Sep 5 = 03:00 UTC Sep 6.
     assert.equal(event.startDate.toISOString(), '2026-09-06T03:00:00.000Z',
       'start must be the PARTY time (22:00 local), not the doors time');
     // No end was stated: the end matches the start exactly (the existing
@@ -6584,6 +6592,55 @@ test('doors-vs-party: FURBALL NOLA start 21:00 (doors) is promoted to 22:00 (par
   assert.ok(
     logs.some(l => l.includes('promoted start to the party/show time 22:00 (doors-vs-party disambiguation)')),
     `the correction logs its own line: ${logs.join(' | ')}`
+  );
+});
+
+// The correction to the above (run 20260913-012112, audit round 2). The real
+// furball.nyc page prints NO timetable at all: "DOORS: 9PM • PARTY: 10PM" is
+// printed on the NOLA flyer, read by OCR — and that flyer was paired both to
+// the card AND, by text similarity, to the one-line ticker row that has no
+// artwork of its own, so a time read off a picture moved TWO records' starts.
+// data/source-expectations/furball.json, the site and the ticket page all
+// state 21:00. A promoted start now needs the event's own printed words.
+test('doors-vs-party: a doors/party pair read only from flyer OCR promotes nothing', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const cityConfig = {
+    'new orleans': { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] }
+  };
+
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: FURBALL_NOLA_SEGMENT }),
+    '', 'the flyer states the timetable, not the page — nothing is promoted'
+  );
+
+  const event = parser.normalizeAiEvent(
+    {
+      title: 'FURBALL NOLA',
+      startDate: '2026-09-05',
+      startTime: '21:00',
+      city: 'new orleans',
+      bar: 'Santos Bar',
+      address: '1135 DECATUR ST'
+    },
+    {},
+    { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+    cityConfig,
+    null
+  );
+  assert.ok(event, 'the event survives normalization');
+  // 9PM CDT (UTC-5) on Sep 5 = 02:00 UTC Sep 6 — the stated doors time,
+  // which is what the ground-truth file records as this event's start.
+  assert.equal(event.startDate.toISOString(), '2026-09-06T02:00:00.000Z',
+    'the stated 21:00 survives untouched');
+  assert.equal(event._doorsTimePromoted, undefined, 'no promotion, no stamp');
+
+  // A segment whose PAGE text states the pair still promotes, even when the
+  // segment also carries a flyer: the rule reads the page chunk.
+  const mixed = [FURBALL_NOLA_PAGE_TEXT, FURBALL_NOLA_SEGMENT].join('\n');
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: mixed, segmentText: FURBALL_NOLA_PAGE_TEXT }),
+    '22:00', 'the segment\'s own page text still carries the rule'
   );
 });
 
@@ -15518,7 +15575,7 @@ test('doors-vs-party: promotion stamps the rejected doors time so the merge can 
       address: '1135 DECATUR ST'
     },
     {},
-    { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+    { html: FURBALL_NOLA_PAGE_TEXT, url: 'https://www.furball.nyc' },
     cityConfig,
     null
   );
@@ -15537,7 +15594,7 @@ test('doors-vs-party: promotion stamps the rejected doors time so the merge can 
       address: '1135 DECATUR ST'
     },
     {},
-    { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+    { html: FURBALL_NOLA_PAGE_TEXT, url: 'https://www.furball.nyc' },
     cityConfig,
     null
   );

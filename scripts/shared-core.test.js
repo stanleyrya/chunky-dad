@@ -3838,6 +3838,116 @@ test('mergeParsedEvents: an empty location loses to the non-empty side (text and
   assert.equal(adapter.calls.length, 0, 'location resolves deterministically without AI');
 });
 
+// ---------------------------------------------------------------------------
+// LISTING AUTHORITY (audit round 2, runs 20260913-012112 / 20260913-012121).
+// An enrich/crawl page fills blanks on the configured listing's record; it
+// never renames or re-illustrates an event the listing already stated.
+//   furball.nyc: the Dallas card was retitled "FURBALL Dallas Underwear +
+//   Gear Party featuring DJ GSP" and re-imaged with img.evbuc.com, because
+//   the Eventbrite page reached by enrich-only crawl is itself structured.
+//   3dollarbillbk.com: "QTS: Brooklyn" lost its published flyer and its
+//   04:00 end to a dice.fm crop and dice's 03:00.
+// ---------------------------------------------------------------------------
+
+test('mergeParsedEvents: a crawl page fills the listing\'s blanks but never restates its title, image or end', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+
+  const listing = {
+    title: 'FURBALL Dallas',
+    image: 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg',
+    imageSource: 'page',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T07:00:00.000Z'),
+    cover: '',
+    ticketUrl: '',
+    source: 'ai-web',
+    _extractionSource: 'ai',
+    _pageOrigin: 'listing',
+    _sourcePageUrl: 'https://www.furball.nyc/',
+    _fieldPriorities: priorities
+  };
+  const ticketPage = {
+    title: 'FURBALL Dallas Underwear + Gear Party featuring DJ GSP',
+    image: 'https://img.evbuc.com/original.20260824-022906?w=940',
+    imageSource: 'jsonld',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T06:00:00.000Z'),
+    cover: '$19.32-$25.09',
+    ticketUrl: 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    source: 'ai-web',
+    _extractionSource: 'jsonld',
+    _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities
+  };
+
+  const merged = await core.mergeParsedEvents(listing, ticketPage, { httpAdapter: adapter });
+  assert.equal(merged.title, 'FURBALL Dallas', 'the listing names its own event');
+  assert.equal(merged.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg',
+    'the listing\'s own artwork survives the ticket page\'s jsonld image');
+  assert.equal(merged.endDate.toISOString(), '2026-09-19T07:00:00.000Z', 'the listing\'s stated end survives');
+  // Enrichment still works: blanks are filled from the crawl page.
+  assert.equal(merged.cover, '$19.32-$25.09', 'a blank cover is filled by the ticket page');
+  assert.equal(merged.ticketUrl, 'https://www.eventbrite.com/e/furball-dallas-tickets-1998828293232',
+    'a blank ticketUrl is filled by the ticket page');
+  assert.equal(adapter.calls.length, 0, 'the rung is deterministic — no AI arbitration');
+
+  // Direction-independent: the same pair with the listing arriving second.
+  const flipped = await core.mergeParsedEvents(ticketPage, listing, { httpAdapter: adapter });
+  assert.equal(flipped.title, 'FURBALL Dallas', 'order does not decide authority');
+  assert.equal(flipped.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg');
+  assert.equal(flipped.endDate.toISOString(), '2026-09-19T07:00:00.000Z');
+
+  // And the authority is STICKY: a second crawl page cannot overwrite what
+  // the first one was refused.
+  const secondCrawl = {
+    ...ticketPage,
+    title: 'QTS: Brooklyn (dice)',
+    image: 'https://dice-media.imgix.net/attachments/2026-08-18/32eda118.jpg?rect=0,216,1080,648'
+  };
+  const twice = await core.mergeParsedEvents(merged, secondCrawl, { httpAdapter: adapter });
+  assert.equal(twice.title, 'FURBALL Dallas', 'the folded record still carries listing authority');
+  assert.equal(twice.image, 'https://static.wixstatic.com/media/238fae_0de32722~mv2.jpg');
+});
+
+test('mergeParsedEvents: listing authority fails open when only one side is stamped', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'incoming', value: 'crawled title', reason: 'more descriptive' }
+  });
+  const build = (overrides) => ({
+    title: 'listing title',
+    startDate: new Date('2026-09-19T02:00:00.000Z'),
+    endDate: new Date('2026-09-19T07:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities,
+    ...overrides
+  });
+  // Two listing records (the ticker row + the card on one site) never decide
+  // by this rung — they are the same authority.
+  const bothListings = await core.mergeParsedEvents(
+    build({ _pageOrigin: 'listing' }),
+    build({ _pageOrigin: 'listing', title: 'crawled title' }),
+    { httpAdapter: adapter }
+  );
+  assert.equal(bothListings.title, 'crawled title', 'two listing records are the same authority');
+  assert.ok(adapter.calls.length > 0, 'same-authority title conflicts still arbitrate as before');
+
+  // An unstamped side (a calendar record, a parser that never crawls) is not
+  // a crawl page — the rung must not fire.
+  const unstamped = await core.mergeParsedEvents(
+    build({ _pageOrigin: 'listing' }),
+    build({ title: 'crawled title' }),
+    { httpAdapter: adapter }
+  );
+  assert.equal(unstamped.title, 'crawled title', 'an unstamped side keeps today\'s behaviour');
+});
+
 test('mergeParsedEvents: coordinates beat text and degenerate ends lose, without AI', async () => {
   const core = createCore();
   const priorities = core.getResolvedFieldPriorities({});
@@ -8198,6 +8308,43 @@ test('dead-end store: ad-classified pages are stored regardless of links; unknow
   const { httpAdapter, parsers } = createCrawlHarness(pages);
   const results = await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
   assert.ok('https://ads.example/promo' in results.deadEndStore);
+});
+
+// CRAWL BUDGET: a listing's own rows are not discovery (audit round 2,
+// thedallaseagle.com). The MEC grid published 152 occurrences and the page
+// linked 15 of their event pages; the flat 12-URL discovery cap read 12 and
+// dropped 3. A link that IS an already-extracted event's own page enriches a
+// row we already have — it gets its own budget, and discovery keeps the 12.
+test('limitAdditionalUrls: the listing\'s own row pages are not cut by the discovery cap', () => {
+  const core = createCore();
+  const rowPages = Array.from({ length: 15 }, (_, i) => `https://www.thedallaseagle.com/events/night-${i + 1}/`);
+  const discovery = Array.from({ length: 20 }, (_, i) => `https://www.thedallaseagle.com/other-${i + 1}/`);
+  const rowKeys = new Set(rowPages.map(url => core.getUrlDedupeKey(url)));
+
+  // Default budget: every row page survives, discovery is still capped at 12.
+  const kept = core.limitAdditionalUrls(rowPages.concat(discovery), {}, rowKeys);
+  assert.equal(kept.filter(url => rowKeys.has(core.getUrlDedupeKey(url))).length, 15,
+    'all 15 of the listing\'s own event pages are followed');
+  assert.equal(kept.length, 27, '15 row pages + the 12 discovery links');
+  assert.deepEqual(kept.slice(0, 15), rowPages, 'the page\'s own ordering is preserved');
+
+  // No row-page keys → the flat cap, byte-for-byte as before.
+  assert.equal(core.limitAdditionalUrls(discovery, {}).length, 12, 'plain discovery is still capped at 12');
+  assert.equal(core.limitAdditionalUrls(discovery, {}, new Set()).length, 12, 'an empty set changes nothing');
+
+  // An explicitly configured budget stays absolute — including 0.
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: 3 }, rowKeys).length, 3,
+    'a parser that says "follow 3" follows 3');
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: 0 }, rowKeys).length, 0,
+    'a parser that says "follow none" follows none');
+  assert.equal(core.limitAdditionalUrls(rowPages, { maxAdditionalUrls: null }, rowKeys).length, 15,
+    'null still means unlimited');
+
+  // Bounded: a listing that links hundreds of rows cannot fan out forever.
+  const manyRows = Array.from({ length: 120 }, (_, i) => `https://www.thedallaseagle.com/events/row-${i}/`);
+  const manyKeys = new Set(manyRows.map(url => core.getUrlDedupeKey(url)));
+  assert.equal(core.limitAdditionalUrls(manyRows, {}, manyKeys).length, 40,
+    'the row-page budget has its own ceiling');
 });
 
 test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser tags uniqueValidCount', () => {
@@ -19528,6 +19675,50 @@ test('canonicalizeIdentityLinks: registry identity fills an EMPTY website (ladde
   assert.equal(blank.website, 'https://beefmince.com', 'the curated identity link fills the blank');
   assert.equal(blank._staticFields.website, 'https://beefmince.com', 'the fill is branding — static-marked');
   assert.equal(noMatch.website, undefined, 'no promoter, no page site → empty is correct');
+});
+
+// A CO-PROMOTER'S FRONT DOOR IS NOT THIS EVENT'S LINK (run 20260913-012112).
+// furball.nyc's UNDERBEAR 9/18 card names the weekend's co-promoter in its
+// text; the model read "theurbanbear.com" and the record shipped it as the
+// event's identity — a bare root on somebody else's host (and a known dead
+// end), while its five siblings carried the Furball identity. Ranking: the
+// event's own page > the source's own site > anyone else's front door.
+test('canonicalizeIdentityLinks: a co-promoter bare root loses to the curated identity, a deep page does not', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const coPromoterRoot = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const ownEventPage = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com/events/urban-bear-weekend-2026',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const ownSiteRoot = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://beefmince.com',
+    _sourcePageUrl: 'https://beefmince.com/'
+  };
+  const unstamped = {
+    title: 'SPOOKMINCE',
+    _promoter: 'BOATMINCE',
+    website: 'https://theurbanbear.com'
+  };
+  core.canonicalizeIdentityLinks([coPromoterRoot, ownEventPage, ownSiteRoot, unstamped]);
+  assert.equal(coPromoterRoot.website, 'https://beefmince.com',
+    'a foreign bare root gives way to the curated identity');
+  assert.equal(coPromoterRoot._staticFields.website, 'https://beefmince.com',
+    'the replacement is branding — static-marked, like every other registry fill');
+  assert.equal(ownEventPage.website, 'https://theurbanbear.com/events/urban-bear-weekend-2026',
+    'a deep URL is an event page and outranks everything');
+  assert.equal(ownSiteRoot.website, 'https://beefmince.com',
+    'the source\'s own root is kept, not "replaced"');
+  assert.equal(unstamped.website, 'https://theurbanbear.com',
+    'no source-page stamp → the rule fails closed and changes nothing');
 });
 
 test('final merge: the pasted BEEFMINCE x RVT rows are gone at the source', async () => {

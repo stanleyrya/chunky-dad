@@ -18704,11 +18704,44 @@ TEXT:
         return '';
     }
 
+    // WHAT THIS EVENT ITSELF PRINTS, for the doors-vs-party rule below: the
+    // record's own segment text when it has one (the segment's page lines,
+    // built OCR-free on purpose — see getSegmentPageText), else the page's
+    // own text. In BOTH cases the OCR regions are removed:
+    // splitOcrAndPageChunks separates the machine-embedded flyer blocks
+    // (OCR_IMAGE_URL/OCR_IMAGE_TEXT) from the published words.
+    //
+    // Why OCR is excluded. A flyer's "DOORS: 9PM • PARTY: 10PM" is the
+    // night's door/music timetable printed on artwork — and the artwork
+    // travels: furball.nyc's NOLA flyer was paired to the card AND, by text
+    // similarity, to the one-line ticker row that has no artwork of its own,
+    // so a time read off a picture moved two records' starts off the 21:00
+    // the site, the ticket page and data/source-expectations all state (run
+    // 20260913-012112, log 201/281). The evidence gate already refuses
+    // end-times cited to that same flyer marker; a promoted START is the
+    // same kind of claim. The rule stays alive for pages that PRINT both
+    // statements in the event's own words, which is where it can be checked.
+    getDoorsVsPartyCorpus(htmlData) {
+        const segmentText = htmlData && typeof htmlData.segmentText === 'string'
+            ? htmlData.segmentText.trim()
+            : '';
+        const source = segmentText
+            || (htmlData && typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (!source) return '';
+        const pageOnly = this.splitOcrAndPageChunks(source)
+            .filter(chunk => chunk && chunk.corpus === 'page')
+            .map(chunk => chunk.text)
+            .join('\n');
+        if (!pageOnly.trim()) return '';
+        return this.stripTags(pageOnly);
+    }
+
     // Doors-vs-party disambiguation (run 20260811-102550, FURBALL NOLA): the
     // flyer prints "DOORS: 9PM • PARTY: 10PM" and extraction adopted 21:00
     // (the DOORS time) as startTime — the event starts when the party starts,
     // not when the doors open. Deterministic and page-derived: when the
-    // event's own source corpus states exactly ONE doors time X and exactly
+    // event's own PRINTED text (getDoorsVsPartyCorpus — its segment when it
+    // has one, never a flyer's OCR) states exactly ONE doors time X and exactly
     // ONE distinct party/show/start time Y later than X, and the extracted
     // startTime equals X, the start is promoted to Y. Fails closed on any
     // ambiguity (multiple distinct doors or party times, Y not after X, or
@@ -18718,9 +18751,8 @@ TEXT:
         const normalizedStart = String(startTimeRaw || '').trim();
         const startMatch = normalizedStart.match(/^(\d{2}):(\d{2})$/);
         if (!startMatch) return '';
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        if (!html) return '';
-        const corpus = this.stripTags(html);
+        const corpus = this.getDoorsVsPartyCorpus(htmlData);
+        if (!corpus) return '';
         // A time token: "9PM", "9:30 PM", or 24h "21:00".
         const timeToken = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)|(\\d{1,2}):(\\d{2})';
         const toMinutes = (match) => {
