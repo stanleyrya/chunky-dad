@@ -21563,3 +21563,51 @@ test('same venue at the same start instant is one event, whatever each record ca
   // No place on one side → inconclusive.
   assert.equal(core.getSameEventIdentitySignal({ title: 'A', startDate: at('2026-10-11T04:00:00.000Z') }, named), null);
 });
+
+// ── The AM/PM span fix runs on the SCRAPED records, before dedup ──────────
+// Run 20260913-0120 (BEEFMINCE Sitges): the venue page's JSON-LD carried a pm
+// typo (01:00→18:00) while the DICE feed row said 01:00→06:00. The correction
+// existed only in the calendar stage, so the run output shipped a 17h span AND
+// the two records disagreed about endDate — which handed the field to the AI
+// arbitrator, which chose the plausible end for DISCO and the 17h one for MEET
+// MARKET, with a fabricated rationale, from the same pair of shapes.
+test('scraped records get the AM/PM span correction before dedup, so the twins agree', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const venuePage = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T18:00:00+02:00'),   // pm typo at the source
+    timezone: 'Europe/Madrid'
+  };
+  const feedRow = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T06:00:00+02:00'),
+    timezone: 'Europe/Madrid'
+  };
+  const corrected = core.applyOvernightSpanCorrections([venuePage, feedRow]);
+  assert.equal(corrected, 1, 'only the broken record is touched');
+  assert.equal(venuePage.endDate.toISOString(), feedRow.endDate.toISOString(),
+    'both records now state the same 5h overnight end — nothing left for an arbitrator to pick between');
+  assert.ok(venuePage._sanityFlags.some(flag => flag.code === 'overnight-span-corrected'),
+    'the correction is on the record for the results UI to show');
+  assert.equal(feedRow._sanityFlags, undefined, 'a plausible span is never stamped');
+
+  // A span a clean -12h does NOT explain keeps its stated value and its
+  // report-only flag (flag, don't drop).
+  const weekender = {
+    title: 'BEEFMINCE x Butlins',
+    startDate: new Date('2027-01-29T18:00:00Z'),
+    endDate: new Date('2027-02-01T18:00:00Z'),
+    _timezoneUnresolved: true
+  };
+  core.applyOvernightSpanCorrections([weekender]);
+  assert.equal(weekender.endDate.toISOString(), '2027-02-01T18:00:00.000Z', 'a 72h span is not an AM/PM slip');
+  assert.ok(weekender._sanityFlags.some(flag => flag.code === 'improbable-overnight-span'),
+    'a wall-clock record reads its local hours off its own components — the flag is not lost with the zone');
+
+  // Idempotent: a second pass neither re-flags nor re-corrects.
+  const again = core.applyOvernightSpanCorrections([venuePage, feedRow, weekender]);
+  assert.equal(again, 0);
+  assert.equal(venuePage._sanityFlags.length, 1);
+});

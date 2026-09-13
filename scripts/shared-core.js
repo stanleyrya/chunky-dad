@@ -2471,38 +2471,83 @@ class SharedCore {
         //     improbable span for the owner to notice. Fails closed without
         //     an event timezone: a wrong-zone local hour would manufacture
         //     false positives.
-        if (typeof event.timezone === 'string' && event.timezone) {
-            const overnightStartMs = toMs(event.startDate);
-            const overnightEndMs = toMs(event.endDate);
-            if (Number.isFinite(overnightStartMs) && Number.isFinite(overnightEndMs)
-                && overnightEndMs > overnightStartMs) {
-                const overnightOffsetMin = this.getTimezoneOffsetMinutes(new Date(overnightStartMs), event.timezone);
-                if (overnightOffsetMin !== null) {
-                    const overnightLocal = new Date(overnightStartMs + (overnightOffsetMin * 60000));
-                    const localStartHour = overnightLocal.getUTCHours();
-                    const localStartMinute = overnightLocal.getUTCMinutes();
-                    const spanHours = (overnightEndMs - overnightStartMs) / (60 * 60 * 1000);
-                    // An EXACT-midnight start is a date-only listing (festival
-                    // campouts, contest weekends), not a typed clock time - FURBALL
-                    // CAMP's 72h weekend flagged every run as a 'typo' it is not.
-                    // A real small-hours typo carries a real time (1AM, 2:30AM).
-                    const isDateOnlyListing = localStartHour === 0 && localStartMinute === 0;
-                    if (!isDateOnlyListing && localStartHour <= 5 && spanHours > 8) {
-                        flags.push({
-                            code: 'improbable-overnight-span',
-                            detail: `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`
-                        });
-                    } else if (!isDateOnlyListing && localStartHour >= 18 && spanHours > 12) {
-                        flags.push({
-                            code: 'improbable-overnight-span',
-                            detail: `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`
-                        });
-                    }
-                }
-            }
-        }
+        const overnightDetail = this.describeImprobableOvernightSpan(event);
+        if (overnightDetail) flags.push({ code: 'improbable-overnight-span', detail: overnightDetail });
 
         return flags;
+    }
+
+    // Rule 11's detector, factored out so the SAME shape test can run on a
+    // scraped record before dedup (applyOvernightSpanCorrections) and on the
+    // merged calendar candidate. Returns the flag detail string, or '' when
+    // the span is plausible / undecidable.
+    describeImprobableOvernightSpan(event) {
+        if (!event || typeof event !== 'object') return '';
+        // Fails closed without an event timezone: a wrong-zone local hour
+        // would manufacture false positives. A record still carrying
+        // wall-clock components labeled UTC (_timezoneUnresolved) reads its
+        // own local hours straight off those components.
+        const timezone = event._timezoneUnresolved
+            ? 'UTC'
+            : (typeof event.timezone === 'string' && event.timezone ? event.timezone : '');
+        if (!timezone) return '';
+        const startMs = this.toEpochMillis(event.startDate);
+        const endMs = this.toEpochMillis(event.endDate);
+        if (startMs === null || endMs === null || endMs <= startMs) return '';
+        const offsetMin = this.getTimezoneOffsetMinutes(new Date(startMs), timezone);
+        if (offsetMin === null) return '';
+        const local = new Date(startMs + (offsetMin * 60000));
+        const localStartHour = local.getUTCHours();
+        const localStartMinute = local.getUTCMinutes();
+        const spanHours = (endMs - startMs) / (60 * 60 * 1000);
+        // An EXACT-midnight start is a date-only listing (festival campouts,
+        // contest weekends), not a typed clock time - FURBALL CAMP's 72h
+        // weekend flagged every run as a 'typo' it is not. A real small-hours
+        // typo carries a real time (1AM, 2:30AM).
+        if (localStartHour === 0 && localStartMinute === 0) return '';
+        if (localStartHour <= 5 && spanHours > 8) {
+            return `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`;
+        }
+        if (localStartHour >= 18 && spanHours > 12) {
+            return `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`;
+        }
+        return '';
+    }
+
+    /**
+     * Run the approved AM/PM span correction on SCRAPED records, before dedup
+     * and before anything merges them.
+     *
+     * The correction already existed, but only in the calendar stage — so the
+     * run output (the results UI, the expectation diff, every consumer that is
+     * not a calendar write) still shipped the broken span, and worse: the two
+     * records of one event disagreed about the end, which handed endDate to
+     * the position-biased AI merge arbitrator. Run 20260913-0120, BEEFMINCE
+     * Sitges: the venue page's JSON-LD said 01:00→18:00 (a pm typo — the
+     * sibling nights say 06:00) while the DICE feed row said 01:00→06:00;
+     * DISCO's arbitration chose the plausible end and MEET MARKET's chose the
+     * 17h one, with a fabricated rationale, for the same pair of shapes.
+     * Correcting each record where it is BUILT makes the two agree, so no
+     * arbitration happens at all.
+     *
+     * Report-only in spirit and deterministic: only a clean -12h slip that
+     * lands in a plausible overnight window is applied (exactly what
+     * applyOvernightSpanCorrection has always allowed); anything it cannot
+     * explain keeps the report-only flag and its stated value.
+     */
+    applyOvernightSpanCorrections(events) {
+        let corrected = 0;
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            const detail = this.describeImprobableOvernightSpan(event);
+            if (!detail) continue;
+            if (!Array.isArray(event._sanityFlags)) event._sanityFlags = [];
+            if (event._sanityFlags.some(flag => flag
+                && (flag.code === 'improbable-overnight-span' || flag.code === 'overnight-span-corrected'))) continue;
+            event._sanityFlags.push({ code: 'improbable-overnight-span', detail });
+            if (this.applyOvernightSpanCorrection(event)) corrected++;
+        }
+        return corrected;
     }
 
     // TRUE only when the event's whole span is provably behind analysis
@@ -5147,6 +5192,14 @@ class SharedCore {
         // ticketUrl points at a DIFFERENT host gets website = ticketUrl (the
         // original source). Generic signal only — no per-site rules.
         this.applyAggregatorWebsitePointers(allEvents, urlClassifications);
+
+        // AM/PM span slips are repaired HERE, on the scraped records, rather
+        // than only on the merged calendar candidate: the run output must
+        // never carry a 17h "overnight" span, and two records of one event
+        // must not disagree about the end (that disagreement is what hands
+        // endDate to the position-biased AI arbitrator). See
+        // applyOvernightSpanCorrections.
+        this.applyOvernightSpanCorrections(allEvents);
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
