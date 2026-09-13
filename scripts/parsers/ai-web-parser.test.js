@@ -9112,8 +9112,25 @@ test('derivePageDateContext: year capture, ambiguity, and majority fallback', ()
   const split = parser.derivePageDateContext(wrap(['5 de septiembre fiesta', '12 de octubre concierto']));
   assert.equal(split, null, 'no majority → unanchored');
   // English pages: month+day census works identically, so anchoring is language-neutral
-  const english = parser.derivePageDateContext(wrap(['September 5 party', 'September 12 dance', 'gala night'])); 
+  const english = parser.derivePageDateContext(wrap(['September 5 party', 'September 12 dance', 'gala night']));
   assert.equal(english && english.month, 9);
+
+  // A hand-typed programme has typos. beefdip.com/planned-events heads nine
+  // day sections, eight of them "… JANUARY DD, 2027" and one "SUNDAY JANUARY
+  // 31, 2029"; demanding ONE year across every mention let that single
+  // keystroke blank the page-level year and the programme lost its anchor.
+  const typo = parser.derivePageDateContext(wrap([
+    'SATURDAY JANUARY 23, 2027', 'SUNDAY JANUARY 24, 2027', 'MONDAY JANUARY 25, 2027',
+    'TUESDAY JANUARY 26, 2027', 'WEDNESDAY JANUARY 27, 2027', 'THURSDAY JANUARY 28, 2027',
+    'FRIDAY JANUARY 29, 2027', 'SATURDAY JANUARY 30, 2027', 'SUNDAY JANUARY 31, 2029'
+  ]));
+  assert.deepEqual({ month: typo && typo.month, year: typo && typo.year }, { month: 1, year: 2027 },
+    'one outlier never outvotes eight agreeing headers');
+  // A majority is evidence; a tie is not.
+  assert.equal(parser.resolvePageDateContextYear([2027, 2029]), null, 'one-to-one has no majority');
+  assert.equal(parser.resolvePageDateContextYear([2027, 2027]), 2027);
+  assert.equal(parser.resolvePageDateContextYear([2027, 2027, 2028, 2029]), null, 'half is not a majority');
+  assert.equal(parser.resolvePageDateContextYear([]), null);
 });
 
 // The multilingual full-name vocabulary is DERIVED from Intl locale data, with

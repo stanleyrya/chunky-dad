@@ -491,6 +491,47 @@ test('festival context never overrides a record whose own address names another 
   assert.equal(core.textMentionsCity('Brooklyn, New York, NY', 'nyc'), true);
 });
 
+// A clock is only a time once it has a place. beefdip.com's 2027 programme
+// states no city the parser can resolve, so every record was stored as
+// wall-clock components labeled UTC and flagged for re-anchoring. The city
+// then arrived from the curated festival umbrella — AFTER LocationNormalizer
+// had already run — and nothing converted the dates: the whole week shipped
+// six hours early (9PM on the page written as 21:00Z, read back as 3PM in
+// Puerto Vallarta).
+test('a city inherited from a curated festival re-anchors wall-clock dates, like any other resolved city', () => {
+  const core = new SharedCore({ pv: { timezone: 'America/Mexico_City', patterns: ['puerto vallarta', 'pv'] } }, { eventSchema: EventSchema });
+  const festival = { key: 'beefdip', name: 'BeefDip Bear Week', cityKey: 'pv', nextDates: { start: '2027-01-23', end: '2027-01-31' } };
+  const originalLog = console.log; console.log = () => {};
+  let event, alreadyAnchored;
+  try {
+    // 21:00 local, stored as 21:00Z and flagged.
+    event = {
+      title: 'PRE WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 23, 21, 0, 0)),
+      endDate: new Date(Date.UTC(2027, 0, 24, 0, 0, 0)),
+      _timezoneUnresolved: true
+    };
+    core.applyCuratedFestivalContext(event, festival);
+
+    // A record that never needed re-anchoring is untouched.
+    alreadyAnchored = {
+      title: 'WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 24, 21, 0, 0))
+    };
+    core.applyCuratedFestivalContext(alreadyAnchored, festival);
+  } finally { console.log = originalLog; }
+
+  assert.equal(event.city, 'pv');
+  assert.equal(event._timezoneUnresolved, undefined, 'the re-anchor clears the flag');
+  assert.equal(event.timezone, 'America/Mexico_City');
+  assert.equal(core.formatLocalClockTime(event.startDate, 'America/Mexico_City'), '21:00',
+    `21:00 on the page must read back as 21:00 locally, got ${event.startDate.toISOString()}`);
+  assert.equal(alreadyAnchored.startDate.toISOString(), '2027-01-24T21:00:00.000Z',
+    'a record with no wall-clock flag is never converted');
+});
+
 // Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide
 // crop of the SAME 2026 asset both sides agreed was `image`; the AI kept the
 // calendar's 2024 attachment instead, calling 768x461 "higher resolution" than

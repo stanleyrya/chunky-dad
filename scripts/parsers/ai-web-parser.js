@@ -5535,15 +5535,32 @@ class AiWebParser {
                 return null;
             }
             const winners = matches.filter(m => m.month === topMonth);
-            const years = Array.from(new Set(winners.map(m => m.year).filter(y => Number.isFinite(y))));
             return {
                 month: topMonth,
-                year: years.length === 1 ? years[0] : null,
+                year: this.resolvePageDateContextYear(winners.map(m => m.year)),
                 phrase: winners[0].phrase
             };
         };
 
         return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+    }
+
+    // The page's year, by the same majority rule the month already uses. A
+    // hand-typed programme has typos: beefdip.com/planned-events heads nine
+    // day sections, eight of them "… JANUARY DD, 2027" and one "SUNDAY
+    // JANUARY 31, 2029". Demanding a single year across every mention let
+    // that one keystroke blank the page-level year outright, and the whole
+    // programme lost its anchor. A majority is still evidence; a lone
+    // outlier is not. Two mentions disagreeing one-to-one has no majority
+    // and stays null, exactly as before.
+    resolvePageDateContextYear(years) {
+        const stated = (Array.isArray(years) ? years : []).filter(year => Number.isFinite(year));
+        if (stated.length === 0) return null;
+        const counts = new Map();
+        stated.forEach(year => counts.set(year, (counts.get(year) || 0) + 1));
+        if (counts.size === 1) return stated[0];
+        const [topYear, topCount] = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+        return topCount * 2 > stated.length ? topYear : null;
     }
 
     // The SEGMENT_DATE_CONTEXT prompt/evidence line for one segment: its

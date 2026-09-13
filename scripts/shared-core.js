@@ -14530,6 +14530,18 @@ class SharedCore {
                 context.inheritedTimezone = true;
             }
         }
+        // A clock is only a time once it has a place. The parser stores an
+        // extracted local time as wall-clock components labeled UTC and flags
+        // the record for re-anchoring; LocationNormalizer converts those the
+        // moment it resolves a city. This runs AFTER the normalizer, so a
+        // record that gets its city here got it too late — and beefdip.com's
+        // whole 2027 programme shipped six hours early (9PM printed on the
+        // page written as 21:00Z, read back as 3PM in Puerto Vallarta). A
+        // city is a city whenever it arrives: re-anchor here on exactly the
+        // same terms.
+        if (event._timezoneUnresolved && (context.inheritedCity || context.inheritedTimezone)) {
+            this.resolveWallClockDates(event);
+        }
         event._festivalContext = context;
         return context;
     }
