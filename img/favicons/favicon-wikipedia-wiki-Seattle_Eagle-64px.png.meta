@@ -1,7 +1,11 @@
 {
-  "originalUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Seattle_Eagle_logo.png/250px-Seattle_Eagle_logo.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail",
-  "error": "HTTP 429: Too many requests (f061ab2)",
+  "originalUrl": "https://thumb.wikimedia.org/wikipedia/en/thumb/3/3f/Seattle_Eagle_logo.png/250px-Seattle_Eagle_logo.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail",
   "type": "favicon",
   "filename": "favicon-wikipedia-wiki-Seattle_Eagle-64px.png",
-  "failureCount": 2
+  "contentType": "image/png",
+  "contentLength": "63799",
+  "isLinktreeProfile": true,
+  "downloadedAt": "2026-09-13T14:06:54.438Z",
+  "etag": "bec5206d79a691f0939a11db6536980a",
+  "lastModified": "Tue, 25 Aug 2026 23:11:23 GMT"
 }
