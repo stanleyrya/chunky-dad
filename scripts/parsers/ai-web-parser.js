@@ -20834,6 +20834,13 @@ TEXT:
 
         let recurringDerivedNoStartTime = false;
         let recurringDerivedWallClock = false;
+        // A date computed FROM a recurrence the page states is not a guess:
+        // the page's own words are "last tuesday" or "every Thursday", and the
+        // calendar date is arithmetic on them. The orphan rule below must not
+        // ask such a date to appear in the page's text, because by
+        // construction it never does (thelumberyardbar.com publishes nothing
+        // but weeklies: all 11 of them were dropped, run 20260913-0336).
+        let startDateFromStatedRecurrence = false;
         if (!startDate && title && recurrenceRule) {
             const schema = this.getEventSchema();
             const nextOccurrence = schema && typeof schema.computeNextRruleOccurrence === 'function'
@@ -20870,6 +20877,7 @@ TEXT:
                     // components labeled UTC (the existing _timezoneUnresolved
                     // convention); flag it for downstream re-anchoring.
                     recurringDerivedWallClock = !timezone;
+                    startDateFromStatedRecurrence = true;
                     console.log(`🔁 RECURRING: derived next occurrence ${nextOccurrence} from rrule for "${title}"`);
                     if (dayPhraseSynthesis) {
                         console.log(`🔁 RECURRING: "${title}" synthesized from day phrase "${dayPhraseSynthesis.phrase}" → ${recurrenceRule}, next ${nextOccurrence} — will be withheld from calendar write (ICS only)`);
@@ -20947,6 +20955,7 @@ TEXT:
         // against, its dates came from OCR, and the year was neither pinned
         // nor stated — so there is no evidence left for this date at all.
         if (startDateIsOrphan
+            && !startDateFromStatedRecurrence
             && !startYearIsStated
             && !this.dateCarriesExplicitYear(startDate, explicitSourceYears.start)
             && !hasStructuredData

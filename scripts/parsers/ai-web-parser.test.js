@@ -18624,6 +18624,25 @@ test('a curated promoter’s own host resolves the page site role', () => {
   assert.equal(parser.resolvePageSiteRole(unrelated, {}), '');
 });
 
+test('a date computed from a recurrence the page states is never an orphan', () => {
+  const parser = createParser();
+  // thelumberyardbar.com publishes nothing but weeklies — "QUEERAOKE every
+  // Tuesday", no calendar dates anywhere. The next occurrence is arithmetic on
+  // the page's own words, so it can never appear in the page's text, and the
+  // orphan rule had dropped all eleven of them (run 20260913-0336).
+  const html = '<html><body><h2>QUEERAOKE</h2><p>Every Tuesday 9pm</p><p>Trivia last tuesday</p></body></html>';
+  const quiet = console.log; const quietWarn = console.warn;
+  console.log = () => {}; console.warn = () => {};
+  let derived;
+  try {
+    derived = parser.normalizeAiEvent(
+      { title: 'QUEERAOKE', recurrence: 'FREQ=WEEKLY;BYDAY=TU', startTime: '21:00' },
+      { name: 'The Lumberyard' }, { html, ocr: true }, null, null);
+  } finally { console.log = quiet; console.warn = quietWarn; }
+  assert.ok(derived, 'a weekly the page states survives the orphan rule');
+  assert.ok(derived.startDate instanceof Date, 'and carries the computed occurrence');
+});
+
 test('a date the page prints without a year is not an orphan', () => {
   const parser = createParser();
   // furball.nyc's ticker states every party as "10/3 FURBALL DC - ICON": the
