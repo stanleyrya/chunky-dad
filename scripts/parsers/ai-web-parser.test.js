@@ -18624,6 +18624,27 @@ test('a curated promoter’s own host resolves the page site role', () => {
   assert.equal(parser.resolvePageSiteRole(unrelated, {}), '');
 });
 
+test('a date the page prints without a year is not an orphan', () => {
+  const parser = createParser();
+  // furball.nyc's ticker states every party as "10/3 FURBALL DC - ICON": the
+  // date is there for any reader, the year never is. The year-qualified
+  // search finds nothing, and the orphan rule had dropped three published
+  // parties because of it (run 20260913-0310).
+  const ticker = { html: '<html><body><p>10/3 FURBALL DC - ICON</p><p>10/10 FURBALL Boston</p></body></html>' };
+  const quiet = console.log; console.log = () => {};
+  try {
+    assert.equal(parser.reportPageDateConflict(new Date('2026-10-03T22:00:00Z'), ticker, 'America/New_York', 'FURBALL DC'), false);
+    // The stale-flyer case the orphan rule exists for is untouched: the page
+    // states January dates, the poster says February, and February appears
+    // nowhere on the page in any spelling.
+    const programme = { html: '<html><body><h2>SATURDAY JANUARY 23, 2027</h2><h2>SUNDAY JANUARY 31, 2027</h2></body></html>' };
+    assert.equal(parser.reportPageDateConflict(new Date('2027-02-01T20:00:00Z'), programme, 'America/Los_Angeles', 'Foam Pool Party'), true);
+  } finally { console.log = quiet; }
+  // Prose only — a slug or an image filename never answers for the page.
+  assert.equal(parser.pageStatesMonthAndDay('<a href="/party-10-3-2026">x</a>', '10', '03'), false);
+  assert.equal(parser.pageStatesMonthAndDay('<p>3 October</p>', '10', '03'), true);
+});
+
 test('an off-quarter minute no page states is an OCR slip, not a start time', () => {
   const parser = createParser();
   // Literal eaglela.com shape (audit 2026-09-13): the shared Cruise LA flyer

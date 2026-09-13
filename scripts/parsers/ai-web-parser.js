@@ -22893,7 +22893,13 @@ TEXT:
         // An after-midnight start belongs to the night before, and that is the
         // date its page prints — the second candidate states this event's day
         // just as truly.
-        for (const candidate of localDates.slice(1)) {
+        // The night-before candidate speaks only for a start that IS after
+        // local midnight. Otherwise any page printing yesterday's date would
+        // vouch for today's, and the orphan rule would stop catching the
+        // stale-flyer shape it exists for.
+        const localHour = this.getLocalHour(startDate, timezone);
+        const afterMidnight = Number.isFinite(localHour) && localHour !== null && localHour < 6;
+        for (const candidate of (afterMidnight ? localDates.slice(1) : [])) {
             const candidateMonth = String(candidate.month).padStart(2, '0');
             const candidateDay = String(candidate.day).padStart(2, '0');
             for (let year = candidate.year - 2; year <= candidate.year + 2; year++) {
@@ -22907,8 +22913,45 @@ TEXT:
         // currently saying. A page that states NO dates has no opinion and
         // raises nothing here: its flyers are the only record (Lumberyard).
         if (!this.pageTextStatesAnyDate(text)) return false;
+        // A YEAR-LESS mention is still a mention. A listing that prints
+        // "10/3 FURBALL DC - ICON" states that date to every reader; it just
+        // never spells the year, so the year-qualified search above finds
+        // nothing and the row reads as an orphan. furball.nyc's whole ticker
+        // is written that way, and the orphan rule dropped three published
+        // parties the owner had confirmed by hand (run 20260913-0310). The
+        // stale-flyer case this rule exists for is unaffected: beefdip's
+        // gallery dates appear nowhere on the page in any spelling.
+        // The event's OWN local day only: the night-before candidate above
+        // answers for artwork, and accepting it here would let any page that
+        // prints yesterday's date vouch for today's.
+        if (this.pageStatesMonthAndDay(text, primary.month, primary.day)) return false;
         console.log(`📅 DATE ORPHAN: "${title || 'event'}" is dated ${currentYear}-${month}-${day}, which appears nowhere in this page's own text`);
         return true;
+    }
+
+    // Does the page print this month and day WITHOUT a year — "10/3",
+    // "Oct 3", "October 3rd", "3 October"? Prose only: the stripped text, so
+    // an image filename or a URL slug never answers for the page (the same
+    // rule sourceStatesValueYear states at length).
+    pageStatesMonthAndDay(text, month, day) {
+        const source = this.stripTags(String(text || ''));
+        if (!source) return false;
+        const monthNumber = parseInt(month, 10);
+        const dayNumber = parseInt(day, 10);
+        if (!Number.isFinite(monthNumber) || !Number.isFinite(dayNumber)) return false;
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+            'july', 'august', 'september', 'october', 'november', 'december'];
+        const name = monthNames[monthNumber - 1];
+        if (!name) return false;
+        const monthPattern = `${name.slice(0, 3)}(?:${name.slice(3)})?\\.?`;
+        const dayPattern = `0?${dayNumber}(?:st|nd|rd|th)?`;
+        const patterns = [
+            // 10/3 and 10/03, with or without a year after it.
+            new RegExp(`(?:^|[^\\d/])0?${monthNumber}\\s*/\\s*0?${dayNumber}(?![\\d])`, 'i'),
+            new RegExp(`\\b${monthPattern}\\s+${dayPattern}\\b`, 'i'),
+            new RegExp(`\\b${dayPattern}\\s+${monthPattern}`, 'i')
+        ];
+        return patterns.some(pattern => pattern.test(source));
     }
 
     // Does this page's text state any date at all?
