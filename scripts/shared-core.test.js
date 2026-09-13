@@ -21591,6 +21591,25 @@ test('same venue at the same start instant is one event, whatever each record ca
   const stub = { title: 'October', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://tickets.example/e/pdx-oct' };
   const child = { title: 'Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', _sourcePageUrl: 'https://tickets.example/e/pdx-oct' };
   assert.equal(core.getSameEventIdentitySignal(child, stub), 'place-exact-start');
+  // …but two cards scraped off the SAME listing were not reached through each
+  // other. Both carry that listing as their website, which made every pair on
+  // the page "share lineage" and left nothing standing between neighbouring
+  // cards: beefdip.com/planned-events folded JUNGLE LUST into TIDAL WAVE,
+  // FURBALL GEAR NIGHT into MAD.BEAR FOAM POOL PARTY, and WELCOME PARTY into a
+  // badge line, all in one run.
+  const listing = 'https://beefdip.example/planned-events/';
+  const jungle = { title: 'JUNGLE LUST – NEON BEACH PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  const tidal = { title: 'TIDAL WAVE – FUNDRAISER POOL PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  assert.equal(core.recordsShareLinkLineage(jungle, tidal), false, 'one page is not a link between its own cards');
+  // The listing itself is already excluded as an event-page identity by the
+  // batch's fan-in guard (3+ records share it), exactly as deduplicateEvents
+  // computes it — so the place rung is what these two reach.
+  const listingHostPath = core.getEventPageUrlIdentity(jungle).hostPath;
+  assert.equal(
+    core.getSameEventIdentitySignal(jungle, tidal, { excludedUrlIdentityHostPaths: new Set([listingHostPath]) }),
+    null, 'two unrelated cards from one listing are two events');
+  // The real lineage shape still holds when the pages differ.
+  assert.equal(core.recordsShareLinkLineage(child, stub), true);
   assert.equal(core.namesHaveAffinity({ title: 'GOLDII.OXX' }, { title: 'GOLDILOXX Chicago' }), true);
   assert.equal(core.namesHaveAffinity({ title: 'Bear Party Saturday' }, { title: 'Bear Night Saturday' }), false, 'generic words are not affinity');
   // Hours apart at one venue on one night are two events (the Montréal case).
