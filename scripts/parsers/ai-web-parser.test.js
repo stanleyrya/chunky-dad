@@ -16332,6 +16332,159 @@ test('extractWixServerEventList returns [] for absent, garbage or list-less blob
   );
 });
 
+// ---------------------------------------------------------------------------
+// A Wix Events widget prints only its FIRST page into the warmup blob.
+// eaglemanchester.com published 18 rows there with `hasMore: true` while the
+// list held 31, and the 13 rows nobody ever read included a whole event
+// (Suck My Disco) the calendar never got. The blob also carries the widget's
+// own component id, its settings and the page's signed app instance — which
+// is exactly what the widget's "Load More" sends.
+// ---------------------------------------------------------------------------
+
+const WIX_PAGED_LISTING_URL = 'https://www.venue.example/eventlist';
+
+const wixListingRow = (slug, title, overrides) => Object.assign({
+  id: slug,
+  title,
+  slug,
+  description: `What happens at ${title}.`,
+  location: {
+    name: 'The Eagle Bar',
+    address: '15 Bloom St, Manchester M1 3HZ, UK',
+    coordinates: { lat: 53.4776757, lng: -2.2369046 },
+    fullAddress: { city: 'Manchester', formattedAddress: '15 Bloom St, Manchester M1 3HZ, UK' }
+  },
+  scheduling: { config: { startDate: '2026-11-07T23:00:00.000Z', endDate: '2026-11-08T04:00:00.000Z', timeZoneId: 'Europe/London' } }
+}, overrides || {});
+
+const WIX_PAGED_LISTING_HTML = `
+<html><head>
+<script type="application/json" id="wix-warmup-data">${JSON.stringify({
+  appsWarmupData: {
+    'cafe1234-0000-4000-8000-000000000000': {
+      'widgetcomp-zz9plural': {
+        instance: { instance: 'JWS.the-page-own-signed-instance' },
+        component: { id: 'comp-zz9plural', settings: { recurringFilter: 2, listLayout: 3 } },
+        siteSettings: { settings: { pagesType: 1 }, locale: 'en-GB', language: 'en' },
+        events: {
+          hasMore: true,
+          filterType: 2,
+          events: [
+            wixListingRow('leather-night-2026-11-07-23-00', 'Leather Night', {
+              registration: { type: 2, ticketing: { lowestPrice: '£8', highestPrice: '£10', currency: 'GBP' } }
+            }),
+            wixListingRow('quiz-night-2026-11-08-19-00', 'Quiz Night', {
+              // The city in the venue slot, and an externally ticketed row.
+              location: {
+                name: 'Manchester',
+                address: '15 Bloom St, Manchester M1 3HZ, UK',
+                fullAddress: { city: 'Manchester', formattedAddress: '15 Bloom St, Manchester M1 3HZ, UK' }
+              },
+              scheduling: { config: { startDate: '2026-11-08T19:00:00.000Z', timeZoneId: 'Europe/London' } },
+              registration: {
+                type: 3,
+                ticketing: { lowestPrice: '£0', currency: 'GBP' },
+                external: { registration: 'https://www.skiddle.com/whats-on/quiz-night/42640605/' }
+              }
+            })
+          ]
+        }
+      }
+    }
+  }
+})}</script>
+</head><body>
+<!-- A CMS photo gallery whose path also says "event", printed BEFORE the widget's own links. -->
+<a href="/event-gallery-2/leather-night">Leather Night photos</a>
+<a href="/event-details/leather-night-2026-11-07-23-00">Leather Night</a>
+<a href="/event-details/quiz-night-2026-11-08-19-00">Quiz Night</a>
+</body></html>`;
+
+const WIX_PAGE_TWO = JSON.stringify({
+  events: [wixListingRow('bear-bash-2026-11-14-23-00', 'Bear Bash', {
+    scheduling: { config: { startDate: '2026-11-14T23:00:00.000Z', timeZoneId: 'Europe/London' } }
+  })],
+  hasMore: false,
+  total: 3
+});
+
+const collectWixPagedListing = async (parser, adapter) => parser.collectWixEventListEvents(
+  WIX_PAGED_LISTING_HTML, WIX_PAGED_LISTING_URL, { urls: [WIX_PAGED_LISTING_URL] }, adapter
+);
+
+test('a Wix widget that says it has more is paged with the widget\'s own request', async () => {
+  const parser = createParser();
+  const calls = [];
+  const adapter = {
+    async fetchData(url, options) {
+      calls.push({ url, options });
+      return { html: WIX_PAGE_TWO, url, statusCode: 200 };
+    }
+  };
+
+  const events = await collectWixPagedListing(parser, adapter);
+
+  assert.equal(calls.length, 1, 'one continuation request — page two said hasMore:false');
+  const [call] = calls;
+  assert.equal(call.options.headers.Authorization, 'JWS.the-page-own-signed-instance',
+    'the page\'s own app instance authorizes the widget\'s request');
+  assert.ok(call.url.startsWith('https://www.venue.example/_api/wix-one-events-server/web/paginated-events/viewer?'),
+    `the widget's own endpoint on the page's own origin, got ${call.url}`);
+  // offset/limit are the rows the blob printed; the filters are the widget's.
+  for (const param of ['offset=2', 'limit=2', 'filterType=2', 'recurringFilter=2', 'locale=en', 'compId=comp-zz9plural']) {
+    assert.ok(call.url.includes(param), `${param} missing from ${call.url}`);
+  }
+  assert.deepEqual(events.map(event => event.title), ['Leather Night', 'Quiz Night', 'Bear Bash'],
+    'the rows behind Load More join the list');
+});
+
+test('a Wix widget with nothing more, or no way to ask, never makes a request', async () => {
+  const parser = createParser();
+  const adapter = { async fetchData(url) { throw new Error(`must not fetch ${url}`); } };
+
+  // hasMore:false — the blob IS the list (clubchubusa/chunk-party).
+  const settled = WIX_PAGED_LISTING_HTML.replace('"hasMore":true', '"hasMore":false');
+  const events = await parser.collectWixEventListEvents(
+    settled, WIX_PAGED_LISTING_URL, { urls: [WIX_PAGED_LISTING_URL] }, adapter);
+  assert.equal(events.length, 2);
+
+  // No adapter at all: the first page still becomes events.
+  assert.equal((await collectWixPagedListing(parser, null)).length, 2);
+
+  // A failed continuation keeps the rows the page already printed.
+  const failing = { async fetchData() { throw new Error('HTTP 401'); } };
+  assert.equal((await collectWixPagedListing(parser, failing)).length, 2);
+});
+
+test('the Wix event-page route comes from the widget\'s own slugs, not the first "event" link', async () => {
+  const parser = createParser();
+  const events = await collectWixPagedListing(parser, null);
+  assert.deepEqual(events.map(event => event.website), [
+    'https://www.venue.example/event-details/leather-night-2026-11-07-23-00',
+    'https://www.venue.example/event-details/quiz-night-2026-11-08-19-00'
+  ], '/event-gallery-2/ is a photo gallery that happens to say "event" — the slugs name the real route');
+  assert.equal(events[0].url, events[0].website, 'url and website are one field');
+});
+
+test('a Wix listing row ships the fields it publishes: text, venue, ticket link, price', async () => {
+  const parser = createParser();
+  const [leather, quiz] = await collectWixPagedListing(parser, null);
+
+  assert.equal(leather.description, 'What happens at Leather Night.');
+  assert.equal(leather.bar, 'The Eagle Bar');
+  assert.equal(leather.cover, '8-10 GBP', 'the row\'s own fee-inclusive price summary');
+  assert.equal(leather._coverFromJsonLdOffers, true,
+    'flagged at offers fidelity so a detail page\'s base sticker prices can still upgrade it');
+  assert.equal(leather.ticketUrl, undefined, 'a Wix-ticketed row has no external vendor');
+
+  // The venue slot sometimes holds the city the address already names.
+  assert.equal(quiz.bar, '', '"Manchester" is the address\'s city, not a bar');
+  assert.equal(quiz.address, '15 Bloom St, Manchester M1 3HZ, UK');
+  assert.equal(quiz.cover, undefined, 'a free (£0) row has no cover, same as a $0 ticket');
+  assert.equal(quiz.ticketUrl, 'https://www.skiddle.com/whats-on/quiz-night/42640605/',
+    'an externally ticketed row points at its vendor');
+});
+
 test('Wix listing data fills a missing end time but never overwrites a real one', () => {
   const parser = createParser();
   // Monster Ball as the pipeline produced it: a missing end became end === start.
