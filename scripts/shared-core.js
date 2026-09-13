@@ -206,6 +206,17 @@ function urlPartsEndInAssetExtension(parts) {
     return ASSET_URL_PATH_EXTENSIONS.some(ext => lastSegment.endsWith(ext));
 }
 
+// TRUE when a URL's PATH spells out one of the given calendar dates. Digits
+// only (separators are normalized away), so /event-details/x-2026-09-13-20-00,
+// /events/2026/09/13/x and /e/20260913-x all match "2026-09-13". Query strings
+// are ignored: a date there is a listing filter, not the page's identity.
+function urlPathCarriesAnyDateToken(parts, dateTokens) {
+    if (!parts || !Array.isArray(parts.segments) || parts.segments.length === 0) return false;
+    if (!Array.isArray(dateTokens) || dateTokens.length === 0) return false;
+    const digits = parts.segments.join('/').replace(/[^0-9]/g, '');
+    return dateTokens.some(token => token && digits.includes(token));
+}
+
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 // Fields that hold a link to a PAGE (not an asset): two spellings of one page
 // are one value — see isSameLinkTarget.
@@ -374,6 +385,23 @@ const SANITY_MAX_EVENT_DURATION_DAYS = 10;
 // late). Owner-tunable via config.sanity.pastSpanWithholdDays (0 restores
 // the flag-everything-past behavior).
 const SANITY_PAST_SPAN_WITHHOLD_DAYS = 30;
+
+// THE ONE DEFAULT END. A source that states a start and no closing time is
+// the normal case for nightlife (Eagle LA: "BAR OPENS 2PM"; Eagle London:
+// "Cosy Bear runs from 9 to 11pm … From 11pm until late"; Rockbar's widget
+// defaults every row's end to its start). Parsers therefore emit NO end at
+// all — a gap, not a zero-length span — and the merge layer keeps whatever
+// end the calendar already stored for it.
+//
+// A CREATE has no calendar side to borrow from, and EventKit refuses to save
+// an event without an end ("No end date has been set."), so exactly one
+// default is materialized, in exactly one place (applyDefaultEventEnd),
+// at the very END of analysis: start + this many hours, stamped
+// `_endDateDefaulted` so the results UI, the provenance table and the
+// calendar merge can all tell a default from a stated end. Three hours is
+// the median stated span of the events that DO publish an end.
+const DEFAULT_MISSING_END_DURATION_HOURS = 3;
+const DEFAULT_MISSING_END_DURATION_MS = DEFAULT_MISSING_END_DURATION_HOURS * 60 * 60 * 1000;
 
 class SharedCore {
     constructor(cities, options = {}) {
@@ -1233,6 +1261,72 @@ class SharedCore {
         const startMs = this.toEpochMillis(event && event.startDate);
         const endMs = this.toEpochMillis(event && event.endDate);
         return startMs !== null && endMs !== null && endMs <= startMs;
+    }
+
+    // ONE END CONTRACT, STEP 1 (pipeline-wide, every producer).
+    //
+    // A scraped end that is <= the scraped start is not an end: it is either a
+    // parser that had no end evidence (the pre-2026-09-13 `endDate ||
+    // new Date(startDate)` fabrication), or a widget whose row defaults `end`
+    // to `start` (Elfsight: WOODSTOCK 22:00-22:00, and 10 more Rockbar rows).
+    // Both mean "no closing time stated", so the whole pipeline downstream —
+    // merge, sanity, ICS, the write plan — should see a MISSING end, which it
+    // already handles correctly (`📅 MERGE: … kept from calendar (scrape found
+    // none)`, the universal empty-loses rule). Clearing it here, once, before
+    // the filters and the merges, is what makes "no end stated" and "the event
+    // is an instant" distinguishable at last. Report is one line per run.
+    clearDegenerateScrapedEnds(events) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        let cleared = 0;
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (!this.hasDegenerateEnd(event)) continue;
+            const inverted = this.toEpochMillis(event.endDate) < this.toEpochMillis(event.startDate);
+            event.endDate = null;
+            // Provenance for the results UI / evidence lines: the record HAD a
+            // degenerate end and it was read as "none stated", not dropped.
+            event._endDateMissing = inverted ? 'inverted' : 'zero-length';
+            cleared++;
+        }
+        if (cleared > 0) {
+            console.log(`🕓 END: ${cleared} record(s) carried an end at or before their own start — read as "no end stated" (a zero-length span is never data)`);
+        }
+        return cleared;
+    }
+
+    // ONE END CONTRACT, STEP 2 (the only place an end is ever invented).
+    //
+    // Runs at the END of analysis, after every merge has had its say, so it
+    // only ever fills a record that has no end from ANY side — a CREATE off a
+    // page that states none. The value is start + DEFAULT_MISSING_END_DURATION
+    // and it is STAMPED (`_endDateDefaulted`), so:
+    //   - the sanity pass sees a positive span instead of flagging every
+    //     no-end event `end-not-after-start`;
+    //   - EventKit gets the end it requires instead of refusing the write;
+    //   - a later run that finds a REAL end replaces it (the stored default is
+    //     recognizable by its exact offset — see the endDate rung in
+    //     createFinalEventObject).
+    applyDefaultEventEnd(event) {
+        if (!event || typeof event !== 'object') return false;
+        const startMs = this.toEpochMillis(event.startDate);
+        if (startMs === null) return false;
+        if (!this.isEmptyArbitrationValue(event.endDate) && this.toEpochMillis(event.endDate) !== null) return false;
+        event.endDate = new Date(startMs + DEFAULT_MISSING_END_DURATION_MS);
+        event._endDateDefaulted = true;
+        console.log(`🕓 END: "${event.title || 'Unknown'}" states no end — writing the default ${DEFAULT_MISSING_END_DURATION_HOURS}h span (replaced by any stated end a later run finds)`);
+        return true;
+    }
+
+    // TRUE when a value pair is exactly the shape applyDefaultEventEnd writes:
+    // an end sitting precisely DEFAULT_MISSING_END_DURATION after its own
+    // start. The calendar cannot carry the `_endDateDefaulted` stamp (notes
+    // never serialize dates), so the default's own arithmetic IS its
+    // provenance marker on a stored record.
+    isDefaultShapedEnd(startValue, endValue) {
+        const startMs = this.toEpochMillis(startValue);
+        const endMs = this.toEpochMillis(endValue);
+        if (startMs === null || endMs === null) return false;
+        return (endMs - startMs) === DEFAULT_MISSING_END_DURATION_MS;
     }
 
     isEmptyArbitrationValue(value) {
@@ -2209,14 +2303,13 @@ class SharedCore {
         //    merge) — a CREATE never passes through either, so 48 of the 134
         //    distinct events analyzed on 2026-08-02 reached the write plan
         //    with startDate === endDate and nothing said so anywhere.
-        //    Deliberately REPORT-ONLY, and deliberately NOT a repair: for many
-        //    of these the page genuinely states a start and no end (Eagle LA
-        //    flyers: "BAR OPENS 2PM", "9PM EVERY SUNDAY", "$8 COVER - 8PM"),
-        //    so inventing a duration would be fabricating data, and dropping
-        //    the event would lose a real night. What is wrong is that "no end
-        //    stated" and "the end really equals the start" are indistinguishable
-        //    downstream — this flag makes the population visible so the upstream
-        //    materialization can be fixed with evidence.
+        //    Still REPORT-ONLY. Since 2026-09-13 the population it exposed is
+        //    fixed upstream rather than here: "no end stated" now travels as a
+        //    MISSING end (clearDegenerateScrapedEnds, and parsers that emit
+        //    none), and exactly one default span is materialized at the end of
+        //    analysis (applyDefaultEventEnd) — so this flag fires only for a
+        //    record whose SOURCE really states an end at or before its start,
+        //    which is the artifact it was written to catch.
         if (this.hasDegenerateEnd(event)) {
             const zeroLength = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs === startMs;
             flags.push({
@@ -3324,6 +3417,29 @@ class SharedCore {
         return matches.length === 1 ? matches[0] : null;
     }
 
+    // The registered promoter whose OWN SITE this page belongs to, or null.
+    //
+    // A registry `website` that is a bare domain root IS that promoter's site;
+    // one with a path is a profile ON someone else's platform
+    // (linktr.ee/<handle>, events.humanitix.com/<slug>) and claims only that
+    // sub-path — the same specificity rule buildCrawlOwnershipClaims uses — so
+    // it never makes the whole host a promoter site. Feeds the parser's
+    // site-role resolution: on a promoter's own site a feed row's own page IS
+    // the event's page (bearitmtl.com shipped `website: https://www.bearitmtl.com`
+    // on every event while each row carried /event/<slug>/, audit 2026-09-13).
+    resolvePromoterEntryBySiteHost(url) {
+        const host = this.getHostFromUrl(url);
+        if (!host || !Array.isArray(this.promoters)) return null;
+        for (const entry of this.promoters) {
+            const website = entry && typeof entry.website === 'string' ? entry.website.trim() : '';
+            if (!website) continue;
+            const parts = this.getUrlRuleParts(website);
+            if (!parts || parts.segments.length > 0) continue;
+            if (this.areUrlHostsSameSite(host, parts.host)) return entry;
+        }
+        return null;
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
@@ -3634,6 +3750,26 @@ class SharedCore {
         return `${parts.host}/${parts.segments.join('/')}`;
     }
 
+    // The calendar dates THIS event can be spelled with, as digit strings
+    // ("20260913"), for the same-host own-page rung. Both merge sides describe
+    // one event, so both contribute; each contributes its UTC day and — when
+    // its timezone resolves — its LOCAL day, because a late-night start lands
+    // on the next UTC day while the site's URL uses the local one.
+    getEventUrlDateTokens(context) {
+        const records = context && context.records ? context.records : null;
+        if (!records) return [];
+        const tokens = new Set();
+        for (const record of [records.a, records.b]) {
+            if (!record || typeof record !== 'object') continue;
+            const startMs = this.toEpochMillis(record.startDate);
+            if (startMs === null) continue;
+            tokens.add(new Date(startMs).toISOString().split('T')[0].replace(/-/g, ''));
+            const localParts = this.getMergeLocalStartParts(record);
+            if (localParts && localParts.localDay) tokens.add(localParts.localDay.replace(/-/g, ''));
+        }
+        return [...tokens];
+    }
+
     // See the orientation-slot rung in resolveConflictDeterministically.
     resolveOrientationImageConflict(valueA, valueB, context) {
         const records = context && context.records ? context.records : null;
@@ -3884,6 +4020,32 @@ class SharedCore {
                 }
                 if (rootB && !rootA && urlA.segments.length > 0) {
                     return { winner: 'a', reason: 'same-host deeper URL beats domain root' };
+                }
+                // Own-page rung (2026-09-13, eaglelondon.com HORSE MEAT DISCO):
+                // both candidates pathed on ONE host — the venue's site — and
+                // one of them carries THIS event's own date in its path
+                // (/event-details/horse-meat-disco-2026-09-13-20-00) while the
+                // other is the undated standing page for the night
+                // (/horse-meat-disco). The dated URL is the event's own page;
+                // the undated one describes the series. Arbitration had no way
+                // to see that and flip-flopped across sibling records of the
+                // same run (ATHENA and 3310 kept event-details, HMD swapped to
+                // the blurb page), so `website` churned every run. Ranking:
+                // the event's own page > the venue's listing > the venue root.
+                // Fails closed — no date in either path, a date in both, or an
+                // undateable record all fall through.
+                if (fieldName === 'website' || fieldName === 'url') {
+                    const eventDateTokens = this.getEventUrlDateTokens(context);
+                    if (eventDateTokens.length > 0) {
+                        const datedA = urlPathCarriesAnyDateToken(urlA, eventDateTokens);
+                        const datedB = urlPathCarriesAnyDateToken(urlB, eventDateTokens);
+                        if (datedA !== datedB) {
+                            return {
+                                winner: datedA ? 'a' : 'b',
+                                reason: "same-host URL carrying this event's own date is its own event page"
+                            };
+                        }
+                    }
                 }
             }
             // Cross-host website/url rungs. Rung 1: a bare homepage never
@@ -5432,6 +5594,11 @@ class SharedCore {
         // website reads as full, rather than dropping them at scrape time.
         const keepPastEvents = effectiveParserConfig.allowPastEvents
             || Boolean(mainConfig && mainConfig.config && mainConfig.config.allowPastEvents);
+        // ONE END CONTRACT, step 1: a zero-length/inverted end is "no end
+        // stated" for EVERY producer (AI extraction, Elfsight/Tribe/MEC rows,
+        // JSON-LD). Before the filters and every merge, so nothing downstream
+        // ever sees a fabricated instant.
+        this.clearDegenerateScrapedEnds(allEvents);
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, keepPastEvents);
         // Curated promoter registry pass (before the bear check so a matched
         // promoter's bearAffinity can steer per-event trust): match each
@@ -11510,6 +11677,21 @@ class SharedCore {
             console.warn(`⚠️ MERGE: "${mergeTitle}" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end`);
         }
 
+        // ONE END CONTRACT, step 3: a STATED end always replaces a DEFAULTED
+        // one. The calendar cannot carry the `_endDateDefaulted` stamp (notes
+        // never serialize dates), so a stored end sitting exactly
+        // DEFAULT_MISSING_END_DURATION after its own start is read as the
+        // default this pipeline itself wrote, and this run's real end wins
+        // deterministically instead of going to position-biased arbitration.
+        // Fails closed: no scraped end, a degenerate one, or a stored end of
+        // any other length all fall through unchanged.
+        const scrapedEndMs = this.toEpochMillis(scraperObject.endDate);
+        const scrapedStartMs = this.toEpochMillis(scraperObject.startDate);
+        const statedEndReplacesDefaultEnd = !keepCalendarEndOverDegenerateScrape
+            && scrapedEndMs !== null && scrapedStartMs !== null && scrapedEndMs > scrapedStartMs
+            && this.isDefaultShapedEnd(calendarObject.startDate, calendarObject.endDate)
+            && scrapedEndMs !== calendarEndMs;
+
         // Apply merge logic for each field
         for (const fieldName of allFields) {
             // Skip internal fields. 'url' is an alias/view of 'website' (folded
@@ -11537,6 +11719,21 @@ class SharedCore {
 
             if (fieldName === 'endDate' && keepCalendarEndOverDegenerateScrape) {
                 mergedObject[fieldName] = calendarValue;
+                continue;
+            }
+
+            if (fieldName === 'endDate' && statedEndReplacesDefaultEnd) {
+                mergedObject[fieldName] = scraperValue;
+                clobberedFields.push(fieldName);
+                console.log(`🕓 MERGE: "${mergeTitle}" stated end replaces the stored ${DEFAULT_MISSING_END_DURATION_HOURS}h default end`);
+                aiDecisionRecords.push({
+                    field: fieldName,
+                    existingValue: calendarValue,
+                    newValue: scraperValue,
+                    chosenValue: scraperValue,
+                    reason: `stored end is the ${DEFAULT_MISSING_END_DURATION_HOURS}h no-end default — a stated end always replaces it`,
+                    source: 'deterministic'
+                });
                 continue;
             }
 
@@ -16794,6 +16991,11 @@ class SharedCore {
             // calendar execution by filterEventsForExecution; nothing about
             // that changes _action or this stamping, and the card stays in
             // the results UI.
+            // ONE END CONTRACT, step 2: the only place an end is invented.
+            // After every merge (so a stored end always wins over the
+            // default) and before the sanity pass (so "no end stated" stops
+            // being reported as a zero-duration event).
+            this.applyDefaultEventEnd(analyzedEvent);
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             // A SECOND approval now exists: overnight-span-corrected (rule 11
             // enforce, owner-approved 2026-08-24) - a clean -12h AM/PM slip is

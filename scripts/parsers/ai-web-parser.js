@@ -10318,21 +10318,136 @@ class AiWebParser {
         }
     }
 
+    // ------------------------------------------------------------------------
+    // LISTING/WIDGET CHROME IN FEED DESCRIPTIONS (deterministic, no AI)
+    // ------------------------------------------------------------------------
+    // A calendar plugin's REST `description` is the rendered event BLOCK, not
+    // the prose: the schedule strip, the venue map embed, the organizer card
+    // and the "Add to calendar / Google Calendar / iCalendar / Outlook 365 /
+    // Outlook Live" subscribe dropdown all render into it. bearitmtl.com
+    // publishes no prose at all, so both of its events shipped their subscribe
+    // menu as the description and CLOBBERED the calendar's own (audit
+    // 2026-09-13). The tells are page-derived and site-agnostic:
+    //   - the chunk has no letters or digits at all (a bare "@" separator);
+    //   - every character of it came from a link/button/option LABEL (a menu),
+    //     as opposed to prose that merely contains an inline link;
+    //   - it repeats a value the row itself publishes as structured data (the
+    //     organizer's or the venue's name, the title);
+    //   - it repeats verbatim across other rows of the SAME feed — one feed's
+    //     rows share chrome, never prose (applied in
+    //     extractEventsFromJsonApiPayload, which sees the whole batch).
+    // Block-level text chunks of an HTML description. `labelOnly` is true when
+    // every alphanumeric character of the chunk sits inside a link/control
+    // label, `separatorOnly` when it carries no alphanumerics at all.
+    describeHtmlDescriptionChunks(html) {
+        let source = String(html || '');
+        if (!source.trim()) return [];
+        // Never prose: their text (or absence of it) is markup furniture.
+        source = source.replace(/<(script|style|svg|iframe|noscript|form|select|template)\b[\s\S]*?<\/\1\s*>/gi, ' ');
+        // Label containers get sentinels so "a chunk that is only a menu" can
+        // be told from "a paragraph with a link in it".
+        source = source
+            .replace(/<(?:a|button|option|summary|label)\b[^>]*>/gi, '\u0001')
+            .replace(/<\/(?:a|button|option|summary|label)\s*>/gi, '\u0002');
+        // Block boundaries become chunk boundaries — on a sentinel of their
+        // own, never on a newline: source HTML breaks lines INSIDE tags
+        // ("<button\n class=…\n>\n Ajouter au calendrier </button>"), so
+        // splitting on newlines would separate a label's text from its own
+        // open tag and every menu entry would read as prose.
+        source = source
+            .replace(/<(?:br|hr)\b[^>]*\/?>/gi, '\u0003')
+            .replace(/<\/?(?:p|div|section|article|header|footer|nav|ul|ol|li|tr|td|th|h[1-6]|blockquote|figure|figcaption|aside|dl|dt|dd|table|tbody|thead|main)\b[^>]*>/gi, '\u0003');
+        const chunks = [];
+        for (const rawLine of source.split('\u0003')) {
+            const withoutLabels = rawLine.replace(/\u0001[^\u0002]*\u0002/g, ' ');
+            const text = this.normalizeWhitespace(
+                this.decodeBasicEntities(this.stripTags(rawLine.replace(/[\u0001\u0002]/g, ''))).replace(/&amp;/gi, '&')
+            );
+            if (!text) continue;
+            const prose = this.normalizeWhitespace(
+                this.decodeBasicEntities(this.stripTags(withoutLabels.replace(/[\u0001\u0002]/g, ''))).replace(/&amp;/gi, '&')
+            );
+            const hasAlphanumeric = (value) => /[\p{L}\p{N}]/u.test(value);
+            chunks.push({
+                text,
+                separatorOnly: !hasAlphanumeric(text),
+                labelOnly: hasAlphanumeric(text) && !hasAlphanumeric(prose)
+            });
+        }
+        return chunks;
+    }
+
+    // Every short string the row publishes as structured data under a naming
+    // key (organizer/venue/author/name…), normalized for comparison. A
+    // description chunk equal to one of them is the row's own metadata card
+    // rendered into the block, never its prose.
+    //
+    // NESTED members only (depth >= 1): the row's TOP-LEVEL title/name is
+    // routinely the first words of a real description ("DADDY POP in Bear
+    // Cave | 9 PM – 2 AM" on eaglebarwm.com), so matching it there would cut
+    // the opening of the sentence.
+    collectJsonApiRowLabelKeys(obj, depth = 0, collected = null) {
+        const keys = collected || new Set();
+        if (!obj || typeof obj !== 'object' || depth > 3) return keys;
+        for (const [key, value] of Object.entries(obj)) {
+            if (Array.isArray(value)) {
+                for (const item of value) this.collectJsonApiRowLabelKeys(item, depth + 1, keys);
+                continue;
+            }
+            if (value && typeof value === 'object') {
+                this.collectJsonApiRowLabelKeys(value, depth + 1, keys);
+                continue;
+            }
+            if (typeof value !== 'string' || depth === 0) continue;
+            if (!/^(name|title|organi[sz]er|venue|author|label|slug)$/.test(this.normalizeJsonApiKey(key))) continue;
+            const normalized = this.normalizeDescriptionChunkKey(value);
+            if (normalized && normalized.length <= 80) keys.add(normalized);
+        }
+        return keys;
+    }
+
+    normalizeDescriptionChunkKey(value) {
+        return this.normalizeWhitespace(String(value || '')).toLowerCase();
+    }
+
+    // The prose of an HTML description: chunks that are separators, menus or
+    // the row's own metadata are dropped. Returns { description, chunks } —
+    // the surviving chunk texts are kept so the feed-level repetition pass can
+    // drop what every row of the feed shares.
+    cleanJsonApiDescription(html, labelKeys) {
+        const chunks = this.describeHtmlDescriptionChunks(html);
+        if (chunks.length === 0) return { description: '', chunks: [] };
+        const kept = [];
+        for (const chunk of chunks) {
+            if (chunk.separatorOnly || chunk.labelOnly) continue;
+            if (labelKeys && labelKeys.has(this.normalizeDescriptionChunkKey(chunk.text))) continue;
+            kept.push(chunk.text);
+        }
+        return { description: kept.join(' ').trim(), chunks: kept };
+    }
+
     extractEventsFromJsonApiPayload(parsed, sourceUrl, cityConfig = null) {
         try {
             const candidates = this.collectJsonApiEventCandidates(parsed);
             const events = [];
             const seen = new Set();
+            const rows = [];
             for (const candidate of candidates) {
                 for (const entry of this.expandJsonApiPerformances(candidate)) {
                     const event = this.buildEventFromJsonApiObject(entry, sourceUrl, cityConfig);
-                    if (!event) continue;
-                    for (const occurrence of this.expandJsonApiSeriesRow(event)) {
-                        const key = `${occurrence.title.toLowerCase()}|${occurrence.startDate.toISOString()}`;
-                        if (seen.has(key)) continue;
-                        seen.add(key);
-                        events.push(occurrence);
-                    }
+                    if (event) rows.push(event);
+                }
+            }
+            // Judged on the ROWS, before a recurring row expands into dated
+            // occurrences — an expanded row's copies share one description, so
+            // counting them would read a single row's prose as repeated.
+            this.stripRepeatedFeedDescriptionChunks(rows);
+            for (const event of rows) {
+                for (const occurrence of this.expandJsonApiSeriesRow(event)) {
+                    const key = `${occurrence.title.toLowerCase()}|${occurrence.startDate.toISOString()}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    events.push(occurrence);
                 }
             }
             return events;
@@ -10340,6 +10455,39 @@ class AiWebParser {
             console.warn(`🤖 AI Web: JSON API structured extraction failed: ${error.message}`);
             return [];
         }
+    }
+
+    // Feed-level chrome: a description chunk that appears verbatim on MORE
+    // THAN ONE row of the same feed is that feed's furniture, not this event's
+    // prose (two parties never share a paragraph; a plugin's every row shares
+    // its block). Needs >= 2 rows to say anything, so a single-row feed keeps
+    // whatever survived the per-row filter.
+    stripRepeatedFeedDescriptionChunks(events) {
+        if (!Array.isArray(events) || events.length < 2) {
+            for (const event of events || []) { if (event) delete event._descriptionChunks; }
+            return 0;
+        }
+        const counts = new Map();
+        for (const event of events) {
+            const chunks = event && Array.isArray(event._descriptionChunks) ? event._descriptionChunks : [];
+            for (const chunk of new Set(chunks.map(chunk => this.normalizeDescriptionChunkKey(chunk)))) {
+                counts.set(chunk, (counts.get(chunk) || 0) + 1);
+            }
+        }
+        let strippedRows = 0;
+        for (const event of events) {
+            const chunks = event && Array.isArray(event._descriptionChunks) ? event._descriptionChunks : null;
+            if (!chunks) continue;
+            const kept = chunks.filter(chunk => (counts.get(this.normalizeDescriptionChunkKey(chunk)) || 0) < 2);
+            delete event._descriptionChunks;
+            if (kept.length === chunks.length) continue;
+            const rebuilt = kept.join(' ').trim();
+            if (rebuilt === event.description) continue;
+            console.log(`🧽 CHROME: "${event.title}" description dropped ${chunks.length - kept.length} block(s) repeated across the feed's rows`);
+            event.description = rebuilt;
+            strippedRows++;
+        }
+        return strippedRows;
     }
 
     // A feed row that states a recurrence rule dates its SERIES (start = the
@@ -10779,8 +10927,22 @@ class AiWebParser {
         //
         // When `summary` became the title, it must not double as the
         // description; a real description key still wins outright.
-        let description = clean(firstTextValue(/^description$/));
-        if (!description && summaryText && summaryText !== title) description = summaryText;
+        // Chrome-aware: a plugin's rendered event block (schedule strip,
+        // subscribe menu, organizer card) is not a description — see
+        // cleanJsonApiDescription. Plain-text descriptions survive byte-for-
+        // byte (one chunk, no labels, no separators).
+        const descriptionSource = firstTextValue(/^description$/);
+        const rowLabelKeys = this.collectJsonApiRowLabelKeys(view);
+        const cleanedDescription = this.cleanJsonApiDescription(descriptionSource, rowLabelKeys);
+        let description = cleanedDescription.description;
+        let descriptionChunks = cleanedDescription.chunks;
+        if (descriptionSource && !description) {
+            console.log(`🧽 CHROME: JSON API row "${title}" description was listing/widget chrome only — no prose published`);
+        }
+        if (!description && summaryText && summaryText !== title) {
+            description = summaryText;
+            descriptionChunks = [];
+        }
         const event = {
             title,
             description,
@@ -10794,6 +10956,10 @@ class AiWebParser {
             image,
             source: this.config.source
         };
+        // Surviving description chunks, for the feed-level repetition pass in
+        // extractEventsFromJsonApiPayload (text every row shares is chrome).
+        // Internal field, deleted once the batch has been judged.
+        if (descriptionChunks.length > 0) event._descriptionChunks = descriptionChunks;
         // The payload's own structured data named this venue and it survived
         // the address-shaped-name gate — same protection as JSON-LD bars: the
         // venue-site identity pass never overrides it (internal field).
@@ -19385,8 +19551,10 @@ TEXT:
                 // Multi-day event with no end time: use 23:59:59 local time
                 combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' 23:59:59', timezone) || combineDateAndTime(endDateRaw, '23:59') || endDateRaw;
             } else {
-                // Same day with no end time: exactly match start time to represent ambiguous end
-                combinedEndDate = combinedStartDate ? new Date(combinedStartDate) : endDateRaw;
+                // Same day, no end time: the source states WHEN the event is,
+                // not when it ends. That is no end at all — see the one end
+                // contract below (a zero-length span is never data).
+                combinedEndDate = null;
             }
         } else if (endTimeRaw) {
             // End time with no end date ("Party Goes Until 2:00 am!" — the next-day
@@ -19401,10 +19569,15 @@ TEXT:
             }
         }
 
-        // If we only have a start date and no end date info at all, match the end exactly to the start
-        if (!endProvided && !endDateRaw && !endTimeRaw && combinedStartDate) {
-            combinedEndDate = new Date(combinedStartDate);
-        }
+        // NO END EVIDENCE => NO END. This block used to write
+        // `combinedEndDate = new Date(combinedStartDate)` — the single
+        // fabrication that made "the page states no closing time" (the normal
+        // case for nightlife) indistinguishable from "the event is an
+        // instant", and that the calendar then rendered as a zero-duration
+        // event. The end now stays empty all the way through the merges (which
+        // keep the calendar's stored end for a missing one) and exactly one
+        // default span is written at the end of analysis, stamped, by
+        // SharedCore.applyDefaultEventEnd.
 
         // Past-midnight ends ("Party Goes Until 2:00 am!") usually arrive with the
         // START's date because the next-day endDate isn't verbatim in the source and
@@ -19434,7 +19607,10 @@ TEXT:
 
         // For single-day events, if startDate is missing but endDate exists, use endDate as start
         let finalStartDate = combinedStartDate || combinedEndDate;
-        let finalEndDate = combinedEndDate || combinedStartDate;
+        // ...but a missing END is NOT filled from the start (one end contract):
+        // "no closing time stated" must stay distinguishable from "the event is
+        // an instant" all the way to applyDefaultEventEnd.
+        let finalEndDate = combinedEndDate;
 
         const hasStructuredData = !!dataFlags.jsonLd || !!dataFlags.meta;
         const hasUnstructuredData = !!dataFlags.ocr || !!dataFlags.segment || !!dataFlags.content;
@@ -19582,7 +19758,9 @@ TEXT:
                             endDate = derivedEnd;
                         }
                     }
-                    if (!endDate) endDate = new Date(derivedStart);
+                    // No end phrase in the rule either: leave the end empty
+                    // (one end contract — the default is written once, later).
+
                     recurringDerivedNoStartTime = !derivedStartTime;
                     // No resolved timezone → the derived instant is wall-clock
                     // components labeled UTC (the existing _timezoneUnresolved
@@ -19701,7 +19879,19 @@ TEXT:
             title,
             description,
             startDate,
-            endDate: endDate || new Date(startDate),
+            // NO END EVIDENCE => NO END. This used to materialize
+            // `new Date(startDate)`, which made "the page states no closing
+            // time" indistinguishable from "the event really is an instant"
+            // (getEventSanityFlags rule 6 has said so since 2026-08-02: 48 of
+            // 134 analyzed events carried startDate === endDate, and the Eagle
+            // London / Rockbar / Furball audits of 2026-09-13 found the same
+            // shape on every kept record). An absent end is an extraction gap
+            // like any other field's: the merge layer keeps the calendar's
+            // stored end for it (`📅 MERGE: … kept from calendar`), and a
+            // CREATE gets ONE documented default at the very end of the
+            // pipeline (SharedCore.applyDefaultEventEnd, stamped
+            // `_endDateDefaulted`) — never a fabricated zero-length span here.
+            endDate: endDate || null,
             bar,
             location,
             address,
@@ -20536,11 +20726,14 @@ TEXT:
             const dayMs = this.extractionLimits.millisPerDay;
             const windowStart = new Date(this.now().getTime() - (this.extractionLimits.yearWindowPastDays * dayMs));
             if (adjustedStart < windowStart) {
-                return { startDate: adjustedStart, endDate: adjustedEnd || new Date(adjustedStart), archivalSourceYear: explicit.start };
+                return { startDate: adjustedStart, endDate: adjustedEnd || null, archivalSourceYear: explicit.start };
             }
         }
-        let normalizedEnd = adjustedEnd || new Date(adjustedStart);
-        if (normalizedEnd < adjustedStart) {
+        // One end contract: an absent end stays absent. Collapsing it onto the
+        // start here was the last of the three fabrication sites — it made
+        // every no-end event look like a zero-duration instant downstream.
+        let normalizedEnd = adjustedEnd || null;
+        if (normalizedEnd && normalizedEnd < adjustedStart) {
             // NYE year-jump: a Dec 31 event ending "2am Jan 1" can arrive with
             // the end on the SAME year's Jan 1 — eleven months BEFORE the start
             // — when the model reuses the start's year and the window repair
@@ -20559,7 +20752,9 @@ TEXT:
                 }
             }
             if (normalizedEnd < adjustedStart) {
-                normalizedEnd = new Date(adjustedStart);
+                // Still inverted after the year-boundary attempt: this is not
+                // an end, it is a parse artifact — read it as none stated.
+                normalizedEnd = null;
             }
         }
         return { startDate: adjustedStart, endDate: normalizedEnd, archivalSourceYear: null };
@@ -22515,6 +22710,25 @@ TEXT:
             if (curatedBar && typeof curatedBar.name === 'string' && curatedBar.name.trim()) {
                 htmlData.pageSiteRole = 'venue';
                 htmlData.pageSiteRoleReason = `curated bar "${curatedBar.name}"`;
+            }
+        }
+        // Promoter-registry rung: still undetermined, and the page's HOST is
+        // the host of a curated promoter's own website (bare-root registry
+        // entries only — a linktr.ee/<handle> profile claims no host). The
+        // pages we are reading ARE that promoter's site, which is exactly the
+        // fact the own-page adoption below parseEvents needs: a feed row's own
+        // /event/<slug>/ page is the event's page, not a copy. Ranks BELOW the
+        // curated-bar rung on purpose, so a venue that also promotes stays
+        // 'venue'.
+        if (htmlData.pageSiteRole === '' && !htmlData.pageSiteRolePromoterChecked
+            && Object.isExtensible(htmlData)) {
+            htmlData.pageSiteRolePromoterChecked = true;
+            const promoterEntry = this.core && typeof this.core.resolvePromoterEntryBySiteHost === 'function'
+                ? this.core.resolvePromoterEntryBySiteHost(htmlData.url)
+                : null;
+            if (promoterEntry && typeof promoterEntry.name === 'string' && promoterEntry.name.trim()) {
+                htmlData.pageSiteRole = 'organizer';
+                htmlData.pageSiteRoleReason = `promoter registry "${promoterEntry.name.trim()}"`;
             }
         }
         if (htmlData.pageSiteRole === '' && Array.isArray(segments) && segments.length > 0
