@@ -11570,6 +11570,26 @@ test('findOverlongFields: under-limit events are empty, overlong titles are dete
   assert.equal(shortNames[0].maxChars, 30);
 });
 
+test('findOverlongFields: a title the source STATED is never offered to the trim pass', () => {
+  const core = createCore();
+  const defaults = core.getTrimConfig(buildTrimParserConfig());
+  const stated = 'ButtTootKing 2026: Lydia B Kollins, Suzie Toot, and Kori King';
+  assert.ok(stated.length > 60);
+  // The AI pass cut this one at a separator and dropped a headliner
+  // (3 Dollar Bill, audit 2026-09-13). A feed/listing row's own title, and a
+  // title taken from a JSON-LD name or the page's own heading, ship in full.
+  assert.deepEqual(core.findOverlongFields({ title: stated, _titleFromListing: true }, defaults), []);
+  assert.deepEqual(core.findOverlongFields({ title: stated, _titleStated: true }, defaults), []);
+  // A title the MODEL composed is still trimmable, and the exemption is for
+  // the title only — an overlong description on a stated-title event is not.
+  assert.equal(core.findOverlongFields({ title: stated }, defaults).length, 1);
+  const longDescription = 'x'.repeat(700);
+  assert.deepEqual(
+    core.findOverlongFields({ title: stated, description: longDescription, _titleFromListing: true }, defaults),
+    [{ field: 'description', value: longDescription, maxChars: 600 }]
+  );
+});
+
 test('isVerbatimTrimAnswer: case-sensitive contiguous substring, non-empty, within limit, strictly shorter', () => {
   const core = createCore();
   assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'D>U>R>O', 60), true);

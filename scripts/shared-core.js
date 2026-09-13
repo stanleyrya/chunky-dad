@@ -9407,9 +9407,20 @@ class SharedCore {
     findOverlongFields(event, trimConfig) {
         const overlong = [];
         if (!event || typeof event !== 'object' || !trimConfig || !trimConfig.limits) return overlong;
+        // A title the SOURCE stated — a feed/listing row's own title
+        // (_titleFromListing), a JSON-LD Event name, a single-event page's
+        // own heading (_titleStated) — is the publisher's exact name and is
+        // never rewritten by the AI trim pass. The pass cuts at a separator,
+        // which drops billed acts ("ButtTootKing 2026: Lydia B Kollins,
+        // Suzie Toot, and Kori King" lost "and Kori King"; Thotyssey's
+        // "Urban Bear Weekend Street Fair" lost the street fair — audit
+        // 2026-09-13). An overlong stated title ships in full; only a title
+        // the model itself composed is trimmable.
+        const titleIsStated = Boolean(event._titleFromListing === true || event._titleStated === true);
         for (const field of ['title', 'description', 'shortName']) {
             const maxChars = trimConfig.limits[field];
             if (!Number.isFinite(maxChars) || maxChars <= 0) continue;
+            if (field === 'title' && titleIsStated) continue;
             const raw = event[field];
             if (raw === null || raw === undefined) continue;
             const value = String(raw).trim();
