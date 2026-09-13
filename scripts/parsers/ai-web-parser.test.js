@@ -6556,6 +6556,22 @@ const FURBALL_NOLA_PAGE_TEXT = [
   'DOORS: 9PM • PARTY: 10PM'
 ].join('\n');
 
+// Flyer tracking survives the read as separate letters (furball.nyc's Dallas
+// card: "FURBALL D A L L A S"). One word on the site must be one word here.
+test('title: a run of single letters is letter-spacing, not six words', () => {
+  const parser = createParser();
+  assert.equal(parser.collapseLetterSpacedTitleWords('FURBALL D A L L A S'), 'FURBALL DALLAS');
+  // Nothing separates the words once the letters are spaced too — one run.
+  assert.equal(parser.collapseLetterSpacedTitleWords('B E A R N I G H T'), 'BEARNIGHT');
+  assert.equal(parser.collapseLetterSpacedTitleWords('BEAR N I G H T'), 'BEAR NIGHT');
+  // Short runs and ordinary prose are untouched.
+  assert.equal(parser.collapseLetterSpacedTitleWords('A Night of Bears'), 'A Night of Bears');
+  assert.equal(parser.collapseLetterSpacedTitleWords('DJ A B set'), 'DJ A B set');
+  assert.equal(parser.collapseLetterSpacedTitleWords('FURBALL Dallas'), 'FURBALL Dallas');
+  assert.equal(parser.collapseLetterSpacedTitleWords(''), '');
+  assert.equal(parser.collapseLetterSpacedTitleWords(null), '');
+});
+
 test('doors-vs-party: a start at a PAGE-PRINTED doors time is promoted to the party time', () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();

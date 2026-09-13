@@ -18685,6 +18685,37 @@ TEXT:
         return text;
     }
 
+    // Join runs of THREE OR MORE consecutive single letters into one word:
+    // "FURBALL D A L L A S" → "FURBALL DALLAS". A tracking effect on a flyer
+    // survives OCR and plain-text reads as separate letters, and every
+    // downstream comparison (dedup name affinity, merge title rungs, the
+    // calendar) then sees six words that are not words. Two-letter runs are
+    // left alone — "D J" is rare and "A B" could be real — and a lone
+    // article never matches. Letters only; digits and punctuation end a run.
+    collapseLetterSpacedTitleWords(value) {
+        const text = String(value || '');
+        if (!text.trim()) return text;
+        const isSingleLetter = (token) => /^[A-Za-z\u00C0-\u024F]$/.test(token);
+        const out = [];
+        let run = [];
+        const flush = () => {
+            if (run.length >= 3) out.push(run.join(''));
+            else out.push(...run);
+            run = [];
+        };
+        for (const token of text.trim().split(/\s+/)) {
+            if (isSingleLetter(token)) {
+                run.push(token);
+                continue;
+            }
+            flush();
+            out.push(token);
+        }
+        flush();
+        const joined = out.join(' ');
+        return joined === text.trim() ? text : joined;
+    }
+
     // The evidence-gate-dropped STATED start-date value retained on the event
     // (the __droppedFieldValues memo the per-snippet validation accumulates,
     // keyed by normalized field name), if any. Read-only observation input
@@ -19186,6 +19217,20 @@ TEXT:
             if (withoutVenue !== title) {
                 console.log(`🤖 AI Web: Stripping venue tail from title "${title}" → "${withoutVenue}" (bar is "${bar}")`);
                 title = withoutVenue;
+            }
+        }
+        // TRACKING IS NOT SPELLING. Flyers set a word in wide letter-spacing
+        // and the OCR/text read comes back as separate letters —
+        // furball.nyc's Dallas card reads "FURBALL D A L L A S". The site
+        // means one word; the calendar would ship six. Typography only: three
+        // or more single letters in a row is a tracking effect, never prose
+        // ("A Night of…" keeps its article, because that run is one letter
+        // long).
+        if (title) {
+            const unspaced = this.collapseLetterSpacedTitleWords(title);
+            if (unspaced !== title) {
+                console.log(`🏷️ TITLE: "${title}" → "${unspaced}" — a run of single letters is letter-spacing, not words`);
+                title = unspaced;
             }
         }
         // Site-tagline backstop (the primary guard runs at pass-result time in
