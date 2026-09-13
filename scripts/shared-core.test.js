@@ -491,6 +491,47 @@ test('festival context never overrides a record whose own address names another 
   assert.equal(core.textMentionsCity('Brooklyn, New York, NY', 'nyc'), true);
 });
 
+// A clock is only a time once it has a place. beefdip.com's 2027 programme
+// states no city the parser can resolve, so every record was stored as
+// wall-clock components labeled UTC and flagged for re-anchoring. The city
+// then arrived from the curated festival umbrella — AFTER LocationNormalizer
+// had already run — and nothing converted the dates: the whole week shipped
+// six hours early (9PM on the page written as 21:00Z, read back as 3PM in
+// Puerto Vallarta).
+test('a city inherited from a curated festival re-anchors wall-clock dates, like any other resolved city', () => {
+  const core = new SharedCore({ pv: { timezone: 'America/Mexico_City', patterns: ['puerto vallarta', 'pv'] } }, { eventSchema: EventSchema });
+  const festival = { key: 'beefdip', name: 'BeefDip Bear Week', cityKey: 'pv', nextDates: { start: '2027-01-23', end: '2027-01-31' } };
+  const originalLog = console.log; console.log = () => {};
+  let event, alreadyAnchored;
+  try {
+    // 21:00 local, stored as 21:00Z and flagged.
+    event = {
+      title: 'PRE WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 23, 21, 0, 0)),
+      endDate: new Date(Date.UTC(2027, 0, 24, 0, 0, 0)),
+      _timezoneUnresolved: true
+    };
+    core.applyCuratedFestivalContext(event, festival);
+
+    // A record that never needed re-anchoring is untouched.
+    alreadyAnchored = {
+      title: 'WELCOME PARTY',
+      city: 'unknown',
+      startDate: new Date(Date.UTC(2027, 0, 24, 21, 0, 0))
+    };
+    core.applyCuratedFestivalContext(alreadyAnchored, festival);
+  } finally { console.log = originalLog; }
+
+  assert.equal(event.city, 'pv');
+  assert.equal(event._timezoneUnresolved, undefined, 'the re-anchor clears the flag');
+  assert.equal(event.timezone, 'America/Mexico_City');
+  assert.equal(core.formatLocalClockTime(event.startDate, 'America/Mexico_City'), '21:00',
+    `21:00 on the page must read back as 21:00 locally, got ${event.startDate.toISOString()}`);
+  assert.equal(alreadyAnchored.startDate.toISOString(), '2027-01-24T21:00:00.000Z',
+    'a record with no wall-clock flag is never converted');
+});
+
 // Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide
 // crop of the SAME 2026 asset both sides agreed was `image`; the AI kept the
 // calendar's 2024 attachment instead, calling 768x461 "higher resolution" than
@@ -22103,6 +22144,25 @@ test('same venue at the same start instant is one event, whatever each record ca
   const stub = { title: 'October', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', ticketUrl: 'https://tickets.example/e/pdx-oct' };
   const child = { title: 'Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), timezone: 'America/Los_Angeles', bar: 'Nova PDX', _sourcePageUrl: 'https://tickets.example/e/pdx-oct' };
   assert.equal(core.getSameEventIdentitySignal(child, stub), 'place-exact-start');
+  // …but two cards scraped off the SAME listing were not reached through each
+  // other. Both carry that listing as their website, which made every pair on
+  // the page "share lineage" and left nothing standing between neighbouring
+  // cards: beefdip.com/planned-events folded JUNGLE LUST into TIDAL WAVE,
+  // FURBALL GEAR NIGHT into MAD.BEAR FOAM POOL PARTY, and WELCOME PARTY into a
+  // badge line, all in one run.
+  const listing = 'https://beefdip.example/planned-events/';
+  const jungle = { title: 'JUNGLE LUST – NEON BEACH PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  const tidal = { title: 'TIDAL WAVE – FUNDRAISER POOL PARTY', startDate: at('2027-01-29T01:00:00.000Z'), timezone: 'America/Mexico_City', bar: 'Blue Chairs', website: listing, _sourcePageUrl: listing };
+  assert.equal(core.recordsShareLinkLineage(jungle, tidal), false, 'one page is not a link between its own cards');
+  // The listing itself is already excluded as an event-page identity by the
+  // batch's fan-in guard (3+ records share it), exactly as deduplicateEvents
+  // computes it — so the place rung is what these two reach.
+  const listingHostPath = core.getEventPageUrlIdentity(jungle).hostPath;
+  assert.equal(
+    core.getSameEventIdentitySignal(jungle, tidal, { excludedUrlIdentityHostPaths: new Set([listingHostPath]) }),
+    null, 'two unrelated cards from one listing are two events');
+  // The real lineage shape still holds when the pages differ.
+  assert.equal(core.recordsShareLinkLineage(child, stub), true);
   assert.equal(core.namesHaveAffinity({ title: 'GOLDII.OXX' }, { title: 'GOLDILOXX Chicago' }), true);
   assert.equal(core.namesHaveAffinity({ title: 'Bear Party Saturday' }, { title: 'Bear Night Saturday' }), false, 'generic words are not affinity');
   // Hours apart at one venue on one night are two events (the Montréal case).

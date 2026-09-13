@@ -15638,6 +15638,18 @@ class SharedCore {
                 context.inheritedTimezone = true;
             }
         }
+        // A clock is only a time once it has a place. The parser stores an
+        // extracted local time as wall-clock components labeled UTC and flags
+        // the record for re-anchoring; LocationNormalizer converts those the
+        // moment it resolves a city. This runs AFTER the normalizer, so a
+        // record that gets its city here got it too late — and beefdip.com's
+        // whole 2027 programme shipped six hours early (9PM printed on the
+        // page written as 21:00Z, read back as 3PM in Puerto Vallarta). A
+        // city is a city whenever it arrives: re-anchor here on exactly the
+        // same terms.
+        if (event._timezoneUnresolved && (context.inheritedCity || context.inheritedTimezone)) {
+            this.resolveWallClockDates(event);
+        }
         event._festivalContext = context;
         return context;
     }
@@ -19113,6 +19125,16 @@ class SharedCore {
         const linksOf = (event) => [event && event.ticketUrl, event && event.website, event && event.url].map(key).filter(Boolean);
         const sourceA = key(eventA && eventA._sourcePageUrl);
         const sourceB = key(eventB && eventB._sourcePageUrl);
+        // Lineage means one record was REACHED THROUGH the other's link, and
+        // that presupposes two different pages. Two cards scraped off the SAME
+        // listing both carry that listing as their website — so every pair on
+        // the page "shared lineage" with every other, and the place+exact-start
+        // rung had nothing left standing between two neighbouring cards.
+        // beefdip.com/planned-events lost three real events that way in one
+        // run: JUNGLE LUST folded into TIDAL WAVE, FURBALL GEAR NIGHT into
+        // MAD.BEAR FOAM POOL PARTY, WELCOME PARTY into a badge line. Neither
+        // card was reached through the other; they were both simply there.
+        if (sourceA && sourceB && sourceA === sourceB) return false;
         return Boolean((sourceA && linksOf(eventB).includes(sourceA)) || (sourceB && linksOf(eventA).includes(sourceB)));
     }
 
