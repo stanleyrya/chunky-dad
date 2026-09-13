@@ -6553,26 +6553,95 @@ class AiWebParser {
         };
         const lat = Number(location.lat);
         const lng = Number(location.lng);
-        if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+        const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+        if (hasCoordinates) {
             event.location = `${lat}, ${lng}`;
+        }
+        // A stated zone is only as good as the place it belongs to. Rows that
+        // name a venue/city/country/street/coordinate carry a zone the feed
+        // derived FROM that place and it is trusted; a row with no place at
+        // all states its zone against nothing, and in the wild those are the
+        // wrong ones — run 20260913-0120's feed labels three Sitges (Spain)
+        // nights Africa/Algiers and Africa/Tunis and a Bognor Regis (UK)
+        // weekender Europe/Rome, and every one of those rows is placeless
+        // while all ten placed rows in the same feed are correct. Rather than
+        // ship a false zone, keep the wall clock the feed's own zone prints
+        // and let the place that IS resolved downstream (the linkout target's
+        // page, a curated bar, the merged twin) anchor it — the same
+        // _timezoneUnresolved channel every other timezone-less extraction
+        // uses. Fails open when the offset cannot be computed.
+        const hasPlaceEvidence = Boolean(event.bar) || Boolean(clean(location.city))
+            || Boolean(clean(location.country)) || Boolean(clean(location.street)) || hasCoordinates;
+        if (event.timezone && !hasPlaceEvidence) {
+            const offsetMinutes = this.core && typeof this.core.getTimezoneOffsetMinutes === 'function'
+                ? this.core.getTimezoneOffsetMinutes(startDate, event.timezone)
+                : null;
+            if (Number.isFinite(offsetMinutes)) {
+                const toWallClock = (value) => (value ? new Date(value.getTime() + (offsetMinutes * 60000)) : value);
+                console.log(`🎟️ DICE: row "${event.title}" states timezone ${event.timezone} but no venue, city, country, street or coordinate — zone unanchored, keeping the wall clock (${toWallClock(startDate).toISOString().slice(11, 16)}) for the resolved place to anchor`);
+                event.startDate = toWallClock(startDate);
+                event.endDate = toWallClock(endDate);
+                event.timezone = null;
+                event._timezoneUnresolved = true;
+            }
         }
         const ticketUrl = this.normalizeHttpUrlValue(String(row.url || row.external_url || '').trim());
         if (ticketUrl) event.ticketUrl = ticketUrl;
         if (event.bar) event._barFromJsonLd = true;
         const images = row.event_images && typeof row.event_images === 'object' ? row.event_images : {};
-        const image = this.normalizeHttpUrlValue(String(images.portrait || images.landscape || images.square
-            || (Array.isArray(row.images) ? row.images[0] : '') || '').trim());
+        const cropUrls = [images.portrait, images.landscape, images.square,
+            ...(Array.isArray(row.images) ? row.images : [])]
+            .map(value => this.normalizeHttpUrlValue(String(value || '').trim()))
+            .filter(Boolean);
+        const image = cropUrls[0] || '';
         if (image) {
             event.image = image;
             event.imageSource = 'json-api';
+            // A feed that publishes the SAME artwork in several crops gives
+            // the image gate somewhere to go when the vision pass rejects the
+            // chosen one: the narrow portrait crop of a wide flyer can read
+            // as "thumbnail with no readable text" while the square crop and
+            // the uncropped original carry the whole poster (run
+            // 20260913-0120, DICE "GRUNT (SF)" — rejected portrait
+            // ?rect=249,0,634,1153, shipped imageless). Display-only channel;
+            // rejectNonEventImageValues is the sole consumer.
+            const alternates = cropUrls.slice(1).filter(url => url !== image);
+            if (alternates.length > 0) event._imageAlternates = alternates;
         }
         // DICE prices are minor units (pence/cents) in the row's currency.
+        // `row.price` is the row's headline price and is routinely null even
+        // when the event is priced — the tiers then carry it in
+        // `ticket_types[].price` (run 20260913-0120, C'mon Everybody: 32/32
+        // rows price null, 30/32 with priced tiers, 21 events shipped without
+        // a cover). `total` is what the buyer pays (fee-inclusive, the
+        // convention every other cover path already follows); `face_value` is
+        // the pre-fee price and only answers when no total is published.
+        const priceAmounts = [];
         const price = Number(row.price);
-        if (Number.isFinite(price) && price > 0) {
-            const amount = price / 100;
-            const formatted = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-            const currency = String(row.currency || '').toUpperCase();
-            event.cover = !currency || currency === 'USD' ? `$${formatted}` : `${formatted} ${currency}`;
+        if (Number.isFinite(price) && price > 0) priceAmounts.push(price / 100);
+        if (priceAmounts.length === 0 && Array.isArray(row.ticket_types)) {
+            const tiers = row.ticket_types
+                .filter(tier => tier && typeof tier === 'object')
+                .map(tier => {
+                    const tierPrice = tier.price && typeof tier.price === 'object' ? tier.price : {};
+                    const total = Number(tierPrice.total);
+                    const faceValue = Number(tierPrice.face_value);
+                    const amount = Number.isFinite(total) && total > 0
+                        ? total
+                        : (Number.isFinite(faceValue) && faceValue > 0 ? faceValue : null);
+                    return { amount, soldOut: Boolean(tier.sold_out) };
+                })
+                .filter(tier => tier.amount !== null);
+            // Same availability policy as formatJsonLdOffersCover: tiers still
+            // on sale define the honest walk-up range; when EVERY priced tier
+            // is sold out they all do (a sold-out show still had a price).
+            let selected = tiers.filter(tier => !tier.soldOut);
+            if (selected.length === 0) selected = tiers;
+            for (const tier of selected) priceAmounts.push(tier.amount / 100);
+        }
+        const cover = this.formatCoverAmountRange(priceAmounts, row.currency);
+        if (cover) {
+            event.cover = cover;
             event._coverFromJsonLdOffers = true;
         }
         return event;
@@ -8979,24 +9048,39 @@ class AiWebParser {
             }
             if (selected.length === 0) return '';
 
-            const amounts = selected.map(entry => entry.amount);
-            const min = Math.min(...amounts);
-            const max = Math.max(...amounts);
-            // Whole-dollar values render without trailing ".00"; anything with cents
-            // always gets two decimals ("20.5" → "$20.50").
-            const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
             const firstCurrency = selected.find(entry => entry.currency && String(entry.currency).trim());
-            const currency = firstCurrency ? String(firstCurrency.currency).trim().toUpperCase() : '';
-            if (!currency || currency === 'USD' || currency === '$') {
-                return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
-            }
-            return min === max
-                ? `${formatAmount(min)} ${currency}`
-                : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
+            return this.formatCoverAmountRange(
+                selected.map(entry => entry.amount),
+                firstCurrency ? firstCurrency.currency : ''
+            );
         } catch (error) {
             console.warn(`🤖 AI Web: JSON-LD offers→cover mapping failed: ${error && error.message ? error.message : error}`);
             return '';
         }
+    }
+
+    // The ONE cover-string convention, shared by every price harvest (JSON-LD
+    // offers, the JSON-API key-pattern harvest, the DICE ticket tiers) so the
+    // same prices can never render three ways. Whole units render without a
+    // trailing ".00"; anything with fractions always gets two decimals
+    // ("20.5" → "$20.50"). USD (and a bare "$") renders "$25" / "$25-$35";
+    // any other currency renders "25 EUR" / "25-35 EUR". Empty string when no
+    // positive amount survives — fail open, never fabricate a price.
+    formatCoverAmountRange(amounts, currencyValue) {
+        const positive = (Array.isArray(amounts) ? amounts : [])
+            .map(amount => Number(amount))
+            .filter(amount => Number.isFinite(amount) && amount > 0);
+        if (positive.length === 0) return '';
+        const min = Math.min(...positive);
+        const max = Math.max(...positive);
+        const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+        const currency = String(currencyValue || '').trim().toUpperCase();
+        if (!currency || currency === 'USD' || currency === '$') {
+            return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
+        }
+        return min === max
+            ? `${formatAmount(min)} ${currency}`
+            : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
     }
 
     // Discovery mode drops events, but the discovery tree should still show what a
@@ -9933,15 +10017,7 @@ class AiWebParser {
             };
             visit(obj, 0);
             if (amounts.length === 0) return statedFree ? 'Free' : '';
-            const min = Math.min(...amounts);
-            const max = Math.max(...amounts);
-            const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-            if (!currency || currency === 'USD' || currency === '$') {
-                return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
-            }
-            return min === max
-                ? `${formatAmount(min)} ${currency}`
-                : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
+            return this.formatCoverAmountRange(amounts, currency);
         } catch (error) {
             console.warn(`🤖 AI Web: JSON API price→cover mapping failed: ${error && error.message ? error.message : error}`);
             return '';
@@ -21407,8 +21483,40 @@ TEXT:
             console.log(`🤖 AI Web: Rejected non-event ${field} ${value} for "${event.title || ''}" — ${reason}`);
             delete event[field];
             if (field === 'image') delete event.imageSource;
+            if (field === 'image') this.adoptAlternateImageCrop(event, value, htmlData);
         }
         return event;
+    }
+
+    /**
+     * A feed row that publishes the same artwork in several renditions
+     * (portrait / square / landscape crops plus the uncropped original) has
+     * somewhere to go when the vision pass rejects the chosen one. The
+     * verdict is about THAT CROP, not about the event's artwork: a narrow
+     * portrait crop of a wide flyer reads as "thumbnail with no readable
+     * text" while the square crop and the original still carry the poster
+     * (run 20260913-0120: DICE "GRUNT (SF)" shipped imageless while
+     * `images[0]` was the real flyer with the name in large type).
+     *
+     * Generic to any structured reader that stamps `_imageAlternates` — the
+     * candidates are the row's OWN other renditions, never another event's
+     * picture. Each is put through the same furniture gate, so a rendition
+     * the vision pass has ALSO rejected is skipped; an unvetted one is
+     * adopted on the "unknown is keep" rule the gate already runs on.
+     */
+    adoptAlternateImageCrop(event, rejectedUrl, htmlData = null) {
+        const alternates = Array.isArray(event && event._imageAlternates) ? event._imageAlternates : [];
+        if (alternates.length === 0) return false;
+        for (const candidate of alternates) {
+            const url = typeof candidate === 'string' ? candidate.trim() : '';
+            if (!url || url === rejectedUrl) continue;
+            if (this.getNonEventImageOcrReason(url, htmlData)) continue;
+            event.image = url;
+            event.imageSource = 'json-api';
+            console.log(`🤖 AI Web: Adopted the row's other crop ${url} for "${event.title || ''}" — the rejected rendition was one crop of this artwork, not the artwork`);
+            return true;
+        }
+        return false;
     }
 
     // Orientation of one candidate. Dimensions the page PUBLISHED (JSON-LD
