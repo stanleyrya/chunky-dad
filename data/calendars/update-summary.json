@@ -129,8 +129,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 38479,
-      "eventCount": 32
+      "dataLength": 36416,
+      "eventCount": 30
     },
     "london": {
       "name": "London",
