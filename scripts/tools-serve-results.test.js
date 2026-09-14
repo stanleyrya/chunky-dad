@@ -769,7 +769,8 @@ test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UT
   assert.ok(html.includes('💵 $20'));
   assert.ok(html.includes('class="thumb portrait"') && !html.includes('onclick=') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, no inline handlers (the page wires taps)');
   assert.ok(!html.includes('class="evidence"') && !html.includes('provenance:'), 'no evidence blurb on the face');
-  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword') && html.includes('data-bear="bear"') && html.includes('data-bear="not_bear"'), 'the bear check is reviewable on the card');
+  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword'), 'the bear check is visible on the card');
+  assert.ok(!html.includes('<button'), 'no buttons on a card — swipes and the reject sheet are the only controls');
   assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
   assert.ok(html.includes('Bears &quot;welcome&quot;'));
   assert.ok(!html.includes('class="chgs"'), 'a new event has no change block');
@@ -830,7 +831,6 @@ test('renderReviewCard: the brand site leads the links, a curated bar gets its t
   assert.ok(brandAt !== -1 && pageAt !== -1 && brandAt < pageAt, 'the favicon (brand) site leads, the venue page follows');
   assert.ok(html.includes('>Red Eye</a> <span class="curated" title="curated bar">✓</span>'), 'curated bar tick');
   assert.ok(html.includes('🐻 bear — ai') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
-  assert.ok(html.includes('class="bear-btn on" data-bear="bear"'), 'stored verdict is the active button');
   const same = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'X', timezone: 'UTC', url: 'https://bearracuda.com/', changes: {} }, display: { favicon: 'https://www.bearracuda.com/' } }, ctx);
   assert.ok(!same.includes('🏷'), 'no brand chip when it is the same site as the event page');
 });
@@ -843,7 +843,7 @@ test('renderReviewCard (dropped): the drop reason is the bear row, and the card 
   }, display: {} }, ctx);
   assert.ok(html.includes('🚫 Dropped as not bear') && html.includes('3 occurrences'));
   assert.ok(html.includes('🚫 dropped as not bear — AI: The title and description contain no bear-specific language.'));
-  assert.ok(html.includes('data-bear="bear"'));
+  assert.ok(!html.includes('<button'), 'the swipe is the verdict — no buttons');
 });
 
 test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {

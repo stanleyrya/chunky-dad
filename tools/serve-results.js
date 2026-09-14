@@ -722,9 +722,10 @@ function renderReviewThumb(display = {}, fallbackImage = '') {
     return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
 }
 
-// The bear check, reviewable: what the run decided and why, and the two
-// verdict buttons that write bear-verdicts.json (the same store the phone's
-// results sheet writes). A stored verdict shows as the active button.
+// The bear check, as information: what the run decided and why, plus any
+// verdict already stored. The verdict itself is a gesture, never a button —
+// on a dropped card the swipe IS the verdict; on a kept card, rejecting with
+// the "not bear" chip records one (one gesture, both stores).
 function renderReviewBearRow(display = {}, proposal = {}) {
     const stored = display.bearVerdict === 'bear' || display.bearVerdict === 'not_bear' ? display.bearVerdict : null;
     let state;
@@ -741,10 +742,7 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     const storedText = stored
         ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}</span>`
         : '';
-    return `<div class="bear-row">
-    <div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div>
-    <div class="bear-btns"><button type="button" class="bear-btn${stored === 'bear' ? ' on' : ''}" data-bear="bear">🐻 Bear</button><button type="button" class="bear-btn${stored === 'not_bear' ? ' on' : ''}" data-bear="not_bear">🚫 Not bear</button></div>
-  </div>`;
+    return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div></div>`;
 }
 
 function renderReviewBarCard(entry, ctx = {}) {
@@ -972,13 +970,8 @@ a { color:var(--accent); }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .curated { color:var(--ok); font-weight:700; }
-.bear-row { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
-.bear-state { flex:1 1 100%; font-size:13px; }
+.bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
 .bear-stored { font-weight:600; }
-.bear-btns { display:flex; gap:6px; }
-.bear-btn { font:inherit; font-size:13px; padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
-.bear-btn.on { border-color:var(--accent); background:var(--accent); color:#fff; }
-.bear-btn.busy { opacity:.5; }
 h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .line { margin:3px 0; }
 .muted { color:var(--muted); }
@@ -1125,31 +1118,6 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
-  // 🐻 / 🚫 buttons on any card: write the verdict now, show it as active.
-  stage.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bear-btn');
-    if (!btn) return;
-    e.preventDefault(); e.stopPropagation();
-    var el = btn.closest('.card'); var key = el ? el.getAttribute('data-key') : '';
-    var card = queue.concat(decided).filter(function (c) { return c.key === key; })[0];
-    if (!card) return;
-    var verdict = btn.classList.contains('on') ? 'clear' : btn.getAttribute('data-bear');
-    var row = btn.closest('.bear-row');
-    btn.classList.add('busy');
-    postBear(card, verdict).then(function () {
-      Array.prototype.forEach.call(row.querySelectorAll('.bear-btn'), function (b) { b.classList.remove('on', 'busy'); });
-      if (verdict !== 'clear') btn.classList.add('on');
-      var stored = row.querySelector('.bear-stored');
-      if (stored) stored.remove();
-      if (verdict !== 'clear') {
-        var span = document.createElement('span'); span.className = 'bear-stored';
-        span.textContent = ' you said: ' + (verdict === 'bear' ? '🐻 bear' : '🚫 not bear');
-        row.querySelector('.bear-state').appendChild(span);
-      }
-      toast(verdict === 'clear' ? 'Verdict cleared' : (verdict === 'bear' ? 'Marked bear' : 'Marked not bear'));
-    }).catch(function (error) { btn.classList.remove('busy'); toast('Not saved: ' + error.message); });
-  });
-
   function renderExecute() {
     var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped'; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
@@ -1195,15 +1163,19 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (el) el.className = 'card ' + direction;
     // A dropped card's swipe is a bear verdict: right = "that IS bear"
     // (rescued by the next run), left = "not bear, confirmed".
+    // "Not bear" as a reject reason on a kept card records the verdict too,
+    // so the next run drops the party without asking again.
+    var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
     var request = card.kind === 'dropped'
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
-      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null });
+      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
+          .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     request.then(function () {
       removeFromQueue(card);
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, html: card.html };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, html: card.html };
       decided.push(record);
       history.push({ card: card, record: record });
-      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : 'Rejected'));
+      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected')));
       setTimeout(render, 180);
     }).catch(function (error) {
       toast('Not saved: ' + error.message);
@@ -1226,7 +1198,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function undoDecision(record) {
     var request = record.kind === 'dropped'
       ? postBear(record, 'clear')
-      : post({ key: record.key, verdict: 'clear' });
+      : post({ key: record.key, verdict: 'clear' })
+          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear').then(function () { return result; }) : result; });
     request.then(function () {
       decided = decided.filter(function (d) { return d.key !== record.key; });
       var card = { id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html };
