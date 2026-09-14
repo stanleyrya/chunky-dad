@@ -15675,6 +15675,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       awaiting: 0,
       housekeeping: 0,
       withheld: 0,
+      skipped: 0,
       executable: 0,
       processed: 0,
       failed: 0,
@@ -15711,7 +15712,54 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return summary;
       }
 
-      const toAnalyze = savedEvents.map((event, index) => ({
+      // Leave a trace BEFORE the heavy part: a review log under its own id
+      // (never over the run's own log), so a hang or a kill mid-way still
+      // shows the run reached this point.
+      const runIdForLog = results.savedRunId || results.sourceRunId || "";
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\..+$/, "")
+        .replace("T", "-");
+      const logRunId = runIdForLog ? `${runIdForLog}-review-${stamp}` : null;
+      if (logRunId) {
+        try {
+          await this.ensureRelativeStorageDirs();
+          await this.appendLogSummary(results, { runIdOverride: logRunId, preUi: true });
+        } catch (logError) {
+          console.log(`📱 Scriptable: 🃏 Review log preflight write failed: ${logError.message}`);
+        }
+      }
+
+      // ONLY the approved cards are re-analyzed. A Mac run holds hundreds of
+      // records; re-analyzing all of them on the phone (a calendar search
+      // and, for merges, an AI arbitration call each) is what made the
+      // first attempt look hung. The key is enough to pre-select — the
+      // strict coverage check (values as approved) runs after the live
+      // analysis via applyOwnerDecisions. Everything else is skipped, not
+      // withheld: the phone's own run→sheet→execute flow still handles it.
+      const approvedKeys = new Set(
+        store
+          .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
+          .map((decision) => decision.key),
+      );
+      const selected = [];
+      savedEvents.forEach((event, index) => {
+        const key = core.getOwnerReviewKey(event);
+        if (key && approvedKeys.has(key)) selected.push({ event, index });
+      });
+      summary.skipped = savedEvents.length - selected.length;
+      console.log(
+        `📱 Scriptable: 🃏 ${selected.length} of ${savedEvents.length} saved event(s) carry an approval — only those are re-analyzed; ${summary.skipped} skipped (not approved on the deck).`,
+      );
+      if (selected.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing Approved",
+          `None of this run's ${savedEvents.length} event(s) has an approval on the Mac's review deck (${store.length} decision(s) loaded). Swipe right on the cards you want written, then tap Execute again.`,
+        );
+        return summary;
+      }
+      const toAnalyze = selected.map(({ event, index }) => ({
         ...SharedCore.stripCalendarAnalysisStamps(event),
         _savedRunSourceIndex: index,
       }));
@@ -15743,6 +15791,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
       const counts = core.applyOwnerDecisions(freshAnalyzed, store);
       Object.assign(summary, counts);
+      // The file keeps the whole saved plan; the re-analyzed rows replace
+      // their saved twins so executions[] and the deck agree.
+      const freshBySource = new Map(
+        freshAnalyzed
+          .filter((event) => event && Number.isInteger(event._savedRunSourceIndex))
+          .map((event) => [event._savedRunSourceIndex, event]),
+      );
+      const mergedPlan = savedEvents.map((event, index) => freshBySource.get(index) || event);
       const freshExecutable = SharedCore.filterEventsForExecution(freshAnalyzed);
       summary.executable = freshExecutable.length;
       console.log(
@@ -15750,7 +15806,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
       // The file reflects the fresh plan either way (executed or not): the
       // owner sees what the live calendar made of his approvals.
-      results.analyzedEvents = freshAnalyzed;
+      results.analyzedEvents = mergedPlan;
 
       if (freshExecutable.length === 0) {
         await this.presentSavedRunExecutionNotice(
@@ -15779,12 +15835,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       if (raw && typeof raw === "object") {
         const withheldCount = Math.max(
           0,
-          freshAnalyzed.length - freshExecutable.length,
+          mergedPlan.length - freshExecutable.length,
         );
         this.lastExecutionActionCounts = {
           ...raw,
           skip: (raw.skip || 0) + withheldCount,
-          analyzed: freshAnalyzed.length,
+          analyzed: mergedPlan.length,
         };
         summary.created = raw.create || 0;
         summary.updated = raw.update || 0;
@@ -15812,14 +15868,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         trigger: "owner-review",
       };
       await this.persistExecutedSavedRunSnapshot(results);
-      const runId = results.savedRunId || results.sourceRunId || "";
-      const stamp = new Date()
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\..+$/, "")
-        .replace("T", "-");
       await this.runPostRunHousekeeping(results, 30, {
-        logRunId: runId ? `${runId}-review-${stamp}` : null,
+        logRunId,
         pruneRuns: true,
       });
       await this.presentSavedRunExecutionNotice(
@@ -15827,8 +15877,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         [
           `➕ Created ${summary.created}`,
           `🔄 Updated ${summary.updated}`,
-          `🃏 Approved ${counts.approved} · housekeeping ${counts.housekeeping}`,
-          `⏸️ Awaiting review ${counts.awaiting} · rejected ${counts.rejected}`,
+          `🃏 Approved ${counts.approved} · ${summary.skipped} not approved (skipped)`,
+          counts.awaiting || counts.rejected ? `⏸️ Approval no longer matches ${counts.awaiting} · rejected ${counts.rejected}` : "",
           failureCount > 0
             ? `⚠️ ${failureCount} write(s) FAILED (recorded on the run file)`
             : "",
