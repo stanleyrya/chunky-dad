@@ -2000,10 +2000,14 @@ test('run 20260722-150336 case: pinSource preserve geocoded-exact → curated re
 
   // Bookkeeping that only got better is not a diff (owner 2026-09-12:
   // "save what is needed, just don't show it as a diff to me").
-  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
   assert.ok(!rows.includes('pinSource'), 'no row at all for a provenance upgrade');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(!rows.includes('preserve failed'));
   assert.ok(!rows.includes('⚠️'), 'no warning icon for an upgrade');
+  // The compressed card table footnotes it instead of rowing it.
+  const compressed = adapter.generateComparisonRowsCompressed(buildPreserveComparisonEvent('pinSource', {
+    existing: 'geocoded-exact', scraped: 'curated', final: 'curated'
+  }));
+  assert.ok(compressed.includes('bookkeeping updated — pinSource'), compressed);
 });
 
 test('a provenance downgrade (curated → geocoded-approx) keeps the red warning, reworded as PROVENANCE DOWNGRADED', () => {
@@ -2012,10 +2016,9 @@ test('a provenance downgrade (curated → geocoded-approx) keeps the red warning
     existing: 'curated', scraped: 'geocoded-approx', final: 'geocoded-approx'
   }));
 
-  assert.ok(rows.includes('PROVENANCE DOWNGRADED (curated → geocoded-approx)'), rows);
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PROVENANCE DOWNGRADED'), 'existing red style');
-  assert.ok(rows.includes('⚠️'), 'downgrades keep the warning icon');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(rows.includes('⚠️ provenance downgraded (curated → geocoded-approx)'), rows);
+  assert.ok(rows.includes('change-row change-warn'), 'downgrades render as a warning row');
+  assert.ok(!rows.includes('preserve failed'));
 });
 
 test('non-provenance preserve mismatch still renders PRESERVE FAILED byte-identically', () => {
@@ -2024,8 +2027,9 @@ test('non-provenance preserve mismatch still renders PRESERVE FAILED byte-identi
     existing: 'FURBALL', scraped: 'MEGAWOOF', final: 'MEGAWOOF'
   }));
 
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: FURBALL, got: MEGAWOOF)</span>'), rows);
-  assert.ok(!rows.includes('PROVENANCE'));
+  assert.ok(rows.includes('⚠️ preserve failed (expected FURBALL, got MEGAWOOF)'), rows);
+  assert.ok(rows.includes('change-row change-warn'));
+  assert.ok(!rows.includes('provenance'));
 });
 
 test('an unknown provenance value fails open to the existing PRESERVE FAILED behavior', () => {
@@ -2034,8 +2038,8 @@ test('an unknown provenance value fails open to the existing PRESERVE FAILED beh
     existing: 'weird-stamp', scraped: 'curated', final: 'curated'
   }));
 
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: weird-stamp, got: curated)</span>'), rows);
-  assert.ok(!rows.includes('PROVENANCE'));
+  assert.ok(rows.includes('⚠️ preserve failed (expected weird-stamp, got curated)'), rows);
+  assert.ok(!rows.includes('provenance'));
 });
 
 test('an equal-tier provenance change (venue-site → geo-poi, same corroborated class) is informational, not a warning', () => {
@@ -2044,9 +2048,8 @@ test('an equal-tier provenance change (venue-site → geo-poi, same corroborated
     existing: 'venue-site', scraped: 'geo-poi', final: 'geo-poi'
   }));
 
-  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
   assert.ok(!rows.includes('barSource'), 'no row at all for an equal-tier provenance change');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(!rows.includes('preserve failed'));
   assert.ok(!rows.includes('⚠️'));
 });
 
@@ -8388,25 +8391,26 @@ test('merge rows label deterministic vs AI vs no-op decisions in plain words', (
 
   // The card table renders ONLY rows that changed something: the AI adoption
   // in full, reason in the shared row format's own reason cell.
-  assert.ok(html.includes('🤝 AI — chose new'));
-  assert.ok(html.includes('poster names this event'));
+  // The WHY sits under the changed row's values, in plain words.
+  assert.ok(html.includes('<div class="change-why">🤝 AI took the scraped value: poster names this event</div>'), html);
   // No-op rows (deterministic kept-existing, same-value) compress into one
   // summary line naming the untouched fields (owner: the merge section
   // should just be the changes).
-  assert.ok(!html.includes('🔒 DETERMINISTIC — kept existing'));
-  assert.ok(!html.includes('SAME VALUE'));
+  assert.ok(!html.includes('🔒'));
+  assert.ok(!html.includes('same on both sides'));
   assert.ok(html.includes('2 fields unchanged'), 'summary line counts the no-ops');
   assert.ok(/2 fields unchanged — [^<]*website/.test(html), 'summary names the untouched fields');
-  // Strategy under the field name reads as words, not a bare "ai".
-  assert.ok(html.includes('<small>AI-arbitrated</small>'));
-  assert.ok(!html.includes('<small>ai</small>'));
+  // Two columns: the field, then calendar-has → would-become with the why.
+  assert.ok(html.includes('<tr><th>Field</th><th>Calendar has → would become</th></tr>'));
+  assert.ok(html.includes('<div class="change-was">calendar: '), 'the calendar value leads');
+  assert.ok(html.includes('<div class="change-now">→ '), 'the would-become value follows');
+  assert.ok(!html.includes('<small>ai</small>') && !html.includes('AI-arbitrated'), 'no strategy tokens under the field name');
 
-  // The uncompressed renderer keeps EVERY row — deterministic label and its
-  // reason intact for tooling and the provenance-preserve tests.
+  // The uncompressed renderer keeps EVERY judged row — deterministic keep
+  // and its reason intact for tooling and the provenance-preserve tests.
   const fullRows = adapter.generateComparisonRows(event);
-  assert.ok(fullRows.includes('🔒 DETERMINISTIC — kept existing'));
-  assert.ok(fullRows.includes('identity link beats a ticketing/social platform URL'));
-  assert.ok(fullRows.includes('SAME VALUE'));
+  assert.ok(fullRows.includes('🔒 rule kept the calendar value: identity link beats a ticketing/social platform URL'), fullRows);
+  assert.ok(fullRows.includes('same on both sides'));
 });
 
 test('merge rows label calendar stickiness and clobber fallback', () => {
@@ -8439,9 +8443,9 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
   const stickyHtml = adapter.generateEventCard(stickyEvent);
   // A sticky keep is a no-op — compressed off the card table into the
   // summary line; the labeled row survives in the uncompressed renderer.
-  assert.ok(!stickyHtml.includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  assert.ok(!stickyHtml.includes('🧊'));
   assert.ok(/\d+ fields? unchanged — [^<]*ticketUrl/.test(stickyHtml), 'ticketUrl named in the unchanged summary');
-  assert.ok(adapter.generateComparisonRows(stickyEvent).includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  assert.ok(adapter.generateComparisonRows(stickyEvent).includes('🧊 calendar stickiness (binding) — saved value kept without AI arbitration'));
 
   const fallbackHtml = adapter.generateEventCard({
     ...base,
@@ -8455,7 +8459,7 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
       source: 'fallback'
     }]
   });
-  assert.ok(fallbackHtml.includes('⚠️ NO AI ANSWER — took new (clobber fallback)'));
+  assert.ok(fallbackHtml.includes('⚠️ AI gave no answer — took the scraped value: ai unavailable/rejected — clobber fallback'), fallbackHtml);
 });
 
 // ---------------------------------------------------------------------------
@@ -8534,16 +8538,19 @@ test('TWISTED BEAR: a recorded deterministic gmaps rebuild renders once, as a ch
 
   const records = adapter.buildComparisonRowRecords(event);
   const gmapsRows = records.filter((record) => record.field === 'gmaps');
-  assert.equal(gmapsRows.length, 1, 'the gmaps row renders exactly once');
+  assert.equal(gmapsRows.length, 1, 'the gmaps field is judged exactly once');
   const row = gmapsRows[0];
-  assert.equal(row.changed, true, 'a rebuilt link IS a change');
-  assert.ok(row.html.includes('🔒 DETERMINISTIC — rewrote'), `truthful outcome label: ${row.html}`);
-  assert.ok(row.html.includes('rebuilt from the final merged bar + address'), 'the rebuild reason rides in the reason cell');
-  assert.ok(row.html.includes('<small>deterministic</small>'), 'the strategy slot names the real source');
-  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'a changed row never claims no change');
-  assert.ok(!row.html.includes('AI-arbitrated'), 'the AI touched nothing on this field');
-
-  assert.equal(adapter.countChangedMergeFields(event), 1, 'the chip counts the one real change');
+  // A rebuilt maps link is bookkeeping (owner 2026-09-12: "save what is
+  // needed, just don't show it as a diff to me"): footnoted, never a row,
+  // never counted — and the record still carries the truthful reason.
+  assert.equal(row.bookkeeping, true);
+  assert.equal(row.bookkeepingChanged, true, 'the link did change');
+  assert.equal(row.changed, false, 'but bookkeeping is not a diff');
+  assert.ok(row.context.includes('🔒 rule rewrote it: gmaps rebuilt: verified final coordinates replace the previous link') || row.context.includes('🔒 rule'), row.context);
+  assert.equal(adapter.countChangedMergeFields(event), 0, 'the chip does not count bookkeeping');
+  const compressed = adapter.generateComparisonRowsCompressed(event);
+  assert.ok(compressed.includes('bookkeeping updated — gmaps'), compressed);
+  assert.ok(!compressed.includes('data-field="gmaps"'), 'no gmaps row');
   const card = adapter.generateEventCard(event);
   assert.ok(!card.includes('KEPT EXISTING (no change)'), 'no self-contradiction anywhere on the card');
   assert.ok(!card.includes('AI-arbitrated'), 'no AI credit anywhere on the card');
@@ -8555,14 +8562,12 @@ test('TWISTED BEAR without a decision record (older saved runs) still never self
 
   const records = adapter.buildComparisonRowRecords(event);
   const row = records.find((record) => record.field === 'gmaps');
-  assert.equal(row.changed, true, 'value truth: merged differs from calendar');
-  assert.ok(row.html.includes('CHANGED (no decision recorded)'),
-    `an unattributed change says so plainly: ${row.html}`);
+  assert.equal(row.bookkeepingChanged, true, 'value truth: merged differs from calendar');
+  assert.equal(row.changed, false, 'bookkeeping is footnoted, not rowed');
+  assert.equal(row.context, 'changed — no decision recorded', 'an unattributed change says so plainly');
   assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'the contradictory composite is dead');
-  assert.ok(!row.html.includes('AI-arbitrated'),
+  assert.ok(!row.html.includes('AI-arbitrated') && !row.context.includes('AI'),
     'aiArbitration is null for this event — the AI is never blamed');
-  assert.ok(row.html.includes('<small>ai (not arbitrated)</small>'),
-    'the strategy slot admits arbitration never ran');
 });
 
 test('matchKey never renders a comparison row (Goldiloxx: calendar cannot hold it, so "→ ADDED" repeated forever)', () => {
@@ -8603,7 +8608,8 @@ test('TWISTED BEAR unchanged twin renders "no changes"', () => {
   const records = adapter.buildComparisonRowRecords(event);
   const row = records.find((record) => record.field === 'gmaps');
   assert.equal(row.changed, false, 'identical link → no-op');
-  assert.ok(row.html.includes('KEPT EXISTING (no change)'), 'the no-op label is reserved for true no-ops');
+  assert.equal(row.bookkeepingChanged, false, 'nothing to footnote either');
+  assert.ok(row.context.includes('calendar value kept'), 'the no-op wording is reserved for true no-ops');
   assert.equal(adapter.countChangedMergeFields(event), 0, 'the twin card says "no changes"');
 });
 
@@ -9083,11 +9089,14 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   const adapter = buildAdapter();
   const event = buildSharedFormatMergeEvent();
   const headerRow = '<tr><th>Field</th><th>Value</th><th>Source / Outcome</th><th>Reason</th></tr>';
+  const changeHeaderRow = '<tr><th>Field</th><th>Calendar has → would become</th></tr>';
 
-  // 1) Merge comparison rows.
+  // 1) Merge comparison rows: the two-column change format (field |
+  // calendar has → would become, why underneath).
   const mergeRows = adapter.generateComparisonRows(event);
-  assert.ok(mergeRows.includes('class="field-row"'), 'merge rows use the shared row class');
-  assert.ok(mergeRows.includes('field-row-source'), 'merge rows carry the source/outcome cell');
+  assert.ok(mergeRows.includes('class="field-row change-row"'), 'merge rows use the shared row class');
+  assert.ok(mergeRows.includes('field-row-change'), 'merge rows carry the change cell');
+  assert.ok(mergeRows.includes('class="change-why"'), 'merge rows carry the why line');
 
   // 2) Folded provenance rows (round 4: the provenance section dissolved
   // into the merge table) use the very same row builder.
@@ -9096,7 +9105,7 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
     new Set(['bar', 'website'])
   );
   assert.ok(folded.length > 0, 'provenance-only fields fold into records');
-  assert.ok(folded.every(r => r.html.includes('class="field-row"')), 'folded rows use the shared row class');
+  assert.ok(folded.every(r => r.html.includes('class="field-row change-row"')), 'folded rows use the change-row format too');
   // Export control markup survives, on the card actions row.
   const exportControl = adapter.buildExportIssueControlHtml(event, { runId: 'r1' });
   assert.ok(exportControl.includes('exportProvenanceIssue(this)'), 'export-issue handler kept');
@@ -9110,8 +9119,8 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   assert.ok(notesRegion.includes('class="field-row"'), 'notes preview uses the shared row class');
   assert.ok(notesRegion.includes(headerRow), 'notes preview renders the shared table header');
 
-  // The card's merge table renders the same header too — one format, three surfaces.
-  assert.ok(card.includes(headerRow));
+  // The card's merge table renders the change header; the notes preview keeps the four-column one.
+  assert.ok(card.includes(changeHeaderRow));
 });
 
 test('review subsections live on the main section; the raw payload hides below it', () => {
@@ -9373,8 +9382,8 @@ test('merge state compresses to a counted MERGE tag plus a write tag on the card
   assert.ok(!card.includes('Intent: MERGE'), 'no Intent/Write note in the details');
 
   // Details table: ONLY the changed row, plus one summary line for no-ops.
-  assert.ok(card.includes('🤝 AI — chose new'), 'the changed row renders in full');
-  assert.ok(!card.includes('🔒 DETERMINISTIC'), 'no-op decision row compressed out');
+  assert.ok(card.includes('🤝 AI took the scraped value'), 'the changed row renders in full, why underneath');
+  assert.ok(!card.includes('🔒'), 'no-op decision row compressed out');
   const summary = card.match(/(\d+) fields? unchanged/);
   assert.ok(summary, 'one summary line for the unchanged fields');
   assert.ok(Number(summary[1]) >= 5, 'the untouched fields are counted, not rendered as rows');
@@ -10483,7 +10492,7 @@ test('round4: provenance rows fold into the merge table under the shared no-op p
   const changed = freshRound3Event(BEEFMINCE_NOOP_EVENT);
   changed._original.calendar.city = 'berlin';
   const changedCard = adapter.generateEventCard(changed, { runId: 'r1' });
-  assert.match(changedCard, /<strong>city<\/strong>/, 'real city outcome renders as a row');
+  assert.match(changedCard, /<strong>City<\/strong>/, 'real city outcome renders as a row');
   assert.ok(changedCard.includes('took scraped value'), 'with its provenance decision as the reason');
   assert.equal(adapter.countChangedMergeFields(changed), 1);
 });

@@ -627,15 +627,29 @@ function describeReviewChange(field, change, proposal, ctx) {
     return { fromHtml: from ? escapeHtmlText(from) : none, toHtml: to ? escapeHtmlText(to) : none, noteHtml: '', warn: false };
 }
 
-function renderReviewChangeRows(changes, proposal = {}, ctx = {}) {
+// `context` = { field: why } from the merge's own decision records (the
+// same wording the results card shows under its rows).
+function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) {
     const fields = changes && typeof changes === 'object' ? Object.keys(changes) : [];
     if (fields.length === 0) return '';
     const rows = fields.map((field) => {
         const described = describeReviewChange(field, changes[field] || {}, proposal, ctx);
         const label = REVIEW_CHANGE_LABELS[field] || field;
-        return `<div class="chg" data-field="${escapeHtmlText(field)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${described.fromHtml}</span><span class="arrow">→</span><span class="now">${described.toHtml}</span></span>${described.noteHtml ? `<span class="chg-n${described.warn ? ' warn' : ''}">${described.noteHtml}</span>` : ''}</div>`;
+        const why = context && typeof context[field] === 'string' ? context[field] : '';
+        return `<div class="chg" data-field="${escapeHtmlText(field)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${described.fromHtml}</span><span class="arrow">→</span><span class="now">${described.toHtml}</span></span>${described.noteHtml ? `<span class="chg-n${described.warn ? ' warn' : ''}">${described.noteHtml}</span>` : ''}${why ? `<span class="chg-n why">${escapeHtmlText(why)}</span>` : ''}</div>`;
     }).join('');
     return `<div class="chgs"><div class="chgs-head"><span>calendar has</span><span>would become</span></div>${rows}</div>`;
+}
+
+// "+ notes: added instagram, facebook · updated description" — what else
+// the write touches, without the bookkeeping.
+function renderReviewNotesChanges(display = {}) {
+    const parts = [];
+    if (Array.isArray(display.notesAdded) && display.notesAdded.length) parts.push(`added ${display.notesAdded.join(', ')}`);
+    if (Array.isArray(display.notesUpdated) && display.notesUpdated.length) parts.push(`updated ${display.notesUpdated.join(', ')}`);
+    if (Array.isArray(display.notesRemoved) && display.notesRemoved.length) parts.push(`removed ${display.notesRemoved.join(', ')}`);
+    if (parts.length === 0) return display.notesOnlyAlso ? '<div class="line muted">+ notes updated</div>' : '';
+    return `<div class="line muted">+ notes: ${escapeHtmlText(parts.join(' · '))}</div>`;
 }
 
 // ---- cards -----------------------------------------------------------------
@@ -772,8 +786,8 @@ function renderReviewCard(entry, ctx = {}) {
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
   ${bear ? `<div class="badges">${bear}</div>` : ''}
   ${chips ? `<div class="chips">${chips}</div>` : ''}
-  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx) : ''}
-  ${isMerge && display.notesOnlyAlso ? '<div class="line muted">+ notes updated</div>' : ''}
+  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext) : ''}
+  ${isMerge ? renderReviewNotesChanges(display) : ''}
   ${renderReviewEvidence(display.evidenceLines)}
   ${description ? `<div class="desc clamped" onclick="toggleDesc(this)">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more" onclick="toggleDesc(this.previousElementSibling)">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
@@ -893,6 +907,7 @@ a { color:var(--accent); }
 .chg .none { color:var(--muted); font-style:italic; font-weight:400; }
 .chg-n { grid-column:2; font-size:12px; color:var(--muted); }
 .chg-n.warn { color:var(--no); font-weight:600; }
+.chg-n.why { color:var(--ink); opacity:.8; }
 .evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
 .notes { margin-top:10px; font-size:12px; }
 .notes summary { cursor:pointer; color:var(--muted); }

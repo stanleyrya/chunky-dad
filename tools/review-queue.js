@@ -306,7 +306,32 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         classifyOrientation: (url) => core.classifyImageOrientation(url)
     }) || (typeof event.image === 'string' ? event.image : '');
     const seriesMatch = event._seriesMatch && typeof event._seriesMatch === 'object' ? event._seriesMatch : null;
+    // The merge's own reason per changed stored field (one wording with the
+    // results card: SharedCore.describeMergeDecision), and which notes keys
+    // moved besides — minus the bookkeeping the scraper regenerates anyway.
+    const bookkeepingKeys = new Set(['key', 'gmaps', 'favicon', 'timezone']
+        .concat((SharedCore.PROVENANCE_COMPANION_FIELDS || []).filter((name) => name !== 'bearSource')));
+    const changeContext = {};
+    if (event._action === 'merge' && Array.isArray(event._mergeDecisions)) {
+        const scraper = (event._original && event._original.scraper) || {};
+        for (const field of SharedCore.getOwnerReviewChangeFields()) {
+            const record = event._mergeDecisions.reduce((latest, entry) => (entry && entry.field === field ? entry : latest), null);
+            if (!record) continue;
+            const outcome = SharedCore.normalizeOwnerReviewValue(event[field]) === SharedCore.normalizeOwnerReviewValue(scraper[field])
+                ? 'took-new'
+                : 'rewrote';
+            changeContext[field] = SharedCore.describeMergeDecision(record, outcome);
+        }
+    }
+    const diff = event._mergeDiff && typeof event._mergeDiff === 'object' ? event._mergeDiff : {};
+    const notesKeys = (list) => (Array.isArray(list) ? list : [])
+        .map((entry) => (entry && typeof entry === 'object' ? entry.key : entry))
+        .filter((key) => typeof key === 'string' && key && !bookkeepingKeys.has(key));
     return {
+        changeContext,
+        notesAdded: notesKeys(diff.added),
+        notesUpdated: notesKeys(diff.updated),
+        notesRemoved: notesKeys(diff.removed),
         parserName: (typeof event.key === 'string' && parserNames.get(event.key)) || parserConfigName || '',
         pageHost,
         analysisReason: event._analysis && typeof event._analysis.reason === 'string' ? event._analysis.reason : '',

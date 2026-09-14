@@ -17307,6 +17307,27 @@ class SharedCore {
         });
     }
 
+    // One plain-words line for a recorded merge decision — the "why" that
+    // sits under a changed row on the results card AND on the Mac review
+    // deck (one wording, two surfaces). outcome: 'kept-existing' |
+    // 'took-new' | 'rewrote'. Reasons are capped so a chatty AI sentence
+    // cannot swallow the row.
+    static describeMergeDecision(record, outcome) {
+        if (!record || typeof record !== 'object') return '';
+        const source = String(record.source || '').toLowerCase();
+        let reason = String(record.reason || '').trim();
+        if (reason.length > 220) reason = `${reason.slice(0, 220)}…`;
+        const verb = outcome === 'kept-existing'
+            ? 'kept the calendar value'
+            : outcome === 'rewrote' ? 'rewrote it' : 'took the scraped value';
+        const tail = reason ? `: ${reason}` : '';
+        if (source === 'deterministic') return `🔒 rule ${verb}${tail}`;
+        if (source === 'sticky') return `🧊 ${reason || 'calendar value kept (stickiness)'}`;
+        if (source === 'ai') return `🤝 AI ${verb}${tail}`;
+        if (source === 'fallback') return `⚠️ AI gave no answer — ${verb}${tail}`;
+        return `${source || 'resolved'} — ${verb}${tail}`;
+    }
+
     async buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config = {}) {
         // (Block wrapper keeps the extracted loop body byte-identical to its
         // original prepareEventsForCalendar form — minimal, reviewable diff.)
