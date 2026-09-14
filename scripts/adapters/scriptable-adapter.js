@@ -14512,6 +14512,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // identically.
   mergeValuesLookIdentical(a, b) {
     if (a === b) return true;
+    // A soft hyphen and a plain "-" are one value in a display name (see
+    // SharedCore.foldSoftHyphens) — never a row, never a count.
+    if (SharedCore.notesValuesEquivalent(a, b)) return true;
     const toMs = (value) => {
       if (value instanceof Date) return value.getTime();
       if (typeof value === "string") {
