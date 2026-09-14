@@ -765,7 +765,7 @@ test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UT
   assert.ok(html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>🧭 Route</a>'));
   assert.ok(html.includes('Furball · from furball.nyc · 📱 chunky-dad-nyc'), 'parser name, page host and target calendar');
   assert.ok(html.includes('🐻 keyword'));
-  assert.ok(html.includes('>🔗 furball.nyc</a>') && html.includes('>🎟 tickets.example</a>') && html.includes('>📸 @furballnyc</a>') && html.includes('>🗺 maps</a>'));
+  assert.ok(html.includes('>🔗 furball.nyc/events/x</a>') && html.includes('>🎟 tickets.example/x</a>') && html.includes('>📸 @furballnyc</a>') && html.includes('>🗺 maps</a>'), 'links keep their path; only handles and the maps link get short labels');
   assert.ok(html.includes('💵 $20'));
   assert.ok(html.includes('class="thumb portrait"') && html.includes('onclick="openFlyer(this)"') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, tap to enlarge');
   assert.ok(html.includes('<li>pin is 0 m from curated &quot;Rockbar&quot; pin</li>'), 'evidence on the face');
@@ -792,7 +792,9 @@ test('renderReviewCard (update): stacked calendar-has → would-become rows in t
   assert.ok(html.includes('<span class="chg-k">Starts</span>') && html.includes('<span class="was">Fri, Oct 4 · 9:00 PM</span>') && html.includes('<span class="now">11:00 PM</span>') && html.includes('2 h later'), 'day printed once, time diffed, delta named');
   assert.ok(html.includes('<span class="chg-k">Pin</span>') && html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>📌 40.7350, -74.0055</a>'));
   assert.match(html, /⚠️ moved 21\d m · <a[^>]*maps\/dir\/\?api=1&amp;origin=40\.7331%2C-74\.0055&amp;destination=40\.735%2C-74\.0055[^>]*>🧭 old → new<\/a>/, 'a pin move shows the distance and a route between old and new');
-  assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('<span class="none">∅</span>') && html.includes('>beefmince.co.uk</a>'));
+  assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('<span class="none">∅</span>') && html.includes('>beefmince.co.uk/tickets</a>'), 'a link change shows the whole stored URL, not its domain');
+  const samePath = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { url: { from: 'https://bearracuda.com', to: 'https://bearracuda.com/events/denver17/' } } } }, ctx);
+  assert.ok(samePath.includes('>bearracuda.com</a>') && samePath.includes('>bearracuda.com/events/denver17/</a>'), 'Bearracuda Denver: the gained path is visible, trailing slash and all');
   assert.ok(html.includes('+ notes updated'));
 
   const added = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { location: { from: '', to: '40.7331, -74.0055' }, endDate: { from: '2030-10-05T03:00:00.000Z', to: '' } } } }, ctx);
@@ -810,7 +812,7 @@ test('renderReviewCard (bar): route line, distance from the city center, labelle
   assert.ok(html.includes('🏳️‍🌈 New bar') && html.includes('<h2>The Woods</h2>'));
   assert.ok(html.includes('>The Woods</a>') && html.includes('>48 S 4th St</a>') && html.includes('href="https://www.google.com/maps/search/?api=1&amp;query=40.71%2C-73.96"'));
   assert.match(html, /\d(\.\d)? km from new york center · seen as page-adjacent/);
-  assert.ok(html.includes('>🔗 thewoods.example</a>') && !html.includes('📸'), 'blank links render no chip');
+  assert.ok(html.includes('>🔗 thewoods.example/</a>') && !html.includes('📸'), 'blank links render no chip');
   assert.ok(html.includes('openstreetmap.org/export/embed.html'), 'inline map');
   assert.ok(html.includes('<li>BEAR NIGHT <span class="muted">— Sat, Feb 2</span></li>'));
   assert.ok(html.includes('<li>pin is 4.1 km from nyc center</li>'));
@@ -818,7 +820,7 @@ test('renderReviewCard (bar): route line, distance from the city center, labelle
 
 test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
   const html = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'Solo', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', bar: 'Rockbar', city: 'nyc', url: 'https://furball.nyc/' } });
-  assert.ok(html.includes('<h2>Solo</h2>') && html.includes('📍 Rockbar') && html.includes('>🔗 https://furball.nyc/</a>'));
+  assert.ok(html.includes('<h2>Solo</h2>') && html.includes('📍 Rockbar') && html.includes('>🔗 furball.nyc/</a>'));
 });
 
 test('injectHeaderBar links the review deck with its pending count', () => {

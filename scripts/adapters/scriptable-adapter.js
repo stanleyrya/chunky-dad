@@ -10881,7 +10881,14 @@ class ScriptableAdapter {
       }
       return "facebook";
     }
-    return this.registrableDomainFromUrl(text) || text;
+    // Everything else: the stored URL with the scheme and www. dropped and
+    // the PATH kept (owner: a domain-only label hid the very part that
+    // differs between two links — "bearracuda.com" for both the homepage
+    // and /events/denver17/), capped so a chip stays a chip.
+    const CHIP_MAX = 48;
+    const shown = text.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+    if (!shown) return text;
+    return shown.length > CHIP_MAX ? `${shown.slice(0, CHIP_MAX - 1)}…` : shown;
   }
 
   // Instagram is sometimes stored as a bare "@handle" — build the profile

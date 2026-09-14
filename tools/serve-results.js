@@ -527,15 +527,27 @@ function reviewAnchor(href, text, extraClass = '') {
     return `<a${extraClass ? ` class="${extraClass}"` : ''} href="${escapeHtmlText(href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlText(text)}</a>`;
 }
 
-// A link chip labelled the way the results card labels links: @handle for
-// instagram, the page for facebook, the registrable domain otherwise.
+// The URL as stored, minus the scheme and www. — never just the domain
+// (owner: a domain-only label showed "bearracuda.com → bearracuda.com" for
+// a link that gained "/events/denver17/"; the path IS the change).
+function reviewUrlLabel(url, maxLength = 0) {
+    const text = String(url || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+    if (maxLength > 0 && text.length > maxLength) return `${text.slice(0, maxLength - 1)}…`;
+    return text;
+}
+
+// A link chip: @handle for instagram, the page for facebook, "maps" for the
+// maps link, and the stored URL (scheme dropped, path kept) for everything
+// else.
 function reviewChip(ctx, kind, icon, url) {
     const adapter = ctx && ctx.adapter;
     const text = typeof url === 'string' ? url.trim() : '';
     if (!text) return '';
     const safe = adapter ? adapter.isSafeExternalUrl(text) : /^https?:\/\/\S+$/i.test(text);
     if (!safe) return '';
-    const label = adapter ? adapter.formatLinkChipLabel(kind, text) : text;
+    const label = adapter && (kind === 'instagram' || kind === 'facebook' || kind === 'gmaps')
+        ? adapter.formatLinkChipLabel(kind, text)
+        : reviewUrlLabel(text, 48);
     return `<a class="chip" href="${escapeHtmlText(text)}" target="_blank" rel="noopener noreferrer" title="${escapeHtmlText(text)}">${icon ? `${icon} ` : ''}${escapeHtmlText(label)}</a>`;
 }
 
@@ -619,9 +631,8 @@ function describeReviewChange(field, change, proposal, ctx) {
         return { fromHtml, toHtml, noteHtml: note, warn };
     }
     if (field === 'url') {
-        const label = (value) => (adapter ? adapter.formatLinkChipLabel('website', value) : value);
-        const fromHtml = from ? reviewAnchor(from, label(from)) : none;
-        const toHtml = to ? reviewAnchor(to, label(to)) : none;
+        const fromHtml = from ? reviewAnchor(from, reviewUrlLabel(from)) : none;
+        const toHtml = to ? reviewAnchor(to, reviewUrlLabel(to)) : none;
         return { fromHtml, toHtml, noteHtml: '', warn: false };
     }
     return { fromHtml: from ? escapeHtmlText(from) : none, toHtml: to ? escapeHtmlText(to) : none, noteHtml: '', warn: false };
@@ -1691,6 +1702,7 @@ module.exports = {
     describeReviewTimeDelta,
     renderReviewChangeRows,
     renderReviewRouteLine,
+    reviewUrlLabel,
     renderReviewCard,
     renderReviewPage,
     renderReviewEmptyPage,
