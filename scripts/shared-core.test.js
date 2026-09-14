@@ -22789,3 +22789,81 @@ test('soft hyphen vs "-" in a short name is not a change: notes projections matc
   assert.equal(rerun[0]._mergeNoOp, true, 'a soft-hyphen-only difference writes nothing');
   assert.equal((rerun[0]._mergeDiff.updated || []).find(entry => entry.key === 'shortName'), undefined, 'and the diff does not list it');
 });
+
+// An override that would change NOTHING about the series night it replaces
+// is a no-op, like a field-identical merge (CUBSCOUT, run 20260914-154851:
+// three of four overrides were identical to their nights once the
+// soft-hyphen spellings compared equal). Detaching a night from its series
+// to write the same thing is not a write.
+test('override no-op: an override identical to its series night is skipped; one that adds something proceeds', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 5 * 60 * 60 * 1000;
+  const scraped = () => ({
+    title: 'CUBSCOUT',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'Eagle LA',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    city: 'dallas',
+    location: '34.0912127, -118.2840632',
+    website: 'https://eaglela.com/events/cub-scout-3/',
+    shortName: 'CUB­SCOUT',
+    source: 'ai-web'
+  });
+  const seriesNight = (notes) => ({
+    title: 'CUBSCOUT',
+    identifier: 'series-uid::night',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '34.0912127, -118.2840632',
+    notes
+  });
+  const overrideAnalysis = (sourceEvent) => ({
+    action: 'new',
+    reason: 'Recurring source match found - creating override',
+    sourceEvent,
+    existingKey: 'series-uid',
+    overrideIdentity: { overrideUid: 'series-uid', overrideRecurrenceId: new Date(start).toISOString() }
+  });
+  const quiet = () => { const original = console.log; console.log = () => {}; return () => { console.log = original; }; };
+
+  // Pass 1: settle what the override writes for this night.
+  let restore = quiet();
+  let settled;
+  try {
+    settled = await core.buildAnalyzedCalendarEvent(scraped(), overrideAnalysis(seriesNight('bar: Eagle LA')), {}, {});
+  } finally { restore(); }
+  assert.equal(SharedCore.isOverrideCreate(settled), true);
+  assert.equal(settled._mergeNoOp, false, 'the first override changes the night (it fills in the notes)');
+
+  // Pass 2: the series night already holds exactly that — as an ICS-imported
+  // series does: a plain hyphen, the text under the "tea:" alias, and none of
+  // the run's bookkeeping / override-identity / automatic bear lines.
+  const nightNotes = String(settled.notes)
+    .split('\n')
+    .filter((line) => !/^(key|bearSource|overrideUid|overrideRecurrenceId|pinSource|addressSource|imageSource|barSource|gmaps|favicon|timezone):/.test(line))
+    .map((line) => line.replace(/^shortName: .*/, 'shortName: CUB-SCOUT').replace(/^description:/, 'tea:'))
+    .join('\n');
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let rerun;
+  try {
+    rerun = await core.buildAnalyzedCalendarEvent(scraped(), overrideAnalysis(seriesNight(nightNotes)), {}, {});
+  } finally { console.log = originalLog; }
+  assert.equal(rerun._mergeNoOp, true, 'identical night (soft hyphen aside) → no-op');
+  assert.ok(logLines.some(line => line.startsWith('⏸️ OVERRIDE: "CUBSCOUT" would change nothing')), logLines.filter(l => l.includes('OVERRIDE')).join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution([rerun]), [], 'never written');
+  assert.equal(SharedCore.describeExecutionDisposition(rerun), 'SKIPPED (override no-op — identical to the series night)');
+  assert.equal(core.isOwnerReviewCandidate(rerun), false, 'and never a card on the deck');
+
+  // Pass 3: the same night, but the scrape now carries a facebook link → a real override.
+  restore = quiet();
+  let changed;
+  try {
+    changed = await core.buildAnalyzedCalendarEvent({ ...scraped(), facebook: 'https://www.facebook.com/eagle.bar.la/' }, overrideAnalysis(seriesNight(nightNotes)), {}, {});
+  } finally { restore(); }
+  assert.equal(changed._mergeNoOp, false, 'a notes-level addition still writes');
+  assert.equal(SharedCore.filterEventsForExecution([changed]).length, 1);
+});
