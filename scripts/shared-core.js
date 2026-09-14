@@ -8144,7 +8144,7 @@ class SharedCore {
                 let pageEventsForEnrich = [];
                 let foreignOrgPage = false;
                 if (!discoveryOnly) {
-                    let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
+                    let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter, url);
                     // Each event remembers the page it was actually extracted from
                     // (underscore field: never serialized into notes/schema). The
                     // bear-check provenance uses it for honest cross-host wording.
@@ -9514,7 +9514,7 @@ class SharedCore {
         }
     }
 
-    async prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline, httpAdapter) {
+    async prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline, httpAdapter, sourcePageUrl = '') {
         if (!Array.isArray(events) || events.length === 0) {
             return [];
         }
@@ -9523,12 +9523,19 @@ class SharedCore {
             if (!Object.isExtensible(event)) {
                 event = { ...event };
             }
-            // The page's classification travels with the record from here on
-            // (re-stamped below on whatever normalization returns): the
-            // static identity rung in applyStaticMetadataBlock needs it to
-            // tell the event's own page from the listing it was scraped off.
+            // The page's URL and classification travel with the record from
+            // here on (the caller re-stamps both on whatever normalization
+            // returns): the static identity rung in applyStaticMetadataBlock
+            // needs BOTH to tell the event's own page from the listing it was
+            // scraped off. Run 20260914-194238: the classification alone was
+            // stamped here while _sourcePageUrl landed only after this call,
+            // so the rung never matched and 541 "kept the page's own
+            // …/calendar" lines survived the fix.
             if (pageClassification && !event._pageClassification) {
                 event._pageClassification = pageClassification;
+            }
+            if (sourcePageUrl && !event._sourcePageUrl) {
+                event._sourcePageUrl = sourcePageUrl;
             }
             return this.applyFieldPriorities(event, parserConfig, mainConfig);
         });
@@ -11321,7 +11328,21 @@ class SharedCore {
             const isPoster = group.some((a, i) => group.some((b, j) => j > i
                 && !sameName(a, b) && this.areEventsDistinctByPlace(a, b)));
             if (!isPoster) continue;
+            // Trust the pointer: a flyer whose FILENAME names exactly one of
+            // the events is that event's flyer, cross-paired onto the others
+            // (beefdip.com/planned-events, run 20260914-194238: "2026-01-28
+            // FURBALL Pool Party.webp" sat on "🍸 Cocktail Party" too, and
+            // the first cut withheld it from FURBALL POOL PARTY as well).
+            // The owner keeps it; the others lose it. An opaque asset name
+            // (cloudfront hashes) names nobody, and so does one that names
+            // several — then nobody keeps it.
+            const owners = group.filter(event => this.imageFilenameNamesEvent(key, event));
+            const owner = owners.length === 1 ? owners[0] : null;
             for (const event of group) {
+                if (event === owner) {
+                    console.log(`🖼️ IMAGE: ${event.title || 'event'} keeps ${event.image || event.imageVertical || event.imageHorizontal} — the flyer's filename names this event, not the ${group.length - 1} other(s) wearing it`);
+                    continue;
+                }
                 const cleared = [];
                 let url = '';
                 for (const field of IMAGE_MERGE_FIELDS) {
@@ -11338,6 +11359,22 @@ class SharedCore {
             }
         }
         return withheld;
+    }
+
+    // Does the image's FILENAME spell out this event's name? Every title
+    // token (getCrossSourceTitleTokens, at least two of them) must appear in
+    // the decoded last path segment, so "Mega-Bear-Blast-2026.jpg" names
+    // "MEGA BEAR BLAST!" and "2026-01-28 FURBALL Pool Party.webp" names
+    // "FURBALL POOL PARTY", while a one-word coincidence ("party") does not.
+    imageFilenameNamesEvent(imageUrl, event) {
+        const raw = String(imageUrl || '').split('?')[0].split('#')[0];
+        let filename = raw.slice(raw.lastIndexOf('/') + 1);
+        try { filename = decodeURIComponent(filename); } catch (_) {}
+        const fileTokens = new Set(this.foldDiacritics(filename).replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean));
+        if (fileTokens.size === 0) return false;
+        const titleTokens = this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '');
+        if (titleTokens.length < 2) return false;
+        return titleTokens.every(token => fileTokens.has(token));
     }
 
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
