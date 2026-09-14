@@ -1026,3 +1026,19 @@ test('renderReviewPage lists the shared runs, marks the syncing ones, and ships 
   assert.ok(html.includes('"executeLink":"scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1"'));
   assert.ok(html.includes('id="sheet-tags"') && html.includes('id="btn-undo"'), 'reject sheet and undo present');
 });
+
+test('renderReviewCard (update with only notes changes): the notes rows are the diff, with a soft hyphen made visible', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'override', key: 'k', proposal: {
+    kind: 'override', title: 'CUBSCOUT', existingTitle: 'CUBSCOUT', startDate: '2030-10-04T04:00:00.000Z', timezone: 'America/Los_Angeles', bar: 'Eagle LA', city: 'nyc',
+    overrideOf: '2030-10-04T04:00:00.000Z', changes: {}
+  }, display: { notesChanges: [
+    { key: 'shortName', from: 'CUB-SCOUT', to: 'CUB­SCOUT' },
+    { key: 'facebook', from: '', to: 'https://www.facebook.com/eagle.bar.la/' }
+  ] } }, ctx);
+  assert.ok(html.includes('<span>series night has</span><span>this night becomes</span>'), 'the change block renders for notes-only changes');
+  assert.ok(html.includes('<span class="chg-k">Short name</span>') && html.includes('<span class="was">CUB-SCOUT</span>') && html.includes('<span class="now">CUB·SCOUT</span>'));
+  assert.ok(html.includes('· marks a soft hyphen'));
+  assert.ok(html.includes('<span class="chg-k">Facebook</span>') && html.includes('>facebook.com/eagle.bar.la/</a>'));
+  assert.ok(!html.includes('+ notes'), 'no blurb when the rows carry the change');
+});

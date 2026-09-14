@@ -644,9 +644,9 @@ function describeReviewChange(field, change, proposal, ctx) {
 // `context` = { field: why } from the merge's own decision records (the
 // same wording the results card shows under its rows). For an override the
 // left column is the series night being replaced.
-function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) {
+function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}, extraRows = '') {
     const fields = changes && typeof changes === 'object' ? Object.keys(changes) : [];
-    if (fields.length === 0) return '';
+    if (fields.length === 0 && !extraRows) return '';
     const rows = fields.map((field) => {
         const described = describeReviewChange(field, changes[field] || {}, proposal, ctx);
         const label = REVIEW_CHANGE_LABELS[field] || field;
@@ -656,18 +656,37 @@ function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) 
     const head = proposal.kind === 'override'
         ? '<span>series night has</span><span>this night becomes</span>'
         : '<span>calendar has</span><span>would become</span>';
-    return `<div class="chgs"><div class="chgs-head">${head}</div>${rows}</div>`;
+    return `<div class="chgs"><div class="chgs-head">${head}</div>${rows}${extraRows || ''}</div>`;
 }
 
-// "+ notes: added instagram, facebook · updated description" — what else
-// the write touches, without the bookkeeping.
-function renderReviewNotesChanges(display = {}) {
-    const parts = [];
-    if (Array.isArray(display.notesAdded) && display.notesAdded.length) parts.push(`added ${display.notesAdded.join(', ')}`);
-    if (Array.isArray(display.notesUpdated) && display.notesUpdated.length) parts.push(`updated ${display.notesUpdated.join(', ')}`);
-    if (Array.isArray(display.notesRemoved) && display.notesRemoved.length) parts.push(`removed ${display.notesRemoved.join(', ')}`);
-    if (parts.length === 0) return display.notesOnlyAlso ? '<div class="line muted">+ notes updated</div>' : '';
-    return `<div class="line muted">+ notes: ${escapeHtmlText(parts.join(' · '))}</div>`;
+// Notes-level changes as rows of their own, under the stored-field rows —
+// with values, so an update whose stored fields all match still shows what
+// it writes (CUBSCOUT: "Short name CUB-SCOUT → CUB·SCOUT"). Invisible
+// characters are made visible (a soft hyphen renders as "·").
+const REVIEW_NOTES_LABELS = {
+    shortName: 'Short name', shorterName: 'Shorter name', description: 'Description', website: 'Website', ticketUrl: 'Tickets',
+    instagram: 'Instagram', facebook: 'Facebook', cover: 'Cover', bar: 'Venue', address: 'Address', image: 'Image',
+    imageVertical: 'Image (portrait)', imageHorizontal: 'Image (landscape)', bearSource: 'Bear verdict', bearReview: 'Bear review',
+    festival: 'Festival', tea: 'Tea', recurrence: 'Recurrence', city: 'City'
+};
+function reviewVisibleText(value) {
+    return String(value == null ? '' : value).replace(/\u00ad/g, '·').replace(/[\u200b\u200c\u200d\ufeff]/g, '⁞');
+}
+function renderReviewNotesChangeRows(display = {}) {
+    const list = Array.isArray(display.notesChanges) ? display.notesChanges : [];
+    if (list.length === 0) return '';
+    const none = '<span class="none">∅</span>';
+    const cell = (value) => {
+        if (!value) return none;
+        const text = reviewVisibleText(value);
+        if (/^https?:\/\//i.test(text)) return reviewAnchor(text, reviewUrlLabel(text, 60));
+        return escapeHtmlText(text.length > 160 ? `${text.slice(0, 160)}…` : text);
+    };
+    return list.map((change) => {
+        const label = REVIEW_NOTES_LABELS[change.key] || change.key;
+        const softHyphen = /\u00ad/.test(String(change.to || '')) || /\u00ad/.test(String(change.from || ''));
+        return `<div class="chg chg-notes" data-field="${escapeHtmlText(change.key)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${cell(change.from)}</span><span class="arrow">→</span><span class="now">${cell(change.to)}</span></span>${softHyphen ? '<span class="chg-n">· marks a soft hyphen (a line-break hint, invisible on the site)</span>' : ''}</div>`;
+    }).join('');
 }
 
 // ---- cards -----------------------------------------------------------------
@@ -837,7 +856,7 @@ function renderReviewCard(entry, ctx = {}) {
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
   ${chips ? `<div class="chips">${chips}</div>` : ''}
   ${renderReviewBearRow(display, proposal)}
-  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext) : ''}
+  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display)) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
@@ -960,6 +979,7 @@ a { color:var(--accent); }
 .chg-n { grid-column:2; font-size:12px; color:var(--muted); }
 .chg-n.warn { color:var(--no); font-weight:600; }
 .chg-n.why { color:var(--ink); opacity:.8; }
+.chg-notes .now { color:var(--ink); }
 .evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
 .notes { margin-top:10px; font-size:12px; }
 .notes summary { cursor:pointer; color:var(--muted); }
