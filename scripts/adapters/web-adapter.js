@@ -872,7 +872,13 @@ class WebAdapter {
                     errors: results.errors || [],
                     calendarHygiene: Array.isArray(results.calendarHygiene)
                         ? results.calendarHygiene
-                        : []
+                        : [],
+                    // New-venue candidates ride with the run so the Mac
+                    // server's review deck (tools/review-queue.js) can offer
+                    // them as cards.
+                    ...(Array.isArray(results.newVenueCandidates) && results.newVenueCandidates.length > 0
+                        ? { newVenueCandidates: results.newVenueCandidates }
+                        : {})
                 };
                 const runFilePath = this.path.join(runsDir, `${runId}.json`);
                 await this.writeFileAtomicallyNode(runFilePath, this.stringifyRunPayload(payload));

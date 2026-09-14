@@ -690,3 +690,219 @@ test('run-once: UV_THREADPOOL_SIZE headroom is defaulted at the entry point and 
     'scheduled runs get the headroom even if the entry-point default ever moves'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Review deck (v2): renderers, the Scriptable hand-off link, and the routes
+// (exercised through handleRequest with a temp shared dir — the first
+// HTTP-level coverage this server has).
+// ---------------------------------------------------------------------------
+const fs = require('node:fs');
+const os = require('node:os');
+const {
+  resolveReviewScriptName,
+  buildScriptableExecuteLink,
+  formatReviewDateLine,
+  renderReviewCard,
+  renderReviewPage,
+  createServerState,
+  handleRequest
+} = require('../tools/serve-results');
+const reviewQueue = require('../tools/review-queue');
+
+test('formatReviewDateLine prints the event\'s own zone, spans days honestly, and admits a missing end', () => {
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z', 'America/New_York'), 'Thu, Oct 3 · 10:00 PM – Fri, Oct 4 1:00 AM');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T03:30:00.000Z', 'America/New_York'), 'Thu, Oct 3 · 10:00 PM – 11:30 PM');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'America/New_York'), 'Thu, Oct 3 · 10:00 PM (no end listed)');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'Not/AZone'), 'Fri, Oct 4 · 2:00 AM (no end listed)', 'unknown zone falls back to UTC');
+  assert.equal(formatReviewDateLine('garbage', null, 'UTC'), '');
+});
+
+test('the Scriptable hand-off link names the phone script and the run, and the name is overridable', () => {
+  assert.equal(buildScriptableExecuteLink('20260913-051750', 'display-saved-run'),
+    'scriptable:///run?scriptName=display-saved-run&runId=20260913-051750&reviewExecute=1');
+  assert.equal(buildScriptableExecuteLink('20260913-051750', 'Display Saved Run'),
+    'scriptable:///run?scriptName=Display%20Saved%20Run&runId=20260913-051750&reviewExecute=1');
+  assert.equal(buildScriptableExecuteLink(''), '');
+  assert.equal(resolveReviewScriptName({}), 'display-saved-run');
+  assert.equal(resolveReviewScriptName({ CHUNKY_REVIEW_SCRIPT_NAME: ' My Script ' }), 'My Script');
+});
+
+test('renderReviewCard: new, update and bar cards carry their facts escaped, with the diff rows and links', () => {
+  const fresh = renderReviewCard({ kind: 'new', key: 'k', proposal: {
+    title: 'Bear <b>Night</b>', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T06:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', source: 'Furball', url: 'https://furball.nyc/', ticketUrl: 'https://tickets.example/x',
+    image: 'https://furball.nyc/flyer.jpg', cover: '$20', description: 'Bears "welcome"', changes: {}
+  } });
+  assert.ok(fresh.includes('✨ New event'));
+  assert.ok(fresh.includes('Bear &lt;b&gt;Night&lt;/b&gt;'), 'title escaped');
+  assert.ok(fresh.includes('Thu, Oct 3 · 10:00 PM – Fri, Oct 4 2:00 AM'));
+  assert.ok(fresh.includes('📍 Rockbar · 185 Christopher St · nyc'));
+  assert.ok(fresh.includes('href="https://tickets.example/x"') && fresh.includes('>Tickets<'));
+  assert.ok(fresh.includes('<img src="https://furball.nyc/flyer.jpg"'));
+  assert.ok(fresh.includes('Bears &quot;welcome&quot;'));
+  assert.ok(!fresh.includes('<table'), 'a new event has no diff');
+
+  const update = renderReviewCard({ kind: 'merge', key: 'k', proposal: {
+    title: 'BEEFMINCE x RVT', existingTitle: 'BEEFMINCE Brief Encounter', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', source: 'The Bear Calendar',
+    changes: { title: { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' } }
+  } });
+  assert.ok(update.includes('🔀 Update saved event'));
+  assert.ok(update.includes('calendar title: BEEFMINCE Brief Encounter'));
+  assert.ok(update.includes('<th>title</th><td class="from">BEEFMINCE Brief Encounter</td><td class="to">BEEFMINCE x RVT</td>'));
+
+  const bar = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
+    name: 'The Woods', city: 'nyc', address: '48 S 4th St', coordinates: '40.71, -73.96', signals: ['page-adjacent'],
+    website: 'https://thewoods.example/', instagram: '', sourceEvents: [{ title: 'BEAR NIGHT', date: '2030-02-02T02:00:00.000Z' }], evidence: []
+  } });
+  assert.ok(bar.includes('🏳️‍🌈 New bar') && bar.includes('<h2>The Woods</h2>'));
+  assert.ok(bar.includes('google.com/maps/search/?api=1&amp;query=40.71%2C%20-73.96'));
+  assert.ok(bar.includes('<li>BEAR NIGHT <span class="muted">2030-02-02</span></li>'));
+  assert.ok(bar.includes('>Website<') && !bar.includes('>Instagram<'), 'blank links render no chip');
+});
+
+test('injectHeaderBar links the review deck with its pending count', () => {
+  assert.ok(injectHeaderBar('<html><body></body></html>', { reviewPending: 3 }).includes('🃏 Review (3)'));
+  const none = injectHeaderBar('<html><body></body></html>', { reviewPending: 0 });
+  assert.ok(none.includes('🃏 Review</a>'));
+});
+
+// --- routes -----------------------------------------------------------------
+
+function fakeRequest(method, url, body) {
+  const handlers = {};
+  return {
+    method,
+    url,
+    headers: {},
+    on(event, callback) {
+      handlers[event] = callback;
+      if (event === 'end') {
+        setImmediate(() => {
+          if (body && handlers.data) handlers.data(body);
+          handlers.end();
+        });
+      }
+      return this;
+    },
+    destroy() {}
+  };
+}
+
+function fakeResponse() {
+  return {
+    status: null,
+    headers: null,
+    body: '',
+    writeHead(status, headers) { this.status = status; this.headers = headers; },
+    end(chunk) { this.body = String(chunk == null ? '' : chunk); }
+  };
+}
+
+async function request(state, method, url, body) {
+  const res = fakeResponse();
+  await handleRequest(state, fakeRequest(method, url, body), res);
+  return res;
+}
+
+function reviewRunFixture(runId) {
+  const start = '2030-10-04T02:00:00.000Z';
+  return {
+    version: 2,
+    summary: { runId, timestamp: '2030-01-01T05:15:00.000Z', totals: { totalEvents: 1, bearEvents: 1 } },
+    runContext: { environment: 'node', type: 'automated' },
+    config: { cities: { nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, config: { dryRun: true }, parsers: [] },
+    analyzedEvents: [{
+      title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', timezone: 'America/New_York',
+      startDate: start, endDate: '2030-10-04T06:00:00.000Z', url: 'https://furball.nyc/',
+      _parserConfig: { name: 'Furball', dryRun: false }, _action: 'new'
+    }],
+    bearDroppedEvents: [], parserResults: [], errors: [], calendarHygiene: []
+  };
+}
+
+test('review routes: deck → decide → decided → undo, over a temp shared dir', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-server-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('FURBALL NYC'), 'the card is on the page');
+    assert.ok(page.body.includes('scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1'), 'hand-off link for THIS run');
+    assert.ok(page.body.includes('window.__reviewDeck = {'), 'deck payload inlined');
+    assert.ok(page.body.includes('"wrong venue"'), 'reject chips shipped');
+
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.ok, true);
+    assert.equal(deck.counts.pending, 1);
+    const card = deck.cards[0];
+    assert.equal(card.key, 'event|furball|rockbar|2030-10-03');
+
+    const bad = await request(state, 'POST', '/review/decide', '{nope');
+    assert.equal(bad.status, 400);
+    const noVerdict = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'maybe' }));
+    assert.equal(noVerdict.status, 400);
+
+    const decided = await request(state, 'POST', '/review/decide', JSON.stringify({
+      key: card.key, kind: card.kind, verdict: 'reject', runId: deck.runId, snapshot: card.proposal,
+      reason: { tags: ['wrong venue'], text: 'it moved to the Eagle' }
+    }));
+    assert.equal(decided.status, 200, decided.body);
+    assert.equal(JSON.parse(decided.body).decisions, 1);
+    const stored = JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8'));
+    assert.equal(stored.decisions[0].key, card.key);
+    assert.equal(stored.decisions[0].reason.text, 'it moved to the Eagle');
+
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(after.counts.pending, 0, 'decided cards leave the deck');
+    assert.equal(after.decided[0].decision.verdict, 'reject');
+    const rejections = await request(state, 'GET', '/review/rejections');
+    assert.ok(rejections.body.includes('NEW FURBALL NYC — 2030-10-04 @ Rockbar [Furball] {wrong venue} — it moved to the Eagle'));
+    const decisionsJson = JSON.parse((await request(state, 'GET', '/review/decisions.json')).body);
+    assert.equal(decisionsJson.decisions.length, 1);
+
+    const cleared = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'clear' }));
+    assert.equal(JSON.parse(cleared.body).removed, true);
+    assert.equal(JSON.parse((await request(state, 'GET', '/review/deck.json')).body).counts.pending, 1, 'undo puts the card back');
+
+    const fallback = await request(state, 'GET', '/review?run=not-a-run');
+    assert.ok(fallback.body.includes('FURBALL NYC'), 'a bad run id falls back to the newest run');
+    const missing = await request(state, 'GET', '/review?run=20200101-000000');
+    assert.ok(missing.body.includes('could not be read'));
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('review page without any saved run explains where runs come from', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-empty-'));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  try {
+    const page = await request(createServerState(), 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('No saved runs in the shared dir yet'));
+    assert.equal(JSON.parse((await request(createServerState(), 'GET', '/review/deck.json')).body).ok, false);
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('renderReviewPage lists the shared runs, marks the syncing ones, and ships the decided list', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const html = renderReviewPage(deck, {
+    runs: [{ runId: '20300102-051500', available: false }, { runId: '20300101-051500', available: true }],
+    scriptName: 'display-saved-run'
+  });
+  assert.ok(html.includes('<option value="20300102-051500" disabled>20300102-051500 (syncing)</option>'));
+  assert.ok(html.includes('<option value="20300101-051500" selected>20300101-051500</option>'));
+  assert.ok(html.includes('"executeLink":"scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1"'));
+  assert.ok(html.includes('id="sheet-tags"') && html.includes('id="btn-undo"'), 'reject sheet and undo present');
+});

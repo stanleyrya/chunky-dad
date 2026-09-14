@@ -11130,3 +11130,200 @@ test('page-cache URL normalization drops the fragment even without a global URL'
     'one page, one cache entry'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Owner review (the Mac server's swipe deck): the decision store read and
+// the reviewed-run execute path — no WebView, the owner's swipes are the gate.
+// ---------------------------------------------------------------------------
+const { SharedCore: ReviewSharedCore } = require('../shared-core');
+const { EventSchema: ReviewEventSchema } = require('../event-schema');
+
+test('loadOwnerDecisions reads the Mac-written store (either shape), downloads from iCloud first, and never throws', async () => {
+  const adapter = buildAdapter();
+  const downloads = [];
+  adapter.fm = {
+    ...fileManagerStub,
+    fileExists: () => true,
+    downloadFileFromiCloud: async (filePath) => { downloads.push(filePath); },
+    readString: () => JSON.stringify({ version: 1, decisions: [{ key: 'event|a', verdict: 'approve' }, { key: 'event|b', verdict: 'later' }, 'junk'] })
+  };
+  const decisions = await adapter.loadOwnerDecisions();
+  assert.deepEqual(decisions.map((entry) => entry.key), ['event|a'], 'only approve/reject entries with a key count');
+  assert.ok(downloads[0].endsWith('/chunky-dad-scraper/owner-decisions.json'), 'the iCloud download is kicked before the read');
+
+  adapter.fm = { ...fileManagerStub, fileExists: () => true, readString: () => '[{"key":"event|c","verdict":"reject"}]' };
+  assert.equal((await adapter.loadOwnerDecisions())[0].key, 'event|c', 'bare array accepted');
+  adapter.fm = { ...fileManagerStub, fileExists: () => true, readString: () => '{oops' };
+  assert.deepEqual(await adapter.loadOwnerDecisions(), [], 'corrupt store → empty, never a throw');
+  adapter.fm = { ...fileManagerStub, fileExists: () => false };
+  assert.deepEqual(await adapter.loadOwnerDecisions(), []);
+});
+
+const REVIEW_RUN_START = '2030-10-04T02:00:00.000Z';
+
+function reviewedNew(title) {
+  return {
+    title,
+    bar: 'Rockbar',
+    address: '185 Christopher St, New York, NY',
+    city: 'nyc',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    _parserConfig: { name: 'Furball', dryRun: false },
+    _action: 'new'
+  };
+}
+
+function reviewedHousekeepingMerge() {
+  const existing = {
+    title: 'BEEFMINCE Brief Encounter',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    notes: 'bar: Royal Vauxhall Tavern'
+  };
+  return {
+    title: 'BEEFMINCE Brief Encounter',
+    bar: 'Royal Vauxhall Tavern',
+    city: 'nyc',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    url: 'https://beefmince.co.uk/',
+    notes: 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.co.uk/',
+    _parserConfig: { name: 'The Bear Calendar', dryRun: false },
+    _action: 'merge',
+    _existingEvent: existing,
+    _original: { scraper: {}, calendar: { ...existing, website: 'https://beefmince.co.uk/' } },
+    _changes: ['notes'],
+    _mergeNoOp: false
+  };
+}
+
+function buildReviewedRunResults(analyzedEvents) {
+  return {
+    _isDisplayingSavedRun: true,
+    sourceRunId: '20260810-101010',
+    _savedRunTimestamp: '2026-08-10T10:10:10.000Z',
+    totalEvents: analyzedEvents.length,
+    bearEvents: analyzedEvents.length,
+    calendarEvents: 0,
+    errors: [],
+    parserResults: [{ name: 'Furball', bearEvents: 1, totalEvents: 1 }],
+    analyzedEvents,
+    runContext: { type: 'display', environment: 'scriptable', trigger: 'saved-run' },
+    // A Mac-born run: run-once forces dryRun on the saved config.
+    config: { parsers: [{ name: 'Furball', dryRun: false }], config: { dryRun: true } }
+  };
+}
+
+// Wires the persistence/UI seams to capturing stubs; the identity core is a
+// REAL SharedCore whose live analysis is replaced by a canned fresh plan.
+function instrumentReviewedRunAdapter(adapter, freshPlan, captured) {
+  const core = new ReviewSharedCore({ nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, { eventSchema: ReviewEventSchema });
+  core.prepareEventsForCalendar = async (events, calendarAdapter, globalConfig) => {
+    captured.analyzed = events;
+    captured.globalConfig = globalConfig;
+    return freshPlan.map((event) => ({ ...event }));
+  };
+  adapter._identityCore = core;
+  adapter.executeCalendarActions = async (events) => {
+    captured.executed = events;
+    adapter.lastExecutionActionCounts = {
+      create: events.filter((event) => event._action === 'new').length,
+      update: events.filter((event) => event._action === 'merge').length,
+      skip: 0,
+      failed: 0,
+      processed: events.length,
+      analyzed: events.length
+    };
+    return events.length;
+  };
+  adapter.preflightSavedRunWriteAccess = async () => true;
+  adapter.presentSavedRunExecutionNotice = async (title, message) => { captured.notices.push({ title, message }); };
+  adapter.persistExecutedSavedRunSnapshot = async (results) => { captured.persisted = results; return results.sourceRunId; };
+  adapter.runPostRunHousekeeping = async (results, retentionDays, options) => { captured.housekeeping = { retentionDays, options }; };
+  adapter.recordCalendarWriteFailures = () => 0;
+  return core;
+}
+
+test('executeReviewedSavedRun writes the approved cards plus housekeeping, withholds the rest, and leaves the full audit trail', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const freshPlan = [reviewedNew('Approved Party'), reviewedNew('Mystery Party'), reviewedNew('Bad Party'), reviewedHousekeepingMerge()];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  const decisions = [
+    { key: core.getOwnerReviewKey(freshPlan[0]), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} },
+    { key: core.getOwnerReviewKey(freshPlan[2]), verdict: 'reject', reason: { tags: ['wrong venue'], text: 'wrong venue' } }
+  ];
+  const stale = freshPlan.map((event) => ({ ...event, _action: 'new', _analysis: { action: 'new', reason: 'Mac-run time' } }));
+  const results = buildReviewedRunResults(stale);
+
+  const summary = await adapter.executeReviewedSavedRun(results, decisions);
+
+  // mandatory re-analysis on the stripped events, with dryRun cleared for this path only
+  assert.equal(captured.analyzed.length, 4);
+  assert.equal(captured.analyzed[3]._action, undefined, 'stale saved intents never enter re-analysis');
+  assert.equal(captured.analyzed[0]._savedRunSourceIndex, 0);
+  assert.equal(captured.globalConfig.dryRun, false, 'the Mac run\'s forced dryRun is cleared for the reviewed execution');
+  assert.equal(results.config.config.dryRun, false);
+  // what was written
+  assert.deepEqual(captured.executed.map((event) => event.title), ['Approved Party', 'BEEFMINCE Brief Encounter'],
+    'the approval and the notes-only housekeeping merge write; the unreviewed and rejected ones do not');
+  assert.equal(summary.approved, 1);
+  assert.equal(summary.awaiting, 1);
+  assert.equal(summary.rejected, 1);
+  assert.equal(summary.housekeeping, 1);
+  assert.equal(summary.executable, 2);
+  assert.equal(summary.processed, 2);
+  assert.equal(summary.created, 1);
+  assert.equal(summary.updated, 1);
+  assert.equal(summary.wrote, true);
+  // the fresh plan (with the review stamps) is what the file now holds
+  const byTitle = Object.fromEntries(results.analyzedEvents.map((event) => [event.title, event]));
+  assert.equal(byTitle['Mystery Party']._ownerReviewWithheld.status, 'awaiting');
+  assert.equal(byTitle['Bad Party']._ownerReviewWithheld.reason, 'wrong venue');
+  assert.equal(byTitle['Approved Party']._ownerReviewApproved.key, decisions[0].key);
+  // audit trail + metadata parity with a normal execute
+  assert.equal(captured.persisted, results, 'execution outcome written back to the run file');
+  assert.equal(results.savedRunExecutions[0].via, 'owner-review');
+  assert.deepEqual(results.savedRunExecutions[0].ownerReview, { approved: 1, rejected: 1, awaiting: 1, housekeeping: 1, withheld: 0 });
+  assert.equal(results.runContext.trigger, 'owner-review');
+  assert.equal(results.runContext.type, 'manual', 'metrics see a manual, owner-driven execution');
+  assert.match(captured.housekeeping.options.logRunId, /^20260810-101010-review-\d{8}-\d{6}$/, 'the review log never overwrites the Mac run\'s own log');
+  assert.equal(captured.housekeeping.options.pruneRuns, true);
+  assert.deepEqual(adapter.lastExecutionActionCounts, { create: 1, update: 1, skip: 2, failed: 0, processed: 2, analyzed: 4 },
+    'withheld events fold into the skips so the record covers the whole plan');
+  const metrics = adapter.buildMetricsRecord(results);
+  assert.equal(metrics.calendar_actions_mode, 'executed', 'metrics report what was executed, not a plan');
+  assert.deepEqual(metrics.calendar_actions, { create: 1, update: 1, skip: 2, failed: 0, other: 0 });
+  assert.equal(metrics.trigger_type, 'manual');
+  const last = captured.notices[captured.notices.length - 1];
+  assert.equal(last.title, 'Calendar Updated');
+  assert.ok(last.message.includes('Created 1') && last.message.includes('Updated 1') && last.message.includes('Awaiting review 1'));
+});
+
+test('executeReviewedSavedRun with nothing approved writes nothing and says so', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  instrumentReviewedRunAdapter(adapter, [reviewedNew('Mystery Party')], captured);
+  const results = buildReviewedRunResults([{ ...reviewedNew('Mystery Party'), _analysis: {} }]);
+  const summary = await adapter.executeReviewedSavedRun(results, []);
+  assert.equal(summary.wrote, false);
+  assert.equal(summary.awaiting, 1);
+  assert.equal(captured.executed, undefined, 'no calendar write');
+  assert.equal(captured.persisted, undefined);
+  assert.equal(captured.notices[0].title, 'Nothing to Write');
+  assert.equal(results.analyzedEvents[0]._ownerReviewWithheld.status, 'awaiting', 'the plan still shows why');
+});
+
+test('results-section mirrors: an owner-review withhold lands in the withheld pile with its reason and never promises a write', () => {
+  const adapter = buildAdapter();
+  const rejected = { title: 'Bad Party', _action: 'new', _ownerReviewWithheld: { status: 'rejected', reason: 'wrong venue', tags: ['wrong venue'] } };
+  const awaiting = { title: 'Mystery Party', _action: 'merge', _ownerReviewWithheld: { status: 'awaiting' } };
+  assert.deepEqual(adapter.classifyEventForResultsSection(rejected), { section: 'withheld', reason: '🚫 rejected by owner — wrong venue' });
+  assert.deepEqual(adapter.classifyEventForResultsSection(awaiting), { section: 'withheld', reason: '🃏 awaiting owner review — not swiped yet' });
+  assert.equal(adapter.getWriteActionFromEvent(rejected), 'withheld');
+  assert.equal(adapter.getWriteActionFromEvent(awaiting), 'withheld');
+  assert.equal(adapter.getWriteActionFromEvent({ title: 'x', _action: 'new' }), 'create', 'unstamped events are untouched');
+});

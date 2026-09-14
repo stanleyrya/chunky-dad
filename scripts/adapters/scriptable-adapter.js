@@ -1610,6 +1610,58 @@ class ScriptableAdapter {
     );
   }
 
+  // ---------------------------------------------------------------------
+  // OWNER DECISIONS — owner-decisions.json (WRITTEN BY THE MAC ONLY: the
+  // tailnet server's swipe deck, tools/serve-results.js /review; this
+  // adapter only ever reads it). Consumed by executeReviewedSavedRun, where
+  // SharedCore.applyOwnerDecisions matches each fresh proposal against the
+  // owner's approve/reject swipes. Same read discipline as the bear verdict
+  // store: iCloud download first, either wrapper shape, empty on any fault.
+  // ---------------------------------------------------------------------
+  getOwnerDecisionsFilePath() {
+    return this.fm.joinPath(this.baseDir, "owner-decisions.json");
+  }
+
+  async loadOwnerDecisions() {
+    const path = this.getOwnerDecisionsFilePath();
+    try {
+      if (!this.fm.fileExists(path)) {
+        console.log(
+          "📱 Scriptable: No owner decision store yet (owner-decisions.json) — nothing approved",
+        );
+        return [];
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      const decisions =
+        parsed && !Array.isArray(parsed) && Array.isArray(parsed.decisions)
+          ? parsed.decisions
+          : Array.isArray(parsed)
+            ? parsed
+            : null;
+      if (!decisions) {
+        console.log(
+          "📱 Scriptable: Owner decision store has unexpected shape — treating as empty",
+        );
+        return [];
+      }
+      return decisions.filter(
+        (entry) =>
+          entry &&
+          typeof entry === "object" &&
+          typeof entry.key === "string" &&
+          (entry.verdict === "approve" || entry.verdict === "reject"),
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Owner decision store read failed (${error.message}) — treating as empty`,
+      );
+      return [];
+    }
+  }
+
   // Fold one tapped candidate into the queue object (caller persists).
   // Existing key → merge: bump lastSeen/timesSeen, union signals/runIds/
   // sourceEvents (runIds keep the 10 most recent, sourceEvents cap at 5),
@@ -5564,100 +5616,12 @@ class ScriptableAdapter {
         console.log(`📱 Scriptable: Skipping run save (${reason})`);
       }
 
-      // Append a log file entry and cleanup logs (skip saved-run display)
+      // Log, metrics and cache prunes — shared with the reviewed-run execute
+      // path (runPostRunHousekeeping), skipped for a saved-run redisplay.
       if (!results?._isDisplayingSavedRun) {
-        try {
-          await this.ensureRelativeStorageDirs();
-          await this.appendLogSummary(results);
-          await this.cleanupOldFiles("chunky-dad-scraper/logs", {
-            maxAgeDays: retentionDays,
-            keep: (name) => {
-              const lower = name.toLowerCase();
-              return lower.includes("performance") || lower.endsWith(".csv");
-            },
-          });
-        } catch (logErr) {
-          console.log(
-            `📱 Scriptable: Log write/cleanup failed: ${logErr.message}`,
-          );
-        }
+        await this.runPostRunHousekeeping(results, retentionDays);
       } else {
         console.log("📱 Scriptable: Skipping log write (display mode)");
-      }
-
-      if (!results?._isDisplayingSavedRun) {
-        // Append metrics record and update summary
-        try {
-          await this.ensureRelativeStorageDirs();
-          const metricsRecord = this.buildMetricsRecord(results);
-          if (metricsRecord) {
-            await this.appendMetricsRecord(metricsRecord, retentionDays);
-            await this.updateMetricsSummary(metricsRecord);
-          } else {
-            console.log(
-              "📱 Scriptable: Skipping metrics write (missing runId)",
-            );
-          }
-        } catch (metricsErr) {
-          console.log(
-            `📱 Scriptable: Metrics write failed: ${metricsErr.message}`,
-          );
-        }
-      }
-
-      if (!results?._isDisplayingSavedRun) {
-        // Prune persistent caches. Pages past their TTL are dead weight
-        // already (readCachedPage ignores them), so they only get a 1-day
-        // grace. OCR/classification entries are retained by LAST USE: cache
-        // hits rewrite ("touch") the entry at most every 7 days (see
-        // AiWebParser.touchCacheEntryOnHit), so a file's mtime tracks its
-        // last use to within that window — pruning works from mtime alone,
-        // no payload reads, with the touch interval added as grace.
-        try {
-          const pageTtlDays = this.getPageCacheConfig().ttlDays;
-          const prunedPages = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/pages",
-            { maxAgeDays: pageTtlDays + 1, recurse: true },
-          );
-          if (prunedPages > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
-            );
-          }
-          const ocrRetentionDays = this.getOcrCacheRetentionDays();
-          const unusedCutoffDays = ocrRetentionDays + 7;
-          const prunedOcr = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/ocr",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedOcr > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedOcr} OCR cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-          const prunedClassification = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/classification",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedClassification > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-          const prunedAiResponses = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/ai-responses",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedAiResponses > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-        } catch (pruneErr) {
-          console.log(
-            `📱 Scriptable: Cache prune failed: ${pruneErr.message}`,
-          );
-        }
       }
     } catch (error) {
       console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -15637,6 +15601,309 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
+  // Post-run housekeeping shared by displayResults (live runs) and
+  // executeReviewedSavedRun: the run log, the metrics record + summary, and
+  // the persistent-cache prunes. Each part fails soft and independently, as
+  // before. options.logRunId writes the log under another id (see
+  // appendLogSummary); options.pruneRuns also prunes old run files.
+  async runPostRunHousekeeping(results, retentionDays = 30, options = {}) {
+    try {
+      await this.ensureRelativeStorageDirs();
+      await this.appendLogSummary(
+        results,
+        options.logRunId ? { runIdOverride: options.logRunId } : {},
+      );
+      await this.cleanupOldFiles("chunky-dad-scraper/logs", {
+        maxAgeDays: retentionDays,
+        keep: (name) => {
+          const lower = name.toLowerCase();
+          return lower.includes("performance") || lower.endsWith(".csv");
+        },
+      });
+    } catch (logErr) {
+      console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+    }
+
+    if (options.pruneRuns) {
+      try {
+        await this.cleanupOldFiles("chunky-dad-scraper/runs", {
+          maxAgeDays: retentionDays,
+          keep: (name) => !name.endsWith(".json"),
+        });
+      } catch (runsErr) {
+        console.log(`📱 Scriptable: Run cleanup failed: ${runsErr.message}`);
+      }
+    }
+
+    // Append metrics record and update summary
+    try {
+      await this.ensureRelativeStorageDirs();
+      const metricsRecord = this.buildMetricsRecord(results);
+      if (metricsRecord) {
+        await this.appendMetricsRecord(metricsRecord, retentionDays);
+        await this.updateMetricsSummary(metricsRecord);
+      } else {
+        console.log("📱 Scriptable: Skipping metrics write (missing runId)");
+      }
+    } catch (metricsErr) {
+      console.log(`📱 Scriptable: Metrics write failed: ${metricsErr.message}`);
+    }
+
+    // Prune persistent caches. Pages past their TTL are dead weight
+    // already (readCachedPage ignores them), so they only get a 1-day
+    // grace. OCR/classification entries are retained by LAST USE: cache
+    // hits rewrite ("touch") the entry at most every 7 days (see
+    // AiWebParser.touchCacheEntryOnHit), so a file's mtime tracks its
+    // last use to within that window — pruning works from mtime alone,
+    // no payload reads, with the touch interval added as grace.
+    try {
+      const pageTtlDays = this.getPageCacheConfig().ttlDays;
+      const prunedPages = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/pages",
+        { maxAgeDays: pageTtlDays + 1, recurse: true },
+      );
+      if (prunedPages > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
+        );
+      }
+      const ocrRetentionDays = this.getOcrCacheRetentionDays();
+      const unusedCutoffDays = ocrRetentionDays + 7;
+      const prunedOcr = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/ocr",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedOcr > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedOcr} OCR cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+      const prunedClassification = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/classification",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedClassification > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+      const prunedAiResponses = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/ai-responses",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedAiResponses > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+    } catch (pruneErr) {
+      console.log(`📱 Scriptable: Cache prune failed: ${pruneErr.message}`);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // EXECUTE A REVIEWED SAVED RUN — the swipe-deck path. Launched by
+  // display-saved-run.js from a scriptable:///run?…&reviewExecute=1 link
+  // the Mac server builds. No WebView: the owner already reviewed every
+  // card on the Mac. The saved run is re-analyzed against the LIVE calendar
+  // (never the saved intents — same doctrine as executeSavedRunWrites),
+  // SharedCore.applyOwnerDecisions writes what his swipes approved plus the
+  // notes-only housekeeping merges, withholds the rest, and the run leaves
+  // the same metadata a normal execute leaves: the run file (with an
+  // executions[] entry), a log, a metrics record, the cache prunes. One
+  // Alert with the counts at the end.
+  //
+  // dryRun: Mac-born runs carry config.config.dryRun === true (run-once
+  // forces it — the Mac itself never writes). This path is the one
+  // sanctioned writer of those runs; the owner's explicit approvals are the
+  // safety, so the flag is cleared HERE, for this execution only, and the
+  // override is logged. Returns the counts; never throws.
+  // ---------------------------------------------------------------------
+  async executeReviewedSavedRun(results, decisions) {
+    const summary = {
+      approved: 0,
+      rejected: 0,
+      awaiting: 0,
+      housekeeping: 0,
+      withheld: 0,
+      executable: 0,
+      processed: 0,
+      failed: 0,
+      created: 0,
+      updated: 0,
+      wrote: false,
+    };
+    try {
+      const savedEvents = Array.isArray(results && results.analyzedEvents)
+        ? results.analyzedEvents
+        : [];
+      const store = Array.isArray(decisions) ? decisions : [];
+      const ageLabel = this.describeSavedRunAgeLabel(results);
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved event(s), ${store.length} owner decision(s). Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
+      );
+      if (savedEvents.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing to Execute",
+          `This run (${ageLabel}) has no analyzable events, so there is nothing to write.`,
+        );
+        return summary;
+      }
+      const core = this.getIdentityCore();
+      if (
+        !core ||
+        typeof core.prepareEventsForCalendar !== "function" ||
+        typeof core.applyOwnerDecisions !== "function"
+      ) {
+        await this.presentSavedRunExecutionNotice(
+          "Cannot Execute",
+          "Shared core failed to initialize for the live calendar analysis. Nothing was written.",
+        );
+        return summary;
+      }
+
+      const toAnalyze = savedEvents.map((event, index) => ({
+        ...SharedCore.stripCalendarAnalysisStamps(event),
+        _savedRunSourceIndex: index,
+      }));
+      const loadedConfig =
+        (results && results.config && results.config.config) || {};
+      if (loadedConfig.dryRun) {
+        console.log(
+          "📱 Scriptable: 🃏 Loaded config says dryRun (a Mac-born run) — cleared for THIS reviewed execution only; the owner's approvals are the gate.",
+        );
+      }
+      const globalConfig = { ...loadedConfig, dryRun: false };
+      results.config = { ...(results.config || {}), config: globalConfig };
+
+      let freshAnalyzed;
+      try {
+        freshAnalyzed = await core.prepareEventsForCalendar(
+          toAnalyze,
+          this,
+          globalConfig,
+        );
+      } catch (error) {
+        await this.presentSavedRunExecutionNotice(
+          "Live Analysis Failed",
+          `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written.`,
+        );
+        return summary;
+      }
+      if (!Array.isArray(freshAnalyzed)) freshAnalyzed = [];
+
+      const counts = core.applyOwnerDecisions(freshAnalyzed, store);
+      Object.assign(summary, counts);
+      const freshExecutable = SharedCore.filterEventsForExecution(freshAnalyzed);
+      summary.executable = freshExecutable.length;
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed-run plan — ${freshAnalyzed.length} analyzed: ${counts.approved} approved, ${counts.housekeeping} housekeeping, ${counts.rejected} rejected, ${counts.awaiting} awaiting review, ${counts.withheld} withheld by the normal gate → ${freshExecutable.length} to write.`,
+      );
+      // The file reflects the fresh plan either way (executed or not): the
+      // owner sees what the live calendar made of his approvals.
+      results.analyzedEvents = freshAnalyzed;
+
+      if (freshExecutable.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing to Write",
+          `${counts.approved} approved, ${counts.awaiting} still awaiting review, ${counts.rejected} rejected. After the live re-analysis nothing is eligible for a calendar write, so nothing was written.`,
+        );
+        return summary;
+      }
+      if (!(await this.preflightSavedRunWriteAccess())) return summary;
+
+      const processedCount = await this.executeCalendarActions(
+        freshExecutable,
+        results.config,
+      );
+      summary.wrote = true;
+      results.calendarEvents = processedCount;
+      const failureCount = this.recordCalendarWriteFailures(results);
+      summary.processed = processedCount;
+      summary.failed = failureCount;
+
+      // Metrics honesty: buildMetricsRecord only reports "executed" counts
+      // when `analyzed` equals the plan it is summarizing. The write ran on
+      // the executable subset, so the withheld remainder is folded in as
+      // skips — which is exactly what the calendar saw.
+      const raw = this.lastExecutionActionCounts;
+      if (raw && typeof raw === "object") {
+        const withheldCount = Math.max(
+          0,
+          freshAnalyzed.length - freshExecutable.length,
+        );
+        this.lastExecutionActionCounts = {
+          ...raw,
+          skip: (raw.skip || 0) + withheldCount,
+          analyzed: freshAnalyzed.length,
+        };
+        summary.created = raw.create || 0;
+        summary.updated = raw.update || 0;
+      }
+
+      if (!Array.isArray(results.savedRunExecutions)) {
+        results.savedRunExecutions = [];
+      }
+      results.savedRunExecutions.push({
+        executedAt: new Date().toISOString(),
+        via: "owner-review",
+        runAgeAtExecution: ageLabel,
+        analyzed: freshAnalyzed.length,
+        executable: freshExecutable.length,
+        processed: processedCount,
+        failed: failureCount,
+        actionCounts: this.lastExecutionActionCounts || null,
+        ownerReview: { ...counts },
+      });
+      // Metrics name the trigger honestly: this was a manual, owner-driven
+      // execution of a saved run, not a display.
+      results.runContext = {
+        ...(results.runContext || {}),
+        type: "manual",
+        trigger: "owner-review",
+      };
+      await this.persistExecutedSavedRunSnapshot(results);
+      const runId = results.savedRunId || results.sourceRunId || "";
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\..+$/, "")
+        .replace("T", "-");
+      await this.runPostRunHousekeeping(results, 30, {
+        logRunId: runId ? `${runId}-review-${stamp}` : null,
+        pruneRuns: true,
+      });
+      await this.presentSavedRunExecutionNotice(
+        "Calendar Updated",
+        [
+          `➕ Created ${summary.created}`,
+          `🔄 Updated ${summary.updated}`,
+          `🃏 Approved ${counts.approved} · housekeeping ${counts.housekeeping}`,
+          `⏸️ Awaiting review ${counts.awaiting} · rejected ${counts.rejected}`,
+          failureCount > 0
+            ? `⚠️ ${failureCount} write(s) FAILED (recorded on the run file)`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+      return summary;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Reviewed-run execution failed: ${error.message}`,
+      );
+      try {
+        await this.presentSavedRunExecutionNotice(
+          "Reviewed-Run Execution Failed",
+          `${error.message}\n\nSome writes may have completed; the run log has details.`,
+        );
+      } catch (noticeError) {
+        /* already logged above */
+      }
+      return summary;
+    }
+  }
+
   async ensureRelativeStorageDirs() {
     try {
       const fm = this.fm || FileManager.iCloud();
@@ -15797,6 +16064,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // run from the saved-run display (absent until the first execution;
         // display-saved-run.js threads prior entries back through so
         // re-executions append instead of overwriting).
+        // New-venue candidates ride with the run so the Mac server's review
+        // deck (tools/review-queue.js) can offer them as cards.
+        ...(Array.isArray(results.newVenueCandidates) &&
+        results.newVenueCandidates.length > 0
+          ? { newVenueCandidates: results.newVenueCandidates }
+          : {}),
         ...(Array.isArray(results.savedRunExecutions) &&
         results.savedRunExecutions.length > 0
           ? { executions: results.savedRunExecutions }
@@ -15967,6 +16240,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         reason: `🎪 ${event._festivalMatch.reason || "matches curated festival"}`,
       };
     }
+    // Owner review (swipe deck, reviewed-run execute path): the owner's
+    // decision — or the lack of one — withheld the write.
+    if (event._ownerReviewWithheld) {
+      const review = event._ownerReviewWithheld;
+      return {
+        section: "withheld",
+        reason:
+          review.status === "rejected"
+            ? `🚫 rejected by owner${review.reason ? ` — ${review.reason}` : ""}`
+            : "🃏 awaiting owner review — not swiped yet",
+      };
+    }
     if (
       // _mergeNoOp is the write path's own no-op stamp (shared-core: final
       // payload field-identical to the calendar record, notes projection
@@ -16029,6 +16314,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // A curated-festival umbrella is withheld by the same gate — the curated
     // dataset renders the festival, the scraper contributes parties only.
     if (SharedCore.isCuratedFestivalUmbrella(event)) return "withheld";
+    // Owner review: rejected / not-yet-swiped proposals are withheld by the
+    // same gate on the reviewed-run execute path.
+    if (event._ownerReviewWithheld) return "withheld";
     // A merge stamped _mergeNoOp is skipped by the same
     // filterEventsForExecution gate — the card must not promise an UPDATE
     // that never runs.
@@ -17127,7 +17415,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   async appendLogSummary(results, options = {}) {
     try {
+      // options.runIdOverride: the reviewed-run execute path writes its log
+      // under "<runId>-review-<stamp>" — writeString would otherwise
+      // REPLACE the Mac run's own log with this session's short buffer.
       const runId =
+        (typeof options.runIdOverride === "string" && options.runIdOverride) ||
         results?.savedRunId ||
         results?.sourceRunId ||
         results?.runId ||

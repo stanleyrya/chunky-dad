@@ -1354,6 +1354,217 @@ class SharedCore {
         return Boolean(city(event.city)) && city(event.city) !== 'unknown' && city(event.city) === city(entry.city);
     }
 
+    // ---------------------------------------------------------------------
+    // OWNER REVIEW QUEUE — platform-pure identity + coverage for the swipe
+    // deck (tools/serve-results.js /review → owner-decisions.json in the
+    // shared iCloud dir → ScriptableAdapter.executeReviewedSavedRun on the
+    // phone). A decision is about ONE proposal: a NEW event on a given local
+    // day at a given place, or a MERGE that changes a stored field. Keyed so
+    // the same proposal on tomorrow's run is already decided, while a
+    // DIFFERENT proposal for the same event (other changed values) comes
+    // back as a fresh card. Notes-only merges are housekeeping: never a
+    // card, never gated.
+    // ---------------------------------------------------------------------
+    static getOwnerReviewChangeFields() {
+        return ['title', 'startDate', 'endDate', 'location', 'url'];
+    }
+
+    // Place half of the review key: venue name → address → rounded pin → city.
+    getOwnerReviewPlaceKey(event) {
+        if (!event || typeof event !== 'object') return '';
+        const bar = this.normalizeBarNameKey(event.bar || event.venue);
+        if (bar) return bar;
+        const address = this.normalizeIdentityText(event.address);
+        if (address) return address;
+        const pin = this.parseCoordinatePair(typeof event.location === 'string' ? event.location : '');
+        if (pin) return `${pin.lat.toFixed(3)},${pin.lng.toFixed(3)}`;
+        const city = String(event.city || '').trim().toLowerCase();
+        return city && city !== 'unknown' ? city : '';
+    }
+
+    // 'event|<title tokens>|<place>|<local day>' — '' when the title carries
+    // no identity (nothing to decide about).
+    getOwnerReviewKey(event) {
+        if (!event || typeof event !== 'object') return '';
+        const titleKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar || event.venue]);
+        if (!titleKey) return '';
+        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        const day = this.normalizeEventDateLocal(event.startDate, timezone) || '';
+        return `event|${titleKey}|${this.getOwnerReviewPlaceKey(event)}|${day}`;
+    }
+
+    static getOwnerReviewBarKey(candidate) {
+        const key = candidate && typeof candidate.key === 'string' ? candidate.key.trim() : '';
+        return key ? `bar|${key}` : '';
+    }
+
+    // Stored-field changes a merge would write, minus notes. Recomputed
+    // against the calendar record when the analysis carried one (the
+    // authoritative predicate); the merge-time _changes stamp otherwise.
+    getOwnerReviewChangedFields(event) {
+        if (!event || typeof event !== 'object' || event._action !== 'merge') return [];
+        let changes = null;
+        const calendarObject = event._original && event._original.calendar;
+        if (event._existingEvent && typeof event._existingEvent === 'object' && calendarObject) {
+            try {
+                changes = this.computeCalendarWriteChanges(event, event._existingEvent, calendarObject);
+            } catch (_) {
+                changes = null;
+            }
+        }
+        if (!Array.isArray(changes)) changes = Array.isArray(event._changes) ? event._changes : [];
+        const allowed = SharedCore.getOwnerReviewChangeFields();
+        return changes.filter(field => allowed.includes(field));
+    }
+
+    // A card-worthy proposal: executable by the normal gate AND either a new
+    // event or a merge that changes a stored field.
+    isOwnerReviewCandidate(event) {
+        if (!event || typeof event !== 'object') return false;
+        if (SharedCore.filterEventsForExecution([event]).length !== 1) return false;
+        if (event._action === 'new') return true;
+        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0;
+        return false;
+    }
+
+    static serializeOwnerReviewValue(value) {
+        if (value === null || value === undefined) return '';
+        if (SharedCore.isDateLike(value)) {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? '' : new Date(ms).toISOString();
+        }
+        return String(value);
+    }
+
+    // Comparable form of a proposed value: instants compare as instants,
+    // everything else as trimmed text.
+    static normalizeOwnerReviewValue(value) {
+        if (value === null || value === undefined) return '';
+        if (SharedCore.isDateLike(value) || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value))) {
+            const ms = SharedCore.toEpochMillis(value);
+            if (ms !== null) return `t:${ms}`;
+        }
+        return String(value).trim();
+    }
+
+    // The card + the decision snapshot: scalars only (persisted verbatim).
+    buildOwnerReviewProposal(event) {
+        if (!event || typeof event !== 'object') return null;
+        const key = this.getOwnerReviewKey(event);
+        if (!key) return null;
+        const kind = event._action === 'merge' ? 'merge' : 'new';
+        const iso = (value) => {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? null : new Date(ms).toISOString();
+        };
+        const changes = {};
+        if (kind === 'merge') {
+            const calendar = (event._original && event._original.calendar) || {};
+            const existing = event._existingEvent || {};
+            for (const field of this.getOwnerReviewChangedFields(event)) {
+                const from = field === 'url'
+                    ? (calendar.website || existing.url || '')
+                    : (existing[field] !== undefined ? existing[field] : calendar[field]);
+                changes[field] = {
+                    from: SharedCore.serializeOwnerReviewValue(from),
+                    to: SharedCore.serializeOwnerReviewValue(event[field])
+                };
+            }
+        }
+        const parserName = event._parserConfig && typeof event._parserConfig.name === 'string'
+            ? event._parserConfig.name
+            : '';
+        const description = String(event.description || '').trim();
+        return {
+            kind,
+            key,
+            title: String(event.title || ''),
+            existingTitle: kind === 'merge' ? String((event._existingEvent && event._existingEvent.title) || '') : '',
+            startDate: iso(event.startDate),
+            endDate: iso(event.endDate),
+            timezone: event.timezone || this.getCityTimezone(event.city) || null,
+            bar: String(event.bar || ''),
+            address: String(event.address || ''),
+            city: String(event.city || ''),
+            location: typeof event.location === 'string' ? event.location : '',
+            source: parserName || String(event.source || ''),
+            url: String(event.url || event.website || ''),
+            ticketUrl: String(event.ticketUrl || ''),
+            image: String(event.image || ''),
+            cover: String(event.cover || ''),
+            description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
+            changes
+        };
+    }
+
+    // Does a stored decision speak for this proposal? Same key always; for a
+    // merge, an APPROVAL covers only a subset of what was approved (every
+    // proposed value was shown and okayed) and a REJECTION covers any
+    // proposal that repeats a rejected value. Anything else is a new card.
+    static ownerDecisionCovers(decision, proposal) {
+        if (!decision || typeof decision !== 'object' || !proposal || typeof proposal !== 'object') return false;
+        if (!decision.key || decision.key !== proposal.key) return false;
+        if (decision.verdict !== 'approve' && decision.verdict !== 'reject') return false;
+        if (proposal.kind !== 'merge') return true;
+        const proposed = proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+        const decided = decision.snapshot && decision.snapshot.changes && typeof decision.snapshot.changes === 'object'
+            ? decision.snapshot.changes
+            : {};
+        const fields = Object.keys(proposed);
+        const sameTo = (field) => Boolean(decided[field])
+            && SharedCore.normalizeOwnerReviewValue(decided[field].to) === SharedCore.normalizeOwnerReviewValue(proposed[field].to);
+        if (decision.verdict === 'reject') return fields.length === 0 || fields.some(sameTo);
+        return fields.every(sameTo);
+    }
+
+    static findOwnerDecision(proposal, decisions) {
+        if (!proposal || !Array.isArray(decisions)) return null;
+        for (const decision of decisions) {
+            if (SharedCore.ownerDecisionCovers(decision, proposal)) return decision;
+        }
+        return null;
+    }
+
+    // Stamp a FRESH plan with the owner's decisions (review execute path
+    // only — the phone's own run/review/execute flow never calls this).
+    // Approved proposals write; rejected and not-yet-reviewed ones are
+    // withheld (gate: filterEventsForExecution); housekeeping (notes-only
+    // merges) rides along untouched. Returns the counts for the summary.
+    applyOwnerDecisions(analyzedEvents, decisions) {
+        const counts = { approved: 0, rejected: 0, awaiting: 0, housekeeping: 0, withheld: 0 };
+        const store = Array.isArray(decisions) ? decisions : [];
+        for (const event of Array.isArray(analyzedEvents) ? analyzedEvents : []) {
+            if (!event || typeof event !== 'object') continue;
+            if (SharedCore.filterEventsForExecution([event]).length !== 1) {
+                counts.withheld++;
+                continue;
+            }
+            if (!this.isOwnerReviewCandidate(event)) {
+                counts.housekeeping++;
+                continue;
+            }
+            const proposal = this.buildOwnerReviewProposal(event);
+            const decision = proposal ? SharedCore.findOwnerDecision(proposal, store) : null;
+            const title = event.title || 'Unknown';
+            if (decision && decision.verdict === 'approve') {
+                event._ownerReviewApproved = { key: proposal.key, stampedAt: decision.stampedAt || null };
+                counts.approved++;
+                console.log(`✅ OWNER REVIEW: "${title}" approved${decision.stampedAt ? ` (${String(decision.stampedAt).slice(0, 10)})` : ''} — writing`);
+            } else if (decision) {
+                const text = decision.reason && typeof decision.reason.text === 'string' ? decision.reason.text.trim() : '';
+                const tags = decision.reason && Array.isArray(decision.reason.tags) ? decision.reason.tags.slice() : [];
+                event._ownerReviewWithheld = { status: 'rejected', key: proposal.key, reason: text, tags };
+                counts.rejected++;
+                console.log(`🚫 OWNER REVIEW: "${title}" rejected${text ? ` — ${text}` : ''} — write withheld`);
+            } else {
+                event._ownerReviewWithheld = { status: 'awaiting', key: proposal ? proposal.key : '', reason: '', tags: [] };
+                counts.awaiting++;
+                console.log(`⏸️ OWNER REVIEW: "${title}" not reviewed yet — write withheld`);
+            }
+        }
+        return counts;
+    }
+
     // Provenance (pinSource/addressSource) follows the finalized value: whichever
     // side's value the merge kept for `valueField`, copy that side's `sourceField`
     // onto the merged object. A value the merge produced fresh from the scrape
@@ -15277,6 +15488,10 @@ class SharedCore {
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
             event?._announcementOnlyWithheld !== true &&
+            // Owner review (swipe deck): a rejected or not-yet-reviewed
+            // proposal is withheld — stamped only by applyOwnerDecisions on
+            // the review execute path, so the phone's own flow never sees it.
+            !event?._ownerReviewWithheld &&
             // A merge stamped _mergeNoOp writes nothing by definition — the
             // final payload is field-identical to the calendar record
             // (stamp site: buildAnalyzedCalendarEvent), so executing it
@@ -15343,6 +15558,8 @@ class SharedCore {
             '_pastSpanWithheld',
             '_unresolvedCityWithheld',
             '_announcementOnlyWithheld',
+            '_ownerReviewWithheld',
+            '_ownerReviewApproved',
             '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
@@ -15375,6 +15592,13 @@ class SharedCore {
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
+        if (event._ownerReviewWithheld) {
+            if (event._ownerReviewWithheld.status === 'rejected') {
+                const reason = String(event._ownerReviewWithheld.reason || '').trim();
+                return `WITHHELD (rejected by owner${reason ? ` — ${reason}` : ''})`;
+            }
+            return 'WITHHELD (awaiting owner review)';
+        }
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
