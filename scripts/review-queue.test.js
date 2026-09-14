@@ -327,3 +327,28 @@ test('buildDeck: a decided card the phone already wrote is marked with when and 
   const untouched = deckOf(runPayload({ analyzedEvents: [newEvent()] }), rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' })));
   assert.equal(untouched.decided[0].executed, null, 'approved but not yet written → no mark');
 });
+
+test('buildDeck: a row the phone already wrote stays decided even when the fresh analysis changed its shape', () => {
+  // Approved on the deck as NEW; the phone found it in the calendar and wrote
+  // it as a merge with a title change. The approval's snapshot no longer
+  // "covers" that proposal — but the write happened, so no new card.
+  const written = newEvent({
+    _ownerReviewApproved: { key: 'event|furball|rockbar|2030-10-03', stampedAt: '2030-01-01T00:00:00.000Z' },
+    _action: 'merge',
+    _existingEvent: { title: 'FURBALL', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600 * 1000) },
+    _original: { scraper: {}, calendar: { title: 'FURBALL', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600 * 1000), website: 'https://furball.nyc/' } },
+    _changes: ['title'],
+    _mergeNoOp: false
+  });
+  const payload = runPayload({ analyzedEvents: [written], executions: [{ executedAt: '2030-01-02T03:04:05.000Z', via: 'owner-review' }] });
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', kind: 'new', verdict: 'approve', snapshot: { kind: 'new', changes: {} } }));
+  const deck = deckOf(payload, store);
+  assert.equal(deck.cards.length, 0, 'not re-offered');
+  assert.equal(deck.decided.length, 1);
+  assert.equal(deck.decided[0].decision.verdict, 'approve');
+  assert.deepEqual(deck.decided[0].executed, { at: '2030-01-02T03:04:05.000Z', as: 'updated' });
+  // Even with the decision store cleared, the written row stays decided.
+  const cleared = deckOf(payload, rq.emptyDecisionStore());
+  assert.equal(cleared.cards.length, 0);
+  assert.equal(cleared.decided[0].decision.stampedAt, '2030-01-01T00:00:00.000Z');
+});
