@@ -19936,8 +19936,48 @@ test('canonicalizeIdentityLinks: a co-promoter bare root loses to the curated id
     'a deep URL is an event page and outranks everything');
   assert.equal(ownSiteRoot.website, 'https://beefmince.com',
     'the source\'s own root is kept, not "replaced"');
-  assert.equal(unstamped.website, 'https://theurbanbear.com',
-    'no source-page stamp → the rule fails closed and changes nothing');
+  assert.equal(unstamped.website, 'https://beefmince.com',
+    'the source page stamp is not needed: any foreign front door loses to the curated identity');
+});
+
+// THE SOURCE'S OWN FRONT DOOR IS NOT THE PARTY'S LINK EITHER (owner, deck
+// review 2026-09-14: "I don't like that we are adding redeye as goldiloxx
+// event page"). GOLDILOXX SINGLET NITE, scraped off Red Eye's own site,
+// shipped website https://redeyeny.com/ — a bare root. Goldiloxx's registry
+// entry carries a favicon link and deliberately NO website, so the honest
+// identity is: no website at all (the favicon names the party, the
+// ticketUrl sells it). A promoter WITH a curated site gets that site.
+test('canonicalizeIdentityLinks: the source\'s bare root gives way to the registry identity — the curated site, or nothing when the promoter has only a favicon', () => {
+  const core = createRegistryCore([
+    { name: 'Goldiloxx', shortName: 'GOLDILOXX', favicon: 'https://linktr.ee/goldiloxx', urlPatterns: ['goldiloxx'] },
+    { name: 'BOATMINCE', shortName: 'BOATMINCE', website: 'https://beefmince.com' }
+  ]);
+  const goldiloxx = {
+    title: 'GOLDILOXX SINGLET NITE',
+    _promoter: 'Goldiloxx',
+    url: 'https://redeyeny.com/',
+    website: 'https://redeyeny.com/',
+    ticketUrl: 'https://redeyetickets.com/events/goldiloxx-singlet-nite',
+    _sourcePageUrl: 'https://redeyeny.com/'
+  };
+  const goldiloxxOwnRoot = { title: 'GOLDILOXX', _promoter: 'Goldiloxx', website: 'https://linktr.ee/goldiloxx' };
+  const goldiloxxDeep = { title: 'GOLDILOXX', _promoter: 'Goldiloxx', website: 'https://redeyeny.com/events/goldiloxx-singlet-nite' };
+  const withSite = { title: 'SPOOKMINCE', _promoter: 'BOATMINCE', website: 'https://theroyalvauxhalltavern.com/', _sourcePageUrl: 'https://theroyalvauxhalltavern.com/' };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    core.canonicalizeIdentityLinks([goldiloxx, goldiloxxOwnRoot, goldiloxxDeep, withSite]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(goldiloxx.website, undefined, 'the venue front door is not the party\'s website');
+  assert.equal(goldiloxx.url, undefined, 'url folds into website and is gone');
+  assert.equal(goldiloxx.ticketUrl, 'https://redeyetickets.com/events/goldiloxx-singlet-nite', 'the ticket link is untouched');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: cleared website https://redeyeny.com/ for "GOLDILOXX SINGLET NITE"') && line.includes('favicon link (https://linktr.ee/goldiloxx)')), lines.join('\n'));
+  assert.equal(goldiloxxOwnRoot.website, 'https://linktr.ee/goldiloxx', 'the promoter\'s own favicon host is its own front door — kept');
+  assert.equal(goldiloxxDeep.website, 'https://redeyeny.com/events/goldiloxx-singlet-nite', 'a deep page on the venue site is the event\'s page — kept');
+  assert.equal(withSite.website, 'https://beefmince.com', 'a promoter with a curated site gets that site over the venue root');
 });
 
 test('final merge: the pasted BEEFMINCE x RVT rows are gone at the source', async () => {

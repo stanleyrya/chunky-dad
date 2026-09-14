@@ -6490,16 +6490,24 @@ class SharedCore {
     // an event's own page above the source's site above a co-promoter's.
     // Fails closed — an unparseable value, any path segment, a query string,
     // or a missing source-page stamp all return false and change nothing.
-    isForeignBareRootIdentityUrl(event, value, curatedWebsite) {
+    // A BARE ROOT (no path, no query) on any host but the promoter's own: a
+    // front door names no event, so it never outranks a registry-matched
+    // promoter's curated identity — a co-promoter's homepage (theurbanbear.com
+    // on Furball's UNDERBEAR, run 20260913-012112) and the SOURCE's own front
+    // door alike (redeyeny.com on GOLDILOXX SINGLET NITE, run 20260913-232000:
+    // the venue/ticketing site the party was scraped from, shipped as the
+    // party's identity). `curatedIdentityUrls` = the entry's website and/or
+    // favicon link; a root on one of THOSE hosts is the promoter's own and
+    // stays. A deep URL is somebody's event page and is always kept.
+    isForeignBareRootIdentityUrl(event, value, curatedIdentityUrls) {
         const parts = this.getUrlRuleParts(value);
         if (!parts) return false;
         if (parts.segments.length > 0 || parts.hasQuery) return false;
-        const sourceHost = this.getHostFromUrl(event && event._sourcePageUrl)
-            .toLowerCase().replace(/^www\./, '');
-        if (!sourceHost || parts.host === sourceHost) return false;
-        const curatedHost = this.getHostFromUrl(curatedWebsite).toLowerCase().replace(/^www\./, '');
-        if (curatedHost && parts.host === curatedHost) return false;
-        return true;
+        const curatedHosts = (Array.isArray(curatedIdentityUrls) ? curatedIdentityUrls : [curatedIdentityUrls])
+            .map(url => this.getHostFromUrl(url).toLowerCase().replace(/^www\./, ''))
+            .filter(Boolean);
+        if (curatedHosts.length === 0) return false;
+        return !curatedHosts.includes(parts.host);
     }
 
     canonicalizeIdentityLinks(events) {
@@ -6569,12 +6577,24 @@ class SharedCore {
                 // 20260913-012112). Shape only — bare root, foreign host, a
                 // curated identity available; a deep URL is somebody's event
                 // page and is always kept.
-                if (curatedWebsite && curatedWebsite !== website
-                    && this.isForeignBareRootIdentityUrl(event, website, curatedWebsite)) {
-                    event.website = curatedWebsite;
-                    if (!event._staticFields) event._staticFields = {};
-                    event._staticFields.website = curatedWebsite;
-                    console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — a bare root on another organiser's host is a co-promoter's front door, not this event's page`);
+                const curatedFavicon = promoterEntry && typeof promoterEntry.favicon === 'string'
+                    ? promoterEntry.favicon.trim()
+                    : '';
+                if (promoterEntry && (curatedWebsite || curatedFavicon) && curatedWebsite !== website
+                    && this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite, curatedFavicon])) {
+                    if (curatedWebsite) {
+                        event.website = curatedWebsite;
+                        if (!event._staticFields) event._staticFields = {};
+                        event._staticFields.website = curatedWebsite;
+                        console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — a bare root is a front door, not this event's page; the curated identity wins`);
+                    } else {
+                        // The registry knows the promoter by its favicon link
+                        // only (a homeless promoter with no site of its own,
+                        // e.g. Goldiloxx): the identity is the favicon, and an
+                        // empty website beats somebody else's front door.
+                        delete event.website;
+                        console.log(`🔗 LINKS: cleared website ${website} for "${title}" — a bare root is a front door, not this event's page, and "${promoterEntry.name}" carries its identity in its favicon link (${curatedFavicon}), not a site`);
+                    }
                 }
                 continue;
             }
