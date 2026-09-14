@@ -1398,16 +1398,35 @@ class SharedCore {
         return key ? `bar|${key}` : '';
     }
 
-    // Stored-field changes a merge would write, minus notes. Recomputed
-    // against the calendar record when the analysis carried one (the
-    // authoritative predicate); the merge-time _changes stamp otherwise.
+    // A single-occurrence OVERRIDE of a saved series: analysis action 'new'
+    // (the calendar operation is a create) built by merging the scraped
+    // record onto the series occurrence it replaces — so it carries an
+    // _original.calendar side (that occurrence) exactly like a merge does.
+    static isOverrideCreate(event) {
+        if (!event || typeof event !== 'object' || event._action !== 'new') return false;
+        if (!event._original || !event._original.calendar || typeof event._original.calendar !== 'object') return false;
+        const analysis = event._analysis && typeof event._analysis === 'object' ? event._analysis : {};
+        return Boolean(analysis.sourceEvent)
+            || /override/i.test(String(analysis.reason || ''))
+            || Boolean(event.overrideUid && event.overrideRecurrenceId);
+    }
+
+    // Stored-field changes a merge (or an override, vs the series night it
+    // replaces) would write, minus notes. Recomputed against the calendar
+    // record when the analysis carried one (the authoritative predicate);
+    // the merge-time _changes stamp otherwise.
     getOwnerReviewChangedFields(event) {
-        if (!event || typeof event !== 'object' || event._action !== 'merge') return [];
+        if (!event || typeof event !== 'object') return [];
+        const isOverride = SharedCore.isOverrideCreate(event);
+        if (event._action !== 'merge' && !isOverride) return [];
         let changes = null;
         const calendarObject = event._original && event._original.calendar;
-        if (event._existingEvent && typeof event._existingEvent === 'object' && calendarObject) {
+        const existing = event._existingEvent && typeof event._existingEvent === 'object'
+            ? event._existingEvent
+            : (isOverride ? calendarObject : null);
+        if (existing && calendarObject) {
             try {
-                changes = this.computeCalendarWriteChanges(event, event._existingEvent, calendarObject);
+                changes = this.computeCalendarWriteChanges(event, existing, calendarObject);
             } catch (_) {
                 changes = null;
             }
@@ -1452,15 +1471,16 @@ class SharedCore {
         if (!event || typeof event !== 'object') return null;
         const key = this.getOwnerReviewKey(event);
         if (!key) return null;
-        const kind = event._action === 'merge' ? 'merge' : 'new';
+        const isOverride = SharedCore.isOverrideCreate(event);
+        const kind = event._action === 'merge' ? 'merge' : isOverride ? 'override' : 'new';
         const iso = (value) => {
             const ms = SharedCore.toEpochMillis(value);
             return ms === null ? null : new Date(ms).toISOString();
         };
         const changes = {};
-        if (kind === 'merge') {
+        if (kind === 'merge' || kind === 'override') {
             const calendar = (event._original && event._original.calendar) || {};
-            const existing = event._existingEvent || {};
+            const existing = event._existingEvent || calendar;
             for (const field of this.getOwnerReviewChangedFields(event)) {
                 const from = field === 'url'
                     ? (calendar.website || existing.url || '')
@@ -1479,7 +1499,11 @@ class SharedCore {
             kind,
             key,
             title: String(event.title || ''),
-            existingTitle: kind === 'merge' ? String((event._existingEvent && event._existingEvent.title) || '') : '',
+            existingTitle: kind === 'merge'
+                ? String((event._existingEvent && event._existingEvent.title) || '')
+                : kind === 'override' ? String((event._original.calendar && event._original.calendar.title) || '') : '',
+            // The series night this override replaces (its stored start).
+            overrideOf: kind === 'override' ? iso(event._original.calendar && event._original.calendar.startDate) : null,
             startDate: iso(event.startDate),
             endDate: iso(event.endDate),
             timezone: event.timezone || this.getCityTimezone(event.city) || null,
@@ -1505,7 +1529,7 @@ class SharedCore {
         if (!decision || typeof decision !== 'object' || !proposal || typeof proposal !== 'object') return false;
         if (!decision.key || decision.key !== proposal.key) return false;
         if (decision.verdict !== 'approve' && decision.verdict !== 'reject') return false;
-        if (proposal.kind !== 'merge') return true;
+        if (proposal.kind !== 'merge' && proposal.kind !== 'override') return true;
         const proposed = proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
         const decided = decision.snapshot && decision.snapshot.changes && typeof decision.snapshot.changes === 'object'
             ? decision.snapshot.changes

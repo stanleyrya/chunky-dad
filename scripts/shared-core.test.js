@@ -22718,3 +22718,43 @@ test('applyOwnerDecisions: approved writes, unreviewed and rejected are withheld
   assert.equal(SharedCore.stripCalendarAnalysisStamps(approved)._ownerReviewApproved, undefined);
   assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_ownerReviewWithheld'));
 });
+
+// A single-night OVERRIDE of a saved series (owner, deck review 2026-09-14:
+// "override requests don't show the diff between the original event and the
+// new one"): analysis action 'new', but built on the series occurrence it
+// replaces, so the proposal is an 'override' with changes vs that night.
+test('owner review proposal: an override carries its changes against the series night it replaces', () => {
+  const core = createReviewCore();
+  const seriesNight = {
+    title: 'Bears Night Out',
+    startDate: REVIEW_START,
+    endDate: '2030-10-04T08:00:00.000Z',
+    location: '40.7331, -74.0055',
+    notes: 'bar: Rockbar'
+  };
+  const override = reviewNewEvent({
+    title: 'Bears Night Out',
+    startDate: '2030-10-04T01:00:00.000Z',
+    endDate: '2030-10-04T05:00:00.000Z',
+    location: '40.7331, -74.0055',
+    url: 'https://rockbarnyc.com/events/bears-night-out',
+    _analysis: { action: 'new', reason: 'Recurring source match found - creating override', sourceEvent: true },
+    _original: { scraper: {}, calendar: { ...seriesNight, website: '' } },
+    _changes: ['startDate', 'endDate', 'url', 'notes']
+  });
+  assert.equal(SharedCore.isOverrideCreate(override), true);
+  assert.equal(SharedCore.isOverrideCreate(reviewNewEvent()), false, 'a plain new event is not an override');
+  const proposal = core.buildOwnerReviewProposal(override);
+  assert.equal(proposal.kind, 'override');
+  assert.deepEqual(Object.keys(proposal.changes).sort(), ['endDate', 'startDate', 'url']);
+  assert.equal(proposal.changes.startDate.from, REVIEW_START);
+  assert.equal(proposal.changes.startDate.to, '2030-10-04T01:00:00.000Z');
+  assert.equal(proposal.overrideOf, REVIEW_START, 'names the series night it replaces');
+  assert.equal(proposal.existingTitle, 'Bears Night Out');
+  assert.equal(core.isOwnerReviewCandidate(override), true);
+  // Coverage works like a merge: the approved values must match.
+  const approval = { key: proposal.key, verdict: 'approve', snapshot: proposal };
+  assert.equal(SharedCore.ownerDecisionCovers(approval, proposal), true);
+  const laterStart = { ...proposal, changes: { ...proposal.changes, startDate: { from: REVIEW_START, to: '2030-10-04T02:30:00.000Z' } } };
+  assert.equal(SharedCore.ownerDecisionCovers(approval, laterStart), false, 'a different night/time is a new question');
+});

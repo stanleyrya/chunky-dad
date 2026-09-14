@@ -642,7 +642,8 @@ function describeReviewChange(field, change, proposal, ctx) {
 }
 
 // `context` = { field: why } from the merge's own decision records (the
-// same wording the results card shows under its rows).
+// same wording the results card shows under its rows). For an override the
+// left column is the series night being replaced.
 function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) {
     const fields = changes && typeof changes === 'object' ? Object.keys(changes) : [];
     if (fields.length === 0) return '';
@@ -652,7 +653,10 @@ function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) 
         const why = context && typeof context[field] === 'string' ? context[field] : '';
         return `<div class="chg" data-field="${escapeHtmlText(field)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${described.fromHtml}</span><span class="arrow">→</span><span class="now">${described.toHtml}</span></span>${described.noteHtml ? `<span class="chg-n${described.warn ? ' warn' : ''}">${described.noteHtml}</span>` : ''}${why ? `<span class="chg-n why">${escapeHtmlText(why)}</span>` : ''}</div>`;
     }).join('');
-    return `<div class="chgs"><div class="chgs-head"><span>calendar has</span><span>would become</span></div>${rows}</div>`;
+    const head = proposal.kind === 'override'
+        ? '<span>series night has</span><span>this night becomes</span>'
+        : '<span>calendar has</span><span>would become</span>';
+    return `<div class="chgs"><div class="chgs-head">${head}</div>${rows}</div>`;
 }
 
 // "+ notes: added instagram, facebook · updated description" — what else
@@ -785,14 +789,18 @@ function renderReviewCard(entry, ctx = {}) {
     const proposal = entry && entry.proposal ? entry.proposal : {};
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
-    const isMerge = entry.kind === 'merge';
+    const isOverride = entry.kind === 'override';
+    const isMerge = entry.kind === 'merge' || isOverride;
     const isDropped = entry.kind === 'dropped';
     const tz = proposal.timezone || null;
     const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz);
     const utcLine = formatReviewUtcLine(proposal.startDate, proposal.endDate);
     const changes = isMerge && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
     const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title && !changes.title
-        ? `<div class="line muted">calendar title: ${escapeHtmlText(proposal.existingTitle)}</div>`
+        ? `<div class="line muted">${isOverride ? 'series' : 'calendar title'}: ${escapeHtmlText(proposal.existingTitle)}</div>`
+        : '';
+    const overrideNight = isOverride && proposal.overrideOf
+        ? (() => { const parts = reviewDateParts(proposal.overrideOf, tz); return parts ? `<div class="line muted">replaces the series night of ${escapeHtmlText(parts.day)} (${escapeHtmlText(proposal.existingTitle || 'series')})</div>` : ''; })()
         : '';
     const cityConfig = adapter && adapter.cities && proposal.city ? adapter.cities[proposal.city] : null;
     const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
@@ -818,9 +826,10 @@ function renderReviewCard(entry, ctx = {}) {
     ].filter(Boolean).join('');
     return `<div class="card-body">
   ${renderReviewThumb(display, proposal.image)}
-  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
+  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isOverride ? '🗓️ Override — this night only' : isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
+  ${overrideNight}
   ${renderReviewBadges({ ...display })}
   <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
   ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
@@ -1079,12 +1088,13 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
+  function tabOf(kind) { return kind === 'override' ? 'merge' : kind; }
   function visible() {
-    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : c.kind === filter; });
+    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter; });
   }
   function counts() {
     var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
-    queue.forEach(function (c) { out[c.kind] = (out[c.kind] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
+    queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {

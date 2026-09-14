@@ -193,7 +193,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'bar' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -487,7 +487,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     const file = (entry, decision) => {
         if (decision) {

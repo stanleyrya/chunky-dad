@@ -804,6 +804,20 @@ test('renderReviewCard (update): stacked calendar-has → would-become rows in t
   assert.ok(added.includes('<span class="none">(no end listed)</span>'), 'an end being dropped says so');
 });
 
+test('renderReviewCard (override): the series night it replaces, and the changes against it', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'override', key: 'k', proposal: {
+    kind: 'override', title: 'Bears Night Out', existingTitle: 'Bears Night Out', startDate: '2030-10-04T01:00:00.000Z', endDate: '2030-10-04T05:00:00.000Z',
+    timezone: 'America/New_York', bar: 'Rockbar', city: 'nyc', overrideOf: '2030-10-04T02:00:00.000Z',
+    changes: { startDate: { from: '2030-10-04T02:00:00.000Z', to: '2030-10-04T01:00:00.000Z' }, url: { from: '', to: 'https://rockbarnyc.com/events/bears-night-out' } }
+  }, display: {} }, ctx);
+  assert.ok(html.includes('🗓️ Override — this night only'));
+  assert.ok(html.includes('replaces the series night of Thu, Oct 3 (Bears Night Out)'));
+  assert.ok(html.includes('<span>series night has</span><span>this night becomes</span>'));
+  assert.ok(html.includes('<span class="chg-k">Starts</span>') && html.includes('<span class="was">Thu, Oct 3 · 10:00 PM</span>') && html.includes('<span class="now">9:00 PM</span>') && html.includes('1 h earlier'));
+  assert.ok(html.includes('>rockbarnyc.com/events/bears-night-out</a>'));
+});
+
 test('renderReviewCard (bar): route line, distance from the city center, labelled links, a map, and the events it was seen in', () => {
   const ctx = buildReviewCtx();
   const html = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
