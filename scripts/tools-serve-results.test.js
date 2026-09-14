@@ -1042,3 +1042,8 @@ test('renderReviewCard (update with only notes changes): the notes rows are the 
   assert.ok(html.includes('<span class="chg-k">Facebook</span>') && html.includes('>facebook.com/eagle.bar.la/</a>'));
   assert.ok(!html.includes('+ notes'), 'no blurb when the rows carry the change');
 });
+
+test('the header names a phone-sourced calendar baseline', () => {
+  const label = formatCalendarSnapshotLabel({ la: { status: 'ok', fetchedAt: new Date(Date.now() - 12 * 60000).toISOString(), source: 'phone' }, nyc: { status: 'ok', fetchedAt: new Date(Date.now() - 3 * 3600000).toISOString() } });
+  assert.equal(label, 'calendar snapshot: la 12m old (phone) · nyc 3.0h old');
+});

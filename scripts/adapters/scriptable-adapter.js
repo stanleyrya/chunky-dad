@@ -5620,6 +5620,9 @@ class ScriptableAdapter {
       // path (runPostRunHousekeeping), skipped for a saved-run redisplay.
       if (!results?._isDisplayingSavedRun) {
         await this.runPostRunHousekeeping(results, retentionDays);
+        // Every phone run leaves the Mac a fresh picture of the calendars
+        // it touched (whether or not anything was written).
+        await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
       } else {
         console.log("📱 Scriptable: Skipping log write (display mode)");
       }
@@ -15875,6 +15878,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         logRunId,
         pruneRuns: true,
       });
+      // The phone's calendars are the truth the Mac run should compare
+      // against next — snapshot the cities this plan touched.
+      await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
       await this.presentSavedRunExecutionNotice(
         "Calendar Updated",
         [
@@ -15904,6 +15910,108 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       }
       return summary;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // PHONE CALENDAR SNAPSHOT — chunky-dad-scraper/calendar-snapshot/<city>.json
+  // The phone's calendar IS the database, but the Mac run can only read the
+  // copy chunky.dad publishes (Google's public feed, cached for hours). So
+  // after every phone execution and every phone run, the phone writes what
+  // its calendars hold — one JSON per city, occurrences already expanded by
+  // EventKit — into the shared iCloud tree, and the Mac run prefers that
+  // over the published copy (WebAdapter.getPhoneCalendarSnapshot). Owner,
+  // 2026-09-14: "use the phone's state instead of waiting for the delayed
+  // calendar write". Window: 35 days back, 120 ahead — the search windows
+  // the analysis uses fit inside it. Never throws.
+  // ---------------------------------------------------------------------
+  getCalendarSnapshotDir() {
+    return this.fm.joinPath(this.baseDir, "calendar-snapshot");
+  }
+
+  getCalendarSnapshotWindow(now = new Date()) {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 35);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setDate(end.getDate() + 120);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  // City keys worth snapshotting for a results object: every city the run
+  // produced an event for that has a configured calendar.
+  collectSnapshotCities(results) {
+    const keys = new Set();
+    const events = Array.isArray(results && results.analyzedEvents) ? results.analyzedEvents : [];
+    for (const event of events) {
+      const city = event && typeof event.city === "string" ? event.city.trim() : "";
+      if (!city || city === "unknown") continue;
+      const config = this.cities && this.cities[city];
+      if (config && typeof config.calendar === "string" && config.calendar) keys.add(city);
+    }
+    return [...keys];
+  }
+
+  async writeCalendarSnapshots(cityKeys, options = {}) {
+    const keys = Array.isArray(cityKeys) ? cityKeys : [];
+    if (keys.length === 0) return [];
+    if (typeof CalendarEvent === "undefined" || typeof Calendar === "undefined") {
+      console.log("📱 Scriptable: Calendar snapshot skipped (no calendar API in this environment)");
+      return [];
+    }
+    const written = [];
+    const now = options.now instanceof Date ? options.now : new Date();
+    const { start, end } = this.getCalendarSnapshotWindow(now);
+    let calendars;
+    try {
+      calendars = await Calendar.forEvents();
+    } catch (error) {
+      console.log(`📱 Scriptable: Calendar snapshot skipped — calendars unavailable: ${error.message}`);
+      return [];
+    }
+    const iso = (value) => {
+      const ms = SharedCore.toEpochMillis(value);
+      return ms === null ? null : new Date(ms).toISOString();
+    };
+    for (const cityKey of keys) {
+      try {
+        const calendarName = this.getCalendarName(cityKey);
+        const calendar = (calendars || []).find((cal) => cal && cal.title === calendarName);
+        if (!calendar) {
+          console.log(`📱 Scriptable: Calendar snapshot skipped for ${cityKey} — calendar "${calendarName}" not on this device`);
+          continue;
+        }
+        const instances = await CalendarEvent.between(start, end, [calendar]);
+        const events = (instances || []).map((record) => ({
+          identifier: typeof record.identifier === "string" ? record.identifier : "",
+          title: String(record.title || ""),
+          startDate: iso(record.startDate),
+          endDate: iso(record.endDate),
+          location: typeof record.location === "string" ? record.location : "",
+          notes: typeof record.notes === "string" ? record.notes : "",
+          url: typeof record.url === "string" ? record.url : "",
+          isAllDay: record.isAllDay === true,
+        })).filter((event) => event.startDate);
+        const payload = {
+          version: 1,
+          cityKey,
+          calendarName,
+          capturedAt: now.toISOString(),
+          windowStart: start.toISOString(),
+          windowEnd: end.toISOString(),
+          events,
+        };
+        const dir = this.getCalendarSnapshotDir();
+        this.ensureDirectoryExists(dir);
+        const filePath = this.fm.joinPath(dir, `${cityKey}.json`);
+        this.fm.writeString(filePath, JSON.stringify(payload));
+        written.push({ cityKey, calendarName, events: events.length, filePath });
+        console.log(`📱 Scriptable: 📸 Calendar snapshot for ${cityKey} — ${events.length} occurrence(s) from "${calendarName}" (${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}) → ${filePath}`);
+      } catch (error) {
+        console.log(`📱 Scriptable: Calendar snapshot failed for ${cityKey}: ${error.message}`);
+      }
+    }
+    return written;
   }
 
   async ensureRelativeStorageDirs() {

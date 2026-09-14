@@ -293,7 +293,7 @@ function formatCalendarSnapshotLabel(snapshots, nowMs = Date.now()) {
         if (snapshot.status === 'ok' && snapshot.fetchedAt) {
             const fetchedMs = Date.parse(snapshot.fetchedAt);
             const age = Number.isFinite(fetchedMs) ? formatSnapshotAge(nowMs - fetchedMs) : null;
-            segments.push(`${city} ${age ? `${age} old` : 'fresh'}`);
+            segments.push(`${city} ${age ? `${age} old` : 'fresh'}${snapshot.source === 'phone' ? ' (phone)' : ''}`);
         } else {
             segments.push(`${city} unavailable`);
         }
@@ -897,6 +897,7 @@ function renderReviewPage(deck, options = {}) {
         verdict: entry.decision.verdict,
         stampedAt: entry.decision.stampedAt || null,
         reason: entry.decision.reason || null,
+        executed: entry.executed || null,
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
@@ -1032,6 +1033,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .decided .v { font-size:18px; width:24px; flex:none; }
 .decided .t { flex:1; min-width:0; }
 .decided .r { color:var(--muted); font-size:13px; }
+.decided .r.ok { color:var(--ok); }
 .decided button { font:inherit; font-size:13px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:3px 8px; cursor:pointer; }
 .sheet { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-end; z-index:20; }
 .sheet.open { display:flex; }
@@ -1165,7 +1167,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     decided.slice().reverse().forEach(function (d) {
       var li = document.createElement('li');
       var reason = d.reason ? [(d.reason.tags || []).join(', '), d.reason.text].filter(Boolean).join(' — ') : '';
-      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + '</div>';
+      var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
+      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + executed + '</div>';
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = 'Undo';

@@ -1095,3 +1095,86 @@ test('postForm replays a synthetic feed URL once per run too', async () => {
     console.log = quiet;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Phone calendar snapshot (calendar-snapshot/<city>.json in the shared root):
+// the phone's own picture of its calendar, preferred over the published ICS
+// (Google's public feed lags the calendar by hours).
+// ---------------------------------------------------------------------------
+
+function withSharedRoot(setup) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-web-snapshot-'));
+  fs.mkdirSync(path.join(dir, 'storage'));
+  fs.mkdirSync(path.join(dir, 'calendar-snapshot'));
+  const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  return {
+    dir,
+    restore() {
+      if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+      else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  };
+}
+
+test('the phone snapshot is the existing-events baseline when it covers the search, without touching the published copy', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  let fetched = 0;
+  global.fetch = async () => { fetched += 1; throw new Error('published copy must not be fetched'); };
+  try {
+    const now = Date.now();
+    const eventStart = new Date(now + 10 * 24 * 60 * 60 * 1000);
+    fs.writeFileSync(path.join(shared.dir, 'calendar-snapshot', 'la.json'), JSON.stringify({
+      version: 1, cityKey: 'la', calendarName: 'chunky-dad-la', capturedAt: new Date(now - 60000).toISOString(),
+      windowStart: new Date(now - 35 * 86400000).toISOString(), windowEnd: new Date(now + 120 * 86400000).toISOString(),
+      events: [
+        { identifier: 'ek-1', title: 'MEAT RACK', startDate: eventStart.toISOString(), endDate: new Date(eventStart.getTime() + 4 * 3600000).toISOString(), location: '34.0912, -118.2841', notes: 'bar: Eagle LA', url: '', isAllDay: false },
+        { identifier: 'ek-2', title: 'Far Away', startDate: new Date(now + 60 * 86400000).toISOString(), endDate: null, location: '', notes: '', url: '', isAllDay: false }
+      ]
+    }));
+    const adapter = new WebAdapter({ cities: CITIES });
+    const existing = await adapter.getExistingEvents({ title: 'MEAT RACK', city: 'la', startDate: eventStart, endDate: new Date(eventStart.getTime() + 3600000) });
+    assert.deepEqual(existing.map((event) => event.title), ['MEAT RACK'], 'the snapshot occurrence in the window is the existing event');
+    assert.equal(existing[0].identifier, 'ek-1');
+    assert.equal(existing[0].notes, 'bar: Eagle LA');
+    assert.equal(fetched, 0, 'the published ICS was never fetched');
+    assert.equal(adapter._publishedCalendarSnapshots.la.source, 'phone', 'the header can say the baseline came from the phone');
+    assert.ok(adapter._publishedCalendarSnapshots.la.fetchedAt);
+  } finally {
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
+test('a search outside the snapshot window, or a stale snapshot, falls back to the published copy', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  let fetched = 0;
+  global.fetch = async () => { fetched += 1; return { ok: true, status: 200, text: async () => LA_ICS_FIXTURE }; };
+  try {
+    const now = Date.now();
+    fs.writeFileSync(path.join(shared.dir, 'calendar-snapshot', 'la.json'), JSON.stringify({
+      version: 1, cityKey: 'la', calendarName: 'chunky-dad-la', capturedAt: new Date(now - 60000).toISOString(),
+      windowStart: new Date(now - 35 * 86400000).toISOString(), windowEnd: new Date(now + 120 * 86400000).toISOString(), events: []
+    }));
+    const adapter = new WebAdapter({ cities: CITIES });
+    const farStart = new Date(now + 200 * 86400000);
+    await adapter.getExistingEvents({ title: 'Something', city: 'la', startDate: farStart, endDate: farStart });
+    assert.equal(fetched, 1, 'beyond the snapshot window the published copy is consulted');
+
+    fs.writeFileSync(path.join(shared.dir, 'calendar-snapshot', 'la.json'), JSON.stringify({
+      version: 1, cityKey: 'la', calendarName: 'chunky-dad-la', capturedAt: new Date(now - 10 * 86400000).toISOString(),
+      windowStart: new Date(now - 45 * 86400000).toISOString(), windowEnd: new Date(now + 110 * 86400000).toISOString(), events: []
+    }));
+    const stale = new WebAdapter({ cities: CITIES });
+    assert.equal(await stale.getPhoneCalendarSnapshot('la'), null, 'a snapshot older than a week is ignored');
+    const noRoot = new WebAdapter({ cities: CITIES });
+    noRoot.sharedStorageRoot = null;
+    assert.equal(await noRoot.getPhoneCalendarSnapshot('la'), null, 'no shared root → no snapshot');
+  } finally {
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
