@@ -8,6 +8,11 @@
 // MODES:
 // - Widget/Read-Only (readOnly: true): Safe viewing only, forces isDryRun override
 // - Manual Run (readOnly: false): Preserves original config, allows calendar updates
+// - Reviewed execute (query reviewExecute=1&runId=<id>): NO WebView — loads
+//   that saved run plus the Mac-written owner-decisions.json and hands both
+//   to ScriptableAdapter.executeReviewedSavedRun, which writes only what the
+//   owner approved on the Mac server's swipe deck (tools/serve-results.js
+//   /review builds the scriptable:///run link).
 
 // Display-specific functionality
 class SavedRunDisplay {
@@ -161,6 +166,112 @@ class SavedRunDisplay {
         }
     }
 
+    // The saved-run → adapter contract, shared by the display and the
+    // reviewed-execute paths. readOnly !== false forces dryRun on every
+    // parser (display safety); the reviewed path passes readOnly: false.
+    buildResultsLike(saved, options = {}) {
+        // Normalize to the same shape expected by display/present methods
+        // (re-saving is prevented by the _isDisplayingSavedRun flag the adapter checks)
+        let config = saved?.config;
+        
+        // If readOnly mode (default), force isDryRun override for all parsers
+        if (options.readOnly !== false && config && config.parsers) {
+            config = JSON.parse(JSON.stringify(config)); // Clone
+            config.parsers = config.parsers.map(parser => ({
+                ...parser,
+                dryRun: true  // Total override - force dry run mode
+            }));
+        }
+        
+        const savedRunContext = saved?.runContext || saved?.summary?.runContext || null;
+        const resultsLike = {
+            totalEvents: saved?.summary?.totals?.totalEvents || 0,
+            bearEvents: saved?.summary?.totals?.bearEvents || 0,
+            calendarEvents: 0, // Display-only value; the adapter's _isDisplayingSavedRun guard is what prevents re-saving
+            errors: saved?.errors || [],
+            parserResults: saved?.parserResults || [],
+            analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
+            // Dropped non-bear events are part of the run's result and the
+            // results UI renders them as real event cards. Omitting them
+            // here made that whole section invisible for saved runs — the
+            // one place you actually review a past run's bear calls.
+            // (Overrides stay inert: _isDisplayingSavedRun renders the
+            // section read-only.)
+            bearDroppedEvents: Array.isArray(saved?.bearDroppedEvents) ? saved.bearDroppedEvents : [],
+            // Report-only calendar hygiene checklist — render it for
+            // saved runs too (older runs simply have none).
+            calendarHygiene: Array.isArray(saved?.calendarHygiene) ? saved.calendarHygiene : [],
+            config: config,
+            sourceRunId: saved?.summary?.runId || null,
+            // Execute-from-saved-run support (adapter feature-detects all
+            // of these; older adapters simply ignore them):
+            // — the run's saved timestamp drives the staleness guard and
+            //   keeps a post-execution rewrite on the SAME file/timestamp
+            _savedRunTimestamp: saved?.summary?.timestamp || null,
+            // — prior executions are threaded back so a re-execution
+            //   APPENDS to the audit trail instead of overwriting it
+            savedRunExecutions: Array.isArray(saved?.executions) ? saved.executions : [],
+            // — prior ICS-export UID ledger entries thread back the same
+            //   way, so a post-execution rewrite appends instead of
+            //   erasing the uids earlier exports minted
+            icsExports: Array.isArray(saved?.icsExports) ? saved.icsExports : [],
+            // — the ORIGINAL config (pre readOnly dryRun-forcing clone),
+            //   so a post-execution rewrite records what the run really ran with
+            _savedRunOriginalConfig: saved?.config || null,
+            runContext: {
+                type: 'display',
+                environment: 'scriptable',
+                trigger: 'saved-run',
+                original: savedRunContext
+            },
+            _savedRunContext: savedRunContext,
+            _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
+        };
+        return resultsLike;
+    }
+
+    createAdapter() {
+        const scraperConfig = importModule('scraper-input');
+        const scraperCities = importModule('scraper-cities');
+        const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
+        this.adapter = new ScriptableAdapter({
+            ...scraperConfig,
+            cities: scraperCities
+        });
+        return this.adapter;
+    }
+
+    // scriptable:///run?scriptName=<this>&runId=<id>&reviewExecute=1 — the
+    // Mac server's "Execute on phone" link. Loads the named run, the owner's
+    // decisions, and executes without presenting the results sheet.
+    async executeReviewedRun(options = {}) {
+        const runId = typeof options.runId === 'string' ? options.runId.trim() : '';
+        if (!runId) {
+            await this.showError('No run named', 'reviewExecute needs a runId — open the link from the Mac server\'s review page.');
+            return null;
+        }
+        const saved = await this.loadSavedRun(runId);
+        if (saved && saved.__icloudSyncPending === true) {
+            await this.showError('Still syncing from iCloud', `Run ${runId} is still syncing from iCloud — try the link again shortly.`);
+            return null;
+        }
+        if (!saved) {
+            await this.showError('Load failed', `Could not load saved run: ${runId}`);
+            return null;
+        }
+        const resultsLike = this.buildResultsLike(saved, { readOnly: false });
+        const adapter = this.createAdapter();
+        const decisions = typeof adapter.loadOwnerDecisions === 'function'
+            ? await adapter.loadOwnerDecisions()
+            : [];
+        console.log(`📱 Display: Reviewed execute of run ${runId} with ${decisions.length} owner decision(s)`);
+        if (typeof adapter.executeReviewedSavedRun !== 'function') {
+            await this.showError('Adapter too old', 'This adapter has no executeReviewedSavedRun — update scripts/adapters/scriptable-adapter.js.');
+            return null;
+        }
+        return adapter.executeReviewedSavedRun(resultsLike, decisions);
+    }
+
     async displaySavedRun(options = {}) {
         try {
             const runs = await this.listSavedRuns();
@@ -223,84 +334,22 @@ class SavedRunDisplay {
                 return;
             }
 
-            // Normalize to the same shape expected by display/present methods
-            // (re-saving is prevented by the _isDisplayingSavedRun flag the adapter checks)
-            let config = saved?.config;
-            
-            // If readOnly mode (default), force isDryRun override for all parsers
-            if (options.readOnly !== false && config && config.parsers) {
-                config = JSON.parse(JSON.stringify(config)); // Clone
-                config.parsers = config.parsers.map(parser => ({
-                    ...parser,
-                    dryRun: true  // Total override - force dry run mode
-                }));
-            }
-            
-            const savedRunContext = saved?.runContext || saved?.summary?.runContext || null;
-            const resultsLike = {
-                totalEvents: saved?.summary?.totals?.totalEvents || 0,
-                bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                calendarEvents: 0, // Display-only value; the adapter's _isDisplayingSavedRun guard is what prevents re-saving
-                errors: saved?.errors || [],
-                parserResults: saved?.parserResults || [],
-                analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
-                // Dropped non-bear events are part of the run's result and the
-                // results UI renders them as real event cards. Omitting them
-                // here made that whole section invisible for saved runs — the
-                // one place you actually review a past run's bear calls.
-                // (Overrides stay inert: _isDisplayingSavedRun renders the
-                // section read-only.)
-                bearDroppedEvents: Array.isArray(saved?.bearDroppedEvents) ? saved.bearDroppedEvents : [],
-                // Report-only calendar hygiene checklist — render it for
-                // saved runs too (older runs simply have none).
-                calendarHygiene: Array.isArray(saved?.calendarHygiene) ? saved.calendarHygiene : [],
-                config: config,
-                sourceRunId: saved?.summary?.runId || null,
-                // Execute-from-saved-run support (adapter feature-detects all
-                // of these; older adapters simply ignore them):
-                // — the run's saved timestamp drives the staleness guard and
-                //   keeps a post-execution rewrite on the SAME file/timestamp
-                _savedRunTimestamp: saved?.summary?.timestamp || null,
-                // — prior executions are threaded back so a re-execution
-                //   APPENDS to the audit trail instead of overwriting it
-                savedRunExecutions: Array.isArray(saved?.executions) ? saved.executions : [],
-                // — prior ICS-export UID ledger entries thread back the same
-                //   way, so a post-execution rewrite appends instead of
-                //   erasing the uids earlier exports minted
-                icsExports: Array.isArray(saved?.icsExports) ? saved.icsExports : [],
-                // — the ORIGINAL config (pre readOnly dryRun-forcing clone),
-                //   so a post-execution rewrite records what the run really ran with
-                _savedRunOriginalConfig: saved?.config || null,
-                runContext: {
-                    type: 'display',
-                    environment: 'scriptable',
-                    trigger: 'saved-run',
-                    original: savedRunContext
-                },
-                _savedRunContext: savedRunContext,
-                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
-            };
+            const resultsLike = this.buildResultsLike(saved, options);
 
             // Initialize adapter and display results
-            // Load configuration to get cities data for timezone lookup
-            const scraperConfig = importModule('scraper-input');
-            const scraperCities = importModule('scraper-cities');
-            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
-            const adapterConfig = {
-                ...scraperConfig,
-                cities: scraperCities
-            };
-            this.adapter = new ScriptableAdapter(adapterConfig);
-            await this.adapter.displayResults(resultsLike);
+            const adapter = this.createAdapter();
+            await adapter.displayResults(resultsLike);
         } catch (e) {
             console.log(`📱 Display: Failed to display saved run: ${e.message}`);
         }
     }
 }
 
-try {
-    const display = new SavedRunDisplay();
-
+// Launch options from the URL-scheme / widget parameters. Pure, exported
+// for tests: runId (query runId/runid or widget "runid:<id>"), last (query
+// or widget "last"), presentHistory, readOnly (default true), and
+// reviewExecute (the Mac server's link — needs runId).
+function parseLaunchOptions(query = {}, widgetParam = null) {
     const toBool = (value, fallback) => {
         if (value === undefined || value === null) return fallback;
         if (typeof value === 'boolean') return value;
@@ -309,10 +358,8 @@ try {
         if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
         return fallback;
     };
-
-    const query = (typeof args !== 'undefined' && args.queryParameters) ? args.queryParameters : {};
-    const widgetParam = (typeof args !== 'undefined' && args.widgetParameter) ? args.widgetParameter : null;
-    const runIdFromQuery = query.runId || query.runid || null;
+    const params = query && typeof query === 'object' ? query : {};
+    const runIdFromQuery = params.runId || params.runid || null;
     let runIdFromParam = null;
     let lastFromParam = false;
     if (widgetParam) {
@@ -323,25 +370,51 @@ try {
             runIdFromParam = trimmed.slice('runid:'.length).trim();
         }
     }
-
     const runId = runIdFromQuery || runIdFromParam || null;
-    const last = runId ? false : (toBool(query.last, false) || lastFromParam);
+    const last = runId ? false : (toBool(params.last, false) || lastFromParam);
     const presentHistoryDefault = !runId && !last;
-
-    // Options: change these to control behavior
-    const OPTIONS = {
-        last: last,                           // set true to auto-load most recent
-        runId: runId,                         // or set to a specific runId like "20250101-120000"
-        presentHistory: toBool(query.presentHistory, presentHistoryDefault),
-        readOnly: toBool(query.readOnly, true) // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
+    const reviewExecute = Boolean(runId) && toBool(params.reviewExecute, false);
+    return {
+        last,                                   // auto-load most recent
+        runId,                                  // a specific runId like "20250101-120000"
+        presentHistory: toBool(params.presentHistory, presentHistoryDefault),
+        readOnly: toBool(params.readOnly, true), // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
+        reviewExecute                           // execute the owner-reviewed plan, no results sheet
     };
+}
 
-    await display.displaySavedRun(OPTIONS);
-} catch (e) {
-    console.error(`Display Saved Run failed: ${e.message}`);
-    const alert = new Alert();
-    alert.title = 'Display Saved Run Error';
-    alert.message = `${e.message}`;
-    alert.addAction('OK');
-    await alert.present();
+// Auto-execute when loaded in Scriptable — never on require() in Node, so
+// scripts/display-saved-run.test.js can import the class and the option
+// parser (same guard as bear-event-scraper-unified.js).
+const isScriptableEnvironment = typeof importModule !== 'undefined';
+const isNodeEnvironment = !isScriptableEnvironment && typeof module !== 'undefined' && module.exports && typeof window === 'undefined';
+if (!isNodeEnvironment) {
+    (async () => {
+        try {
+            const display = new SavedRunDisplay();
+            const query = (typeof args !== 'undefined' && args.queryParameters) ? args.queryParameters : {};
+            const widgetParam = (typeof args !== 'undefined' && args.widgetParameter) ? args.widgetParameter : null;
+            const OPTIONS = parseLaunchOptions(query, widgetParam);
+            if (OPTIONS.reviewExecute) {
+                await display.executeReviewedRun(OPTIONS);
+            } else {
+                await display.displaySavedRun(OPTIONS);
+            }
+        } catch (e) {
+            console.error(`Display Saved Run failed: ${e.message}`);
+            const alert = new Alert();
+            alert.title = 'Display Saved Run Error';
+            alert.message = `${e.message}`;
+            alert.addAction('OK');
+            await alert.present();
+        } finally {
+            if (typeof Script !== 'undefined' && typeof Script.complete === 'function') {
+                Script.complete();
+            }
+        }
+    })();
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SavedRunDisplay, parseLaunchOptions };
 }

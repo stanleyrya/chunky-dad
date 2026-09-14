@@ -313,6 +313,24 @@ scriptable:///run?scriptName=Bear%20Event%20Scraper&title=Bear%20Night&startDate
 Notes:
 - Query params are the only supported input format (JSON payloads are not parsed).
 - All provided params are treated as explicit and clobber existing fields.
+
+### Mac review deck → "Execute on phone"
+The Mac server (`npm run scraper-server`, `tools/serve-results.js`) serves a
+swipe deck at `/review` for the newest run in the shared iCloud `runs/` dir:
+approve (swipe right), reject with a reason (swipe left), skip. Decisions live
+in `chunky-dad-scraper/owner-decisions.json` (written by the Mac only). The
+deck's **Execute on phone** button opens
+
+```
+scriptable:///run?scriptName=display-saved-run&runId=<runId>&reviewExecute=1
+```
+
+which makes `display-saved-run.js` load that run plus the decisions, re-analyze
+against the live calendar, write only the approved cards (plus notes-only
+housekeeping merges), and record the run file / log / metrics — no results
+sheet. If the script is named differently on the phone, start the server with
+`CHUNKY_REVIEW_SCRIPT_NAME=<name>`. Approved bars are promoted into
+`data/bars/<city>.json` with `npm run apply-bar-approvals`.
 - Send the full set of params every time; empty values clear fields.
 
 Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,

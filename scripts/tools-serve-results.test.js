@@ -690,3 +690,325 @@ test('run-once: UV_THREADPOOL_SIZE headroom is defaulted at the entry point and 
     'scheduled runs get the headroom even if the entry-point default ever moves'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Review deck (v2): renderers, the Scriptable hand-off link, and the routes
+// (exercised through handleRequest with a temp shared dir — the first
+// HTTP-level coverage this server has).
+// ---------------------------------------------------------------------------
+const fs = require('node:fs');
+const os = require('node:os');
+const {
+  resolveReviewScriptName,
+  buildScriptableExecuteLink,
+  formatReviewDateLine,
+  formatReviewUtcLine,
+  describeReviewTimeDelta,
+  renderReviewCard,
+  renderReviewPage,
+  createServerState,
+  handleRequest
+} = require('../tools/serve-results');
+const reviewQueue = require('../tools/review-queue');
+
+const REVIEW_TEST_CITIES = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'], calendar: 'chunky-dad-nyc', coordinates: { lat: 40.7128, lng: -74.006 } } };
+function buildReviewCtx() {
+  return {
+    adapter: new ScriptableAdapter({ cities: REVIEW_TEST_CITIES }),
+    core: reviewQueue.createDeckCore({ config: { cities: REVIEW_TEST_CITIES } }, {})
+  };
+}
+
+test('formatReviewDateLine: the event\'s zone with its label, no fabricated end, a named end day, and honesty about a missing zone', () => {
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM – Fri, Oct 4 1:00 AM EDT');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T03:30:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM – 11:30 PM EDT');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM EDT (no end listed)');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T02:00:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM EDT (no end listed)', 'end == start is not an end');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'Not/AZone'), 'Fri, Oct 4, 2030 · 2:00 AM UTC (no end listed)', 'unknown zone falls back to UTC');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, null), 'Fri, Oct 4, 2030 · 2:00 AM UTC (no end listed) — no timezone on the event');
+  assert.equal(formatReviewDateLine('garbage', null, 'UTC'), '');
+  assert.equal(formatReviewUtcLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z'), '🌍 Fri, Oct 4 2:00 AM – 5:00 AM UTC');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-04T04:00:00.000Z'), '2 h later');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-04T01:30:00.000Z'), '30 min earlier');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-07T02:00:00.000Z'), '3 days later');
+});
+
+test('the Scriptable hand-off link names the phone script and the run, and the name is overridable', () => {
+  assert.equal(buildScriptableExecuteLink('20260913-051750', 'display-saved-run'),
+    'scriptable:///run?scriptName=display-saved-run&runId=20260913-051750&reviewExecute=1');
+  assert.equal(buildScriptableExecuteLink('20260913-051750', 'Display Saved Run'),
+    'scriptable:///run?scriptName=Display%20Saved%20Run&runId=20260913-051750&reviewExecute=1');
+  assert.equal(buildScriptableExecuteLink(''), '');
+  assert.equal(resolveReviewScriptName({}), 'display-saved-run');
+  assert.equal(resolveReviewScriptName({ CHUNKY_REVIEW_SCRIPT_NAME: ' My Script ' }), 'My Script');
+});
+
+test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UTC check, tappable route line, domain-labelled chips', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: {
+    title: 'Bear <b>Night</b>', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T06:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Rockbar', address: '185 Christopher St, New York, NY', city: 'nyc', location: '40.7331, -74.0055', source: 'ai-web',
+    url: 'https://www.furball.nyc/events/x', ticketUrl: 'https://tickets.example/x', image: 'https://furball.nyc/flyer.jpg', cover: '$20',
+    description: 'Bears "welcome"', changes: {}
+  }, display: {
+    parserName: 'Furball', pageHost: 'furball.nyc', analysisReason: 'No existing events found', bearSource: 'keyword', bearReview: '',
+    evidenceLines: ['pin is 0 m from curated "Rockbar" pin'], notes: 'bar: Rockbar\nwebsite: https://www.furball.nyc/events/x',
+    image: 'https://furball.nyc/flyer-portrait.jpg', imageOrientation: 'portrait', imageDimensions: { width: 800, height: 1000 }, imageRepeatCount: 1,
+    instagram: '@furballnyc', gmaps: 'https://www.google.com/maps/search/?api=1&query=x'
+  } }, ctx);
+  assert.ok(html.includes('✨ New event') && html.includes('No existing events found'));
+  assert.ok(html.includes('Bear &lt;b&gt;Night&lt;/b&gt;'), 'title escaped');
+  assert.ok(html.includes('📅 Thu, Oct 3, 2030 · 10:00 PM – Fri, Oct 4 2:00 AM EDT'));
+  assert.ok(html.includes('🌍 Fri, Oct 4 2:00 AM – 6:00 AM UTC'), 'UTC verification line');
+  assert.ok(html.includes('href="https://www.google.com/maps/search/?api=1&amp;query=Rockbar%2C%20new%20york"') && html.includes('>Rockbar</a>'), 'bar links to maps');
+  assert.ok(html.includes('>185 Christopher St</a>'), 'street-only address label');
+  assert.ok(html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>🧭 Route</a>'));
+  assert.ok(html.includes('Furball · from furball.nyc · 📱 chunky-dad-nyc'), 'parser name, page host and target calendar');
+  assert.ok(html.includes('>Rockbar</a> <span class="curated" title="curated bar">✓</span>') === false, 'no curated tick without a curated barSource');
+  assert.ok(html.includes('>🔗 furball.nyc/events/x</a>') && html.includes('>🎟 tickets.example/x</a>') && html.includes('>📸 @furballnyc</a>') && html.includes('>🗺 maps</a>'), 'links keep their path; only handles and the maps link get short labels');
+  assert.ok(html.includes('💵 $20'));
+  assert.ok(html.includes('class="thumb portrait"') && !html.includes('onclick=') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, no inline handlers (the page wires taps)');
+  assert.ok(!html.includes('class="evidence"') && !html.includes('provenance:'), 'no evidence blurb on the face');
+  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword') && html.includes('data-bear="bear"') && html.includes('data-bear="not_bear"'), 'the bear check is reviewable on the card');
+  assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
+  assert.ok(html.includes('Bears &quot;welcome&quot;'));
+  assert.ok(!html.includes('class="chgs"'), 'a new event has no change block');
+});
+
+test('renderReviewCard (update): stacked calendar-has → would-become rows in the field\'s own language', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'merge', key: 'k', proposal: {
+    title: 'BEEFMINCE x RVT', existingTitle: 'BEEFMINCE Brief Encounter', startDate: '2030-10-05T03:00:00.000Z', timezone: 'America/New_York', city: 'nyc',
+    changes: {
+      title: { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' },
+      startDate: { from: '2030-10-05T01:00:00.000Z', to: '2030-10-05T03:00:00.000Z' },
+      location: { from: '40.7331, -74.0055', to: '40.7350, -74.0055' },
+      url: { from: '', to: 'https://www.beefmince.co.uk/tickets' }
+    }
+  }, display: { parserName: 'The Bear Calendar', notesOnlyAlso: true } }, ctx);
+  assert.ok(html.includes('🔀 Update saved event'));
+  assert.ok(!html.includes('calendar title:'), 'the title row already shows the calendar title');
+  assert.ok(html.includes('<span>calendar has</span><span>would become</span>'));
+  assert.ok(html.includes('data-field="title"') && html.includes('<span class="was">BEEFMINCE Brief Encounter</span>') && html.includes('<span class="now">BEEFMINCE x RVT</span>'));
+  assert.ok(html.includes('<span class="chg-k">Starts</span>') && html.includes('<span class="was">Fri, Oct 4 · 9:00 PM</span>') && html.includes('<span class="now">11:00 PM</span>') && html.includes('2 h later'), 'day printed once, time diffed, delta named');
+  assert.ok(html.includes('<span class="chg-k">Pin</span>') && html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>📌 40.7350, -74.0055</a>'));
+  assert.match(html, /⚠️ moved 21\d m · <a[^>]*maps\/dir\/\?api=1&amp;origin=40\.7331%2C-74\.0055&amp;destination=40\.735%2C-74\.0055[^>]*>🧭 old → new<\/a>/, 'a pin move shows the distance and a route between old and new');
+  assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('<span class="none">∅</span>') && html.includes('>beefmince.co.uk/tickets</a>'), 'a link change shows the whole stored URL, not its domain');
+  const samePath = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { url: { from: 'https://bearracuda.com', to: 'https://bearracuda.com/events/denver17/' } } } }, ctx);
+  assert.ok(samePath.includes('>bearracuda.com</a>') && samePath.includes('>bearracuda.com/events/denver17/</a>'), 'Bearracuda Denver: the gained path is visible, trailing slash and all');
+  assert.ok(!html.includes('+ notes'), 'no notes blurb');
+
+  const added = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { location: { from: '', to: '40.7331, -74.0055' }, endDate: { from: '2030-10-05T03:00:00.000Z', to: '' } } } }, ctx);
+  assert.ok(added.includes('pin added'));
+  assert.ok(added.includes('<span class="none">(no end listed)</span>'), 'an end being dropped says so');
+});
+
+test('renderReviewCard (bar): route line, distance from the city center, labelled links, a map, and the events it was seen in', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
+    name: 'The Woods', city: 'nyc', address: '48 S 4th St, Brooklyn', coordinates: '40.71, -73.96', signals: ['page-adjacent'],
+    website: 'https://thewoods.example/', instagram: '', sourceEvents: [{ title: 'BEAR NIGHT', date: '2030-02-02T02:00:00.000Z' }],
+    evidence: ['pin is 4.1 km from nyc center']
+  } }, ctx);
+  assert.ok(html.includes('🏳️‍🌈 New bar') && html.includes('<h2>The Woods</h2>'));
+  assert.ok(html.includes('>The Woods</a>') && html.includes('>48 S 4th St</a>') && html.includes('href="https://www.google.com/maps/search/?api=1&amp;query=40.71%2C-73.96"'));
+  assert.match(html, /\d(\.\d)? km from new york center · seen as page-adjacent/);
+  assert.ok(html.includes('>🔗 thewoods.example/</a>') && !html.includes('📸'), 'blank links render no chip');
+  assert.ok(html.includes('openstreetmap.org/export/embed.html'), 'inline map');
+  assert.ok(html.includes('<li>BEAR NIGHT <span class="muted">— Sat, Feb 2</span></li>'));
+  assert.ok(html.includes('<li>pin is 4.1 km from nyc center</li>'));
+});
+
+test('renderReviewCard: the brand site leads the links, a curated bar gets its tick, a stored verdict shows as the active button', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: {
+    title: 'GOLDILOXX SINGLET NITE', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: 'Red Eye', city: 'nyc',
+    url: 'https://redeyeny.com/', ticketUrl: 'https://redeyetickets.com/events/goldiloxx-singlet-nite', changes: {}
+  }, display: { favicon: 'https://linktr.ee/goldiloxx', barSource: 'curated', bearSource: 'ai', bearVerdict: 'bear', bearVerdictStampedAt: '2030-01-02T00:00:00.000Z' } }, ctx);
+  const brandAt = html.indexOf('>🏷 linktr.ee/goldiloxx</a>');
+  const pageAt = html.indexOf('>🔗 redeyeny.com/</a>');
+  assert.ok(brandAt !== -1 && pageAt !== -1 && brandAt < pageAt, 'the favicon (brand) site leads, the venue page follows');
+  assert.ok(html.includes('>Red Eye</a> <span class="curated" title="curated bar">✓</span>'), 'curated bar tick');
+  assert.ok(html.includes('🐻 bear — ai') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
+  assert.ok(html.includes('class="bear-btn on" data-bear="bear"'), 'stored verdict is the active button');
+  const same = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'X', timezone: 'UTC', url: 'https://bearracuda.com/', changes: {} }, display: { favicon: 'https://www.bearracuda.com/' } }, ctx);
+  assert.ok(!same.includes('🏷'), 'no brand chip when it is the same site as the event page');
+});
+
+test('renderReviewCard (dropped): the drop reason is the bear row, and the card asks the one question', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'dropped', key: 'dropped|x', proposal: {
+    kind: 'dropped', title: 'Dolly Parton Tribute', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: '3 Dollar Bill', city: 'nyc',
+    dropReason: 'ai: The title and description contain no bear-specific language.', occurrences: 3, changes: {}
+  }, display: {} }, ctx);
+  assert.ok(html.includes('🚫 Dropped as not bear') && html.includes('3 occurrences'));
+  assert.ok(html.includes('🚫 dropped as not bear — AI: The title and description contain no bear-specific language.'));
+  assert.ok(html.includes('data-bear="bear"'));
+});
+
+test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'Solo', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', bar: 'Rockbar', city: 'nyc', url: 'https://furball.nyc/' } });
+  assert.ok(html.includes('<h2>Solo</h2>') && html.includes('📍 Rockbar') && html.includes('>🔗 furball.nyc/</a>'));
+});
+
+test('injectHeaderBar links the review deck with its pending count', () => {
+  assert.ok(injectHeaderBar('<html><body></body></html>', { reviewPending: 3 }).includes('🃏 Review (3)'));
+  const none = injectHeaderBar('<html><body></body></html>', { reviewPending: 0 });
+  assert.ok(none.includes('🃏 Review</a>'));
+});
+
+// --- routes -----------------------------------------------------------------
+
+function fakeRequest(method, url, body) {
+  const handlers = {};
+  return {
+    method,
+    url,
+    headers: {},
+    on(event, callback) {
+      handlers[event] = callback;
+      if (event === 'end') {
+        setImmediate(() => {
+          if (body && handlers.data) handlers.data(body);
+          handlers.end();
+        });
+      }
+      return this;
+    },
+    destroy() {}
+  };
+}
+
+function fakeResponse() {
+  return {
+    status: null,
+    headers: null,
+    body: '',
+    writeHead(status, headers) { this.status = status; this.headers = headers; },
+    end(chunk) { this.body = String(chunk == null ? '' : chunk); }
+  };
+}
+
+async function request(state, method, url, body) {
+  const res = fakeResponse();
+  await handleRequest(state, fakeRequest(method, url, body), res);
+  return res;
+}
+
+function reviewRunFixture(runId) {
+  const start = '2030-10-04T02:00:00.000Z';
+  return {
+    version: 2,
+    summary: { runId, timestamp: '2030-01-01T05:15:00.000Z', totals: { totalEvents: 1, bearEvents: 1 } },
+    runContext: { environment: 'node', type: 'automated' },
+    config: { cities: { nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, config: { dryRun: true }, parsers: [] },
+    analyzedEvents: [{
+      title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', timezone: 'America/New_York',
+      startDate: start, endDate: '2030-10-04T06:00:00.000Z', url: 'https://furball.nyc/',
+      _parserConfig: { name: 'Furball', dryRun: false }, _action: 'new'
+    }],
+    bearDroppedEvents: [], parserResults: [], errors: [], calendarHygiene: []
+  };
+}
+
+test('review routes: deck → decide → decided → undo, over a temp shared dir', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-server-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('FURBALL NYC'), 'the card is on the page');
+    assert.ok(page.body.includes('scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1'), 'hand-off link for THIS run');
+    assert.ok(page.body.includes('window.__reviewDeck = {'), 'deck payload inlined');
+    assert.ok(page.body.includes('"wrong venue"'), 'reject chips shipped');
+
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.ok, true);
+    assert.equal(deck.counts.pending, 1);
+    const card = deck.cards[0];
+    assert.equal(card.key, 'event|furball|rockbar|2030-10-03');
+
+    const bad = await request(state, 'POST', '/review/decide', '{nope');
+    assert.equal(bad.status, 400);
+    const noVerdict = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'maybe' }));
+    assert.equal(noVerdict.status, 400);
+
+    const decided = await request(state, 'POST', '/review/decide', JSON.stringify({
+      key: card.key, kind: card.kind, verdict: 'reject', runId: deck.runId, snapshot: card.proposal,
+      reason: { tags: ['wrong venue'], text: 'it moved to the Eagle' }
+    }));
+    assert.equal(decided.status, 200, decided.body);
+    assert.equal(JSON.parse(decided.body).decisions, 1);
+    const stored = JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8'));
+    assert.equal(stored.decisions[0].key, card.key);
+    assert.equal(stored.decisions[0].reason.text, 'it moved to the Eagle');
+
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(after.counts.pending, 0, 'decided cards leave the deck');
+    assert.equal(after.decided[0].decision.verdict, 'reject');
+    const rejections = await request(state, 'GET', '/review/rejections');
+    assert.ok(rejections.body.includes('NEW FURBALL NYC — 2030-10-04 @ Rockbar [Furball] {wrong venue} — it moved to the Eagle'));
+    const decisionsJson = JSON.parse((await request(state, 'GET', '/review/decisions.json')).body);
+    assert.equal(decisionsJson.decisions.length, 1);
+
+    const cleared = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'clear' }));
+    assert.equal(JSON.parse(cleared.body).removed, true);
+    assert.equal(JSON.parse((await request(state, 'GET', '/review/deck.json')).body).counts.pending, 1, 'undo puts the card back');
+
+    // 🐻 from the deck writes the phone's verdict store with the tap's shape.
+    const bear = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'not_bear', event: { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', location: '', city: 'nyc' } }));
+    assert.equal(bear.status, 200, bear.body);
+    const verdicts = JSON.parse(fs.readFileSync(reviewQueue.getBearVerdictsPath(dir), 'utf8'));
+    assert.equal(verdicts.version, 1);
+    assert.deepEqual(Object.keys(verdicts.verdicts[0]).sort(), ['address', 'city', 'location', 'stampedAt', 'title', 'venue', 'verdict'].sort(), 'same entry shape as a results-sheet tap');
+    assert.equal(verdicts.verdicts[0].verdict, 'not_bear');
+    const flipped = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'bear', event: { title: 'furball nyc', bar: 'The Rockbar', city: 'nyc' } }));
+    assert.equal(JSON.parse(flipped.body).verdicts, 1, 'same party → one entry, last verdict wins');
+    const deckWithVerdict = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deckWithVerdict.cards[0].display.bearVerdict, 'bear', 'the deck shows the stored verdict');
+    const clearedBear = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'clear', event: { title: 'FURBALL NYC', bar: 'Rockbar', city: 'nyc' } }));
+    assert.equal(JSON.parse(clearedBear.body).removed, true);
+    assert.equal((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'maybe', event: {} }))).status, 400);
+
+    const fallback = await request(state, 'GET', '/review?run=not-a-run');
+    assert.ok(fallback.body.includes('FURBALL NYC'), 'a bad run id falls back to the newest run');
+    const missing = await request(state, 'GET', '/review?run=20200101-000000');
+    assert.ok(missing.body.includes('could not be read'));
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('review page without any saved run explains where runs come from', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-empty-'));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  try {
+    const page = await request(createServerState(), 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('No saved runs in the shared dir yet'));
+    assert.equal(JSON.parse((await request(createServerState(), 'GET', '/review/deck.json')).body).ok, false);
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('renderReviewPage lists the shared runs, marks the syncing ones, and ships the decided list', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const html = renderReviewPage(deck, {
+    runs: [{ runId: '20300102-051500', available: false }, { runId: '20300101-051500', available: true }],
+    scriptName: 'display-saved-run'
+  });
+  assert.ok(html.includes('<option value="20300102-051500" disabled>20300102-051500 (syncing)</option>'));
+  assert.ok(html.includes('<option value="20300101-051500" selected>20300101-051500</option>'));
+  assert.ok(html.includes('"executeLink":"scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1"'));
+  assert.ok(html.includes('id="sheet-tags"') && html.includes('id="btn-undo"'), 'reject sheet and undo present');
+});

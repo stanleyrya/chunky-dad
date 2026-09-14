@@ -19936,8 +19936,48 @@ test('canonicalizeIdentityLinks: a co-promoter bare root loses to the curated id
     'a deep URL is an event page and outranks everything');
   assert.equal(ownSiteRoot.website, 'https://beefmince.com',
     'the source\'s own root is kept, not "replaced"');
-  assert.equal(unstamped.website, 'https://theurbanbear.com',
-    'no source-page stamp → the rule fails closed and changes nothing');
+  assert.equal(unstamped.website, 'https://beefmince.com',
+    'the source page stamp is not needed: any foreign front door loses to the curated identity');
+});
+
+// THE SOURCE'S OWN FRONT DOOR IS NOT THE PARTY'S LINK EITHER (owner, deck
+// review 2026-09-14: "I don't like that we are adding redeye as goldiloxx
+// event page"). GOLDILOXX SINGLET NITE, scraped off Red Eye's own site,
+// shipped website https://redeyeny.com/ — a bare root. Goldiloxx's registry
+// entry carries a favicon link and deliberately NO website, so the honest
+// identity is: no website at all (the favicon names the party, the
+// ticketUrl sells it). A promoter WITH a curated site gets that site.
+test('canonicalizeIdentityLinks: the source\'s bare root gives way to the registry identity — the curated site, or nothing when the promoter has only a favicon', () => {
+  const core = createRegistryCore([
+    { name: 'Goldiloxx', shortName: 'GOLDILOXX', favicon: 'https://linktr.ee/goldiloxx', urlPatterns: ['goldiloxx'] },
+    { name: 'BOATMINCE', shortName: 'BOATMINCE', website: 'https://beefmince.com' }
+  ]);
+  const goldiloxx = {
+    title: 'GOLDILOXX SINGLET NITE',
+    _promoter: 'Goldiloxx',
+    url: 'https://redeyeny.com/',
+    website: 'https://redeyeny.com/',
+    ticketUrl: 'https://redeyetickets.com/events/goldiloxx-singlet-nite',
+    _sourcePageUrl: 'https://redeyeny.com/'
+  };
+  const goldiloxxOwnRoot = { title: 'GOLDILOXX', _promoter: 'Goldiloxx', website: 'https://linktr.ee/goldiloxx' };
+  const goldiloxxDeep = { title: 'GOLDILOXX', _promoter: 'Goldiloxx', website: 'https://redeyeny.com/events/goldiloxx-singlet-nite' };
+  const withSite = { title: 'SPOOKMINCE', _promoter: 'BOATMINCE', website: 'https://theroyalvauxhalltavern.com/', _sourcePageUrl: 'https://theroyalvauxhalltavern.com/' };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    core.canonicalizeIdentityLinks([goldiloxx, goldiloxxOwnRoot, goldiloxxDeep, withSite]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(goldiloxx.website, undefined, 'the venue front door is not the party\'s website');
+  assert.equal(goldiloxx.url, undefined, 'url folds into website and is gone');
+  assert.equal(goldiloxx.ticketUrl, 'https://redeyetickets.com/events/goldiloxx-singlet-nite', 'the ticket link is untouched');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: cleared website https://redeyeny.com/ for "GOLDILOXX SINGLET NITE"') && line.includes('favicon link (https://linktr.ee/goldiloxx)')), lines.join('\n'));
+  assert.equal(goldiloxxOwnRoot.website, 'https://linktr.ee/goldiloxx', 'the promoter\'s own favicon host is its own front door — kept');
+  assert.equal(goldiloxxDeep.website, 'https://redeyeny.com/events/goldiloxx-singlet-nite', 'a deep page on the venue site is the event\'s page — kept');
+  assert.equal(withSite.website, 'https://beefmince.com', 'a promoter with a curated site gets that site over the venue root');
 });
 
 test('final merge: the pasted BEEFMINCE x RVT rows are gone at the source', async () => {
@@ -22519,4 +22559,162 @@ test('a third-party listing never renames a saved event; a site renaming its own
   const verdict = core.resolveConflictDeterministically('title', 'Wig Out', ownRename.title,
     { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'Wig Out', key: 'wig-out|2026-11-01|' }, b: ownRename } });
   assert.ok(!verdict || verdict.reason !== 'a third-party listing never renames a saved event', 'the site\'s own rename is not a third party');
+});
+
+// ---------------------------------------------------------------------------
+// Owner review queue (the Mac server's swipe deck): proposal keys, coverage
+// of stored decisions, and the withhold the reviewed-run execute path stamps.
+// ---------------------------------------------------------------------------
+
+const REVIEW_CITIES = { nyc: { timezone: 'America/New_York', patterns: ['nyc'] } };
+const REVIEW_START = '2030-10-04T02:00:00.000Z'; // Fri Oct 3, 22:00 in New York
+
+function createReviewCore() {
+  return new SharedCore(REVIEW_CITIES, { eventSchema: EventSchema });
+}
+
+function reviewNewEvent(overrides = {}) {
+  return {
+    title: 'FURBALL NYC',
+    bar: 'Rockbar',
+    address: '185 Christopher St, New York, NY',
+    city: 'nyc',
+    startDate: REVIEW_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    _parserConfig: { name: 'Furball', dryRun: false },
+    _action: 'new',
+    ...overrides
+  };
+}
+
+function reviewMergeEvent(overrides = {}) {
+  const existing = {
+    title: 'BEEFMINCE Brief Encounter',
+    startDate: REVIEW_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    notes: 'bar: Royal Vauxhall Tavern'
+  };
+  return {
+    title: 'BEEFMINCE x RVT',
+    bar: 'Royal Vauxhall Tavern',
+    city: 'nyc',
+    startDate: REVIEW_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    url: 'https://beefmince.co.uk/',
+    notes: 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.co.uk/',
+    _parserConfig: { name: 'The Bear Calendar', dryRun: false },
+    _action: 'merge',
+    _existingEvent: existing,
+    _original: { scraper: {}, calendar: { ...existing, website: 'https://beefmince.co.uk/' } },
+    _changes: ['title', 'notes'],
+    _mergeNoOp: false,
+    ...overrides
+  };
+}
+
+test('owner review key: title tokens + place + LOCAL day, case/punctuation folded, place falls back to city', () => {
+  const core = createReviewCore();
+  const key = core.getOwnerReviewKey(reviewNewEvent());
+  assert.equal(key, 'event|furball|rockbar|2030-10-03', 'the day is the local (New York) day, not the UTC one');
+  assert.equal(core.getOwnerReviewKey(reviewNewEvent({ title: 'furball nyc!!', bar: 'The Rockbar', startDate: new Date(REVIEW_START) })), key,
+    'case, punctuation, a Date object and a leading "The" make no difference');
+  assert.notEqual(core.getOwnerReviewKey(reviewNewEvent({ bar: 'Eagle NYC' })), key, 'a different venue is a different proposal');
+  assert.notEqual(core.getOwnerReviewKey(reviewNewEvent({ startDate: '2030-10-11T02:00:00.000Z' })), key, 'a different night is a different proposal');
+  assert.equal(core.getOwnerReviewKey(reviewNewEvent({ bar: '', address: '', location: '' })), 'event|furball|nyc|2030-10-03',
+    'a placeless record keys on its city');
+  assert.equal(core.getOwnerReviewKey({ title: '', bar: 'Rockbar', city: 'nyc', startDate: REVIEW_START }), '', 'no title identity → nothing to decide');
+  assert.equal(SharedCore.getOwnerReviewBarKey({ key: 'nyc|thewoods' }), 'bar|nyc|thewoods');
+});
+
+test('owner review proposal: a merge shows only stored-field changes (never notes); a new event shows none', () => {
+  const core = createReviewCore();
+  const merge = core.buildOwnerReviewProposal(reviewMergeEvent());
+  assert.equal(merge.kind, 'merge');
+  assert.deepEqual(Object.keys(merge.changes), ['title']);
+  assert.deepEqual(merge.changes.title, { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' });
+  assert.equal(merge.existingTitle, 'BEEFMINCE Brief Encounter');
+  assert.equal(merge.source, 'The Bear Calendar');
+  assert.equal(merge.startDate, REVIEW_START);
+
+  const fresh = core.buildOwnerReviewProposal(reviewNewEvent({ description: 'x'.repeat(700) }));
+  assert.equal(fresh.kind, 'new');
+  assert.deepEqual(fresh.changes, {});
+  assert.equal(fresh.description.length, 601, 'long descriptions are trimmed for the card');
+  assert.equal(fresh.timezone, 'America/New_York');
+
+  assert.equal(core.isOwnerReviewCandidate(reviewNewEvent()), true);
+  assert.equal(core.isOwnerReviewCandidate(reviewMergeEvent()), true);
+  assert.equal(core.isOwnerReviewCandidate(reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', _changes: ['notes'] })), false, 'notes-only = housekeeping');
+  assert.equal(core.isOwnerReviewCandidate(reviewMergeEvent({ _mergeNoOp: true })), false);
+  assert.equal(core.isOwnerReviewCandidate(reviewNewEvent({ _pastSpanWithheld: true })), false, 'already withheld by the normal gate');
+  assert.equal(core.isOwnerReviewCandidate(reviewNewEvent({ _action: 'conflict' })), false);
+});
+
+test('ownerDecisionCovers: same key for new events; a merge approval covers a subset of what was okayed, a rejection any repeated value', () => {
+  const approveNew = { key: 'event|a', verdict: 'approve' };
+  assert.equal(SharedCore.ownerDecisionCovers(approveNew, { kind: 'new', key: 'event|a' }), true);
+  assert.equal(SharedCore.ownerDecisionCovers(approveNew, { kind: 'new', key: 'event|b' }), false);
+  assert.equal(SharedCore.ownerDecisionCovers({ key: 'event|a', verdict: 'later' }, { kind: 'new', key: 'event|a' }), false);
+
+  const approveMerge = { key: 'event|m', verdict: 'approve', snapshot: { changes: { title: { from: 'A', to: 'B' } } } };
+  assert.equal(SharedCore.ownerDecisionCovers(approveMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' } } }), true);
+  assert.equal(SharedCore.ownerDecisionCovers(approveMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), false,
+    'an approval never covers a value the owner did not see');
+  assert.equal(SharedCore.ownerDecisionCovers(approveMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'C' } } }), false);
+
+  const rejectMerge = { key: 'event|m', verdict: 'reject', snapshot: { changes: { title: { from: 'A', to: 'B' } } } };
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), true,
+    'a rejection covers any proposal that repeats the rejected value');
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'C' } } }), false);
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: {} }), true);
+
+  const approveDate = { key: 'event|d', verdict: 'approve', snapshot: { changes: { startDate: { to: '2030-10-04T02:00:00.000Z' } } } };
+  assert.equal(SharedCore.ownerDecisionCovers(approveDate, { kind: 'merge', key: 'event|d', changes: { startDate: { to: '2030-10-04T02:00:00Z' } } }), true,
+    'instants compare as instants');
+  assert.equal(SharedCore.findOwnerDecision({ kind: 'new', key: 'event|a' }, [rejectMerge, approveNew]), approveNew);
+  assert.equal(SharedCore.findOwnerDecision({ kind: 'new', key: 'event|zzz' }, [approveNew]), null);
+});
+
+test('applyOwnerDecisions: approved writes, unreviewed and rejected are withheld with honest labels, housekeeping rides along', () => {
+  const core = createReviewCore();
+  const approved = reviewNewEvent({ title: 'Approved Party' });
+  const mystery = reviewNewEvent({ title: 'Mystery Party' });
+  const bad = reviewNewEvent({ title: 'Bad Party' });
+  const housekeeping = reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', _changes: ['notes'] });
+  const past = reviewNewEvent({ title: 'Past Party', _pastSpanWithheld: true });
+  const events = [approved, mystery, bad, housekeeping, past];
+  const decisions = [
+    { key: core.getOwnerReviewKey(approved), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z' },
+    { key: core.getOwnerReviewKey(bad), verdict: 'reject', reason: { tags: ['wrong venue'], text: 'wrong venue' } }
+  ];
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let counts;
+  try {
+    counts = core.applyOwnerDecisions(events, decisions);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(counts, { approved: 1, rejected: 1, awaiting: 1, housekeeping: 1, withheld: 1 });
+  assert.deepEqual(SharedCore.filterEventsForExecution(events).map((event) => event.title),
+    ['Approved Party', 'BEEFMINCE Brief Encounter'], 'only the approval and the housekeeping merge reach the write');
+  assert.deepEqual(approved._ownerReviewApproved, { key: core.getOwnerReviewKey(approved), stampedAt: '2030-01-01T00:00:00.000Z' });
+  assert.equal(SharedCore.describeExecutionDisposition(approved), 'NEW');
+  assert.equal(SharedCore.describeExecutionDisposition(mystery), 'WITHHELD (awaiting owner review)');
+  assert.equal(SharedCore.describeExecutionDisposition(bad), 'WITHHELD (rejected by owner — wrong venue)');
+  assert.deepEqual(bad._ownerReviewWithheld.tags, ['wrong venue']);
+  assert.equal(SharedCore.describeExecutionDisposition(past), 'WITHHELD (span fully past)', 'the normal gate still speaks first');
+  assert.ok(logLines.some((line) => line.startsWith('✅ OWNER REVIEW: "Approved Party" approved')));
+  assert.ok(logLines.some((line) => line.startsWith('🚫 OWNER REVIEW: "Bad Party" rejected — wrong venue')));
+  assert.ok(logLines.some((line) => line.startsWith('⏸️ OWNER REVIEW: "Mystery Party" not reviewed yet')));
+
+  // Analysis-time stamps: a replay strips them so the next pass re-decides.
+  const stripped = SharedCore.stripCalendarAnalysisStamps(bad);
+  assert.equal(stripped._ownerReviewWithheld, undefined);
+  assert.equal(SharedCore.stripCalendarAnalysisStamps(approved)._ownerReviewApproved, undefined);
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_ownerReviewWithheld'));
 });

@@ -2000,10 +2000,14 @@ test('run 20260722-150336 case: pinSource preserve geocoded-exact → curated re
 
   // Bookkeeping that only got better is not a diff (owner 2026-09-12:
   // "save what is needed, just don't show it as a diff to me").
-  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
   assert.ok(!rows.includes('pinSource'), 'no row at all for a provenance upgrade');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(!rows.includes('preserve failed'));
   assert.ok(!rows.includes('⚠️'), 'no warning icon for an upgrade');
+  // The compressed card table footnotes it instead of rowing it.
+  const compressed = adapter.generateComparisonRowsCompressed(buildPreserveComparisonEvent('pinSource', {
+    existing: 'geocoded-exact', scraped: 'curated', final: 'curated'
+  }));
+  assert.ok(compressed.includes('bookkeeping updated — pinSource'), compressed);
 });
 
 test('a provenance downgrade (curated → geocoded-approx) keeps the red warning, reworded as PROVENANCE DOWNGRADED', () => {
@@ -2012,10 +2016,9 @@ test('a provenance downgrade (curated → geocoded-approx) keeps the red warning
     existing: 'curated', scraped: 'geocoded-approx', final: 'geocoded-approx'
   }));
 
-  assert.ok(rows.includes('PROVENANCE DOWNGRADED (curated → geocoded-approx)'), rows);
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PROVENANCE DOWNGRADED'), 'existing red style');
-  assert.ok(rows.includes('⚠️'), 'downgrades keep the warning icon');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(rows.includes('⚠️ provenance downgraded (curated → geocoded-approx)'), rows);
+  assert.ok(rows.includes('change-row change-warn'), 'downgrades render as a warning row');
+  assert.ok(!rows.includes('preserve failed'));
 });
 
 test('non-provenance preserve mismatch still renders PRESERVE FAILED byte-identically', () => {
@@ -2024,8 +2027,9 @@ test('non-provenance preserve mismatch still renders PRESERVE FAILED byte-identi
     existing: 'FURBALL', scraped: 'MEGAWOOF', final: 'MEGAWOOF'
   }));
 
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: FURBALL, got: MEGAWOOF)</span>'), rows);
-  assert.ok(!rows.includes('PROVENANCE'));
+  assert.ok(rows.includes('⚠️ preserve failed (expected FURBALL, got MEGAWOOF)'), rows);
+  assert.ok(rows.includes('change-row change-warn'));
+  assert.ok(!rows.includes('provenance'));
 });
 
 test('an unknown provenance value fails open to the existing PRESERVE FAILED behavior', () => {
@@ -2034,8 +2038,8 @@ test('an unknown provenance value fails open to the existing PRESERVE FAILED beh
     existing: 'weird-stamp', scraped: 'curated', final: 'curated'
   }));
 
-  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: weird-stamp, got: curated)</span>'), rows);
-  assert.ok(!rows.includes('PROVENANCE'));
+  assert.ok(rows.includes('⚠️ preserve failed (expected weird-stamp, got curated)'), rows);
+  assert.ok(!rows.includes('provenance'));
 });
 
 test('an equal-tier provenance change (venue-site → geo-poi, same corroborated class) is informational, not a warning', () => {
@@ -2044,9 +2048,8 @@ test('an equal-tier provenance change (venue-site → geo-poi, same corroborated
     existing: 'venue-site', scraped: 'geo-poi', final: 'geo-poi'
   }));
 
-  assert.ok(!rows.includes('PROVENANCE UPGRADED'), rows);
   assert.ok(!rows.includes('barSource'), 'no row at all for an equal-tier provenance change');
-  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(!rows.includes('preserve failed'));
   assert.ok(!rows.includes('⚠️'));
 });
 
@@ -8388,25 +8391,26 @@ test('merge rows label deterministic vs AI vs no-op decisions in plain words', (
 
   // The card table renders ONLY rows that changed something: the AI adoption
   // in full, reason in the shared row format's own reason cell.
-  assert.ok(html.includes('🤝 AI — chose new'));
-  assert.ok(html.includes('poster names this event'));
+  // The WHY sits under the changed row's values, in plain words.
+  assert.ok(html.includes('<div class="change-why">🤝 AI took the scraped value: poster names this event</div>'), html);
   // No-op rows (deterministic kept-existing, same-value) compress into one
   // summary line naming the untouched fields (owner: the merge section
   // should just be the changes).
-  assert.ok(!html.includes('🔒 DETERMINISTIC — kept existing'));
-  assert.ok(!html.includes('SAME VALUE'));
+  assert.ok(!html.includes('🔒'));
+  assert.ok(!html.includes('same on both sides'));
   assert.ok(html.includes('2 fields unchanged'), 'summary line counts the no-ops');
   assert.ok(/2 fields unchanged — [^<]*website/.test(html), 'summary names the untouched fields');
-  // Strategy under the field name reads as words, not a bare "ai".
-  assert.ok(html.includes('<small>AI-arbitrated</small>'));
-  assert.ok(!html.includes('<small>ai</small>'));
+  // Two columns: the field, then calendar-has → would-become with the why.
+  assert.ok(html.includes('<tr><th>Field</th><th>Calendar has → would become</th></tr>'));
+  assert.ok(html.includes('<div class="change-was">calendar: '), 'the calendar value leads');
+  assert.ok(html.includes('<div class="change-now">→ '), 'the would-become value follows');
+  assert.ok(!html.includes('<small>ai</small>') && !html.includes('AI-arbitrated'), 'no strategy tokens under the field name');
 
-  // The uncompressed renderer keeps EVERY row — deterministic label and its
-  // reason intact for tooling and the provenance-preserve tests.
+  // The uncompressed renderer keeps EVERY judged row — deterministic keep
+  // and its reason intact for tooling and the provenance-preserve tests.
   const fullRows = adapter.generateComparisonRows(event);
-  assert.ok(fullRows.includes('🔒 DETERMINISTIC — kept existing'));
-  assert.ok(fullRows.includes('identity link beats a ticketing/social platform URL'));
-  assert.ok(fullRows.includes('SAME VALUE'));
+  assert.ok(fullRows.includes('🔒 rule kept the calendar value: identity link beats a ticketing/social platform URL'), fullRows);
+  assert.ok(fullRows.includes('same on both sides'));
 });
 
 test('merge rows label calendar stickiness and clobber fallback', () => {
@@ -8439,9 +8443,9 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
   const stickyHtml = adapter.generateEventCard(stickyEvent);
   // A sticky keep is a no-op — compressed off the card table into the
   // summary line; the labeled row survives in the uncompressed renderer.
-  assert.ok(!stickyHtml.includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  assert.ok(!stickyHtml.includes('🧊'));
   assert.ok(/\d+ fields? unchanged — [^<]*ticketUrl/.test(stickyHtml), 'ticketUrl named in the unchanged summary');
-  assert.ok(adapter.generateComparisonRows(stickyEvent).includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  assert.ok(adapter.generateComparisonRows(stickyEvent).includes('🧊 calendar stickiness (binding) — saved value kept without AI arbitration'));
 
   const fallbackHtml = adapter.generateEventCard({
     ...base,
@@ -8455,7 +8459,7 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
       source: 'fallback'
     }]
   });
-  assert.ok(fallbackHtml.includes('⚠️ NO AI ANSWER — took new (clobber fallback)'));
+  assert.ok(fallbackHtml.includes('⚠️ AI gave no answer — took the scraped value: ai unavailable/rejected — clobber fallback'), fallbackHtml);
 });
 
 // ---------------------------------------------------------------------------
@@ -8534,16 +8538,19 @@ test('TWISTED BEAR: a recorded deterministic gmaps rebuild renders once, as a ch
 
   const records = adapter.buildComparisonRowRecords(event);
   const gmapsRows = records.filter((record) => record.field === 'gmaps');
-  assert.equal(gmapsRows.length, 1, 'the gmaps row renders exactly once');
+  assert.equal(gmapsRows.length, 1, 'the gmaps field is judged exactly once');
   const row = gmapsRows[0];
-  assert.equal(row.changed, true, 'a rebuilt link IS a change');
-  assert.ok(row.html.includes('🔒 DETERMINISTIC — rewrote'), `truthful outcome label: ${row.html}`);
-  assert.ok(row.html.includes('rebuilt from the final merged bar + address'), 'the rebuild reason rides in the reason cell');
-  assert.ok(row.html.includes('<small>deterministic</small>'), 'the strategy slot names the real source');
-  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'a changed row never claims no change');
-  assert.ok(!row.html.includes('AI-arbitrated'), 'the AI touched nothing on this field');
-
-  assert.equal(adapter.countChangedMergeFields(event), 1, 'the chip counts the one real change');
+  // A rebuilt maps link is bookkeeping (owner 2026-09-12: "save what is
+  // needed, just don't show it as a diff to me"): footnoted, never a row,
+  // never counted — and the record still carries the truthful reason.
+  assert.equal(row.bookkeeping, true);
+  assert.equal(row.bookkeepingChanged, true, 'the link did change');
+  assert.equal(row.changed, false, 'but bookkeeping is not a diff');
+  assert.ok(row.context.includes('🔒 rule rewrote it: gmaps rebuilt: verified final coordinates replace the previous link') || row.context.includes('🔒 rule'), row.context);
+  assert.equal(adapter.countChangedMergeFields(event), 0, 'the chip does not count bookkeeping');
+  const compressed = adapter.generateComparisonRowsCompressed(event);
+  assert.ok(compressed.includes('bookkeeping updated — gmaps'), compressed);
+  assert.ok(!compressed.includes('data-field="gmaps"'), 'no gmaps row');
   const card = adapter.generateEventCard(event);
   assert.ok(!card.includes('KEPT EXISTING (no change)'), 'no self-contradiction anywhere on the card');
   assert.ok(!card.includes('AI-arbitrated'), 'no AI credit anywhere on the card');
@@ -8555,14 +8562,12 @@ test('TWISTED BEAR without a decision record (older saved runs) still never self
 
   const records = adapter.buildComparisonRowRecords(event);
   const row = records.find((record) => record.field === 'gmaps');
-  assert.equal(row.changed, true, 'value truth: merged differs from calendar');
-  assert.ok(row.html.includes('CHANGED (no decision recorded)'),
-    `an unattributed change says so plainly: ${row.html}`);
+  assert.equal(row.bookkeepingChanged, true, 'value truth: merged differs from calendar');
+  assert.equal(row.changed, false, 'bookkeeping is footnoted, not rowed');
+  assert.equal(row.context, 'changed — no decision recorded', 'an unattributed change says so plainly');
   assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'the contradictory composite is dead');
-  assert.ok(!row.html.includes('AI-arbitrated'),
+  assert.ok(!row.html.includes('AI-arbitrated') && !row.context.includes('AI'),
     'aiArbitration is null for this event — the AI is never blamed');
-  assert.ok(row.html.includes('<small>ai (not arbitrated)</small>'),
-    'the strategy slot admits arbitration never ran');
 });
 
 test('matchKey never renders a comparison row (Goldiloxx: calendar cannot hold it, so "→ ADDED" repeated forever)', () => {
@@ -8603,7 +8608,8 @@ test('TWISTED BEAR unchanged twin renders "no changes"', () => {
   const records = adapter.buildComparisonRowRecords(event);
   const row = records.find((record) => record.field === 'gmaps');
   assert.equal(row.changed, false, 'identical link → no-op');
-  assert.ok(row.html.includes('KEPT EXISTING (no change)'), 'the no-op label is reserved for true no-ops');
+  assert.equal(row.bookkeepingChanged, false, 'nothing to footnote either');
+  assert.ok(row.context.includes('calendar value kept'), 'the no-op wording is reserved for true no-ops');
   assert.equal(adapter.countChangedMergeFields(event), 0, 'the twin card says "no changes"');
 });
 
@@ -9083,11 +9089,14 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   const adapter = buildAdapter();
   const event = buildSharedFormatMergeEvent();
   const headerRow = '<tr><th>Field</th><th>Value</th><th>Source / Outcome</th><th>Reason</th></tr>';
+  const changeHeaderRow = '<tr><th>Field</th><th>Calendar has → would become</th></tr>';
 
-  // 1) Merge comparison rows.
+  // 1) Merge comparison rows: the two-column change format (field |
+  // calendar has → would become, why underneath).
   const mergeRows = adapter.generateComparisonRows(event);
-  assert.ok(mergeRows.includes('class="field-row"'), 'merge rows use the shared row class');
-  assert.ok(mergeRows.includes('field-row-source'), 'merge rows carry the source/outcome cell');
+  assert.ok(mergeRows.includes('class="field-row change-row"'), 'merge rows use the shared row class');
+  assert.ok(mergeRows.includes('field-row-change'), 'merge rows carry the change cell');
+  assert.ok(mergeRows.includes('class="change-why"'), 'merge rows carry the why line');
 
   // 2) Folded provenance rows (round 4: the provenance section dissolved
   // into the merge table) use the very same row builder.
@@ -9096,7 +9105,7 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
     new Set(['bar', 'website'])
   );
   assert.ok(folded.length > 0, 'provenance-only fields fold into records');
-  assert.ok(folded.every(r => r.html.includes('class="field-row"')), 'folded rows use the shared row class');
+  assert.ok(folded.every(r => r.html.includes('class="field-row change-row"')), 'folded rows use the change-row format too');
   // Export control markup survives, on the card actions row.
   const exportControl = adapter.buildExportIssueControlHtml(event, { runId: 'r1' });
   assert.ok(exportControl.includes('exportProvenanceIssue(this)'), 'export-issue handler kept');
@@ -9110,8 +9119,8 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   assert.ok(notesRegion.includes('class="field-row"'), 'notes preview uses the shared row class');
   assert.ok(notesRegion.includes(headerRow), 'notes preview renders the shared table header');
 
-  // The card's merge table renders the same header too — one format, three surfaces.
-  assert.ok(card.includes(headerRow));
+  // The card's merge table renders the change header; the notes preview keeps the four-column one.
+  assert.ok(card.includes(changeHeaderRow));
 });
 
 test('review subsections live on the main section; the raw payload hides below it', () => {
@@ -9373,8 +9382,8 @@ test('merge state compresses to a counted MERGE tag plus a write tag on the card
   assert.ok(!card.includes('Intent: MERGE'), 'no Intent/Write note in the details');
 
   // Details table: ONLY the changed row, plus one summary line for no-ops.
-  assert.ok(card.includes('🤝 AI — chose new'), 'the changed row renders in full');
-  assert.ok(!card.includes('🔒 DETERMINISTIC'), 'no-op decision row compressed out');
+  assert.ok(card.includes('🤝 AI took the scraped value'), 'the changed row renders in full, why underneath');
+  assert.ok(!card.includes('🔒'), 'no-op decision row compressed out');
   const summary = card.match(/(\d+) fields? unchanged/);
   assert.ok(summary, 'one summary line for the unchanged fields');
   assert.ok(Number(summary[1]) >= 5, 'the untouched fields are counted, not rendered as rows');
@@ -10483,7 +10492,7 @@ test('round4: provenance rows fold into the merge table under the shared no-op p
   const changed = freshRound3Event(BEEFMINCE_NOOP_EVENT);
   changed._original.calendar.city = 'berlin';
   const changedCard = adapter.generateEventCard(changed, { runId: 'r1' });
-  assert.match(changedCard, /<strong>city<\/strong>/, 'real city outcome renders as a row');
+  assert.match(changedCard, /<strong>City<\/strong>/, 'real city outcome renders as a row');
   assert.ok(changedCard.includes('took scraped value'), 'with its provenance decision as the reason');
   assert.equal(adapter.countChangedMergeFields(changed), 1);
 });
@@ -11129,4 +11138,201 @@ test('page-cache URL normalization drops the fragment even without a global URL'
     adapter.getPageCachePathParts(clean),
     'one page, one cache entry'
   );
+});
+
+// ---------------------------------------------------------------------------
+// Owner review (the Mac server's swipe deck): the decision store read and
+// the reviewed-run execute path — no WebView, the owner's swipes are the gate.
+// ---------------------------------------------------------------------------
+const { SharedCore: ReviewSharedCore } = require('../shared-core');
+const { EventSchema: ReviewEventSchema } = require('../event-schema');
+
+test('loadOwnerDecisions reads the Mac-written store (either shape), downloads from iCloud first, and never throws', async () => {
+  const adapter = buildAdapter();
+  const downloads = [];
+  adapter.fm = {
+    ...fileManagerStub,
+    fileExists: () => true,
+    downloadFileFromiCloud: async (filePath) => { downloads.push(filePath); },
+    readString: () => JSON.stringify({ version: 1, decisions: [{ key: 'event|a', verdict: 'approve' }, { key: 'event|b', verdict: 'later' }, 'junk'] })
+  };
+  const decisions = await adapter.loadOwnerDecisions();
+  assert.deepEqual(decisions.map((entry) => entry.key), ['event|a'], 'only approve/reject entries with a key count');
+  assert.ok(downloads[0].endsWith('/chunky-dad-scraper/owner-decisions.json'), 'the iCloud download is kicked before the read');
+
+  adapter.fm = { ...fileManagerStub, fileExists: () => true, readString: () => '[{"key":"event|c","verdict":"reject"}]' };
+  assert.equal((await adapter.loadOwnerDecisions())[0].key, 'event|c', 'bare array accepted');
+  adapter.fm = { ...fileManagerStub, fileExists: () => true, readString: () => '{oops' };
+  assert.deepEqual(await adapter.loadOwnerDecisions(), [], 'corrupt store → empty, never a throw');
+  adapter.fm = { ...fileManagerStub, fileExists: () => false };
+  assert.deepEqual(await adapter.loadOwnerDecisions(), []);
+});
+
+const REVIEW_RUN_START = '2030-10-04T02:00:00.000Z';
+
+function reviewedNew(title) {
+  return {
+    title,
+    bar: 'Rockbar',
+    address: '185 Christopher St, New York, NY',
+    city: 'nyc',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    _parserConfig: { name: 'Furball', dryRun: false },
+    _action: 'new'
+  };
+}
+
+function reviewedHousekeepingMerge() {
+  const existing = {
+    title: 'BEEFMINCE Brief Encounter',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    notes: 'bar: Royal Vauxhall Tavern'
+  };
+  return {
+    title: 'BEEFMINCE Brief Encounter',
+    bar: 'Royal Vauxhall Tavern',
+    city: 'nyc',
+    startDate: REVIEW_RUN_START,
+    endDate: '2030-10-04T06:00:00.000Z',
+    location: '51.4863391, -0.1217784',
+    url: 'https://beefmince.co.uk/',
+    notes: 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.co.uk/',
+    _parserConfig: { name: 'The Bear Calendar', dryRun: false },
+    _action: 'merge',
+    _existingEvent: existing,
+    _original: { scraper: {}, calendar: { ...existing, website: 'https://beefmince.co.uk/' } },
+    _changes: ['notes'],
+    _mergeNoOp: false
+  };
+}
+
+function buildReviewedRunResults(analyzedEvents) {
+  return {
+    _isDisplayingSavedRun: true,
+    sourceRunId: '20260810-101010',
+    _savedRunTimestamp: '2026-08-10T10:10:10.000Z',
+    totalEvents: analyzedEvents.length,
+    bearEvents: analyzedEvents.length,
+    calendarEvents: 0,
+    errors: [],
+    parserResults: [{ name: 'Furball', bearEvents: 1, totalEvents: 1 }],
+    analyzedEvents,
+    runContext: { type: 'display', environment: 'scriptable', trigger: 'saved-run' },
+    // A Mac-born run: run-once forces dryRun on the saved config.
+    config: { parsers: [{ name: 'Furball', dryRun: false }], config: { dryRun: true } }
+  };
+}
+
+// Wires the persistence/UI seams to capturing stubs; the identity core is a
+// REAL SharedCore whose live analysis is replaced by a canned fresh plan.
+function instrumentReviewedRunAdapter(adapter, freshPlan, captured) {
+  const core = new ReviewSharedCore({ nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, { eventSchema: ReviewEventSchema });
+  core.prepareEventsForCalendar = async (events, calendarAdapter, globalConfig) => {
+    captured.analyzed = events;
+    captured.globalConfig = globalConfig;
+    return freshPlan.map((event) => ({ ...event }));
+  };
+  adapter._identityCore = core;
+  adapter.executeCalendarActions = async (events) => {
+    captured.executed = events;
+    adapter.lastExecutionActionCounts = {
+      create: events.filter((event) => event._action === 'new').length,
+      update: events.filter((event) => event._action === 'merge').length,
+      skip: 0,
+      failed: 0,
+      processed: events.length,
+      analyzed: events.length
+    };
+    return events.length;
+  };
+  adapter.preflightSavedRunWriteAccess = async () => true;
+  adapter.presentSavedRunExecutionNotice = async (title, message) => { captured.notices.push({ title, message }); };
+  adapter.persistExecutedSavedRunSnapshot = async (results) => { captured.persisted = results; return results.sourceRunId; };
+  adapter.runPostRunHousekeeping = async (results, retentionDays, options) => { captured.housekeeping = { retentionDays, options }; };
+  adapter.recordCalendarWriteFailures = () => 0;
+  return core;
+}
+
+test('executeReviewedSavedRun writes the approved cards plus housekeeping, withholds the rest, and leaves the full audit trail', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const freshPlan = [reviewedNew('Approved Party'), reviewedNew('Mystery Party'), reviewedNew('Bad Party'), reviewedHousekeepingMerge()];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  const decisions = [
+    { key: core.getOwnerReviewKey(freshPlan[0]), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} },
+    { key: core.getOwnerReviewKey(freshPlan[2]), verdict: 'reject', reason: { tags: ['wrong venue'], text: 'wrong venue' } }
+  ];
+  const stale = freshPlan.map((event) => ({ ...event, _action: 'new', _analysis: { action: 'new', reason: 'Mac-run time' } }));
+  const results = buildReviewedRunResults(stale);
+
+  const summary = await adapter.executeReviewedSavedRun(results, decisions);
+
+  // mandatory re-analysis on the stripped events, with dryRun cleared for this path only
+  assert.equal(captured.analyzed.length, 4);
+  assert.equal(captured.analyzed[3]._action, undefined, 'stale saved intents never enter re-analysis');
+  assert.equal(captured.analyzed[0]._savedRunSourceIndex, 0);
+  assert.equal(captured.globalConfig.dryRun, false, 'the Mac run\'s forced dryRun is cleared for the reviewed execution');
+  assert.equal(results.config.config.dryRun, false);
+  // what was written
+  assert.deepEqual(captured.executed.map((event) => event.title), ['Approved Party', 'BEEFMINCE Brief Encounter'],
+    'the approval and the notes-only housekeeping merge write; the unreviewed and rejected ones do not');
+  assert.equal(summary.approved, 1);
+  assert.equal(summary.awaiting, 1);
+  assert.equal(summary.rejected, 1);
+  assert.equal(summary.housekeeping, 1);
+  assert.equal(summary.executable, 2);
+  assert.equal(summary.processed, 2);
+  assert.equal(summary.created, 1);
+  assert.equal(summary.updated, 1);
+  assert.equal(summary.wrote, true);
+  // the fresh plan (with the review stamps) is what the file now holds
+  const byTitle = Object.fromEntries(results.analyzedEvents.map((event) => [event.title, event]));
+  assert.equal(byTitle['Mystery Party']._ownerReviewWithheld.status, 'awaiting');
+  assert.equal(byTitle['Bad Party']._ownerReviewWithheld.reason, 'wrong venue');
+  assert.equal(byTitle['Approved Party']._ownerReviewApproved.key, decisions[0].key);
+  // audit trail + metadata parity with a normal execute
+  assert.equal(captured.persisted, results, 'execution outcome written back to the run file');
+  assert.equal(results.savedRunExecutions[0].via, 'owner-review');
+  assert.deepEqual(results.savedRunExecutions[0].ownerReview, { approved: 1, rejected: 1, awaiting: 1, housekeeping: 1, withheld: 0 });
+  assert.equal(results.runContext.trigger, 'owner-review');
+  assert.equal(results.runContext.type, 'manual', 'metrics see a manual, owner-driven execution');
+  assert.match(captured.housekeeping.options.logRunId, /^20260810-101010-review-\d{8}-\d{6}$/, 'the review log never overwrites the Mac run\'s own log');
+  assert.equal(captured.housekeeping.options.pruneRuns, true);
+  assert.deepEqual(adapter.lastExecutionActionCounts, { create: 1, update: 1, skip: 2, failed: 0, processed: 2, analyzed: 4 },
+    'withheld events fold into the skips so the record covers the whole plan');
+  const metrics = adapter.buildMetricsRecord(results);
+  assert.equal(metrics.calendar_actions_mode, 'executed', 'metrics report what was executed, not a plan');
+  assert.deepEqual(metrics.calendar_actions, { create: 1, update: 1, skip: 2, failed: 0, other: 0 });
+  assert.equal(metrics.trigger_type, 'manual');
+  const last = captured.notices[captured.notices.length - 1];
+  assert.equal(last.title, 'Calendar Updated');
+  assert.ok(last.message.includes('Created 1') && last.message.includes('Updated 1') && last.message.includes('Awaiting review 1'));
+});
+
+test('executeReviewedSavedRun with nothing approved writes nothing and says so', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  instrumentReviewedRunAdapter(adapter, [reviewedNew('Mystery Party')], captured);
+  const results = buildReviewedRunResults([{ ...reviewedNew('Mystery Party'), _analysis: {} }]);
+  const summary = await adapter.executeReviewedSavedRun(results, []);
+  assert.equal(summary.wrote, false);
+  assert.equal(summary.awaiting, 1);
+  assert.equal(captured.executed, undefined, 'no calendar write');
+  assert.equal(captured.persisted, undefined);
+  assert.equal(captured.notices[0].title, 'Nothing to Write');
+  assert.equal(results.analyzedEvents[0]._ownerReviewWithheld.status, 'awaiting', 'the plan still shows why');
+});
+
+test('results-section mirrors: an owner-review withhold lands in the withheld pile with its reason and never promises a write', () => {
+  const adapter = buildAdapter();
+  const rejected = { title: 'Bad Party', _action: 'new', _ownerReviewWithheld: { status: 'rejected', reason: 'wrong venue', tags: ['wrong venue'] } };
+  const awaiting = { title: 'Mystery Party', _action: 'merge', _ownerReviewWithheld: { status: 'awaiting' } };
+  assert.deepEqual(adapter.classifyEventForResultsSection(rejected), { section: 'withheld', reason: '🚫 rejected by owner — wrong venue' });
+  assert.deepEqual(adapter.classifyEventForResultsSection(awaiting), { section: 'withheld', reason: '🃏 awaiting owner review — not swiped yet' });
+  assert.equal(adapter.getWriteActionFromEvent(rejected), 'withheld');
+  assert.equal(adapter.getWriteActionFromEvent(awaiting), 'withheld');
+  assert.equal(adapter.getWriteActionFromEvent({ title: 'x', _action: 'new' }), 'create', 'unstamped events are untouched');
 });

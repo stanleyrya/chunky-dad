@@ -1610,6 +1610,58 @@ class ScriptableAdapter {
     );
   }
 
+  // ---------------------------------------------------------------------
+  // OWNER DECISIONS — owner-decisions.json (WRITTEN BY THE MAC ONLY: the
+  // tailnet server's swipe deck, tools/serve-results.js /review; this
+  // adapter only ever reads it). Consumed by executeReviewedSavedRun, where
+  // SharedCore.applyOwnerDecisions matches each fresh proposal against the
+  // owner's approve/reject swipes. Same read discipline as the bear verdict
+  // store: iCloud download first, either wrapper shape, empty on any fault.
+  // ---------------------------------------------------------------------
+  getOwnerDecisionsFilePath() {
+    return this.fm.joinPath(this.baseDir, "owner-decisions.json");
+  }
+
+  async loadOwnerDecisions() {
+    const path = this.getOwnerDecisionsFilePath();
+    try {
+      if (!this.fm.fileExists(path)) {
+        console.log(
+          "📱 Scriptable: No owner decision store yet (owner-decisions.json) — nothing approved",
+        );
+        return [];
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      const decisions =
+        parsed && !Array.isArray(parsed) && Array.isArray(parsed.decisions)
+          ? parsed.decisions
+          : Array.isArray(parsed)
+            ? parsed
+            : null;
+      if (!decisions) {
+        console.log(
+          "📱 Scriptable: Owner decision store has unexpected shape — treating as empty",
+        );
+        return [];
+      }
+      return decisions.filter(
+        (entry) =>
+          entry &&
+          typeof entry === "object" &&
+          typeof entry.key === "string" &&
+          (entry.verdict === "approve" || entry.verdict === "reject"),
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Owner decision store read failed (${error.message}) — treating as empty`,
+      );
+      return [];
+    }
+  }
+
   // Fold one tapped candidate into the queue object (caller persists).
   // Existing key → merge: bump lastSeen/timesSeen, union signals/runIds/
   // sourceEvents (runIds keep the 10 most recent, sourceEvents cap at 5),
@@ -5564,100 +5616,12 @@ class ScriptableAdapter {
         console.log(`📱 Scriptable: Skipping run save (${reason})`);
       }
 
-      // Append a log file entry and cleanup logs (skip saved-run display)
+      // Log, metrics and cache prunes — shared with the reviewed-run execute
+      // path (runPostRunHousekeeping), skipped for a saved-run redisplay.
       if (!results?._isDisplayingSavedRun) {
-        try {
-          await this.ensureRelativeStorageDirs();
-          await this.appendLogSummary(results);
-          await this.cleanupOldFiles("chunky-dad-scraper/logs", {
-            maxAgeDays: retentionDays,
-            keep: (name) => {
-              const lower = name.toLowerCase();
-              return lower.includes("performance") || lower.endsWith(".csv");
-            },
-          });
-        } catch (logErr) {
-          console.log(
-            `📱 Scriptable: Log write/cleanup failed: ${logErr.message}`,
-          );
-        }
+        await this.runPostRunHousekeeping(results, retentionDays);
       } else {
         console.log("📱 Scriptable: Skipping log write (display mode)");
-      }
-
-      if (!results?._isDisplayingSavedRun) {
-        // Append metrics record and update summary
-        try {
-          await this.ensureRelativeStorageDirs();
-          const metricsRecord = this.buildMetricsRecord(results);
-          if (metricsRecord) {
-            await this.appendMetricsRecord(metricsRecord, retentionDays);
-            await this.updateMetricsSummary(metricsRecord);
-          } else {
-            console.log(
-              "📱 Scriptable: Skipping metrics write (missing runId)",
-            );
-          }
-        } catch (metricsErr) {
-          console.log(
-            `📱 Scriptable: Metrics write failed: ${metricsErr.message}`,
-          );
-        }
-      }
-
-      if (!results?._isDisplayingSavedRun) {
-        // Prune persistent caches. Pages past their TTL are dead weight
-        // already (readCachedPage ignores them), so they only get a 1-day
-        // grace. OCR/classification entries are retained by LAST USE: cache
-        // hits rewrite ("touch") the entry at most every 7 days (see
-        // AiWebParser.touchCacheEntryOnHit), so a file's mtime tracks its
-        // last use to within that window — pruning works from mtime alone,
-        // no payload reads, with the touch interval added as grace.
-        try {
-          const pageTtlDays = this.getPageCacheConfig().ttlDays;
-          const prunedPages = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/pages",
-            { maxAgeDays: pageTtlDays + 1, recurse: true },
-          );
-          if (prunedPages > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
-            );
-          }
-          const ocrRetentionDays = this.getOcrCacheRetentionDays();
-          const unusedCutoffDays = ocrRetentionDays + 7;
-          const prunedOcr = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/ocr",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedOcr > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedOcr} OCR cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-          const prunedClassification = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/classification",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedClassification > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-          const prunedAiResponses = await this.cleanupOldFiles(
-            "chunky-dad-scraper/storage/ai-responses",
-            { maxAgeDays: unusedCutoffDays, recurse: true },
-          );
-          if (prunedAiResponses > 0) {
-            console.log(
-              `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
-            );
-          }
-        } catch (pruneErr) {
-          console.log(
-            `📱 Scriptable: Cache prune failed: ${pruneErr.message}`,
-          );
-        }
       }
     } catch (error) {
       console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -7734,6 +7698,20 @@ class ScriptableAdapter {
         .field-row-missing {
             color: var(--text-secondary);
         }
+
+        /* The merge table's two-column change rows: field | calendar has →
+           would become, with the merge's reason as a line under the values. */
+        .change-table th:nth-child(1),
+        .change-table .field-row-field { width: 26%; }
+        .change-table th:nth-child(2),
+        .field-row-change { width: 74%; }
+        .change-was, .change-scraped { font-size: 10px; color: var(--text-secondary); }
+        .change-scraped { font-style: italic; }
+        .change-now { font-weight: 600; }
+        .change-note { font-weight: 400; font-size: 10px; color: var(--text-secondary); }
+        .change-why { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+        .change-warn .change-why { color: #ff3b30; }
+        .merge-bookkeeping-summary td { color: var(--text-secondary); font-style: italic; }
 
         .field-row-flow {
             opacity: 0.7;
@@ -9923,27 +9901,21 @@ class ScriptableAdapter {
                 : finalText
                   ? "merged"
                   : "dropped";
-        // Final value first; the losing side(s) as small sub-lines, so
-        // nothing the old Scraper/Calendar columns showed is lost.
-        const valueParts = [this.formatFieldRowValueHtml(row.finalValue)];
-        if (scraperText && !matchesScraper) {
-          valueParts.push(
-            `<div class="field-row-was">scraper: ${this.formatFieldRowValueHtml(row.scraperValue)}</div>`,
-          );
-        }
-        if (calendarText && !matchesCalendar) {
-          valueParts.push(
-            `<div class="field-row-was">calendar: ${this.formatFieldRowValueHtml(row.calendarValue)}</div>`,
-          );
-        }
+        const bookkeeping = ScriptableAdapter.isBookkeepingComparisonField(row.field);
+        const context = [sourceLabel, row.decisionText || ""].filter(Boolean).join(" — ");
         records.push({
           field: row.field,
-          changed,
-          html: this.buildFieldRowHtml({
-            fieldHtml: `<strong>${this.escapeHtml(row.field)}</strong>`,
-            valueHtml: valueParts.join(""),
-            sourceHtml: this.escapeHtml(sourceLabel),
-            reasonHtml: this.escapeHtml(row.decisionText || ""),
+          changed: changed && !bookkeeping,
+          bookkeeping,
+          bookkeepingChanged: bookkeeping && changed,
+          context,
+          html: this.buildChangeRowHtml({
+            field: row.field,
+            labelHtml: `<strong>${this.escapeHtml(ScriptableAdapter.getComparisonFieldLabel(row.field))}</strong>`,
+            wasHtml: calendarText ? this.formatFieldRowValueHtml(row.calendarValue) : "",
+            nowHtml: finalText ? this.formatFieldRowValueHtml(row.finalValue) : "",
+            scrapedHtml: scraperText && !matchesScraper ? this.formatFieldRowValueHtml(row.scraperValue) : "",
+            contextHtml: this.escapeHtml(context),
           }),
         });
       }
@@ -10909,7 +10881,14 @@ class ScriptableAdapter {
       }
       return "facebook";
     }
-    return this.registrableDomainFromUrl(text) || text;
+    // Everything else: the stored URL with the scheme and www. dropped and
+    // the PATH kept (owner: a domain-only label hid the very part that
+    // differs between two links — "bearracuda.com" for both the homepage
+    // and /events/denver17/), capped so a chip stays a chip.
+    const CHIP_MAX = 48;
+    const shown = text.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+    if (!shown) return text;
+    return shown.length > CHIP_MAX ? `${shown.slice(0, CHIP_MAX - 1)}…` : shown;
   }
 
   // Instagram is sometimes stored as a bare "@handle" — build the profile
@@ -12424,12 +12403,12 @@ class ScriptableAdapter {
                             📋 Copy JSON
                         </button>
                     </div>
-                    ${this.buildFieldRowsTableHtml(
+                    ${this.buildChangeRowsTableHtml(
                       this.claimMergeDiffBudget(
                         "field-by-field comparison",
                         this.generateComparisonRowsCompressed(event),
                         event,
-                        { asTableRow: true },
+                        { asTableRow: true, colspan: 2 },
                       ),
                     )}
                 </div>
@@ -13133,7 +13112,7 @@ class ScriptableAdapter {
   // document-wide pool. A card that spends less leaves the rest for later
   // cards, but no card may draw more than its equal share — so the total is
   // <= MERGE_DIFF_TOTAL_BUDGET_BYTES no matter how many events a run has.
-  claimMergeDiffBudget(kind, html, event, { asTableRow = false } = {}) {
+  claimMergeDiffBudget(kind, html, event, { asTableRow = false, colspan = 4 } = {}) {
     const text = typeof html === "string" ? html : "";
     if (!text) return text;
     if (!Number.isFinite(this._mergeDiffRemainingBytes)) return text;
@@ -13158,7 +13137,7 @@ class ScriptableAdapter {
     // A <table> child has to stay a row or the WebView drops it entirely.
     // colspan 4 = the shared field-row format (field | value | source | reason).
     return asTableRow
-      ? `<tr><td colspan="4" class="payload-cap-note">${notice}</td></tr>`
+      ? `<tr><td colspan="${colspan}" class="payload-cap-note">${notice}</td></tr>`
       : `<div class="payload-cap-note">${notice}</div>`;
   }
 
@@ -14469,7 +14448,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   generateComparisonRows(event) {
     const records = this.buildComparisonRowRecords(event);
     if (!records) return "";
-    return records.map((record) => record.html).join("");
+    // Every judged row, no-ops included, for tooling — bookkeeping fields
+    // excepted: they are never rows on any surface (footnote only).
+    return records
+      .filter((record) => !record.bookkeeping)
+      .map((record) => record.html)
+      .join("");
   }
 
   // Compressed variant for the card expander (owner: "the merge/write
@@ -14483,8 +14467,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     const parts = records
       .filter((record) => record.changed)
       .map((record) => record.html);
+    // Bookkeeping that moved (gmaps rebuilt, a provenance stamp upgraded):
+    // one footnote naming the fields, never rows, never counted.
+    const bookkeepingFields = records
+      .filter((record) => record.bookkeepingChanged)
+      .map((record) => record.field);
+    if (bookkeepingFields.length > 0) {
+      parts.push(
+        `<tr class="field-row merge-bookkeeping-summary"><td colspan="2">bookkeeping updated — ${this.escapeHtml(bookkeepingFields.join(", "))}</td></tr>`,
+      );
+    }
     const noopFields = records
-      .filter((record) => !record.changed)
+      .filter((record) => !record.changed && !record.bookkeepingChanged)
       .map((record) => record.field);
     if (noopFields.length > 0) {
       const MAX_NAMES = 8;
@@ -14492,7 +14486,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         noopFields.slice(0, MAX_NAMES).join(", ") +
         (noopFields.length > MAX_NAMES ? ", …" : "");
       parts.push(
-        `<tr class="field-row merge-noop-summary"><td colspan="4">${noopFields.length} field${
+        `<tr class="field-row merge-noop-summary"><td colspan="2">${noopFields.length} field${
           noopFields.length === 1 ? "" : "s"
         } unchanged — ${this.escapeHtml(names)}</td></tr>`,
       );
@@ -14565,299 +14559,261 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     );
   }
 
-  // One record per comparison field: { field, changed, html }. `changed`
-  // means the merge left the field DIFFERENT from what the calendar already
-  // had (added/clobbered/cleared/rewrote); kept-existing and same-value
-  // rows are no-ops. null (not []) when the event has no _original.
+  // Bookkeeping the scraper regenerates every run (owner 2026-09-12: "save
+  // what is needed, just don't show it as a diff to me"): the derived maps
+  // link, the favicon, the dedup key, the resolved timezone, and the
+  // provenance stamps that follow their value. Saved, footnoted on the
+  // table, never a diff ROW, never counted. bearSource stays a real row: a
+  // manual verdict IS a change worth reading.
+  static isBookkeepingComparisonField(field) {
+    const name = String(field || "");
+    if (["key", "gmaps", "favicon", "timezone"].includes(name)) return true;
+    return SharedCore.isProvenanceCompanionField(name) && name !== "bearSource";
+  }
+
+  // Human labels for the field column (raw keys read as code).
+  static getComparisonFieldLabel(field) {
+    const labels = {
+      title: "Title",
+      startDate: "Starts",
+      endDate: "Ends",
+      location: "Pin",
+      bar: "Venue",
+      address: "Address",
+      website: "Website",
+      ticketUrl: "Tickets",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      cover: "Cover",
+      description: "Description",
+      shortName: "Short name",
+      image: "Image",
+      imageVertical: "Image (portrait)",
+      imageHorizontal: "Image (landscape)",
+      recurrenceRule: "Recurrence",
+      bearSource: "Bear verdict",
+      bearReview: "Bear review",
+      festival: "Festival",
+      city: "City",
+      gmaps: "Maps link",
+    };
+    return labels[String(field || "")] || String(field || "");
+  }
+
+  // The two-column change row: field | calendar has → would become, with
+  // the merge's own reason as a line UNDER the values (owner: "put context
+  // next to the row that shows the update"). `wasHtml` is what the calendar
+  // holds, `nowHtml` what the write would leave, `scrapedHtml` the scraped
+  // value when it differs from both, `noteHtml` a short delta ("2 h
+  // earlier", "moved 180 m"), `contextHtml` the why.
+  buildChangeRowHtml({ field, labelHtml, wasHtml, nowHtml, scrapedHtml, noteHtml, contextHtml, warn } = {}) {
+    return (
+      `<tr class="field-row change-row${warn ? " change-warn" : ""}"${field ? ` data-field="${this.escapeHtml(field)}"` : ""}>` +
+      `<td class="field-row-field">${labelHtml || ""}</td>` +
+      `<td class="field-row-change">` +
+      `<div class="change-was">calendar: ${wasHtml || '<em class="field-row-missing">(not set)</em>'}</div>` +
+      (scrapedHtml ? `<div class="change-scraped">scraped: ${scrapedHtml}</div>` : "") +
+      `<div class="change-now">→ ${nowHtml || '<em class="field-row-missing">(cleared)</em>'}${noteHtml ? ` <span class="change-note">${noteHtml}</span>` : ""}</div>` +
+      (contextHtml ? `<div class="change-why">${contextHtml}</div>` : "") +
+      `</td></tr>`
+    );
+  }
+
+  buildChangeRowsTableHtml(rowsHtml) {
+    if (!rowsHtml) return "";
+    return (
+      `<table class="field-rows-table change-table">` +
+      `<tr><th>Field</th><th>Calendar has → would become</th></tr>` +
+      rowsHtml +
+      `</table>`
+    );
+  }
+
+  // One value cell of the change table: dates in the event's zone, pins as
+  // rounded coordinates, objects as JSON, long text as an anchored window
+  // (the visible slice is centred on the first differing character so a
+  // change deep inside a description is still what you see).
+  formatComparisonValueHtml(field, value, event, anchor = 0) {
+    if (value === undefined || value === null || value === "") {
+      return '<em class="field-row-missing">(not set)</em>';
+    }
+    if (field === "startDate" || field === "endDate") {
+      const parts = this.describeComparisonDate(value, event);
+      if (parts) return this.escapeHtml(`${parts.day} · ${parts.time}`);
+    }
+    if (field === "location" && typeof value === "string" && this.parseCoordinatePairText(value)) {
+      const pair = this.parseCoordinatePairText(value);
+      return this.escapeHtml(`📌 ${pair.lat.toFixed(4)}, ${pair.lng.toFixed(4)}`);
+    }
+    let text;
+    if (typeof value === "object") {
+      try {
+        text = JSON.stringify(value);
+      } catch (error) {
+        text = String(value);
+      }
+    } else {
+      text = String(value);
+    }
+    const maxLength = field === "description" ? 160 : 90;
+    if (text.length <= maxLength) return this.escapeHtml(text);
+    // BOUNDED BY CONSTRUCTION: visible slice + capped tooltip; the full
+    // value lives one tap away (📋 Copy JSON). safeSubstring, never
+    // substring — a cut through an emoji's surrogate pair blanks the page.
+    const TOOLTIP_MAX_CHARS = 240;
+    const start = anchor > maxLength ? Math.max(0, anchor - Math.floor(maxLength / 3)) : 0;
+    const lead = start > 0 ? "..." : "";
+    const visible = ScriptableAdapter.safeSubstring(text, start, start + maxLength);
+    const tooltipSource = ScriptableAdapter.safeSubstring(text, start);
+    const tooltip =
+      tooltipSource.length > TOOLTIP_MAX_CHARS
+        ? `${ScriptableAdapter.safeSubstring(tooltipSource, 0, TOOLTIP_MAX_CHARS)}... (+${tooltipSource.length - TOOLTIP_MAX_CHARS} more chars - use Copy JSON for the full value)`
+        : tooltipSource;
+    return `<span title="${this.escapeHtml(tooltip)}">${lead}${this.escapeHtml(visible)}...</span><span class="cmp-more"> ${text.length} chars</span>`;
+  }
+
+  // { day: "Sep 19", time: "11:00 PM", dayKey, ms } for a date in the
+  // event's city timezone; null when unparseable.
+  describeComparisonDate(value, event) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const timeZone = this.getTimezoneForCityOrUtc(event && event.city);
+    try {
+      return {
+        day: date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone }),
+        time: date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }),
+        dayKey: date.toLocaleDateString("en-US", { timeZone }),
+        ms: date.getTime(),
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Both sides of one changed field in the field's own language:
+  // same-day time changes print the day once and name the delta, pin moves
+  // name the distance, everything else goes through formatComparisonValueHtml.
+  describeComparisonPair(field, existingValue, finalValue, event, anchor = 0) {
+    const out = {
+      wasHtml: this.formatComparisonValueHtml(field, existingValue, event, anchor),
+      nowHtml: this.formatComparisonValueHtml(field, finalValue, event, anchor),
+      noteHtml: "",
+      warn: false,
+    };
+    if (field === "startDate" || field === "endDate") {
+      const was = this.describeComparisonDate(existingValue, event);
+      const now = this.describeComparisonDate(finalValue, event);
+      if (was && now) {
+        if (was.dayKey === now.dayKey) out.nowHtml = this.escapeHtml(now.time);
+        const diff = now.ms - was.ms;
+        if (diff !== 0) {
+          const minutes = Math.round(Math.abs(diff) / 60000);
+          const direction = diff > 0 ? "later" : "earlier";
+          const hours = Math.abs(diff) / 3600000;
+          const delta =
+            minutes < 60
+              ? `${minutes} min ${direction}`
+              : hours < 48
+                ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h ${direction}`
+                : `${Math.round(hours / 24)} days ${direction}`;
+          out.noteHtml = this.escapeHtml(`(${delta})`);
+        }
+      }
+      return out;
+    }
+    if (field === "location") {
+      const core = this.getIdentityCore();
+      const km =
+        core && typeof core.coordinatePairDistanceKm === "function"
+          ? core.coordinatePairDistanceKm(existingValue, finalValue)
+          : null;
+      if (Number.isFinite(km) && km > 0) {
+        out.noteHtml = this.escapeHtml(`(moved ${core.formatEvidenceDistance(km)})`);
+        out.warn = km > 0.15;
+      }
+    }
+    return out;
+  }
+
+  // One record per comparison field:
+  //   { field, changed, bookkeeping, bookkeepingChanged, context, html }
+  // `changed` = the merge left the field DIFFERENT from what the calendar
+  // already had AND the field is worth a diff row; bookkeeping fields
+  // (isBookkeepingComparisonField) are never `changed` — they carry
+  // `bookkeepingChanged` and fold into one footnote. null (not []) when the
+  // event has no _original.
   buildComparisonRowRecords(event) {
     if (!event || !event._original) return null;
 
-    // Use the same field logic as comparison (includes core fields not in notes)
     const fieldsToCompare = this.getFieldsForComparison(event);
     const rows = [];
+    const arbitration = event._original?.aiArbitration;
 
     fieldsToCompare.forEach((field) => {
-      // Skip notes field as it's a computed field that combines other fields
-      // This makes the comparison confusing and it's often broken
       if (field === "notes") return;
 
-      // Get the actual scraped value - don't default to empty string yet
-      let newValue = event._original?.scraper?.[field];
-      let existingValue = event._original?.calendar?.[field];
-      let finalValue = event[field];
-
-      // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
+      const newValue = event._original?.scraper?.[field];
+      const existingValue = event._original?.calendar?.[field];
+      const finalValue = event[field];
       const strategy =
         event._fieldPriorities?.[field]?.merge ||
         event._fieldMergeStrategies?.[field] ||
         "preserve";
-
-      // Determine what was used by comparing final value with source values
-      let wasUsed = "unknown";
-      if (finalValue === newValue && finalValue !== existingValue) {
-        wasUsed = "new";
-      } else if (finalValue === existingValue && finalValue !== newValue) {
-        wasUsed = "existing";
-      } else if (finalValue === existingValue && finalValue === newValue) {
-        wasUsed = "same";
-      }
-
-      // For preserve fields, we want to show BOTH the scraped value AND the existing value
-      // This matches the old behavior: "show both and then say 'choosing original because preserve'"
-
-      // Skip if both are empty and no final value, unless it's a field with explicit strategy
-      // For preserve/clobber fields, always show them to demonstrate the strategy in action
+      const isEmptyish = (value) => value === undefined || value === null || value === "";
       if (!newValue && !existingValue && !finalValue && !strategy) return;
 
-      // For preserve fields, always show them if they have a strategy configured
-      // This ensures we show "scraped X, existing undefined, choosing undefined because preserve"
-      // Don't skip preserve fields even if they appear empty - user needs to see what was preserved
-      if (strategy === "preserve") {
-        // Always show preserve fields to demonstrate the strategy, even if all values are empty
-        // This is important for showing "scraped value X, existing undefined, preserved undefined"
-      }
+      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
+      const bookkeeping = ScriptableAdapter.isBookkeepingComparisonField(field);
+      const finalMatchesNew = this.mergeValuesLookIdentical(finalValue, newValue);
+      const sidesAgree = this.mergeValuesLookIdentical(existingValue, newValue);
+      const outcome = rowIsNoop ? "kept-existing" : finalMatchesNew ? "took-new" : "rewrote";
 
-      // Format values for display - show exactly what the merge logic saw.
-      // `anchor` is the index of the first character at which the two sides
-      // of this row diverge; the visible window is centred there so a long
-      // description whose change is at character 900 does not render as two
-      // identical-looking 30-character stubs.
-      const formatValue = (val, anchor = 0, maxLength = 30) => {
-        if (val === null) return '<em style="color: #999;">null</em>';
-        if (val === undefined) return '<em style="color: #999;">undefined</em>';
-        if (val === "") return '<em style="color: #999;">empty string</em>';
-        if (!val) return '<em style="color: #999;">falsy</em>';
-
-        if (field.includes("Date") && val) {
-          // For date fields in event debugging, get timezone from city configuration
-          if (field === "startDate" || field === "endDate") {
-            const timezone = this.getTimezoneForCityOrUtc(event?.city);
-            var eventForField = { timeZone: timezone };
-          } else {
-            var eventForField = {};
-          }
-          return new Date(val).toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            ...eventForField,
-          });
-        }
-        let stringValue = "";
-        if (typeof val === "object") {
-          try {
-            stringValue = JSON.stringify(val);
-          } catch (e) {
-            stringValue = String(val);
-          }
-        } else {
-          stringValue = val.toString();
-        }
-        const str = stringValue;
-        if (str.length > maxLength) {
-          // BOUNDED BY CONSTRUCTION. This used to emit the ENTIRE value into a
-          // title="" attribute on both the existing and the new cell, so a
-          // single long description cost ~2x its own length per row, per
-          // event, forever. Visible text is capped at maxLength and the
-          // tooltip at TOOLTIP_MAX_CHARS; the "+N chars" badge is the
-          // affordance that says how much is hidden and the complete value is
-          // one tap away via this card's 📋 Copy JSON / raw dump.
-          const TOOLTIP_MAX_CHARS = 240;
-          const start =
-            anchor > maxLength ? Math.max(0, anchor - Math.floor(maxLength / 3)) : 0;
-          const lead = start > 0 ? "..." : "";
-          // safeSubstring, not substring: a cut through an emoji's surrogate
-          // pair leaves a lone surrogate, which makes WebKit render an EMPTY
-          // document (see stripLoneSurrogates).
-          const visible = ScriptableAdapter.safeSubstring(
-            str,
-            start,
-            start + maxLength,
-          );
-          const tooltipSource = ScriptableAdapter.safeSubstring(str, start);
-          const tooltip =
-            tooltipSource.length > TOOLTIP_MAX_CHARS
-              ? `${ScriptableAdapter.safeSubstring(tooltipSource, 0, TOOLTIP_MAX_CHARS)}... (+${
-                  tooltipSource.length - TOOLTIP_MAX_CHARS
-                } more chars - use Copy JSON for the full value)`
-              : tooltipSource;
-          return `<span title="${this.escapeHtml(tooltip)}">${lead}${this.escapeHtml(visible)}...</span><span class="cmp-more"> ${str.length} chars</span>`;
-        }
-        return this.escapeHtml(str);
-      };
-
-      // Index of the first character at which the two sides differ, so a
-      // truncated diff always shows the part that actually changed.
-      const diffAnchor = (() => {
-        const asText = (v) => {
-          if (v === null || v === undefined || typeof v === "object") return "";
-          return String(v);
-        };
-        const a = asText(existingValue);
-        const b = asText(newValue);
-        if (!a || !b) return 0;
-        const max = Math.min(a.length, b.length);
-        let i = 0;
-        while (i < max && a[i] === b[i]) i++;
-        return i;
-      })();
-
-      // Identity for DISPLAY only — see the mergeValuesLookIdentical method
-      // (shared with the line view and the diff-state chip).
-      const mergeValuesLookIdentical = (a, b) =>
-        this.mergeValuesLookIdentical(a, b);
-
-      // The merge pipeline records WHY each contested field resolved the way
-      // it did (_mergeDecisions: deterministic rung 🔒 / calendar stickiness
-      // 🧊 / AI arbitration 🤝 / clobber fallback). When this field carries a
-      // record, the row says so in plain words — source AND outcome — instead
-      // of leaving the reader to reverse-engineer it from two value cells and
-      // a bare strategy name. The strategy-heuristic chain below stays as the
-      // fallback for fields (and older saved runs) with no record. LAST
-      // record wins: post-merge deterministic rewrites append AFTER the
-      // arbitration records, and the row must describe the final state.
+      // LAST record wins: post-merge deterministic rewrites append after the
+      // arbitration records and the row must describe the final state.
       const decisionRecord = Array.isArray(event._mergeDecisions)
         ? event._mergeDecisions.reduce(
-            (latest, record) =>
-              record && record.field === field ? record : latest,
+            (latest, record) => (record && record.field === field ? record : latest),
             null,
           )
         : null;
 
-      // Value truth FIRST: did the merge leave this field different from
-      // what the calendar already had? Computed before any outcome branch so
-      // a row can never label itself "no change" while counting as changed —
-      // run 20260815-083809 ("TWISTED BEAR San Francisco Debut") rendered a
-      // rebuilt gmaps link as "AI-arbitrated … KEPT EXISTING (no change)" on
-      // a row whose value genuinely changed. Same predicate as the chip and
-      // the compressed view (mergeRowIsNoop).
-      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
-      const arbitration = event._original?.aiArbitration;
-
-      // Determine flow direction and result. The WHY of a recorded decision
-      // goes into its own reason cell (the shared row format's fourth
-      // column) instead of being glued onto the outcome label.
-      let flowIcon = "";
-      let resultText = "";
-      let reasonCellHtml = "";
-
+      // The WHY, in one line. A recorded decision speaks for itself; the
+      // strategy heuristics below cover fields (and older saved runs) with
+      // no record — and never credit the AI with a change it did not make.
+      let context = "";
+      let warn = false;
       if (decisionRecord) {
-        // Outcome is judged by the FINAL value (what the calendar write
-        // saves), not the record's chosenValue: it must agree with the
-        // changed/no-op classification above even against a stale record.
-        const keptExisting = rowIsNoop;
-        const tookNew =
-          !keptExisting && mergeValuesLookIdentical(finalValue, newValue);
-        const outcome = keptExisting
-          ? "kept existing"
-          : tookNew
-            ? "took new"
-            : "rewrote";
-        reasonCellHtml = decisionRecord.reason
-          ? this.escapeHtml(String(decisionRecord.reason))
-          : "";
-        const source = String(decisionRecord.source || "").toLowerCase();
-        flowIcon = keptExisting ? "←" : "→";
-        if (source === "deterministic") {
-          resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}</span>`;
-        } else if (source === "sticky" && keptExisting) {
-          flowIcon = "←";
-          resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)</span>`;
-        } else if (source === "ai") {
-          resultText = `<span style="color: #34c759;">🤝 AI — ${keptExisting ? "chose existing" : "chose new"}</span>`;
-        } else if (source === "fallback") {
-          resultText = `<span style="color: #ff9500;">⚠️ NO AI ANSWER — ${outcome} (clobber fallback)</span>`;
-        } else {
-          resultText = `<span style="color: #999;">${this.escapeHtml(source || "resolved")} — ${outcome}</span>`;
-        }
-      } else if (!existingValue && newValue) {
-        // New field being added
-        flowIcon = "→";
-        resultText = '<span style="color: #34c759;">ADDED</span>';
-      } else if (existingValue && newValue && mergeValuesLookIdentical(existingValue, newValue)) {
-        // Both values are identical - no change needed
-        flowIcon = "—";
-        resultText = '<span style="color: #999;">SAME VALUE</span>';
+        context = SharedCore.describeMergeDecision(decisionRecord, outcome);
+      } else if (isEmptyish(existingValue) && !isEmptyish(newValue) && !rowIsNoop) {
+        context = "added from the scrape";
+      } else if (!isEmptyish(existingValue) && !isEmptyish(newValue) && sidesAgree) {
+        context = "same on both sides";
       } else if (strategy === "ai") {
-        // AI-arbitrated strategy — show which side the AI picked (or that it fell back)
         if (arbitration?.fallbacks?.includes(field)) {
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">AI FALLBACK (CLOBBERED)</span>';
+          context = "⚠️ AI gave no answer — took the scraped value (clobber fallback)";
         } else if (arbitration?.arbitrated?.includes(field)) {
-          if (finalValue === existingValue && existingValue !== newValue) {
-            flowIcon = "←";
-            resultText = '<span style="color: #007aff;">🤝 AI CHOSE EXISTING</span>';
-          } else {
-            flowIcon = "→";
-            resultText = '<span style="color: #34c759;">🤝 AI CHOSE NEW</span>';
-          }
-        } else if (newValue !== undefined && finalValue === newValue) {
-          // No genuine conflict → clobber semantics applied
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
-        } else if (!newValue && !finalValue) {
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">CLEARED</span>';
+          context = rowIsNoop ? "🤝 AI kept the calendar value" : "🤝 AI took the scraped value";
+        } else if (!rowIsNoop && isEmptyish(finalValue)) {
+          context = "cleared";
         } else if (!rowIsNoop) {
-          // The value DID change but no decision record names the writer
-          // (saved runs recorded before post-merge rewrites logged their
-          // provenance). Never claim "no change" on a changed row — and
-          // never credit the AI with a change it did not make.
-          flowIcon = "→";
-          resultText =
-            '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
+          context = "changed — no decision recorded";
         } else {
-          flowIcon = "—";
-          resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
+          context = "calendar value kept";
         }
       } else if (strategy === "clobber") {
-        // Clobber strategy - should always use new value (even if empty)
-        // For clobber, we should trust that the merge logic worked correctly
-        // The finalValue should match newValue, but there might be edge cases with processing
-        if (newValue !== undefined && finalValue === newValue) {
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
-        } else if (!newValue && !finalValue) {
-          // Clobber with empty new value - clears the field
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">CLEARED</span>';
-        } else if (newValue !== undefined) {
-          // For clobber, if we have a new value, assume it worked
-          // The display might show differences due to processing, but trust the merge logic
-          flowIcon = "→";
-          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
-        } else {
-          // Only show failure if we truly can't determine what happened
-          flowIcon = "⚠️";
-          resultText = '<span style="color: #ff3b30;">CLOBBER UNCLEAR</span>';
-        }
+        if (!rowIsNoop && isEmptyish(finalValue)) context = "cleared";
+        else if (!rowIsNoop) context = "scraped value wins (clobber)";
+        else context = "calendar value kept";
       } else if (strategy === "preserve") {
-        // Preserve strategy - ALWAYS keep existing value (even if null/empty)
-        // For preserve, if existing is undefined, final should also be undefined
         const preserveWorked =
           (existingValue === undefined && finalValue === undefined) ||
           (existingValue !== undefined && finalValue === existingValue);
-
-        if (preserveWorked) {
-          flowIcon = "←";
-          if (existingValue !== undefined) {
-            resultText =
-              '<span style="color: #007aff;">PRESERVED EXISTING</span>';
-          } else {
-            resultText =
-              '<span style="color: #007aff;">PRESERVED UNDEFINED (ignored scraped)</span>';
-          }
+        if (preserveWorked || rowIsNoop) {
+          context = "calendar value kept (preserve)";
         } else {
-          // Provenance companion fields (pinSource/addressSource/imageSource/
-          // barSource/bearSource) legitimately CHANGE under preserve: the
-          // stamp follows the finalized value (setProvenanceSource), so when a
-          // higher authority vouches for the SAME kept value the attribution
-          // upgrades (e.g. pinSource geocoded-exact → curated once the bar
-          // joins the curated data). Equal-or-higher tier → informational;
-          // lower tier → a genuine downgrade warning. Unknown values (null
-          // tier) fail open to the PRESERVE FAILED line, byte-identical to
-          // before — as do all non-provenance fields.
+          // Provenance stamps legitimately CHANGE under preserve when a
+          // higher authority vouches for the same value; only a DOWNGRADE
+          // warns. Non-provenance fields that moved under preserve warn too.
           const existingTier = SharedCore.isProvenanceCompanionField(field)
             ? SharedCore.getProvenanceTrustTier(field, existingValue)
             : null;
@@ -14865,117 +14821,63 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
             ? SharedCore.getProvenanceTrustTier(field, finalValue)
             : null;
           const describeStamp = (val) =>
-            val === undefined || val === null || String(val).trim() === ""
-              ? "unstamped"
-              : this.escapeHtml(String(val));
+            val === undefined || val === null || String(val).trim() === "" ? "unstamped" : String(val);
           if (existingTier !== null && finalTier !== null && finalTier >= existingTier) {
-            // A provenance stamp that stayed level or got better is
-            // bookkeeping, not a change: saved, never a diff row (owner
-            // 2026-09-12). Only a DOWNGRADE below still warns.
-            return;
+            context = "provenance upgraded";
           } else if (existingTier !== null && finalTier !== null) {
-            flowIcon = "⚠️";
-            resultText = `<span style="color: #ff3b30;">PROVENANCE DOWNGRADED (${describeStamp(existingValue)} → ${describeStamp(finalValue)})</span>`;
+            context = `⚠️ provenance downgraded (${describeStamp(existingValue)} → ${describeStamp(finalValue)})`;
+            warn = true;
           } else {
-            // Preserve didn't work as expected - should always keep existing
-            flowIcon = "⚠️";
-            resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? "undefined" : existingValue}, got: ${finalValue === undefined ? "undefined" : finalValue})</span>`;
+            context = `⚠️ preserve failed (expected ${describeStamp(existingValue)}, got ${describeStamp(finalValue)})`;
+            warn = true;
           }
         }
-      } else if (wasUsed === "existing") {
-        // Merge strategy explicitly chose existing value
-        flowIcon = "←";
-        resultText = '<span style="color: #007aff;">KEPT EXISTING</span>';
-      } else if (finalValue === newValue) {
-        // Replaced with new value
-        flowIcon = "→";
-        resultText = '<span style="color: #ff9500;">TOOK NEW</span>';
-      } else if (finalValue === existingValue && existingValue !== newValue) {
-        // Preserved existing value when values differ
-        flowIcon = "←";
-        resultText = '<span style="color: #007aff;">KEPT EXISTING</span>';
-      } else if (
-        finalValue &&
-        finalValue !== existingValue &&
-        finalValue !== newValue
-      ) {
-        // Merged/combined value
-        flowIcon = "↔";
-        resultText = '<span style="color: #32d74b;">MERGED</span>';
-      } else if (!rowIsNoop) {
-        // Same guard as the ai-strategy chain: a changed value with no
-        // recorded writer must render as a change, never as "no change".
-        flowIcon = "→";
-        resultText =
-          '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
+      } else if (rowIsNoop) {
+        context = "calendar value kept";
+      } else if (finalMatchesNew) {
+        context = "took the scraped value";
+      } else if (!isEmptyish(finalValue)) {
+        context = "merged from both";
       } else {
-        flowIcon = "—";
-        resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
+        context = "cleared";
       }
 
-      // Plain-words strategy label: "ai" under a field name read as a
-      // mystery token (owner pasted a `website ai … NO CHANGE` row as the
-      // example of the confusion). Unknown strategies fall through verbatim.
-      // "AI-arbitrated" is reserved for rows the AI actually touched: a
-      // recorded decision labels by its SOURCE (the TWISTED BEAR gmaps row
-      // wore "AI-arbitrated" over a deterministic rebuild while aiArbitration
-      // was null), and an ai-strategy field the arbitration never saw says
-      // so instead of borrowing the AI's name.
-      const aiTouchedField =
-        arbitration?.arbitrated?.includes(field) ||
-        arbitration?.fallbacks?.includes(field);
-      const strategyLabel = decisionRecord
-        ? {
-            deterministic: "deterministic",
-            sticky: "calendar stickiness",
-            ai: "AI-arbitrated",
-            fallback: "clobber fallback",
-          }[String(decisionRecord.source || "").toLowerCase()] ||
-          "recorded decision"
-        : strategy === "ai" && !aiTouchedField
-          ? "ai (not arbitrated)"
-          : {
-              ai: "AI-arbitrated",
-              preserve: "preserve saved",
-              clobber: "fresh wins",
-            }[strategy] || strategy;
-
-      // Shared row format (field | value | source/outcome | reason): the
-      // value cell leads with the FINAL value; when the sides disagreed, the
-      // losing side(s) ride along as small "calendar:"/"scraped:" sub-lines
-      // (same anchored, bounded truncation as before), so the row still
-      // shows what the merge chose BETWEEN.
-      const finalMatchesExisting = mergeValuesLookIdentical(
-        finalValue,
-        existingValue,
-      );
-      const finalMatchesNew = mergeValuesLookIdentical(finalValue, newValue);
-      const sidesAgree = mergeValuesLookIdentical(existingValue, newValue);
-      const valueParts = [formatValue(finalValue, diffAnchor)];
-      if (!sidesAgree) {
-        if (!finalMatchesExisting) {
-          valueParts.push(
-            `<div class="field-row-was">calendar: ${formatValue(existingValue, diffAnchor)}</div>`,
-          );
-        }
-        if (!finalMatchesNew) {
-          valueParts.push(
-            `<div class="field-row-was">scraped: ${formatValue(newValue, diffAnchor)}</div>`,
-          );
-        }
-      }
-
-      // No-op classification for the compressed view: rowIsNoop was computed
-      // above (before the outcome branches) from the shared mergeRowIsNoop —
-      // one definition for the table view, the line view and the chip.
+      // Index of the first character at which the two sides differ, so a
+      // truncated value always shows the part that actually changed.
+      const diffAnchor = (() => {
+        const asText = (v) => (v === null || v === undefined || typeof v === "object" ? "" : String(v));
+        const a = asText(existingValue);
+        const b = asText(finalValue) || asText(newValue);
+        if (!a || !b) return 0;
+        const max = Math.min(a.length, b.length);
+        let i = 0;
+        while (i < max && a[i] === b[i]) i++;
+        return i;
+      })();
+      const pair = this.describeComparisonPair(field, existingValue, finalValue, event, diffAnchor);
+      const scrapedHtml =
+        !isEmptyish(newValue) && !finalMatchesNew && !sidesAgree
+          ? this.formatComparisonValueHtml(field, newValue, event, diffAnchor)
+          : "";
+      const rowWarn = warn || pair.warn;
+      // A provenance DOWNGRADE (or a preserve that failed) is a warning the
+      // owner must see — a real row, whatever the field's usual class.
+      const isBookkeepingRow = bookkeeping && !warn;
       rows.push({
         field,
-        changed: !rowIsNoop,
-        html: this.buildFieldRowHtml({
-          fieldHtml: `<strong>${field}</strong><br><small>${strategyLabel}</small>`,
-          valueHtml: valueParts.join(""),
-          sourceHtml: `${flowIcon ? `<span class="field-row-flow">${flowIcon}</span> ` : ""}${resultText}`,
-          reasonHtml: reasonCellHtml,
+        changed: !rowIsNoop && !isBookkeepingRow,
+        bookkeeping: isBookkeepingRow,
+        bookkeepingChanged: isBookkeepingRow && !rowIsNoop,
+        context,
+        html: this.buildChangeRowHtml({
+          field,
+          labelHtml: `<strong>${this.escapeHtml(ScriptableAdapter.getComparisonFieldLabel(field))}</strong>`,
+          wasHtml: pair.wasHtml,
+          nowHtml: pair.nowHtml,
+          scrapedHtml,
+          noteHtml: pair.noteHtml,
+          contextHtml: this.escapeHtml(context),
+          warn: rowWarn,
         }),
       });
     });
@@ -15033,6 +14935,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     const fieldsToCompare = this.getFieldsForComparison(event);
     const changedBlocks = [];
     const noopFields = [];
+    const bookkeepingFields = [];
 
     fieldsToCompare.forEach((field) => {
       // Skip notes field as it's a computed field that combines other fields
@@ -15054,6 +14957,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // left this field as the calendar already had it.
       if (this.mergeRowIsNoop(finalValue, existingValue)) {
         noopFields.push(field);
+        return;
+      }
+      // Bookkeeping that moved folds into its own summary line, like the
+      // table view's footnote.
+      if (ScriptableAdapter.isBookkeepingComparisonField(field)) {
+        bookkeepingFields.push(field);
         return;
       }
 
@@ -15134,6 +15043,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     html += changedBlocks.join(
       `<div class=\"diff-sep\"></div><div style="margin-bottom: 12px;"></div>`,
     );
+    if (bookkeepingFields.length > 0) {
+      if (changedBlocks.length > 0) html += `<div class=\"diff-sep\"></div>`;
+      html += `<div class=\"diff-line diff-same line-bookkeeping-summary\"><span>═</span> bookkeeping updated — ${this.escapeHtml(bookkeepingFields.join(", "))}</div>`;
+    }
     if (noopFields.length > 0) {
       // Same phrasing and cap as the table view's merge-noop-summary row.
       const MAX_NAMES = 8;
@@ -15637,6 +15550,309 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
+  // Post-run housekeeping shared by displayResults (live runs) and
+  // executeReviewedSavedRun: the run log, the metrics record + summary, and
+  // the persistent-cache prunes. Each part fails soft and independently, as
+  // before. options.logRunId writes the log under another id (see
+  // appendLogSummary); options.pruneRuns also prunes old run files.
+  async runPostRunHousekeeping(results, retentionDays = 30, options = {}) {
+    try {
+      await this.ensureRelativeStorageDirs();
+      await this.appendLogSummary(
+        results,
+        options.logRunId ? { runIdOverride: options.logRunId } : {},
+      );
+      await this.cleanupOldFiles("chunky-dad-scraper/logs", {
+        maxAgeDays: retentionDays,
+        keep: (name) => {
+          const lower = name.toLowerCase();
+          return lower.includes("performance") || lower.endsWith(".csv");
+        },
+      });
+    } catch (logErr) {
+      console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+    }
+
+    if (options.pruneRuns) {
+      try {
+        await this.cleanupOldFiles("chunky-dad-scraper/runs", {
+          maxAgeDays: retentionDays,
+          keep: (name) => !name.endsWith(".json"),
+        });
+      } catch (runsErr) {
+        console.log(`📱 Scriptable: Run cleanup failed: ${runsErr.message}`);
+      }
+    }
+
+    // Append metrics record and update summary
+    try {
+      await this.ensureRelativeStorageDirs();
+      const metricsRecord = this.buildMetricsRecord(results);
+      if (metricsRecord) {
+        await this.appendMetricsRecord(metricsRecord, retentionDays);
+        await this.updateMetricsSummary(metricsRecord);
+      } else {
+        console.log("📱 Scriptable: Skipping metrics write (missing runId)");
+      }
+    } catch (metricsErr) {
+      console.log(`📱 Scriptable: Metrics write failed: ${metricsErr.message}`);
+    }
+
+    // Prune persistent caches. Pages past their TTL are dead weight
+    // already (readCachedPage ignores them), so they only get a 1-day
+    // grace. OCR/classification entries are retained by LAST USE: cache
+    // hits rewrite ("touch") the entry at most every 7 days (see
+    // AiWebParser.touchCacheEntryOnHit), so a file's mtime tracks its
+    // last use to within that window — pruning works from mtime alone,
+    // no payload reads, with the touch interval added as grace.
+    try {
+      const pageTtlDays = this.getPageCacheConfig().ttlDays;
+      const prunedPages = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/pages",
+        { maxAgeDays: pageTtlDays + 1, recurse: true },
+      );
+      if (prunedPages > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
+        );
+      }
+      const ocrRetentionDays = this.getOcrCacheRetentionDays();
+      const unusedCutoffDays = ocrRetentionDays + 7;
+      const prunedOcr = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/ocr",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedOcr > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedOcr} OCR cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+      const prunedClassification = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/classification",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedClassification > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+      const prunedAiResponses = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/ai-responses",
+        { maxAgeDays: unusedCutoffDays, recurse: true },
+      );
+      if (prunedAiResponses > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
+        );
+      }
+    } catch (pruneErr) {
+      console.log(`📱 Scriptable: Cache prune failed: ${pruneErr.message}`);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // EXECUTE A REVIEWED SAVED RUN — the swipe-deck path. Launched by
+  // display-saved-run.js from a scriptable:///run?…&reviewExecute=1 link
+  // the Mac server builds. No WebView: the owner already reviewed every
+  // card on the Mac. The saved run is re-analyzed against the LIVE calendar
+  // (never the saved intents — same doctrine as executeSavedRunWrites),
+  // SharedCore.applyOwnerDecisions writes what his swipes approved plus the
+  // notes-only housekeeping merges, withholds the rest, and the run leaves
+  // the same metadata a normal execute leaves: the run file (with an
+  // executions[] entry), a log, a metrics record, the cache prunes. One
+  // Alert with the counts at the end.
+  //
+  // dryRun: Mac-born runs carry config.config.dryRun === true (run-once
+  // forces it — the Mac itself never writes). This path is the one
+  // sanctioned writer of those runs; the owner's explicit approvals are the
+  // safety, so the flag is cleared HERE, for this execution only, and the
+  // override is logged. Returns the counts; never throws.
+  // ---------------------------------------------------------------------
+  async executeReviewedSavedRun(results, decisions) {
+    const summary = {
+      approved: 0,
+      rejected: 0,
+      awaiting: 0,
+      housekeeping: 0,
+      withheld: 0,
+      executable: 0,
+      processed: 0,
+      failed: 0,
+      created: 0,
+      updated: 0,
+      wrote: false,
+    };
+    try {
+      const savedEvents = Array.isArray(results && results.analyzedEvents)
+        ? results.analyzedEvents
+        : [];
+      const store = Array.isArray(decisions) ? decisions : [];
+      const ageLabel = this.describeSavedRunAgeLabel(results);
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved event(s), ${store.length} owner decision(s). Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
+      );
+      if (savedEvents.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing to Execute",
+          `This run (${ageLabel}) has no analyzable events, so there is nothing to write.`,
+        );
+        return summary;
+      }
+      const core = this.getIdentityCore();
+      if (
+        !core ||
+        typeof core.prepareEventsForCalendar !== "function" ||
+        typeof core.applyOwnerDecisions !== "function"
+      ) {
+        await this.presentSavedRunExecutionNotice(
+          "Cannot Execute",
+          "Shared core failed to initialize for the live calendar analysis. Nothing was written.",
+        );
+        return summary;
+      }
+
+      const toAnalyze = savedEvents.map((event, index) => ({
+        ...SharedCore.stripCalendarAnalysisStamps(event),
+        _savedRunSourceIndex: index,
+      }));
+      const loadedConfig =
+        (results && results.config && results.config.config) || {};
+      if (loadedConfig.dryRun) {
+        console.log(
+          "📱 Scriptable: 🃏 Loaded config says dryRun (a Mac-born run) — cleared for THIS reviewed execution only; the owner's approvals are the gate.",
+        );
+      }
+      const globalConfig = { ...loadedConfig, dryRun: false };
+      results.config = { ...(results.config || {}), config: globalConfig };
+
+      let freshAnalyzed;
+      try {
+        freshAnalyzed = await core.prepareEventsForCalendar(
+          toAnalyze,
+          this,
+          globalConfig,
+        );
+      } catch (error) {
+        await this.presentSavedRunExecutionNotice(
+          "Live Analysis Failed",
+          `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written.`,
+        );
+        return summary;
+      }
+      if (!Array.isArray(freshAnalyzed)) freshAnalyzed = [];
+
+      const counts = core.applyOwnerDecisions(freshAnalyzed, store);
+      Object.assign(summary, counts);
+      const freshExecutable = SharedCore.filterEventsForExecution(freshAnalyzed);
+      summary.executable = freshExecutable.length;
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed-run plan — ${freshAnalyzed.length} analyzed: ${counts.approved} approved, ${counts.housekeeping} housekeeping, ${counts.rejected} rejected, ${counts.awaiting} awaiting review, ${counts.withheld} withheld by the normal gate → ${freshExecutable.length} to write.`,
+      );
+      // The file reflects the fresh plan either way (executed or not): the
+      // owner sees what the live calendar made of his approvals.
+      results.analyzedEvents = freshAnalyzed;
+
+      if (freshExecutable.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing to Write",
+          `${counts.approved} approved, ${counts.awaiting} still awaiting review, ${counts.rejected} rejected. After the live re-analysis nothing is eligible for a calendar write, so nothing was written.`,
+        );
+        return summary;
+      }
+      if (!(await this.preflightSavedRunWriteAccess())) return summary;
+
+      const processedCount = await this.executeCalendarActions(
+        freshExecutable,
+        results.config,
+      );
+      summary.wrote = true;
+      results.calendarEvents = processedCount;
+      const failureCount = this.recordCalendarWriteFailures(results);
+      summary.processed = processedCount;
+      summary.failed = failureCount;
+
+      // Metrics honesty: buildMetricsRecord only reports "executed" counts
+      // when `analyzed` equals the plan it is summarizing. The write ran on
+      // the executable subset, so the withheld remainder is folded in as
+      // skips — which is exactly what the calendar saw.
+      const raw = this.lastExecutionActionCounts;
+      if (raw && typeof raw === "object") {
+        const withheldCount = Math.max(
+          0,
+          freshAnalyzed.length - freshExecutable.length,
+        );
+        this.lastExecutionActionCounts = {
+          ...raw,
+          skip: (raw.skip || 0) + withheldCount,
+          analyzed: freshAnalyzed.length,
+        };
+        summary.created = raw.create || 0;
+        summary.updated = raw.update || 0;
+      }
+
+      if (!Array.isArray(results.savedRunExecutions)) {
+        results.savedRunExecutions = [];
+      }
+      results.savedRunExecutions.push({
+        executedAt: new Date().toISOString(),
+        via: "owner-review",
+        runAgeAtExecution: ageLabel,
+        analyzed: freshAnalyzed.length,
+        executable: freshExecutable.length,
+        processed: processedCount,
+        failed: failureCount,
+        actionCounts: this.lastExecutionActionCounts || null,
+        ownerReview: { ...counts },
+      });
+      // Metrics name the trigger honestly: this was a manual, owner-driven
+      // execution of a saved run, not a display.
+      results.runContext = {
+        ...(results.runContext || {}),
+        type: "manual",
+        trigger: "owner-review",
+      };
+      await this.persistExecutedSavedRunSnapshot(results);
+      const runId = results.savedRunId || results.sourceRunId || "";
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\..+$/, "")
+        .replace("T", "-");
+      await this.runPostRunHousekeeping(results, 30, {
+        logRunId: runId ? `${runId}-review-${stamp}` : null,
+        pruneRuns: true,
+      });
+      await this.presentSavedRunExecutionNotice(
+        "Calendar Updated",
+        [
+          `➕ Created ${summary.created}`,
+          `🔄 Updated ${summary.updated}`,
+          `🃏 Approved ${counts.approved} · housekeeping ${counts.housekeeping}`,
+          `⏸️ Awaiting review ${counts.awaiting} · rejected ${counts.rejected}`,
+          failureCount > 0
+            ? `⚠️ ${failureCount} write(s) FAILED (recorded on the run file)`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+      return summary;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Reviewed-run execution failed: ${error.message}`,
+      );
+      try {
+        await this.presentSavedRunExecutionNotice(
+          "Reviewed-Run Execution Failed",
+          `${error.message}\n\nSome writes may have completed; the run log has details.`,
+        );
+      } catch (noticeError) {
+        /* already logged above */
+      }
+      return summary;
+    }
+  }
+
   async ensureRelativeStorageDirs() {
     try {
       const fm = this.fm || FileManager.iCloud();
@@ -15797,6 +16013,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // run from the saved-run display (absent until the first execution;
         // display-saved-run.js threads prior entries back through so
         // re-executions append instead of overwriting).
+        // New-venue candidates ride with the run so the Mac server's review
+        // deck (tools/review-queue.js) can offer them as cards.
+        ...(Array.isArray(results.newVenueCandidates) &&
+        results.newVenueCandidates.length > 0
+          ? { newVenueCandidates: results.newVenueCandidates }
+          : {}),
         ...(Array.isArray(results.savedRunExecutions) &&
         results.savedRunExecutions.length > 0
           ? { executions: results.savedRunExecutions }
@@ -15967,6 +16189,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         reason: `🎪 ${event._festivalMatch.reason || "matches curated festival"}`,
       };
     }
+    // Owner review (swipe deck, reviewed-run execute path): the owner's
+    // decision — or the lack of one — withheld the write.
+    if (event._ownerReviewWithheld) {
+      const review = event._ownerReviewWithheld;
+      return {
+        section: "withheld",
+        reason:
+          review.status === "rejected"
+            ? `🚫 rejected by owner${review.reason ? ` — ${review.reason}` : ""}`
+            : "🃏 awaiting owner review — not swiped yet",
+      };
+    }
     if (
       // _mergeNoOp is the write path's own no-op stamp (shared-core: final
       // payload field-identical to the calendar record, notes projection
@@ -16029,6 +16263,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // A curated-festival umbrella is withheld by the same gate — the curated
     // dataset renders the festival, the scraper contributes parties only.
     if (SharedCore.isCuratedFestivalUmbrella(event)) return "withheld";
+    // Owner review: rejected / not-yet-swiped proposals are withheld by the
+    // same gate on the reviewed-run execute path.
+    if (event._ownerReviewWithheld) return "withheld";
     // A merge stamped _mergeNoOp is skipped by the same
     // filterEventsForExecution gate — the card must not promise an UPDATE
     // that never runs.
@@ -17127,7 +17364,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   async appendLogSummary(results, options = {}) {
     try {
+      // options.runIdOverride: the reviewed-run execute path writes its log
+      // under "<runId>-review-<stamp>" — writeString would otherwise
+      // REPLACE the Mac run's own log with this session's short buffer.
       const runId =
+        (typeof options.runIdOverride === "string" && options.runIdOverride) ||
         results?.savedRunId ||
         results?.sourceRunId ||
         results?.runId ||
