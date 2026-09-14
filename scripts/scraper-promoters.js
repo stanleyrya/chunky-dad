@@ -263,6 +263,18 @@ const scraperPromoters = [
       "spookybear"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Urban Bear",
+    "aliases": [
+      "Urban Bear NYC",
+      "Urban Bear Weekend"
+    ],
+    "website": "https://www.theurbanbear.com",
+    "urlPatterns": [
+      "theurbanbear.com"
+    ],
+    "bearAffinity": "always"
   }
 ];
 

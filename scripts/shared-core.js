@@ -2025,6 +2025,24 @@ class SharedCore {
     // beats domain root" rung already makes inside
     // resolveConflictDeterministically. Fails closed: either side unparseable,
     // different sites, or a candidate that is itself pathed all return false.
+    // Is this URL the event's OWN SOURCE LISTING — the multi-event page or
+    // link aggregator the record was scraped off? That page is where the
+    // event was FOUND, not what it IS, whatever its path looks like. Run
+    // 20260914-164140: rockbarnyc.com/calendar carries a path, so the
+    // "deeper URL = this event's page" rungs kept it over the venue root on
+    // five Rockbar events, and the merge then ranked it as "event-specific"
+    // over the promoter homepage the calendar held (theurbanbear.com). The
+    // run's own read of the page decides (_pageClassification): a page
+    // classified as one event's page, or never classified, is not a listing.
+    isOwnListingPageUrl(event, value) {
+        if (!event || typeof event !== 'object') return false;
+        const classification = String(event._pageClassification || '');
+        if (classification !== 'multi-event-page' && classification !== 'link-aggregator') return false;
+        const sourceKey = this.getUrlDedupeKey(String(event._sourcePageUrl || '').trim());
+        if (!sourceKey) return false;
+        return sourceKey === this.getUrlDedupeKey(String(value || '').trim());
+    }
+
     isBareRootBuryingSameSiteEventPage(candidate, incumbent) {
         const candidateParts = this.getUrlRuleParts(candidate);
         const incumbentParts = this.getUrlRuleParts(incumbent);
@@ -4542,8 +4560,15 @@ class SharedCore {
                 }
             }
             if ((fieldName === 'website' || fieldName === 'url') && urlA.host !== urlB.host) {
-                const bareRootA = urlA.segments.length === 0 && !urlA.hasQuery;
-                const bareRootB = urlB.segments.length === 0 && !urlB.hasQuery;
+                // A record's own source listing (isOwnListingPageUrl) ranks
+                // as a front door here, path or no path: it is where the
+                // event was found, never "the event's page".
+                const listingRecords = context && context.records && typeof context.records === 'object'
+                    ? context.records : null;
+                const isListing = (value) => Boolean(listingRecords)
+                    && (this.isOwnListingPageUrl(listingRecords.a, value) || this.isOwnListingPageUrl(listingRecords.b, value));
+                const bareRootA = (urlA.segments.length === 0 && !urlA.hasQuery) || isListing(valueA);
+                const bareRootB = (urlB.segments.length === 0 && !urlB.hasQuery) || isListing(valueB);
                 if (bareRootA && !bareRootB && urlB.segments.length > 0) {
                     return { winner: 'b', reason: 'event-specific URL beats bare homepage' };
                 }
@@ -6526,7 +6551,9 @@ class SharedCore {
     isForeignBareRootIdentityUrl(event, value, curatedIdentityUrls) {
         const parts = this.getUrlRuleParts(value);
         if (!parts) return false;
-        if (parts.segments.length > 0 || parts.hasQuery) return false;
+        // The listing the record was scraped off is a front door too — a
+        // venue calendar names every event on it, so it names none.
+        if ((parts.segments.length > 0 || parts.hasQuery) && !this.isOwnListingPageUrl(event, value)) return false;
         const curatedHosts = (Array.isArray(curatedIdentityUrls) ? curatedIdentityUrls : [curatedIdentityUrls])
             .map(url => this.getHostFromUrl(url).toLowerCase().replace(/^www\./, ''))
             .filter(Boolean);
@@ -6578,7 +6605,23 @@ class SharedCore {
                 }
                 continue;
             }
-            if (websiteIsStatic) continue;
+            if (websiteIsStatic) {
+                // A parser's static website is the SOURCE SITE's front door,
+                // stamped on every event it emits. When the event itself
+                // named a curated promoter (registry match on its own
+                // evidence) whose identity lives on another host, the
+                // promoter is the identity and the venue root is not — owner
+                // ruling 2026-09-14 (The UnderBear Party: "urbanbear
+                // (promoter) should mostly win"). Bare roots only: a deep
+                // page the parser stamped is a page-stated site and stands.
+                if (promoterEntry && curatedWebsite && curatedWebsite !== website
+                    && this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite])) {
+                    event.website = curatedWebsite;
+                    event._staticFields.website = curatedWebsite;
+                    console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — the source site's front door yields to the promoter the event names`);
+                }
+                continue;
+            }
 
             const host = this.getHostFromUrl(website).toLowerCase().replace(/^www\./, '');
             if (!host) continue;
@@ -6606,18 +6649,21 @@ class SharedCore {
                     : '';
                 if (promoterEntry && (curatedWebsite || curatedFavicon) && curatedWebsite !== website
                     && this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite, curatedFavicon])) {
+                    const frontDoor = this.isOwnListingPageUrl(event, website)
+                        ? 'the listing it was scraped off is a front door'
+                        : 'a bare root is a front door';
                     if (curatedWebsite) {
                         event.website = curatedWebsite;
                         if (!event._staticFields) event._staticFields = {};
                         event._staticFields.website = curatedWebsite;
-                        console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — a bare root is a front door, not this event's page; the curated identity wins`);
+                        console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — ${frontDoor}, not this event's page; the curated identity wins`);
                     } else {
                         // The registry knows the promoter by its favicon link
                         // only (a homeless promoter with no site of its own,
                         // e.g. Goldiloxx): the identity is the favicon, and an
                         // empty website beats somebody else's front door.
                         delete event.website;
-                        console.log(`🔗 LINKS: cleared website ${website} for "${title}" — a bare root is a front door, not this event's page, and "${promoterEntry.name}" carries its identity in its favicon link (${curatedFavicon}), not a site`);
+                        console.log(`🔗 LINKS: cleared website ${website} for "${title}" — ${frontDoor}, not this event's page, and "${promoterEntry.name}" carries its identity in its favicon link (${curatedFavicon}), not a site`);
                     }
                 }
                 continue;
@@ -9477,6 +9523,13 @@ class SharedCore {
             if (!Object.isExtensible(event)) {
                 event = { ...event };
             }
+            // The page's classification travels with the record from here on
+            // (re-stamped below on whatever normalization returns): the
+            // static identity rung in applyStaticMetadataBlock needs it to
+            // tell the event's own page from the listing it was scraped off.
+            if (pageClassification && !event._pageClassification) {
+                event._pageClassification = pageClassification;
+            }
             return this.applyFieldPriorities(event, parserConfig, mainConfig);
         });
 
@@ -11229,9 +11282,68 @@ class SharedCore {
         console.log(`🔗 DEDUP: "${event.title || 'event'}" matched "${match.title || 'event'}" by event-page URL identity (${where})`);
     }
 
+    // One flyer on several events at DIFFERENT PLACES under DIFFERENT names
+    // in one batch is a weekend/festival poster, not any one event's image —
+    // so no record keeps it. Thotyssey feed, run 20260914-164140: one
+    // cloudfront image sat on "Urban Bear: Mega Bear Blast at Rockbar", "The
+    // Urban Bear Weekend: Truck Stop / Fat Fuc at Nowhere" and the Street
+    // Fair on Little West 12th, and the merge then picked that poster over
+    // Rockbar's own 2026 Mega Bear Blast flyer. Both conditions, because
+    // each alone names a legitimate shape: a listing stub and its detail
+    // page, or a weekly party's nights, share a name; a venue's own posts
+    // ("Bear Tea / Club Cafe" and "Bear Tea - Meet MA Bear 2027", or
+    // eaglela.com's stock "coming soon" card on six different nights) share
+    // a place. A record with no place evidence can't be told apart and never
+    // triggers this (areEventsDistinctByPlace fails closed). Runs before
+    // dedup so a folded twin never inherits the poster. Returns the records
+    // whose image fields were cleared.
+    withholdSharedFlyerImages(events) {
+        if (!Array.isArray(events) || events.length < 2) return [];
+        const imageKey = (value) => this.getUrlDedupeKey(typeof value === 'string' ? value.trim() : '');
+        const holdersByKey = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const keysOnRecord = new Set();
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = imageKey(event[field]);
+                if (!key || keysOnRecord.has(key)) continue;
+                keysOnRecord.add(key);
+                if (!holdersByKey.has(key)) holdersByKey.set(key, []);
+                holdersByKey.get(key).push(event);
+            }
+        }
+        const namesOf = (event) => [event.title, event.name]
+            .filter(value => typeof value === 'string' && value.trim());
+        const sameName = (a, b) => namesOf(a).some(nameA => namesOf(b).some(nameB => this.areTitlesSimilar(nameA, nameB)));
+        const withheld = [];
+        for (const [key, group] of holdersByKey) {
+            if (group.length < 2) continue;
+            const isPoster = group.some((a, i) => group.some((b, j) => j > i
+                && !sameName(a, b) && this.areEventsDistinctByPlace(a, b)));
+            if (!isPoster) continue;
+            for (const event of group) {
+                const cleared = [];
+                let url = '';
+                for (const field of IMAGE_MERGE_FIELDS) {
+                    if (imageKey(event[field]) !== key) continue;
+                    url = url || event[field];
+                    delete event[field];
+                    cleared.push(field);
+                }
+                if (cleared.length === 0) continue;
+                if (cleared.includes('image')) delete event.imageSource;
+                event._sharedFlyerWithheld = { url, sharedBy: group.length };
+                console.log(`🖼️ IMAGE: withheld ${url} from "${event.title || 'event'}" — one flyer on ${group.length} differently named events at different places in this batch is a multi-event poster, not this event's image (${cleared.join(', ')} cleared)`);
+                withheld.push(event);
+            }
+        }
+        return withheld;
+    }
+
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
+        this.withholdSharedFlyerImages(events);
 
         // Log progress for large batches
         const logProgress = events.length > 10;
@@ -13540,7 +13652,18 @@ class SharedCore {
                 localDay: date.toISOString().split('T')[0]
             };
         }
-        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        // A calendar record states its timezone in its notes, never as a
+        // field — without this fallback every calendar event read as the
+        // midnight missing-time placeholder, which barred the place +
+        // exact-start identity rung for every scraped-vs-calendar pair (run
+        // 20260914-164140: "Urban Bear: Mega Bear Blast at Rockbar" landed
+        // as NEW beside the calendar's "Mega Bear Blast: Closing Night
+        // Party" — same pin, same 6pm, shared name — for exactly this).
+        const notesTimezone = typeof event.notes === 'string' && event.notes.includes('timezone')
+            ? String(this.parseNotesIntoFields(event.notes).timezone || '').trim()
+            : '';
+        const timezone = event.timezone || event.calendarTimezone || notesTimezone
+            || this.getCityTimezone(event.city) || null;
         if (!timezone) return null;
         const offsetMinutes = this.getTimezoneOffsetMinutes(date, timezone);
         if (!Number.isFinite(offsetMinutes)) return null;
@@ -16932,8 +17055,17 @@ class SharedCore {
                             ? event.website.trim()
                             : (typeof event.url === 'string' ? event.url.trim() : '');
                         if (this.isBareRootBuryingSameSiteEventPage(resolvedValue, pageDerived)) {
-                            console.log(`🔗 LINKS: kept the page's own ${pageDerived} over curated ${resolvedValue} for "${event.title || 'event'}" — same site, and the deeper URL is the one that describes THIS event`);
-                            return;
+                            if (this.isOwnListingPageUrl(event, pageDerived)) {
+                                // …unless the "deeper URL" is the listing the
+                                // record was scraped off: that page names
+                                // every event on it, so the curated root is
+                                // the honest value (and a front door the
+                                // identity ladder can still replace).
+                                console.log(`🔗 LINKS: curated ${resolvedValue} stamped over ${pageDerived} for "${event.title || 'event'}" — that is the listing the event was scraped off, not this event's page`);
+                            } else {
+                                console.log(`🔗 LINKS: kept the page's own ${pageDerived} over curated ${resolvedValue} for "${event.title || 'event'}" — same site, and the deeper URL is the one that describes THIS event`);
+                                return;
+                            }
                         }
                     }
 

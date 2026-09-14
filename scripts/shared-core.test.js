@@ -22867,3 +22867,261 @@ test('override no-op: an override identical to its series night is skipped; one 
   assert.equal(changed._mergeNoOp, false, 'a notes-level addition still writes');
   assert.equal(SharedCore.filterEventsForExecution([changed]).length, 1);
 });
+
+// ---------------------------------------------------------------------------
+// Owner rejections 2026-09-14 (review deck, run 20260914-164140): a venue
+// listing page is a front door, a matched promoter beats the source site's
+// root, a calendar record's notes timezone unlocks the exact-start rung, and
+// one flyer on several differently named events is nobody's image.
+// ---------------------------------------------------------------------------
+
+function silenceConsole() {
+  const original = console.log;
+  console.log = () => {};
+  return () => { console.log = original; };
+}
+
+test('isOwnListingPageUrl: only the multi-event page the record was scraped off counts', () => {
+  const core = createCore();
+  const listing = { _sourcePageUrl: 'https://www.rockbarnyc.com/calendar', _pageClassification: 'multi-event-page' };
+  assert.equal(core.isOwnListingPageUrl(listing, 'https://www.rockbarnyc.com/calendar'), true);
+  assert.equal(core.isOwnListingPageUrl(listing, 'https://rockbarnyc.com/calendar/'), true, 'www and trailing slash fold');
+  assert.equal(core.isOwnListingPageUrl(listing, 'https://www.rockbarnyc.com/events/underbear'), false, 'a deeper page is not the listing');
+  assert.equal(core.isOwnListingPageUrl({ ...listing, _pageClassification: 'event-page' }, 'https://www.rockbarnyc.com/calendar'), false, 'a page classified as one event\'s page is that event\'s page');
+  assert.equal(core.isOwnListingPageUrl({ _sourcePageUrl: 'https://www.rockbarnyc.com/calendar' }, 'https://www.rockbarnyc.com/calendar'), false, 'unclassified never counts');
+  assert.equal(core.isOwnListingPageUrl({ ...listing, _pageClassification: 'link-aggregator' }, 'https://www.rockbarnyc.com/calendar'), true);
+});
+
+test('static identity rung: the curated root replaces the listing the event was scraped off, keeps a real event page', () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const offListing = {
+      title: 'UNDERBEAR: URBAN BEAR WEEKEND',
+      website: 'https://www.rockbarnyc.com/calendar',
+      _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+      _pageClassification: 'multi-event-page'
+    };
+    core.applyStaticMetadataBlock(offListing, { website: { value: 'https://www.rockbarnyc.com' } }, { website: { priority: ['static'] } });
+    assert.equal(offListing.website, 'https://www.rockbarnyc.com', 'the listing is where the event was found, not its page');
+    assert.equal(offListing._staticFields.website, 'https://www.rockbarnyc.com');
+
+    const ownPage = {
+      title: 'UNDERBEAR',
+      website: 'https://www.rockbarnyc.com/events/underbear',
+      _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+      _pageClassification: 'multi-event-page'
+    };
+    core.applyStaticMetadataBlock(ownPage, { website: { value: 'https://www.rockbarnyc.com' } }, { website: { priority: ['static'] } });
+    assert.equal(ownPage.website, 'https://www.rockbarnyc.com/events/underbear', 'a deeper same-site page still beats the curated root');
+  } finally { restore(); }
+});
+
+test('prepareParsedEvents stamps the page classification before the static identity rung reads it', async () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const parserConfig = {
+      name: 'Rockbar',
+      urls: ['https://www.rockbarnyc.com/calendar'],
+      metadata: { website: { value: 'https://www.rockbarnyc.com' } }
+    };
+    const [event] = await core.prepareParsedEvents([{
+      title: 'UNDERBEAR: URBAN BEAR WEEKEND',
+      website: 'https://www.rockbarnyc.com/calendar',
+      _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+      startDate: new Date('2026-09-19T01:00:00Z')
+    }], parserConfig, {}, 'multi-event-page', null, null);
+    assert.equal(event._pageClassification, 'multi-event-page');
+    assert.equal(event.website, 'https://www.rockbarnyc.com');
+  } finally { restore(); }
+});
+
+const URBAN_BEAR_ENTRY = {
+  name: 'Urban Bear',
+  aliases: ['The Urban Bear', 'Urban Bear NYC', 'Urban Bear Weekend'],
+  instagram: 'https://www.instagram.com/urbanbearnyc',
+  website: 'https://www.theurbanbear.com',
+  urlPatterns: ['theurbanbear.com'],
+  bearAffinity: 'always'
+};
+
+test('identity ladder: a matched promoter beats the listing page and the source site\'s root, never a real page', () => {
+  const core = createCore();
+  core.promoters = [URBAN_BEAR_ENTRY];
+  const restore = silenceConsole();
+  try {
+    const enforce = { promoterRegistry: { mode: 'enforce' } };
+    // The aggregator row carrying the venue's listing page as website.
+    const offListing = {
+      title: 'Urban Bear: Mega Bear Blast at Rockbar',
+      website: 'https://www.rockbarnyc.com/calendar',
+      _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+      _pageClassification: 'multi-event-page'
+    };
+    core.applyPromoterRegistryMatches([offListing], { name: 'Thotyssey' }, enforce);
+    core.canonicalizeIdentityLinks([offListing]);
+    assert.equal(offListing.website, 'https://www.theurbanbear.com', 'the listing is a front door; the curated identity wins');
+    assert.equal(offListing._staticFields.website, 'https://www.theurbanbear.com');
+
+    // The venue parser's static root, on an event that names the promoter.
+    const venueRoot = {
+      title: 'UNDERBEAR: URBAN BEAR WEEKEND',
+      website: 'https://www.rockbarnyc.com',
+      _staticFields: { website: 'https://www.rockbarnyc.com' },
+      _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+      _pageClassification: 'multi-event-page'
+    };
+    core.applyPromoterRegistryMatches([venueRoot], { name: 'Rockbar', urls: ['https://www.rockbarnyc.com/calendar'] }, enforce);
+    core.canonicalizeIdentityLinks([venueRoot]);
+    assert.equal(venueRoot.website, 'https://www.theurbanbear.com', 'the source site\'s front door yields to the promoter the event names');
+
+    // A static root on the promoter's OWN host stands.
+    const ownRoot = {
+      title: 'Urban Bear Street Fair',
+      website: 'https://theurbanbear.com/',
+      _staticFields: { website: 'https://theurbanbear.com/' }
+    };
+    core.applyPromoterRegistryMatches([ownRoot], { name: 'Urban Bear site' }, enforce);
+    core.canonicalizeIdentityLinks([ownRoot]);
+    assert.equal(ownRoot.website, 'https://theurbanbear.com/');
+
+    // A deep page on another host is somebody's event page: kept, static or not.
+    const deepPage = {
+      title: 'Urban Bear Roper Romp',
+      website: 'https://www.juliusbarny.com/events/roper-romp',
+      _sourcePageUrl: 'https://www.juliusbarny.com/events',
+      _pageClassification: 'multi-event-page'
+    };
+    core.applyPromoterRegistryMatches([deepPage], { name: 'Julius' }, enforce);
+    core.canonicalizeIdentityLinks([deepPage]);
+    assert.equal(deepPage.website, 'https://www.juliusbarny.com/events/roper-romp');
+    const staticDeep = {
+      title: 'Urban Bear Roper Romp',
+      website: 'https://www.juliusbarny.com/events/roper-romp',
+      _staticFields: { website: 'https://www.juliusbarny.com/events/roper-romp' }
+    };
+    core.applyPromoterRegistryMatches([staticDeep], { name: 'Julius' }, enforce);
+    core.canonicalizeIdentityLinks([staticDeep]);
+    assert.equal(staticDeep.website, 'https://www.juliusbarny.com/events/roper-romp');
+  } finally { restore(); }
+});
+
+test('merge rung: a record\'s own listing page is not "event-specific" against a bare homepage', () => {
+  const core = createCore();
+  const record = {
+    website: 'https://www.rockbarnyc.com/calendar',
+    _sourcePageUrl: 'https://www.rockbarnyc.com/calendar',
+    _pageClassification: 'multi-event-page'
+  };
+  const listingVsRoot = core.resolveConflictDeterministically('website',
+    'https://www.rockbarnyc.com/calendar', 'https://theurbanbear.com', { records: { a: record, b: {} } });
+  assert.ok(!listingVsRoot || listingVsRoot.reason !== 'event-specific URL beats bare homepage',
+    `the listing must not outrank the promoter root: ${JSON.stringify(listingVsRoot)}`);
+  const pageVsRoot = core.resolveConflictDeterministically('website',
+    'https://www.rockbarnyc.com/events/underbear', 'https://theurbanbear.com',
+    { records: { a: { ...record, website: 'https://www.rockbarnyc.com/events/underbear' }, b: {} } });
+  assert.deepEqual(pageVsRoot, { winner: 'a', reason: 'event-specific URL beats bare homepage' });
+});
+
+test('getMergeLocalStartParts reads a calendar record\'s notes timezone, so the exact-start rung meets calendar events', () => {
+  const core = createCore();
+  const calendarRecord = {
+    title: 'Mega Bear Blast: Closing Night Party',
+    startDate: new Date('2026-09-20T22:00:00Z'),
+    endDate: new Date('2026-09-21T02:00:00Z'),
+    location: '40.7326534, -74.0096996',
+    notes: 'description: Urban Bear NYC closing-night party at Rockbar following the street fair.\nbar: Rockbar\naddress: 185 Christopher St, New York, NY 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: mega-bear-blast-closing-night-party|2026-09-20|rockbar\nfestival: Urban Bear NYC'
+  };
+  const parts = core.getMergeLocalStartParts(calendarRecord);
+  assert.deepEqual(parts, { minutesOfDay: 18 * 60, localDay: '2026-09-20' });
+  assert.equal(core.getMergeLocalStartParts({ startDate: new Date('2026-09-20T22:00:00Z'), notes: 'bar: Rockbar' }), null, 'no timezone anywhere still fails closed');
+
+  const scraped = {
+    title: 'Urban Bear: Mega Bear Blast at Rockbar',
+    bar: 'Rockbar NYC',
+    address: '185 Christopher St, New York, NY 10014, USA',
+    location: '40.7326534, -74.0096996',
+    startDate: new Date('2026-09-20T22:00:00Z'),
+    endDate: new Date('2026-09-21T04:00:00Z'),
+    timezone: 'America/New_York',
+    website: 'https://www.theurbanbear.com'
+  };
+  assert.equal(core.hasMissingTimeStartPlaceholder(scraped, calendarRecord), false);
+  assert.equal(core.getSameEventIdentitySignal(scraped, calendarRecord), 'place-exact-start');
+  const decision = core.analyzeEventAction(scraped, [calendarRecord]);
+  assert.equal(decision.action, 'merge');
+  assert.equal(decision.existingEvent, calendarRecord);
+
+  // Two unrelated names in one slot at one venue are still two rooms.
+  const otherRoom = { ...scraped, title: 'PANTHEON: A Classic Queer Dance Party' };
+  assert.equal(core.getSameEventIdentitySignal(otherRoom, calendarRecord), null);
+});
+
+test('withholdSharedFlyerImages: one flyer on differently named events at different places is nobody\'s image', () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const poster = 'https://d3flpus5evl89n.cloudfront.net/56b4c4fddf82fe40ce873cdc/6a9ee8cf18db9687ebb3a7d9/scaled_1024.jpg';
+    const stock = 'https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg';
+    const events = [
+      { title: 'Urban Bear: Mega Bear Blast at Rockbar', bar: 'Rockbar NYC', image: poster, imageVertical: poster, imageSource: 'json-api' },
+      { title: 'The Urban Bear Weekend: Truck Stop / Fat Fuc at Nowhere', bar: 'Nowhere Bar', image: poster, imageSource: 'json-api' },
+      { title: 'Urban Bear Weekend: 8th Annual Urban Bear Street Fair', address: 'Little West 12th Street, New York, NY', image: `${poster}?utm_source=x` },
+      // Same-named records share their flyer legitimately (stub + detail page).
+      { title: 'Bear Night', bar: 'Eagle LA', image: 'https://cdn.example.com/bear-night.jpg', imageSource: 'page' },
+      { title: 'BEAR NIGHT!', bar: 'Eagle LA', image: 'https://cdn.example.com/bear-night.jpg', imageSource: 'page' },
+      // A venue's own posts share its stock card: one place, so not a poster.
+      { title: 'OUTLAW', bar: 'Eagle LA', image: stock },
+      { title: 'JUNGLE', bar: 'Eagle LA', image: stock },
+      { title: 'Bear Tea / Club Cafe', bar: 'Club Cafe', image: 'https://cdn.example.com/bear-tea.jpg' },
+      { title: 'Bear Tea - Meet MA Bear 2027', bar: 'Club Cafe', image: 'https://cdn.example.com/bear-tea.jpg' },
+      // No place evidence on one side: can't be told apart, never triggers.
+      { title: 'Cocktail Party', image: 'https://cdn.example.com/pool.jpg' },
+      { title: 'FURBALL POOL PARTY', bar: 'The Resort', image: 'https://cdn.example.com/pool.jpg' },
+      { title: 'Solo', bar: 'Rockbar', image: 'https://cdn.example.com/solo.jpg' }
+    ];
+    const withheld = core.withholdSharedFlyerImages(events);
+    assert.deepEqual(withheld.map(event => event.title), events.slice(0, 3).map(event => event.title));
+    for (const event of events.slice(0, 3)) {
+      assert.equal(event.image, undefined, `${event.title} loses the poster`);
+      assert.equal(event.imageVertical, undefined);
+      assert.equal(event.imageSource, undefined);
+      assert.equal(event._sharedFlyerWithheld.sharedBy, 3);
+    }
+    assert.equal(events[0]._sharedFlyerWithheld.url, poster);
+    for (const event of events.slice(3)) {
+      assert.ok(event.image, `${event.title} keeps its image`);
+      assert.equal(event._sharedFlyerWithheld, undefined);
+    }
+    assert.equal(events[4].imageSource, 'page');
+    assert.deepEqual(core.withholdSharedFlyerImages([events[11]]), []);
+  } finally { restore(); }
+});
+
+test('deduplicateEvents withholds a multi-event poster before any twin can inherit it', async () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const poster = 'https://cdn.example.com/urban-bear-weekend.jpg';
+    const result = await core.deduplicateEvents([
+      { title: 'Urban Bear: Mega Bear Blast at Rockbar', bar: 'Rockbar', city: 'dallas', startDate: new Date('2026-09-20T22:00:00Z'), image: poster },
+      { title: 'Urban Bear Weekend: Street Fair', bar: 'Little West 12th Street', address: '12 Little West 12th St, New York, NY', city: 'dallas', startDate: new Date('2026-09-20T16:00:00Z'), image: poster }
+    ], null);
+    assert.equal(result.length, 2);
+    for (const event of result) assert.equal(event.image, undefined);
+  } finally { restore(); }
+});
+
+test('data/promoters.json: Urban Bear is a curated promoter matched by title, not by a co-promoter\'s event', () => {
+  const core = createCore();
+  core.promoters = require('../data/promoters.json');
+  const urbanBear = core.matchEventToPromoter({ title: 'Urban Bear: Mega Bear Blast at Rockbar' });
+  assert.equal(urbanBear && urbanBear.entry && urbanBear.entry.name, 'Urban Bear');
+  assert.equal(urbanBear.evidence, 'title');
+  assert.equal(core.getPromoterEntryIdentityWebsite(urbanBear.entry), 'https://www.theurbanbear.com');
+  const weekend = core.matchEventToPromoter({ title: 'UNDERBEAR: URBAN BEAR WEEKEND' });
+  assert.equal(weekend && weekend.entry && weekend.entry.name, 'Urban Bear');
+  const furballParty = core.matchEventToPromoter({ title: 'UNDERBEAR NYC', ticketUrl: 'https://events.ticketleap.com/tickets/furballnyc/underbear' });
+  assert.notEqual(furballParty && furballParty.entry && furballParty.entry.name, 'Urban Bear', 'a title that never names Urban Bear is not its event');
+});
