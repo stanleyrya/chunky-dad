@@ -702,6 +702,8 @@ const {
   resolveReviewScriptName,
   buildScriptableExecuteLink,
   formatReviewDateLine,
+  formatReviewUtcLine,
+  describeReviewTimeDelta,
   renderReviewCard,
   renderReviewPage,
   createServerState,
@@ -709,12 +711,26 @@ const {
 } = require('../tools/serve-results');
 const reviewQueue = require('../tools/review-queue');
 
-test('formatReviewDateLine prints the event\'s own zone, spans days honestly, and admits a missing end', () => {
-  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z', 'America/New_York'), 'Thu, Oct 3 · 10:00 PM – Fri, Oct 4 1:00 AM');
-  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T03:30:00.000Z', 'America/New_York'), 'Thu, Oct 3 · 10:00 PM – 11:30 PM');
-  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'America/New_York'), 'Thu, Oct 3 · 10:00 PM (no end listed)');
-  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'Not/AZone'), 'Fri, Oct 4 · 2:00 AM (no end listed)', 'unknown zone falls back to UTC');
+const REVIEW_TEST_CITIES = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'], calendar: 'chunky-dad-nyc', coordinates: { lat: 40.7128, lng: -74.006 } } };
+function buildReviewCtx() {
+  return {
+    adapter: new ScriptableAdapter({ cities: REVIEW_TEST_CITIES }),
+    core: reviewQueue.createDeckCore({ config: { cities: REVIEW_TEST_CITIES } }, {})
+  };
+}
+
+test('formatReviewDateLine: the event\'s zone with its label, no fabricated end, a named end day, and honesty about a missing zone', () => {
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM – Fri, Oct 4 1:00 AM EDT');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T03:30:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM – 11:30 PM EDT');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM EDT (no end listed)');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', '2030-10-04T02:00:00.000Z', 'America/New_York'), 'Thu, Oct 3, 2030 · 10:00 PM EDT (no end listed)', 'end == start is not an end');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, 'Not/AZone'), 'Fri, Oct 4, 2030 · 2:00 AM UTC (no end listed)', 'unknown zone falls back to UTC');
+  assert.equal(formatReviewDateLine('2030-10-04T02:00:00.000Z', null, null), 'Fri, Oct 4, 2030 · 2:00 AM UTC (no end listed) — no timezone on the event');
   assert.equal(formatReviewDateLine('garbage', null, 'UTC'), '');
+  assert.equal(formatReviewUtcLine('2030-10-04T02:00:00.000Z', '2030-10-04T05:00:00.000Z'), '🌍 Fri, Oct 4 2:00 AM – 5:00 AM UTC');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-04T04:00:00.000Z'), '2 h later');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-04T01:30:00.000Z'), '30 min earlier');
+  assert.equal(describeReviewTimeDelta('2030-10-04T02:00:00.000Z', '2030-10-07T02:00:00.000Z'), '3 days later');
 });
 
 test('the Scriptable hand-off link names the phone script and the run, and the name is overridable', () => {
@@ -727,37 +743,82 @@ test('the Scriptable hand-off link names the phone script and the run, and the n
   assert.equal(resolveReviewScriptName({ CHUNKY_REVIEW_SCRIPT_NAME: ' My Script ' }), 'My Script');
 });
 
-test('renderReviewCard: new, update and bar cards carry their facts escaped, with the diff rows and links', () => {
-  const fresh = renderReviewCard({ kind: 'new', key: 'k', proposal: {
+test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UTC check, tappable route line, domain-labelled chips', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: {
     title: 'Bear <b>Night</b>', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T06:00:00.000Z', timezone: 'America/New_York',
-    bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', source: 'Furball', url: 'https://furball.nyc/', ticketUrl: 'https://tickets.example/x',
-    image: 'https://furball.nyc/flyer.jpg', cover: '$20', description: 'Bears "welcome"', changes: {}
-  } });
-  assert.ok(fresh.includes('✨ New event'));
-  assert.ok(fresh.includes('Bear &lt;b&gt;Night&lt;/b&gt;'), 'title escaped');
-  assert.ok(fresh.includes('Thu, Oct 3 · 10:00 PM – Fri, Oct 4 2:00 AM'));
-  assert.ok(fresh.includes('📍 Rockbar · 185 Christopher St · nyc'));
-  assert.ok(fresh.includes('href="https://tickets.example/x"') && fresh.includes('>Tickets<'));
-  assert.ok(fresh.includes('<img src="https://furball.nyc/flyer.jpg"'));
-  assert.ok(fresh.includes('Bears &quot;welcome&quot;'));
-  assert.ok(!fresh.includes('<table'), 'a new event has no diff');
+    bar: 'Rockbar', address: '185 Christopher St, New York, NY', city: 'nyc', location: '40.7331, -74.0055', source: 'ai-web',
+    url: 'https://www.furball.nyc/events/x', ticketUrl: 'https://tickets.example/x', image: 'https://furball.nyc/flyer.jpg', cover: '$20',
+    description: 'Bears "welcome"', changes: {}
+  }, display: {
+    parserName: 'Furball', pageHost: 'furball.nyc', analysisReason: 'No existing events found', bearSource: 'keyword', bearReview: '',
+    evidenceLines: ['pin is 0 m from curated "Rockbar" pin'], notes: 'bar: Rockbar\nwebsite: https://www.furball.nyc/events/x',
+    image: 'https://furball.nyc/flyer-portrait.jpg', imageOrientation: 'portrait', imageDimensions: { width: 800, height: 1000 }, imageRepeatCount: 1,
+    instagram: '@furballnyc', gmaps: 'https://www.google.com/maps/search/?api=1&query=x'
+  } }, ctx);
+  assert.ok(html.includes('✨ New event') && html.includes('No existing events found'));
+  assert.ok(html.includes('Bear &lt;b&gt;Night&lt;/b&gt;'), 'title escaped');
+  assert.ok(html.includes('📅 Thu, Oct 3, 2030 · 10:00 PM – Fri, Oct 4 2:00 AM EDT'));
+  assert.ok(html.includes('🌍 Fri, Oct 4 2:00 AM – 6:00 AM UTC'), 'UTC verification line');
+  assert.ok(html.includes('href="https://www.google.com/maps/search/?api=1&amp;query=Rockbar%2C%20new%20york"') && html.includes('>Rockbar</a>'), 'bar links to maps');
+  assert.ok(html.includes('>185 Christopher St</a>'), 'street-only address label');
+  assert.ok(html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>🧭 Route</a>'));
+  assert.ok(html.includes('Furball · from furball.nyc · 📱 chunky-dad-nyc'), 'parser name, page host and target calendar');
+  assert.ok(html.includes('🐻 keyword'));
+  assert.ok(html.includes('>🔗 furball.nyc</a>') && html.includes('>🎟 tickets.example</a>') && html.includes('>📸 @furballnyc</a>') && html.includes('>🗺 maps</a>'));
+  assert.ok(html.includes('💵 $20'));
+  assert.ok(html.includes('class="thumb portrait"') && html.includes('onclick="openFlyer(this)"') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, tap to enlarge');
+  assert.ok(html.includes('<li>pin is 0 m from curated &quot;Rockbar&quot; pin</li>'), 'evidence on the face');
+  assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
+  assert.ok(html.includes('Bears &quot;welcome&quot;'));
+  assert.ok(!html.includes('class="chgs"'), 'a new event has no change block');
+});
 
-  const update = renderReviewCard({ kind: 'merge', key: 'k', proposal: {
-    title: 'BEEFMINCE x RVT', existingTitle: 'BEEFMINCE Brief Encounter', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', source: 'The Bear Calendar',
-    changes: { title: { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' } }
-  } });
-  assert.ok(update.includes('🔀 Update saved event'));
-  assert.ok(update.includes('calendar title: BEEFMINCE Brief Encounter'));
-  assert.ok(update.includes('<th>title</th><td class="from">BEEFMINCE Brief Encounter</td><td class="to">BEEFMINCE x RVT</td>'));
+test('renderReviewCard (update): stacked calendar-has → would-become rows in the field\'s own language', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'merge', key: 'k', proposal: {
+    title: 'BEEFMINCE x RVT', existingTitle: 'BEEFMINCE Brief Encounter', startDate: '2030-10-05T03:00:00.000Z', timezone: 'America/New_York', city: 'nyc',
+    changes: {
+      title: { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' },
+      startDate: { from: '2030-10-05T01:00:00.000Z', to: '2030-10-05T03:00:00.000Z' },
+      location: { from: '40.7331, -74.0055', to: '40.7350, -74.0055' },
+      url: { from: '', to: 'https://www.beefmince.co.uk/tickets' }
+    }
+  }, display: { parserName: 'The Bear Calendar', notesOnlyAlso: true } }, ctx);
+  assert.ok(html.includes('🔀 Update saved event'));
+  assert.ok(!html.includes('calendar title:'), 'the title row already shows the calendar title');
+  assert.ok(html.includes('<span>calendar has</span><span>would become</span>'));
+  assert.ok(html.includes('data-field="title"') && html.includes('<span class="was">BEEFMINCE Brief Encounter</span>') && html.includes('<span class="now">BEEFMINCE x RVT</span>'));
+  assert.ok(html.includes('<span class="chg-k">Starts</span>') && html.includes('<span class="was">Fri, Oct 4 · 9:00 PM</span>') && html.includes('<span class="now">11:00 PM</span>') && html.includes('2 h later'), 'day printed once, time diffed, delta named');
+  assert.ok(html.includes('<span class="chg-k">Pin</span>') && html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>📌 40.7350, -74.0055</a>'));
+  assert.match(html, /⚠️ moved 21\d m · <a[^>]*maps\/dir\/\?api=1&amp;origin=40\.7331%2C-74\.0055&amp;destination=40\.735%2C-74\.0055[^>]*>🧭 old → new<\/a>/, 'a pin move shows the distance and a route between old and new');
+  assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('<span class="none">∅</span>') && html.includes('>beefmince.co.uk</a>'));
+  assert.ok(html.includes('+ notes updated'));
 
-  const bar = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
-    name: 'The Woods', city: 'nyc', address: '48 S 4th St', coordinates: '40.71, -73.96', signals: ['page-adjacent'],
-    website: 'https://thewoods.example/', instagram: '', sourceEvents: [{ title: 'BEAR NIGHT', date: '2030-02-02T02:00:00.000Z' }], evidence: []
-  } });
-  assert.ok(bar.includes('🏳️‍🌈 New bar') && bar.includes('<h2>The Woods</h2>'));
-  assert.ok(bar.includes('google.com/maps/search/?api=1&amp;query=40.71%2C%20-73.96'));
-  assert.ok(bar.includes('<li>BEAR NIGHT <span class="muted">2030-02-02</span></li>'));
-  assert.ok(bar.includes('>Website<') && !bar.includes('>Instagram<'), 'blank links render no chip');
+  const added = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { location: { from: '', to: '40.7331, -74.0055' }, endDate: { from: '2030-10-05T03:00:00.000Z', to: '' } } } }, ctx);
+  assert.ok(added.includes('pin added'));
+  assert.ok(added.includes('<span class="none">(no end listed)</span>'), 'an end being dropped says so');
+});
+
+test('renderReviewCard (bar): route line, distance from the city center, labelled links, a map, and the events it was seen in', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
+    name: 'The Woods', city: 'nyc', address: '48 S 4th St, Brooklyn', coordinates: '40.71, -73.96', signals: ['page-adjacent'],
+    website: 'https://thewoods.example/', instagram: '', sourceEvents: [{ title: 'BEAR NIGHT', date: '2030-02-02T02:00:00.000Z' }],
+    evidence: ['pin is 4.1 km from nyc center']
+  } }, ctx);
+  assert.ok(html.includes('🏳️‍🌈 New bar') && html.includes('<h2>The Woods</h2>'));
+  assert.ok(html.includes('>The Woods</a>') && html.includes('>48 S 4th St</a>') && html.includes('href="https://www.google.com/maps/search/?api=1&amp;query=40.71%2C-73.96"'));
+  assert.match(html, /\d(\.\d)? km from new york center · seen as page-adjacent/);
+  assert.ok(html.includes('>🔗 thewoods.example</a>') && !html.includes('📸'), 'blank links render no chip');
+  assert.ok(html.includes('openstreetmap.org/export/embed.html'), 'inline map');
+  assert.ok(html.includes('<li>BEAR NIGHT <span class="muted">— Sat, Feb 2</span></li>'));
+  assert.ok(html.includes('<li>pin is 4.1 km from nyc center</li>'));
+});
+
+test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'Solo', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', bar: 'Rockbar', city: 'nyc', url: 'https://furball.nyc/' } });
+  assert.ok(html.includes('<h2>Solo</h2>') && html.includes('📍 Rockbar') && html.includes('>🔗 https://furball.nyc/</a>'));
 });
 
 test('injectHeaderBar links the review deck with its pending count', () => {

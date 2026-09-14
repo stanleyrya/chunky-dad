@@ -286,6 +286,77 @@ function buildBarProposal(candidate) {
     };
 }
 
+// Everything the CARD shows beyond the decision snapshot: read from the full
+// analyzed event and the run payload at deck time, never persisted (the
+// proposal is the decision contract and stays scalar — see
+// SharedCore.ownerDecisionCovers). Missing on decided entries re-rendered
+// from a stored snapshot; renderers must degrade without it.
+function buildReviewDisplayContext(event, payload, core, extras = {}) {
+    const SharedCore = loadSharedCore();
+    const EventSchema = loadEventSchema();
+    const parserNames = extras.parserNamesByKey || new Map();
+    const parserConfigName = event._parserConfig && typeof event._parserConfig === 'object' && typeof event._parserConfig.name === 'string'
+        ? event._parserConfig.name
+        : '';
+    const host = (url) => core.getHostFromUrl(url).replace(/^www\./i, '');
+    const pageHost = (typeof event._venueSitePageHost === 'string' && event._venueSitePageHost)
+        || host(event._sourcePageUrl)
+        || host(event.url || event.website);
+    const image = EventSchema.pickImageForOrientation(event, 'portrait', {
+        classifyOrientation: (url) => core.classifyImageOrientation(url)
+    }) || (typeof event.image === 'string' ? event.image : '');
+    const seriesMatch = event._seriesMatch && typeof event._seriesMatch === 'object' ? event._seriesMatch : null;
+    return {
+        parserName: (typeof event.key === 'string' && parserNames.get(event.key)) || parserConfigName || '',
+        pageHost,
+        analysisReason: event._analysis && typeof event._analysis.reason === 'string' ? event._analysis.reason : '',
+        bearSource: typeof event.bearSource === 'string' ? event.bearSource : '',
+        bearReview: typeof event.bearReview === 'string' ? event.bearReview : '',
+        evidenceLines: Array.isArray(event._evidenceLines) ? event._evidenceLines.filter((line) => typeof line === 'string').slice(0, 6) : [],
+        notes: typeof event.notes === 'string' ? event.notes : '',
+        recurring: SharedCore.isRecurringSeriesEvent(event),
+        seriesMatchTitle: seriesMatch ? String(seriesMatch.title || '') : '',
+        sanityCodes: Array.isArray(event._sanityFlags) ? event._sanityFlags.map((flag) => flag && flag.code).filter(Boolean) : [],
+        venueOverlaps: Array.isArray(event._venueOverlap) ? event._venueOverlap.map((entry) => entry && (entry.withTitle || entry.title)).filter(Boolean).slice(0, 3) : [],
+        image,
+        imageOrientation: image ? core.classifyImageOrientation(image) : 'unknown',
+        imageDimensions: image ? core.getImageDimensionsFromUrl(image) : null,
+        imageRepeatCount: image && extras.imageUseCounts ? (extras.imageUseCounts.get(image) || 0) : 0,
+        gmaps: typeof event.gmaps === 'string' ? event.gmaps : '',
+        instagram: typeof event.instagram === 'string' ? event.instagram : '',
+        facebook: typeof event.facebook === 'string' ? event.facebook : '',
+        website: typeof event.website === 'string' ? event.website : '',
+        shortName: typeof event.shortName === 'string' ? event.shortName : '',
+        notesOnlyAlso: Array.isArray(event._changes) && event._changes.includes('notes')
+    };
+}
+
+// parserResults[].events[].key → parser name (the saved event's own
+// _parserConfig is slimmed on save and can be "[Circular]").
+function buildParserNamesByKey(payload) {
+    const map = new Map();
+    for (const result of Array.isArray(payload.parserResults) ? payload.parserResults : []) {
+        if (!result || typeof result.name !== 'string') continue;
+        for (const event of Array.isArray(result.events) ? result.events : []) {
+            if (event && typeof event.key === 'string' && event.key && !map.has(event.key)) map.set(event.key, result.name);
+        }
+    }
+    return map;
+}
+
+// Same census the results UI runs: an image reused by ≥3 records is a venue
+// placeholder tile, not this event's flyer (flag, don't drop).
+function buildImageUseCounts(payload) {
+    const counts = new Map();
+    const count = (event) => {
+        const image = event && typeof event.image === 'string' ? event.image.trim() : '';
+        if (image) counts.set(image, (counts.get(image) || 0) + 1);
+    };
+    (Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : []).forEach(count);
+    (Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : []).forEach((entry) => count(entry && entry.event));
+    return counts;
+}
+
 // One saved run + the decision store → { runId, cards, decided, counts }.
 // cards = proposals with no covering decision (past events dropped);
 // decided = proposals a stored decision already covers (with that decision).
@@ -313,6 +384,7 @@ function buildDeck(runPayload, store, options = {}) {
         }
     };
 
+    const extras = { parserNamesByKey: buildParserNamesByKey(payload), imageUseCounts: buildImageUseCounts(payload) };
     const analyzed = Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : [];
     analyzed.forEach((event, index) => {
         if (!core.isOwnerReviewCandidate(event)) return;
@@ -326,7 +398,14 @@ function buildDeck(runPayload, store, options = {}) {
             return;
         }
         file(
-            { id: `e${index}`, kind: proposal.kind, key: proposal.key, sourceIndex: index, proposal },
+            {
+                id: `e${index}`,
+                kind: proposal.kind,
+                key: proposal.key,
+                sourceIndex: index,
+                proposal,
+                display: buildReviewDisplayContext(event, payload, core, extras)
+            },
             SharedCore.findOwnerDecision(proposal, decisions)
         );
     });
@@ -396,6 +475,9 @@ module.exports = {
     loadCuratedBars,
     createDeckCore,
     buildBarProposal,
+    buildReviewDisplayContext,
+    buildParserNamesByKey,
+    buildImageUseCounts,
     buildDeck,
     formatRejectionsText
 };

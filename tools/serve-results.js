@@ -444,86 +444,339 @@ function buildScriptableExecuteLink(runId, scriptName = resolveReviewScriptName(
     return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&runId=${encodeURIComponent(runId)}&reviewExecute=1`;
 }
 
-// "Sat, Oct 3 · 9:00 PM – 2:00 AM" in the event's own zone; a missing end
-// prints honestly as "(no end listed)".
-function formatReviewDateLine(startIso, endIso, timezone) {
-    const start = startIso ? new Date(startIso) : null;
-    if (!start || Number.isNaN(start.getTime())) return '';
+// ---- dates -----------------------------------------------------------------
+
+function reviewZoneFormatter(timezone, options) {
+    try {
+        return new Intl.DateTimeFormat('en-US', { timeZone: timezone || 'UTC', ...options });
+    } catch (error) {
+        return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', ...options });
+    }
+}
+
+// One instant in the event's own zone: day "Fri, Oct 3", dayYear
+// "Fri, Oct 3, 2030", time "10:00 PM", zone "EDT", dayKey for same-day tests.
+function reviewDateParts(iso, timezone) {
+    const date = iso ? new Date(iso) : null;
+    if (!date || Number.isNaN(date.getTime())) return null;
     const zone = timezone || 'UTC';
-    const safe = (options) => {
-        try {
-            return new Intl.DateTimeFormat('en-US', { timeZone: zone, ...options });
-        } catch (error) {
-            return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', ...options });
-        }
+    let zoneLabel = '';
+    try {
+        const part = reviewZoneFormatter(zone, { timeZoneName: 'short' }).formatToParts(date)
+            .find((piece) => piece.type === 'timeZoneName');
+        zoneLabel = part ? part.value : '';
+    } catch (error) {
+        zoneLabel = '';
+    }
+    return {
+        day: reviewZoneFormatter(zone, { weekday: 'short', month: 'short', day: 'numeric' }).format(date),
+        dayYear: reviewZoneFormatter(zone, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }).format(date),
+        time: reviewZoneFormatter(zone, { hour: 'numeric', minute: '2-digit' }).format(date),
+        zone: zoneLabel,
+        dayKey: reviewZoneFormatter(zone, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date),
+        ms: date.getTime()
     };
-    const dayFmt = safe({ weekday: 'short', month: 'short', day: 'numeric' });
-    const timeFmt = safe({ hour: 'numeric', minute: '2-digit' });
-    const end = endIso ? new Date(endIso) : null;
-    const endValid = end && !Number.isNaN(end.getTime());
-    let line = `${dayFmt.format(start)} · ${timeFmt.format(start)}`;
-    if (!endValid) return `${line} (no end listed)`;
-    const sameDay = dayFmt.format(start) === dayFmt.format(end);
-    line += sameDay ? ` – ${timeFmt.format(end)}` : ` – ${dayFmt.format(end)} ${timeFmt.format(end)}`;
+}
+
+// "Fri, Oct 3, 2030 · 10:00 PM – 2:00 AM EDT" — same rules as the results
+// card: an end renders only when it is strictly after the start (never a
+// fabricated "9 PM – 9 PM"), an end on another day names that day, and an
+// event with no timezone shows UTC and says so.
+function formatReviewDateLine(startIso, endIso, timezone) {
+    const start = reviewDateParts(startIso, timezone);
+    if (!start) return '';
+    const end = reviewDateParts(endIso, timezone);
+    const hasRealEnd = Boolean(end && end.ms > start.ms);
+    let line = `${start.dayYear} · ${start.time}`;
+    if (hasRealEnd) line += end.dayKey === start.dayKey ? ` – ${end.time}` : ` – ${end.day} ${end.time}`;
+    if (start.zone) line += ` ${start.zone}`;
+    if (!hasRealEnd) line += ' (no end listed)';
+    if (!timezone) line += ' — no timezone on the event';
     return line;
 }
 
-function reviewLinkChip(href, label) {
-    if (!href) return '';
-    return `<a class="chip" href="${escapeHtmlText(href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlText(label)}</a>`;
+// The UTC verification line the results card carries ("🌍 … UTC"): the one
+// thing that exposes a timezone bug before it lands on the calendar.
+function formatReviewUtcLine(startIso, endIso) {
+    const start = reviewDateParts(startIso, 'UTC');
+    if (!start) return '';
+    const end = reviewDateParts(endIso, 'UTC');
+    const hasRealEnd = Boolean(end && end.ms > start.ms);
+    const endText = hasRealEnd ? ` – ${end.dayKey === start.dayKey ? '' : `${end.day} `}${end.time}` : '';
+    return `🌍 ${start.day} ${start.time}${endText} UTC`;
 }
 
-function renderReviewChangeRows(changes) {
+// "2 h later" / "30 min earlier" / "3 days later" for a changed instant.
+function describeReviewTimeDelta(fromIso, toIso) {
+    const from = Date.parse(fromIso);
+    const to = Date.parse(toIso);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return '';
+    const diff = to - from;
+    const direction = diff > 0 ? 'later' : 'earlier';
+    const minutes = Math.round(Math.abs(diff) / 60000);
+    if (minutes < 60) return `${minutes} min ${direction}`;
+    const hours = Math.abs(diff) / 3600000;
+    if (hours < 48) return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h ${direction}`;
+    return `${Math.round(hours / 24)} days ${direction}`;
+}
+
+// ---- links / places --------------------------------------------------------
+
+function reviewAnchor(href, text, extraClass = '') {
+    if (!href) return escapeHtmlText(text);
+    return `<a${extraClass ? ` class="${extraClass}"` : ''} href="${escapeHtmlText(href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlText(text)}</a>`;
+}
+
+// A link chip labelled the way the results card labels links: @handle for
+// instagram, the page for facebook, the registrable domain otherwise.
+function reviewChip(ctx, kind, icon, url) {
+    const adapter = ctx && ctx.adapter;
+    const text = typeof url === 'string' ? url.trim() : '';
+    if (!text) return '';
+    const safe = adapter ? adapter.isSafeExternalUrl(text) : /^https?:\/\/\S+$/i.test(text);
+    if (!safe) return '';
+    const label = adapter ? adapter.formatLinkChipLabel(kind, text) : text;
+    return `<a class="chip" href="${escapeHtmlText(text)}" target="_blank" rel="noopener noreferrer" title="${escapeHtmlText(text)}">${icon ? `${icon} ` : ''}${escapeHtmlText(label)}</a>`;
+}
+
+function reviewPinLabel(ctx, coordinates) {
+    const adapter = ctx && ctx.adapter;
+    const pair = adapter ? adapter.parseCoordinatePairText(coordinates) : null;
+    return pair ? `${pair.lat.toFixed(4)}, ${pair.lng.toFixed(4)}` : String(coordinates || '');
+}
+
+// "📍 Rockbar ↗ · 185 Christopher St ↗ · 📌 40.7331, -74.0055 ↗ · 🧭 Route ↗"
+// — the results card's route line, with plain anchors (no bridge). Every
+// stored place signal is one tap from a map; the Route link draws them
+// against each other (a ~0 m route = the same place).
+function renderReviewRouteLine(ctx, place = {}) {
+    const adapter = ctx && ctx.adapter;
+    const bar = String(place.bar || '').trim();
+    const address = String(place.address || '').trim();
+    const city = String(place.city || '').trim();
+    const coordinates = String(place.coordinates || '').trim();
+    const parts = [];
+    if (bar) parts.push(reviewAnchor(adapter ? adapter.buildBarMapsSearchUrl(bar, city) : '', bar));
+    if (address) {
+        const street = address.split(',')[0].trim() || address;
+        parts.push(reviewAnchor(adapter ? adapter.buildAddressMapsSearchUrl(address, city) : '', street));
+    }
+    if (coordinates && adapter && adapter.parseCoordinatePairText(coordinates)) {
+        parts.push(reviewAnchor(adapter.buildPinMapsSearchUrl(coordinates), `📌 ${reviewPinLabel(ctx, coordinates)}`));
+    }
+    const route = adapter ? adapter.buildRouteMapsDirectionsUrl({ bar, city, address, coordinates }) : '';
+    if (route) parts.push(reviewAnchor(route, '🧭 Route'));
+    const cityName = city && adapter ? adapter.getCityDisplayNameForMaps(city) : city;
+    if (parts.length === 0) return `<div class="line route">📍 (no place)${cityName ? ` <span class="muted">· ${escapeHtmlText(cityName)}</span>` : ''}</div>`;
+    return `<div class="line route">📍 ${parts.join(' · ')}${cityName ? ` <span class="muted">· ${escapeHtmlText(cityName)}</span>` : ''}</div>`;
+}
+
+// ---- merge change rows -----------------------------------------------------
+
+const REVIEW_CHANGE_LABELS = { title: 'Title', startDate: 'Starts', endDate: 'Ends', location: 'Pin', url: 'Event page' };
+
+// { fromHtml, toHtml, noteHtml, warn } for one changed field, in the
+// language of the field: dates in the event's zone with the day printed
+// once, pins as map links with the distance moved, links as domains.
+function describeReviewChange(field, change, proposal, ctx) {
+    const from = change && change.from != null ? String(change.from) : '';
+    const to = change && change.to != null ? String(change.to) : '';
+    const adapter = ctx && ctx.adapter;
+    const core = ctx && ctx.core;
+    const none = '<span class="none">∅</span>';
+    if (field === 'startDate' || field === 'endDate') {
+        const tz = proposal && proposal.timezone ? proposal.timezone : null;
+        const fp = reviewDateParts(from, tz);
+        const tp = reviewDateParts(to, tz);
+        const sameDay = fp && tp && fp.dayKey === tp.dayKey;
+        const fromHtml = fp ? escapeHtmlText(sameDay ? `${fp.day} · ${fp.time}` : `${fp.day} ${fp.time}`) : none;
+        const toHtml = tp
+            ? escapeHtmlText(sameDay ? tp.time : `${tp.day} ${tp.time}`)
+            : (field === 'endDate' ? '<span class="none">(no end listed)</span>' : none);
+        const delta = fp && tp ? describeReviewTimeDelta(from, to) : '';
+        return { fromHtml, toHtml, noteHtml: escapeHtmlText(delta), warn: false };
+    }
+    if (field === 'location') {
+        const fromPair = adapter && adapter.parseCoordinatePairText(from);
+        const toPair = adapter && adapter.parseCoordinatePairText(to);
+        const fromHtml = fromPair ? reviewAnchor(adapter.buildPinMapsSearchUrl(from), `📌 ${reviewPinLabel(ctx, from)}`) : (from ? escapeHtmlText(from) : none);
+        const toHtml = toPair ? reviewAnchor(adapter.buildPinMapsSearchUrl(to), `📌 ${reviewPinLabel(ctx, to)}`) : (to ? escapeHtmlText(to) : none);
+        let note = '';
+        let warn = false;
+        if (fromPair && toPair && core && typeof core.coordinatePairDistanceKm === 'function') {
+            const km = core.coordinatePairDistanceKm(from, to);
+            if (Number.isFinite(km)) {
+                warn = km > 0.15;
+                const directions = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${fromPair.lat},${fromPair.lng}`)}&destination=${encodeURIComponent(`${toPair.lat},${toPair.lng}`)}`;
+                note = `${warn ? '⚠️ ' : ''}moved ${escapeHtmlText(core.formatEvidenceDistance(km))} · ${reviewAnchor(directions, '🧭 old → new')}`;
+            }
+        } else if (!fromPair && toPair) {
+            note = 'pin added';
+        } else if (fromPair && !toPair) {
+            note = '⚠️ pin removed';
+            warn = true;
+        }
+        return { fromHtml, toHtml, noteHtml: note, warn };
+    }
+    if (field === 'url') {
+        const label = (value) => (adapter ? adapter.formatLinkChipLabel('website', value) : value);
+        const fromHtml = from ? reviewAnchor(from, label(from)) : none;
+        const toHtml = to ? reviewAnchor(to, label(to)) : none;
+        return { fromHtml, toHtml, noteHtml: '', warn: false };
+    }
+    return { fromHtml: from ? escapeHtmlText(from) : none, toHtml: to ? escapeHtmlText(to) : none, noteHtml: '', warn: false };
+}
+
+function renderReviewChangeRows(changes, proposal = {}, ctx = {}) {
     const fields = changes && typeof changes === 'object' ? Object.keys(changes) : [];
     if (fields.length === 0) return '';
     const rows = fields.map((field) => {
-        const change = changes[field] || {};
-        return `<tr><th>${escapeHtmlText(field)}</th><td class="from">${escapeHtmlText(change.from || '∅')}</td><td class="to">${escapeHtmlText(change.to || '∅')}</td></tr>`;
+        const described = describeReviewChange(field, changes[field] || {}, proposal, ctx);
+        const label = REVIEW_CHANGE_LABELS[field] || field;
+        return `<div class="chg" data-field="${escapeHtmlText(field)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${described.fromHtml}</span><span class="arrow">→</span><span class="now">${described.toHtml}</span></span>${described.noteHtml ? `<span class="chg-n${described.warn ? ' warn' : ''}">${described.noteHtml}</span>` : ''}</div>`;
     }).join('');
-    return `<table class="diff"><thead><tr><th></th><th>calendar has</th><th>would become</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<div class="chgs"><div class="chgs-head"><span>calendar has</span><span>would become</span></div>${rows}</div>`;
 }
 
-// One card's HTML (compact: everything visible, nothing behind a tap except
-// a long description). Escaped here, injected by the page script verbatim.
-function renderReviewCard(entry) {
-    const proposal = entry && entry.proposal ? entry.proposal : {};
-    if (entry.kind === 'bar') {
-        const maps = proposal.coordinates
-            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(proposal.coordinates)}`
-            : '';
-        const sources = (proposal.sourceEvents || []).map((event) =>
-            `<li>${escapeHtmlText(event.title || '')}${event.date ? ` <span class="muted">${escapeHtmlText(String(event.date).slice(0, 10))}</span>` : ''}</li>`
-        ).join('');
-        return `<div class="card-body">
+// ---- cards -----------------------------------------------------------------
+
+function renderReviewBadges(display = {}) {
+    const badges = [];
+    if (display.recurring) badges.push('<span class="badge">🔁 recurring — ICS only</span>');
+    if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
+    if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
+    if (Array.isArray(display.venueOverlaps) && display.venueOverlaps.length > 0) badges.push(`<span class="badge warn">⚔️ overlaps ${escapeHtmlText(display.venueOverlaps.join(', '))}</span>`);
+    return badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
+}
+
+function renderReviewEvidence(lines) {
+    const list = Array.isArray(lines) ? lines.filter(Boolean).slice(0, 6) : [];
+    if (list.length === 0) return '';
+    return `<ul class="evidence">${list.map((line) => `<li>${escapeHtmlText(line)}</li>`).join('')}</ul>`;
+}
+
+// The notes the phone would write, as labelled rows (the real parser, not a
+// line splitter), behind one collapsed disclosure.
+function renderReviewNotes(notes, ctx) {
+    const text = typeof notes === 'string' ? notes.trim() : '';
+    if (!text) return '';
+    const core = ctx && ctx.core;
+    let fields = null;
+    if (core && typeof core.parseNotesIntoFields === 'function') {
+        try {
+            fields = core.parseNotesIntoFields(text);
+        } catch (error) {
+            fields = null;
+        }
+    }
+    const entries = fields && typeof fields === 'object' && Object.keys(fields).length > 0
+        ? Object.keys(fields).map((key) => [key, String(fields[key] == null ? '' : fields[key])])
+        : text.split('\n').filter(Boolean).map((line) => {
+            const index = line.indexOf(':');
+            return index > 0 ? [line.slice(0, index).trim(), line.slice(index + 1).trim()] : ['', line.trim()];
+        });
+    const rows = entries.map(([key, value]) => {
+        const shown = value.length > 160 ? `${value.slice(0, 160)}… (${value.length} chars)` : value;
+        return `<tr><th>${escapeHtmlText(key)}</th><td>${escapeHtmlText(shown)}</td></tr>`;
+    }).join('');
+    return `<details class="notes"><summary>📝 Calendar notes (${entries.length})</summary><table>${rows}</table></details>`;
+}
+
+function renderReviewThumb(display = {}, fallbackImage = '') {
+    const image = String(display.image || fallbackImage || '').trim();
+    if (!image) return '';
+    const orientation = display.imageOrientation && display.imageOrientation !== 'unknown' ? display.imageOrientation : '';
+    const dims = display.imageDimensions && display.imageDimensions.width && display.imageDimensions.height ? display.imageDimensions : null;
+    const repeat = Number(display.imageRepeatCount) || 0;
+    const placeholder = repeat >= 3;
+    return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}" onclick="openFlyer(this)"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
+}
+
+function renderReviewBarCard(entry, ctx = {}) {
+    const proposal = entry.proposal || {};
+    const adapter = ctx.adapter;
+    const core = ctx.core;
+    const city = String(proposal.city || '');
+    const cityName = adapter ? adapter.getCityDisplayNameForMaps(city) : city;
+    let distance = '';
+    if (core && typeof core.getCityCenterCoordinatePair === 'function') {
+        const center = core.getCityCenterCoordinatePair(city);
+        const km = center ? core.coordinatePairDistanceKm(center, proposal.coordinates) : null;
+        if (Number.isFinite(km)) distance = `${core.formatEvidenceDistance(km)} from ${cityName || 'the city'} center`;
+    }
+    const facts = [distance, proposal.signals && proposal.signals.length ? `seen as ${proposal.signals.join(', ')}` : ''].filter(Boolean);
+    const sources = (proposal.sourceEvents || []).map((event) => {
+        const parts = reviewDateParts(event.date, null);
+        return `<li>${escapeHtmlText(event.title || '')}${parts ? ` <span class="muted">— ${escapeHtmlText(parts.day)}</span>` : ''}</li>`;
+    }).join('');
+    const embed = adapter ? adapter.buildOsmEmbedUrl(proposal.coordinates) : '';
+    return `<div class="card-body">
   <div class="kind kind-bar">🏳️‍🌈 New bar</div>
   <h2>${escapeHtmlText(proposal.name)}</h2>
-  <div class="line">📍 ${escapeHtmlText(proposal.address || '(no address)')} · ${escapeHtmlText(proposal.city)}</div>
-  <div class="line muted">${escapeHtmlText(proposal.coordinates)} · seen as ${escapeHtmlText((proposal.signals || []).join(', ') || 'unknown')}</div>
-  <div class="chips">${reviewLinkChip(maps, 'Maps')}${reviewLinkChip(proposal.website, 'Website')}${reviewLinkChip(proposal.instagram, 'Instagram')}</div>
+  ${renderReviewRouteLine(ctx, { bar: proposal.name, address: proposal.address, city, coordinates: proposal.coordinates })}
+  ${facts.length ? `<div class="line muted">${escapeHtmlText(facts.join(' · '))}</div>` : ''}
+  <div class="chips">${reviewChip(ctx, 'website', '🔗', proposal.website)}${reviewChip(ctx, 'instagram', '📸', adapter ? adapter.normalizeInstagramChipUrl(proposal.instagram) : proposal.instagram)}</div>
+  ${embed ? `<div class="map"><iframe src="${escapeHtmlText(embed)}" loading="lazy" title="map"></iframe></div>` : ''}
   ${sources ? `<div class="label">Events seen here</div><ul class="sources">${sources}</ul>` : ''}
+  ${renderReviewEvidence(proposal.evidence)}
 </div>`;
-    }
+}
+
+// One card's HTML. `entry.proposal` is the decision snapshot (what gets
+// stored); `entry.display` is everything else the owner needs to judge it,
+// read from the full analyzed event at deck time and absent on entries
+// re-rendered from a stored snapshot. `ctx` = { adapter, core } for the maps
+// URL builders, link labels and distances; every part degrades without it.
+function renderReviewCard(entry, ctx = {}) {
+    if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
+    const proposal = entry && entry.proposal ? entry.proposal : {};
+    const display = entry && entry.display ? entry.display : {};
+    const adapter = ctx.adapter;
     const isMerge = entry.kind === 'merge';
-    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, proposal.timezone);
-    const place = [proposal.bar, proposal.address].filter(Boolean).join(' · ') || '(no place)';
-    const description = proposal.description || '';
-    const image = proposal.image
-        ? `<div class="thumb"><img src="${escapeHtmlText(proposal.image)}" alt="" loading="lazy"></div>`
-        : '';
-    const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title
+    const tz = proposal.timezone || null;
+    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz);
+    const utcLine = formatReviewUtcLine(proposal.startDate, proposal.endDate);
+    const changes = isMerge && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+    const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title && !changes.title
         ? `<div class="line muted">calendar title: ${escapeHtmlText(proposal.existingTitle)}</div>`
         : '';
+    const cityConfig = adapter && adapter.cities && proposal.city ? adapter.cities[proposal.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const sourceBits = [
+        display.parserName || proposal.source || 'unknown source',
+        display.pageHost ? `from ${display.pageHost}` : '',
+        calendarName ? `📱 ${calendarName}` : ''
+    ].filter(Boolean);
+    const bear = display.bearReview
+        ? `<span class="badge">🐻 ${escapeHtmlText(display.bearReview)}</span>`
+        : display.bearSource ? `<span class="badge">🐻 ${escapeHtmlText(display.bearSource)}</span>` : '';
+    const description = String(proposal.description || '');
+    const instagram = adapter ? adapter.normalizeInstagramChipUrl(display.instagram) : display.instagram;
+    const chips = [
+        reviewChip(ctx, 'website', '🔗', proposal.url),
+        reviewChip(ctx, 'tickets', '🎟', proposal.ticketUrl),
+        reviewChip(ctx, 'instagram', '📸', instagram),
+        reviewChip(ctx, 'facebook', '📘', display.facebook),
+        reviewChip(ctx, 'gmaps', '🗺', display.gmaps),
+        proposal.cover ? `<span class="chip">💵 ${escapeHtmlText(proposal.cover)}</span>` : ''
+    ].filter(Boolean).join('');
     return `<div class="card-body">
-  ${image}
-  <div class="kind ${isMerge ? 'kind-merge' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : '✨ New event'}</div>
+  ${renderReviewThumb(display, proposal.image)}
+  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : '✨ New event'}</span>${display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
+  ${renderReviewBadges({ ...display })}
   <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
-  <div class="line">📍 ${escapeHtmlText(place)}${proposal.city ? ` · ${escapeHtmlText(proposal.city)}` : ''}</div>
-  <div class="line muted">${escapeHtmlText(proposal.source || 'unknown source')}${proposal.cover ? ` · 💵 ${escapeHtmlText(proposal.cover)}` : ''}</div>
-  <div class="chips">${reviewLinkChip(proposal.url, 'Event page')}${reviewLinkChip(proposal.ticketUrl, 'Tickets')}</div>
-  ${isMerge ? renderReviewChangeRows(proposal.changes) : ''}
-  ${description ? `<div class="desc clamped" onclick="this.classList.toggle('clamped')">${escapeHtmlText(description)}</div>` : ''}
+  ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
+  ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location })}
+  <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
+  ${bear ? `<div class="badges">${bear}</div>` : ''}
+  ${chips ? `<div class="chips">${chips}</div>` : ''}
+  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx) : ''}
+  ${isMerge && display.notesOnlyAlso ? '<div class="line muted">+ notes updated</div>' : ''}
+  ${renderReviewEvidence(display.evidenceLines)}
+  ${description ? `<div class="desc clamped" onclick="toggleDesc(this)">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more" onclick="toggleDesc(this.previousElementSibling)">… more</div>' : ''}` : ''}
+  ${renderReviewNotes(display.notes, ctx)}
 </div>`;
 }
 
@@ -545,7 +798,15 @@ ${options.sharedRoot ? `<p style="opacity:0.7;">Shared dir: <code>${escapeHtmlTe
 function renderReviewPage(deck, options = {}) {
     const runs = Array.isArray(options.runs) ? options.runs : [];
     const scriptLink = buildScriptableExecuteLink(deck.runId, options.scriptName);
-    const cards = deck.cards.map((entry) => ({ ...entry, html: renderReviewCard(entry) }));
+    const ctx = options.ctx || {};
+    const cards = deck.cards.map((entry) => ({
+        id: entry.id,
+        kind: entry.kind,
+        key: entry.key,
+        sourceIndex: entry.sourceIndex,
+        proposal: entry.proposal,
+        html: renderReviewCard(entry, ctx)
+    }));
     const decided = deck.decided.map((entry) => ({
         id: entry.id,
         kind: entry.kind,
@@ -555,7 +816,7 @@ function renderReviewPage(deck, options = {}) {
         reason: entry.decision.reason || null,
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
-        html: renderReviewCard(entry)
+        html: renderReviewCard(entry, ctx)
     }));
     const payload = {
         runId: deck.runId,
@@ -578,7 +839,10 @@ function renderReviewPage(deck, options = {}) {
         const label = `${run.runId}${run.available ? '' : ' (syncing)'}`;
         return `<option value="${escapeHtmlText(run.runId)}"${selected}${run.available ? '' : ' disabled'}>${escapeHtmlText(label)}</option>`;
     }).join('');
-    const savedLabel = deck.savedAt ? escapeHtmlText(String(deck.savedAt).replace('T', ' ').slice(0, 16)) : '';
+    const SharedCore = require(path.join(repoRoot, 'scripts', 'shared-core')).SharedCore;
+    const savedLabel = deck.savedAt || deck.runId
+        ? escapeHtmlText(`run ${SharedCore.formatRunAgeLabel(deck.savedAt, deck.runId)}`)
+        : '';
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Review · chunky.dad</title>
@@ -604,8 +868,44 @@ a { color:var(--accent); }
 .card.gone-left { transform:translate(-120vw, -20px) rotate(-18deg); opacity:0; }
 .card.gone-down { transform:translateY(90vh) scale(.9); opacity:0; }
 .card-body { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 18px; }
-.thumb { margin:-14px -16px 12px; background:#000; }
-.thumb img { display:block; width:100%; max-height:38vh; object-fit:cover; }
+.thumb { margin:-14px -16px 12px; background:#0d0c0b; display:flex; justify-content:center; position:relative; cursor:zoom-in; }
+.thumb img { display:block; max-width:100%; width:auto; height:auto; max-height:40vh; object-fit:contain; }
+.thumb.portrait img { max-height:46vh; }
+.thumb.landscape img { width:100%; max-height:32vh; }
+.thumb.placeholder img { filter:grayscale(1); opacity:.5; }
+.thumb-badge { position:absolute; left:10px; bottom:10px; font-size:11px; background:rgba(0,0,0,.65); color:#fff; padding:2px 8px; border-radius:999px; }
+.kind-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+.kind-row .reason { font-size:12px; }
+.badges { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
+.badge.warn { color:var(--no); border-color:var(--no); }
+.utc { font-size:12px; color:var(--muted); margin:0 0 3px 22px; }
+.route a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+.chgs { margin:10px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.chgs-head { display:flex; justify-content:space-between; padding:5px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg); }
+.chg { display:grid; grid-template-columns:76px 1fr; gap:3px 10px; padding:8px 10px; border-top:1px solid var(--line); font-size:14px; }
+.chg-k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding-top:2px; }
+.chg-v { word-break:break-word; }
+.chg .was { color:var(--muted); }
+.chg .arrow { margin:0 6px; color:var(--muted); }
+.chg .now { color:var(--ok); font-weight:600; }
+.chg .now a { color:var(--ok); }
+.chg .none { color:var(--muted); font-style:italic; font-weight:400; }
+.chg-n { grid-column:2; font-size:12px; color:var(--muted); }
+.chg-n.warn { color:var(--no); font-weight:600; }
+.evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
+.notes { margin-top:10px; font-size:12px; }
+.notes summary { cursor:pointer; color:var(--muted); }
+.notes table { width:100%; border-collapse:collapse; margin-top:6px; }
+.notes th, .notes td { text-align:left; vertical-align:top; padding:3px 6px; border-top:1px solid var(--line); word-break:break-word; }
+.notes th { color:var(--muted); font-weight:600; width:30%; }
+.map { margin:10px -16px 0; height:170px; pointer-events:none; background:var(--bg); }
+.map iframe { width:100%; height:100%; border:0; }
+.desc-more { font-size:12px; color:var(--accent); cursor:pointer; margin-top:2px; }
+.desc:not(.clamped) + .desc-more { display:none; }
+.lightbox { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(5,6,10,.93); padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); cursor:zoom-out; }
+.lightbox.open { display:flex; }
+.lightbox img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; border-radius:12px; box-shadow:0 18px 60px rgba(0,0,0,.6); }
 .kind { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px; margin-bottom:8px; }
 .kind-new { background:rgba(47,158,95,.14); color:var(--ok); }
 .kind-merge { background:rgba(255,107,53,.16); color:var(--accent); }
@@ -618,12 +918,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .chip { font-size:13px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); text-decoration:none; color:var(--ink); background:var(--bg); }
 .chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
 .desc { margin-top:10px; white-space:pre-line; color:var(--ink); }
-.desc.clamped { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
-.diff { width:100%; border-collapse:collapse; margin:10px 0; font-size:13px; }
-.diff th, .diff td { text-align:left; vertical-align:top; padding:5px 6px; border-top:1px solid var(--line); word-break:break-word; }
-.diff thead th { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); border-top:none; }
-.diff .from { color:var(--muted); text-decoration:line-through; }
-.diff .to { color:var(--ok); font-weight:600; }
+.desc.clamped { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
 .sources { margin:4px 0 0; padding-left:18px; }
 .stamp { position:absolute; top:22px; padding:6px 12px; border:3px solid; border-radius:8px; font-weight:800; font-size:22px; letter-spacing:.08em; opacity:0; transform:rotate(-12deg); pointer-events:none; }
 .stamp.ok { left:18px; color:var(--ok); border-color:var(--ok); }
@@ -690,7 +985,19 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
     </div>
   </div>
 </div>
+<div class="lightbox" id="lightbox" onclick="closeFlyer()"><img alt=""></div>
 <div class="toast" id="toast"></div>
+<script>
+function openFlyer(el) {
+  var img = el && el.querySelector ? el.querySelector('img') : null;
+  if (!img || !img.src) return;
+  var box = document.getElementById('lightbox');
+  box.querySelector('img').src = img.src;
+  box.classList.add('open');
+}
+function closeFlyer() { document.getElementById('lightbox').classList.remove('open'); }
+function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
+</script>
 <script>
 window.__reviewDeck = ${jsonForInlineScript(payload)};
 (function () {
@@ -850,7 +1157,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function attachDrag(el, card) {
     var startX = 0, startY = 0, dx = 0, dy = 0, active = false, pointerId = null;
     el.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('a, button, .desc')) return;
+      if (e.target.closest('a, button, .desc, .desc-more, .thumb, .map, details, summary')) return;
       active = true; pointerId = e.pointerId; startX = e.clientX; startY = e.clientY; dx = 0; dy = 0;
       el.classList.add('dragging');
       try { el.setPointerCapture(e.pointerId); } catch (ignore) {}
@@ -883,6 +1190,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   document.getElementById('btn-skip').onclick = skipTop;
   document.getElementById('btn-undo').onclick = undoLast;
   document.addEventListener('keydown', function (e) {
+    var lightbox = document.getElementById('lightbox');
+    if (lightbox.classList.contains('open')) { if (e.key === 'Escape') closeFlyer(); return; }
     if (sheet.classList.contains('open')) { if (e.key === 'Escape') closeSheet(); return; }
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); approveTop(); }
@@ -1045,12 +1354,17 @@ function resolveReviewRun(query) {
     return { sharedRoot, runs, run };
 }
 
+// { deck, ctx } — ctx carries the adapter (maps URL builders, link labels,
+// calendar names; the same stubbed adapter the results render uses) and the
+// deck's SharedCore (distances, notes parsing) for the card renderers.
 function buildReviewDeckForRun(sharedRoot, run) {
     const store = reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot));
-    return reviewQueue.buildDeck(run.payload, store, {
-        runId: run.runId,
-        curatedBars: reviewQueue.loadCuratedBars(repoRoot)
-    });
+    const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
+    const core = reviewQueue.createDeckCore(run.payload, { curatedBars });
+    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core });
+    const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
+    const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
+    return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
 
 // Pending-card count for the header bar on /: cheap when the run is cached
@@ -1059,7 +1373,7 @@ function countReviewPending() {
     try {
         const { sharedRoot, run } = resolveReviewRun({});
         if (!run) return 0;
-        return buildReviewDeckForRun(sharedRoot, run).counts.pending;
+        return buildReviewDeckForRun(sharedRoot, run).deck.counts.pending;
     } catch (error) {
         return 0;
     }
@@ -1236,8 +1550,8 @@ async function handleRequest(state, req, res) {
             ));
         }
         try {
-            const deck = buildReviewDeckForRun(sharedRoot, run);
-            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName() }));
+            const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run);
+            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx }));
         } catch (error) {
             console.error(`Review render failed: ${error.stack || error}`);
             return sendText(res, 500, `Review render failed: ${error.message}`);
@@ -1248,7 +1562,8 @@ async function handleRequest(state, req, res) {
         const { sharedRoot, run } = resolveReviewRun(query);
         if (!run) return sendJson(res, 404, { ok: false, error: 'no run' });
         try {
-            return sendJson(res, 200, { ok: true, ...buildReviewDeckForRun(sharedRoot, run) });
+            const { deck } = buildReviewDeckForRun(sharedRoot, run);
+            return sendJson(res, 200, { ok: true, ...deck });
         } catch (error) {
             return sendJson(res, 500, { ok: false, error: error.message });
         }
@@ -1357,6 +1672,10 @@ module.exports = {
     resolveReviewScriptName,
     buildScriptableExecuteLink,
     formatReviewDateLine,
+    formatReviewUtcLine,
+    describeReviewTimeDelta,
+    renderReviewChangeRows,
+    renderReviewRouteLine,
     renderReviewCard,
     renderReviewPage,
     renderReviewEmptyPage,
