@@ -81,7 +81,7 @@
     "denver": {
       "name": "Denver",
       "status": "success",
-      "dataLength": 8398,
+      "dataLength": 8465,
       "eventCount": 7
     },
     "dublin": {
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 29099,
-      "eventCount": 27
+      "dataLength": 30629,
+      "eventCount": 28
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -201,7 +201,7 @@
     "phoenix": {
       "name": "Phoenix",
       "status": "success",
-      "dataLength": 5986,
+      "dataLength": 6052,
       "eventCount": 4
     },
     "poconos": {
@@ -213,7 +213,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 28633,
+      "dataLength": 28795,
       "eventCount": 20
     },
     "ptown": {
@@ -255,7 +255,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 25822,
+      "dataLength": 25851,
       "eventCount": 18
     },
     "sitges": {
