@@ -11360,3 +11360,43 @@ test('merge table: a short name differing only by a soft hyphen is a no-op row, 
   assert.equal(adapter.countChangedMergeFields(event), 0);
   assert.match(adapter.generateComparisonRowsCompressed(event), /fields unchanged — [^<]*shortName/);
 });
+
+// ---------------------------------------------------------------------------
+// Phone calendar snapshot writer: after a run or an execution the phone
+// leaves the Mac a JSON picture of each touched city's calendar.
+// ---------------------------------------------------------------------------
+
+test('writeCalendarSnapshots writes one JSON per touched city with EventKit\'s expanded occurrences', async () => {
+  const adapter = new ScriptableAdapter({ cities: { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York' }, la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles' } } });
+  const writes = [];
+  const dirs = [];
+  adapter.fm = { ...fileManagerStub, writeString: (filePath, text) => { writes.push({ filePath, text }); }, createDirectory: (dir) => { dirs.push(dir); } };
+  const originalCalendar = global.Calendar;
+  const originalCalendarEvent = global.CalendarEvent;
+  const between = [];
+  global.Calendar = { forEvents: async () => [{ title: 'chunky-dad-nyc' }] };
+  global.CalendarEvent = { between: async (start, end, calendars) => {
+    between.push({ start, end, calendar: calendars[0].title });
+    return [
+      { identifier: 'ek-1', title: 'FURBALL NYC', startDate: new Date('2030-10-04T02:00:00.000Z'), endDate: new Date('2030-10-04T06:00:00.000Z'), location: '40.7331, -74.0055', notes: 'bar: Rockbar', url: '', isAllDay: false },
+      { identifier: 'ek-2', title: 'No start', startDate: null }
+    ];
+  } };
+  try {
+    const cities = adapter.collectSnapshotCities({ analyzedEvents: [{ city: 'nyc' }, { city: 'la' }, { city: 'unknown' }, { city: 'nowhere' }] });
+    assert.deepEqual(cities, ['nyc', 'la'], 'only cities with a configured calendar');
+    const written = await adapter.writeCalendarSnapshots(cities, { now: new Date('2030-09-14T12:00:00.000Z') });
+    assert.deepEqual(written.map((entry) => [entry.cityKey, entry.events]), [['nyc', 1]], 'la has no calendar on this device → skipped, never a throw');
+    assert.equal(between[0].calendar, 'chunky-dad-nyc');
+    assert.ok(between[0].start < new Date('2030-09-14T12:00:00.000Z') && between[0].end > new Date('2030-12-14T12:00:00.000Z'), '35 days back, 120 ahead');
+    assert.ok(writes[0].filePath.endsWith('/chunky-dad-scraper/calendar-snapshot/nyc.json'));
+    const payload = JSON.parse(writes[0].text);
+    assert.equal(payload.version, 1);
+    assert.equal(payload.calendarName, 'chunky-dad-nyc');
+    assert.equal(payload.capturedAt, '2030-09-14T12:00:00.000Z');
+    assert.deepEqual(payload.events, [{ identifier: 'ek-1', title: 'FURBALL NYC', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T06:00:00.000Z', location: '40.7331, -74.0055', notes: 'bar: Rockbar', url: '', isAllDay: false }]);
+  } finally {
+    global.Calendar = originalCalendar;
+    if (originalCalendarEvent === undefined) delete global.CalendarEvent; else global.CalendarEvent = originalCalendarEvent;
+  }
+});

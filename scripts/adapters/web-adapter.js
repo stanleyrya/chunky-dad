@@ -1730,6 +1730,66 @@ async saveFailureNote(url, error, metadata = {}) {
         return entry;
     }
 
+    // The phone's own calendar snapshot for a city
+    // (<sharedRoot>/calendar-snapshot/<cityKey>.json, written by
+    // ScriptableAdapter.writeCalendarSnapshots after every phone run and
+    // execution): occurrences already expanded by EventKit, in the shape
+    // getExistingEvents returns. Preferred over the published ICS whenever
+    // it exists and is recent (the published copy comes from Google's public
+    // feed, which lags hours behind the calendar). null when absent, stale
+    // or unreadable. Memoized per run.
+    async getPhoneCalendarSnapshot(cityKey) {
+        const key = String(cityKey || '').trim();
+        if (!key || !this.sharedStorageRoot || !this.fs || !this.path) return null;
+        if (!this._phoneCalendarSnapshotByCity) this._phoneCalendarSnapshotByCity = {};
+        if (Object.prototype.hasOwnProperty.call(this._phoneCalendarSnapshotByCity, key)) {
+            return this._phoneCalendarSnapshotByCity[key];
+        }
+        let snapshot = null;
+        try {
+            const filePath = this.path.join(this.sharedStorageRoot, 'calendar-snapshot', `${key}.json`);
+            if (this.fs.existsSync(filePath)) {
+                const parsed = JSON.parse(this.fs.readFileSync(filePath, 'utf8'));
+                const capturedMs = Date.parse(parsed && parsed.capturedAt);
+                const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+                if (parsed && Array.isArray(parsed.events) && Number.isFinite(capturedMs)
+                    && Date.now() - capturedMs <= maxAgeMs) {
+                    const coerce = (value) => {
+                        const parsedDate = value ? new Date(value) : null;
+                        return parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
+                    };
+                    const events = parsed.events
+                        .map((event) => ({
+                            identifier: String((event && event.identifier) || ''),
+                            title: String((event && event.title) || ''),
+                            startDate: coerce(event && event.startDate),
+                            endDate: coerce(event && event.endDate),
+                            location: String((event && event.location) || ''),
+                            notes: String((event && event.notes) || ''),
+                            url: String((event && event.url) || ''),
+                            isAllDay: Boolean(event && event.isAllDay)
+                        }))
+                        .filter((event) => event.startDate);
+                    snapshot = {
+                        events,
+                        capturedAt: new Date(capturedMs).toISOString(),
+                        windowStart: coerce(parsed.windowStart),
+                        windowEnd: coerce(parsed.windowEnd),
+                        calendarName: String(parsed.calendarName || '')
+                    };
+                    console.log(`🖥️ WebAdapter: phone calendar snapshot for ${key} — ${events.length} occurrence(s) captured ${snapshot.capturedAt} — used as the existing-events baseline over the published copy`);
+                } else if (parsed && Number.isFinite(capturedMs)) {
+                    console.log(`🖥️ WebAdapter: phone calendar snapshot for ${key} is older than 7 days (${parsed.capturedAt}) — ignored, published copy used`);
+                }
+            }
+        } catch (error) {
+            console.log(`🖥️ WebAdapter: phone calendar snapshot for ${key} unreadable (${error.message}) — published copy used`);
+            snapshot = null;
+        }
+        this._phoneCalendarSnapshotByCity[key] = snapshot;
+        return snapshot;
+    }
+
     // Get existing events for a specific event (called by shared-core for
     // analysis). Node/Mac runs have no EventKit, so the published per-city
     // calendar ICS is the existing-events source: fetch + parse the event's
@@ -1811,21 +1871,37 @@ async saveFailureNote(url, error, metadata = {}) {
                 return [];
             }
 
-            const published = await this.getPublishedCalendarEvents(city);
-            if (!published) {
-                return [];
-            }
-
             const core = this.getSharedCoreRef();
             if (!core) {
                 return [];
             }
-
             const overallStart = new Date(Math.min(...windows.map((w) => w.start.getTime())));
             const overallEnd = new Date(Math.max(...windows.map((w) => w.end.getTime())));
-            const expansion = core.expandPublishedCalendarEventsInWindow(
-                published.records, overallStart, overallEnd
-            );
+
+            // The phone's own snapshot first — when it exists, is recent and
+            // its window covers this search, it IS the calendar.
+            const phoneSnapshot = await this.getPhoneCalendarSnapshot(city);
+            const snapshotCovers = Boolean(phoneSnapshot && phoneSnapshot.windowStart && phoneSnapshot.windowEnd
+                && phoneSnapshot.windowStart.getTime() <= overallStart.getTime()
+                && phoneSnapshot.windowEnd.getTime() >= overallEnd.getTime());
+            let expansion;
+            let published = null;
+            if (snapshotCovers) {
+                if (!this._publishedCalendarSnapshots) this._publishedCalendarSnapshots = {};
+                this._publishedCalendarSnapshots[city] = { status: 'ok', fetchedAt: phoneSnapshot.capturedAt, source: 'phone' };
+                expansion = { events: phoneSnapshot.events, unsupportedRrules: [] };
+            } else {
+                if (phoneSnapshot) {
+                    console.log(`🖥️ WebAdapter: phone calendar snapshot for ${city} does not cover ${overallStart.toISOString().slice(0, 10)} → ${overallEnd.toISOString().slice(0, 10)} — published copy used for this search`);
+                }
+                published = await this.getPublishedCalendarEvents(city);
+                if (!published) {
+                    return [];
+                }
+                expansion = core.expandPublishedCalendarEventsInWindow(
+                    published.records, overallStart, overallEnd
+                );
+            }
 
             // Unsupported RRULE shapes degrade to non-recurring; log once per uid.
             if (!this._unsupportedRruleLoggedUids) this._unsupportedRruleLoggedUids = new Set();
@@ -1842,7 +1918,7 @@ async saveFailureNote(url, error, metadata = {}) {
             });
             const matched = expansion.events.filter(inAnyWindow);
             console.log(
-                `🖥️ WebAdapter: Existing event search city=${city} window=${overallStart.toISOString()} → ${overallEnd.toISOString()} found=${matched.length} (published VEVENTs=${published.records.length})`
+                `🖥️ WebAdapter: Existing event search city=${city} window=${overallStart.toISOString()} → ${overallEnd.toISOString()} found=${matched.length} (${published ? `published VEVENTs=${published.records.length}` : `phone snapshot occurrences=${expansion.events.length}`})`
             );
             return matched;
         } catch (error) {

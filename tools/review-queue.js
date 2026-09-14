@@ -502,9 +502,22 @@ function buildDeck(runPayload, store, options = {}) {
     const decided = [];
     const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
+    // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
+    // its fresh action; the run file's executions[] dates it.
+    const executions = Array.isArray(payload.executions) ? payload.executions : [];
+    const lastExecutedAt = executions.reduce((latest, entry) => {
+        const at = entry && typeof entry.executedAt === 'string' ? entry.executedAt : '';
+        return at > latest ? at : latest;
+    }, '');
+    const executedMark = (entry) => {
+        const event = analyzed[entry.sourceIndex];
+        if (!event || !event._ownerReviewApproved) return null;
+        return { at: lastExecutedAt || null, as: event._action === 'merge' ? 'updated' : 'created' };
+    };
     const file = (entry, decision) => {
         if (decision) {
-            decided.push({ ...entry, decision });
+            const executed = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' ? executedMark(entry) : null;
+            decided.push({ ...entry, decision, executed });
             counts.decided++;
             if (decision.verdict === 'approve') counts.approved++;
             else counts.rejected++;

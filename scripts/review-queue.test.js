@@ -316,3 +316,14 @@ test('buildDeck: dropped-as-not-bear events become one card per party (future on
   });
   assert.equal(keptWithVerdict.cards[0].display.bearVerdict, 'not_bear');
 });
+
+test('buildDeck: a decided card the phone already wrote is marked with when and how', () => {
+  const approved = newEvent({ _ownerReviewApproved: { key: 'event|furball|rockbar|2030-10-03', stampedAt: '2030-01-01T00:00:00.000Z' }, _action: 'merge', _existingEvent: { title: 'FURBALL', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600 * 1000) }, _original: { scraper: {}, calendar: { title: 'FURBALL', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600 * 1000), website: 'https://furball.nyc/' } }, _changes: ['title'], _mergeNoOp: false });
+  const payload = runPayload({ analyzedEvents: [approved], executions: [{ executedAt: '2030-01-02T03:04:05.000Z', via: 'owner-review', processed: 1 }] });
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', kind: 'merge', verdict: 'approve', snapshot: { changes: { title: { from: 'FURBALL NYC', to: 'FURBALL NYC' } } } }));
+  const deck = deckOf(payload, store);
+  assert.equal(deck.decided.length, 1);
+  assert.deepEqual(deck.decided[0].executed, { at: '2030-01-02T03:04:05.000Z', as: 'updated' });
+  const untouched = deckOf(runPayload({ analyzedEvents: [newEvent()] }), rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' })));
+  assert.equal(untouched.decided[0].executed, null, 'approved but not yet written → no mark');
+});
