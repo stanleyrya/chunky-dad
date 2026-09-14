@@ -13239,17 +13239,46 @@ class SharedCore {
             && SharedCore.foldSoftHyphens(a) === SharedCore.foldSoftHyphens(b);
     }
 
-    notesProjectionsMatch(existingNotes, mergedNotes) {
-        const isRegeneratedBookkeeping = (line) => {
+    // options.overrideCreate: comparing a single-night OVERRIDE against the
+    // series night it replaces. A series (ICS-imported) never carries the
+    // run's bookkeeping, the override-identity lines or an automatic bear
+    // stamp, so those are not differences there — and "first stamping"
+    // is no reason to detach a night from its series.
+    notesProjectionsMatch(existingNotes, mergedNotes, options = {}) {
+        const overrideCreate = Boolean(options && options.overrideCreate);
+        const canonicalKey = (rawKey) => {
+            const key = String(rawKey || '').trim();
+            try {
+                if (this.eventSchema && typeof this.eventSchema.canonicalizeEventKey === 'function') {
+                    return this.eventSchema.canonicalizeEventKey(key, { context: 'notes' }) || key;
+                }
+            } catch (_) { /* fall through to the raw key */ }
+            return key;
+        };
+        // Lines compare by CANONICAL key: "tea: x" and "description: x" are
+        // one field (event-schema aliases) written under two spellings.
+        const canonicalLine = (line) => {
             const colon = line.indexOf(':');
-            if (colon <= 0) return false;
-            return REGENERATED_NOTES_KEYS.has(line.slice(0, colon).trim());
+            if (colon <= 0) return line;
+            return `${canonicalKey(line.slice(0, colon))}: ${line.slice(colon + 1).trim()}`;
+        };
+        const keyOf = (line) => {
+            const colon = line.indexOf(':');
+            return colon <= 0 ? '' : line.slice(0, colon).trim();
+        };
+        const isRegeneratedBookkeeping = (line) => REGENERATED_NOTES_KEYS.has(keyOf(line));
+        const isInherentOverrideLine = (line) => {
+            if (!overrideCreate) return false;
+            const key = keyOf(line);
+            if (key === 'overrideUid' || key === 'overrideRecurrenceId') return true;
+            return key === 'bearSource' && !this.isManualBearSource(line.slice(line.indexOf(':') + 1));
         };
         const allLines = (value) => SharedCore.foldSoftHyphens(String(value === null || value === undefined ? '' : value))
             .replace(/\r\n?/g, '\n')
             .split('\n')
             .map(line => line.trim())
-            .filter(line => line !== '');
+            .filter(line => line !== '')
+            .map(canonicalLine);
         // A calendar record that carries NONE of this bookkeeping has never
         // been stamped by a run: writing it the first time is the point (the
         // dedup key is how later runs find the event), so it counts as a
@@ -13259,10 +13288,10 @@ class SharedCore {
         const mergedLinesAll = allLines(mergedNotes);
         const existingWasStamped = existingLinesAll.some(isRegeneratedBookkeeping);
         const mergedStamps = mergedLinesAll.some(isRegeneratedBookkeeping);
-        if (!existingWasStamped && mergedStamps) return false;
+        if (!overrideCreate && !existingWasStamped && mergedStamps) return false;
         const toSortedLines = (lines) => lines
             // Regenerated bookkeeping is written, never a reason to write.
-            .filter(line => !isRegeneratedBookkeeping(line))
+            .filter(line => !isRegeneratedBookkeeping(line) && !isInherentOverrideLine(line))
             .sort();
         const existingLines = toSortedLines(existingLinesAll);
         const mergedLines = toSortedLines(mergedLinesAll);
@@ -15664,7 +15693,11 @@ class SharedCore {
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
         if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
-        if (event._mergeNoOp === true) return 'SKIPPED (merge no-op — no field changes)';
+        if (event._mergeNoOp === true) {
+            return SharedCore.isOverrideCreate(event)
+                ? 'SKIPPED (override no-op — identical to the series night)'
+                : 'SKIPPED (merge no-op — no field changes)';
+        }
         const action = typeof event._action === 'string' && event._action ? event._action : 'new';
         return action.toUpperCase();
     }
@@ -18348,6 +18381,26 @@ class SharedCore {
                 analyzedEvent._mergeNoOp = changedBeyondNotes.length === 0 && notesIdentical;
                 if (analyzedEvent._mergeNoOp) {
                     console.log(`⏸️ MERGE: "${analyzedEvent.title || 'Unknown'}" produced no field changes — write skipped`);
+                }
+            } else if (SharedCore.isOverrideCreate(analyzedEvent)) {
+                // Same gate for a single-night OVERRIDE of a saved series: it
+                // was built by merging the scrape onto the series night it
+                // would replace (_original.calendar), so when every stored
+                // field and the notes projection come out identical, the
+                // override would detach that night from the series to change
+                // nothing (CUBSCOUT, run 20260914-154851: three of four
+                // overrides differed from their nights by nothing at all once
+                // the soft-hyphen spellings compared equal). Skipped, never a
+                // card, never a write; an override that DOES change something
+                // is stamped false and proceeds like before.
+                const seriesNight = analyzedEvent._original.calendar;
+                const finalWriteChanges = this.computeCalendarWriteChanges(analyzedEvent, seriesNight, seriesNight);
+                const changedBeyondNotes = finalWriteChanges.filter(field => field !== 'notes');
+                const notesIdentical = !finalWriteChanges.includes('notes')
+                    || this.notesProjectionsMatch(seriesNight.notes, analyzedEvent.notes, { overrideCreate: true });
+                analyzedEvent._mergeNoOp = changedBeyondNotes.length === 0 && notesIdentical;
+                if (analyzedEvent._mergeNoOp) {
+                    console.log(`⏸️ OVERRIDE: "${analyzedEvent.title || 'Unknown'}" would change nothing about the series night it replaces — write skipped`);
                 }
             }
 
