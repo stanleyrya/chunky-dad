@@ -22758,3 +22758,34 @@ test('owner review proposal: an override carries its changes against the series 
   const laterStart = { ...proposal, changes: { ...proposal.changes, startDate: { from: REVIEW_START, to: '2030-10-04T02:30:00.000Z' } } };
   assert.equal(SharedCore.ownerDecisionCovers(approval, laterStart), false, 'a different night/time is a new question');
 });
+
+// A soft hyphen and a plain "-" are one display-name value (owner, 2026-09-14:
+// the site converts "-" to a soft hyphen at render time; the registry carries
+// literal soft hyphens since PR #1694; both render the same). Comparing them
+// as different re-proposed CUBSCOUT's series nights as overrides every run.
+test('soft hyphen vs "-" in a short name is not a change: notes projections match and the merge diff stays quiet', async () => {
+  assert.equal(SharedCore.foldSoftHyphens('CUB­SCOUT'), 'CUB-SCOUT');
+  assert.equal(SharedCore.notesValuesEquivalent('CUB-SCOUT', 'CUB­SCOUT'), true);
+  assert.equal(SharedCore.notesValuesEquivalent('CUB-SCOUT', 'CUBSCOUT'), false, 'dropping the hyphen IS a change');
+  const core = createCore();
+  assert.equal(core.notesProjectionsMatch(
+    'bar: Eagle LA\nshortName: CUB-SCOUT\nkey: cubscout|2026-10-02|eagle la',
+    'shortName: CUB­SCOUT\nbar: Eagle LA\nkey: cubscout|2026-10-03|eagle la'
+  ), true, 'only the hyphen form (and regenerated bookkeeping) differs → no write');
+
+  // The real shape: a re-scrape of a settled record whose only difference is
+  // the registry's soft hyphen must be a merge no-op.
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = await settleBeefminceCalendarRecord(core, start, end);
+  const settledNotes = String(calendarRecord.notes || '');
+  assert.ok(settledNotes.includes('shortName:'), 'precondition: the settled record carries a shortName line');
+  const hyphenated = { ...calendarRecord, notes: settledNotes.replace(/shortName: [^\n]*/, 'shortName: BEEF-MINCE'), startDate: new Date(calendarRecord.startDate), endDate: new Date(calendarRecord.endDate) };
+  const rerun = await core.prepareEventsForCalendar(
+    [scrapedBeefminceShape(start, end, { shortName: 'BEEF­MINCE', _staticFields: { shortName: 'BEEF­MINCE' } })],
+    buildPrepCalendarAdapter([hyphenated]), {});
+  assert.equal(rerun.length, 1);
+  assert.equal(rerun[0]._action, 'merge');
+  assert.equal(rerun[0]._mergeNoOp, true, 'a soft-hyphen-only difference writes nothing');
+  assert.equal((rerun[0]._mergeDiff.updated || []).find(entry => entry.key === 'shortName'), undefined, 'and the diff does not list it');
+});

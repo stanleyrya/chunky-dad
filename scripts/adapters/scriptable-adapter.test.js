@@ -11347,3 +11347,16 @@ test('results-section mirrors: an owner-review withhold lands in the withheld pi
   assert.equal(adapter.getWriteActionFromEvent(awaiting), 'withheld');
   assert.equal(adapter.getWriteActionFromEvent({ title: 'x', _action: 'new' }), 'create', 'unstamped events are untouched');
 });
+
+test('merge table: a short name differing only by a soft hyphen is a no-op row, never a change', () => {
+  const adapter = buildAdapter();
+  assert.equal(adapter.mergeValuesLookIdentical('CUB-SCOUT', 'CUB­SCOUT'), true);
+  assert.equal(adapter.mergeRowIsNoop('CUB­SCOUT', 'CUB-SCOUT'), true);
+  const event = {
+    title: 'CUBSCOUT', _action: 'merge', shortName: 'CUB­SCOUT',
+    _original: { scraper: { title: 'CUBSCOUT', shortName: 'CUB­SCOUT' }, calendar: { title: 'CUBSCOUT', shortName: 'CUB-SCOUT' }, merged: { title: 'CUBSCOUT', shortName: 'CUB­SCOUT' } },
+    _fieldPriorities: { shortName: { merge: 'clobber' } }
+  };
+  assert.equal(adapter.countChangedMergeFields(event), 0);
+  assert.match(adapter.generateComparisonRowsCompressed(event), /fields unchanged — [^<]*shortName/);
+});

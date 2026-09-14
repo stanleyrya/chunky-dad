@@ -13222,13 +13222,30 @@ class SharedCore {
     // line-level difference is (a bearReview edit, a manual-verdict
     // bearSource line, a sanity-driven note line must always land in the
     // calendar). Fail closed: anything not provably identical writes.
+    // A soft hyphen (U+00AD) and a plain "-" are ONE value in a display name:
+    // the site turns an unescaped "-" into a soft hyphen at render time, and
+    // the registry has carried literal soft hyphens since PR #1694, so the
+    // two spellings render identically. Comparing them as different made
+    // every pre-#1694 calendar record a notes-only rewrite — and, for a
+    // series (which the scraper never rewrites), a per-night override
+    // proposal on every run (CUBSCOUT, run 20260914-134414).
+    static foldSoftHyphens(value) {
+        return typeof value === 'string' ? value.replace(/\u00ad/g, '-') : value;
+    }
+
+    static notesValuesEquivalent(a, b) {
+        if (a === b) return true;
+        return typeof a === 'string' && typeof b === 'string'
+            && SharedCore.foldSoftHyphens(a) === SharedCore.foldSoftHyphens(b);
+    }
+
     notesProjectionsMatch(existingNotes, mergedNotes) {
         const isRegeneratedBookkeeping = (line) => {
             const colon = line.indexOf(':');
             if (colon <= 0) return false;
             return REGENERATED_NOTES_KEYS.has(line.slice(0, colon).trim());
         };
-        const allLines = (value) => String(value === null || value === undefined ? '' : value)
+        const allLines = (value) => SharedCore.foldSoftHyphens(String(value === null || value === undefined ? '' : value))
             .replace(/\r\n?/g, '\n')
             .split('\n')
             .map(line => line.trim())
@@ -17270,7 +17287,7 @@ class SharedCore {
             return (priorityConfig && priorityConfig.merge) || 'preserve';
         };
         Object.keys(originalFields).forEach(key => {
-            if (mergedFields[key] === originalFields[key]) {
+            if (SharedCore.notesValuesEquivalent(mergedFields[key], originalFields[key])) {
                 diff.preserved.push(key);
             } else if (!mergedFields[key]) {
                 if (strategyFor(key) === 'preserve' && originalFields[key] === undefined) {
@@ -17408,7 +17425,7 @@ class SharedCore {
                 // Analyze what changed
                 Object.keys(originalFields).forEach(key => {
                     // Check the merge strategy for this field
-                    if (mergedFields[key] === originalFields[key]) {
+                    if (SharedCore.notesValuesEquivalent(mergedFields[key], originalFields[key])) {
                         analyzedEvent._mergeDiff.preserved.push(key);
                     } else if (!mergedFields[key]) {
                         // Check if this is preserve strategy - if so, undefined should be preserved, not removed
@@ -17470,7 +17487,7 @@ class SharedCore {
                     removed: []
                 };
                 Object.keys(originalFields).forEach(key => {
-                    if (mergedFields[key] === originalFields[key]) {
+                    if (SharedCore.notesValuesEquivalent(mergedFields[key], originalFields[key])) {
                         analyzedEvent._mergeDiff.preserved.push(key);
                     } else if (!mergedFields[key]) {
                         analyzedEvent._mergeDiff.removed.push({ key, value: originalFields[key] });
