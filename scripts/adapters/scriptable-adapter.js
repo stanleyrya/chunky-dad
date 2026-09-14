@@ -15797,14 +15797,45 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
       const counts = core.applyOwnerDecisions(freshAnalyzed, store);
       Object.assign(summary, counts);
+      // Every row here was pre-selected by an approval. One the live
+      // analysis turned into housekeeping (a notes-only merge) is still an
+      // approved write — mark it so the deck can say it was written.
+      for (const event of freshAnalyzed) {
+        if (!event || typeof event !== "object" || event._ownerReviewApproved || event._ownerReviewWithheld) continue;
+        const key = core.getOwnerReviewKey(event);
+        if (!key || !approvedKeys.has(key)) continue;
+        const decision = store.find((entry) => entry && entry.key === key && entry.verdict === "approve");
+        event._ownerReviewApproved = { key, stampedAt: (decision && decision.stampedAt) || null };
+      }
       // The file keeps the whole saved plan; the re-analyzed rows replace
       // their saved twins so executions[] and the deck agree.
-      const freshBySource = new Map(
-        freshAnalyzed
-          .filter((event) => event && Number.isInteger(event._savedRunSourceIndex))
-          .map((event) => [event._savedRunSourceIndex, event]),
-      );
-      const mergedPlan = savedEvents.map((event, index) => freshBySource.get(index) || event);
+      // Pair fresh rows back to their saved twins by the source index the
+      // strip stamped — and, for rows the merge path rebuilt without it
+      // (createFinalEventObject drops underscore fields), by review key.
+      // Run 20260914-164140: 6 written, only the 1 create carried its index,
+      // so the 5 merges never reached the file and the deck could not mark
+      // them written.
+      const freshBySource = new Map();
+      const freshByKey = new Map();
+      for (const event of freshAnalyzed) {
+        if (!event || typeof event !== "object") continue;
+        if (Number.isInteger(event._savedRunSourceIndex)) {
+          freshBySource.set(event._savedRunSourceIndex, event);
+          continue;
+        }
+        const key = core.getOwnerReviewKey(event);
+        if (key && !freshByKey.has(key)) freshByKey.set(key, event);
+      }
+      const mergedPlan = savedEvents.map((event, index) => {
+        if (freshBySource.has(index)) return freshBySource.get(index);
+        const key = core.getOwnerReviewKey(event);
+        if (key && freshByKey.has(key)) {
+          const fresh = freshByKey.get(key);
+          freshByKey.delete(key);
+          return fresh;
+        }
+        return event;
+      });
       const freshExecutable = SharedCore.filterEventsForExecution(freshAnalyzed);
       summary.executable = freshExecutable.length;
       console.log(

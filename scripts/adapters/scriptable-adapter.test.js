@@ -11400,3 +11400,26 @@ test('writeCalendarSnapshots writes one JSON per touched city with EventKit\'s e
     if (originalCalendarEvent === undefined) delete global.CalendarEvent; else global.CalendarEvent = originalCalendarEvent;
   }
 });
+
+test('executeReviewedSavedRun writes a re-analyzed merge back to the run file even when the merge path dropped its source index', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const approved = reviewedNew('Approved Party');
+  const core = instrumentReviewedRunAdapter(adapter, [approved], captured);
+  // The live analysis turns the approval into a MERGE and — like the real
+  // merge path — rebuilds the object without _savedRunSourceIndex.
+  core.prepareEventsForCalendar = async (events) => events.map((event) => {
+    const { _savedRunSourceIndex, ...rest } = event;
+    const night = { title: 'Approved Party', startDate: rest.startDate, endDate: rest.endDate, location: '', website: '' };
+    return { ...rest, url: '', location: '', _action: 'merge', _existingEvent: night, _original: { scraper: {}, calendar: night }, _changes: ['notes'], _mergeNoOp: false };
+  });
+  const decisions = [{ key: core.getOwnerReviewKey(approved), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }];
+  const results = buildReviewedRunResults([{ ...approved, _analysis: {} }, { ...reviewedNew('Other Party'), _analysis: {} }]);
+  const summary = await adapter.executeReviewedSavedRun(results, decisions);
+  assert.equal(summary.processed, 1);
+  assert.equal(results.analyzedEvents.length, 2, 'the whole saved plan is kept');
+  assert.equal(results.analyzedEvents[0]._action, 'merge', 'the fresh merge row replaced its saved twin by review key');
+  assert.equal(results.analyzedEvents[0]._ownerReviewApproved.key, decisions[0].key, 'and carries the written mark the deck reads');
+  assert.equal(results.analyzedEvents[1].title, 'Other Party', 'untouched rows stay');
+  assert.equal(adapter.lastExecutionActionCounts.analyzed, 2);
+});

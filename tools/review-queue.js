@@ -541,6 +541,15 @@ function buildDeck(runPayload, store, options = {}) {
             counts.pastSkipped++;
             return;
         }
+        // A row the phone already re-analyzed and WROTE (its executed run
+        // rewrote the file with _ownerReviewApproved on that row) is done,
+        // whatever the fresh analysis turned it into — a "new" approved on
+        // the deck often comes back as a merge with changes once the phone
+        // checked its real calendar, and that must not re-offer the card.
+        const writtenDecision = event._ownerReviewApproved && typeof event._ownerReviewApproved === 'object'
+            ? (decisions.find((decision) => decision.key === event._ownerReviewApproved.key && decision.verdict === 'approve')
+                || { key: event._ownerReviewApproved.key || proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: event._ownerReviewApproved.stampedAt || null, reason: null, snapshot: null })
+            : null;
         file(
             {
                 id: `e${index}`,
@@ -550,7 +559,7 @@ function buildDeck(runPayload, store, options = {}) {
                 proposal,
                 display: buildReviewDisplayContext(event, payload, core, extras)
             },
-            SharedCore.findOwnerDecision(proposal, decisions)
+            writtenDecision || SharedCore.findOwnerDecision(proposal, decisions)
         );
     });
 
