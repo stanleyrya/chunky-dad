@@ -324,8 +324,25 @@ test('buildDeck: a decided card the phone already wrote is marked with when and 
   const deck = deckOf(payload, store);
   assert.equal(deck.decided.length, 1);
   assert.deepEqual(deck.decided[0].executed, { at: '2030-01-02T03:04:05.000Z', as: 'updated' });
+  assert.equal(deck.decided[0].pendingExecute, false, 'written → nothing left to execute');
+  assert.equal(deck.lastExecution.processed, 1);
+  assert.equal(deck.lastExecution.via, 'owner-review');
   const untouched = deckOf(runPayload({ analyzedEvents: [newEvent()] }), rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' })));
   assert.equal(untouched.decided[0].executed, null, 'approved but not yet written → no mark');
+  assert.equal(untouched.decided[0].pendingExecute, true, 'and still waiting for Execute on phone');
+  assert.equal(untouched.lastExecution, null);
+  // An approval OLDER than the run's last execution was already handed to
+  // the phone (written or withheld there): not pending, even without a mark.
+  const handed = deckOf(
+    runPayload({ analyzedEvents: [newEvent()], executions: [{ executedAt: '2030-01-05T00:00:00.000Z', via: 'owner-review', processed: 0 }] }),
+    rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' }, { now: new Date('2030-01-04T00:00:00Z') }))
+  );
+  assert.equal(handed.decided[0].pendingExecute, false);
+  const newer = deckOf(
+    runPayload({ analyzedEvents: [newEvent()], executions: [{ executedAt: '2030-01-05T00:00:00.000Z', via: 'owner-review', processed: 0 }] }),
+    rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' }, { now: new Date('2030-01-06T00:00:00Z') }))
+  );
+  assert.equal(newer.decided[0].pendingExecute, true, 'approved after the last execution → pending');
 });
 
 test('buildDeck: a row the phone already wrote stays decided even when the fresh analysis changed its shape', () => {

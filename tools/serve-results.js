@@ -898,6 +898,7 @@ function renderReviewPage(deck, options = {}) {
         stampedAt: entry.decision.stampedAt || null,
         reason: entry.decision.reason || null,
         executed: entry.executed || null,
+        pendingExecute: entry.pendingExecute === true,
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
@@ -910,6 +911,7 @@ function renderReviewPage(deck, options = {}) {
         cards,
         decided,
         counts: deck.counts,
+        lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
         executeLink: scriptLink
     };
@@ -1151,13 +1153,17 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
   function renderExecute() {
-    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped'; }).length;
+    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && d.pendingExecute; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
     var el = document.getElementById('execute');
+    var last = deck.lastExecution;
+    var lastLine = last && last.at
+      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC: ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + '.</small>'
+      : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' approved on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes the approved cards plus notes-only updates, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) are promoted separately (node tools/apply-bar-approvals.js).' : '') + '</small>';
+      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) are promoted separately (node tools/apply-bar-approvals.js).' : '') + '</small>' + lastLine;
     } else {
-      el.innerHTML = '<span>Approve something to enable "Execute on phone"</span>' + (bars ? '<small>' + bars + ' approved bar(s) are promoted with node tools/apply-bar-approvals.js.</small>' : '');
+      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) are promoted with node tools/apply-bar-approvals.js.</small>' : '');
     }
   }
   function renderDecided() {
@@ -1205,7 +1211,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     request.then(function () {
       removeFromQueue(card);
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, html: card.html };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html };
       decided.push(record);
       history.push({ card: card, record: record });
       toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected')));

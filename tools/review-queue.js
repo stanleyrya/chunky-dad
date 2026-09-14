@@ -516,8 +516,15 @@ function buildDeck(runPayload, store, options = {}) {
     };
     const file = (entry, decision) => {
         if (decision) {
-            const executed = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' ? executedMark(entry) : null;
-            decided.push({ ...entry, decision, executed });
+            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override';
+            const executed = isEventKind ? executedMark(entry) : null;
+            // Still waiting for "Execute on phone": an approval the phone has
+            // not written, and that is newer than the run's last execution
+            // (an older one was already handed to the phone — written or
+            // withheld there).
+            const pendingExecute = isEventKind && decision.verdict === 'approve' && !executed
+                && (!lastExecutedAt || String(decision.stampedAt || '') > lastExecutedAt);
+            decided.push({ ...entry, decision, executed, pendingExecute });
             counts.decided++;
             if (decision.verdict === 'approve') counts.approved++;
             else counts.rejected++;
@@ -642,13 +649,23 @@ function buildDeck(runPayload, store, options = {}) {
         }
     }
 
+    const lastExecution = executions.length > 0 ? executions[executions.length - 1] : null;
     return {
         runId,
         savedAt: (payload.summary && payload.summary.timestamp) || null,
         environment: (payload.runContext && payload.runContext.environment) || null,
         cards,
         decided,
-        counts
+        counts,
+        lastExecution: lastExecution ? {
+            at: lastExecution.executedAt || null,
+            via: lastExecution.via || null,
+            processed: Number(lastExecution.processed) || 0,
+            failed: Number(lastExecution.failed) || 0,
+            created: lastExecution.actionCounts ? Number(lastExecution.actionCounts.create) || 0 : null,
+            updated: lastExecution.actionCounts ? Number(lastExecution.actionCounts.update) || 0 : null,
+            ownerReview: lastExecution.ownerReview || null
+        } : null
     };
 }
 
