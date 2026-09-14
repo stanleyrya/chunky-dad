@@ -44,6 +44,7 @@ window.EVENT_PLATES = {
   "animal.nyc": "#ffffff",
   "eagle-ny.com": "#ffffff",
   "fuzzy.nyc": "#eba1cc",
+  "3dollarbillbk.com": "#3c3225",
   "tys.nyc": "#ffffff",
   "rockbarnyc.com": "#000000",
   "nowherebarnyc.com": "#ffffff",

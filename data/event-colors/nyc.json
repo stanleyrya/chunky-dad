@@ -142,6 +142,16 @@
     "faviconFg": "#140b10"
   },
   {
+    "slug": "goldiloxx-bear-tea-at-3-dollar-bill-31dcc897",
+    "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
+    "paletteSource": "flyer",
+    "palette": "#131314:18:0 #f3197b:18:24 #332c2c:15:1 #a37166:13:7 #dda27b:10:9",
+    "accent": "#f3197b"
+  },
+  {
     "slug": "goldiloxx-mdw-43e392ec",
     "paletteSource": "flyer",
     "palette": "#2b2324:21:1 #130f10:17:1 #c59066:15:9 #965a3c:14:9 #eecc0d:4:17",

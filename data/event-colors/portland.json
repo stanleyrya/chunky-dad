@@ -20,6 +20,16 @@
     "accent": "#3f40aa"
   },
   {
+    "slug": "bearracuda-portland-17-year-anniversary-749a33af",
+    "url": "https://bearracuda.com/events/portland-17/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1a0d13:27:2 #24245d:13:10 #c19d8d:12:5 #b35d45:10:12 #4148a0:10:14",
+    "accent": "#4148a0"
+  },
+  {
     "slug": "bearracuda-portland-boner-garage-3e1b185e",
     "url": "https://bearracuda.com/events/portland-gear/",
     "faviconBg": "#ff1901",
