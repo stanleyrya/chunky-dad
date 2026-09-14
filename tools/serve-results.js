@@ -642,28 +642,51 @@ function describeReviewChange(field, change, proposal, ctx) {
 }
 
 // `context` = { field: why } from the merge's own decision records (the
-// same wording the results card shows under its rows).
-function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}) {
+// same wording the results card shows under its rows). For an override the
+// left column is the series night being replaced.
+function renderReviewChangeRows(changes, proposal = {}, ctx = {}, context = {}, extraRows = '') {
     const fields = changes && typeof changes === 'object' ? Object.keys(changes) : [];
-    if (fields.length === 0) return '';
+    if (fields.length === 0 && !extraRows) return '';
     const rows = fields.map((field) => {
         const described = describeReviewChange(field, changes[field] || {}, proposal, ctx);
         const label = REVIEW_CHANGE_LABELS[field] || field;
         const why = context && typeof context[field] === 'string' ? context[field] : '';
         return `<div class="chg" data-field="${escapeHtmlText(field)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${described.fromHtml}</span><span class="arrow">→</span><span class="now">${described.toHtml}</span></span>${described.noteHtml ? `<span class="chg-n${described.warn ? ' warn' : ''}">${described.noteHtml}</span>` : ''}${why ? `<span class="chg-n why">${escapeHtmlText(why)}</span>` : ''}</div>`;
     }).join('');
-    return `<div class="chgs"><div class="chgs-head"><span>calendar has</span><span>would become</span></div>${rows}</div>`;
+    const head = proposal.kind === 'override'
+        ? '<span>series night has</span><span>this night becomes</span>'
+        : '<span>calendar has</span><span>would become</span>';
+    return `<div class="chgs"><div class="chgs-head">${head}</div>${rows}${extraRows || ''}</div>`;
 }
 
-// "+ notes: added instagram, facebook · updated description" — what else
-// the write touches, without the bookkeeping.
-function renderReviewNotesChanges(display = {}) {
-    const parts = [];
-    if (Array.isArray(display.notesAdded) && display.notesAdded.length) parts.push(`added ${display.notesAdded.join(', ')}`);
-    if (Array.isArray(display.notesUpdated) && display.notesUpdated.length) parts.push(`updated ${display.notesUpdated.join(', ')}`);
-    if (Array.isArray(display.notesRemoved) && display.notesRemoved.length) parts.push(`removed ${display.notesRemoved.join(', ')}`);
-    if (parts.length === 0) return display.notesOnlyAlso ? '<div class="line muted">+ notes updated</div>' : '';
-    return `<div class="line muted">+ notes: ${escapeHtmlText(parts.join(' · '))}</div>`;
+// Notes-level changes as rows of their own, under the stored-field rows —
+// with values, so an update whose stored fields all match still shows what
+// it writes (CUBSCOUT: "Short name CUB-SCOUT → CUB·SCOUT"). Invisible
+// characters are made visible (a soft hyphen renders as "·").
+const REVIEW_NOTES_LABELS = {
+    shortName: 'Short name', shorterName: 'Shorter name', description: 'Description', website: 'Website', ticketUrl: 'Tickets',
+    instagram: 'Instagram', facebook: 'Facebook', cover: 'Cover', bar: 'Venue', address: 'Address', image: 'Image',
+    imageVertical: 'Image (portrait)', imageHorizontal: 'Image (landscape)', bearSource: 'Bear verdict', bearReview: 'Bear review',
+    festival: 'Festival', tea: 'Tea', recurrence: 'Recurrence', city: 'City'
+};
+function reviewVisibleText(value) {
+    return String(value == null ? '' : value).replace(/\u00ad/g, '·').replace(/[\u200b\u200c\u200d\ufeff]/g, '⁞');
+}
+function renderReviewNotesChangeRows(display = {}) {
+    const list = Array.isArray(display.notesChanges) ? display.notesChanges : [];
+    if (list.length === 0) return '';
+    const none = '<span class="none">∅</span>';
+    const cell = (value) => {
+        if (!value) return none;
+        const text = reviewVisibleText(value);
+        if (/^https?:\/\//i.test(text)) return reviewAnchor(text, reviewUrlLabel(text, 60));
+        return escapeHtmlText(text.length > 160 ? `${text.slice(0, 160)}…` : text);
+    };
+    return list.map((change) => {
+        const label = REVIEW_NOTES_LABELS[change.key] || change.key;
+        const softHyphen = /\u00ad/.test(String(change.to || '')) || /\u00ad/.test(String(change.from || ''));
+        return `<div class="chg chg-notes" data-field="${escapeHtmlText(change.key)}"><span class="chg-k">${escapeHtmlText(label)}</span><span class="chg-v"><span class="was">${cell(change.from)}</span><span class="arrow">→</span><span class="now">${cell(change.to)}</span></span>${softHyphen ? '<span class="chg-n">· marks a soft hyphen (a line-break hint, invisible on the site)</span>' : ''}</div>`;
+    }).join('');
 }
 
 // ---- cards -----------------------------------------------------------------
@@ -722,9 +745,10 @@ function renderReviewThumb(display = {}, fallbackImage = '') {
     return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
 }
 
-// The bear check, reviewable: what the run decided and why, and the two
-// verdict buttons that write bear-verdicts.json (the same store the phone's
-// results sheet writes). A stored verdict shows as the active button.
+// The bear check, as information: what the run decided and why, plus any
+// verdict already stored. The verdict itself is a gesture, never a button —
+// on a dropped card the swipe IS the verdict; on a kept card, rejecting with
+// the "not bear" chip records one (one gesture, both stores).
 function renderReviewBearRow(display = {}, proposal = {}) {
     const stored = display.bearVerdict === 'bear' || display.bearVerdict === 'not_bear' ? display.bearVerdict : null;
     let state;
@@ -741,10 +765,7 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     const storedText = stored
         ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}</span>`
         : '';
-    return `<div class="bear-row">
-    <div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div>
-    <div class="bear-btns"><button type="button" class="bear-btn${stored === 'bear' ? ' on' : ''}" data-bear="bear">🐻 Bear</button><button type="button" class="bear-btn${stored === 'not_bear' ? ' on' : ''}" data-bear="not_bear">🚫 Not bear</button></div>
-  </div>`;
+    return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div></div>`;
 }
 
 function renderReviewBarCard(entry, ctx = {}) {
@@ -787,14 +808,18 @@ function renderReviewCard(entry, ctx = {}) {
     const proposal = entry && entry.proposal ? entry.proposal : {};
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
-    const isMerge = entry.kind === 'merge';
+    const isOverride = entry.kind === 'override';
+    const isMerge = entry.kind === 'merge' || isOverride;
     const isDropped = entry.kind === 'dropped';
     const tz = proposal.timezone || null;
     const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz);
     const utcLine = formatReviewUtcLine(proposal.startDate, proposal.endDate);
     const changes = isMerge && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
     const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title && !changes.title
-        ? `<div class="line muted">calendar title: ${escapeHtmlText(proposal.existingTitle)}</div>`
+        ? `<div class="line muted">${isOverride ? 'series' : 'calendar title'}: ${escapeHtmlText(proposal.existingTitle)}</div>`
+        : '';
+    const overrideNight = isOverride && proposal.overrideOf
+        ? (() => { const parts = reviewDateParts(proposal.overrideOf, tz); return parts ? `<div class="line muted">replaces the series night of ${escapeHtmlText(parts.day)} (${escapeHtmlText(proposal.existingTitle || 'series')})</div>` : ''; })()
         : '';
     const cityConfig = adapter && adapter.cities && proposal.city ? adapter.cities[proposal.city] : null;
     const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
@@ -820,9 +845,10 @@ function renderReviewCard(entry, ctx = {}) {
     ].filter(Boolean).join('');
     return `<div class="card-body">
   ${renderReviewThumb(display, proposal.image)}
-  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
+  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isOverride ? '🗓️ Override — this night only' : isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
+  ${overrideNight}
   ${renderReviewBadges({ ...display })}
   <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
   ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
@@ -830,7 +856,7 @@ function renderReviewCard(entry, ctx = {}) {
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
   ${chips ? `<div class="chips">${chips}</div>` : ''}
   ${renderReviewBearRow(display, proposal)}
-  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext) : ''}
+  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display)) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
@@ -953,6 +979,7 @@ a { color:var(--accent); }
 .chg-n { grid-column:2; font-size:12px; color:var(--muted); }
 .chg-n.warn { color:var(--no); font-weight:600; }
 .chg-n.why { color:var(--ink); opacity:.8; }
+.chg-notes .now { color:var(--ink); }
 .evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
 .notes { margin-top:10px; font-size:12px; }
 .notes summary { cursor:pointer; color:var(--muted); }
@@ -972,13 +999,8 @@ a { color:var(--accent); }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .curated { color:var(--ok); font-weight:700; }
-.bear-row { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
-.bear-state { flex:1 1 100%; font-size:13px; }
+.bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
 .bear-stored { font-weight:600; }
-.bear-btns { display:flex; gap:6px; }
-.bear-btn { font:inherit; font-size:13px; padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
-.bear-btn.on { border-color:var(--accent); background:var(--accent); color:#fff; }
-.bear-btn.busy { opacity:.5; }
 h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .line { margin:3px 0; }
 .muted { color:var(--muted); }
@@ -1086,12 +1108,13 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
+  function tabOf(kind) { return kind === 'override' ? 'merge' : kind; }
   function visible() {
-    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : c.kind === filter; });
+    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter; });
   }
   function counts() {
     var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
-    queue.forEach(function (c) { out[c.kind] = (out[c.kind] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
+    queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {
@@ -1125,31 +1148,6 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
-  // 🐻 / 🚫 buttons on any card: write the verdict now, show it as active.
-  stage.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bear-btn');
-    if (!btn) return;
-    e.preventDefault(); e.stopPropagation();
-    var el = btn.closest('.card'); var key = el ? el.getAttribute('data-key') : '';
-    var card = queue.concat(decided).filter(function (c) { return c.key === key; })[0];
-    if (!card) return;
-    var verdict = btn.classList.contains('on') ? 'clear' : btn.getAttribute('data-bear');
-    var row = btn.closest('.bear-row');
-    btn.classList.add('busy');
-    postBear(card, verdict).then(function () {
-      Array.prototype.forEach.call(row.querySelectorAll('.bear-btn'), function (b) { b.classList.remove('on', 'busy'); });
-      if (verdict !== 'clear') btn.classList.add('on');
-      var stored = row.querySelector('.bear-stored');
-      if (stored) stored.remove();
-      if (verdict !== 'clear') {
-        var span = document.createElement('span'); span.className = 'bear-stored';
-        span.textContent = ' you said: ' + (verdict === 'bear' ? '🐻 bear' : '🚫 not bear');
-        row.querySelector('.bear-state').appendChild(span);
-      }
-      toast(verdict === 'clear' ? 'Verdict cleared' : (verdict === 'bear' ? 'Marked bear' : 'Marked not bear'));
-    }).catch(function (error) { btn.classList.remove('busy'); toast('Not saved: ' + error.message); });
-  });
-
   function renderExecute() {
     var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped'; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
@@ -1195,15 +1193,19 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (el) el.className = 'card ' + direction;
     // A dropped card's swipe is a bear verdict: right = "that IS bear"
     // (rescued by the next run), left = "not bear, confirmed".
+    // "Not bear" as a reject reason on a kept card records the verdict too,
+    // so the next run drops the party without asking again.
+    var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
     var request = card.kind === 'dropped'
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
-      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null });
+      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
+          .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     request.then(function () {
       removeFromQueue(card);
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, html: card.html };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, html: card.html };
       decided.push(record);
       history.push({ card: card, record: record });
-      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : 'Rejected'));
+      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected')));
       setTimeout(render, 180);
     }).catch(function (error) {
       toast('Not saved: ' + error.message);
@@ -1226,7 +1228,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function undoDecision(record) {
     var request = record.kind === 'dropped'
       ? postBear(record, 'clear')
-      : post({ key: record.key, verdict: 'clear' });
+      : post({ key: record.key, verdict: 'clear' })
+          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear').then(function () { return result; }) : result; });
     request.then(function () {
       decided = decided.filter(function (d) { return d.key !== record.key; });
       var card = { id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html };

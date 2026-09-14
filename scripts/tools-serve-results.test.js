@@ -769,7 +769,8 @@ test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UT
   assert.ok(html.includes('💵 $20'));
   assert.ok(html.includes('class="thumb portrait"') && !html.includes('onclick=') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, no inline handlers (the page wires taps)');
   assert.ok(!html.includes('class="evidence"') && !html.includes('provenance:'), 'no evidence blurb on the face');
-  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword') && html.includes('data-bear="bear"') && html.includes('data-bear="not_bear"'), 'the bear check is reviewable on the card');
+  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword'), 'the bear check is visible on the card');
+  assert.ok(!html.includes('<button'), 'no buttons on a card — swipes and the reject sheet are the only controls');
   assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
   assert.ok(html.includes('Bears &quot;welcome&quot;'));
   assert.ok(!html.includes('class="chgs"'), 'a new event has no change block');
@@ -803,6 +804,20 @@ test('renderReviewCard (update): stacked calendar-has → would-become rows in t
   assert.ok(added.includes('<span class="none">(no end listed)</span>'), 'an end being dropped says so');
 });
 
+test('renderReviewCard (override): the series night it replaces, and the changes against it', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'override', key: 'k', proposal: {
+    kind: 'override', title: 'Bears Night Out', existingTitle: 'Bears Night Out', startDate: '2030-10-04T01:00:00.000Z', endDate: '2030-10-04T05:00:00.000Z',
+    timezone: 'America/New_York', bar: 'Rockbar', city: 'nyc', overrideOf: '2030-10-04T02:00:00.000Z',
+    changes: { startDate: { from: '2030-10-04T02:00:00.000Z', to: '2030-10-04T01:00:00.000Z' }, url: { from: '', to: 'https://rockbarnyc.com/events/bears-night-out' } }
+  }, display: {} }, ctx);
+  assert.ok(html.includes('🗓️ Override — this night only'));
+  assert.ok(html.includes('replaces the series night of Thu, Oct 3 (Bears Night Out)'));
+  assert.ok(html.includes('<span>series night has</span><span>this night becomes</span>'));
+  assert.ok(html.includes('<span class="chg-k">Starts</span>') && html.includes('<span class="was">Thu, Oct 3 · 10:00 PM</span>') && html.includes('<span class="now">9:00 PM</span>') && html.includes('1 h earlier'));
+  assert.ok(html.includes('>rockbarnyc.com/events/bears-night-out</a>'));
+});
+
 test('renderReviewCard (bar): route line, distance from the city center, labelled links, a map, and the events it was seen in', () => {
   const ctx = buildReviewCtx();
   const html = renderReviewCard({ kind: 'bar', key: 'bar|nyc|thewoods', proposal: {
@@ -830,7 +845,6 @@ test('renderReviewCard: the brand site leads the links, a curated bar gets its t
   assert.ok(brandAt !== -1 && pageAt !== -1 && brandAt < pageAt, 'the favicon (brand) site leads, the venue page follows');
   assert.ok(html.includes('>Red Eye</a> <span class="curated" title="curated bar">✓</span>'), 'curated bar tick');
   assert.ok(html.includes('🐻 bear — ai') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
-  assert.ok(html.includes('class="bear-btn on" data-bear="bear"'), 'stored verdict is the active button');
   const same = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'X', timezone: 'UTC', url: 'https://bearracuda.com/', changes: {} }, display: { favicon: 'https://www.bearracuda.com/' } }, ctx);
   assert.ok(!same.includes('🏷'), 'no brand chip when it is the same site as the event page');
 });
@@ -843,7 +857,7 @@ test('renderReviewCard (dropped): the drop reason is the bear row, and the card 
   }, display: {} }, ctx);
   assert.ok(html.includes('🚫 Dropped as not bear') && html.includes('3 occurrences'));
   assert.ok(html.includes('🚫 dropped as not bear — AI: The title and description contain no bear-specific language.'));
-  assert.ok(html.includes('data-bear="bear"'));
+  assert.ok(!html.includes('<button'), 'the swipe is the verdict — no buttons');
 });
 
 test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
@@ -1011,4 +1025,20 @@ test('renderReviewPage lists the shared runs, marks the syncing ones, and ships 
   assert.ok(html.includes('<option value="20300101-051500" selected>20300101-051500</option>'));
   assert.ok(html.includes('"executeLink":"scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1"'));
   assert.ok(html.includes('id="sheet-tags"') && html.includes('id="btn-undo"'), 'reject sheet and undo present');
+});
+
+test('renderReviewCard (update with only notes changes): the notes rows are the diff, with a soft hyphen made visible', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'override', key: 'k', proposal: {
+    kind: 'override', title: 'CUBSCOUT', existingTitle: 'CUBSCOUT', startDate: '2030-10-04T04:00:00.000Z', timezone: 'America/Los_Angeles', bar: 'Eagle LA', city: 'nyc',
+    overrideOf: '2030-10-04T04:00:00.000Z', changes: {}
+  }, display: { notesChanges: [
+    { key: 'shortName', from: 'CUB-SCOUT', to: 'CUB­SCOUT' },
+    { key: 'facebook', from: '', to: 'https://www.facebook.com/eagle.bar.la/' }
+  ] } }, ctx);
+  assert.ok(html.includes('<span>series night has</span><span>this night becomes</span>'), 'the change block renders for notes-only changes');
+  assert.ok(html.includes('<span class="chg-k">Short name</span>') && html.includes('<span class="was">CUB-SCOUT</span>') && html.includes('<span class="now">CUB·SCOUT</span>'));
+  assert.ok(html.includes('· marks a soft hyphen'));
+  assert.ok(html.includes('<span class="chg-k">Facebook</span>') && html.includes('>facebook.com/eagle.bar.la/</a>'));
+  assert.ok(!html.includes('+ notes'), 'no blurb when the rows carry the change');
 });

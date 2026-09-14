@@ -193,7 +193,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'bar' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -410,6 +410,18 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
     const notesKeys = (list) => (Array.isArray(list) ? list : [])
         .map((entry) => (entry && typeof entry === 'object' ? entry.key : entry))
         .filter((key) => typeof key === 'string' && key && !bookkeepingKeys.has(key));
+    // The notes-level changes WITH their values, minus bookkeeping — for an
+    // update or override whose stored fields all match, these rows ARE the
+    // diff (CUBSCOUT's four overrides differed only by a soft-hyphen in the
+    // short name and one facebook link).
+    const notesChanges = []
+        .concat((Array.isArray(diff.updated) ? diff.updated : []).map((entry) => entry && typeof entry === 'object' && !bookkeepingKeys.has(entry.key)
+            ? { key: entry.key, from: entry.from == null ? '' : String(entry.from), to: entry.to == null ? '' : String(entry.to) } : null))
+        .concat((Array.isArray(diff.added) ? diff.added : []).map((entry) => entry && typeof entry === 'object' && !bookkeepingKeys.has(entry.key)
+            ? { key: entry.key, from: '', to: entry.value == null ? '' : String(entry.value) } : null))
+        .concat((Array.isArray(diff.removed) ? diff.removed : []).map((entry) => entry && typeof entry === 'object' && !bookkeepingKeys.has(entry.key)
+            ? { key: entry.key, from: entry.value == null ? '' : String(entry.value), to: '' } : null))
+        .filter(Boolean);
     const storedVerdict = Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
         ? core.findStoredBearVerdict(event)
         : null;
@@ -421,6 +433,7 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         barSource: typeof event.barSource === 'string' ? event.barSource : '',
         favicon: typeof event.favicon === 'string' ? event.favicon : '',
         changeContext,
+        notesChanges,
         notesAdded: notesKeys(diff.added),
         notesUpdated: notesKeys(diff.updated),
         notesRemoved: notesKeys(diff.removed),
@@ -487,7 +500,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     const file = (entry, decision) => {
         if (decision) {
