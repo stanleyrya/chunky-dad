@@ -568,7 +568,10 @@ function renderReviewRouteLine(ctx, place = {}) {
     const city = String(place.city || '').trim();
     const coordinates = String(place.coordinates || '').trim();
     const parts = [];
-    if (bar) parts.push(reviewAnchor(adapter ? adapter.buildBarMapsSearchUrl(bar, city) : '', bar));
+    // A curated bar is the one place fact worth a mark on the face: the
+    // name, address and pin all come from data/bars, not from the page.
+    const curatedMark = place.barSource === 'curated' ? ' <span class="curated" title="curated bar">✓</span>' : '';
+    if (bar) parts.push(reviewAnchor(adapter ? adapter.buildBarMapsSearchUrl(bar, city) : '', bar) + curatedMark);
     if (address) {
         const street = address.split(',')[0].trim() || address;
         parts.push(reviewAnchor(adapter ? adapter.buildAddressMapsSearchUrl(address, city) : '', street));
@@ -714,7 +717,34 @@ function renderReviewThumb(display = {}, fallbackImage = '') {
     const dims = display.imageDimensions && display.imageDimensions.width && display.imageDimensions.height ? display.imageDimensions : null;
     const repeat = Number(display.imageRepeatCount) || 0;
     const placeholder = repeat >= 3;
-    return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}" onclick="openFlyer(this)"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
+    // Tap-to-enlarge is wired by the page (a tap that did not become a
+    // swipe), so no inline handler here.
+    return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
+}
+
+// The bear check, reviewable: what the run decided and why, and the two
+// verdict buttons that write bear-verdicts.json (the same store the phone's
+// results sheet writes). A stored verdict shows as the active button.
+function renderReviewBearRow(display = {}, proposal = {}) {
+    const stored = display.bearVerdict === 'bear' || display.bearVerdict === 'not_bear' ? display.bearVerdict : null;
+    let state;
+    if (proposal.kind === 'dropped') {
+        const reason = String(proposal.dropReason || '').replace(/^ai:\s*/i, 'AI: ');
+        state = `🚫 dropped as not bear${reason ? ` — ${reason}` : ''}`;
+    } else if (display.bearReview) {
+        state = `🐻 kept, but ${display.bearReview}`;
+    } else if (display.bearSource) {
+        state = `🐻 bear — ${display.bearSource}`;
+    } else {
+        state = '🐻 bear (no check recorded)';
+    }
+    const storedText = stored
+        ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}</span>`
+        : '';
+    return `<div class="bear-row">
+    <div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div>
+    <div class="bear-btns"><button type="button" class="bear-btn${stored === 'bear' ? ' on' : ''}" data-bear="bear">🐻 Bear</button><button type="button" class="bear-btn${stored === 'not_bear' ? ' on' : ''}" data-bear="not_bear">🚫 Not bear</button></div>
+  </div>`;
 }
 
 function renderReviewBarCard(entry, ctx = {}) {
@@ -758,6 +788,7 @@ function renderReviewCard(entry, ctx = {}) {
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
     const isMerge = entry.kind === 'merge';
+    const isDropped = entry.kind === 'dropped';
     const tz = proposal.timezone || null;
     const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz);
     const utcLine = formatReviewUtcLine(proposal.startDate, proposal.endDate);
@@ -772,12 +803,14 @@ function renderReviewCard(entry, ctx = {}) {
         display.pageHost ? `from ${display.pageHost}` : '',
         calendarName ? `📱 ${calendarName}` : ''
     ].filter(Boolean);
-    const bear = display.bearReview
-        ? `<span class="badge">🐻 ${escapeHtmlText(display.bearReview)}</span>`
-        : display.bearSource ? `<span class="badge">🐻 ${escapeHtmlText(display.bearSource)}</span>` : '';
     const description = String(proposal.description || '');
     const instagram = adapter ? adapter.normalizeInstagramChipUrl(display.instagram) : display.instagram;
+    // The favicon field is the event's OWN brand site (Goldiloxx's
+    // linktr.ee, not Red Eye's homepage), so it leads the links when it
+    // differs from the event page.
+    const brand = display.favicon && reviewUrlLabel(display.favicon) !== reviewUrlLabel(proposal.url) ? display.favicon : '';
     const chips = [
+        reviewChip(ctx, 'brand', '🏷', brand),
         reviewChip(ctx, 'website', '🔗', proposal.url),
         reviewChip(ctx, 'tickets', '🎟', proposal.ticketUrl),
         reviewChip(ctx, 'instagram', '📸', instagram),
@@ -787,20 +820,18 @@ function renderReviewCard(entry, ctx = {}) {
     ].filter(Boolean).join('');
     return `<div class="card-body">
   ${renderReviewThumb(display, proposal.image)}
-  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : '✨ New event'}</span>${display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
+  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
   ${renderReviewBadges({ ...display })}
   <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
   ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
-  ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location })}
+  ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location, barSource: display.barSource })}
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
-  ${bear ? `<div class="badges">${bear}</div>` : ''}
   ${chips ? `<div class="chips">${chips}</div>` : ''}
+  ${renderReviewBearRow(display, proposal)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext) : ''}
-  ${isMerge ? renderReviewNotesChanges(display) : ''}
-  ${renderReviewEvidence(display.evidenceLines)}
-  ${description ? `<div class="desc clamped" onclick="toggleDesc(this)">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more" onclick="toggleDesc(this.previousElementSibling)">… more</div>' : ''}` : ''}
+  ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
 }
@@ -830,6 +861,7 @@ function renderReviewPage(deck, options = {}) {
         key: entry.key,
         sourceIndex: entry.sourceIndex,
         proposal: entry.proposal,
+        bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
         html: renderReviewCard(entry, ctx)
     }));
     const decided = deck.decided.map((entry) => ({
@@ -841,6 +873,7 @@ function renderReviewPage(deck, options = {}) {
         reason: entry.decision.reason || null,
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
+        bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
         html: renderReviewCard(entry, ctx)
     }));
     const payload = {
@@ -894,6 +927,7 @@ a { color:var(--accent); }
 .card.gone-down { transform:translateY(90vh) scale(.9); opacity:0; }
 .card-body { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 18px; }
 .thumb { margin:-14px -16px 12px; background:#0d0c0b; display:flex; justify-content:center; position:relative; cursor:zoom-in; }
+.card { -webkit-touch-callout:none; }
 .thumb img { display:block; max-width:100%; width:auto; height:auto; max-height:40vh; object-fit:contain; }
 .thumb.portrait img { max-height:46vh; }
 .thumb.landscape img { width:100%; max-height:32vh; }
@@ -936,6 +970,15 @@ a { color:var(--accent); }
 .kind-new { background:rgba(47,158,95,.14); color:var(--ok); }
 .kind-merge { background:rgba(255,107,53,.16); color:var(--accent); }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
+.kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
+.curated { color:var(--ok); font-weight:700; }
+.bear-row { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+.bear-state { flex:1 1 100%; font-size:13px; }
+.bear-stored { font-weight:600; }
+.bear-btns { display:flex; gap:6px; }
+.bear-btn { font:inherit; font-size:13px; padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+.bear-btn.on { border-color:var(--accent); background:var(--accent); color:#fff; }
+.bear-btn.busy { opacity:.5; }
 h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .line { margin:3px 0; }
 .muted { color:var(--muted); }
@@ -1044,17 +1087,17 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
   function visible() {
-    return queue.filter(function (c) { return filter === 'all' || c.kind === filter; });
+    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : c.kind === filter; });
   }
   function counts() {
-    var out = { all: queue.length, new: 0, merge: 0, bar: 0 };
-    queue.forEach(function (c) { out[c.kind] = (out[c.kind] || 0) + 1; });
+    var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
+    queue.forEach(function (c) { out[c.kind] = (out[c.kind] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {
     var c = counts();
     var html = '';
-    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['bar', 'Bars']].forEach(function (pair) {
+    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
     });
     document.getElementById('filters').innerHTML = html;
@@ -1077,13 +1120,38 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       stage.appendChild(el);
       if (i === 0) attachDrag(el, card);
     });
-    document.getElementById('left').textContent = list.length + ' left' + (queue.length !== list.length ? ' (' + queue.length + ' total)' : '');
+    document.getElementById('left').textContent = list.length + ' left';
     var disabled = list.length === 0;
     ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
+  // 🐻 / 🚫 buttons on any card: write the verdict now, show it as active.
+  stage.addEventListener('click', function (e) {
+    var btn = e.target.closest('.bear-btn');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    var el = btn.closest('.card'); var key = el ? el.getAttribute('data-key') : '';
+    var card = queue.concat(decided).filter(function (c) { return c.key === key; })[0];
+    if (!card) return;
+    var verdict = btn.classList.contains('on') ? 'clear' : btn.getAttribute('data-bear');
+    var row = btn.closest('.bear-row');
+    btn.classList.add('busy');
+    postBear(card, verdict).then(function () {
+      Array.prototype.forEach.call(row.querySelectorAll('.bear-btn'), function (b) { b.classList.remove('on', 'busy'); });
+      if (verdict !== 'clear') btn.classList.add('on');
+      var stored = row.querySelector('.bear-stored');
+      if (stored) stored.remove();
+      if (verdict !== 'clear') {
+        var span = document.createElement('span'); span.className = 'bear-stored';
+        span.textContent = ' you said: ' + (verdict === 'bear' ? '🐻 bear' : '🚫 not bear');
+        row.querySelector('.bear-state').appendChild(span);
+      }
+      toast(verdict === 'clear' ? 'Verdict cleared' : (verdict === 'bear' ? 'Marked bear' : 'Marked not bear'));
+    }).catch(function (error) { btn.classList.remove('busy'); toast('Not saved: ' + error.message); });
+  });
+
   function renderExecute() {
-    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar'; }).length;
+    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped'; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
     var el = document.getElementById('execute');
     if (approved > 0 && deck.executeLink) {
@@ -1113,23 +1181,29 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function post(body) {
-    return fetch('/review/decide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  function postTo(path, body) {
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; }); });
   }
+  function post(body) { return postTo('/review/decide', body); }
+  function postBear(card, verdict) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key }); }
   function topCard() { return visible()[0] || null; }
   function removeFromQueue(card) { queue = queue.filter(function (c) { return c.key !== card.key; }); }
 
   function decide(card, verdict, reason, direction) {
     var el = stage.querySelector('.card[data-key="' + CSS.escape(card.key) + '"]');
     if (el) el.className = 'card ' + direction;
-    var body = { key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null };
-    post(body).then(function () {
+    // A dropped card's swipe is a bear verdict: right = "that IS bear"
+    // (rescued by the next run), left = "not bear, confirmed".
+    var request = card.kind === 'dropped'
+      ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
+      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null });
+    request.then(function () {
       removeFromQueue(card);
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, html: card.html };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, html: card.html };
       decided.push(record);
       history.push({ card: card, record: record });
-      toast(verdict === 'approve' ? 'Approved' : 'Rejected');
+      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : 'Rejected'));
       setTimeout(render, 180);
     }).catch(function (error) {
       toast('Not saved: ' + error.message);
@@ -1137,7 +1211,11 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     });
   }
   function approveTop() { var c = topCard(); if (c) decide(c, 'approve', null, 'gone-right'); }
-  function rejectTop() { var c = topCard(); if (!c) return; pending = c; openSheet(c); }
+  function rejectTop() {
+    var c = topCard(); if (!c) return;
+    if (c.kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    pending = c; openSheet(c);
+  }
   function skipTop() {
     var c = topCard(); if (!c) return;
     var el = stage.querySelector('.card[data-key="' + CSS.escape(c.key) + '"]');
@@ -1146,9 +1224,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     setTimeout(render, 180);
   }
   function undoDecision(record) {
-    post({ key: record.key, verdict: 'clear' }).then(function () {
+    var request = record.kind === 'dropped'
+      ? postBear(record, 'clear')
+      : post({ key: record.key, verdict: 'clear' });
+    request.then(function () {
       decided = decided.filter(function (d) { return d.key !== record.key; });
-      var card = { id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, html: record.html };
+      var card = { id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html };
       queue.unshift(card);
       history = history.filter(function (h) { return h.card.key !== record.key; });
       toast('Undone');
@@ -1179,36 +1260,77 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     decide(card, 'reject', { tags: tags, text: text }, 'gone-left');
   };
 
-  // Drag
+  // Drag — touch + mouse (iOS Safari delivers pointer events but starts
+  // its own scroll first, so horizontal swipes died as pointercancel).
+  // Vertical intent scrolls the card body natively (touch-action: pan-y);
+  // horizontal intent is claimed with preventDefault on a non-passive
+  // touchmove. A touch that never moved is a tap: flyer → lightbox,
+  // description → expand.
   function attachDrag(el, card) {
-    var startX = 0, startY = 0, dx = 0, dy = 0, active = false, pointerId = null;
-    el.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('a, button, .desc, .desc-more, .thumb, .map, details, summary')) return;
-      active = true; pointerId = e.pointerId; startX = e.clientX; startY = e.clientY; dx = 0; dy = 0;
-      el.classList.add('dragging');
-      try { el.setPointerCapture(e.pointerId); } catch (ignore) {}
-    });
-    el.addEventListener('pointermove', function (e) {
-      if (!active || e.pointerId !== pointerId) return;
-      dx = e.clientX - startX; dy = e.clientY - startY;
-      if (Math.abs(dy) > Math.abs(dx) * 1.5 && Math.abs(dx) < 20) return; // vertical scroll inside the card
-      e.preventDefault();
-      el.style.transform = 'translate(' + dx + 'px,' + (dy * 0.3) + 'px) rotate(' + (dx / 18) + 'deg)';
-      var ok = el.querySelector('.stamp.ok'), no = el.querySelector('.stamp.no');
-      ok.style.opacity = Math.max(0, Math.min(1, dx / 90));
-      no.style.opacity = Math.max(0, Math.min(1, -dx / 90));
-    });
-    function finish(e) {
-      if (!active || (e && e.pointerId !== pointerId)) return;
-      active = false; el.classList.remove('dragging');
-      if (dx > 110) { approveTop(); return; }
-      if (dx < -110) { el.style.transform = ''; rejectTop(); return; }
+    var startX = 0, startY = 0, dx = 0, dy = 0, active = false, moved = false, lockedH = false, lockedV = false;
+    var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no');
+    function reset() {
       el.style.transform = '';
-      el.querySelector('.stamp.ok').style.opacity = 0;
-      el.querySelector('.stamp.no').style.opacity = 0;
+      if (okStamp) okStamp.style.opacity = 0;
+      if (noStamp) noStamp.style.opacity = 0;
     }
-    el.addEventListener('pointerup', finish);
-    el.addEventListener('pointercancel', finish);
+    function begin(x, y, target) {
+      if (target && target.closest && target.closest('a, button, select, textarea, input, summary')) return false;
+      active = true; moved = false; lockedH = false; lockedV = false;
+      startX = x; startY = y; dx = 0; dy = 0;
+      el.classList.add('dragging');
+      return true;
+    }
+    function move(x, y, e) {
+      if (!active) return;
+      dx = x - startX; dy = y - startY;
+      if (!lockedH && !lockedV && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        if (Math.abs(dx) > Math.abs(dy)) lockedH = true; else lockedV = true;
+      }
+      if (!lockedH) return;
+      moved = true;
+      if (e && e.cancelable) e.preventDefault();
+      el.style.transform = 'translate(' + dx + 'px,' + (dy * 0.3) + 'px) rotate(' + (dx / 18) + 'deg)';
+      if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
+      if (noStamp) noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+    }
+    function tap(target) {
+      if (!target || !target.closest) return;
+      if (target.closest('.thumb')) { openFlyer(target.closest('.thumb')); return; }
+      var desc = target.closest('.desc, .desc-more');
+      if (desc) { toggleDesc(el.querySelector('.desc')); }
+    }
+    function end(target, cancelled) {
+      if (!active) return;
+      active = false;
+      el.classList.remove('dragging');
+      if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
+      if (!cancelled && lockedH && dx < -110) { reset(); rejectTop(); return; }
+      reset();
+      if (!cancelled && !moved && !lockedV) tap(target);
+    }
+    el.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      begin(t.clientX, t.clientY, e.target);
+    }, { passive: true });
+    el.addEventListener('touchmove', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      move(t.clientX, t.clientY, e);
+    }, { passive: false });
+    el.addEventListener('touchend', function (e) { end(e.target, false); });
+    el.addEventListener('touchcancel', function (e) { end(e.target, true); });
+    el.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      if (!begin(e.clientX, e.clientY, e.target)) return;
+      var onMove = function (ev) { move(ev.clientX, ev.clientY, ev); };
+      var onUp = function (ev) {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        end(ev.target, false);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
   }
 
   document.getElementById('btn-approve').onclick = approveTop;
@@ -1385,9 +1507,10 @@ function resolveReviewRun(query) {
 // deck's SharedCore (distances, notes parsing) for the card renderers.
 function buildReviewDeckForRun(sharedRoot, run) {
     const store = reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot));
+    const bearVerdicts = reviewQueue.loadBearVerdicts(reviewQueue.getBearVerdictsPath(sharedRoot));
     const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
     const core = reviewQueue.createDeckCore(run.payload, { curatedBars });
-    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core });
+    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts });
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
@@ -1625,6 +1748,43 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // 🐻 / 🚫 from the deck: the phone's own verdict store, same identity
+    // and entry shape as a results-sheet tap.
+    if (pathname === '/review/bear' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try {
+            body = JSON.parse(raw || '{}');
+        } catch (error) {
+            return sendJson(res, 400, { ok: false, error: 'body must be JSON' });
+        }
+        const verdict = body && (body.verdict === 'bear' || body.verdict === 'not_bear' || body.verdict === 'clear') ? body.verdict : null;
+        if (!verdict) return sendJson(res, 400, { ok: false, error: 'verdict must be bear, not_bear or clear' });
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const verdictsPath = reviewQueue.getBearVerdictsPath(sharedRoot);
+        try {
+            const { SharedCore } = require(path.join(repoRoot, 'scripts', 'shared-core'));
+            const { EventSchema } = require(path.join(repoRoot, 'scripts', 'event-schema'));
+            const latest = resolveReviewRun({}).run;
+            const cities = (latest && latest.payload && latest.payload.config && latest.payload.config.cities) || {};
+            const core = new SharedCore(cities, { eventSchema: EventSchema });
+            const current = reviewQueue.loadBearVerdicts(verdictsPath);
+            if (verdict === 'clear') {
+                const cleared = reviewQueue.clearBearVerdict(current, core, body.event || {});
+                reviewQueue.saveBearVerdicts(verdictsPath, cleared.verdicts);
+                console.log(`Review: cleared bear verdict for "${(body.event && body.event.title) || '?'}"${cleared.removed ? '' : ' (none stored)'}`);
+                return sendJson(res, 200, { ok: true, removed: cleared.removed, verdicts: cleared.verdicts.length });
+            }
+            const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict);
+            reviewQueue.saveBearVerdicts(verdictsPath, result.verdicts);
+            console.log(`Review: ${verdict} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"`);
+            return sendJson(res, 200, { ok: true, entry: result.entry, verdicts: result.verdicts.length });
+        } catch (error) {
+            const status = /must be|no title identity/.test(error.message) ? 400 : 500;
+            return sendJson(res, status, { ok: false, error: error.message });
+        }
+    }
+
     if (pathname === '/review/decisions.json' && req.method === 'GET') {
         const sharedRoot = reviewQueue.resolveSharedRoot();
         return sendJson(res, 200, reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot)));
@@ -1636,7 +1796,7 @@ async function handleRequest(state, req, res) {
         return sendText(res, 200, reviewQueue.formatRejectionsText(store));
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/decisions.json /review/rejections');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections');
 }
 
 function parsePortFromArgv(argv) {
@@ -1702,6 +1862,7 @@ module.exports = {
     describeReviewTimeDelta,
     renderReviewChangeRows,
     renderReviewRouteLine,
+    renderReviewBearRow,
     reviewUrlLabel,
     renderReviewCard,
     renderReviewPage,

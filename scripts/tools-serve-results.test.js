@@ -764,11 +764,12 @@ test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UT
   assert.ok(html.includes('>185 Christopher St</a>'), 'street-only address label');
   assert.ok(html.includes('>📌 40.7331, -74.0055</a>') && html.includes('>🧭 Route</a>'));
   assert.ok(html.includes('Furball · from furball.nyc · 📱 chunky-dad-nyc'), 'parser name, page host and target calendar');
-  assert.ok(html.includes('🐻 keyword'));
+  assert.ok(html.includes('>Rockbar</a> <span class="curated" title="curated bar">✓</span>') === false, 'no curated tick without a curated barSource');
   assert.ok(html.includes('>🔗 furball.nyc/events/x</a>') && html.includes('>🎟 tickets.example/x</a>') && html.includes('>📸 @furballnyc</a>') && html.includes('>🗺 maps</a>'), 'links keep their path; only handles and the maps link get short labels');
   assert.ok(html.includes('💵 $20'));
-  assert.ok(html.includes('class="thumb portrait"') && html.includes('onclick="openFlyer(this)"') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, tap to enlarge');
-  assert.ok(html.includes('<li>pin is 0 m from curated &quot;Rockbar&quot; pin</li>'), 'evidence on the face');
+  assert.ok(html.includes('class="thumb portrait"') && !html.includes('onclick=') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, no inline handlers (the page wires taps)');
+  assert.ok(!html.includes('class="evidence"') && !html.includes('provenance:'), 'no evidence blurb on the face');
+  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword') && html.includes('data-bear="bear"') && html.includes('data-bear="not_bear"'), 'the bear check is reviewable on the card');
   assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
   assert.ok(html.includes('Bears &quot;welcome&quot;'));
   assert.ok(!html.includes('class="chgs"'), 'a new event has no change block');
@@ -795,7 +796,7 @@ test('renderReviewCard (update): stacked calendar-has → would-become rows in t
   assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('<span class="none">∅</span>') && html.includes('>beefmince.co.uk/tickets</a>'), 'a link change shows the whole stored URL, not its domain');
   const samePath = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { url: { from: 'https://bearracuda.com', to: 'https://bearracuda.com/events/denver17/' } } } }, ctx);
   assert.ok(samePath.includes('>bearracuda.com</a>') && samePath.includes('>bearracuda.com/events/denver17/</a>'), 'Bearracuda Denver: the gained path is visible, trailing slash and all');
-  assert.ok(html.includes('+ notes updated'));
+  assert.ok(!html.includes('+ notes'), 'no notes blurb');
 
   const added = renderReviewCard({ kind: 'merge', key: 'k', proposal: { title: 'X', timezone: 'UTC', changes: { location: { from: '', to: '40.7331, -74.0055' }, endDate: { from: '2030-10-05T03:00:00.000Z', to: '' } } } }, ctx);
   assert.ok(added.includes('pin added'));
@@ -816,6 +817,33 @@ test('renderReviewCard (bar): route line, distance from the city center, labelle
   assert.ok(html.includes('openstreetmap.org/export/embed.html'), 'inline map');
   assert.ok(html.includes('<li>BEAR NIGHT <span class="muted">— Sat, Feb 2</span></li>'));
   assert.ok(html.includes('<li>pin is 4.1 km from nyc center</li>'));
+});
+
+test('renderReviewCard: the brand site leads the links, a curated bar gets its tick, a stored verdict shows as the active button', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'new', key: 'k', proposal: {
+    title: 'GOLDILOXX SINGLET NITE', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: 'Red Eye', city: 'nyc',
+    url: 'https://redeyeny.com/', ticketUrl: 'https://redeyetickets.com/events/goldiloxx-singlet-nite', changes: {}
+  }, display: { favicon: 'https://linktr.ee/goldiloxx', barSource: 'curated', bearSource: 'ai', bearVerdict: 'bear', bearVerdictStampedAt: '2030-01-02T00:00:00.000Z' } }, ctx);
+  const brandAt = html.indexOf('>🏷 linktr.ee/goldiloxx</a>');
+  const pageAt = html.indexOf('>🔗 redeyeny.com/</a>');
+  assert.ok(brandAt !== -1 && pageAt !== -1 && brandAt < pageAt, 'the favicon (brand) site leads, the venue page follows');
+  assert.ok(html.includes('>Red Eye</a> <span class="curated" title="curated bar">✓</span>'), 'curated bar tick');
+  assert.ok(html.includes('🐻 bear — ai') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
+  assert.ok(html.includes('class="bear-btn on" data-bear="bear"'), 'stored verdict is the active button');
+  const same = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'X', timezone: 'UTC', url: 'https://bearracuda.com/', changes: {} }, display: { favicon: 'https://www.bearracuda.com/' } }, ctx);
+  assert.ok(!same.includes('🏷'), 'no brand chip when it is the same site as the event page');
+});
+
+test('renderReviewCard (dropped): the drop reason is the bear row, and the card asks the one question', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'dropped', key: 'dropped|x', proposal: {
+    kind: 'dropped', title: 'Dolly Parton Tribute', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: '3 Dollar Bill', city: 'nyc',
+    dropReason: 'ai: The title and description contain no bear-specific language.', occurrences: 3, changes: {}
+  }, display: {} }, ctx);
+  assert.ok(html.includes('🚫 Dropped as not bear') && html.includes('3 occurrences'));
+  assert.ok(html.includes('🚫 dropped as not bear — AI: The title and description contain no bear-specific language.'));
+  assert.ok(html.includes('data-bear="bear"'));
 });
 
 test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
@@ -930,6 +958,21 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     const cleared = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'clear' }));
     assert.equal(JSON.parse(cleared.body).removed, true);
     assert.equal(JSON.parse((await request(state, 'GET', '/review/deck.json')).body).counts.pending, 1, 'undo puts the card back');
+
+    // 🐻 from the deck writes the phone's verdict store with the tap's shape.
+    const bear = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'not_bear', event: { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', location: '', city: 'nyc' } }));
+    assert.equal(bear.status, 200, bear.body);
+    const verdicts = JSON.parse(fs.readFileSync(reviewQueue.getBearVerdictsPath(dir), 'utf8'));
+    assert.equal(verdicts.version, 1);
+    assert.deepEqual(Object.keys(verdicts.verdicts[0]).sort(), ['address', 'city', 'location', 'stampedAt', 'title', 'venue', 'verdict'].sort(), 'same entry shape as a results-sheet tap');
+    assert.equal(verdicts.verdicts[0].verdict, 'not_bear');
+    const flipped = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'bear', event: { title: 'furball nyc', bar: 'The Rockbar', city: 'nyc' } }));
+    assert.equal(JSON.parse(flipped.body).verdicts, 1, 'same party → one entry, last verdict wins');
+    const deckWithVerdict = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deckWithVerdict.cards[0].display.bearVerdict, 'bear', 'the deck shows the stored verdict');
+    const clearedBear = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'clear', event: { title: 'FURBALL NYC', bar: 'Rockbar', city: 'nyc' } }));
+    assert.equal(JSON.parse(clearedBear.body).removed, true);
+    assert.equal((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'maybe', event: {} }))).status, 400);
 
     const fallback = await request(state, 'GET', '/review?run=not-a-run');
     assert.ok(fallback.body.includes('FURBALL NYC'), 'a bad run id falls back to the newest run');

@@ -250,3 +250,69 @@ test('formatRejectionsText lists every rejection with its tags, text and the val
   assert.match(text, /^- MERGE BEEFMINCE x RVT — 2030-10-04 @ RVT \[The Bear Calendar\] \{wrong title\} — aggregator renamed it \(title: BEEFMINCE Brief Encounter → BEEFMINCE x RVT\)$/m);
   assert.equal(rq.formatRejectionsText(rq.emptyDecisionStore()), '');
 });
+
+// ---------------------------------------------------------------------------
+// Bear review: the verdict store the deck writes, and dropped-event cards
+// ---------------------------------------------------------------------------
+
+test('bear verdict store: upsert by party identity (last verdict wins), clear, atomic save in the phone\'s shape', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-bear-'));
+  const verdictsPath = rq.getBearVerdictsPath(dir);
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  assert.deepEqual(rq.loadBearVerdicts(verdictsPath), []);
+  const first = rq.upsertBearVerdict([], core, { title: 'MEAT RACK', bar: 'Eagle NYC', city: 'nyc' }, 'not_bear', { now: new Date('2030-01-01T00:00:00Z') });
+  assert.deepEqual(first.entry, { verdict: 'not_bear', stampedAt: '2030-01-01T00:00:00.000Z', title: 'MEAT RACK', venue: 'Eagle NYC', address: '', location: '', city: 'nyc' });
+  const second = rq.upsertBearVerdict(first.verdicts, core, { title: 'meat rack!', bar: 'The Eagle NYC', city: 'nyc' }, 'bear');
+  assert.equal(second.verdicts.length, 1, 'same party at the same venue → one entry');
+  assert.equal(second.verdicts[0].verdict, 'bear');
+  const other = rq.upsertBearVerdict(second.verdicts, core, { title: 'MEAT RACK INFERNO', bar: 'Eagle NYC', city: 'nyc' }, 'bear');
+  assert.equal(other.verdicts.length, 2, 'a different party never inherits');
+  rq.saveBearVerdicts(verdictsPath, other.verdicts);
+  const saved = JSON.parse(fs.readFileSync(verdictsPath, 'utf8'));
+  assert.equal(saved.version, 1);
+  assert.equal(saved.verdicts.length, 2);
+  assert.ok(!fs.readdirSync(dir).some((name) => name.includes('.tmp-')));
+  const cleared = rq.clearBearVerdict(rq.loadBearVerdicts(verdictsPath), core, { title: 'MEAT RACK', bar: 'Eagle NYC', city: 'nyc' });
+  assert.equal(cleared.removed, true);
+  assert.equal(cleared.verdicts.length, 1);
+  assert.throws(() => rq.upsertBearVerdict([], core, { title: '', bar: 'x' }, 'bear'), /no title identity/);
+  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'x' }, 'maybe'), /bear or not_bear/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('buildDeck: dropped-as-not-bear events become one card per party (future only), decided once a verdict is stored', () => {
+  const dropped = (title, start, reason = 'ai: no bear language') => ({
+    title, startDate: start, venue: '3 Dollar Bill', reason, host: 'www.3dollarbillbk.com',
+    event: { title, startDate: start, endDate: start, bar: '3 Dollar Bill', address: '260 Meserole St', city: 'nyc', timezone: 'America/New_York', source: 'ai-web', image: 'https://x/y.jpg' }
+  });
+  const payload = runPayload({
+    analyzedEvents: [newEvent()],
+    bearDroppedEvents: [
+      dropped('Dolly Parton Tribute', iso(FUTURE)),
+      dropped('Dolly Parton Tribute', iso(FUTURE + 7 * 86400000)),
+      dropped('Charli Party', iso(FUTURE)),
+      dropped('Ancient Party', '2020-01-01T02:00:00.000Z')
+    ]
+  });
+  const deck = deckOf(payload);
+  const droppedCards = deck.cards.filter((card) => card.kind === 'dropped');
+  assert.deepEqual(droppedCards.map((card) => [card.proposal.title, card.proposal.occurrences]), [['Dolly Parton Tribute', 2], ['Charli Party', 1]]);
+  assert.equal(droppedCards[0].key, 'dropped|dolly parton tribute|3dollarbill', 'dateless key: the verdict is about the party');
+  assert.equal(droppedCards[0].proposal.dropReason, 'ai: no bear language');
+  assert.deepEqual(droppedCards[0].display.bearIdentity, { title: 'Dolly Parton Tribute', bar: '3 Dollar Bill', address: '260 Meserole St', location: '', city: 'nyc' });
+  assert.equal(deck.counts.dropped, 2);
+  assert.equal(deck.counts.pending, 1, 'dropped cards do not count as pending proposals');
+
+  const verdicts = [{ verdict: 'bear', stampedAt: '2030-01-01T00:00:00.000Z', title: 'Dolly Parton Tribute', venue: '3 Dollar Bill', address: '', location: '', city: 'nyc' }];
+  const judged = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: verdicts });
+  assert.deepEqual(judged.cards.filter((card) => card.kind === 'dropped').map((card) => card.proposal.title), ['Charli Party']);
+  const decided = judged.decided.find((entry) => entry.kind === 'dropped');
+  assert.equal(decided.decision.verdict, 'approve');
+  assert.equal(decided.decision.bearVerdict, 'bear');
+  assert.equal(judged.counts.droppedDecided, 1);
+  // The kept event card knows the store too.
+  const keptWithVerdict = deckOf(runPayload({ analyzedEvents: [newEvent()] }), rq.emptyDecisionStore(), {
+    bearVerdicts: [{ verdict: 'not_bear', stampedAt: '2030-01-01T00:00:00.000Z', title: 'FURBALL NYC', venue: 'Rockbar', city: 'nyc' }]
+  });
+  assert.equal(keptWithVerdict.cards[0].display.bearVerdict, 'not_bear');
+});

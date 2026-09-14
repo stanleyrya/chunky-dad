@@ -223,6 +223,89 @@ function clearDecision(store, key) {
 }
 
 // ---------------------------------------------------------------------------
+// Bear verdict store — bear-verdicts.json, the SAME file the phone's results
+// sheet writes on a 🐻/🚫 tap (ScriptableAdapter.persistBearVerdictTap) and
+// the scraper reads at run start (SharedCore.findStoredBearVerdict, tier 0
+// of the bear cascade). The deck's bear buttons upsert into it with the
+// same identity (title tokens + fail-closed place match), so a verdict
+// swiped here is honoured by the next phone run exactly like a tapped one.
+// ---------------------------------------------------------------------------
+
+const BEAR_VERDICTS_FILE_NAME = 'bear-verdicts.json';
+
+function getBearVerdictsPath(sharedRoot) {
+    return path.join(sharedRoot, BEAR_VERDICTS_FILE_NAME);
+}
+
+function normalizeBearVerdicts(parsed) {
+    const list = parsed && !Array.isArray(parsed) && Array.isArray(parsed.verdicts)
+        ? parsed.verdicts
+        : Array.isArray(parsed) ? parsed : [];
+    return list.filter((entry) => entry && typeof entry === 'object'
+        && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+}
+
+function loadBearVerdicts(verdictsPath) {
+    try {
+        if (!fs.existsSync(verdictsPath)) return [];
+        return normalizeBearVerdicts(JSON.parse(fs.readFileSync(verdictsPath, 'utf8')));
+    } catch (error) {
+        console.warn(`review-queue: bear verdict store unreadable (${error.message}) — treating as empty`);
+        return [];
+    }
+}
+
+function saveBearVerdicts(verdictsPath, verdicts) {
+    const list = normalizeBearVerdicts(verdicts);
+    fs.mkdirSync(path.dirname(verdictsPath), { recursive: true });
+    const tmpPath = `${verdictsPath}.tmp-${process.pid}`;
+    fs.writeFileSync(tmpPath, JSON.stringify({ version: 1, verdicts: list }, null, 2));
+    fs.renameSync(tmpPath, verdictsPath);
+    return list;
+}
+
+// The identity the deck posts back for a 🐻/🚫 tap: enough for
+// SharedCore's verdict-store identity, nothing more.
+function buildBearIdentity(event) {
+    return {
+        title: String((event && (event.title || event.name)) || ''),
+        bar: String((event && (event.bar || event.venue)) || ''),
+        address: typeof (event && event.address) === 'string' ? event.address : '',
+        location: typeof (event && event.location) === 'string' ? event.location : '',
+        city: typeof (event && event.city) === 'string' ? event.city : ''
+    };
+}
+
+// Same entry shape and upsert rule as persistBearVerdictTap: one entry per
+// party-at-venue, last tap wins. Returns { verdicts, entry } or throws on a
+// record with no title identity.
+function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
+    if (verdict !== 'bear' && verdict !== 'not_bear') throw new Error('verdict must be bear or not_bear');
+    const id = buildBearIdentity(identity);
+    const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
+    if (!key) throw new Error('event carries no title identity');
+    const now = options.now instanceof Date ? options.now : new Date();
+    const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city };
+    const list = normalizeBearVerdicts(verdicts).slice();
+    const index = list.findIndex((existing) =>
+        core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
+        && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing));
+    if (index >= 0) list[index] = entry;
+    else list.push(entry);
+    return { verdicts: list, entry };
+}
+
+function clearBearVerdict(verdicts, core, identity) {
+    const id = buildBearIdentity(identity);
+    const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
+    const list = normalizeBearVerdicts(verdicts);
+    const kept = list.filter((existing) =>
+        !(key && core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
+            && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing)));
+    return { verdicts: kept, removed: kept.length !== list.length };
+}
+
+// ---------------------------------------------------------------------------
 // Curated bars (data/bars/<city>.json) — approved candidates already promoted
 // (or hand-curated) must not come back as cards.
 // ---------------------------------------------------------------------------
@@ -327,7 +410,16 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
     const notesKeys = (list) => (Array.isArray(list) ? list : [])
         .map((entry) => (entry && typeof entry === 'object' ? entry.key : entry))
         .filter((key) => typeof key === 'string' && key && !bookkeepingKeys.has(key));
+    const storedVerdict = Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
+        ? core.findStoredBearVerdict(event)
+        : null;
     return {
+        bearVerdict: storedVerdict ? storedVerdict.verdict : null,
+        bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
+        bearIdentity: buildBearIdentity(event),
+        isBearEvent: event.isBearEvent === true,
+        barSource: typeof event.barSource === 'string' ? event.barSource : '',
+        favicon: typeof event.favicon === 'string' ? event.favicon : '',
         changeContext,
         notesAdded: notesKeys(diff.added),
         notesUpdated: notesKeys(diff.updated),
@@ -391,10 +483,11 @@ function buildDeck(runPayload, store, options = {}) {
     const now = Number.isFinite(options.now) ? options.now : Date.now();
     const SharedCore = loadSharedCore();
     const core = createDeckCore(payload, options);
+    core.bearVerdicts = Array.isArray(options.bearVerdicts) ? options.bearVerdicts : [];
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, bar: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     const file = (entry, decision) => {
         if (decision) {
@@ -447,6 +540,73 @@ function buildDeck(runPayload, store, options = {}) {
         );
     });
 
+    // Events the bear check DROPPED (flag, don't drop — they are in the run
+    // file with their reason): one card per party-at-venue, so the owner can
+    // say "that IS bear" (→ a stored verdict the next run honours) or confirm
+    // the drop. Already-judged parties (a stored verdict) are decided.
+    const dropped = Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : [];
+    const droppedByKey = new Map();
+    dropped.forEach((entry, index) => {
+        const event = entry && entry.event && typeof entry.event === 'object' ? entry.event : null;
+        if (!event) return;
+        const endMs = SharedCore.toEpochMillis(event.endDate);
+        const startMs = SharedCore.toEpochMillis(event.startDate);
+        const lastMs = endMs !== null ? endMs : startMs;
+        if (lastMs !== null && lastMs < now) return;
+        const titleKey = core.getBearVerdictTitleKey(event.title || event.name, [event.bar || event.venue]);
+        if (!titleKey) return;
+        const key = `dropped|${titleKey}|${core.getOwnerReviewPlaceKey(event)}`;
+        const existing = droppedByKey.get(key);
+        if (existing) {
+            existing.proposal.occurrences += 1;
+            return;
+        }
+        const timezone = event.timezone || core.getCityTimezone(event.city) || null;
+        const iso = (value) => {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? null : new Date(ms).toISOString();
+        };
+        const description = String(event.description || '').trim();
+        const proposal = {
+            kind: 'dropped',
+            key,
+            title: String(event.title || ''),
+            startDate: iso(event.startDate),
+            endDate: iso(event.endDate),
+            timezone,
+            bar: String(event.bar || entry.venue || ''),
+            address: String(event.address || ''),
+            city: String(event.city || ''),
+            location: typeof event.location === 'string' ? event.location : '',
+            source: String(event.source || ''),
+            url: String(event.url || event.website || ''),
+            ticketUrl: String(event.ticketUrl || ''),
+            image: String(event.image || ''),
+            cover: String(event.cover || ''),
+            description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
+            dropReason: String(entry.reason || ''),
+            host: String(entry.host || ''),
+            occurrences: 1,
+            changes: {}
+        };
+        // A dropped card asks one question (bear or not), so it travels
+        // without the notes table — 160 of them per run add up.
+        const display = buildReviewDisplayContext(event, payload, core, extras);
+        display.notes = '';
+        const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display };
+        droppedByKey.set(key, card);
+    });
+    for (const card of droppedByKey.values()) {
+        if (card.display.bearVerdict) {
+            decided.push({ ...card, decision: { key: card.key, kind: 'dropped', verdict: card.display.bearVerdict === 'bear' ? 'approve' : 'reject', stampedAt: card.display.bearVerdictStampedAt, reason: null, bearVerdict: card.display.bearVerdict } });
+            counts.decided++;
+            counts.droppedDecided++;
+        } else {
+            cards.push(card);
+            counts.dropped++;
+        }
+    }
+
     return {
         runId,
         savedAt: (payload.summary && payload.summary.timestamp) || null,
@@ -498,6 +658,14 @@ module.exports = {
     upsertDecision,
     clearDecision,
     loadCuratedBars,
+    BEAR_VERDICTS_FILE_NAME,
+    getBearVerdictsPath,
+    normalizeBearVerdicts,
+    loadBearVerdicts,
+    saveBearVerdicts,
+    buildBearIdentity,
+    upsertBearVerdict,
+    clearBearVerdict,
     createDeckCore,
     buildBarProposal,
     buildReviewDisplayContext,
