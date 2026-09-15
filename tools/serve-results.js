@@ -1158,7 +1158,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var el = document.getElementById('execute');
     var last = deck.lastExecution;
     var lastLine = last && last.at
-      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC: ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + '.</small>'
+      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + '.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
       el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) are promoted separately (node tools/apply-bar-approvals.js).' : '') + '</small>' + lastLine;
@@ -1522,7 +1522,8 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const bearVerdicts = reviewQueue.loadBearVerdicts(reviewQueue.getBearVerdictsPath(sharedRoot));
     const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
     const core = reviewQueue.createDeckCore(run.payload, { curatedBars });
-    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts });
+    const executions = reviewQueue.collectExecutions(sharedRoot);
+    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions });
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
