@@ -119,6 +119,40 @@ function readRunFile(filePath) {
     return payload;
 }
 
+// Every phone execution recorded on ANY run file in the shared dir, newest
+// last: [{ runId, executedAt, via, processed, failed, actionCounts, ownerReview }].
+// A decision handed to the phone is executed for good, whichever run's deck
+// shows it — run 20260914-214512's deck counted the seven approvals executed
+// on run 164140 as pending again, because only the displayed run's own
+// executions[] was consulted. Run files are large, so each file's
+// executions are cached by path + mtime + size and re-read only on change.
+const executionsCache = new Map();
+function collectExecutions(sharedRoot) {
+    const collected = [];
+    for (const entry of listRunFiles(sharedRoot)) {
+        if (!entry.available) continue;
+        const cached = executionsCache.get(entry.path);
+        let executions;
+        if (cached && cached.mtimeMs === entry.mtimeMs && cached.size === entry.size) {
+            executions = cached.executions;
+        } else {
+            try {
+                const payload = readRunFile(entry.path);
+                executions = Array.isArray(payload.executions) ? payload.executions : [];
+            } catch (error) {
+                executions = [];
+            }
+            executionsCache.set(entry.path, { mtimeMs: entry.mtimeMs, size: entry.size, executions });
+        }
+        for (const execution of executions) {
+            if (!execution || typeof execution.executedAt !== 'string') continue;
+            collected.push({ ...execution, runId: entry.runId });
+        }
+    }
+    collected.sort((a, b) => a.executedAt.localeCompare(b.executedAt));
+    return collected;
+}
+
 // { runId, payload } for a run id in the shared dir, or null. The id is
 // validated against the run-id shape so a request can never name a path.
 function loadRun(sharedRoot, runId) {
@@ -503,12 +537,18 @@ function buildDeck(runPayload, store, options = {}) {
     const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
-    // its fresh action; the run file's executions[] dates it.
-    const executions = Array.isArray(payload.executions) ? payload.executions : [];
-    const lastExecutedAt = executions.reduce((latest, entry) => {
-        const at = entry && typeof entry.executedAt === 'string' ? entry.executedAt : '';
-        return at > latest ? at : latest;
-    }, '');
+    // its fresh action; the run file's executions[] dates it. Executions
+    // recorded on OTHER run files (options.executions, see collectExecutions)
+    // count too: an approval handed to the phone from an earlier run's deck
+    // is not pending again on today's.
+    const ownExecutions = (Array.isArray(payload.executions) ? payload.executions : [])
+        .map((entry) => (entry && typeof entry === 'object' ? { ...entry, runId: entry.runId || runId } : entry));
+    const otherExecutions = (Array.isArray(options.executions) ? options.executions : [])
+        .filter((entry) => entry && typeof entry === 'object' && entry.runId !== runId);
+    const executions = ownExecutions.concat(otherExecutions)
+        .filter((entry) => entry && typeof entry.executedAt === 'string')
+        .sort((a, b) => a.executedAt.localeCompare(b.executedAt));
+    const lastExecutedAt = executions.length > 0 ? executions[executions.length - 1].executedAt : '';
     const executedMark = (entry) => {
         const event = analyzed[entry.sourceIndex];
         if (!event || !event._ownerReviewApproved) return null;
@@ -659,6 +699,7 @@ function buildDeck(runPayload, store, options = {}) {
         counts,
         lastExecution: lastExecution ? {
             at: lastExecution.executedAt || null,
+            runId: lastExecution.runId || null,
             via: lastExecution.via || null,
             processed: Number(lastExecution.processed) || 0,
             failed: Number(lastExecution.failed) || 0,
@@ -702,6 +743,7 @@ module.exports = {
     pickLatestRunId,
     readRunFile,
     loadRun,
+    collectExecutions,
     emptyDecisionStore,
     normalizeDecisionStore,
     loadDecisions,

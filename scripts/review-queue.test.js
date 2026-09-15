@@ -369,3 +369,42 @@ test('buildDeck: a row the phone already wrote stays decided even when the fresh
   assert.equal(cleared.cards.length, 0);
   assert.equal(cleared.decided[0].decision.stampedAt, '2030-01-01T00:00:00.000Z');
 });
+
+test('buildDeck: an execution recorded on an earlier run keeps the approval executed on a later run\'s deck', () => {
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' }, { now: new Date('2030-01-04T00:00:00Z') }));
+  const later = runPayload({ analyzedEvents: [newEvent()] });
+  const prior = [{ runId: '20300103-050000', executedAt: '2030-01-05T00:00:00.000Z', via: 'owner-review', processed: 6, failed: 0, actionCounts: { create: 1, update: 5 } }];
+  const deck = rq.buildDeck(later, store, { runId: '20300106-050000', executions: prior });
+  assert.equal(deck.decided[0].pendingExecute, false, 'handed to the phone from the earlier run → not pending again');
+  assert.equal(deck.decided[0].executed, null, 'no written row on THIS run, so no mark');
+  assert.equal(deck.lastExecution.runId, '20300103-050000');
+  assert.equal(deck.lastExecution.at, '2030-01-05T00:00:00.000Z');
+  assert.equal(deck.lastExecution.processed, 6);
+  // An approval newer than every execution anywhere is still pending.
+  const fresh = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'event|furball|rockbar|2030-10-03', verdict: 'approve' }, { now: new Date('2030-01-07T00:00:00Z') }));
+  assert.equal(rq.buildDeck(later, fresh, { runId: '20300106-050000', executions: prior }).decided[0].pendingExecute, true);
+  // The displayed run's own, newer execution wins the summary line.
+  const own = runPayload({ analyzedEvents: [newEvent()], executions: [{ executedAt: '2030-01-08T00:00:00.000Z', via: 'owner-review', processed: 2 }] });
+  const ownDeck = rq.buildDeck(own, fresh, { runId: '20300106-050000', executions: prior });
+  assert.equal(ownDeck.lastExecution.runId, ownDeck.runId, 'tagged with the displayed run (its payload names the run)');
+  assert.equal(ownDeck.decided[0].pendingExecute, false);
+});
+
+test('collectExecutions gathers every run file\'s executions newest-last, tagged with the run id, and caches by mtime', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-exec-'));
+  const runsDir = path.join(dir, 'runs');
+  fs.mkdirSync(runsDir);
+  const write = (runId, executions) => fs.writeFileSync(path.join(runsDir, `${runId}.json`), JSON.stringify({ summary: { runId }, analyzedEvents: [], executions }));
+  write('20300101-050000', [{ executedAt: '2030-01-01T10:00:00.000Z', via: 'owner-review', processed: 1 }]);
+  write('20300102-050000', []);
+  write('20300103-050000', [{ executedAt: '2030-01-03T10:00:00.000Z', via: 'owner-review', processed: 2 }, { executedAt: '2030-01-02T23:00:00.000Z', via: 'owner-review', processed: 3 }]);
+  fs.writeFileSync(path.join(runsDir, '.20300104-050000.json.icloud'), '');
+  const all = rq.collectExecutions(dir);
+  assert.deepEqual(all.map((entry) => [entry.runId, entry.executedAt, entry.processed]), [
+    ['20300101-050000', '2030-01-01T10:00:00.000Z', 1],
+    ['20300103-050000', '2030-01-02T23:00:00.000Z', 3],
+    ['20300103-050000', '2030-01-03T10:00:00.000Z', 2]
+  ]);
+  assert.deepEqual(rq.collectExecutions(dir), all, 'stable on a second read');
+  assert.deepEqual(rq.collectExecutions(path.join(dir, 'missing')), []);
+});
