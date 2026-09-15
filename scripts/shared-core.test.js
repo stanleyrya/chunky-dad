@@ -23125,3 +23125,70 @@ test('data/promoters.json: Urban Bear is a curated promoter matched by title, no
   const furballParty = core.matchEventToPromoter({ title: 'UNDERBEAR NYC', ticketUrl: 'https://events.ticketleap.com/tickets/furballnyc/underbear' });
   assert.notEqual(furballParty && furballParty.entry && furballParty.entry.name, 'Urban Bear', 'a title that never names Urban Bear is not its event');
 });
+
+test('prepareParsedEvents stamps the source page URL before the static rung, so the listing rule fires in the live crawl', async () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const parserConfig = {
+      name: 'Rockbar',
+      urls: ['https://www.rockbarnyc.com/calendar'],
+      metadata: { website: { value: 'https://www.rockbarnyc.com' } }
+    };
+    // As the crawl hands them over: no _sourcePageUrl on the record yet.
+    const [event] = await core.prepareParsedEvents([{
+      title: 'UNDERBEAR: HEAT WAVE',
+      website: 'https://www.rockbarnyc.com/calendar',
+      startDate: new Date('2026-08-22T01:00:00Z')
+    }], parserConfig, {}, 'multi-event-page', null, null, 'https://www.rockbarnyc.com/calendar');
+    assert.equal(event._sourcePageUrl, 'https://www.rockbarnyc.com/calendar');
+    assert.equal(event.website, 'https://www.rockbarnyc.com', 'the listing is not this event\'s page');
+    // A record that already knows its (deeper) source page keeps it.
+    const [detail] = await core.prepareParsedEvents([{
+      title: 'UNDERBEAR: HEAT WAVE',
+      website: 'https://www.rockbarnyc.com/events/heat-wave',
+      _sourcePageUrl: 'https://www.rockbarnyc.com/events/heat-wave',
+      startDate: new Date('2026-08-22T01:00:00Z')
+    }], parserConfig, {}, 'event-page', null, null, 'https://www.rockbarnyc.com/calendar');
+    assert.equal(detail._sourcePageUrl, 'https://www.rockbarnyc.com/events/heat-wave');
+    assert.equal(detail.website, 'https://www.rockbarnyc.com/events/heat-wave');
+  } finally { restore(); }
+});
+
+test('imageFilenameNamesEvent: every title token in the decoded filename, at least two of them', () => {
+  const core = createCore();
+  const furball = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp';
+  assert.equal(core.imageFilenameNamesEvent(furball, { title: 'FURBALL POOL PARTY' }), true);
+  assert.equal(core.imageFilenameNamesEvent(furball, { title: '🍸 Cocktail Party' }), false, 'one shared word is a coincidence');
+  assert.equal(core.imageFilenameNamesEvent('https://files.elfsightcdn.com/a/b/Mega-Bear-Blast-2026.jpg', { title: 'MEGA BEAR BLAST!' }), true);
+  assert.equal(core.imageFilenameNamesEvent('https://d3flpus5evl89n.cloudfront.net/56b4/6a9e/scaled_1024.jpg', { title: 'Urban Bear: Mega Bear Blast at Rockbar' }), false, 'an opaque asset name names nobody');
+  assert.equal(core.imageFilenameNamesEvent('https://cdn.example.com/party.jpg', { title: 'Party' }), false, 'a one-token title never qualifies');
+});
+
+test('withholdSharedFlyerImages: the event the flyer\'s filename names keeps it, the cross-paired one loses it', () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const flyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp';
+    const events = [
+      { title: '🍸 Cocktail Party', bar: 'Delfin Beach Resort', image: flyer },
+      { title: 'FURBALL POOL PARTY', bar: 'FURBALL', image: flyer, imageVertical: flyer }
+    ];
+    const withheld = core.withholdSharedFlyerImages(events);
+    assert.deepEqual(withheld.map(event => event.title), ['🍸 Cocktail Party']);
+    assert.equal(events[0].image, undefined);
+    assert.equal(events[1].image, flyer, 'the named owner keeps its flyer');
+    assert.equal(events[1].imageVertical, flyer);
+    assert.equal(events[1]._sharedFlyerWithheld, undefined);
+
+    // Two owners named by one filename: nobody keeps it.
+    const both = 'https://cdn.example.com/Furball-Pool-Party-and-Bear-Tea.jpg';
+    const pair = [
+      { title: 'Furball Pool Party', bar: 'Resort A', image: both },
+      { title: 'Bear Tea', bar: 'Club B', image: both }
+    ];
+    core.withholdSharedFlyerImages(pair);
+    assert.equal(pair[0].image, undefined);
+    assert.equal(pair[1].image, undefined);
+  } finally { restore(); }
+});
