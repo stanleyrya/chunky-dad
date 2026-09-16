@@ -271,5 +271,14 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:36:0 #ec2b16:27:23 #f36d49:11:17 #c30604:9:21 #9c0302:5:18",
     "accent": "#ec2b16"
+  },
+  {
+    "slug": "urban-bear-roper-romp-afternoon-beer-burger-bust-7e32319f",
+    "url": "https://www.juliusbarny.com/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#1c1c1c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:62:0 #1a1a1a:30:0 #b3b3b3:2:0"
   }
 ]
