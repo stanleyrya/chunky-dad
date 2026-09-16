@@ -23224,17 +23224,24 @@ test('identity: a ticket link shared by 3+ records of a batch is a pass page, an
   assert.equal(core.getSameEventIdentitySignal({ ...gearAtBlueChairs, _ticketUrlFanIn: 7 }, foam, { requireCloseStartTimes: false }), null);
 });
 
-test('deduplicateEvents: a pass link on 3+ records is stamped as fan-in and folds nothing', async () => {
+test('deduplicateEvents: a pass link on 3+ records over 2+ nights is stamped as fan-in and folds nothing; one event\'s own ticket page on one night is not', async () => {
   const core = createCore();
   const pass = 'https://beefdip.com/tags/';
-  const day = (hourUtc, title, bar) => ({
-    title, bar, city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl: pass,
-    startDate: `2027-01-29T${String(hourUtc).padStart(2, '0')}:00:00.000Z`, endDate: `2027-01-29T${String(hourUtc + 2).padStart(2, '0')}:00:00.000Z`
+  const on = (date, hourUtc, title, bar, ticketUrl = pass) => ({
+    title, bar, city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl,
+    startDate: `${date}T${String(hourUtc).padStart(2, '0')}:00:00.000Z`, endDate: `${date}T${String(hourUtc + 2).padStart(2, '0')}:00:00.000Z`
   });
-  const events = [day(18, 'MAD.BEAR FOAM POOL PARTY', 'Blue Chairs Resort'), day(20, 'BEARAOKE', 'Blue Chairs Rooftop'), day(4, 'FURBALL GEAR NIGHT', 'CC Slaughters')];
+  const events = [on('2027-01-29', 18, 'MAD.BEAR FOAM POOL PARTY', 'Blue Chairs Resort'), on('2027-01-28', 20, 'BEARAOKE', 'Blue Chairs Rooftop'), on('2027-01-30', 4, 'FURBALL GEAR NIGHT', 'CC Slaughters')];
   const out = await core.deduplicateEvents(events, null);
   assert.equal(out.length, 3, 'three parties on one pass link stay three');
   assert.ok(out.every(event => event._ticketUrlFanIn === 3), 'each record carries the batch finding');
+
+  // One night, one bar, one event's own ticket page under three spellings: not a pass page.
+  const own = 'https://www.sickening.events/e/goldiloxx-chicago/tickets';
+  const twins = [on('2027-01-29', 18, 'GOLDILOXX Chicago', 'Jackhammer', own), on('2027-01-29', 18, 'Goldiloxx: Bear Tea', 'Jackhammer', own), on('2027-01-29', 18, 'GOLDILOXX', 'Jackhammer', own)];
+  const folded = await core.deduplicateEvents(twins, null);
+  assert.equal(folded.length, 1, 'the ticket link still folds the twins');
+  assert.equal(folded[0]._ticketUrlFanIn, undefined);
 });
 
 test('identity: same place, same start instant and the same curated brand is place-exact-start (festival note vs titled event)', () => {

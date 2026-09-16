@@ -18864,3 +18864,32 @@ test('image pairing: a flyer with a home segment is never moved to a far segment
   const rescued = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, orphan, ocrResults);
   assert.equal(rescued[0], url);
 });
+
+test('image pairing: a date heading + title cut off from its card is a header fragment and claims no image', () => {
+  const parser = createParser();
+  const segments = [
+    { lines: ['TUESDAY JANUARY 26, 2027', 'SPLASH! Classic Anthems Pool Party'] },
+    { lines: ['SPLASH! Classic Anthems Pool Party', 'Tue Jan 26 • 11AM–7PM • Hotel Delfin', 'Pool Party'] },
+    { lines: ['BEARAOKE', 'Tue Jan 26 • 9:30PM • Blue Chairs Rooftop'] }
+  ];
+  const eligibility = parser.buildSegmentPairingEligibility(segments);
+  assert.deepEqual(eligibility, [false, true, true]);
+  assert.equal(parser.isDateOnlyLine('TUESDAY JANUARY 26, 2027'), true);
+  assert.equal(parser.isDateOnlyLine('Sat, Oct 3rd'), true);
+  assert.equal(parser.isDateOnlyLine('Tue Jan 26 • 11AM–7PM • Hotel Delfin'), false);
+  assert.equal(parser.isDateOnlyLine('SPLASH! Classic Anthems Pool Party'), false);
+
+  // The flyer printed inside the card goes to the card, not the fragment,
+  // however well the fragment's shorter text matches the flyer's OCR.
+  const bounds = [
+    { rawStart: 0, rawEnd: 80, matchedRecords: [{ text: segments[0].lines.join('\n') }] },
+    { rawStart: 100, rawEnd: 600, matchedRecords: [{ text: segments[1].lines.join('\n') }] },
+    { rawStart: 900, rawEnd: 1100, matchedRecords: [{ text: segments[2].lines.join('\n') }] }
+  ];
+  const url = 'https://beefdip.example/2026-01-27%20Splash%20Pool%20Party.webp';
+  const records = [{ url, start: 620, end: 660 }];
+  const ocrResults = [{ url, text: 'SPLASH! Classic Anthems Pool Party', imageClassification: 'event-flyer' }];
+  const matched = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, records, ocrResults, eligibility);
+  assert.equal(matched[0], null);
+  assert.equal(matched[1], url);
+});

@@ -11481,15 +11481,25 @@ class SharedCore {
         // Dog Tag") sits on every card of the festival and identifies none
         // of them. Stamped on the records too, so the calendar analysis
         // (which sees one record at a time) inherits the batch's finding.
+        // A pass page serves MANY NIGHTS; an event's own ticket page is
+        // shared only by that event's records (a listing stub, its detail
+        // page, its JSON-LD twin — four rows of GOLDILOXX Chicago on one
+        // sickening.events link, run 20260916-093055), all on one local day.
+        // So: 3+ records AND 2+ local days.
         const ticketUrlCounts = new Map();
+        const ticketUrlDays = new Map();
         const ticketKeyOf = (event) => this.getUrlDedupeKey(String((event && event.ticketUrl) || '').trim());
         for (const event of events) {
             const key = ticketKeyOf(event);
-            if (key) ticketUrlCounts.set(key, (ticketUrlCounts.get(key) || 0) + 1);
+            if (!key) continue;
+            ticketUrlCounts.set(key, (ticketUrlCounts.get(key) || 0) + 1);
+            const day = this.normalizeEventDateLocal(event.startDate, event.timezone || this.getCityTimezone(event.city) || null) || '';
+            if (!ticketUrlDays.has(key)) ticketUrlDays.set(key, new Set());
+            if (day) ticketUrlDays.get(key).add(day);
         }
         const excludedTicketUrlKeys = new Set();
         for (const [key, count] of ticketUrlCounts) {
-            if (count >= 3) excludedTicketUrlKeys.add(key);
+            if (count >= 3 && ticketUrlDays.get(key).size >= 2) excludedTicketUrlKeys.add(key);
         }
         for (const event of events) {
             const key = ticketKeyOf(event);
@@ -19919,8 +19929,8 @@ class SharedCore {
         return Boolean(keyA && keyA === keyOf(eventB));
     }
 
-    // A ticket link that is a pass page: shared by 3+ records of the batch
-    // being deduplicated (options.excludedTicketUrlKeys) or stamped as such
+    // A ticket link that is a pass page: shared by 3+ records on 2+ nights of
+    // the batch being deduplicated (options.excludedTicketUrlKeys) or stamped as such
     // on either record (_ticketUrlFanIn, so the calendar analysis inherits
     // the batch's finding).
     isFanInTicketUrl(eventA, eventB, options = {}) {

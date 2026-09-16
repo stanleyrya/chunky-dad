@@ -2632,6 +2632,54 @@ class AiWebParser {
         return !this.isVenueHoursNoticeTitle(this.deriveSegmentListingTitle(segment));
     }
 
+    // A line that is only a date: weekday/month words, day and year numbers,
+    // ordinals and punctuation ("TUESDAY JANUARY 26, 2027", "Sat, Oct 3rd").
+    isDateOnlyLine(line) {
+        const text = String(line || '').trim();
+        if (!text || !/\d/.test(text)) return false;
+        const stripped = text.toLowerCase()
+            .replace(/\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:[a-z]*day)?\b/g, ' ')
+            .replace(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/g, ' ')
+            .replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/g, ' ')
+            .replace(/\b\d{4}\b/g, ' ')
+            .replace(/[\s,.\-–—•/|:]+/g, '');
+        return stripped === '';
+    }
+
+    // Pairing eligibility for every segment of a page, in one pass: the
+    // venue-hours notice rule above, plus HEADER FRAGMENTS — a segment whose
+    // every non-date line reappears in its neighbour is the neighbour's date
+    // heading and title cut off from the card body (beefdip.com/planned-events,
+    // run 20260916-093055: "TUESDAY JANUARY 26, 2027 / SPLASH! Classic Anthems
+    // Pool Party" stood beside the SPLASH card, outbid the card for its own
+    // flyer on title similarity, and the card then took the next card's).
+    // A fragment claims no image; the card it belongs to keeps its flyer.
+    buildSegmentPairingEligibility(segments) {
+        const list = Array.isArray(segments) ? segments : [];
+        const contentLines = (segment) => (segment && Array.isArray(segment.lines) ? segment.lines : [])
+            .map(line => String(line || '').trim())
+            .filter(line => line && !this.isDateOnlyLine(line));
+        const normalizedLineSet = (segment) => new Set(contentLines(segment).map(line => line.toLowerCase()));
+        return list.map((segment, index) => {
+            if (!this.isSegmentEligibleForImagePairing(segment)) {
+                console.log(`🤖 AI Web: Segment ${index + 1} ("${this.deriveSegmentListingTitle(segment)}") is a venue-hours notice — not eligible for image pairing`);
+                return false;
+            }
+            const own = contentLines(segment);
+            if (own.length === 0 || own.length > 2) return true;
+            for (const neighbourIndex of [index + 1, index - 1]) {
+                const neighbour = list[neighbourIndex];
+                if (!neighbour) continue;
+                const neighbourLines = normalizedLineSet(neighbour);
+                if (neighbourLines.size > own.length && own.every(line => neighbourLines.has(line.toLowerCase()))) {
+                    console.log(`🤖 AI Web: Segment ${index + 1} ("${this.deriveSegmentListingTitle(segment)}") is a header fragment of segment ${neighbourIndex + 1} — not eligible for image pairing`);
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
     // A segment's page TEXT. Every segment constructor carries `lines` — the
     // same extractBodyParts corpus the prompt and the verbatim-evidence gate
     // read — so that is the authority. A segment that somehow arrives with no
@@ -4414,15 +4462,10 @@ class AiWebParser {
             return bounds;
         });
 
-        // Venue-hours notice segments ("Tuesday Closed") never take part in
-        // image pairing — a claimed flyer would be stolen from a real sibling.
-        const segmentEligibility = sourceSegments.map((segment, index) => {
-            const eligible = this.isSegmentEligibleForImagePairing(segment);
-            if (!eligible) {
-                console.log(`🤖 AI Web: Segment ${index + 1} ("${this.deriveSegmentListingTitle(segment)}") is a venue-hours notice — not eligible for image pairing`);
-            }
-            return eligible;
-        });
+        // Venue-hours notice segments ("Tuesday Closed") and header fragments
+        // never take part in image pairing — a claimed flyer would be stolen
+        // from a real sibling.
+        const segmentEligibility = this.buildSegmentPairingEligibility(sourceSegments);
 
         // Use OCR results for better image-segment pairing if available
         const matchedImageUrls = ocrResults && ocrResults.length > 0
@@ -4586,6 +4629,7 @@ class AiWebParser {
         // hint line was already present.
         const imageHasHomeSegment = records.map((imageRecord) => boundsList.some((bounds, index) =>
             (!eligibility || eligibility[index] !== false) && Number.isFinite(this.getSegmentImagePairingCost(bounds, imageRecord))));
+        const refusedOnTextAlone = new Map();
 
         const pairings = [];
         for (let i = 0; i < boundsList.length; i++) {
@@ -4611,8 +4655,7 @@ class AiWebParser {
 
                 if (Number.isFinite(pairingResult.cost)) {
                     if (!Number.isFinite(pairingResult.proximity) && imageHasHomeSegment[j]) {
-                        const segmentTitle = String(fallbackText || '').split('\n').map(line => line.trim()).filter(Boolean)[0] || '';
-                        console.log(`🖼️ PAIRING: not moving ${imageRecord.url} to segment ${i + 1} ("${segmentTitle}") on text alone — it sits in or beside another segment of the page`);
+                        refusedOnTextAlone.set(j, (refusedOnTextAlone.get(j) || 0) + 1);
                         continue;
                     }
                     pairings.push({
@@ -4624,6 +4667,10 @@ class AiWebParser {
                     });
                 }
             }
+        }
+
+        for (const [imageIndex, count] of refusedOnTextAlone) {
+            console.log(`🖼️ PAIRING: ${records[imageIndex].url} sits in or beside a segment of the page — not offered to ${count} far segment(s) on text similarity alone`);
         }
 
         pairings.sort((a, b) => {
@@ -13253,13 +13300,14 @@ class AiWebParser {
         if (sourceSegments.length < 2 || ocrList.length === 0) return sourceSegments;
         if (!this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return sourceSegments;
 
-        const segmentInfos = sourceSegments.map(segment => {
+        const pairingEligibility = this.buildSegmentPairingEligibility(sourceSegments);
+        const segmentInfos = sourceSegments.map((segment, index) => {
             const title = this.deriveSegmentListingTitle(segment);
             return {
                 segment,
                 title,
                 titleTokens: this.core.getCrossSourceTitleTokens(title),
-                eligible: this.isSegmentEligibleForImagePairing(segment),
+                eligible: pairingEligibility[index],
                 keys: this.getSegmentImageUrlKeys(segment, sourceUrl)
             };
         });
