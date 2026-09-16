@@ -23192,3 +23192,103 @@ test('withholdSharedFlyerImages: the event the flyer\'s filename names keeps it,
     assert.equal(pair[1].image, undefined);
   } finally { restore(); }
 });
+
+// ---------------------------------------------------------------------------
+// Review rejections, round 2 (run 20260916-053541): a festival pass link is
+// not an event identity, a shared brand carries the place+exact-start rung,
+// a listing's "Tonight at <bar>" row is not an event, and a rejection speaks
+// only for the proposal it was made on.
+// ---------------------------------------------------------------------------
+
+test('identity: a ticket link shared by 3+ records of a batch is a pass page, and never welds contradicting places', () => {
+  const core = createCore();
+  const pass = 'https://beefdip.com/tags/';
+  const base = { city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl: pass, _sourcePageUrl: 'https://beefdip.com/planned-events/' };
+  const foam = { ...base, title: 'MAD.BEAR FOAM POOL PARTY', bar: 'Blue Chairs Resort', startDate: '2027-01-29T18:00:00.000Z', endDate: '2027-01-30T00:00:00.000Z' };
+  const gear = { ...base, title: 'FURBALL GEAR NIGHT', bar: 'CC Slaughters', startDate: '2027-01-30T04:00:00.000Z', endDate: '2027-01-30T11:00:00.000Z' };
+
+  // Two cards of one page, two bars, one pass link, one Friday: two events.
+  assert.equal(core.getSameEventIdentitySignal(gear, foam, { requireCloseStartTimes: false }), null,
+    'contradicting bar names on one listing page veto the ticket-url rung');
+  // Across two sources a shared ticket link still corroborates a pair whose
+  // venue text disagrees (the sickening.events warehouse case).
+  assert.equal(core.getSameEventIdentitySignal({ ...gear, _sourcePageUrl: 'https://www.sickening.events/e/gear' }, foam, { requireCloseStartTimes: false }), 'ticket-url');
+
+  // Same bar, same pass link: the link alone still vouches for a pair…
+  const gearAtBlueChairs = { ...gear, bar: 'Blue Chairs Resort' };
+  assert.equal(core.getSameEventIdentitySignal(gearAtBlueChairs, foam, { requireCloseStartTimes: false }), 'ticket-url');
+  // …until the batch shows it on 3+ records (deduplicateEvents' fan-in set,
+  // or the stamp it leaves on the records for the calendar analysis).
+  const excludedTicketUrlKeys = new Set([core.getUrlDedupeKey(pass)]);
+  assert.equal(core.getSameEventIdentitySignal(gearAtBlueChairs, foam, { requireCloseStartTimes: false, excludedTicketUrlKeys }), null);
+  assert.equal(core.getSameEventIdentitySignal({ ...gearAtBlueChairs, _ticketUrlFanIn: 7 }, foam, { requireCloseStartTimes: false }), null);
+});
+
+test('deduplicateEvents: a pass link on 3+ records is stamped as fan-in and folds nothing', async () => {
+  const core = createCore();
+  const pass = 'https://beefdip.com/tags/';
+  const day = (hourUtc, title, bar) => ({
+    title, bar, city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl: pass,
+    startDate: `2027-01-29T${String(hourUtc).padStart(2, '0')}:00:00.000Z`, endDate: `2027-01-29T${String(hourUtc + 2).padStart(2, '0')}:00:00.000Z`
+  });
+  const events = [day(18, 'MAD.BEAR FOAM POOL PARTY', 'Blue Chairs Resort'), day(20, 'BEARAOKE', 'Blue Chairs Rooftop'), day(4, 'FURBALL GEAR NIGHT', 'CC Slaughters')];
+  const out = await core.deduplicateEvents(events, null);
+  assert.equal(out.length, 3, 'three parties on one pass link stay three');
+  assert.ok(out.every(event => event._ticketUrlFanIn === 3), 'each record carries the batch finding');
+});
+
+test('identity: same place, same start instant and the same curated brand is place-exact-start (festival note vs titled event)', () => {
+  const core = createCore();
+  core.promoters = [{ name: 'Urban Bear', aliases: ['Urban Bear NYC', 'Urban Bear Weekend'], website: 'https://www.theurbanbear.com', urlPatterns: ['theurbanbear.com'], bearAffinity: 'always' }];
+  const incoming = {
+    title: "Urban Bear Weekend: Beefy Boys Happy Hour at Ty's", bar: "Ty's Bar NYC", address: '114 Christopher St, New York, NY 10014, USA',
+    city: 'nyc', timezone: 'America/New_York', startDate: '2026-09-18T21:00:00.000Z', endDate: '2026-09-19T02:00:00.000Z', location: '40.7330387, -74.0052985'
+  };
+  const calendar = (notes) => ({
+    title: 'Hairy Happy Hour', name: 'Hairy Happy Hour', startDate: new Date('2026-09-18T21:00:00.000Z'), endDate: new Date('2026-09-19T02:00:00.000Z'),
+    coordinates: { lat: 40.7330387, lng: -74.0052985 }, calendarTimezone: 'America/New_York', notes
+  });
+  const withFestival = "bar: Ty's\naddress: 114 Christopher St, New York, NY 10014\nwebsite: https://tys.nyc\ntimezone: America/New_York\nfestival: Urban Bear NYC";
+  assert.equal(core.getSameEventIdentitySignal(incoming, calendar(withFestival)), 'place-exact-start');
+  assert.equal(core.getSameEventIdentitySignal(incoming, calendar(withFestival.replace(/\nfestival:.*$/, ''))), null,
+    'no shared brand, no shared word: two rooms until proven otherwise');
+  // "Ty's" leads "Ty's Bar NYC": one bar under two spellings, not a contradiction.
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: "Ty's" }, { bar: "Ty's Bar NYC" }), false);
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Rockbar' }, { bar: 'Bar' }), true, 'a stray short token still contradicts');
+});
+
+test("a listing's standing row (\"Tonight at Ty's\") is a placeholder, not an event, and prepareParsedEvents drops it", async () => {
+  const core = createCore();
+  assert.equal(core.isVenuePlaceholderTitle({ title: "Tonight at Ty's", bar: "Ty's Bar NYC" }), true);
+  assert.equal(core.isVenuePlaceholderTitle({ title: 'Tonight at Ty’s', bar: "Ty's Bar NYC" }), true, 'curly apostrophe');
+  assert.equal(core.isVenuePlaceholderTitle({ title: 'Today @ The Eagle', bar: 'Eagle NYC' }), true);
+  assert.equal(core.isVenuePlaceholderTitle({ title: "Bear Night Tonight at Ty's", bar: "Ty's Bar NYC" }), false, 'a party name keeps it');
+  assert.equal(core.isVenuePlaceholderTitle({ title: 'Sundays at Rockbar', bar: 'Rockbar' }), false, 'a weekday row is not judged here');
+  assert.equal(core.isVenuePlaceholderTitle({ title: "Tonight at Ty's", bar: '' }), false, 'no venue name: fail closed');
+  const kept = await core.prepareParsedEvents([
+    { title: "Tonight at Ty's", bar: "Ty's Bar NYC", city: 'nyc', startDate: '2026-09-16T22:00:00.000Z' },
+    { title: "Leather Daddy at Ty's", bar: "Ty's Bar NYC", city: 'nyc', startDate: '2026-09-24T22:00:00.000Z' }
+  ], {}, {}, 'multi-event-page', null, {}, 'https://tockify.com/api/ngevent?calname=thotyssey');
+  assert.deepEqual(kept.map(event => event.title), ["Leather Daddy at Ty's"]);
+});
+
+test('ownerDecisionCovers: a rejection covers a new card only while the card still shows what was rejected; "not bear" holds', () => {
+  const snapshot = {
+    kind: 'new', key: 'event|mad bear foam pool party|bluechairsresort|2027-01-29', title: 'MAD.BEAR FOAM POOL PARTY',
+    startDate: '2027-01-30T04:00:00.000Z', endDate: '2027-01-30T11:00:00.000Z', bar: 'Blue Chairs Resort', address: 'LÁZARO CÁRDENAS 254, PV MX',
+    url: 'https://www.furball.nyc', ticketUrl: 'https://beefdip.com/tags/', image: 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp'
+  };
+  const reject = { key: snapshot.key, kind: 'new', verdict: 'reject', reason: { tags: [], text: 'Image seems wrong?' }, snapshot };
+  const same = { ...snapshot, startDate: new Date(snapshot.startDate), url: 'http://furball.nyc/', image: `${snapshot.image}?w=800` };
+  assert.equal(SharedCore.ownerDecisionCovers(reject, same), true, 'spelling of a link and an image size parameter are not a change');
+  assert.deepEqual(SharedCore.getOwnerReviewDrift(reject, same), []);
+  const fixed = { ...snapshot, url: 'https://beefdip.com/tags/', image: 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20MadBear%20Foam%20Party.webp' };
+  assert.equal(SharedCore.ownerDecisionCovers(reject, fixed), false, 'the fixed card comes back');
+  assert.deepEqual(SharedCore.getOwnerReviewDrift(reject, fixed), ['url', 'image']);
+  assert.equal(SharedCore.ownerDecisionCovers({ ...reject, reason: { tags: ['not bear'], text: '' } }, fixed), true, 'not bear is about the party');
+  assert.equal(SharedCore.ownerDecisionCovers({ ...reject, snapshot: null }, fixed), true, 'a decision stored without a snapshot still covers its key');
+  assert.equal(SharedCore.ownerDecisionCovers({ ...reject, verdict: 'approve' }, fixed), true, 'approvals are by key');
+  // Merges: drift is the proposed values that were not okayed/rejected as shown.
+  const rejectMerge = { key: 'event|m', kind: 'merge', verdict: 'reject', snapshot: { kind: 'merge', changes: { title: { from: 'A', to: 'B' } } } };
+  assert.deepEqual(SharedCore.getOwnerReviewDrift(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), ['url']);
+});

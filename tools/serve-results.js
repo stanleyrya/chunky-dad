@@ -803,6 +803,20 @@ function renderReviewBarCard(entry, ctx = {}) {
 // read from the full analyzed event at deck time and absent on entries
 // re-rendered from a stored snapshot. `ctx` = { adapter, core } for the maps
 // URL builders, link labels and distances; every part degrades without it.
+// A card the owner already judged, back because the scraper now shows
+// something else for it (tools/review-queue.js attaches `prior`): say so,
+// with the earlier reason and what changed, so a fix gets its second look
+// with the first verdict in view.
+function renderReviewPriorRow(prior) {
+    if (!prior || (prior.verdict !== 'reject' && prior.verdict !== 'approve')) return '';
+    const when = prior.stampedAt ? String(prior.stampedAt).slice(0, 10) : '';
+    const reason = prior.reason
+        ? [Array.isArray(prior.reason.tags) ? prior.reason.tags.join(', ') : '', prior.reason.text || ''].filter(Boolean).join(' — ')
+        : '';
+    const drift = Array.isArray(prior.drift) && prior.drift.length > 0 ? `changed since: ${prior.drift.join(', ')}` : 'nothing changed';
+    return `<div class="prior">↩︎ You ${prior.verdict === 'reject' ? 'rejected' : 'approved'} this${when ? ` on ${escapeHtmlText(when)}` : ''}${reason ? ` — “${escapeHtmlText(reason)}”` : ''}. Back for a second look: ${escapeHtmlText(drift)}.</div>`;
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
@@ -846,6 +860,7 @@ function renderReviewCard(entry, ctx = {}) {
     return `<div class="card-body">
   ${renderReviewThumb(display, proposal.image)}
   <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isOverride ? '🗓️ Override — this night only' : isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
+  ${renderReviewPriorRow(entry.prior)}
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
   ${overrideNight}
@@ -938,10 +953,17 @@ function renderReviewPage(deck, options = {}) {
 @media (prefers-color-scheme: dark) { :root { --bg:#151412; --card:#23211d; --ink:#f2efe9; --muted:#a39d92; --line:#3a362f; --shadow:0 12px 32px rgba(0,0,0,0.55); } }
 * { box-sizing:border-box; }
 html, body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
+/* iOS Safari zoom traps: a double-tap on a button (two quick swipes or
+   taps on Approve/Reject) is a double-tap-to-zoom unless the element opts
+   out with touch-action:manipulation, and focusing any form control whose
+   font is under 16px auto-zooms the page in (and back out on blur) — the
+   reject sheet's textarea did exactly that. Pinch-zoom stays allowed. */
+html, body, button, a, .controls, .sheet, .top { touch-action:manipulation; }
+select, textarea, input { font-size:16px; }
 a { color:var(--accent); }
 .top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--bg); border-bottom:1px solid var(--line); }
 .top h1 { font-size:17px; margin:0; }
-.top select { font:inherit; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.top select { font:inherit; font-size:16px; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
 .pills { display:flex; gap:6px; flex-wrap:wrap; }
 .pill { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer; }
 .pill.on { border-color:var(--accent); color:var(--ink); font-weight:600; }
@@ -1003,6 +1025,7 @@ a { color:var(--accent); }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.prior { margin:0 0 8px; padding:6px 10px; border:1px dashed var(--no); border-radius:10px; font-size:13px; }
 .bear-stored { font-weight:600; }
 h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .line { margin:3px 0; }
@@ -1041,7 +1064,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .sheet.open { display:flex; }
 .sheet .panel { width:100%; max-width:560px; margin:0 auto; background:var(--card); border-radius:18px 18px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
 .sheet h3 { margin:0 0 10px; font-size:16px; }
-.sheet textarea { width:100%; min-height:72px; font:inherit; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-top:10px; }
+.sheet textarea { width:100%; min-height:72px; font:inherit; font-size:16px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-top:10px; }
 .sheet .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
 .sheet .actions button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; }
 .empty { text-align:center; color:var(--muted); padding:60px 20px; }
@@ -1791,6 +1814,14 @@ async function handleRequest(state, req, res) {
             const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict);
             reviewQueue.saveBearVerdicts(verdictsPath, result.verdicts);
             console.log(`Review: ${verdict} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"`);
+            if (verdict === 'bear') {
+                const decisionsPath = reviewQueue.getDecisionsPath(sharedRoot);
+                const cleared = reviewQueue.clearNotBearRejections(reviewQueue.loadDecisions(decisionsPath), core, body.event || {});
+                if (cleared.removed.length > 0) {
+                    reviewQueue.saveDecisions(decisionsPath, cleared.store);
+                    console.log(`Review: bear verdict also cleared ${cleared.removed.length} "not bear" rejection(s): ${cleared.removed.join(', ')}`);
+                }
+            }
             return sendJson(res, 200, { ok: true, entry: result.entry, verdicts: result.verdicts.length });
         } catch (error) {
             const status = /must be|no title identity/.test(error.message) ? 400 : 500;

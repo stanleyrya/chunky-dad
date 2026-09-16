@@ -4576,6 +4576,17 @@ class AiWebParser {
             }
         }
 
+        // An image with a HOME segment — one it sits in or beside by HTML
+        // position — is that segment's flyer, and text similarity may not
+        // carry it to a segment out of proximity range. beefdip.com/
+        // planned-events (run 20260916-053541): the FURBALL GEAR NIGHT
+        // flyer, printed inside that card 13,000 characters down the page,
+        // was handed to the SPLASH pool party's card on a "pool party" text
+        // overlap, and the SPLASH card's own flyer went unoffered because a
+        // hint line was already present.
+        const imageHasHomeSegment = records.map((imageRecord) => boundsList.some((bounds, index) =>
+            (!eligibility || eligibility[index] !== false) && Number.isFinite(this.getSegmentImagePairingCost(bounds, imageRecord))));
+
         const pairings = [];
         for (let i = 0; i < boundsList.length; i++) {
             // Ineligible (venue-hours notice) segments never enter the pairing
@@ -4599,6 +4610,11 @@ class AiWebParser {
                 );
 
                 if (Number.isFinite(pairingResult.cost)) {
+                    if (!Number.isFinite(pairingResult.proximity) && imageHasHomeSegment[j]) {
+                        const segmentTitle = String(fallbackText || '').split('\n').map(line => line.trim()).filter(Boolean)[0] || '';
+                        console.log(`🖼️ PAIRING: not moving ${imageRecord.url} to segment ${i + 1} ("${segmentTitle}") on text alone — it sits in or beside another segment of the page`);
+                        continue;
+                    }
                     pairings.push({
                         segmentIndex: i,
                         imageIndex: j,
@@ -4664,10 +4680,10 @@ class AiWebParser {
         const similarityRescueClassifications = ['ad-banner', 'multi-event-flyer'];
         const needsSimilarityRescue = similarityRescueClassifications.includes(pairingClassification);
         if (pairingClassification && pairingClassification !== 'event-flyer' && !needsSimilarityRescue) {
-            return { cost: Infinity, score: -Infinity };
+            return { cost: Infinity, score: -Infinity, proximity: proximityCost };
         }
         if (!ocrResult) {
-            return { cost: Infinity, score: -Infinity };
+            return { cost: Infinity, score: -Infinity, proximity: proximityCost };
         }
         if (!pairingClassification) {
             console.log(`🤖 AI Web: OCR result for ${ocrResult.url || 'an image'} carries no imageClassification — pairing on its text instead of refusing it`);
@@ -4705,17 +4721,17 @@ class AiWebParser {
         // elevated bar they are refused exactly as before this rescue existed.
         if (needsSimilarityRescue) {
             if (similarity < 0.4) {
-                return { cost: Infinity, score: -Infinity };
+                return { cost: Infinity, score: -Infinity, proximity: proximityCost };
             }
             const rescueSegmentTitle = String(segmentText || '').split('\n').map(line => line.trim()).filter(Boolean)[0] || '';
             console.log(`🖼️ PAIRING: allowing ${pairingClassification} image ${ocrResult.url || ''} for segment "${rescueSegmentTitle}" — flyer text strongly matches (similarity ${similarity.toFixed(2)} ≥ 0.40)`);
         }
 
         if (!Number.isFinite(cost)) {
-            return { cost: Infinity, score: -Infinity };
+            return { cost: Infinity, score: -Infinity, proximity: proximityCost };
         }
 
-        return { cost, score };
+        return { cost, score, proximity: proximityCost };
     }
 
     getSegmentImagePairingCost(segmentBounds, imageRecord) {

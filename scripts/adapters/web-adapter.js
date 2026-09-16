@@ -807,6 +807,35 @@ class WebAdapter {
         });
     }
 
+    // parserResults[] in a saved run carried every raw record a second time
+    // (events + bearDroppedEvents, each with its `_parserConfig`,
+    // `_aiPrompts`, `_aiValidation`, `_fieldPriorities` working keys): 7.7MB
+    // of the 12.3MB run 20260916-053541, and the phone downloads and parses
+    // all of it before a reviewed execute can start. Nothing reads those
+    // working keys back from a saved file — the results UI reads
+    // analyzedEvents and the top-level bearDroppedEvents, the deck reads
+    // events[].key, replay-run the public fields — so the saved copy keeps
+    // the public fields only. Shallow copies: the live objects stay intact.
+    sanitizeParserResultsForRunSave(parserResults) {
+        if (!Array.isArray(parserResults)) return [];
+        const publicFields = (event) => {
+            if (!event || typeof event !== 'object') return event;
+            const copy = {};
+            for (const key of Object.keys(event)) {
+                if (key.startsWith('_')) continue;
+                copy[key] = event[key];
+            }
+            return copy;
+        };
+        return parserResults.map((result) => {
+            if (!result || typeof result !== 'object') return result;
+            const copy = { ...result };
+            if (Array.isArray(copy.events)) copy.events = copy.events.map(publicFields);
+            if (Array.isArray(copy.bearDroppedEvents)) copy.bearDroppedEvents = this.sanitizeDroppedEntriesForRunSave(copy.bearDroppedEvents);
+            return copy;
+        });
+    }
+
     // The phone stringifies its run payload plainly (and a cycle fails the
     // save); Node results occasionally self-reference, so try the identical
     // plain stringify first and only fall back to dropping repeated object
@@ -868,7 +897,7 @@ class WebAdapter {
                     config: results.config || null,
                     analyzedEvents: this.sanitizeEventsForRunSave(results.analyzedEvents || []),
                     bearDroppedEvents: this.sanitizeDroppedEntriesForRunSave(results.bearDroppedEvents),
-                    parserResults: results.parserResults || [],
+                    parserResults: this.sanitizeParserResultsForRunSave(results.parserResults),
                     errors: results.errors || [],
                     calendarHygiene: Array.isArray(results.calendarHygiene)
                         ? results.calendarHygiene

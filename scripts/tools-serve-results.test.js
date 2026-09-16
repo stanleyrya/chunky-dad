@@ -1047,3 +1047,16 @@ test('the header names a phone-sourced calendar baseline', () => {
   const label = formatCalendarSnapshotLabel({ la: { status: 'ok', fetchedAt: new Date(Date.now() - 12 * 60000).toISOString(), source: 'phone' }, nyc: { status: 'ok', fetchedAt: new Date(Date.now() - 3 * 3600000).toISOString() } });
   assert.equal(label, 'calendar snapshot: la 12m old (phone) · nyc 3.0h old');
 });
+
+test('renderReviewCard: a card back for a second look shows the earlier verdict, its reason and what changed', () => {
+  const ctx = buildReviewCtx();
+  const base = { kind: 'new', key: 'k', proposal: {
+    title: 'MAD.BEAR FOAM POOL PARTY', startDate: '2027-01-30T04:00:00.000Z', endDate: '2027-01-30T11:00:00.000Z', timezone: 'America/Mexico_City',
+    bar: 'Blue Chairs Resort', address: 'LÁZARO CÁRDENAS 254', city: 'pv', location: '', source: 'ai-web', url: '', ticketUrl: '', image: '', cover: '', description: '', changes: {}
+  }, display: {} };
+  const html = renderReviewCard({ ...base, prior: { verdict: 'reject', stampedAt: '2026-09-16T12:13:11.506Z', reason: { tags: [], text: 'Image seems wrong?' }, drift: ['image', 'url'] } }, ctx);
+  assert.ok(html.includes('class="prior"'));
+  assert.ok(html.includes('You rejected this on 2026-09-16 — “Image seems wrong?”'));
+  assert.ok(html.includes('changed since: image, url'));
+  assert.ok(!renderReviewCard(base, ctx).includes('class="prior"'), 'no prior, no row');
+});
