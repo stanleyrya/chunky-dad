@@ -129,7 +129,7 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 46849,
+      "dataLength": 47113,
       "eventCount": 40
     },
     "london": {
@@ -165,8 +165,8 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 15251,
-      "eventCount": 12
+      "dataLength": 16427,
+      "eventCount": 13
     },
     "nola": {
       "name": "New Orleans",
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 31205,
-      "eventCount": 28
+      "dataLength": 41674,
+      "eventCount": 36
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -225,8 +225,8 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 195,
-      "eventCount": 0
+      "dataLength": 18356,
+      "eventCount": 16
     },
     "sacramento": {
       "name": "Sacramento",
