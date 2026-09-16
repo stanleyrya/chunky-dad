@@ -194,7 +194,17 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "pv": {
-   "dates": [],
+   "dates": [
+    "2027-01-23",
+    "2027-01-24",
+    "2027-01-25",
+    "2027-01-26",
+    "2027-01-27",
+    "2027-01-28",
+    "2027-01-29",
+    "2027-01-30",
+    "2027-01-31"
+   ],
    "recurring": 0,
    "festivalUntil": "2027-01-31"
   },
@@ -229,12 +239,17 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "fort-lauderdale": {
-   "dates": [],
+   "dates": [
+    "2026-11-01"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "montreal": {
-   "dates": [],
+   "dates": [
+    "2026-09-19",
+    "2026-10-03"
+   ],
    "recurring": 0,
    "festivalUntil": "2027-04-11"
   },
