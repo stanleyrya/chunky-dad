@@ -1,13 +1,14 @@
 // City Configuration - Maps cities to their data and calendar IDs
 // Scraper config lives alongside city fields (calendar/timezone/patterns) and is used to generate scripts/scraper-cities.js.
 //
-// `visible: false` delists a city everywhere the site enumerates cities
-// (homepage cards/map, city switcher, generated pages + sitemap) but does
-// NOT touch scraping — generate-scraper-cities.js ignores the flag.
+// There is NO hand-maintained visibility flag (owner, 2026-09-16: "Don't
+// hardlist cities anymore. Always build, and only render when we have
+// events to show"). Every city here is BUILT — its page, calendar JSON, OG
+// card and sitemap entry — and the site RENDERS a city only while its
+// calendar has something upcoming (isCityActive below, fed by the generated
+// js/city-activity.data.js). A new city needs a calendar, nothing else.
 // `order` pins a city to the front of the homepage strip (lower first);
 // cities without one keep this file's order after the pinned ones.
-// Cities whose calendar has nothing upcoming are delisted AUTOMATICALLY at
-// runtime (see isCityActive below) — never flip `visible` for that.
 const CITY_CONFIG = {
     'nyc': {
         name: 'New York',
@@ -21,7 +22,6 @@ const CITY_CONFIG = {
         patterns: ['new york', 'nyc', 'manhattan', 'brooklyn', 'queens', 'bronx'],
         coordinates: { lat: 40.7831, lng: -73.9712 },
         mapZoom: 10,
-        visible: true
     },
     'seattle': {
         name: 'Seattle',
@@ -33,7 +33,6 @@ const CITY_CONFIG = {
         patterns: ['seattle'],
         coordinates: { lat: 47.6062, lng: -122.3321 },
         mapZoom: 10,
-        visible: true
     },
     'la': {
         name: 'Los Angeles',
@@ -47,7 +46,6 @@ const CITY_CONFIG = {
         patterns: ['los angeles', 'hollywood', 'west hollywood', 'weho', 'dtla', 'downtown los angeles', 'downtown la', 'downtown l.a.', 'long beach', 'santa monica', 'd>u>r>o'],
         coordinates: { lat: 34.0522, lng: -118.2437 },
         mapZoom: 10,
-        visible: true
     },
     'toronto': {
         name: 'Toronto',
@@ -59,7 +57,6 @@ const CITY_CONFIG = {
         patterns: ['toronto'],
         coordinates: { lat: 43.6532, lng: -79.3832 },
         mapZoom: 10,
-        visible: true
     },
     'london': {
         name: 'London',
@@ -71,7 +68,6 @@ const CITY_CONFIG = {
         patterns: ['london'],
         coordinates: { lat: 51.5074, lng: -0.1278 },
         mapZoom: 10,
-        visible: true
     },
     'chicago': {
         name: 'Chicago',
@@ -84,7 +80,6 @@ const CITY_CONFIG = {
         patterns: ['chicago', 'chi'],
         coordinates: { lat: 41.8781, lng: -87.6298 },
         mapZoom: 10,
-        visible: true
     },
     'berlin': {
         name: 'Berlin',
@@ -96,7 +91,6 @@ const CITY_CONFIG = {
         patterns: ['berlin'],
         coordinates: { lat: 52.5200, lng: 13.4050 },
         mapZoom: 10,
-        visible: true
     },
     'palm-springs': {
         name: 'Palm Springs',
@@ -108,7 +102,6 @@ const CITY_CONFIG = {
         patterns: ['palm springs', 'cathedral city', 'palm desert', 'rancho mirage', 'indian wells', 'la quinta', 'desert hot springs', 'greater palm springs'],
         coordinates: { lat: 33.8303, lng: -116.5453 },
         mapZoom: 10,
-        visible: true
     },
     'denver': {
         name: 'Denver',
@@ -120,7 +113,6 @@ const CITY_CONFIG = {
         patterns: ['denver'],
         coordinates: { lat: 39.7392, lng: -104.9903 },
         mapZoom: 10,
-        visible: true
     },
     'dallas': {
         name: 'Dallas',
@@ -132,7 +124,6 @@ const CITY_CONFIG = {
         patterns: ['dallas'],
         coordinates: { lat: 32.7767, lng: -96.7970 },
         mapZoom: 10,
-        visible: true
     },
     'dc': {
         name: 'DC',
@@ -144,7 +135,6 @@ const CITY_CONFIG = {
         patterns: ['dc', 'washington, dc', 'washington dc', 'district of columbia'],
         coordinates: { lat: 38.9072, lng: -77.0369 },
         mapZoom: 10,
-        visible: true
     },
     'vegas': {
         name: 'Las Vegas',
@@ -156,7 +146,6 @@ const CITY_CONFIG = {
         patterns: ['las vegas', 'vegas'],
         coordinates: { lat: 36.1699, lng: -115.1398 },
         mapZoom: 10,
-        visible: true
     },
     'atlanta': {
         name: 'Atlanta',
@@ -168,7 +157,6 @@ const CITY_CONFIG = {
         patterns: ['atlanta', 'atl'],
         coordinates: { lat: 33.7490, lng: -84.3880 },
         mapZoom: 10,
-        visible: true
     },
     'nola': {
         name: 'New Orleans',
@@ -181,7 +169,6 @@ const CITY_CONFIG = {
         patterns: ['new orleans'],
         coordinates: { lat: 29.9511, lng: -90.0715 },
         mapZoom: 10,
-        visible: true
     },
     'sf': {
         name: 'San Francisco',
@@ -193,7 +180,6 @@ const CITY_CONFIG = {
         patterns: ['san francisco', 'san fransisco', 'sf', 'castro', 'san jose', 'oakland'],
         coordinates: { lat: 37.7749, lng: -122.4194 },
         mapZoom: 10,
-        visible: true
     },
     'portland': {
         name: 'Portland',
@@ -205,7 +191,6 @@ const CITY_CONFIG = {
         patterns: ['portland'],
         coordinates: { lat: 45.5152, lng: -122.6784 },
         mapZoom: 10,
-        visible: true
     },
     'sitges': {
         name: 'Sitges',
@@ -217,7 +202,6 @@ const CITY_CONFIG = {
         patterns: ['sitges'],
         coordinates: { lat: 41.2379, lng: 1.8057 },
         mapZoom: 10,
-        visible: true
     },
     'boston': {
         name: 'Boston',
@@ -229,7 +213,6 @@ const CITY_CONFIG = {
         patterns: ['boston', 'boton', 'bostom', 'bostun', 'bostan'],
         coordinates: { lat: 42.3601, lng: -71.0589 },
         mapZoom: 10,
-        visible: true
     },
     'phoenix': {
         name: 'Phoenix',
@@ -241,7 +224,6 @@ const CITY_CONFIG = {
         patterns: ['phoenix'],
         coordinates: { lat: 33.4484, lng: -112.0740 },
         mapZoom: 10,
-        visible: true
     },
     'ptown': {
         name: 'Provincetown',
@@ -254,7 +236,6 @@ const CITY_CONFIG = {
         patterns: ['provincetown', 'ptown'],
         coordinates: { lat: 42.0526, lng: -70.1865 },
         mapZoom: 12,
-        visible: true
     },
     'san-diego': {
         name: 'San Diego',
@@ -266,7 +247,6 @@ const CITY_CONFIG = {
         patterns: ['san diego'],
         coordinates: { lat: 32.7157, lng: -117.1611 },
         mapZoom: 10,
-        visible: true
     },
     'philly': {
         name: 'Philadelphia',
@@ -279,7 +259,6 @@ const CITY_CONFIG = {
         patterns: ['philadelphia', 'philly'],
         coordinates: { lat: 39.9526, lng: -75.1652 },
         mapZoom: 10,
-        visible: true
     },
     'miami': {
         name: 'Miami',
@@ -291,7 +270,6 @@ const CITY_CONFIG = {
         patterns: ['miami', 'south beach', 'miami beach', 'key west'],
         coordinates: { lat: 25.7617, lng: -80.1918 },
         mapZoom: 10,
-        visible: false
     },
     'pv': {
         name: 'Puerto Vallarta',
@@ -315,7 +293,6 @@ const CITY_CONFIG = {
         patterns: ['puerto vallarta', 'vallarta', 'pv', 'p.v'],
         coordinates: { lat: 20.6534, lng: -105.2253 },
         mapZoom: 11,
-        visible: false
     },
     'austin': {
         name: 'Austin',
@@ -327,7 +304,6 @@ const CITY_CONFIG = {
         patterns: ['austin'],
         coordinates: { lat: 30.2672, lng: -97.7431 },
         mapZoom: 10,
-        visible: false
     },
     'houston': {
         name: 'Houston',
@@ -339,7 +315,6 @@ const CITY_CONFIG = {
         patterns: ['houston'],
         coordinates: { lat: 29.7604, lng: -95.3698 },
         mapZoom: 10,
-        visible: false
     },
     'sacramento': {
         name: 'Sacramento',
@@ -351,7 +326,6 @@ const CITY_CONFIG = {
         patterns: ['sacramento'],
         coordinates: { lat: 38.5816, lng: -121.4944 },
         mapZoom: 10,
-        visible: false
     },
     'poconos': {
         name: 'Poconos',
@@ -366,7 +340,6 @@ const CITY_CONFIG = {
         patterns: ['poconos', 'pocono', 'east stroudsburg'],
         coordinates: { lat: 41.0339, lng: -75.3188 },
         mapZoom: 10,
-        visible: false
     },
     'asbury-park': {
         name: 'Asbury Park',
@@ -378,7 +351,6 @@ const CITY_CONFIG = {
         patterns: ['asbury park', 'asbury'],
         coordinates: { lat: 40.2204, lng: -74.0121 },
         mapZoom: 13,
-        visible: false
     },
     'torremolinos': {
         name: 'Torremolinos',
@@ -390,7 +362,6 @@ const CITY_CONFIG = {
         patterns: ['torremolinos'],
         coordinates: { lat: 36.6213, lng: -4.4998 },
         mapZoom: 12,
-        visible: false
     },
     'fort-lauderdale': {
         name: 'Fort Lauderdale',
@@ -407,7 +378,6 @@ const CITY_CONFIG = {
         patterns: ['fort lauderdale', 'fll', 'ft lauderdale', 'wilton manors'],
         coordinates: { lat: 26.1224, lng: -80.1373 },
         mapZoom: 11,
-        visible: false
     },
     'montreal': {
         name: 'Montreal',
@@ -419,7 +389,6 @@ const CITY_CONFIG = {
         patterns: ['montreal', 'mtl'],
         coordinates: { lat: 45.5019, lng: -73.5674 },
         mapZoom: 11,
-        visible: false
     },
     'fire-island': {
         name: 'Fire Island',
@@ -431,7 +400,6 @@ const CITY_CONFIG = {
         patterns: ['fire island', 'cherry grove', 'fire island pines'],
         coordinates: { lat: 40.6482, lng: -73.0850 },
         mapZoom: 11,
-        visible: false
     },
     'vancouver': {
         name: 'Vancouver',
@@ -443,7 +411,6 @@ const CITY_CONFIG = {
         patterns: ['vancouver', 'yvr'],
         coordinates: { lat: 49.2827, lng: -123.1207 },
         mapZoom: 11,
-        visible: false
     },
     'bangkok': {
         name: 'Bangkok',
@@ -455,7 +422,6 @@ const CITY_CONFIG = {
         patterns: ['bangkok', 'bkk'],
         coordinates: { lat: 13.7563, lng: 100.5018 },
         mapZoom: 11,
-        visible: false
     },
     'paris': {
         name: 'Paris',
@@ -467,7 +433,6 @@ const CITY_CONFIG = {
         patterns: ['paris'],
         coordinates: { lat: 48.8566, lng: 2.3522 },
         mapZoom: 11,
-        visible: false
     },
     'manchester': {
         name: 'Manchester',
@@ -479,7 +444,6 @@ const CITY_CONFIG = {
         patterns: ['manchester', 'mcr'],
         coordinates: { lat: 53.4808, lng: -2.2426 },
         mapZoom: 11,
-        visible: false
     },
     'brighton': {
         name: 'Brighton',
@@ -491,7 +455,6 @@ const CITY_CONFIG = {
         patterns: ['brighton', 'brighton and hove'],
         coordinates: { lat: 50.8225, lng: -0.1372 },
         mapZoom: 11,
-        visible: true
     },
     'birmingham': {
         name: 'Birmingham',
@@ -503,7 +466,6 @@ const CITY_CONFIG = {
         patterns: ['birmingham'],
         coordinates: { lat: 52.4862, lng: -1.8904 },
         mapZoom: 11,
-        visible: true
     },
     'dublin': {
         name: 'Dublin',
@@ -515,7 +477,6 @@ const CITY_CONFIG = {
         patterns: ['dublin'],
         coordinates: { lat: 53.3498, lng: -6.2603 },
         mapZoom: 11,
-        visible: false
     },
     'mexico-city': {
         name: 'Mexico City',
@@ -528,7 +489,6 @@ const CITY_CONFIG = {
         patterns: ['mexico city', 'cdmx'],
         coordinates: { lat: 19.4326, lng: -99.1332 },
         mapZoom: 11,
-        visible: false
     },
     'madrid': {
         name: 'Madrid',
@@ -540,7 +500,6 @@ const CITY_CONFIG = {
         patterns: ['madrid'],
         coordinates: { lat: 40.4168, lng: -3.7038 },
         mapZoom: 11,
-        visible: false
     },
     'amsterdam': {
         name: 'Amsterdam',
@@ -552,7 +511,6 @@ const CITY_CONFIG = {
         patterns: ['amsterdam'],
         coordinates: { lat: 52.3676, lng: 4.9041 },
         mapZoom: 11,
-        visible: false
     },
     'sao-paulo': {
         name: 'São Paulo',
@@ -565,7 +523,6 @@ const CITY_CONFIG = {
         patterns: ['sao paulo', 'são paulo'],
         coordinates: { lat: -23.5505, lng: -46.6333 },
         mapZoom: 11,
-        visible: false
     },
     'bogota': {
         name: 'Bogotá',
@@ -577,7 +534,6 @@ const CITY_CONFIG = {
         patterns: ['bogota', 'bogotá'],
         coordinates: { lat: 4.7110, lng: -74.0721 },
         mapZoom: 11,
-        visible: false
     },
     'honolulu': {
         name: 'Honolulu',
@@ -589,7 +545,6 @@ const CITY_CONFIG = {
         patterns: ['honolulu', 'hawaii', 'oahu', 'waikiki'],
         coordinates: { lat: 21.3069, lng: -157.8583 },
         mapZoom: 11,
-        visible: false
     },
     'hong-kong': {
         name: 'Hong Kong',
@@ -601,7 +556,6 @@ const CITY_CONFIG = {
         patterns: ['hong kong', 'hk'],
         coordinates: { lat: 22.3193, lng: 114.1694 },
         mapZoom: 11,
-        visible: false
     },
     'tokyo': {
         name: 'Tokyo',
@@ -613,7 +567,6 @@ const CITY_CONFIG = {
         patterns: ['tokyo'],
         coordinates: { lat: 35.6762, lng: 139.6503 },
         mapZoom: 11,
-        visible: false
     }
 };
 
@@ -625,12 +578,12 @@ function getCityConfig(cityKey) {
 // Helper function to get all available cities.
 // Cities with an `order` number come first (ascending); the rest keep this
 // file's order after them (Array.prototype.sort is stable).
-// Automated delist: js/city-activity.data.js (GENERATED by
+// The ONLY delist: js/city-activity.data.js (GENERATED by
 // tools/generate-city-activity.js, refreshed by CI whenever the calendars
-// change) summarises what each city calendar holds. A city with a calendar
-// that has nothing upcoming — no future single event, no open-ended recurring
-// event, no upcoming festival — is treated like `visible: false` at runtime,
-// and comes back by itself the moment something lands on its calendar.
+// change) summarises what each city calendar holds. A city with nothing
+// upcoming — no future single event, no open-ended recurring event, no
+// upcoming festival, or no processed calendar yet — is not rendered, and
+// comes back by itself the moment something lands on its calendar.
 // Without the file (or for a city it does not list) everything shows.
 function isCityActive(key) {
     const activity = (typeof window !== "undefined" && window.CITY_ACTIVITY && window.CITY_ACTIVITY.cities) || null;
@@ -650,7 +603,7 @@ function getAvailableCities() {
             key,
             ...CITY_CONFIG[key]
         }))
-        .filter(city => city.visible !== false && isCityActive(city.key))
+        .filter(city => isCityActive(city.key))
         .sort((a, b) => (a.order || Number.MAX_SAFE_INTEGER) - (b.order || Number.MAX_SAFE_INTEGER));
 }
 

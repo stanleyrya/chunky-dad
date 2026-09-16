@@ -382,7 +382,7 @@ function pruneCards(keep) {
 }
 
 /**
- * The cards for places rather than events: one per visible city, plus the home
+ * The cards for places rather than events: one per configured city, plus the home
  * page. Before this, /nyc/ shared a 1.3 MB photograph of the owner's head at
  * the wrong aspect ratio and emitted no twitter:image at all, and the home page
  * shared a 512x512 square — neither is a link preview.
@@ -450,7 +450,7 @@ function collectPlaceTargets() {
   const out = [];
 
   for (const [cityKey, cfg] of Object.entries(CITY_CONFIG)) {
-    if (!cfg || cfg.visible === false) continue;
+    if (!cfg) continue;
     const point = cfg.coordinates || {};
     const hasPoint = Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng));
     out.push({

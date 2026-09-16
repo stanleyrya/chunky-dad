@@ -45,7 +45,7 @@ async function fetchCalendarData() {
     const fetchPromises = [];
     
     for (const [cityKey, config] of Object.entries(cityConfig)) {
-        if (config.calendarId && config.visible) {
+        if (config.calendarId) {
             console.log(`📅 Fetching calendar for ${config.name} (${cityKey})`);
             
             const icalUrl = `https://calendar.google.com/calendar/ical/${config.calendarId}/public/basic.ics`;

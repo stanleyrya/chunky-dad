@@ -82,7 +82,7 @@ class CompactCardRenderer {
     internalCityHref(item) {
         const key = item.cityKey;
         const cfg = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG[key] : null;
-        if (!key || !cfg || cfg.visible === false) return null;
+        if (!key || !cfg) return null;
         const dates = window.getUpcomingEventDates ? getUpcomingEventDates(item) : item;
         const date = (dates && typeof dates.startDate === 'string') ? dates.startDate : null;
         return date ? `${key}/?view=week&date=${date}` : `${key}/`;
