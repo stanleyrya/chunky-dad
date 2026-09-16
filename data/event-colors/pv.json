@@ -1,7 +1,167 @@
 [
   {
+    "slug": "-cocktail-party-72c51e09",
+    "url": "http://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
+    "slug": "booze-cruise-1d04b529",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2a4c6c:20:7 #ed4d1e:14:20 #d4dbdc:14:1 #e4a256:13:12 #fdd20a:7:18",
+    "accent": "#ed4d1e"
+  },
+  {
+    "slug": "carnaval-night-mardi-gras-42e2fbed",
+    "url": "https://beefdip.com",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#866452:17:5 #b58363:16:8 #0d0e11:15:1 #6c3385:12:14 #4da94f:5:15",
+    "accent": "#6c3385"
+  },
+  {
+    "slug": "dinner-under-the-stars-tryst-12356a88",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
+    "slug": "drag-brunch-rooftop-pool-6bde928f",
+    "url": "http://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
     "slug": "festival-beefdip-bear-week-2027",
     "url": "https://beefdip.com/planned-events/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
+    "slug": "foam-pool-party-06eda3c4",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#553113:21:7 #945434:19:10 #120d13:16:1 #0bd265:5:20 #ef167d:3:24",
+    "accent": "#ef167d"
+  },
+  {
+    "slug": "furball-pool-party-692b7f78",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#45dbe8:21:12 #2483ac:19:11 #ee2d2c:13:23 #f5e82b:9:19 #5ead45:8:16",
+    "accent": "#ee2d2c"
+  },
+  {
+    "slug": "jungle-lust-neon-beach-party-345d0163",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3a0b12:18:7 #14020a:17:4 #33134c:14:10 #eb3b7c:10:21 #5d2a83:10:15",
+    "accent": "#eb3b7c"
+  },
+  {
+    "slug": "madbear-red-ball-64450d6f",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#13120c:25:1 #c82712:17:20 #831c0c:14:14 #d57e3c:8:13 #efb653:7:13",
+    "accent": "#c82712"
+  },
+  {
+    "slug": "papa-dirk-rooftop-cigar-social-08f1157b",
+    "url": "https://beefdip.com",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#020101:34:1 #1c120d:30:2 #3b2c2b:13:2 #64453b:10:5 #d11d1c:6:21",
+    "accent": "#d11d1c"
+  },
+  {
+    "slug": "pre-welcome-party-28882b0e",
+    "url": "http://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
+    "slug": "sweat-singlet-underwear-jockstrap-party-22959658",
+    "url": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0d13:41:1 #8c7962:13:4 #5a5343:11:3 #b3a261:9:9 #12344c:9:6",
+    "accent": "#b3a261"
+  },
+  {
+    "slug": "tidal-wave-0b71e4c3",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3da29e:19:9 #e88459:18:14 #ecc4ab:16:6 #7fceb3:9:9 #db1164:7:23",
+    "accent": "#db1164"
+  },
+  {
+    "slug": "welcome-t-dance-3c6cd27e",
+    "url": "https://beefdip.com",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f1e7aa:21:8 #cd8943:16:12 #963e1b:14:13 #e3b865:11:11 #f55b35:4:20",
+    "accent": "#963e1b"
+  },
+  {
+    "slug": "wet-wild-pool-beach-party-6b59383d",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#323424:33:3 #535434:19:5 #746a43:18:6 #84845c:14:6 #ada072:10:6",
+    "accent": "#746a43"
+  },
+  {
+    "slug": "white-party-50b21550",
+    "url": "https://beefdip.com",
     "faviconBg": "#e30309",
     "faviconFg": "#fde524",
     "faviconPlate": "#ffffff",

@@ -79,6 +79,15 @@
     "accent": "#922324"
   },
   {
+    "slug": "players-7f327916",
+    "url": "https://www.bearitmtl.com/event/players/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:59:0 #434343:11:0 #232323:9:0"
+  },
+  {
     "slug": "playground-thick-glazed-0e06efcb",
     "url": "https://www.bearitmtl.com/event/playground-thick-glazed/",
     "faviconBg": "#1a1a1a",

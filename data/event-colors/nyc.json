@@ -19,6 +19,12 @@
     "palette": "#ffffff:92:0 #cccccc:3:0 #a2a2a2:3:0"
   },
   {
+    "slug": "bear-milk-at-the-deep-end-44ca222f",
+    "paletteSource": "flyer",
+    "palette": "#1b1b1c:18:0 #3b3b3c:17:0 #040409:14:2 #944e3b:12:10 #b3836c:11:7",
+    "accent": "#944e3b"
+  },
+  {
     "slug": "bears-are-animals-4cf796ee",
     "url": "https://animal.nyc",
     "faviconBg": "#e51a1a",
@@ -117,6 +123,18 @@
     "accent": "#ca815e"
   },
   {
+    "slug": "fat-bunny-at-nowhere-5b4c768d",
+    "paletteSource": "flyer",
+    "palette": "#15168a:18:18 #13154c:18:10 #121cbb:17:23 #132dea:16:27 #8462cb:12:16",
+    "accent": "#132dea"
+  },
+  {
+    "slug": "fat-fuc-at-nowhere-78e31898",
+    "paletteSource": "flyer",
+    "palette": "#2b2b2b:19:0 #cab5b5:19:2 #5a6cbb:15:12 #7e9dd4:11:9 #a77d7e:7:5",
+    "accent": "#5a6cbb"
+  },
+  {
     "slug": "festival-urban-bear-nyc-2026",
     "url": "https://www.theurbanbear.com/urbanbearnyc",
     "faviconBg": "#141414",
@@ -178,6 +196,18 @@
     "accent": "#f8c709"
   },
   {
+    "slug": "gorditos-at-rockbar-0f31acb7",
+    "paletteSource": "flyer",
+    "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
+    "accent": "#d5ad8c"
+  },
+  {
+    "slug": "grunt-at-cmon-everybody-657361b5",
+    "paletteSource": "flyer",
+    "palette": "#060609:57:1 #231916:15:2 #363332:9:0 #98140f:3:17",
+    "accent": "#98140f"
+  },
+  {
     "slug": "hairy-happy-hour-50a44f8e",
     "url": "https://tys.nyc",
     "faviconBg": "#177c17",
@@ -186,6 +216,16 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:32:0 #188218:30:17 #051705:13:4 #0a400a:9:10",
     "accent": "#188218"
+  },
+  {
+    "slug": "leather-daddy-at-tys-19eaa976",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
+  },
+  {
+    "slug": "leather-daddy-at-tys-3568f504",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
   {
     "slug": "mega-bear-blast-closing-night-party-435aeee7",
@@ -261,6 +301,12 @@
     "paletteSource": "flyer",
     "palette": "#000001:26:1 #2c0c11:17:5 #030a34:15:8 #6c2522:10:10 #0b1167:6:14",
     "accent": "#0b1167"
+  },
+  {
+    "slug": "underbear-party-at-rockbar-49903d26",
+    "paletteSource": "flyer",
+    "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
+    "accent": "#7b3d1b"
   },
   {
     "slug": "urban-bear-nyc-opening-night-party-5788c695",
