@@ -980,6 +980,35 @@ class ScriptableAdapter {
     });
   }
 
+  // parserResults[] in a saved run carried every raw record a second time
+  // (events + bearDroppedEvents, each with its `_parserConfig`,
+  // `_aiPrompts`, `_aiValidation`, `_fieldPriorities` working keys): 7.7MB
+  // of the 12.3MB run 20260916-053541, and the phone downloads and parses
+  // all of it before a reviewed execute can start. Nothing reads those
+  // working keys back from a saved file — the results UI reads
+  // analyzedEvents and the top-level bearDroppedEvents, the deck reads
+  // events[].key, replay-run the public fields — so the saved copy keeps
+  // the public fields only. Shallow copies: the live objects stay intact.
+  sanitizeParserResultsForRunSave(parserResults) {
+      if (!Array.isArray(parserResults)) return [];
+      const publicFields = (event) => {
+          if (!event || typeof event !== 'object') return event;
+          const copy = {};
+          for (const key of Object.keys(event)) {
+              if (key.startsWith("_")) continue;
+              copy[key] = event[key];
+          }
+          return copy;
+      };
+      return parserResults.map((result) => {
+          if (!result || typeof result !== 'object') return result;
+          const copy = { ...result };
+          if (Array.isArray(copy.events)) copy.events = copy.events.map(publicFields);
+          if (Array.isArray(copy.bearDroppedEvents)) copy.bearDroppedEvents = this.sanitizeDroppedEntriesForRunSave(copy.bearDroppedEvents);
+          return copy;
+      });
+  }
+
   // Detect all-day events at save-time based on DateTime patterns
   isAllDayEvent(event) {
     if (!event || !event.startDate || !event.endDate) return false;
@@ -15675,6 +15704,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // override is logged. Returns the counts; never throws.
   // ---------------------------------------------------------------------
   async executeReviewedSavedRun(results, decisions) {
+    const executeStartedAt = Date.now();
     const summary = {
       approved: 0,
       rejected: 0,
@@ -15904,7 +15934,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         type: "manual",
         trigger: "owner-review",
       };
+      const writesDoneAt = Date.now();
       await this.persistExecutedSavedRunSnapshot(results);
+      const persistedAt = Date.now();
       await this.runPostRunHousekeeping(results, 30, {
         logRunId,
         pruneRuns: true,
@@ -15912,6 +15944,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // The phone's calendars are the truth the Mac run should compare
       // against next — snapshot the cities this plan touched.
       await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed execute timing — ${writesDoneAt - executeStartedAt}ms live analysis + writes, ${persistedAt - writesDoneAt}ms run-file save, ${Date.now() - persistedAt}ms log/metrics/cleanup + calendar snapshots`,
+      );
       await this.presentSavedRunExecutionNotice(
         "Calendar Updated",
         [
@@ -16194,7 +16229,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         bearDroppedEvents: this.sanitizeDroppedEntriesForRunSave(
           results.bearDroppedEvents,
         ),
-        parserResults: results.parserResults || [],
+        parserResults: this.sanitizeParserResultsForRunSave(results.parserResults),
         errors: results.errors || [],
         // Report-only hygiene checklist (scalars only) — persisted so a
         // saved-run display can re-render the section for auditing.

@@ -1178,3 +1178,19 @@ test('a search outside the snapshot window, or a stale snapshot, falls back to t
     shared.restore();
   }
 });
+
+test('sanitizeParserResultsForRunSave keeps the public fields of raw records and drops the working keys (both events and bear drops)', () => {
+  const adapter = { sanitizeDroppedEntriesForRunSave: WebAdapter.prototype.sanitizeDroppedEntriesForRunSave };
+  const raw = [{
+    name: 'BeefDip', parserType: 'ai-web', bearEvents: 1, totalEvents: 2, config: { parser: 'ai-web' },
+    events: [{ title: 'FURBALL GEAR NIGHT', key: 'k1', ticketUrl: 'https://beefdip.com/tags/', _parserConfig: { big: 'x'.repeat(50) }, _aiPrompts: [{}], _aiValidation: {}, _fieldPriorities: {} }],
+    bearDroppedEvents: [{ reason: 'no bear wording', _parserConfig: { big: 'x' }, event: { title: 'Looking', key: 'k2', _aiPrompts: [{}] } }]
+  }];
+  const slim = WebAdapter.prototype.sanitizeParserResultsForRunSave.call(adapter, raw);
+  assert.deepEqual(slim[0].events, [{ title: 'FURBALL GEAR NIGHT', key: 'k1', ticketUrl: 'https://beefdip.com/tags/' }]);
+  assert.deepEqual(slim[0].bearDroppedEvents, [{ reason: 'no bear wording', event: { title: 'Looking', key: 'k2' } }]);
+  assert.equal(slim[0].name, 'BeefDip');
+  assert.equal(slim[0].totalEvents, 2);
+  assert.ok(raw[0].events[0]._aiPrompts, 'the live record is untouched');
+  assert.deepEqual(WebAdapter.prototype.sanitizeParserResultsForRunSave.call(adapter, null), []);
+});

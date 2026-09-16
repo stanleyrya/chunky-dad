@@ -1467,6 +1467,42 @@ class SharedCore {
     }
 
     // The card + the decision snapshot: scalars only (persisted verbatim).
+    // The fields the owner sees on a NEW card — what a decision was about.
+    static getOwnerReviewFingerprintFields() {
+        return ['title', 'startDate', 'endDate', 'bar', 'address', 'url', 'ticketUrl', 'image'];
+    }
+
+    static normalizeOwnerReviewLinkValue(value) {
+        const text = SharedCore.normalizeOwnerReviewValue(value).toLowerCase();
+        if (!/^https?:\/\//.test(text)) return text;
+        return text.replace(/^https?:\/\/(www\.)?/, '').split('#')[0].split('?')[0].replace(/\/+$/, '');
+    }
+
+    static ownerDecisionSaysNotBear(decision) {
+        const tags = decision && decision.reason && Array.isArray(decision.reason.tags) ? decision.reason.tags : [];
+        return tags.some(tag => String(tag || '').trim().toLowerCase() === 'not bear');
+    }
+
+    // What changed between the proposal a decision was made on (its stored
+    // snapshot) and this proposal: for a merge the proposed values, for a
+    // new event the card's fields. Empty for a decision stored without a
+    // snapshot, and empty means the decision still covers the card.
+    static getOwnerReviewDrift(decision, proposal) {
+        const snapshot = decision && decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
+        if (!snapshot || !proposal || typeof proposal !== 'object') return [];
+        if (proposal.kind === 'merge' || proposal.kind === 'override') {
+            const proposed = proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+            const decided = snapshot.changes && typeof snapshot.changes === 'object' ? snapshot.changes : {};
+            return Object.keys(proposed).filter(field => !decided[field]
+                || SharedCore.normalizeOwnerReviewValue(decided[field].to) !== SharedCore.normalizeOwnerReviewValue(proposed[field].to));
+        }
+        const linkFields = new Set(['url', 'ticketUrl', 'image']);
+        return SharedCore.getOwnerReviewFingerprintFields().filter(field => {
+            const norm = linkFields.has(field) ? SharedCore.normalizeOwnerReviewLinkValue : SharedCore.normalizeOwnerReviewValue;
+            return norm(snapshot[field]) !== norm(proposal[field]);
+        });
+    }
+
     buildOwnerReviewProposal(event) {
         if (!event || typeof event !== 'object') return null;
         const key = this.getOwnerReviewKey(event);
@@ -1529,7 +1565,16 @@ class SharedCore {
         if (!decision || typeof decision !== 'object' || !proposal || typeof proposal !== 'object') return false;
         if (!decision.key || decision.key !== proposal.key) return false;
         if (decision.verdict !== 'approve' && decision.verdict !== 'reject') return false;
-        if (proposal.kind !== 'merge' && proposal.kind !== 'override') return true;
+        if (proposal.kind !== 'merge' && proposal.kind !== 'override') {
+            // A rejection speaks for the proposal it was made on. When the
+            // scraper later shows something else for the same card (a fixed
+            // flyer, a real event page, a corrected time or venue) the card
+            // comes back with the earlier verdict pinned on it — that is
+            // how a fix gets a second look. "Not bear" is about the party,
+            // not the proposal, and holds whatever changed.
+            if (decision.verdict === 'approve' || SharedCore.ownerDecisionSaysNotBear(decision)) return true;
+            return SharedCore.getOwnerReviewDrift(decision, proposal).length === 0;
+        }
         const proposed = proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
         const decided = decision.snapshot && decision.snapshot.changes && typeof decision.snapshot.changes === 'object'
             ? decision.snapshot.changes
@@ -9560,7 +9605,37 @@ class SharedCore {
             }
             event._pageClassification = pageClassification;
         });
-        return enrichedEvents;
+
+        const kept = [];
+        for (const event of enrichedEvents) {
+            if (this.isVenuePlaceholderTitle(event)) {
+                console.log(`🧽 PLACEHOLDER: dropped "${event.title}" — a when-word plus the venue's own name (${event.bar || event.venue}) is a listing's standing row, not an event`);
+                continue;
+            }
+            kept.push(event);
+        }
+        return kept;
+    }
+
+    // A listing's standing row — "Tonight at Ty's", "Today @ The Eagle" —
+    // says WHEN and WHERE and names no party: every title token that is not
+    // a when-word is a token of the venue's own name. Thotyssey's tockify
+    // feed publishes one such repeat row per bar it lists (uid 22092
+    // "Tonight at Ty's" / "Enjoy drinks at neighborhood bar Ty's", run
+    // 20260916-053541 — five nights of it reached the deck as new events).
+    // Owner ruling 2026-09-13: fragments are not events. Fails closed: no
+    // venue name, or any title token the venue doesn't own, keeps the row.
+    isVenuePlaceholderTitle(event) {
+        const title = String((event && event.title) || '').trim();
+        if (!title) return false;
+        const whenWord = /\b(tonight|tonite|today|this (?:evening|afternoon|weekend|week))\b/i;
+        if (!whenWord.test(this.decodeBasicHtmlEntities(title))) return false;
+        const venue = String((event && (event.bar || event.venue)) || '').trim();
+        if (!venue) return false;
+        const titleTokens = this.getCrossSourceTitleTokens(title);
+        if (titleTokens.length === 0) return false;
+        const venueTokens = new Set(this.getCrossSourceTitleTokens(venue));
+        return titleTokens.every(token => venueTokens.has(token));
     }
 
     async parsePageForCrawl({
@@ -11283,6 +11358,10 @@ class SharedCore {
     // decided by the event-page URL (not by key/place/name), name the shared
     // page so run logs show WHY two differently-shaped records merged.
     logUrlIdentityDedupSignal(signal, event, match) {
+        if (signal === 'ticket-url') {
+            console.log(`🎟️ DEDUP: "${event.title || 'event'}" matched "${match.title || 'event'}" by a shared ticket link (${event.ticketUrl || match.ticketUrl || ''})`);
+            return;
+        }
         if (signal !== 'event-page-url' && signal !== 'event-url-id') return;
         const page = this.getEventPageUrlIdentity(event) || this.getEventPageUrlIdentity(match);
         const where = page ? page.hostPath : 'unknown-url';
@@ -11398,7 +11477,30 @@ class SharedCore {
         for (const [hostPath, count] of pageIdentityCounts) {
             if (count >= 3) excludedUrlIdentityHostPaths.add(hostPath);
         }
-        const identityScanOptions = { requireCloseStartTimes: false, excludedUrlIdentityHostPaths };
+        // Same fan-in rule for ticket links: a festival pass page ("Get Your
+        // Dog Tag") sits on every card of the festival and identifies none
+        // of them. Stamped on the records too, so the calendar analysis
+        // (which sees one record at a time) inherits the batch's finding.
+        const ticketUrlCounts = new Map();
+        const ticketKeyOf = (event) => this.getUrlDedupeKey(String((event && event.ticketUrl) || '').trim());
+        for (const event of events) {
+            const key = ticketKeyOf(event);
+            if (key) ticketUrlCounts.set(key, (ticketUrlCounts.get(key) || 0) + 1);
+        }
+        const excludedTicketUrlKeys = new Set();
+        for (const [key, count] of ticketUrlCounts) {
+            if (count >= 3) excludedTicketUrlKeys.add(key);
+        }
+        for (const event of events) {
+            const key = ticketKeyOf(event);
+            if (key && excludedTicketUrlKeys.has(key) && event && typeof event === 'object' && Object.isExtensible(event)) {
+                event._ticketUrlFanIn = ticketUrlCounts.get(key);
+            }
+        }
+        if (excludedTicketUrlKeys.size > 0) {
+            console.log(`🎟️ DEDUP: ${excludedTicketUrlKeys.size} ticket link(s) shared by 3+ records in this batch are pass pages, not event identities: ${[...excludedTicketUrlKeys].map(key => `${key} (×${ticketUrlCounts.get(key)})`).join(', ')}`);
+        }
+        const identityScanOptions = { requireCloseStartTimes: false, excludedUrlIdentityHostPaths, excludedTicketUrlKeys };
 
         for (const event of events) {
             const key = this.createEventKey(event);
@@ -19490,7 +19592,25 @@ class SharedCore {
         if (!this.areIdentityDatesOnSameLocalDay(incoming, existing)) return null;
 
         // A shared ticket URL is a near-unique event identifier.
-        if (incoming.ticketUrl && existing.ticketUrl && incoming.ticketUrl === existing.ticketUrl) {
+        // …unless it is a PASS page. One link every event of a festival
+        // carries ("Get Your Dog Tag" → beefdip.com/tags/ on all 30 BeefDip
+        // cards, run 20260916-053541) names the festival, not an event. Two
+        // structural guards: a ticket link shared by 3+ records in one batch
+        // is no identity (the fan-in rule the event-page rung already
+        // applies; deduplicateEvents stamps the count as _ticketUrlFanIn so
+        // the later calendar analysis sees it too), and two cards of ONE
+        // listing page whose place evidence CONTRADICTS are the two events
+        // the page presents them as, whatever link they share — FURBALL
+        // GEAR NIGHT at CC Slaughters folded into MAD.BEAR FOAM POOL PARTY
+        // at Blue Chairs (same Friday, same pass link): the party vanished
+        // and the survivor wore Furball's flyer and website. Across two
+        // sources the link still corroborates a pair whose venue text
+        // disagrees (a warehouse party under the promoter's bar name on one
+        // site and its street address on the ticket site).
+        if (incoming.ticketUrl && existing.ticketUrl && incoming.ticketUrl === existing.ticketUrl
+            && !this.isFanInTicketUrl(newEvent, existingEvent, options)
+            && !(this.recordsShareSourcePage(newEvent, existingEvent)
+                && this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent))) {
             return 'ticket-url';
         }
 
@@ -19552,7 +19672,9 @@ class SharedCore {
             && (incoming.bar || incoming.address) && (existing.bar || existing.address)
             && this.areIdentityPlacesSimilar(incoming, existing)
             && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)
-            && (this.recordsShareLinkLineage(newEvent, existingEvent) || this.namesHaveAffinity(newEvent, existingEvent))) {
+            && (this.recordsShareLinkLineage(newEvent, existingEvent)
+                || this.namesHaveAffinity(newEvent, existingEvent)
+                || this.recordsShareEventBrand(newEvent, existingEvent))) {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -19789,6 +19911,62 @@ class SharedCore {
         return Boolean((sourceA && linksOf(eventB).includes(sourceA)) || (sourceB && linksOf(eventA).includes(sourceB)));
     }
 
+    // TRUE when both records were scraped off the same page (the listing
+    // that presents them as two cards).
+    recordsShareSourcePage(eventA, eventB) {
+        const keyOf = (event) => this.getUrlDedupeKey(String((event && event._sourcePageUrl) || '').trim());
+        const keyA = keyOf(eventA);
+        return Boolean(keyA && keyA === keyOf(eventB));
+    }
+
+    // A ticket link that is a pass page: shared by 3+ records of the batch
+    // being deduplicated (options.excludedTicketUrlKeys) or stamped as such
+    // on either record (_ticketUrlFanIn, so the calendar analysis inherits
+    // the batch's finding).
+    isFanInTicketUrl(eventA, eventB, options = {}) {
+        const excluded = options && options.excludedTicketUrlKeys instanceof Set ? options.excludedTicketUrlKeys : null;
+        if (excluded && excluded.size > 0) {
+            const keyOf = (event) => this.getUrlDedupeKey(String((event && event.ticketUrl) || '').trim());
+            if (excluded.has(keyOf(eventA)) || excluded.has(keyOf(eventB))) return true;
+        }
+        return [eventA, eventB].some(event => event && typeof event === 'object' && Number(event._ticketUrlFanIn) >= 3);
+    }
+
+    // The curated brand a record wears by IDENTITY evidence: its organizer
+    // or title naming a registry promoter, or a festival line (a calendar
+    // record's `festival: Urban Bear NYC` note, an event's own festival or
+    // organizer field) naming one. Site evidence (a url token) is not a
+    // brand — a festival's page lends its host to every guest brand.
+    getRecordBrandEntry(event) {
+        if (!event || typeof event !== 'object') return null;
+        const probes = [event];
+        const notesFestival = typeof event.notes === 'string' && /(^|\n)\s*festival\s*:/i.test(event.notes)
+            ? this.parseNotesIntoFields(event.notes).festival
+            : '';
+        for (const label of [event.festival, notesFestival, event.organizer]) {
+            if (typeof label === 'string' && label.trim()) probes.push({ title: label.trim() });
+        }
+        for (const probe of probes) {
+            const match = this.matchEventToPromoter(probe);
+            if (match && match.entry && !String(match.evidence || '').startsWith('url:')) return match.entry;
+        }
+        return null;
+    }
+
+    // TRUE when both records wear the same curated brand. One promoter does
+    // not throw two parties in one bar at one minute, so with the place and
+    // the start instant already agreeing this is one event however the two
+    // sources named it: "Hairy Happy Hour" in the calendar (festival: Urban
+    // Bear NYC) and "Urban Bear Weekend: Beefy Boys Happy Hour at Ty's" on
+    // Thotyssey — same Ty's, same 5pm, run 20260916-053541 — shared no
+    // distinctive word, and the deck offered a duplicate.
+    recordsShareEventBrand(eventA, eventB) {
+        const brandA = this.getRecordBrandEntry(eventA);
+        if (!brandA) return false;
+        const brandB = this.getRecordBrandEntry(eventB);
+        return Boolean(brandB && brandB.name === brandA.name);
+    }
+
     // TRUE when the two names share a distinctive word (5+ letters, not
     // generic event vocabulary) or a pair of such words one OCR slip apart
     // ("GOLDII.OXX" / "GOLDILOXX Chicago").
@@ -19838,8 +20016,22 @@ class SharedCore {
     haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null) {
         const barA = this.normalizeIdentityText(shapeA.bar);
         const barB = this.normalizeIdentityText(shapeB.bar);
-        if (barA && barB && barA !== barB
-            && !(barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))) {
+        // One name contained in the other is one bar under two spellings.
+        // The 4-letter floor keeps a stray short token from vouching for a
+        // containment; a short name whose words LEAD the longer name ("Ty's"
+        // in the calendar, "Ty's Bar NYC" from Thotyssey — run
+        // 20260916-053541, the veto kept a duplicate happy hour on the deck)
+        // is the bar's own name plus descriptors, not a stray token.
+        const leadsTheOther = (shortName, longName) => {
+            const shortTokens = this.getCrossSourceTitleTokens(String(shortName || ''));
+            const longTokens = this.getCrossSourceTitleTokens(String(longName || ''));
+            return shortTokens.length >= 1 && shortTokens.length < longTokens.length
+                && shortTokens.every((token, index) => longTokens[index] === token);
+        };
+        const sameBarSpelledTwice = barA === barB
+            || (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))
+            || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar);
+        if (barA && barB && !sameBarSpelledTwice) {
             return true;
         }
         // The street LINE only ("722 East Burnside Street"): the locality

@@ -124,9 +124,16 @@ class SavedRunDisplay {
                 console.log(`📱 Display: Download attempt ${attempt}/${maxRetries}`);
                 
                 try {
-                    // Force download from iCloud
-                    await fm.downloadFileFromiCloud(runFilePath);
-                    console.log(`📱 Display: Download completed for attempt ${attempt}`);
+                    // The bounded download above already confirmed the
+                    // file is local on a clean first pass — a second
+                    // downloadFileFromiCloud on a 12MB run file is a
+                    // second wait for nothing.
+                    if (download.ok && attempt === 1) {
+                        console.log(`📱 Display: Bounded download confirmed the file is local — reading it`);
+                    } else {
+                        await fm.downloadFileFromiCloud(runFilePath);
+                        console.log(`📱 Display: Download completed for attempt ${attempt}`);
+                    }
                 } catch (downloadError) {
                     console.log(`📱 Display: Download attempt ${attempt} failed: ${downloadError.message}`);
                 }
@@ -157,8 +164,9 @@ class SavedRunDisplay {
             }
             
             console.log(`📱 Display: Successfully read file, content length: ${content.length}`);
+            const parseStartedAt = Date.now();
             const parsed = JSON.parse(content);
-            console.log(`📱 Display: Successfully parsed JSON, keys: ${Object.keys(parsed)}`);
+            console.log(`📱 Display: Successfully parsed JSON in ${Date.now() - parseStartedAt}ms, keys: ${Object.keys(parsed)}`);
             return parsed;
         } catch (e) {
             console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
@@ -250,7 +258,12 @@ class SavedRunDisplay {
             await this.showError('No run named', 'reviewExecute needs a runId — open the link from the Mac server\'s review page.');
             return null;
         }
+        // Phase timings in the log: "the script takes forever to load" needs
+        // a number per phase (iCloud download + read + parse of the run
+        // file, adapter + decisions load) before anything can be sped up.
+        const startedAt = Date.now();
         const saved = await this.loadSavedRun(runId);
+        const loadedAt = Date.now();
         if (saved && saved.__icloudSyncPending === true) {
             await this.showError('Still syncing from iCloud', `Run ${runId} is still syncing from iCloud — try the link again shortly.`);
             return null;
@@ -264,7 +277,7 @@ class SavedRunDisplay {
         const decisions = typeof adapter.loadOwnerDecisions === 'function'
             ? await adapter.loadOwnerDecisions()
             : [];
-        console.log(`📱 Display: Reviewed execute of run ${runId} with ${decisions.length} owner decision(s)`);
+        console.log(`📱 Display: Reviewed execute of run ${runId} with ${decisions.length} owner decision(s) — run file loaded in ${loadedAt - startedAt}ms, adapter + decisions in ${Date.now() - loadedAt}ms`);
         if (typeof adapter.executeReviewedSavedRun !== 'function') {
             await this.showError('Adapter too old', 'This adapter has no executeReviewedSavedRun — update scripts/adapters/scriptable-adapter.js.');
             return null;

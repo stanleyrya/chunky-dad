@@ -18836,3 +18836,31 @@ test('a start read only off the flyer yields to the one start the page prints', 
   assert.equal(parser.getPagePrintedStartOverFlyerReading('13:00', { html: html.replace('SHOW AT 1PM', 'SHOW AT 11PM') }), '',
     'a start the flyer never states is not a flyer reading');
 });
+
+test('image pairing: a flyer with a home segment is never moved to a far segment on text similarity alone', () => {
+  const parser = createParser();
+  const segments = [
+    { lines: ['SPLASH! Classic Anthems Pool Party', 'Tue Jan 26 • 11AM–7PM • Hotel Delfin', 'Pool Party'] },
+    { lines: ['FURBALL GEAR NIGHT', 'Fri Jan 29 • 10PM–Late • CC Slaughters', 'Dance Party'] }
+  ];
+  const bounds = [
+    { rawStart: 0, rawEnd: 400, matchedRecords: [{ text: segments[0].lines.join('\n') }] },
+    { rawStart: 13000, rawEnd: 13400, matchedRecords: [{ text: segments[1].lines.join('\n') }] }
+  ];
+  // The flyer is printed INSIDE the second card, 13,000 characters down the
+  // page — out of the first segment's proximity range.
+  const url = 'https://beefdip.example/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp';
+  const records = [{ url, start: 13350, end: 13390 }];
+  // Its OCR text reads like the first card (the "pool party" overlap that
+  // moved it on beefdip.com/planned-events, run 20260916-053541).
+  const ocrResults = [{ url, text: 'SPLASH! Classic Anthems Pool Party Hotel Delfin Pool Party', imageClassification: '' }];
+
+  const matched = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, records, ocrResults);
+  assert.equal(matched[0], null, 'text alone cannot carry a flyer out of its own card');
+  assert.equal(matched[1], url, 'the card it sits in keeps it');
+
+  // Far from EVERY segment (no home), similarity still rescues it, as before.
+  const orphan = [{ url, start: 90000, end: 90040 }];
+  const rescued = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, orphan, ocrResults);
+  assert.equal(rescued[0], url);
+});

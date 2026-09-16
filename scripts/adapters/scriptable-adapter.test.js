@@ -3606,7 +3606,7 @@ test('probeRecurringSeries fails open on errors and without an identifier', asyn
 // sanitized (no `_`-prefixed event keys); parserResults keeps the raw entries.
 // ---------------------------------------------------------------------------
 
-test('saveRun persists sanitized dropped entries; parserResults and live entries stay raw', async () => {
+test('saveRun persists sanitized dropped entries in both lists; live entries stay raw', async () => {
   const adapter = buildAdapter();
   const files = installMemoryFm(adapter);
 
@@ -3635,11 +3635,15 @@ test('saveRun persists sanitized dropped entries; parserResults and live entries
     'no _-prefixed keys (including _parserConfig) on the saved embedded event'
   );
 
-  // parserResults is persisted untouched — other consumers may rely on it.
-  assert.ok(
+  // parserResults is persisted slimmed too (sanitizeParserResultsForRunSave):
+  // no consumer reads the working keys back from a saved file, and they were
+  // 60% of a 12MB run file the phone had to download before executing.
+  assert.equal(
     payload.parserResults[0].bearDroppedEvents[0].event._parserConfig,
-    'parserResults copy keeps the raw entry'
+    undefined,
+    'parserResults copy sheds the working keys'
   );
+  assert.equal(payload.parserResults[0].bearDroppedEvents[0].event.title, 'Twink Bash');
   // The live entry is never mutated by the save.
   assert.ok(entry.event._parserConfig, 'live entry keeps its working keys');
   assert.equal(results.bearDroppedEvents[0], entry, 'live list untouched');

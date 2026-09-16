@@ -249,6 +249,24 @@ function upsertDecision(store, decision) {
     return normalized;
 }
 
+// A 🐻 on a dropped card reverses an earlier "not bear" rejection of the
+// same party (title tokens + place, any night): that rejection would
+// otherwise keep the party's next card off the deck for good —
+// SharedCore.ownerDecisionCovers holds "not bear" rejections whatever
+// changed. Returns the keys it removed.
+function clearNotBearRejections(store, core, event) {
+    const SharedCore = loadSharedCore();
+    const normalized = normalizeDecisionStore(store);
+    const titleKey = core.getBearVerdictTitleKey((event && (event.title || event.name)) || '', [event && (event.bar || event.venue)]);
+    if (!titleKey) return { store: normalized, removed: [] };
+    const prefix = `event|${titleKey}|${core.getOwnerReviewPlaceKey(event)}|`;
+    const removed = normalized.decisions
+        .filter((entry) => entry.verdict === 'reject' && String(entry.key || '').startsWith(prefix) && SharedCore.ownerDecisionSaysNotBear(entry))
+        .map((entry) => entry.key);
+    if (removed.length > 0) normalized.decisions = normalized.decisions.filter((entry) => !removed.includes(entry.key));
+    return { store: normalized, removed };
+}
+
 function clearDecision(store, key) {
     const normalized = normalizeDecisionStore(store);
     const before = normalized.decisions.length;
@@ -597,6 +615,12 @@ function buildDeck(runPayload, store, options = {}) {
             ? (decisions.find((decision) => decision.key === event._ownerReviewApproved.key && decision.verdict === 'approve')
                 || { key: event._ownerReviewApproved.key || proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: event._ownerReviewApproved.stampedAt || null, reason: null, snapshot: null })
             : null;
+        const decision = writtenDecision || SharedCore.findOwnerDecision(proposal, decisions);
+        // A decision on this key that no longer covers the proposal (the
+        // scraper changed what it shows — SharedCore.getOwnerReviewDrift)
+        // rides on the card as `prior`, so the owner sees it is a second
+        // look, what they said last time, and what changed since.
+        const prior = decision ? null : decisions.find((entry) => entry.key === proposal.key) || null;
         file(
             {
                 id: `e${index}`,
@@ -604,9 +628,10 @@ function buildDeck(runPayload, store, options = {}) {
                 key: proposal.key,
                 sourceIndex: index,
                 proposal,
-                display: buildReviewDisplayContext(event, payload, core, extras)
+                display: buildReviewDisplayContext(event, payload, core, extras),
+                ...(prior ? { prior: { verdict: prior.verdict, stampedAt: prior.stampedAt || null, reason: prior.reason || null, drift: SharedCore.getOwnerReviewDrift(prior, proposal) } } : {})
             },
-            writtenDecision || SharedCore.findOwnerDecision(proposal, decisions)
+            decision
         );
     });
 
@@ -751,6 +776,7 @@ module.exports = {
     buildDecision,
     upsertDecision,
     clearDecision,
+    clearNotBearRejections,
     loadCuratedBars,
     BEAR_VERDICTS_FILE_NAME,
     getBearVerdictsPath,

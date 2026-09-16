@@ -408,3 +408,54 @@ test('collectExecutions gathers every run file\'s executions newest-last, tagged
   assert.deepEqual(rq.collectExecutions(dir), all, 'stable on a second read');
   assert.deepEqual(rq.collectExecutions(path.join(dir, 'missing')), []);
 });
+
+// ---------------------------------------------------------------------------
+// Rejections come back when the scraper changes what it shows (round 2,
+// 2026-09-16): the card carries `prior`, "not bear" holds, and a 🐻 on the
+// party reverses a "not bear" rejection.
+// ---------------------------------------------------------------------------
+const { SharedCore: ReviewSharedCore } = require('../scripts/shared-core');
+const { EventSchema: ReviewEventSchema } = require('../scripts/event-schema');
+
+test('buildDeck: a rejected new card returns with `prior` once its image (or any shown field) changes; "not bear" keeps it decided', () => {
+  const first = deckOf(runPayload({ analyzedEvents: [newEvent()] }));
+  assert.equal(first.cards.length, 1);
+  let store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({
+    key: first.cards[0].key, kind: 'new', verdict: 'reject', reason: { tags: [], text: 'Image seems wrong?' }, snapshot: first.cards[0].proposal
+  }));
+
+  const unchanged = deckOf(runPayload({ analyzedEvents: [newEvent()] }), store);
+  assert.equal(unchanged.cards.length, 0, 'the same proposal stays decided');
+  assert.equal(unchanged.counts.rejected, 1);
+
+  const fixed = deckOf(runPayload({ analyzedEvents: [newEvent({ image: 'https://furball.nyc/flyer-2027.jpg' })] }), store);
+  assert.equal(fixed.cards.length, 1, 'a changed card is back');
+  assert.equal(fixed.decided.length, 0);
+  assert.equal(fixed.cards[0].prior.verdict, 'reject');
+  assert.equal(fixed.cards[0].prior.reason.text, 'Image seems wrong?');
+  assert.deepEqual(fixed.cards[0].prior.drift, ['image']);
+  assert.equal(first.cards[0].prior, undefined, 'a first-time card carries no prior');
+
+  store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({
+    key: first.cards[0].key, kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: first.cards[0].proposal
+  }));
+  const stillOut = deckOf(runPayload({ analyzedEvents: [newEvent({ image: 'https://furball.nyc/flyer-2027.jpg' })] }), store);
+  assert.equal(stillOut.cards.length, 0, '"not bear" is about the party, whatever the card shows');
+});
+
+test('clearNotBearRejections: a 🐻 on the party removes its "not bear" rejections (any night), nothing else', () => {
+  const core = new ReviewSharedCore(CITIES, { eventSchema: ReviewEventSchema });
+  const first = deckOf(runPayload({ analyzedEvents: [newEvent()] }));
+  const key = first.cards[0].key;
+  const otherNight = key.replace(/\d{4}-\d{2}-\d{2}$/, '2030-10-10');
+  let store = rq.emptyDecisionStore();
+  store = rq.upsertDecision(store, rq.buildDecision({ key, kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: first.cards[0].proposal }));
+  store = rq.upsertDecision(store, rq.buildDecision({ key: otherNight, kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: null }));
+  store = rq.upsertDecision(store, rq.buildDecision({ key: 'event|other party|rockbar|2030-10-03', kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: null }));
+  store = rq.upsertDecision(store, rq.buildDecision({ key: key.replace('2030-10-03', '2030-10-17'), kind: 'new', verdict: 'reject', reason: { tags: ['bad image'], text: '' }, snapshot: null }));
+
+  const cleared = rq.clearNotBearRejections(store, core, { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St, New York, NY', city: 'nyc' });
+  assert.deepEqual(cleared.removed.sort(), [key, otherNight].sort());
+  assert.equal(cleared.store.decisions.length, 2, 'another party and a non-bear reason stay');
+  assert.deepEqual(rq.clearNotBearRejections(store, core, { title: '' }).removed, [], 'no title identity: nothing removed');
+});
