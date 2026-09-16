@@ -1,27 +1,22 @@
 {
   "img.evbuc.com": {
-    "misses": 3,
+    "misses": 4,
     "firstMiss": "2026-08-23T01:41:04.914Z",
-    "lastTried": "2026-09-08T18:46:33.510Z"
+    "lastTried": "2026-09-16T12:11:13.363Z"
   },
   "noxsatvrn.carrd.co": {
-    "misses": 7,
+    "misses": 8,
     "firstMiss": "2026-07-23T18:05:57.542Z",
-    "lastTried": "2026-09-08T18:46:39.087Z"
+    "lastTried": "2026-09-16T12:11:15.159Z"
   },
   "www.clubxhubusa.com": {
     "misses": 3,
     "firstMiss": "2026-08-20T18:29:52.422Z",
     "lastTried": "2026-09-05T11:44:22.994Z"
   },
-  "www.juliusbarny.com": {
-    "misses": 3,
-    "firstMiss": "2026-08-23T17:26:14.516Z",
-    "lastTried": "2026-09-08T18:46:37.668Z"
-  },
   "www.woof-berlin.com": {
-    "misses": 3,
+    "misses": 4,
     "firstMiss": "2026-08-23T17:26:09.871Z",
-    "lastTried": "2026-09-08T18:46:31.895Z"
+    "lastTried": "2026-09-16T12:11:12.035Z"
   }
 }
