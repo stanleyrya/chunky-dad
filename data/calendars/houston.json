@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Chicago",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "MEGAWOOF HOUSTON @ RICHs",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.7451002,
+        "lng": -95.3715298
+      },
+      "startDate": "2026-08-15T22:00:00",
+      "endDate": "2026-08-16T03:00:00",
+      "unprocessedDescription": "description: MEGAWOOF HOUSTON\nbar: Rich's Houston\naddress: 24\r01 San Jacinto Street, Houston, TX 77002\nticketUrl: https://www.eventbrite.com/e/megawoof-houston-richs-tickets-1992174793435\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187234130%2F185013722403%2F1%2Foriginal.20260618-221903?w=940&auto=format%2Ccompress&q=75&sharp=10&s=bc0c55cb113d9222aeebb2aa5b28cade\ncover: $11.58-$27.37\ntimezone: America/Chicago\nwebsite: https://linktr.ee/megawoof_america\ninstagram: https://www.instagram.com/megawoof_america\nshortName: MEGA-WOOF\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-houston-richs|2026-08-16|rich's houston\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=29.7451002%2C-95.3715298",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "2A0F66EB-F987-4D37-A5E3-68F984CFC244",
+      "uid": "2A0F66EB-F987-4D37-A5E3-68F984CFC244",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Rich's Houston",
+      "cover": "$11.58-$27.37",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187234130%2F185013722403%2F1%2Foriginal.20260618-221903?w=940&auto=format%2Ccompress&q=75&sharp=10&s=bc0c55cb113d9222aeebb2aa5b28cade",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF HOUSTON",
+      "address": "2401 San Jacinto Street, Houston, TX 77002",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=29.7451002%2C-95.3715298",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-houston-richs-tickets-1992174793435",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=29.7451002%2C-95.3715298",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-houston-richs-tickets-1992174793435",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-houston-richs-0338bafb"
+    }
+  ]
+}

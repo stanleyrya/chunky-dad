@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/New_York",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "FURBALL CAMP",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.0219799,
+        "lng": -75.1167816
+      },
+      "startDate": "2026-08-21T00:00:00",
+      "endDate": "2026-08-23T23:59:59",
+      "unprocessedDescription": "bar: Camp Out\naddress: 446 MT NEBO RD, EAST STROUDSBURG, PA\\\r, 18301\ntimezone: America/New_York\nticketUrl: https://www.camplife.com/1146/reservation/step1\nimage: https://static.wixstatic.com/media/238fae_927aeb4a256d48a385e943e486bc4980~mv2.png\nimageVertical: https://static.wixstatic.com/media/238fae_451a74a7d2144ed8a4fbdc934597fbef~mv2.png\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-camp|2026-08-21|camp out\nbearSource: keyword\ndescription: CAMPOUT, POCONOS\nFUN - SUN - DANCING\nPOOL PARTIES - BEARS\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: curated\ngmaps: https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "4796AF76-FCF2-40C4-B409-34F788DC8EB8",
+      "uid": "4796AF76-FCF2-40C4-B409-34F788DC8EB8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Camp Out",
+      "image": "https://static.wixstatic.com/media/238fae_927aeb4a256d48a385e943e486bc4980~mv2.png",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_451a74a7d2144ed8a4fbdc934597fbef~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "CAMPOUT, POCONOS",
+      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA\\, 18301",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic",
+      "ticketUrl": "https://www.camplife.com/1146/reservation/step1",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.camplife.com/1146/reservation/step1",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-camp-6c5d7621"
+    },
+    {
+      "name": "FURBALL CAMP",
+      "day": "Saturday",
+      "time": "9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.0219799,
+        "lng": -75.1167816
+      },
+      "startDate": "2026-08-22T21:00:00",
+      "unprocessedDescription": "description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp\r\ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\naddress: 446 MT NEBO RD, EAST STROUDSBURG, PA, 18301\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
+      "uid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Camp",
+      "image": "https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "EXPERIENCE THE PREMIER LGBT+ CAMPGROUND",
+      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA, 18301",
+      "website": "https://furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furball-camp-4b98e73b"
+    }
+  ]
+}
