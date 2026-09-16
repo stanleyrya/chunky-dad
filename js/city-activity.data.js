@@ -2,7 +2,7 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-14",
+ "generatedAt": "2026-09-16",
  "cities": {
   "nyc": {
    "dates": [
@@ -26,9 +26,18 @@ window.CITY_ACTIVITY = {
     "2026-09-18",
     "2026-09-19",
     "2026-09-20",
+    "2026-10-01",
+    "2026-10-02",
     "2026-10-16",
     "2026-10-17",
-    "2026-10-31"
+    "2026-10-31",
+    "2026-11-05",
+    "2026-11-06",
+    "2026-11-29",
+    "2026-12-03",
+    "2026-12-04",
+    "2026-12-11",
+    "2027-01-01"
    ],
    "recurring": 2,
    "festivalUntil": null
@@ -123,9 +132,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "sitges": {
-   "dates": [
-    "2026-09-14"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
