@@ -12845,7 +12845,7 @@ test('bear-check provenance: matched promoters gain the ADDITIVE sentence, unmat
   const matchedAlways = core.buildBearCheckProvenance(
     { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'BEEFWITCH' }, parserConfig);
   assert.ok(matchedAlways.startsWith(unmatched), 'existing sentences stay byte-identical; the registry sentence is appended');
-  assert.ok(matchedAlways.endsWith(' This event\'s own content names the promoter BEEFWITCH, whom the calendar owner has marked as a trusted bear-scene promoter.'));
+  assert.ok(matchedAlways.endsWith(' This event\'s own content names BEEFWITCH, a party series of Coach After Dark, whom the calendar owner has marked as a trusted bear-scene promoter.'), matchedAlways);
 
   const matchedUsually = core.buildBearCheckProvenance(
     { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'Bearracuda' }, parserConfig);
@@ -23298,4 +23298,37 @@ test('ownerDecisionCovers: a rejection covers a new card only while the card sti
   // Merges: drift is the proposed values that were not okayed/rejected as shown.
   const rejectMerge = { key: 'event|m', kind: 'merge', verdict: 'reject', snapshot: { kind: 'merge', changes: { title: { from: 'A', to: 'B' } } } };
   assert.deepEqual(SharedCore.getOwnerReviewDrift(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), ['url']);
+});
+
+test('place contradiction: two ticket paths contradict only on the SAME vendor; two vendors can sell one party', () => {
+  const core = createCore();
+  const shape = { bar: 'Massive', address: '619 E Pine St' };
+  const sameVendor = core.haveContradictingPlaceEvidence(shape, shape,
+    { ticketUrl: 'https://www.sickening.events/e/pridefriday/tickets' }, { ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets' });
+  assert.equal(sameVendor, true, 'one vendor, two event paths: two events');
+  const twoVendors = core.haveContradictingPlaceEvidence(shape, shape,
+    { ticketUrl: 'https://tixr.com/e/207002' }, { ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets' });
+  assert.equal(twoVendors, false, 'the venue on tixr and the promoter on sickening.events: not a contradiction');
+
+  // So the venue's row and the promoter's row of one night now meet at the exact-start rung.
+  const massive = { title: 'Treasure Trail', bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: '2026-10-11T04:00:00.000Z', endDate: '2026-10-11T10:00:00.000Z', ticketUrl: 'https://tixr.com/e/207002', _sourcePageUrl: 'https://www.massive.club/calendar' };
+  const promoter = { title: 'Treasure Trail Seattle: Rim Reaper!', bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: '2026-10-11T04:00:00.000Z', endDate: '2026-10-11T10:00:00.000Z', ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets', _sourcePageUrl: 'https://bearracuda.com/events/ttoct/' };
+  assert.equal(core.getSameEventIdentitySignal(promoter, massive), 'place-exact-start');
+});
+
+test('bear-check provenance names a sub-brand with its parent, so "Treasure Trail" reads as a Bearracuda series', () => {
+  const core = createCore();
+  core.promoters = [
+    { name: 'Bearracuda', website: 'https://bearracuda.com/', urlPatterns: ['bearracuda.com'], bearAffinity: 'usually' },
+    { name: 'TREASURE TRAIL', parent: 'Bearracuda', keywords: ['treasure trail'] }
+  ];
+  const event = { title: 'Treasure Trail Seattle: Rim Reaper!', _promoter: 'TREASURE TRAIL', url: 'https://bearracuda.com/events/ttoct/' };
+  const sentence = core.buildBearCheckProvenance(event, { name: 'Bearracuda', urls: ['https://bearracuda.com/'] });
+  assert.ok(sentence.includes('names TREASURE TRAIL, a party series of Bearracuda, whom the calendar owner tracks as a usually-bear promoter'), sentence);
+  assert.ok(sentence.includes('its named series are bear parties unless the event text targets another audience'), sentence);
+  // No parent: the sentence is what it always was.
+  const plain = core.buildBearCheckProvenance({ title: 'Bearracuda Seattle', _promoter: 'Bearracuda' }, { name: 'Bearracuda', urls: ['https://bearracuda.com/'] });
+  assert.ok(plain.includes('names the promoter Bearracuda, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.'), plain);
 });

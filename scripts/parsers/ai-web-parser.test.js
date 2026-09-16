@@ -18893,3 +18893,25 @@ test('image pairing: a date heading + title cut off from its card is a header fr
   assert.equal(matched[0], null);
   assert.equal(matched[1], url);
 });
+
+test('normalizeAiEvent: an end date that is "the next day" on an evening start with no end time is a night-party marker, not an end', () => {
+  const parser = createParser();
+  const cityConfig = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+  const base = { title: 'Bearracuda | Seattle - Red Light District', address: '619 E Pine St, Seattle, WA 98122', startDate: '2026-11-07', startTime: '22:00' };
+
+  const nightParty = parser.normalizeAiEvent({ ...base, endDate: '2026-11-08' }, {}, null, cityConfig, null);
+  assert.equal(nightParty.startDate.toISOString(), '2026-11-08T06:00:00.000Z');
+  assert.equal(nightParty.endDate, null, 'no end stated');
+
+  // Two days apart is a multi-day event ending at 23:59:59 local of its last day.
+  const multiDay = parser.normalizeAiEvent({ ...base, endDate: '2026-11-09' }, {}, null, cityConfig, null);
+  assert.equal(multiDay.endDate.toISOString(), '2026-11-10T07:59:59.000Z');
+
+  // A daytime start ending "the next day" is a genuine two-day span.
+  const daytime = parser.normalizeAiEvent({ ...base, startTime: '10:00', endDate: '2026-11-08' }, {}, null, cityConfig, null);
+  assert.equal(daytime.endDate.toISOString(), '2026-11-09T07:59:59.000Z');
+
+  // A stated end time still wins.
+  const stated = parser.normalizeAiEvent({ ...base, endDate: '2026-11-08', endTime: '03:00' }, {}, null, cityConfig, null);
+  assert.equal(stated.endDate.toISOString(), '2026-11-08T11:00:00.000Z');
+});

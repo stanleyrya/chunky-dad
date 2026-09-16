@@ -10087,7 +10087,18 @@ class SharedCore {
     // parserConfig.alwaysBear — byte-identical to the pre-registry behavior.
     getEventBearTrust(event, parserConfig) {
         const entry = this.getEventPromoterEntry(event);
-        const affinity = entry && typeof entry.bearAffinity === 'string' ? entry.bearAffinity.trim().toLowerCase() : '';
+        // A sub-brand inherits its parent's affinity (the same inheritance
+        // promoterEntryToMetadataBlock applies to every unspecified field):
+        // TREASURE TRAIL carries none of its own, so Bearracuda's "usually"
+        // never reached the bear check and the model judged "Treasure Trail
+        // Seattle: Rim Reaper!" with no promoter context at all (dropped as
+        // "no bear-specific vocabulary", run 20260916-093055).
+        const parent = entry && typeof entry.parent === 'string' && entry.parent.trim()
+            && !(typeof entry.bearAffinity === 'string' && entry.bearAffinity.trim())
+            ? this.getPromoterEntryByName(entry.parent.trim())
+            : null;
+        const affinitySource = parent && typeof parent.bearAffinity === 'string' && parent.bearAffinity.trim() ? parent : entry;
+        const affinity = affinitySource && typeof affinitySource.bearAffinity === 'string' ? affinitySource.bearAffinity.trim().toLowerCase() : '';
         if (entry && affinity === 'always') {
             return { trusted: true, promoter: entry.name, affinity };
         }
@@ -10391,10 +10402,23 @@ class SharedCore {
         // entry the event was found through. Every pre-existing sentence
         // below stays byte-identical; this is appended after them.
         const trust = this.getEventBearTrust(event, parserConfig);
+        // A sub-brand is named WITH its parent: "Treasure Trail" reads as a
+        // generic party name until the model is told it is a Bearracuda
+        // series — the strict prompt's own evidence rule ("a named bear
+        // party brand or series") never engaged, and Bearracuda's Rim
+        // Reaper was dropped as "no bear-specific vocabulary" (run
+        // 20260916-093055).
+        const matchedEntry = trust.affinity ? this.getEventPromoterEntry(event) : null;
+        const parentName = matchedEntry && typeof matchedEntry.parent === 'string' && matchedEntry.parent.trim()
+            ? matchedEntry.parent.trim()
+            : '';
+        const promoterLabel = parentName
+            ? `${trust.promoter}, a party series of ${parentName}`
+            : `the promoter ${trust.promoter}`;
         const matchedPromoterSentence = trust.affinity === 'always'
-            ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner has marked as a trusted bear-scene promoter.`
+            ? ` This event's own content names ${promoterLabel}, whom the calendar owner has marked as a trusted bear-scene promoter.`
             : trust.affinity === 'usually'
-                ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.`
+                ? ` This event's own content names ${promoterLabel}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
                 : '';
 
         // Honest cross-host provenance: when the event was actually extracted
@@ -20070,9 +20094,15 @@ class SharedCore {
             const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
             return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };
+        // Only the SAME vendor can contradict itself: a vendor names events
+        // by path, and two paths on one vendor are two events. Across vendors
+        // the paths are incomparable — one party sold on tixr by the venue
+        // and on sickening.events by the promoter (Treasure Trail at Massive,
+        // run 20260916-093055: the veto kept two cards for one night).
         const ticketA = ticketKey(eventA && eventA.ticketUrl);
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
-        if (ticketA && ticketB && ticketA !== ticketB) return true;
+        const hostOf = (key) => key.split('/')[0];
+        if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)) return true;
         return false;
     }
 

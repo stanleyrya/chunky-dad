@@ -20980,8 +20980,27 @@ TEXT:
             if (endTimeRaw) {
                 combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(endDateRaw, endTimeRaw) || endDateRaw;
             } else if (isDifferentDay) {
-                // Multi-day event with no end time: use 23:59:59 local time
-                combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' 23:59:59', timezone) || combineDateAndTime(endDateRaw, '23:59') || endDateRaw;
+                // An end date that is the NEXT day, on an event that starts in
+                // the evening, with no end time, is a night-party marker
+                // ("Nov 07 → Nov 08": it runs past midnight), not a two-day
+                // span — massive.club's calendar JSON-LD states every party
+                // that way, and 23:59:59 of the next day made Bearracuda's
+                // Red Light District "start 9PM, run 27h" (owner rejection,
+                // run 20260916-093055). That is no stated end at all (the
+                // one end contract). Two or more days apart stays a
+                // multi-day event ending at 23:59:59 local of its last day.
+                const startHour = (() => {
+                    const match = String(effectiveStartTime || '').match(/^(\d{1,2}):/);
+                    return match ? Number(match[1]) : null;
+                })();
+                const dayApart = Math.round((endDateRaw.getTime() - startDateRaw.getTime()) / 86400000) === 1;
+                if (dayApart && startHour !== null && startHour >= 17) {
+                    console.log(`⏰ AI Web: "${aiEvent.title || 'event'}" ends "the next day" with no end time on an evening start — a night-party marker, not a stated end; left without an end`);
+                    combinedEndDate = null;
+                } else {
+                    // Multi-day event with no end time: use 23:59:59 local time
+                    combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' 23:59:59', timezone) || combineDateAndTime(endDateRaw, '23:59') || endDateRaw;
+                }
             } else {
                 // Same day, no end time: the source states WHEN the event is,
                 // not when it ends. That is no end at all — see the one end
