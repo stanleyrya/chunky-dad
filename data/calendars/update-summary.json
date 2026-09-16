@@ -75,7 +75,7 @@
     "dc": {
       "name": "DC",
       "status": "success",
-      "dataLength": 3156,
+      "dataLength": 3160,
       "eventCount": 2
     },
     "denver": {
@@ -129,8 +129,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 36416,
-      "eventCount": 30
+      "dataLength": 46849,
+      "eventCount": 40
     },
     "london": {
       "name": "London",
@@ -177,7 +177,7 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 30629,
+      "dataLength": 31205,
       "eventCount": 28
     },
     "palm-springs": {

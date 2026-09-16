@@ -34,25 +34,231 @@ DTSTART:19700101T000000
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART:20260816T210000Z
-DTSTAMP:20260914T202445Z
-UID:8A37EE5E-36ED-40B5-8F73-A22D00CA0178
-CREATED:20260815T031707Z
-DESCRIPTION:description: Bar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nbar: E
- agle LA\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster
- -2024-web-1-300x300.jpg\nimageSource: page\nbarSource: venue-site\nwebsite:
-  https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16\ntime
- zone: America/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1
- &query=34.0912127%2C-118.2840632\naddress: 4219 Santa Monica Blvd\, Los Ang
- eles\, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dir
- tybird_la\nkey: sunday-beer-bust|2026-08-16|eagle la\nbearSource: manual-be
- ar (overrode ai\\: The title 'SUNDAY BEER BUST' and description mention onl
- y generic bar ameniti...)
+DTSTART:20260816T040000Z
+DTEND:20260816T090000Z
+DTSTAMP:20260916T121050Z
+UID:3B7D88D3-8536-47F1-9230-573DC58EF9D9
+CREATED:20260815T031655Z
+DESCRIPTION:description: Bear la cub la 2027 aug 15\, $8\nbar: Eagle LA\nim
+ age: https://eaglela.com/wp-content/uploads/Bear-la-cub-la-contest-Medium-s
+ quare-300x300.jpeg\ncover: $8\nwebsite: https://eaglela.com/events/mr-bear-
+ la-2027-contest/?occurrence=2026-08-15\ntimezone: America/Los_Angeles\ngmap
+ s: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B
+ 4\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource:
+  curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-and-
+ cub-la-2027-contest|2026-08-16|eagle la\nimageSource: page\nbarSource: venu
+ e-site\nbearSource: keyword\nshortName: MR BEAR
+LAST-MODIFIED:20260815T031655Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MR BEAR LA AND CUB LA 2027 CONTEST
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261009T070000Z
+DTSTAMP:20260916T121050Z
+UID:940A5CE0-28B4-401E-AFBA-93552B1A685B
+CREATED:20260815T031705Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/jungle-29/\ntimezone: Ame
+ rica/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ
+ LwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA
+  90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la
+ \nkey: jungle|2026-10-09|eagle la\nimageSource: og-image\nbarSource: venue-
+ site\nbearReview: unsure — ai\\: The title 'JUNGLE' and description 'Check 
+ back later for more details on this event' contain no bear-specific wording
+  or evidence of bear community targeting.
+LAST-MODIFIED:20260815T031705Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:JUNGLE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261018T060000Z
+DTEND:20261018T110000Z
+DTSTAMP:20260916T121050Z
+UID:E5730362-17B5-45AE-A98C-C1638EE7B41D
+CREATED:20260828T205240Z
+DESCRIPTION:description: a sweaty hairy bubba slinks down a back alley\, pa
+ vement wet\, neon trailing in the corner of your eye... LET'S GO!!!!! CHUNK
+  Los Angeles is BACK Exclusive DJ SETS from DICAP (NYC) MARCEAUX MARCEAUX (
+ Memphis) & THCKRTANKER (Toronto) // HOT GOGO BEARS // WAREHOUSE - Arts Dist
+ rict\nimage: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b10
+ 9bb655e6c97c~mv2.jpg/v1/fill/w_1200\,h_1500\,al_c\,q_85/42b6cb_55a68769f04b
+ 46d99b109bb655e6c97c~mv2.jpg\ncover: $35-$50\ntimezone: America/Los_Angeles
+ \nimageVertical: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d9
+ 9b109bb655e6c97c~mv2.jpg/v1/fill/w_1200\,h_1500\,al_c\,q_85/42b6cb_55a68769
+ f04b46d99b109bb655e6c97c~mv2.jpg\nwebsite: https://www.chunk-party.com/even
+ t-details/chunk-los-angeles-the-return\nshortName: CHUNK\ninstagram: https:
+ //www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: 
+ chunk-los-angeles-the-return|2026-10-18|warehouse\nbar: WAREHOUSE\naddress:
+  Arts District\nbearSource: keyword\naddressSource: page\nimageSource: json
+ ld\ngmaps: https://www.google.com/maps/search/?api=1&query=WAREHOUSE%2C%20A
+ rts%20District
+LAST-MODIFIED:20260910T193038Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK Los Angeles - THE RETURN!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260517T040000Z
+DTEND:20260517T090000Z
+DTSTAMP:20260916T121050Z
+UID:F5435015-D350-4B57-8C02-6227EB96FDE1
+CREATED:20260512T171310Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
+ orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
+ rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
+ 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
+ : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
+ F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
+ &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
+ 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
+ [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
+  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
+ a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
+ -beach-pride|2026-05-17|falcon north
+LAST-MODIFIED:20260514T005409Z
+LOCATION:33.874454\,-118.1680614
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260904T000000Z
+DTEND:20260904T040000Z
+DTSTAMP:20260916T121050Z
+UID:0D41B297-305A-4600-AE2C-40B3BA8EF7BC
+CREATED:20260815T031706Z
+DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
+ H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
+  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
+ 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
+ hour\nkey: bear-happy-hour|2026-09-04|eagle la\nbearSource: keyword\noverri
+ deUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 2026090
+ 4T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram: htt
+ ps://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSource: 
+ curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.g
+ oogle.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
 LAST-MODIFIED:20260815T031707Z
 LOCATION:34.0912127\, -118.2840632
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:SUNDAY BEER BUST
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251026T050000Z
+DTEND:20251026T120000Z
+DTSTAMP:20260916T121050Z
+UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
+CREATED:20250921T003523Z
+DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
+ ITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_ameri
+ ca\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-a
+ nniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/
+ 1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F112
+ 1300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=c
+ rop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=99
+ 9820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://ww
+ w.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite
+LAST-MODIFIED:20251002T003852Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261003T040000Z
+DTEND:20261003T090000Z
+DTSTAMP:20260916T121050Z
+UID:13CA7932-ED3B-4F08-A37B-DD77B28EC7E4
+CREATED:20260916T120609Z
+DESCRIPTION:description: CubScout First Fridays 9pm $7\nbar: Eagle LA\naddr
+ ess: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Los
+ _Angeles\ninstagram: https://www.instagram.com/eagle_la/\nfacebook: https:/
+ /www.facebook.com/eagle.bar.la/\nimage: https://eaglela.com/wp-content/uplo
+ ads/CubScout-generic.jpg\ncover: $7\naddressSource: curated\nwebsite: https
+ ://eaglela.com/events/cub-scout-3/\ngmaps: https://www.google.com/maps/plac
+ e/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\nshortName: C
+ UB­SCOUT\nkey: cubscout|2026-10-03|eagle la\nimageSource: og-image\nbarSour
+ ce: venue-site\nbearSource: keyword
+LAST-MODIFIED:20260916T120609Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBSCOUT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250831T040000Z
+DTEND:20250831T090000Z
+DTSTAMP:20260916T121050Z
+UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
+CREATED:20250823T205552Z
+DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
+ \nreturn to close out the Summer Tour in you —\nSATURDAY\, AUGUST 30th  and
+  it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard\, L
+ ong Beach\, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.event
+ brite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639
+ \nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-lo
+ ng-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: ht
+ tps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185
+ 013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=4
+ 60&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6
+ 687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagr
+ am.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8B
+ ZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite
+LAST-MODIFIED:20250830T170547Z
+LOCATION:33.87445400000001\, -118.1680614
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261107T050000Z
+DTEND:20261107T100000Z
+DTSTAMP:20260916T121050Z
+UID:42F4DCC2-5635-410D-992A-308638289B90
+CREATED:20260916T120622Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/cub-scout-3/?occurrence=2026-11-06\nimage: https://eaglela.com/wp-conte
+ nt/uploads/CubScout-generic.jpg\nbar: Eagle LA\naddress: 4219 Santa Monica 
+ Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\n
+ gmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1Pf
+ On6B4\ninstagram: dirtybird_la\nshortName: CUB­SCOUT\nkey: cubscout|2026-11
+ -07|eagle la\nimageSource: json-ld\nbarSource: venue-site-identity\nbearSou
+ rce: keyword
+LAST-MODIFIED:20260916T120622Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBSCOUT
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -60,7 +266,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250817T050000Z
 DTEND:20250817T100000Z
-DTSTAMP:20260914T202445Z
+DTSTAMP:20260916T121050Z
 UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
 CREATED:20250719T045039Z
 DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
@@ -84,25 +290,77 @@ SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260925T070000Z
-DTSTAMP:20260914T202445Z
-UID:D44C4F06-A82D-4079-A343-D7B95F7A3E86
-CREATED:20260815T031704Z
-DESCRIPTION:description: LOST PUPPY Details coming soon\nbar: Eagle LA\nadd
- ress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Lo
- s_Angeles\nimage: https://eaglela.com/wp-content/uploads/Lost-Puppy-GENERIC
- -Large-square.jpeg\naddressSource: curated\nwebsite: https://eaglela.com/ev
- ents/lost-puppy-19/\ngmaps: https://www.google.com/maps/place/?q=place_id:C
- hIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nke
- y: lost-puppy|2026-09-25|eagle la\nimageSource: og-image\nbarSource: venue-
- site\nbearReview: unsure — ai\\: The title 'LOST PUPPY' and description 'De
- tails coming soon' contain no bear-specific wording or evidence of bear com
- munity targeting.
-LAST-MODIFIED:20260815T031704Z
+DTSTART:20260809T030000Z
+DTEND:20260809T090000Z
+DTSTAMP:20260916T121050Z
+UID:898799F0-F844-4DEA-BCC5-D24EC2661DD3
+CREATED:20260807T164825Z
+DESCRIPTION:description: Meat Rack Aug 8 8pm $8\nbar: Eagle LA\naddress: 42
+ 19 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Los_Angele
+ s\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-sq
+ uare.jpg\ncover: $8\nimageVertical: https://eaglela.com/wp-content/uploads/
+ M_Rack-poster-8_8_26-web-1.jpg\naddressSource: curated\nwebsite: https://ea
+ glela.com/events/meat-rack-102/\ngmaps: https://www.google.com/maps/search/
+ ?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirt
+ ybird_la\nkey: meat-rack|2026-08-09|eagle la\nimageSource: og-image\nbarSou
+ rce: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RA
+ CK' and description 'Meat Rack Aug 8 8pm $8' contain no bea...)
+LAST-MODIFIED:20260807T164825Z
 LOCATION:34.0912127\, -118.2840632
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:LOST PUPPY
+SUMMARY:MEAT RACK
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260607T040000Z
+DTEND:20260607T090000Z
+DTSTAMP:20260916T121050Z
+UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
+CREATED:20260512T171311Z
+DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
+ e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
+ ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
+ e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
+ ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
+ 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
+ crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
+ 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
+  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
+ e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
+ es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
+ 026-06-07|the globe
+LAST-MODIFIED:20260514T005410Z
+LOCATION:34.044092\,-118.2542355
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260918T070000Z
+DTSTAMP:20260916T121050Z
+UID:84CA3B01-F9CF-45E2-A249-2D2C8D1D9297
+CREATED:20260815T031702Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
+ contest-meet-and-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.
+ google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 421
+ 9 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSo
+ urce: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-conte
+ st-meet-and-greet|2026-09-18|eagle la\nimageSource: og-image\nbarSource: ve
+ nue-site\nbearSource: keyword\nshortName: MR REGIMENT
+LAST-MODIFIED:20260815T031703Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -110,7 +368,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260822T200000Z
 DTEND:20260823T020000Z
-DTSTAMP:20260914T202445Z
+DTSTAMP:20260916T121050Z
 UID:D5378088-C88D-46FD-ADE4-407711D61161
 CREATED:20260731T160001Z
 DESCRIPTION:description: LA's Premier Queer Pool Party for Bears\, Chubs\, 
@@ -137,9 +395,183 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261002T000000Z
+DTEND:20261002T040000Z
+DTSTAMP:20260916T121050Z
+UID:E4E5EC52-3A49-4345-A8DA-7D7B37F44BC5
+CREATED:20260916T120606Z
+DESCRIPTION:facebook: https://www.facebook.com/eagle.bar.la/\nimage: https:
+ //eaglela.com/wp-content/uploads/BHH-IG.png\ntimezone: America/Los_Angeles\
+ naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\nshortName: BHH\n
+ shorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy
+ -hour|2026-10-02|eagle la\nbearSource: keyword\ninstagram: https://www.inst
+ agram.com/bearhappyhourla\noverrideUid: 9vnvsm6kjpievu62279lco139k@google.c
+ om\noverrideRecurrenceId: 20261002T000000Z\nbar: Eagle LA\nwebsite: https:/
+ /eaglela.com/events/bear-happy-hour-2/\ndescription: Bear Happy Hour First 
+ Thursdays 5pm\npinSource: curated\naddressSource: curated\nimageSource: og-
+ image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=Eagle%20LA%2C%204219%20Santa%20Monica%20Blvd%2C%20Los%20Angeles%2
+ C%20CA%2090029
+LAST-MODIFIED:20260916T120607Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260807T000000Z
+DTEND:20260807T040000Z
+DTSTAMP:20260916T121050Z
+UID:7696C0F2-5708-44C9-9AFC-49CC0BDBF0F4
+CREATED:20260807T164824Z
+DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
+ H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
+  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
+ 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
+ hour\nkey: bear-happy-hour|2026-08-07|eagle la\nticketUrl: https://eaglela.
+ com/events/bear-happy-hour-2/?occurrence=2026-08-06\nbearSource: keyword\no
+ verrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20
+ 260807T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram
+ : https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSou
+ rce: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
+LAST-MODIFIED:20260807T164824Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T070000Z
+DTSTAMP:20260916T121050Z
+UID:F06200CE-BC07-4C30-95BF-E305741074A5
+CREATED:20260815T031700Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
+ contest-victory-party/\ntimezone: America/Los_Angeles\ngmaps: https://www.g
+ oogle.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219
+  Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSou
+ rce: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contes
+ t-victory-party|2026-09-20|eagle la\nimageSource: og-image\nbarSource: venu
+ e-site\nbearSource: keyword\nshortName: MR REGIMENT
+LAST-MODIFIED:20260815T031701Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260913T030000Z
+DTSTAMP:20260916T121050Z
+UID:003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA
+CREATED:20260815T031708Z
+DESCRIPTION:description: Meat Rack 2nd and 4th Saturday of each month 8pm $
+ 8\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\
+ ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploa
+ ds/IG_M_Rack-poster-GENERIC-2026.jpg\ncover: $8\naddressSource: curated\nwe
+ bsite: https://eaglela.com/events/meat-rack-8/\ngmaps: https://www.google.c
+ om/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\n
+ instagram: dirtybird_la\nkey: meat-rack|2026-09-13|eagle la\nimageSource: o
+ g-image\nbarSource: venue-site\nbearSource: manual-bear (overrode ai\\: The
+  title 'MEAT RACK' and description 'Meat Rack 2nd and 4th Saturday of each.
+ ..)
+LAST-MODIFIED:20260815T031709Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEAT RACK
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260823T030000Z
+DTSTAMP:20260916T121050Z
+UID:4B60BF32-88E7-462E-AE12-656483BD4010
+CREATED:20260815T031708Z
+DESCRIPTION:description: Meat Rack Inferno Aug 22 8pm $8\nbar: Eagle LA\nad
+ dress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/L
+ os_Angeles\nticketUrl: https://eaglela.com/events/meat-rack-inferno-4/\nima
+ ge: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg\nco
+ ver: $8\nimageSource: page\nbarSource: venue-site\naddressSource: curated\n
+ website: https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08
+ -22\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-1
+ 18.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack-inf
+ erno|2026-08-23|eagle la\nbearSource: manual-bear (overrode ai\\: The title
+  'MEAT RACK INFERNO' and description 'Meat Rack Inferno Aug 22 8pm $...)\ns
+ hortName: MEAT RACK
+LAST-MODIFIED:20260815T031708Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEAT RACK INFERNO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261017T070000Z
+DTEND:20261017T100000Z
+DTSTAMP:20260916T121050Z
+UID:CE7113BF-7E8B-42AA-BC31-65A76C5717B2
+CREATED:20260916T120612Z
+DESCRIPTION:description: CruiseLA Leather & Bootblack Contest Oct 16\\: Mee
+ t & Greet Oct 17\\: Contest and Victory Party\nbar: Eagle LA\ninstagram: ht
+ tps://www.instagram.com/eagle_la/\nfacebook: https://www.facebook.com/eagle
+ .bar.la/\nimage: https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium-s
+ quare.jpeg\ncover: $7\nwebsite: https://eaglela.com/events/cruise-la-contes
+ t-2/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/pla
+ ce/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd
+ \, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\nkey:
+  cruise-la-leather-and-bootblack-2027-contest|2026-10-17|eagle la\nimageSou
+ rce: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: CRUIS
+ E
+LAST-MODIFIED:20260916T120612Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261106T050000Z
+DTEND:20261106T080000Z
+DTSTAMP:20260916T121050Z
+UID:C93893C0-8A50-4260-AECF-0EE9947B46C1
+CREATED:20260916T120620Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/bear-happy-hour-2/?occurrence=2026-11-05\nimage: https://eaglela.com/wp
+ -content/uploads/BHH-IG.png\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd
+ \, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\ngmap
+ s: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B
+ 4\ninstagram: dirtybird_la\nshortName: BHH\nshorterName: BHH\nfavicon: http
+ s://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-11-06|eagle la\nimag
+ eSource: json-ld\nbarSource: venue-site-identity\nbearSource: keyword
+LAST-MODIFIED:20260916T120620Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR HAPPY HOUR
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261101T040000Z
 DTEND:20261101T100000Z
-DTSTAMP:20260914T202445Z
+DTSTAMP:20260916T121050Z
 UID:ADC467BB-DD76-4206-82AB-F086E72E4AF6
 CREATED:20260820T175329Z
 DESCRIPTION:description: Club Chub presents THE MONSTER BALL\, Halloween ni
@@ -172,92 +604,56 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260904T000000Z
-DTEND:20260904T040000Z
-DTSTAMP:20260914T202445Z
-UID:0D41B297-305A-4600-AE2C-40B3BA8EF7BC
-CREATED:20260815T031706Z
-DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
- H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
-  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
- 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
- hour\nkey: bear-happy-hour|2026-09-04|eagle la\nbearSource: keyword\noverri
- deUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 2026090
- 4T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram: htt
- ps://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSource: 
- curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.g
- oogle.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
-LAST-MODIFIED:20260815T031707Z
+DTSTART:20261003T070000Z
+DTSTAMP:20260916T121050Z
+UID:C17EB719-3393-4E54-8526-53CD30FE7537
+CREATED:20260815T031704Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nimageSource: og-image\nbarSource: venue-site\nwebsite: https:
+ //eaglela.com/events/outlaw-11/\ntimezone: America/Los_Angeles\ngmaps: http
+ s://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddr
+ ess: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curate
+ d\npinSource: curated\ninstagram: dirtybird_la\nkey: outlaw|2026-10-03|eagl
+ e la\nbearReview: unsure — ai\\: The event title and description contain no
+  bear-specific wording or evidence of bear community targeting.
+LAST-MODIFIED:20260815T031705Z
 LOCATION:34.0912127\, -118.2840632
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:OUTLAW
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250831T040000Z
-DTEND:20250831T090000Z
-DTSTAMP:20260914T202445Z
-UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
-CREATED:20250823T205552Z
-DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
- \nreturn to close out the Summer Tour in you —\nSATURDAY\, AUGUST 30th  and
-  it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard\, L
- ong Beach\, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.event
- brite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639
- \nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-lo
- ng-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: ht
- tps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185
- 013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=4
- 60&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6
- 687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagr
- am.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&q
- uery=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8B
- ZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite
-LAST-MODIFIED:20250830T170547Z
-LOCATION:33.87445400000001\, -118.1680614
+DTSTART:20260809T210000Z
+DTSTAMP:20260916T121050Z
+UID:CA8D02F4-CC9F-414D-913F-5E782016485D
+CREATED:20260807T164824Z
+DESCRIPTION:bar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, 
+ CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/eve
+ nts/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-
+ Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://ea
+ glela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSo
+ urce: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occu
+ rrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChI
+ JLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey:
+  sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2P
+ M\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-sit
+ e\nbearSource: ai
+LAST-MODIFIED:20260807T164825Z
+LOCATION:34.0912127\, -118.2840632
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261018T060000Z
-DTEND:20261018T110000Z
-DTSTAMP:20260914T202445Z
-UID:E5730362-17B5-45AE-A98C-C1638EE7B41D
-CREATED:20260828T205240Z
-DESCRIPTION:description: a sweaty hairy bubba slinks down a back alley\, pa
- vement wet\, neon trailing in the corner of your eye... LET'S GO!!!!! CHUNK
-  Los Angeles is BACK Exclusive DJ SETS from DICAP (NYC) MARCEAUX MARCEAUX (
- Memphis) & THCKRTANKER (Toronto) // HOT GOGO BEARS // WAREHOUSE - Arts Dist
- rict\nimage: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b10
- 9bb655e6c97c~mv2.jpg/v1/fill/w_1200\,h_1500\,al_c\,q_85/42b6cb_55a68769f04b
- 46d99b109bb655e6c97c~mv2.jpg\ncover: $35-$50\ntimezone: America/Los_Angeles
- \nimageVertical: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d9
- 9b109bb655e6c97c~mv2.jpg/v1/fill/w_1200\,h_1500\,al_c\,q_85/42b6cb_55a68769
- f04b46d99b109bb655e6c97c~mv2.jpg\nwebsite: https://www.chunk-party.com/even
- t-details/chunk-los-angeles-the-return\nshortName: CHUNK\ninstagram: https:
- //www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: 
- chunk-los-angeles-the-return|2026-10-18|warehouse\nbar: WAREHOUSE\naddress:
-  Arts District\nbearSource: keyword\naddressSource: page\nimageSource: json
- ld\ngmaps: https://www.google.com/maps/search/?api=1&query=WAREHOUSE%2C%20A
- rts%20District
-LAST-MODIFIED:20260910T193038Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CHUNK Los Angeles - THE RETURN!
+SUMMARY:SUNDAY BEER BUST
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260820T070000Z
-DTSTAMP:20260914T202445Z
+DTSTAMP:20260916T121050Z
 UID:C0DF64EA-F28C-406D-ACE8-95C7D09BC6A1
 CREATED:20260815T031700Z
 DESCRIPTION:description: BEARS CUBS OTTERS and OTHER FURRY CRITTERS!\nbar: 
@@ -278,26 +674,318 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260809T030000Z
-DTEND:20260809T090000Z
-DTSTAMP:20260914T202445Z
-UID:898799F0-F844-4DEA-BCC5-D24EC2661DD3
-CREATED:20260807T164825Z
-DESCRIPTION:description: Meat Rack Aug 8 8pm $8\nbar: Eagle LA\naddress: 42
- 19 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Los_Angele
- s\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-sq
- uare.jpg\ncover: $8\nimageVertical: https://eaglela.com/wp-content/uploads/
- M_Rack-poster-8_8_26-web-1.jpg\naddressSource: curated\nwebsite: https://ea
- glela.com/events/meat-rack-102/\ngmaps: https://www.google.com/maps/search/
- ?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirt
- ybird_la\nkey: meat-rack|2026-08-09|eagle la\nimageSource: og-image\nbarSou
- rce: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RA
- CK' and description 'Meat Rack Aug 8 8pm $8' contain no bea...)
-LAST-MODIFIED:20260807T164825Z
+DTSTART:20270102T050000Z
+DTEND:20270102T100000Z
+DTSTAMP:20260916T121050Z
+UID:ED8260EF-0655-4C37-8F77-69FB9676021C
+CREATED:20260916T120635Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/cub-scout-3/?occurrence=2027-01-01\nimage: https://eaglela.com/wp-conte
+ nt/uploads/CubScout-generic.jpg\nbar: Eagle LA\naddress: 4219 Santa Monica 
+ Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\n
+ gmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1Pf
+ On6B4\ninstagram: dirtybird_la\nshortName: CUB­SCOUT\nkey: cubscout|2027-01
+ -02|eagle la\nimageSource: json-ld\nbarSource: venue-site-identity\nbearSou
+ rce: keyword
+LAST-MODIFIED:20260916T120635Z
 LOCATION:34.0912127\, -118.2840632
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MEAT RACK
+SUMMARY:CUBSCOUT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T070000Z
+DTSTAMP:20260916T121050Z
+UID:12BD0385-90AC-4082-84EB-0E0A5AE13851
+CREATED:20260815T031656Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-bear-la-2027-victory-p
+ arty/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress:
+  4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\np
+ inSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-2027-victory-pa
+ rty|2026-08-16|eagle la\nimageSource: page\nbarSource: venue-site\nbearSour
+ ce: keyword\nshortName: MR BEAR LA 2027
+LAST-MODIFIED:20260815T031656Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MR BEAR LA 2027 VICTORY PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T080000Z
+DTEND:20261129T110000Z
+DTSTAMP:20260916T121050Z
+UID:B4BA6684-6363-432D-9912-33E7F6CDC400
+CREATED:20260916T120624Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/bears-la-mac-and-chees-cook-off/?occurrence=2026-11-29\nimage: https://
+ eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nbar: Eagle LA\n
+ address: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: cu
+ rated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=plac
+ e_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\ninstagram: dirtybird_la\nkey: bears-la-ma
+ c-and-cheese-cook-off|2026-11-29|eagle la\nimageSource: json-ld\nbarSource:
+  venue-site-identity\nbearSource: keyword\nshortName: BEARS LA MAC
+LAST-MODIFIED:20260916T120625Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARS LA MAC AND CHEESE COOK OFF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260925T070000Z
+DTSTAMP:20260916T121050Z
+UID:D44C4F06-A82D-4079-A343-D7B95F7A3E86
+CREATED:20260815T031704Z
+DESCRIPTION:description: LOST PUPPY Details coming soon\nbar: Eagle LA\nadd
+ ress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Lo
+ s_Angeles\nimage: https://eaglela.com/wp-content/uploads/Lost-Puppy-GENERIC
+ -Large-square.jpeg\naddressSource: curated\nwebsite: https://eaglela.com/ev
+ ents/lost-puppy-19/\ngmaps: https://www.google.com/maps/place/?q=place_id:C
+ hIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nke
+ y: lost-puppy|2026-09-25|eagle la\nimageSource: og-image\nbarSource: venue-
+ site\nbearReview: unsure — ai\\: The title 'LOST PUPPY' and description 'De
+ tails coming soon' contain no bear-specific wording or evidence of bear com
+ munity targeting.
+LAST-MODIFIED:20260815T031704Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LOST PUPPY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250720T150000
+DTEND;TZID=America/Los_Angeles:20250720T210000
+RRULE:FREQ=MONTHLY;BYDAY=3SU
+DTSTAMP:20260916T121050Z
+UID:club-chub-20260822T193139Z@chunky.dad
+URL:https://www.clubchubusa.com/
+CREATED:20260822T193156Z
+DESCRIPTION:shortName: CLUB CHUB\nbar: Precinct DTLA\naddress: 357 S Broadw
+ ay\, Los Angeles\, CA 90013\ntimezone: America/Los_Angeles\nwebsite: https:
+ //www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubchubparty?
+ igsh=MWxjZHprZnl6NWc0NQ==\ngmaps: https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7
+ ?g_st=ipc
+LAST-MODIFIED:20260822T193157Z
+LOCATION:34.0498043\, -118.2493258
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CLUB CHUB
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261204T050000Z
+DTEND:20261204T080000Z
+DTSTAMP:20260916T121050Z
+UID:425F4F49-653E-4136-94B6-BE06D838876C
+CREATED:20260916T120632Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/bear-happy-hour-2/?occurrence=2026-12-03\nimage: https://eaglela.com/wp
+ -content/uploads/BHH-IG.png\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd
+ \, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\ngmap
+ s: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B
+ 4\ninstagram: dirtybird_la\nshortName: BHH\nshorterName: BHH\nfavicon: http
+ s://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-12-04|eagle la\nimag
+ eSource: json-ld\nbarSource: venue-site-identity\nbearSource: keyword
+LAST-MODIFIED:20260916T120632Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR HAPPY HOUR
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T210000Z
+DTSTAMP:20260916T121050Z
+UID:8A37EE5E-36ED-40B5-8F73-A22D00CA0178
+CREATED:20260815T031707Z
+DESCRIPTION:description: Bar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nbar: E
+ agle LA\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster
+ -2024-web-1-300x300.jpg\nimageSource: page\nbarSource: venue-site\nwebsite:
+  https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16\ntime
+ zone: America/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1
+ &query=34.0912127%2C-118.2840632\naddress: 4219 Santa Monica Blvd\, Los Ang
+ eles\, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dir
+ tybird_la\nkey: sunday-beer-bust|2026-08-16|eagle la\nbearSource: manual-be
+ ar (overrode ai\\: The title 'SUNDAY BEER BUST' and description mention onl
+ y generic bar ameniti...)
+LAST-MODIFIED:20260815T031707Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SUNDAY BEER BUST
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261017T021000Z
+DTEND:20261017T090000Z
+DTSTAMP:20260916T121050Z
+UID:B8521446-F0B6-4EB0-8654-231E7FBC20DE
+CREATED:20260815T031706Z
+DESCRIPTION:description: CruiseLA Leather & Bootblack Contest Oct 16\\: Mee
+ t & Greet Oct 17\\: Contest and Victory Party\nbar: Eagle LA\nimage: https:
+ //eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg\ncover: $7\n
+ website: https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-g
+ reet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/pl
+ ace/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blv
+ d\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\nins
+ tagram: dirtybird_la\nkey: cruise-la-leather-bootblack-2027-meet-greet|2026
+ -10-17|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: 
+ keyword\nshortName: CRUISE
+LAST-MODIFIED:20260815T031706Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261205T050000Z
+DTEND:20261205T100000Z
+DTSTAMP:20260916T121050Z
+UID:FA859542-CA47-41F9-A0F1-894702CC26CB
+CREATED:20260916T120633Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/cub-scout-3/?occurrence=2026-12-04\nimage: https://eaglela.com/wp-conte
+ nt/uploads/CubScout-generic.jpg\nbar: Eagle LA\naddress: 4219 Santa Monica 
+ Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\n
+ gmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1Pf
+ On6B4\ninstagram: dirtybird_la\nshortName: CUB­SCOUT\nkey: cubscout|2026-12
+ -05|eagle la\nimageSource: json-ld\nbarSource: venue-site-identity\nbearSou
+ rce: keyword
+LAST-MODIFIED:20260916T120633Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBSCOUT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T220000Z
+DTEND:20260921T040000Z
+DTSTAMP:20260916T121050Z
+UID:C74C5775-2363-41FE-B293-DAA6D202E3C8
+CREATED:20260910T193038Z
+DESCRIPTION:description: GREGG'S BIRTHDAY\naddress: 357 S Broadway\, Los An
+ geles\, CA 90013\ntimezone: America/Los_Angeles\nticketUrl: https://www.fac
+ ebook.com/events/2230739407468916/\nimage: https://static.wixstatic.com/med
+ ia/f91121_54f347bfe478402195162ecd347d7909~mv2.jpg\ncover: NO COVER\nwebsit
+ e: https://www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubc
+ hubparty\nshortName: CLUB CHUB\nfavicon: https://www.clubchubusa.com\nkey: 
+ ♍️-club-chub-virgo-party-ii-♍️|2026-09-20|precinct\nbearSource: keyword\nov
+ errideUid: club-chub-20260822T193139Z@chunky.dad\noverrideRecurrenceId: 202
+ 60920T220000Z\nbar: Precinct DTLA\nimageSource: page\ngmaps: https://www.go
+ ogle.com/maps/search/?api=1&query=34.0498043%2C-118.2493258
+LAST-MODIFIED:20260913T130238Z
+LOCATION:34.0498043\, -118.2493258
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:♍️ CLUB CHUB: VIRGO PARTY II ♍️
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261211T080000Z
+DTEND:20261211T110000Z
+DTSTAMP:20260916T121050Z
+UID:FE4EE0F9-4D60-4276-9B1D-2CBDBD4D9168
+CREATED:20260916T120634Z
+DESCRIPTION:timezone: America/Los_Angeles\nwebsite: https://eaglela.com/eve
+ nts/bears-la-naughy-bear/?occurrence=2026-12-11\nimage: https://eaglela.com
+ /wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nbar: Eagle LA\naddress: 42
+ 19 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinS
+ ource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLw
+ uhHU_HwoARdQQ1PfOn6B4\ninstagram: dirtybird_la\nkey: bears-la-naughy-bear|2
+ 026-12-11|eagle la\nimageSource: json-ld\nbarSource: venue-site-identity\nb
+ earSource: keyword\nshortName: BEARS
+LAST-MODIFIED:20260916T120634Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARS LA NAUGHY BEAR
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260911T070000Z
+DTSTAMP:20260916T121050Z
+UID:C9F89688-89D5-4288-B774-251EDF8EFCAB
+CREATED:20260815T031702Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/jockstrapped-3/\ntimezone
+ : America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id
+ :ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd\, Los Angeles
+ \, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybi
+ rd_la\nkey: jockstrapped|2026-09-11|eagle la\nimageSource: og-image\nbarSou
+ rce: venue-site\nbearSource: keyword\nshortName: JOCK-STRAPPED
+LAST-MODIFIED:20260815T031702Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:JOCKSTRAPPED
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Vancouver:20250717T170000
+DTEND;TZID=America/Vancouver:20250717T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260916T121050Z
+UID:9vnvsm6kjpievu62279lco139k@google.com
+CREATED:20250715T045103Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
+ //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161157Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T070000Z
+DTSTAMP:20260916T121050Z
+UID:643976FE-F0EB-4FB4-98E2-FB111257D796
+CREATED:20260815T031703Z
+DESCRIPTION:description: Check back later for more details on this event\nb
+ ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
+ g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
+ contest/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps
+ /place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica 
+ Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\n
+ instagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest|2026-09-19|e
+ agle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\
+ nshortName: MR REGIMENT
+LAST-MODIFIED:20260815T031703Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MR REGIMENT LEATHER 2027 CONTEST
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -305,7 +993,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260802T050000Z
 DTEND:20260802T113000Z
-DTSTAMP:20260914T202445Z
+DTSTAMP:20260916T121050Z
 UID:A3B037C4-449C-4785-82BF-811EB8890D67
 CREATED:20260712T004133Z
 DESCRIPTION:address: DTLA\, Los Angeles\, CA 90013\nticketUrl: https://www.
@@ -330,456 +1018,6 @@ LAST-MODIFIED:20260802T135041Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251026T050000Z
-DTEND:20251026T120000Z
-DTSTAMP:20260914T202445Z
-UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
-CREATED:20250921T003523Z
-DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
- ITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_ameri
- ca\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-a
- nniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/
- 1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F112
- 1300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=c
- rop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=99
- 9820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://ww
- w.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite
-LAST-MODIFIED:20251002T003852Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261009T070000Z
-DTSTAMP:20260914T202445Z
-UID:940A5CE0-28B4-401E-AFBA-93552B1A685B
-CREATED:20260815T031705Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/jungle-29/\ntimezone: Ame
- rica/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ
- LwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA
-  90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la
- \nkey: jungle|2026-10-09|eagle la\nimageSource: og-image\nbarSource: venue-
- site\nbearReview: unsure — ai\\: The title 'JUNGLE' and description 'Check 
- back later for more details on this event' contain no bear-specific wording
-  or evidence of bear community targeting.
-LAST-MODIFIED:20260815T031705Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:JUNGLE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260807T000000Z
-DTEND:20260807T040000Z
-DTSTAMP:20260914T202445Z
-UID:7696C0F2-5708-44C9-9AFC-49CC0BDBF0F4
-CREATED:20260807T164824Z
-DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
- H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
-  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
- 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
- hour\nkey: bear-happy-hour|2026-08-07|eagle la\nticketUrl: https://eaglela.
- com/events/bear-happy-hour-2/?occurrence=2026-08-06\nbearSource: keyword\no
- verrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20
- 260807T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram
- : https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSou
- rce: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://
- www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
-LAST-MODIFIED:20260807T164824Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260918T070000Z
-DTSTAMP:20260914T202445Z
-UID:84CA3B01-F9CF-45E2-A249-2D2C8D1D9297
-CREATED:20260815T031702Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
- contest-meet-and-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.
- google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 421
- 9 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSo
- urce: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-conte
- st-meet-and-greet|2026-09-18|eagle la\nimageSource: og-image\nbarSource: ve
- nue-site\nbearSource: keyword\nshortName: MR REGIMENT
-LAST-MODIFIED:20260815T031703Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260517T040000Z
-DTEND:20260517T090000Z
-DTSTAMP:20260914T202445Z
-UID:F5435015-D350-4B57-8C02-6227EB96FDE1
-CREATED:20260512T171310Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
- orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
- rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
- 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
- : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
- F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
- &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
- 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
- [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
-  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
- a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
- -beach-pride|2026-05-17|falcon north
-LAST-MODIFIED:20260514T005409Z
-LOCATION:33.874454\,-118.1680614
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260920T070000Z
-DTSTAMP:20260914T202445Z
-UID:F06200CE-BC07-4C30-95BF-E305741074A5
-CREATED:20260815T031700Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
- contest-victory-party/\ntimezone: America/Los_Angeles\ngmaps: https://www.g
- oogle.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219
-  Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSou
- rce: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contes
- t-victory-party|2026-09-20|eagle la\nimageSource: og-image\nbarSource: venu
- e-site\nbearSource: keyword\nshortName: MR REGIMENT
-LAST-MODIFIED:20260815T031701Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260816T070000Z
-DTSTAMP:20260914T202445Z
-UID:12BD0385-90AC-4082-84EB-0E0A5AE13851
-CREATED:20260815T031656Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-bear-la-2027-victory-p
- arty/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://
- www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress:
-  4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curated\np
- inSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-2027-victory-pa
- rty|2026-08-16|eagle la\nimageSource: page\nbarSource: venue-site\nbearSour
- ce: keyword\nshortName: MR BEAR LA 2027
-LAST-MODIFIED:20260815T031656Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MR BEAR LA 2027 VICTORY PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Vancouver:20250717T170000
-DTEND;TZID=America/Vancouver:20250717T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260914T202445Z
-UID:9vnvsm6kjpievu62279lco139k@google.com
-CREATED:20250715T045103Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
- //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161157Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260823T030000Z
-DTSTAMP:20260914T202445Z
-UID:4B60BF32-88E7-462E-AE12-656483BD4010
-CREATED:20260815T031708Z
-DESCRIPTION:description: Meat Rack Inferno Aug 22 8pm $8\nbar: Eagle LA\nad
- dress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/L
- os_Angeles\nticketUrl: https://eaglela.com/events/meat-rack-inferno-4/\nima
- ge: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg\nco
- ver: $8\nimageSource: page\nbarSource: venue-site\naddressSource: curated\n
- website: https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08
- -22\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-1
- 18.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack-inf
- erno|2026-08-23|eagle la\nbearSource: manual-bear (overrode ai\\: The title
-  'MEAT RACK INFERNO' and description 'Meat Rack Inferno Aug 22 8pm $...)\ns
- hortName: MEAT RACK
-LAST-MODIFIED:20260815T031708Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEAT RACK INFERNO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250720T150000
-DTEND;TZID=America/Los_Angeles:20250720T210000
-RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20260914T202445Z
-UID:club-chub-20260822T193139Z@chunky.dad
-URL:https://www.clubchubusa.com/
-CREATED:20260822T193156Z
-DESCRIPTION:shortName: CLUB CHUB\nbar: Precinct DTLA\naddress: 357 S Broadw
- ay\, Los Angeles\, CA 90013\ntimezone: America/Los_Angeles\nwebsite: https:
- //www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubchubparty?
- igsh=MWxjZHprZnl6NWc0NQ==\ngmaps: https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7
- ?g_st=ipc
-LAST-MODIFIED:20260822T193157Z
-LOCATION:34.0498043\, -118.2493258
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CLUB CHUB
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260607T040000Z
-DTEND:20260607T090000Z
-DTSTAMP:20260914T202445Z
-UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
-CREATED:20260512T171311Z
-DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
- e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
- ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
- e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
- ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
- 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
- crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
- 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
-  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
- e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
- earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
- es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
- 026-06-07|the globe
-LAST-MODIFIED:20260514T005410Z
-LOCATION:34.044092\,-118.2542355
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260913T030000Z
-DTSTAMP:20260914T202445Z
-UID:003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA
-CREATED:20260815T031708Z
-DESCRIPTION:description: Meat Rack 2nd and 4th Saturday of each month 8pm $
- 8\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\
- ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploa
- ds/IG_M_Rack-poster-GENERIC-2026.jpg\ncover: $8\naddressSource: curated\nwe
- bsite: https://eaglela.com/events/meat-rack-8/\ngmaps: https://www.google.c
- om/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\n
- instagram: dirtybird_la\nkey: meat-rack|2026-09-13|eagle la\nimageSource: o
- g-image\nbarSource: venue-site\nbearSource: manual-bear (overrode ai\\: The
-  title 'MEAT RACK' and description 'Meat Rack 2nd and 4th Saturday of each.
- ..)
-LAST-MODIFIED:20260815T031709Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEAT RACK
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261003T070000Z
-DTSTAMP:20260914T202445Z
-UID:C17EB719-3393-4E54-8526-53CD30FE7537
-CREATED:20260815T031704Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nimageSource: og-image\nbarSource: venue-site\nwebsite: https:
- //eaglela.com/events/outlaw-11/\ntimezone: America/Los_Angeles\ngmaps: http
- s://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddr
- ess: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource: curate
- d\npinSource: curated\ninstagram: dirtybird_la\nkey: outlaw|2026-10-03|eagl
- e la\nbearReview: unsure — ai\\: The event title and description contain no
-  bear-specific wording or evidence of bear community targeting.
-LAST-MODIFIED:20260815T031705Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:OUTLAW
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260920T220000Z
-DTEND:20260921T040000Z
-DTSTAMP:20260914T202445Z
-UID:C74C5775-2363-41FE-B293-DAA6D202E3C8
-CREATED:20260910T193038Z
-DESCRIPTION:description: GREGG'S BIRTHDAY\naddress: 357 S Broadway\, Los An
- geles\, CA 90013\ntimezone: America/Los_Angeles\nticketUrl: https://www.fac
- ebook.com/events/2230739407468916/\nimage: https://static.wixstatic.com/med
- ia/f91121_54f347bfe478402195162ecd347d7909~mv2.jpg\ncover: NO COVER\nwebsit
- e: https://www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubc
- hubparty\nshortName: CLUB CHUB\nfavicon: https://www.clubchubusa.com\nkey: 
- ♍️-club-chub-virgo-party-ii-♍️|2026-09-20|precinct\nbearSource: keyword\nov
- errideUid: club-chub-20260822T193139Z@chunky.dad\noverrideRecurrenceId: 202
- 60920T220000Z\nbar: Precinct DTLA\nimageSource: page\ngmaps: https://www.go
- ogle.com/maps/search/?api=1&query=34.0498043%2C-118.2493258
-LAST-MODIFIED:20260913T130238Z
-LOCATION:34.0498043\, -118.2493258
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:♍️ CLUB CHUB: VIRGO PARTY II ♍️
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261017T021000Z
-DTEND:20261017T090000Z
-DTSTAMP:20260914T202445Z
-UID:B8521446-F0B6-4EB0-8654-231E7FBC20DE
-CREATED:20260815T031706Z
-DESCRIPTION:description: CruiseLA Leather & Bootblack Contest Oct 16\\: Mee
- t & Greet Oct 17\\: Contest and Victory Party\nbar: Eagle LA\nimage: https:
- //eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg\ncover: $7\n
- website: https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-g
- reet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/pl
- ace/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blv
- d\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\nins
- tagram: dirtybird_la\nkey: cruise-la-leather-bootblack-2027-meet-greet|2026
- -10-17|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: 
- keyword\nshortName: CRUISE
-LAST-MODIFIED:20260815T031706Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260816T040000Z
-DTEND:20260816T090000Z
-DTSTAMP:20260914T202445Z
-UID:3B7D88D3-8536-47F1-9230-573DC58EF9D9
-CREATED:20260815T031655Z
-DESCRIPTION:description: Bear la cub la 2027 aug 15\, $8\nbar: Eagle LA\nim
- age: https://eaglela.com/wp-content/uploads/Bear-la-cub-la-contest-Medium-s
- quare-300x300.jpeg\ncover: $8\nwebsite: https://eaglela.com/events/mr-bear-
- la-2027-contest/?occurrence=2026-08-15\ntimezone: America/Los_Angeles\ngmap
- s: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B
- 4\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90029\naddressSource:
-  curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-and-
- cub-la-2027-contest|2026-08-16|eagle la\nimageSource: page\nbarSource: venu
- e-site\nbearSource: keyword\nshortName: MR BEAR
-LAST-MODIFIED:20260815T031655Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MR BEAR LA AND CUB LA 2027 CONTEST
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260911T070000Z
-DTSTAMP:20260914T202445Z
-UID:C9F89688-89D5-4288-B774-251EDF8EFCAB
-CREATED:20260815T031702Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/jockstrapped-3/\ntimezone
- : America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id
- :ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd\, Los Angeles
- \, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybi
- rd_la\nkey: jockstrapped|2026-09-11|eagle la\nimageSource: og-image\nbarSou
- rce: venue-site\nbearSource: keyword\nshortName: JOCK-STRAPPED
-LAST-MODIFIED:20260815T031702Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:JOCKSTRAPPED
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T070000Z
-DTSTAMP:20260914T202445Z
-UID:643976FE-F0EB-4FB4-98E2-FB111257D796
-CREATED:20260815T031703Z
-DESCRIPTION:description: Check back later for more details on this event\nb
- ar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Comin
- g-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-
- contest/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps
- /place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica 
- Blvd\, Los Angeles\, CA 90029\naddressSource: curated\npinSource: curated\n
- instagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest|2026-09-19|e
- agle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\
- nshortName: MR REGIMENT
-LAST-MODIFIED:20260815T031703Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MR REGIMENT LEATHER 2027 CONTEST
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260809T210000Z
-DTSTAMP:20260914T202445Z
-UID:CA8D02F4-CC9F-414D-913F-5E782016485D
-CREATED:20260807T164824Z
-DESCRIPTION:bar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, 
- CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/eve
- nts/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-
- Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://ea
- glela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSo
- urce: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occu
- rrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChI
- JLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey:
-  sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2P
- M\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-sit
- e\nbearSource: ai
-LAST-MODIFIED:20260807T164825Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SUNDAY BEER BUST
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

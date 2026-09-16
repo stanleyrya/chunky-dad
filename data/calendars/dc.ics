@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T080000Z
-DTSTAMP:20260829T083143Z
+DTSTAMP:20260916T121050Z
 UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
 CREATED:20260121T135638Z
 DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
@@ -35,7 +35,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260927T010000Z
 DTEND:20260927T070000Z
-DTSTAMP:20260829T083143Z
+DTSTAMP:20260916T121050Z
 UID:787E9181-C677-4679-8CF8-BB945E9E1202
 CREATED:20260820T174238Z
 DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
@@ -51,11 +51,11 @@ DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
  f54af50254\nwebsite: https://twisted-bear.com\nshortName: TWIST­ED BEAR\nin
  stagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.
  facebook.com/twistedglobal/\nfavicon: https://twisted-bear.com\nkey: twiste
- d-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keyword\naddres
- sSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/sear
- ch/?api=1&query=Icon%20DC%2C%202001%2011th%20Street%20Northwest%2C%20Washin
- gton%2C%20DC%2020001
-LAST-MODIFIED:20260829T014753Z
+ d-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keyword\npinSou
+ rce: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https
+ ://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211
+LAST-MODIFIED:20260916T120637Z
+LOCATION:38.9171577\, -77.0268211
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:TWISTED BEAR Washington\, D.C. Debut
