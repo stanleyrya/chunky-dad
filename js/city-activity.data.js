@@ -2,7 +2,7 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-16",
+ "generatedAt": "2026-09-17",
  "cities": {
   "nyc": {
    "dates": [
