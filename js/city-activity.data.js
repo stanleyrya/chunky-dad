@@ -11,6 +11,7 @@ window.CITY_ACTIVITY = {
     "2026-09-19",
     "2026-09-20",
     "2026-09-24",
+    "2026-09-25",
     "2026-09-26",
     "2026-10-03",
     "2026-10-16",
@@ -21,7 +22,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": "2026-09-20"
   },
   "seattle": {
-   "dates": [],
+   "dates": [
+    "2026-11-07"
+   ],
    "recurring": 2,
    "festivalUntil": null
   },
@@ -108,7 +111,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "atlanta": {
-   "dates": [],
+   "dates": [
+    "2026-11-14"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -143,6 +148,7 @@ window.CITY_ACTIVITY = {
   "boston": {
    "dates": [
     "2026-09-17",
+    "2026-09-19",
     "2026-09-20",
     "2026-09-26",
     "2026-10-09",
