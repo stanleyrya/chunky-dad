@@ -56,8 +56,10 @@ async function processCalendars() {
     const calendarsDir = path.join(ROOT, 'data', 'calendars');
 
     for (const cityKey of TARGET_CITIES) {
-        if (!CITY_CONFIG[cityKey] || CITY_CONFIG[cityKey].visible === false) {
-            console.log(`Skipping ${cityKey} (not in config or not visible)`);
+        // Every configured city gets its JSON (owner, 2026-09-16: always
+        // build); js/city-activity.data.js then decides what the site shows.
+        if (!CITY_CONFIG[cityKey]) {
+            console.log(`Skipping ${cityKey} (not in config)`);
             continue;
         }
 

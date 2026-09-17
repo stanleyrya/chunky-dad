@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/New_York",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "FURBALL Asbury Park Beach",
+      "day": "Friday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.218455,
+        "lng": -74.0015495
+      },
+      "startDate": "2026-07-31T22:00:00",
+      "unprocessedDescription": "description: Bear Invasion Opening Party\nbar: Paradise Night C\rlub\naddress: 101 Asbury Ave, Asbury Park, NJ 07712\ntimezone: America/New_York\nticketUrl: https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729\nimage: https://static.wixstatic.com/media/238fae_448a62fe9115494dae82df2a205d94ce~mv2.png\ncover: Tickets at the door\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nbearSource: keyword\nkey: furball-asbury-park-beach|2026-08-01|paradise night club\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: uncorroborated\ngmaps: https://www.google.com/maps/search/?api=1&query=40.218455%2C-74.0015495",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "7FF6439D-9567-404D-B179-D12FBE289F0A",
+      "uid": "7FF6439D-9567-404D-B179-D12FBE289F0A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Paradise Night Club",
+      "cover": "Tickets at the door",
+      "image": "https://static.wixstatic.com/media/238fae_448a62fe9115494dae82df2a205d94ce~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Bear Invasion Opening Party",
+      "address": "101 Asbury Ave, Asbury Park, NJ 07712",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=40.218455%2C-74.0015495",
+      "ticketUrl": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=40.218455%2C-74.0015495",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-asbury-park-beach-726f04af"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Chicago",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "FURBALL Austin",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 30.3306335,
+        "lng": -97.6672143
+      },
+      "startDate": "2026-08-29T22:00:00",
+      "unprocessedDescription": "description: Jock / Fetish / Gear Party\nbar: Austin Eagle\nadd\rress: 8201 Cross Park Drive, Austin\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-austin-jock-fetish-gear-082926\nimage: https://static.wixstatic.com/media/238fae_a523cf005b05445fbcd4ce5d5f2d10eb~mv2.png/v1/fill/w_296,h_296,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_a523cf005b05445fbcd4ce5d5f2d10eb~mv2.png\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-austin|2026-08-30|austin eagle\nbearSource: keyword\nwebsite: https://www.furball.nyc\npinSource: geocoded-exact\naddressSource: page\nbarSource: uncorroborated\ngmaps: https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "CD68B5C8-D91F-4546-8068-0B62927CBC45",
+      "uid": "CD68B5C8-D91F-4546-8068-0B62927CBC45",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Austin Eagle",
+      "image": "https://static.wixstatic.com/media/238fae_a523cf005b05445fbcd4ce5d5f2d10eb~mv2.png/v1/fill/w_296,h_296,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_a523cf005b05445fbcd4ce5d5f2d10eb~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Jock / Fetish / Gear Party",
+      "address": "8201 Cross Park Drive, Austin",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-austin-jock-fetish-gear-082926",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-austin-jock-fetish-gear-082926",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-austin-57e360df"
+    }
+  ]
+}

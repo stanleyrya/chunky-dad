@@ -8,9 +8,11 @@
 // file only needs regenerating when the calendars change — CI does that in
 // update-calendar-data.yml. Past dates left in the list are harmless.
 //
-// `visible: false` in city-config stays the manual, hard delist (no calendar
-// at all, or "don't show this yet"); this file only ever hides cities that
-// have a calendar and nothing on it.
+// There is no manual delist any more (owner, 2026-09-16: "always build, and
+// only render when we have events to show"): every configured city is
+// summarised here, and a city with no processed calendar at all is
+// summarised as having nothing upcoming — it renders the moment its
+// calendar carries a date.
 const fs = require('fs');
 const path = require('path');
 
@@ -35,11 +37,13 @@ function computeCityActivity({ cityConfig, calendars, festivals, today }) {
 
     for (const key of Object.keys(cityConfig || {})) {
         const cal = calendars[key];
-        if (!cal || !Array.isArray(cal.events)) continue; // nothing to judge by → not listed → shown
+        // No processed calendar = nothing to show (an upcoming festival on
+        // the city can still list it below).
+        const events = cal && Array.isArray(cal.events) ? cal.events : [];
 
         const dates = new Set();
         let recurring = 0;
-        for (const ev of cal.events) {
+        for (const ev of events) {
             const start = typeof ev.startDate === 'string' ? ev.startDate.slice(0, 10) : null;
             if (ev.recurring && ev.recurrence) {
                 const until = rruleUntil(ev.recurrence);

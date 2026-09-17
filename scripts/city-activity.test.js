@@ -69,10 +69,15 @@ test('an upcoming festival keeps an otherwise empty city active until the festiv
     assert.strictEqual(cities.dallas.festivalUntil, '2027-03-21');
 });
 
-test('a city without a processed calendar is not listed, and an unlisted city counts as active', () => {
-    const cities = computeCityActivity({ cityConfig, calendars: {}, festivals: [], today: TODAY });
-    assert.strictEqual(Object.keys(cities).length, 0);
-    assert.strictEqual(isActive(undefined, TODAY), true);
+test('a city without a processed calendar is listed with nothing upcoming (hidden); only a missing summary file counts as active', () => {
+    const cities = computeCityActivity({ cityConfig, calendars: {}, festivals: [
+        { key: 'tbru', cityKey: 'dallas', nextDates: { start: '2027-03-18', end: '2027-03-21' } }
+    ], today: TODAY });
+    assert.deepStrictEqual(Object.keys(cities).sort(), ['atlanta', 'dallas', 'nocal', 'nyc', 'ptown']);
+    assert.deepStrictEqual(cities.nocal, { dates: [], recurring: 0, festivalUntil: null });
+    assert.strictEqual(isActive(cities.nocal, TODAY), false, 'no calendar, no festival: nothing to show');
+    assert.strictEqual(isActive(cities.dallas, TODAY), true, 'a festival on the city still shows it');
+    assert.strictEqual(isActive(undefined, TODAY), true, 'the browser fails open only when the summary file is missing');
 });
 
 test('festivals.json wrapped in an object is accepted too', () => {

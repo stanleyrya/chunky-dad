@@ -54,9 +54,10 @@ function buildSitemap() {
     priority: PRIORITIES.home
   });
 
-  // Add all visible city pages
+  // Every configured city has a page (always built; the site itself only
+  // renders a city while its calendar has something upcoming).
   const visibleCities = Object.entries(CITY_CONFIG)
-    .filter(([, cfg]) => cfg && cfg.visible !== false)
+    .filter(([, cfg]) => Boolean(cfg))
     .sort(([a], [b]) => a.localeCompare(b)); // Sort alphabetically for consistency
 
   visibleCities.forEach(([cityKey, cfg]) => {
@@ -132,7 +133,7 @@ function main() {
   if (changed) {
     console.log(`✓ Generated sitemap.xml with ${urlCount} URLs`);
     console.log(`  - Homepage`);
-    console.log(`  - ${Object.keys(CITY_CONFIG).filter(k => CITY_CONFIG[k].visible !== false).length} city pages`);
+    console.log(`  - ${Object.keys(CITY_CONFIG).length} city pages`);
     if (fs.existsSync(path.join(ROOT, 'bear-directory.html'))) {
       console.log(`  - Bear directory`);
     }

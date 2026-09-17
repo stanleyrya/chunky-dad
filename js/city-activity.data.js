@@ -188,6 +188,96 @@ window.CITY_ACTIVITY = {
    "recurring": 0,
    "festivalUntil": null
   },
+  "miami": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "pv": {
+   "dates": [
+    "2027-01-23",
+    "2027-01-24",
+    "2027-01-25",
+    "2027-01-26",
+    "2027-01-27",
+    "2027-01-28",
+    "2027-01-29",
+    "2027-01-30",
+    "2027-01-31"
+   ],
+   "recurring": 0,
+   "festivalUntil": "2027-01-31"
+  },
+  "austin": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "houston": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "sacramento": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "poconos": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "asbury-park": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "torremolinos": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "fort-lauderdale": {
+   "dates": [
+    "2026-11-01"
+   ],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "montreal": {
+   "dates": [
+    "2026-09-19",
+    "2026-10-03"
+   ],
+   "recurring": 0,
+   "festivalUntil": "2027-04-11"
+  },
+  "fire-island": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "vancouver": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "bangkok": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "paris": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "manchester": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
   "brighton": {
    "dates": [
     "2026-12-05"
@@ -199,6 +289,51 @@ window.CITY_ACTIVITY = {
    "dates": [
     "2026-09-26"
    ],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "dublin": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "mexico-city": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "madrid": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": "2026-12-09"
+  },
+  "amsterdam": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "sao-paulo": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "bogota": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "honolulu": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "hong-kong": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "tokyo": {
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   }

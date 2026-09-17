@@ -56,10 +56,12 @@ function ensureDir(dirPath) {
 
 // Generate pre-populated header with city selector
 function generateCityHeader(html, cityKey, cityConfig) {
-  // Get all available cities for the dropdown — same ordering rule as the
-  // homepage strip: `order`-pinned cities first, then config-file order
+  // Every configured city goes in the dropdown — same ordering rule as the
+  // homepage strip: `order`-pinned cities first, then config-file order.
+  // The browser prunes the quiet ones at load (isCityActive), so the static
+  // list and the homepage always agree.
   const availableCities = Object.entries(CITY_CONFIG)
-    .filter(([, cfg]) => cfg && cfg.visible !== false)
+    .filter(([, cfg]) => Boolean(cfg))
     .map(([key, cfg]) => ({ key, ...cfg }))
     .sort((a, b) => (a.order || Number.MAX_SAFE_INTEGER) - (b.order || Number.MAX_SAFE_INTEGER));
 
@@ -338,9 +340,11 @@ function writeIfChanged(filePath, content) {
   return true;
 }
 
-// Generate pages for visible cities
+// Generate pages for EVERY configured city (owner, 2026-09-16: always
+// build; the site only renders a city while its calendar has something
+// upcoming — see isCityActive in js/city-config.js).
 let changes = 0;
-const visibleEntries = Object.entries(CITY_CONFIG).filter(([, cfg]) => cfg && cfg.visible !== false);
+const visibleEntries = Object.entries(CITY_CONFIG).filter(([, cfg]) => Boolean(cfg));
 
 const reservedKeys = new Set(Object.keys(CITY_CONFIG));
 const aliasRedirects = new Map();
