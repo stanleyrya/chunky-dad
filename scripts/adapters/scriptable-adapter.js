@@ -15987,8 +15987,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // EventKit — into the shared iCloud tree, and the Mac run prefers that
   // over the published copy (WebAdapter.getPhoneCalendarSnapshot). Owner,
   // 2026-09-14: "use the phone's state instead of waiting for the delayed
-  // calendar write". Window: 35 days back, 120 ahead — the search windows
-  // the analysis uses fit inside it. Never throws.
+  // calendar write". Window: 35 days back, 400 ahead — the Mac falls back
+  // to the (hours-behind) published copy for any search window the
+  // snapshot does not cover, and 120 days ahead stopped short of BeefDip
+  // (late January, scraped in September): 16 events the phone had just
+  // written came back as "new" cards (run 20260916-093055). Never throws.
   // ---------------------------------------------------------------------
   getCalendarSnapshotDir() {
     return this.fm.joinPath(this.baseDir, "calendar-snapshot");
@@ -15999,7 +16002,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     start.setDate(start.getDate() - 35);
     start.setHours(0, 0, 0, 0);
     const end = new Date(now);
-    end.setDate(end.getDate() + 120);
+    end.setDate(end.getDate() + 400);
     end.setHours(23, 59, 59, 999);
     return { start, end };
   }

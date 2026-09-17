@@ -12845,7 +12845,7 @@ test('bear-check provenance: matched promoters gain the ADDITIVE sentence, unmat
   const matchedAlways = core.buildBearCheckProvenance(
     { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'BEEFWITCH' }, parserConfig);
   assert.ok(matchedAlways.startsWith(unmatched), 'existing sentences stay byte-identical; the registry sentence is appended');
-  assert.ok(matchedAlways.endsWith(' This event\'s own content names the promoter BEEFWITCH, whom the calendar owner has marked as a trusted bear-scene promoter.'));
+  assert.ok(matchedAlways.endsWith(' This event\'s own content names BEEFWITCH, a party series of Coach After Dark, whom the calendar owner has marked as a trusted bear-scene promoter.'), matchedAlways);
 
   const matchedUsually = core.buildBearCheckProvenance(
     { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'Bearracuda' }, parserConfig);
@@ -23224,17 +23224,24 @@ test('identity: a ticket link shared by 3+ records of a batch is a pass page, an
   assert.equal(core.getSameEventIdentitySignal({ ...gearAtBlueChairs, _ticketUrlFanIn: 7 }, foam, { requireCloseStartTimes: false }), null);
 });
 
-test('deduplicateEvents: a pass link on 3+ records is stamped as fan-in and folds nothing', async () => {
+test('deduplicateEvents: a pass link on 3+ records over 2+ nights is stamped as fan-in and folds nothing; one event\'s own ticket page on one night is not', async () => {
   const core = createCore();
   const pass = 'https://beefdip.com/tags/';
-  const day = (hourUtc, title, bar) => ({
-    title, bar, city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl: pass,
-    startDate: `2027-01-29T${String(hourUtc).padStart(2, '0')}:00:00.000Z`, endDate: `2027-01-29T${String(hourUtc + 2).padStart(2, '0')}:00:00.000Z`
+  const on = (date, hourUtc, title, bar, ticketUrl = pass) => ({
+    title, bar, city: 'pv', timezone: 'America/Mexico_City', address: 'LÁZARO CÁRDENAS 254, PV MX', ticketUrl,
+    startDate: `${date}T${String(hourUtc).padStart(2, '0')}:00:00.000Z`, endDate: `${date}T${String(hourUtc + 2).padStart(2, '0')}:00:00.000Z`
   });
-  const events = [day(18, 'MAD.BEAR FOAM POOL PARTY', 'Blue Chairs Resort'), day(20, 'BEARAOKE', 'Blue Chairs Rooftop'), day(4, 'FURBALL GEAR NIGHT', 'CC Slaughters')];
+  const events = [on('2027-01-29', 18, 'MAD.BEAR FOAM POOL PARTY', 'Blue Chairs Resort'), on('2027-01-28', 20, 'BEARAOKE', 'Blue Chairs Rooftop'), on('2027-01-30', 4, 'FURBALL GEAR NIGHT', 'CC Slaughters')];
   const out = await core.deduplicateEvents(events, null);
   assert.equal(out.length, 3, 'three parties on one pass link stay three');
   assert.ok(out.every(event => event._ticketUrlFanIn === 3), 'each record carries the batch finding');
+
+  // One night, one bar, one event's own ticket page under three spellings: not a pass page.
+  const own = 'https://www.sickening.events/e/goldiloxx-chicago/tickets';
+  const twins = [on('2027-01-29', 18, 'GOLDILOXX Chicago', 'Jackhammer', own), on('2027-01-29', 18, 'Goldiloxx: Bear Tea', 'Jackhammer', own), on('2027-01-29', 18, 'GOLDILOXX', 'Jackhammer', own)];
+  const folded = await core.deduplicateEvents(twins, null);
+  assert.equal(folded.length, 1, 'the ticket link still folds the twins');
+  assert.equal(folded[0]._ticketUrlFanIn, undefined);
 });
 
 test('identity: same place, same start instant and the same curated brand is place-exact-start (festival note vs titled event)', () => {
@@ -23291,4 +23298,37 @@ test('ownerDecisionCovers: a rejection covers a new card only while the card sti
   // Merges: drift is the proposed values that were not okayed/rejected as shown.
   const rejectMerge = { key: 'event|m', kind: 'merge', verdict: 'reject', snapshot: { kind: 'merge', changes: { title: { from: 'A', to: 'B' } } } };
   assert.deepEqual(SharedCore.getOwnerReviewDrift(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), ['url']);
+});
+
+test('place contradiction: two ticket paths contradict only on the SAME vendor; two vendors can sell one party', () => {
+  const core = createCore();
+  const shape = { bar: 'Massive', address: '619 E Pine St' };
+  const sameVendor = core.haveContradictingPlaceEvidence(shape, shape,
+    { ticketUrl: 'https://www.sickening.events/e/pridefriday/tickets' }, { ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets' });
+  assert.equal(sameVendor, true, 'one vendor, two event paths: two events');
+  const twoVendors = core.haveContradictingPlaceEvidence(shape, shape,
+    { ticketUrl: 'https://tixr.com/e/207002' }, { ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets' });
+  assert.equal(twoVendors, false, 'the venue on tixr and the promoter on sickening.events: not a contradiction');
+
+  // So the venue's row and the promoter's row of one night now meet at the exact-start rung.
+  const massive = { title: 'Treasure Trail', bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: '2026-10-11T04:00:00.000Z', endDate: '2026-10-11T10:00:00.000Z', ticketUrl: 'https://tixr.com/e/207002', _sourcePageUrl: 'https://www.massive.club/calendar' };
+  const promoter = { title: 'Treasure Trail Seattle: Rim Reaper!', bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: '2026-10-11T04:00:00.000Z', endDate: '2026-10-11T10:00:00.000Z', ticketUrl: 'https://www.sickening.events/e/treasure-trail/tickets', _sourcePageUrl: 'https://bearracuda.com/events/ttoct/' };
+  assert.equal(core.getSameEventIdentitySignal(promoter, massive), 'place-exact-start');
+});
+
+test('bear-check provenance names a sub-brand with its parent, so "Treasure Trail" reads as a Bearracuda series', () => {
+  const core = createCore();
+  core.promoters = [
+    { name: 'Bearracuda', website: 'https://bearracuda.com/', urlPatterns: ['bearracuda.com'], bearAffinity: 'usually' },
+    { name: 'TREASURE TRAIL', parent: 'Bearracuda', keywords: ['treasure trail'] }
+  ];
+  const event = { title: 'Treasure Trail Seattle: Rim Reaper!', _promoter: 'TREASURE TRAIL', url: 'https://bearracuda.com/events/ttoct/' };
+  const sentence = core.buildBearCheckProvenance(event, { name: 'Bearracuda', urls: ['https://bearracuda.com/'] });
+  assert.ok(sentence.includes('names TREASURE TRAIL, a party series of Bearracuda, whom the calendar owner tracks as a usually-bear promoter'), sentence);
+  assert.ok(sentence.includes('its named series are bear parties unless the event text targets another audience'), sentence);
+  // No parent: the sentence is what it always was.
+  const plain = core.buildBearCheckProvenance({ title: 'Bearracuda Seattle', _promoter: 'Bearracuda' }, { name: 'Bearracuda', urls: ['https://bearracuda.com/'] });
+  assert.ok(plain.includes('names the promoter Bearracuda, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.'), plain);
 });

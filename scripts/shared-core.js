@@ -10087,7 +10087,18 @@ class SharedCore {
     // parserConfig.alwaysBear — byte-identical to the pre-registry behavior.
     getEventBearTrust(event, parserConfig) {
         const entry = this.getEventPromoterEntry(event);
-        const affinity = entry && typeof entry.bearAffinity === 'string' ? entry.bearAffinity.trim().toLowerCase() : '';
+        // A sub-brand inherits its parent's affinity (the same inheritance
+        // promoterEntryToMetadataBlock applies to every unspecified field):
+        // TREASURE TRAIL carries none of its own, so Bearracuda's "usually"
+        // never reached the bear check and the model judged "Treasure Trail
+        // Seattle: Rim Reaper!" with no promoter context at all (dropped as
+        // "no bear-specific vocabulary", run 20260916-093055).
+        const parent = entry && typeof entry.parent === 'string' && entry.parent.trim()
+            && !(typeof entry.bearAffinity === 'string' && entry.bearAffinity.trim())
+            ? this.getPromoterEntryByName(entry.parent.trim())
+            : null;
+        const affinitySource = parent && typeof parent.bearAffinity === 'string' && parent.bearAffinity.trim() ? parent : entry;
+        const affinity = affinitySource && typeof affinitySource.bearAffinity === 'string' ? affinitySource.bearAffinity.trim().toLowerCase() : '';
         if (entry && affinity === 'always') {
             return { trusted: true, promoter: entry.name, affinity };
         }
@@ -10391,10 +10402,23 @@ class SharedCore {
         // entry the event was found through. Every pre-existing sentence
         // below stays byte-identical; this is appended after them.
         const trust = this.getEventBearTrust(event, parserConfig);
+        // A sub-brand is named WITH its parent: "Treasure Trail" reads as a
+        // generic party name until the model is told it is a Bearracuda
+        // series — the strict prompt's own evidence rule ("a named bear
+        // party brand or series") never engaged, and Bearracuda's Rim
+        // Reaper was dropped as "no bear-specific vocabulary" (run
+        // 20260916-093055).
+        const matchedEntry = trust.affinity ? this.getEventPromoterEntry(event) : null;
+        const parentName = matchedEntry && typeof matchedEntry.parent === 'string' && matchedEntry.parent.trim()
+            ? matchedEntry.parent.trim()
+            : '';
+        const promoterLabel = parentName
+            ? `${trust.promoter}, a party series of ${parentName}`
+            : `the promoter ${trust.promoter}`;
         const matchedPromoterSentence = trust.affinity === 'always'
-            ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner has marked as a trusted bear-scene promoter.`
+            ? ` This event's own content names ${promoterLabel}, whom the calendar owner has marked as a trusted bear-scene promoter.`
             : trust.affinity === 'usually'
-                ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.`
+                ? ` This event's own content names ${promoterLabel}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
                 : '';
 
         // Honest cross-host provenance: when the event was actually extracted
@@ -11481,15 +11505,25 @@ class SharedCore {
         // Dog Tag") sits on every card of the festival and identifies none
         // of them. Stamped on the records too, so the calendar analysis
         // (which sees one record at a time) inherits the batch's finding.
+        // A pass page serves MANY NIGHTS; an event's own ticket page is
+        // shared only by that event's records (a listing stub, its detail
+        // page, its JSON-LD twin — four rows of GOLDILOXX Chicago on one
+        // sickening.events link, run 20260916-093055), all on one local day.
+        // So: 3+ records AND 2+ local days.
         const ticketUrlCounts = new Map();
+        const ticketUrlDays = new Map();
         const ticketKeyOf = (event) => this.getUrlDedupeKey(String((event && event.ticketUrl) || '').trim());
         for (const event of events) {
             const key = ticketKeyOf(event);
-            if (key) ticketUrlCounts.set(key, (ticketUrlCounts.get(key) || 0) + 1);
+            if (!key) continue;
+            ticketUrlCounts.set(key, (ticketUrlCounts.get(key) || 0) + 1);
+            const day = this.normalizeEventDateLocal(event.startDate, event.timezone || this.getCityTimezone(event.city) || null) || '';
+            if (!ticketUrlDays.has(key)) ticketUrlDays.set(key, new Set());
+            if (day) ticketUrlDays.get(key).add(day);
         }
         const excludedTicketUrlKeys = new Set();
         for (const [key, count] of ticketUrlCounts) {
-            if (count >= 3) excludedTicketUrlKeys.add(key);
+            if (count >= 3 && ticketUrlDays.get(key).size >= 2) excludedTicketUrlKeys.add(key);
         }
         for (const event of events) {
             const key = ticketKeyOf(event);
@@ -19919,8 +19953,8 @@ class SharedCore {
         return Boolean(keyA && keyA === keyOf(eventB));
     }
 
-    // A ticket link that is a pass page: shared by 3+ records of the batch
-    // being deduplicated (options.excludedTicketUrlKeys) or stamped as such
+    // A ticket link that is a pass page: shared by 3+ records on 2+ nights of
+    // the batch being deduplicated (options.excludedTicketUrlKeys) or stamped as such
     // on either record (_ticketUrlFanIn, so the calendar analysis inherits
     // the batch's finding).
     isFanInTicketUrl(eventA, eventB, options = {}) {
@@ -20060,9 +20094,15 @@ class SharedCore {
             const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
             return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };
+        // Only the SAME vendor can contradict itself: a vendor names events
+        // by path, and two paths on one vendor are two events. Across vendors
+        // the paths are incomparable — one party sold on tixr by the venue
+        // and on sickening.events by the promoter (Treasure Trail at Massive,
+        // run 20260916-093055: the veto kept two cards for one night).
         const ticketA = ticketKey(eventA && eventA.ticketUrl);
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
-        if (ticketA && ticketB && ticketA !== ticketB) return true;
+        const hostOf = (key) => key.split('/')[0];
+        if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)) return true;
         return false;
     }
 

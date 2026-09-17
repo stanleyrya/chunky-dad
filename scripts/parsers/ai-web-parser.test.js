@@ -18864,3 +18864,54 @@ test('image pairing: a flyer with a home segment is never moved to a far segment
   const rescued = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, orphan, ocrResults);
   assert.equal(rescued[0], url);
 });
+
+test('image pairing: a date heading + title cut off from its card is a header fragment and claims no image', () => {
+  const parser = createParser();
+  const segments = [
+    { lines: ['TUESDAY JANUARY 26, 2027', 'SPLASH! Classic Anthems Pool Party'] },
+    { lines: ['SPLASH! Classic Anthems Pool Party', 'Tue Jan 26 • 11AM–7PM • Hotel Delfin', 'Pool Party'] },
+    { lines: ['BEARAOKE', 'Tue Jan 26 • 9:30PM • Blue Chairs Rooftop'] }
+  ];
+  const eligibility = parser.buildSegmentPairingEligibility(segments);
+  assert.deepEqual(eligibility, [false, true, true]);
+  assert.equal(parser.isDateOnlyLine('TUESDAY JANUARY 26, 2027'), true);
+  assert.equal(parser.isDateOnlyLine('Sat, Oct 3rd'), true);
+  assert.equal(parser.isDateOnlyLine('Tue Jan 26 • 11AM–7PM • Hotel Delfin'), false);
+  assert.equal(parser.isDateOnlyLine('SPLASH! Classic Anthems Pool Party'), false);
+
+  // The flyer printed inside the card goes to the card, not the fragment,
+  // however well the fragment's shorter text matches the flyer's OCR.
+  const bounds = [
+    { rawStart: 0, rawEnd: 80, matchedRecords: [{ text: segments[0].lines.join('\n') }] },
+    { rawStart: 100, rawEnd: 600, matchedRecords: [{ text: segments[1].lines.join('\n') }] },
+    { rawStart: 900, rawEnd: 1100, matchedRecords: [{ text: segments[2].lines.join('\n') }] }
+  ];
+  const url = 'https://beefdip.example/2026-01-27%20Splash%20Pool%20Party.webp';
+  const records = [{ url, start: 620, end: 660 }];
+  const ocrResults = [{ url, text: 'SPLASH! Classic Anthems Pool Party', imageClassification: 'event-flyer' }];
+  const matched = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, records, ocrResults, eligibility);
+  assert.equal(matched[0], null);
+  assert.equal(matched[1], url);
+});
+
+test('normalizeAiEvent: an end date that is "the next day" on an evening start with no end time is a night-party marker, not an end', () => {
+  const parser = createParser();
+  const cityConfig = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+  const base = { title: 'Bearracuda | Seattle - Red Light District', address: '619 E Pine St, Seattle, WA 98122', startDate: '2026-11-07', startTime: '22:00' };
+
+  const nightParty = parser.normalizeAiEvent({ ...base, endDate: '2026-11-08' }, {}, null, cityConfig, null);
+  assert.equal(nightParty.startDate.toISOString(), '2026-11-08T06:00:00.000Z');
+  assert.equal(nightParty.endDate, null, 'no end stated');
+
+  // Two days apart is a multi-day event ending at 23:59:59 local of its last day.
+  const multiDay = parser.normalizeAiEvent({ ...base, endDate: '2026-11-09' }, {}, null, cityConfig, null);
+  assert.equal(multiDay.endDate.toISOString(), '2026-11-10T07:59:59.000Z');
+
+  // A daytime start ending "the next day" is a genuine two-day span.
+  const daytime = parser.normalizeAiEvent({ ...base, startTime: '10:00', endDate: '2026-11-08' }, {}, null, cityConfig, null);
+  assert.equal(daytime.endDate.toISOString(), '2026-11-09T07:59:59.000Z');
+
+  // A stated end time still wins.
+  const stated = parser.normalizeAiEvent({ ...base, endDate: '2026-11-08', endTime: '03:00' }, {}, null, cityConfig, null);
+  assert.equal(stated.endDate.toISOString(), '2026-11-08T11:00:00.000Z');
+});
