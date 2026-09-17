@@ -18915,3 +18915,20 @@ test('normalizeAiEvent: an end date that is "the next day" on an evening start w
   const stated = parser.normalizeAiEvent({ ...base, endDate: '2026-11-08', endTime: '03:00' }, {}, null, cityConfig, null);
   assert.equal(stated.endDate.toISOString(), '2026-11-08T11:00:00.000Z');
 });
+
+test('foldSubheadingEvents: a record whose venue and address are only a sibling\'s title, same day, no text of its own, is that card\'s sub-heading', () => {
+  const parser = createParser();
+  const card = { title: 'Bearracuda | Seattle - Red Light District', bar: 'Massive Club', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-11-08T05:00:00.000Z'), description: 'Bearracuda returns to Massive.' };
+  const heading = { title: 'FINAL PARTY', bar: 'Red Light District', address: 'SEATTLE RED LIGHT DISTRICT', city: 'seattle', timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-11-07T08:00:00.000Z') };
+  const kept = parser.foldSubheadingEvents([card, heading]);
+  assert.deepEqual(kept.map(e => e.title), ['Bearracuda | Seattle - Red Light District']);
+
+  // Its own description, its own link, or another day keeps it.
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, description: 'The last party of the season.' }]).length, 2);
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, ticketUrl: 'https://tixr.com/e/1' }]).length, 2);
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, startDate: new Date('2026-11-09T08:00:00.000Z') }]).length, 2);
+  // A real second event at a real venue is never a sub-heading.
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, bar: 'Kremwerk', address: '1809 Minor Ave' }]).length, 2);
+});

@@ -275,6 +275,14 @@ const scraperPromoters = [
       "theurbanbear.com"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Bears 4 Bareburger",
+    "aliases": [
+      "Bears for Bareburger"
+    ],
+    "website": "https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018",
+    "bearAffinity": "always"
   }
 ];
 

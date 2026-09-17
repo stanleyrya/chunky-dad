@@ -971,11 +971,12 @@ a { color:var(--accent); }
 .stage { position:relative; max-width:560px; margin:14px auto 0; padding:0 14px; height:min(68vh, 640px); }
 .card { position:absolute; inset:0 14px; background:var(--card); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; transition:transform .25s ease, opacity .25s ease; will-change:transform; }
 .card.dragging { transition:none; }
-.card.behind { transform:scale(.96) translateY(10px); opacity:.85; pointer-events:none; }
-.card.behind2 { transform:scale(.92) translateY(20px); opacity:.6; pointer-events:none; }
-.card.gone-right { transform:translate(120vw, -20px) rotate(18deg); opacity:0; }
-.card.gone-left { transform:translate(-120vw, -20px) rotate(-18deg); opacity:0; }
-.card.gone-down { transform:translateY(90vh) scale(.9); opacity:0; }
+.card.behind { opacity:.85; pointer-events:none; }
+.card.behind2 { opacity:.6; pointer-events:none; }
+.card.gone-right, .card.gone-left, .card.gone-down { pointer-events:none; }
+.card.behind, .card.behind2 { transform:translate3d(0,10px,0) scale(.96); }
+.card.behind2 { transform:translate3d(0,20px,0) scale(.92); }
+@media (prefers-reduced-motion: reduce) { .card { transition:none; } }
 .card-body { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 18px; }
 .thumb { margin:-14px -16px 12px; background:#0d0c0b; display:flex; justify-content:center; position:relative; cursor:zoom-in; }
 .card { -webkit-touch-callout:none; }
@@ -1155,21 +1156,43 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       el.onclick = function () { filter = el.getAttribute('data-f'); render(); };
     });
   }
+  // The stack is KEYED: a card already on the stage keeps its element and
+  // only its class changes (behind2 → behind → top), so the promotion is one
+  // CSS transition instead of a rebuilt DOM — rebuilding mid-fly-out is what
+  // dropped frames. Elements mid-flight (gone-*) are left to finish and
+  // removed afterwards.
   function renderStage() {
     var list = visible();
-    stage.innerHTML = '';
-    if (list.length === 0) {
-      stage.innerHTML = '<div class="empty">Nothing left to review' + (queue.length ? ' in this filter' : ' in this run') + '. 🐻</div>';
-    }
+    var keep = {};
     list.slice(0, 3).forEach(function (card, i) {
-      var el = document.createElement('div');
+      keep[card.key] = i;
+      var el = stage.querySelector('.card[data-key="' + CSS.escape(card.key) + '"]');
+      if (!el) {
+        el = document.createElement('div');
+        el.setAttribute('data-key', card.key);
+        el.innerHTML = card.html + '<div class="stamp ok">APPROVE</div><div class="stamp no">REJECT</div>';
+        el.className = 'card behind2';
+        stage.appendChild(el);
+        void el.offsetWidth; // commit the entry state so the promotion animates
+      }
       el.className = 'card' + (i === 1 ? ' behind' : i === 2 ? ' behind2' : '');
       el.style.zIndex = String(3 - i); // the top card paints last
-      el.setAttribute('data-key', card.key);
-      el.innerHTML = card.html + '<div class="stamp ok">APPROVE</div><div class="stamp no">REJECT</div>';
-      stage.appendChild(el);
-      if (i === 0) attachDrag(el, card);
+      if (i === 0 && el.getAttribute('data-drag') !== '1') { attachDrag(el, card); el.setAttribute('data-drag', '1'); }
     });
+    Array.prototype.forEach.call(stage.querySelectorAll('.card'), function (el) {
+      var key = el.getAttribute('data-key');
+      if (keep[key] !== undefined || /\bgone-/.test(el.className)) return;
+      el.remove();
+    });
+    var empty = stage.querySelector('.empty');
+    if (list.length === 0 && !empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Nothing left to review' + (queue.length ? ' in this filter' : ' in this run') + '. 🐻';
+      stage.appendChild(empty);
+    } else if (list.length > 0 && empty) {
+      empty.remove();
+    }
     document.getElementById('left').textContent = list.length + ' left';
     var disabled = list.length === 0;
     ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
@@ -1220,9 +1243,32 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function topCard() { return visible()[0] || null; }
   function removeFromQueue(card) { queue = queue.filter(function (c) { return c.key !== card.key; }); }
 
+  // Fly-out starts from wherever the finger left the card (the drag's
+  // inline transform is folded into the exit, never snapped to centre
+  // first), the next card is promoted in the same frame, and the save goes
+  // to the server in the background — a slow tailnet round trip used to
+  // freeze the stack. A failed save puts the card back on top.
+  function flyOut(el, direction) {
+    if (!el) return;
+    var dx = Number(el.getAttribute('data-dx') || 0);
+    var dy = Number(el.getAttribute('data-dy') || 0);
+    el.classList.remove('dragging');
+    el.style.transition = 'transform .32s cubic-bezier(.2,.7,.2,1), opacity .28s ease-out';
+    el.style.zIndex = '9';
+    var w = Math.max(window.innerWidth, 420);
+    var target = direction === 'gone-right' ? 'translate3d(' + (w + 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(18deg)'
+      : direction === 'gone-left' ? 'translate3d(' + (-w - 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(-18deg)'
+      : 'translate3d(0,' + Math.round(window.innerHeight * 0.9) + 'px,0) scale(.9)';
+    el.className = 'card ' + direction;
+    requestAnimationFrame(function () { el.style.transform = target; el.style.opacity = '0'; });
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 360);
+  }
+
   function decide(card, verdict, reason, direction) {
     var el = stage.querySelector('.card[data-key="' + CSS.escape(card.key) + '"]');
-    if (el) el.className = 'card ' + direction;
+    flyOut(el, direction);
+    removeFromQueue(card);
+    render();
     // A dropped card's swipe is a bear verdict: right = "that IS bear"
     // (rescued by the next run), left = "not bear, confirmed".
     // "Not bear" as a reject reason on a kept card records the verdict too,
@@ -1233,14 +1279,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     request.then(function () {
-      removeFromQueue(card);
       var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html };
       decided.push(record);
       history.push({ card: card, record: record });
       toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected')));
-      setTimeout(render, 180);
+      renderDecided(); renderExecute();
     }).catch(function (error) {
       toast('Not saved: ' + error.message);
+      queue.unshift(card);
       render();
     });
   }
@@ -1253,9 +1299,9 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function skipTop() {
     var c = topCard(); if (!c) return;
     var el = stage.querySelector('.card[data-key="' + CSS.escape(c.key) + '"]');
-    if (el) el.className = 'card gone-down';
+    flyOut(el, 'gone-down');
     removeFromQueue(c); queue.push(c);
-    setTimeout(render, 180);
+    render();
   }
   function undoDecision(record) {
     var request = record.kind === 'dropped'
@@ -1304,8 +1350,17 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function attachDrag(el, card) {
     var startX = 0, startY = 0, dx = 0, dy = 0, active = false, moved = false, lockedH = false, lockedV = false;
     var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no');
+    var frame = null;
+    function paint() {
+      frame = null;
+      el.style.transform = 'translate3d(' + dx + 'px,' + (dy * 0.3) + 'px,0) rotate(' + (dx / 18) + 'deg)';
+      if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
+      if (noStamp) noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+    }
     function reset() {
+      if (frame) { cancelAnimationFrame(frame); frame = null; }
       el.style.transform = '';
+      el.removeAttribute('data-dx'); el.removeAttribute('data-dy');
       if (okStamp) okStamp.style.opacity = 0;
       if (noStamp) noStamp.style.opacity = 0;
     }
@@ -1325,9 +1380,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (!lockedH) return;
       moved = true;
       if (e && e.cancelable) e.preventDefault();
-      el.style.transform = 'translate(' + dx + 'px,' + (dy * 0.3) + 'px) rotate(' + (dx / 18) + 'deg)';
-      if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
-      if (noStamp) noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+      el.setAttribute('data-dx', String(dx)); el.setAttribute('data-dy', String(dy));
+      if (!frame) frame = requestAnimationFrame(paint);
     }
     function tap(target) {
       if (!target || !target.closest) return;
@@ -1338,9 +1392,10 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     function end(target, cancelled) {
       if (!active) return;
       active = false;
-      el.classList.remove('dragging');
+      if (frame) { cancelAnimationFrame(frame); frame = null; paint(); }
       if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
-      if (!cancelled && lockedH && dx < -110) { reset(); rejectTop(); return; }
+      if (!cancelled && lockedH && dx < -110) { el.classList.remove('dragging'); reset(); rejectTop(); return; }
+      el.classList.remove('dragging');
       reset();
       if (!cancelled && !moved && !lockedV) tap(target);
     }

@@ -4421,3 +4421,22 @@ test('curated canonicalization still wins for a known bar arriving all-lowercase
   normalizer.normalize(event);
   assert.equal(event.bar, 'The Eagle NYC', 'curated display name outranks generic title-casing');
 });
+
+test('a placeholder venue ("Check instagram…") is replaced by the title\'s own "at <Venue>" when the record corroborates it; uncorroborated stays TBA', () => {
+  const normalizer = createLocationNormalizer();
+  const row = {
+    title: 'Bear Happy Hour at Rawhide', city: 'nyc',
+    bar: 'Check instagram for this week’s location.',
+    description: 'Early evening bear party at Rawhide.',
+    ticketUrl: 'https://linktr.ee/clubrawhidenyc',
+    startDate: new Date('2026-09-17T22:00:00.000Z'), endDate: new Date('2026-09-18T02:00:00.000Z')
+  };
+  normalizer.normalize(row);
+  assert.equal(row.bar, 'Rawhide');
+
+  const uncorroborated = { title: 'Some Party at Nowhere Special', city: 'nyc', bar: 'Location TBA', description: 'A party.', address: '1 Main St', location: '40.7, -74.0',
+    startDate: new Date('2026-09-17T22:00:00.000Z'), endDate: new Date('2026-09-18T02:00:00.000Z') };
+  normalizer.normalize(uncorroborated);
+  assert.equal(uncorroborated.bar, 'Location TBA', 'a title tail nothing else on the record names is not a venue');
+  assert.equal(uncorroborated.location, null, 'the TBA path still clears fake location data');
+});
