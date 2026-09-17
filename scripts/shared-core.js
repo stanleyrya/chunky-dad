@@ -1467,6 +1467,55 @@ class SharedCore {
     }
 
     // The card + the decision snapshot: scalars only (persisted verbatim).
+    // A venue field that is an instruction, not a place: "Check instagram
+    // for this week's location.", "TBA", "Location announced day-of" —
+    // Bear Happy Hour's Thotyssey row (run 20260917-092851) carried the
+    // first, the calendar kept it for weeks, and the merge preferred it to
+    // a scrape that named no venue at all. Not a venue name: never anchors
+    // a pin, never beats a named venue, never survives as a merge value
+    // over one.
+    static isPlaceholderVenueText(value) {
+        const text = String(value || '').trim().toLowerCase();
+        if (!text) return false;
+        if (/\b(tba|tbd|to be announced|to be determined|to be confirmed)\b/.test(text)) return true;
+        if (/\b(check|see|follow|watch|dm|message)\b[^.]{0,40}\b(instagram|ig|socials?|website|site|page|facebook|twitter|x)\b/.test(text)) return true;
+        if (/\b(location|venue|address)\b[^.]{0,30}\b(announced|revealed|shared|dm|day.of|later|soon)\b/.test(text)) return true;
+        return false;
+    }
+
+    // Instance twin for callers that hold a core but not the class
+    // (normalizers.js stays free of a SharedCore import).
+    isPlaceholderVenueText(value) {
+        return SharedCore.isPlaceholderVenueText(value);
+    }
+
+    // "<Party> at <Venue>" — the listing convention of every aggregator row
+    // (Thotyssey: "Bear Happy Hour at Rawhide"). The tail after the last
+    // " at " is the venue the row names. Returned only when something
+    // else on the record CORROBORATES it (bar corroboration rule): the
+    // description names it too, or a link on the record carries its
+    // tokens ("linktr.ee/clubrawhidenyc"), or it is a curated bar of the
+    // event's city. Fails closed otherwise.
+    getCorroboratedVenueFromTitle(event) {
+        const title = String((event && event.title) || '').trim();
+        const match = title.match(/\s+(?:at|@)\s+([^|•(]+?)\s*$/i);
+        if (!match) return '';
+        const venue = match[1].trim().replace(/[.!]+$/, '');
+        if (!venue || venue.length < 3) return '';
+        const venueTokens = this.getCrossSourceTitleTokens(venue);
+        if (venueTokens.length === 0) return '';
+        const compact = venueTokens.join('');
+        const description = String((event && event.description) || '').toLowerCase();
+        const descriptionTokens = new Set(this.getCrossSourceTitleTokens(description));
+        if (venueTokens.every(token => descriptionTokens.has(token))) return venue;
+        const links = [event && event.ticketUrl, event && event.url, event && event.website, event && event.instagram]
+            .filter(value => typeof value === 'string' && value.trim());
+        if (links.some(link => link.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(compact))) return venue;
+        const cityBars = event && event.city ? this.getCuratedCityBars(String(event.city).trim().toLowerCase()) : null;
+        if (cityBars && this.findCuratedBarByName(cityBars, venue)) return venue;
+        return '';
+    }
+
     // The fields the owner sees on a NEW card — what a decision was about.
     static getOwnerReviewFingerprintFields() {
         return ['title', 'startDate', 'endDate', 'bar', 'address', 'url', 'ticketUrl', 'image'];
@@ -4457,6 +4506,35 @@ class SharedCore {
     }
 
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
+        // Owner-approved value (reviewed execute on the phone): the deck
+        // showed this exact from → to for this field and the owner swiped
+        // right, so the answer is known — no AI arbitration round trip. The
+        // stamp (_ownerApprovedChanges, set by executeReviewedSavedRun from
+        // the approval's snapshot) only speaks when BOTH sides still match
+        // what was shown: a calendar value that moved since is a fresh
+        // conflict and falls through to the normal ladder.
+        if (context && context.records && context.sideLabels
+            && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped') {
+            const approved = context.records.b && context.records.b._ownerApprovedChanges
+                && typeof context.records.b._ownerApprovedChanges === 'object'
+                ? context.records.b._ownerApprovedChanges[fieldName]
+                : null;
+            if (approved && typeof approved === 'object'
+                && SharedCore.normalizeOwnerReviewValue(approved.to) === SharedCore.normalizeOwnerReviewValue(valueB)
+                && SharedCore.normalizeOwnerReviewValue(approved.from) === SharedCore.normalizeOwnerReviewValue(valueA)) {
+                return { winner: 'b', reason: 'the owner approved this value on the review deck' };
+            }
+        }
+
+        // A placeholder venue ("Check instagram for this week's location.")
+        // yields to any named venue, whichever side carries it.
+        if (fieldName === 'bar') {
+            const placeholderA = SharedCore.isPlaceholderVenueText(valueA);
+            const placeholderB = SharedCore.isPlaceholderVenueText(valueB);
+            if (placeholderA && !placeholderB && String(valueB || '').trim()) return { winner: 'b', reason: 'a named venue beats a placeholder ("' + String(valueA).trim() + '")' };
+            if (placeholderB && !placeholderA && String(valueA || '').trim()) return { winner: 'a', reason: 'a named venue beats a placeholder ("' + String(valueB).trim() + '")' };
+        }
+
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
         // NOLA): wave 2's extraction fix promoted a DOORS start to the
         // party/show time and stamps the event (_doorsTimeRejected /
@@ -11033,9 +11111,12 @@ class SharedCore {
             // event ("MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON
             // WEEKEND" → "MEGAWOOF", run 20260910-215043). The model's
             // verbatim answer still stands — this gate never substitutes a
-            // deterministic cut — but the run log names the shorter-than-
-            // necessary trim and the prefix that would have fit, so the
-            // pattern is countable before the prompt is ever touched.
+            // deterministic cut (a short cut is often right: "D>U>R>O —
+            // Precinct DTLA — Saturday — SOLD OUT" is D>U>R>O) — but the run
+            // log names the shorter-than-necessary trim and the prefix that
+            // would have fit. The merge-time guard that DOES act lives in
+            // applyFinalOverlongFieldTrims: a saved title that fits and says
+            // more than the cut is kept.
             if (entry.field === 'title' && answer && answer.length < entry.maxChars * 0.4) {
                 const separatorPrefix = this.longestSeparatorBoundedPrefix(entry.value, entry.maxChars);
                 if (separatorPrefix && separatorPrefix.length > answer.length * 1.5) {
@@ -11164,6 +11245,29 @@ class SharedCore {
         const priorRecords = Array.isArray(event._fieldTrims) ? event._fieldTrims : [];
         const records = await this.trimOverlongFieldsForEvent(event, trimConfig, aiConfig, httpAdapter);
         if (records.length === 0) return records;
+        // A saved title that fits the limit and says more than the cut is
+        // kept. The AI merge picked the scraped "Urban Bear Weekend: 8th
+        // Annual Urban Bear Street Fair at Little West 12th Street", the
+        // trim cut it to "Urban Bear Weekend", and the calendar's own "The
+        // 18th Annual Urban Bear NYC Street Fair" lost its event (run
+        // 20260917-092851; owner: "the old name was better"). An update
+        // never makes a saved title say less: any distinctive word of the
+        // saved title the cut dropped keeps the saved title.
+        const savedTitle = event._original && event._original.calendar && typeof event._original.calendar.title === 'string'
+            ? event._original.calendar.title.trim()
+            : '';
+        for (const record of records) {
+            if (!record || record.field !== 'title' || record.status !== 'trimmed' || !savedTitle) continue;
+            if (!Number.isFinite(record.maxChars) || savedTitle.length > record.maxChars) continue;
+            const cutTokens = new Set(this.getCrossSourceTitleTokens(event.title));
+            const missing = this.getCrossSourceTitleTokens(savedTitle).filter(token => token.length >= 4 && !cutTokens.has(token));
+            if (missing.length === 0) continue;
+            console.log(`✂️ TRIM: "${event.title}" — the cut drops "${missing.join('", "')}" that the saved title "${savedTitle}" carries; the saved title fits (${savedTitle.length} ≤ ${record.maxChars} chars) and is kept`);
+            event.title = savedTitle;
+            record.status = 'saved-title-kept';
+            record.trimmedValue = savedTitle;
+            record.trimmedLength = savedTitle.length;
+        }
         const finalPassFields = new Set(records.map(record => record && record.field).filter(Boolean));
         event._fieldTrims = [
             ...priorRecords.filter(record => record && record.field && !finalPassFields.has(record.field)),

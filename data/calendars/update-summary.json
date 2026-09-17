@@ -15,8 +15,8 @@
     "atlanta": {
       "name": "Atlanta",
       "status": "success",
-      "dataLength": 6630,
-      "eventCount": 5
+      "dataLength": 8394,
+      "eventCount": 6
     },
     "austin": {
       "name": "Austin",
@@ -51,8 +51,8 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 60018,
-      "eventCount": 43
+      "dataLength": 61684,
+      "eventCount": 44
     },
     "brighton": {
       "name": "Brighton",
@@ -129,7 +129,7 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 47113,
+      "dataLength": 47453,
       "eventCount": 40
     },
     "london": {
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 41674,
-      "eventCount": 36
+      "dataLength": 44036,
+      "eventCount": 38
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -225,8 +225,8 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 18356,
-      "eventCount": 16
+      "dataLength": 26709,
+      "eventCount": 23
     },
     "sacramento": {
       "name": "Sacramento",
@@ -249,8 +249,8 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 14452,
-      "eventCount": 11
+      "dataLength": 19636,
+      "eventCount": 14
     },
     "sf": {
       "name": "San Francisco",

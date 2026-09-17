@@ -60,6 +60,16 @@
     "accent": "#df0209"
   },
   {
+    "slug": "flower-power-disco-44bb0bf7",
+    "url": "https://beefdip.com",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#553113:21:7 #945434:19:10 #120d13:16:1 #0bd265:5:20 #ef167d:3:24",
+    "accent": "#ef167d"
+  },
+  {
     "slug": "foam-pool-party-06eda3c4",
     "url": "https://beefdip.com/",
     "faviconBg": "#e30309",
@@ -68,6 +78,16 @@
     "paletteSource": "flyer",
     "palette": "#553113:21:7 #945434:19:10 #120d13:16:1 #0bd265:5:20 #ef167d:3:24",
     "accent": "#ef167d"
+  },
+  {
+    "slug": "furball-gear-night-4d404df0",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#64635b:18:1 #3c4b4c:17:2 #1b323c:16:3 #9b755b:11:6",
+    "accent": "#9b755b"
   },
   {
     "slug": "furball-pool-party-692b7f78",
@@ -88,6 +108,16 @@
     "paletteSource": "flyer",
     "palette": "#3a0b12:18:7 #14020a:17:4 #33134c:14:10 #eb3b7c:10:21 #5d2a83:10:15",
     "accent": "#eb3b7c"
+  },
+  {
+    "slug": "madbear-foam-pool-party-59683591",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#e3bba4:21:6 #9c533d:16:10 #c39373:16:7 #df5242:11:18 #e42be0:3:28",
+    "accent": "#df5242"
   },
   {
     "slug": "madbear-red-ball-64450d6f",
@@ -120,6 +150,16 @@
     "accent": "#df0209"
   },
   {
+    "slug": "splash-classic-anthems-pool-party-67eb2dec",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#34837c:17:8 #e2e3c5:17:4 #b4714b:14:10 #daa56b:14:10 #f7e129:7:18",
+    "accent": "#b4714b"
+  },
+  {
     "slug": "sweat-singlet-underwear-jockstrap-party-22959658",
     "url": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01",
     "faviconBg": "#e30309",
@@ -130,6 +170,16 @@
     "accent": "#b3a261"
   },
   {
+    "slug": "the-black-ball-70adad84",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0a05:46:1 #2b251b:17:2 #4b3c2c:12:3 #e2ceae:6:5 #b40a08:3:19",
+    "accent": "#b40a08"
+  },
+  {
     "slug": "tidal-wave-0b71e4c3",
     "url": "https://beefdip.com/tags/",
     "faviconBg": "#e30309",
@@ -138,6 +188,16 @@
     "paletteSource": "flyer",
     "palette": "#3da29e:19:9 #e88459:18:14 #ecc4ab:16:6 #7fceb3:9:9 #db1164:7:23",
     "accent": "#db1164"
+  },
+  {
+    "slug": "welcome-party-6cf6baa0",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f1e7aa:21:8 #cd8943:16:12 #963e1b:14:13 #e3b865:11:11 #f55b35:4:20",
+    "accent": "#963e1b"
   },
   {
     "slug": "welcome-t-dance-3c6cd27e",
@@ -158,6 +218,16 @@
     "paletteSource": "flyer",
     "palette": "#323424:33:3 #535434:19:5 #746a43:18:6 #84845c:14:6 #ada072:10:6",
     "accent": "#746a43"
+  },
+  {
+    "slug": "white-party-139c66d0",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
   },
   {
     "slug": "white-party-50b21550",

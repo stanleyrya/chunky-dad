@@ -20,6 +20,16 @@
     "accent": "#d753e4"
   },
   {
+    "slug": "bearracuda-seattle-red-light-district-792ef9cf",
+    "url": "https://bearracuda.com/events/seattlered/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#ca1c11:31:21 #1b0b0b:18:3 #eae1de:16:1",
+    "accent": "#ca1c11"
+  },
+  {
     "slug": "bearracuda-seattle-serious-wood-4a1720dd",
     "url": "https://bearracuda.com/events/seattlewood/",
     "faviconBg": "#ff1901",
