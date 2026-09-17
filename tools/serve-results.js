@@ -817,6 +817,22 @@ function renderReviewPriorRow(prior) {
     return `<div class="prior">↩︎ You ${prior.verdict === 'reject' ? 'rejected' : 'approved'} this${when ? ` on ${escapeHtmlText(when)}` : ''}${reason ? ` — “${escapeHtmlText(reason)}”` : ''}. Back for a second look: ${escapeHtmlText(drift)}.</div>`;
 }
 
+// Calendar link memory on a NEW card: the link came from an earlier
+// night of this party, or there is none anywhere — which is the moment a
+// paste into any occurrence pays off for every later night.
+function renderReviewLinkHistory(entry, proposal, display) {
+    if (!entry || entry.kind !== 'new') return '';
+    const history = display && display.linkHistory && typeof display.linkHistory === 'object' ? display.linkHistory : null;
+    if (!history) return '';
+    if (history.website && (history.website === proposal.url || history.website === proposal.ticketUrl)) {
+        return `<div class="line muted">🔗 link inherited from the calendar's ${escapeHtmlText(history.from || 'earlier')} night of this party</div>`;
+    }
+    if (!proposal.url && !proposal.ticketUrl && history.occurrences > 0) {
+        return `<div class="line muted">🔗 no link on this row or on the calendar's ${history.occurrences} earlier night${history.occurrences === 1 ? '' : 's'} of this party — paste one into any occurrence and later nights inherit it</div>`;
+    }
+    return '';
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
@@ -870,6 +886,7 @@ function renderReviewCard(entry, ctx = {}) {
   ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location, barSource: display.barSource })}
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
   ${chips ? `<div class="chips">${chips}</div>` : ''}
+  ${renderReviewLinkHistory(entry, proposal, display)}
   ${renderReviewBearRow(display, proposal)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display)) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}

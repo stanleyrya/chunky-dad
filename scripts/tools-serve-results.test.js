@@ -1060,3 +1060,17 @@ test('renderReviewCard: a card back for a second look shows the earlier verdict,
   assert.ok(html.includes('changed since: image, url'));
   assert.ok(!renderReviewCard(base, ctx).includes('class="prior"'), 'no prior, no row');
 });
+
+test('renderReviewCard: calendar link memory — an inherited link is named, and a party with no link anywhere invites a paste', () => {
+  const ctx = buildReviewCtx();
+  const base = { kind: 'new', key: 'k', proposal: {
+    title: 'Bears 4 Bareburger at Bareburger HK', startDate: '2026-09-25T01:00:00.000Z', endDate: '2026-09-25T05:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Bareburger', address: '366 W 46th St', city: 'nyc', location: '', source: 'Thotyssey', url: '', ticketUrl: '', image: '', cover: '', description: '', changes: {}
+  } };
+  const none = renderReviewCard({ ...base, display: { linkHistory: { occurrences: 3, latest: '2026-09-17', website: '', from: null } } }, ctx);
+  assert.ok(none.includes("no link on this row or on the calendar's 3 earlier nights of this party"), none);
+  const eventbrite = 'https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018';
+  const inherited = renderReviewCard({ ...base, proposal: { ...base.proposal, ticketUrl: eventbrite }, display: { linkHistory: { occurrences: 3, latest: '2026-09-17', website: eventbrite, from: '2026-09-17' } } }, ctx);
+  assert.ok(inherited.includes("link inherited from the calendar's 2026-09-17 night"), inherited);
+  assert.ok(!renderReviewCard({ ...base, display: {} }, ctx).includes('🔗 no link'), 'no history, no line');
+});
