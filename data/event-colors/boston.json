@@ -270,6 +270,16 @@
     "accent": "#db8c64"
   },
   {
+    "slug": "furball-boston-328cb05d",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#00101f:59:4 #b21e2c:9:18 #621a2e:8:10 #b08982:7:5",
+    "accent": "#b21e2c"
+  },
+  {
     "slug": "jocks-at-jacques-3300bbe2",
     "url": "https://www.massbearsandcubs.org/events/jocks-at-jacques",
     "faviconBg": "#533531",
