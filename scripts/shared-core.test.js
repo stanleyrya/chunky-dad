@@ -23332,3 +23332,27 @@ test('bear-check provenance names a sub-brand with its parent, so "Treasure Trai
   const plain = core.buildBearCheckProvenance({ title: 'Bearracuda Seattle', _promoter: 'Bearracuda' }, { name: 'Bearracuda', urls: ['https://bearracuda.com/'] });
   assert.ok(plain.includes('names the promoter Bearracuda, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.'), plain);
 });
+
+test('flag, don\'t drop: an AI "not bear" on an event whose own title names a usually-bear promoter\'s series is held as unsure', async () => {
+  const core = createRegistryCore([
+    { name: 'Bearracuda', website: 'https://bearracuda.com/', urlPatterns: ['bearracuda.com'], bearAffinity: 'usually' },
+    { name: 'HOT TAKE', parent: 'Bearracuda', keywords: ['hot take'] }
+  ]);
+  const parserConfig = { name: 'Bearracuda', alwaysBear: false, ai: { enabled: true, bearCheck: { mode: 'enforce' } } };
+  core.getAiBearVerdict = async () => ({ verdict: 'not_bear', reason: 'no bear-specific vocabulary', evidence: [] });
+
+  // HOT TAKE is a Bearracuda series (parent bearAffinity "usually"); the title names it.
+  const series = { title: 'HOT TAKE Anniversary', _promoter: 'HOT TAKE', startDate: new Date('2026-11-07T05:00:00.000Z') };
+  const held = await core.computeBearCheckDecision(series, parserConfig, {});
+  assert.equal(held.result, 'unsure');
+  assert.ok(held.provenance.includes('held: the event\'s own title names HOT TAKE, a usually-bear promoter'), held.provenance);
+
+  // The same verdict on an event the registry matched only by URL is a real drop.
+  const byUrl = { title: 'Drag Brunch', _promoter: 'Bearracuda', url: 'https://bearracuda.com/events/brunch/', _staticFields: {} };
+  const dropped = await core.computeBearCheckDecision(byUrl, parserConfig, {});
+  assert.equal(dropped.result, 'not_bear');
+
+  // And "bear" / "unsure" verdicts pass through untouched.
+  core.getAiBearVerdict = async () => ({ verdict: 'bear', reason: 'names the series', evidence: ['HOT TAKE'] });
+  assert.equal((await core.computeBearCheckDecision(series, parserConfig, {})).result, 'bear');
+});
