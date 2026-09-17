@@ -10171,7 +10171,8 @@ class SharedCore {
         const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
         if (aiVerdict) {
             const aiDecision = { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
-            return this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence);
+            return this.holdUsuallyBearSeriesFromDrop(
+                this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence), event, trust);
         }
 
         // Fail closed: a deferred description-only match the AI tier could not
@@ -10189,6 +10190,29 @@ class SharedCore {
             return { result: 'bear', provenance: 'config: alwaysBear (ai unavailable)' };
         }
         return { result: 'unsure', provenance: 'fallback: ai unavailable' };
+    }
+
+    // Flag, don't drop: an AI "not bear" on an event whose OWN title or
+    // organizer names a usually-bear promoter (or one of its series) is
+    // held as "unsure" — kept on the plan with the review flag, hidden on
+    // the site, one swipe on the deck — instead of dropped. "Usually" means
+    // the owner wants these judged, not that a thin description may erase
+    // them: Bearracuda's "Treasure Trail Seattle: Rim Reaper!" was dropped
+    // twice on "no bear-specific vocabulary" (runs 20260916-093055,
+    // 20260917-091952) while the same night's venue row was judged bear,
+    // and the drop discarded the promoter's own page (flyer, ticket link,
+    // 3am end) before dedup could fold the two.
+    holdUsuallyBearSeriesFromDrop(decision, event, trust) {
+        if (!decision || decision.result !== 'not_bear') return decision;
+        if (!trust || trust.affinity !== 'usually') return decision;
+        const match = this.matchEventToPromoter(event);
+        const evidence = match && match.entry ? String(match.evidence || '') : '';
+        if (evidence !== 'title' && evidence !== 'organizer') return decision;
+        console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — AI said not bear, but its own ${evidence} names ${trust.promoter} (usually-bear); held for review, not dropped`);
+        return {
+            result: 'unsure',
+            provenance: `${decision.provenance} — held: the event's own ${evidence} names ${trust.promoter}, a usually-bear promoter`
+        };
     }
 
     isBearEvent(event, parserConfig) {
