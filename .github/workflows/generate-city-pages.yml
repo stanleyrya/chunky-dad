@@ -41,7 +41,15 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
             git commit -m "chore: regenerate city pages and sitemap"
-            git push
+            # Other workflows commit to main too (the calendar refresh landed
+            # 18 s before this job's push on 2026-09-17 and the push was
+            # rejected, leaving 26 freshly built city pages unpublished).
+            # Rebase onto whatever landed meanwhile and retry.
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
           else
             echo "No changes to commit."
           fi
