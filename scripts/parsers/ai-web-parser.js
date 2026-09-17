@@ -1663,9 +1663,11 @@ class AiWebParser {
             // segment pairing recorded its verdict) state a different start
             // time than the page-derived one?
             this.applyFlyerTimeConflictFlag(keptEvents);
+            // One card, two "events": a sibling's sub-heading is not an event.
+            const foldedEvents = this.foldSubheadingEvents(keptEvents);
 
             return {
-                events: keptEvents,
+                events: foldedEvents,
                 additionalLinks,
                 discoveredSegments,
                 ocrResults: ocrResults,
@@ -2307,6 +2309,46 @@ class AiWebParser {
         if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
         if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
         return false;
+    }
+
+    // One card, two "events": the model split a listing card into the event
+    // and its flyer's headline — massive.club's calendar, run 20260917-092851:
+    // "FINAL PARTY" with bar "Red Light District" (the sibling's own title),
+    // address "SEATTLE RED LIGHT DISTRICT", a midnight start on the same
+    // day, no description, no link — beside "Bearracuda | Seattle - Red
+    // Light District". A record whose venue AND address are nothing but a
+    // sibling's title tokens, on the sibling's local day, with no
+    // description and no link of its own, is that sibling's sub-heading.
+    // Fails closed: any token the sibling's title does not carry, any
+    // description, any link, or another day keeps the record.
+    foldSubheadingEvents(events) {
+        const list = Array.isArray(events) ? events.filter(Boolean) : [];
+        if (list.length < 2 || !this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return list;
+        const tokensOf = (value) => this.core.getCrossSourceTitleTokens(String(value || ''));
+        const dayOf = (event) => {
+            const timezone = event.timezone || (typeof this.core.getCityTimezone === 'function' ? this.core.getCityTimezone(event.city) : null) || null;
+            return typeof this.core.normalizeEventDateLocal === 'function' ? (this.core.normalizeEventDateLocal(event.startDate, timezone) || '') : '';
+        };
+        const kept = [];
+        for (const event of list) {
+            const placeTokens = [...new Set([...tokensOf(event.bar), ...tokensOf(event.address)])];
+            const hasOwnText = Boolean(String(event.description || '').trim())
+                || Boolean(String(event.ticketUrl || '').trim())
+                || Boolean(String(event.url || event.website || '').trim());
+            let owner = null;
+            if (placeTokens.length > 0 && !hasOwnText) {
+                const day = dayOf(event);
+                owner = list.find(sibling => sibling !== event && day && dayOf(sibling) === day
+                    && (() => { const siblingTitle = new Set(tokensOf(sibling.title)); return placeTokens.every(token => siblingTitle.has(token)); })()
+                    && tokensOf(sibling.bar).some(token => !placeTokens.includes(token)));
+            }
+            if (owner) {
+                console.log(`🧽 SUBHEADING: dropped "${event.title || 'event'}" — its venue/address ("${[event.bar, event.address].filter(Boolean).join(' / ')}") is only the title of "${owner.title}" on the same day, with no description or link of its own`);
+                continue;
+            }
+            kept.push(event);
+        }
+        return kept;
     }
 
     isVenueHoursNoticeTitle(title) {

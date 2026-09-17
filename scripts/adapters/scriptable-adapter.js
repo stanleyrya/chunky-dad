@@ -1947,9 +1947,18 @@ class ScriptableAdapter {
   }
 
   async postJson(url, payload, options = {}) {
-    return this.withNetworkResilience("AI/POST request", url, () =>
-      this.postJsonOnce(url, payload, options),
-    );
+    // Per-run tally (calls, wall time) so an execute's timing line can say
+    // how much of it was AI round trips.
+    const stats = this._postJsonStats || (this._postJsonStats = { calls: 0, ms: 0 });
+    const startedAt = Date.now();
+    stats.calls += 1;
+    try {
+      return await this.withNetworkResilience("AI/POST request", url, () =>
+        this.postJsonOnce(url, payload, options),
+      );
+    } finally {
+      stats.ms += Date.now() - startedAt;
+    }
   }
 
   // A non-2xx status the server ANSWERED with used to come back as
@@ -15779,10 +15788,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
           .map((decision) => decision.key),
       );
+      const approvedByKey = new Map(
+        store
+          .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
+          .map((decision) => [decision.key, decision]),
+      );
       const selected = [];
       savedEvents.forEach((event, index) => {
         const key = core.getOwnerReviewKey(event);
-        if (key && approvedKeys.has(key)) selected.push({ event, index });
+        if (key && approvedKeys.has(key)) selected.push({ event, index, decision: approvedByKey.get(key) });
       });
       summary.skipped = savedEvents.length - selected.length;
       console.log(
@@ -15795,8 +15809,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         );
         return summary;
       }
-      const toAnalyze = selected.map(({ event, index }) => ({
+      // The approval's snapshot carries the exact from → to the owner saw
+      // for a merge; stamped on the record so the merge ladder answers
+      // those fields deterministically (SharedCore
+      // .resolveConflictDeterministically, top rung) instead of an AI
+      // arbitration round trip per merge — 1.2–2.4 s each on the phone,
+      // 12.6 of the 14 s of the 2026-09-16 execute.
+      const toAnalyze = selected.map(({ event, index, decision }) => ({
         ...SharedCore.stripCalendarAnalysisStamps(event),
+        ...(decision && decision.snapshot && decision.snapshot.changes && typeof decision.snapshot.changes === "object"
+          && Object.keys(decision.snapshot.changes).length > 0
+          ? { _ownerApprovedChanges: decision.snapshot.changes }
+          : {}),
         _savedRunSourceIndex: index,
       }));
       const loadedConfig =
@@ -15944,8 +15968,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // The phone's calendars are the truth the Mac run should compare
       // against next — snapshot the cities this plan touched.
       await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
+      const aiStats = this._postJsonStats || { calls: 0, ms: 0 };
       console.log(
-        `📱 Scriptable: 🃏 Reviewed execute timing — ${writesDoneAt - executeStartedAt}ms live analysis + writes, ${persistedAt - writesDoneAt}ms run-file save, ${Date.now() - persistedAt}ms log/metrics/cleanup + calendar snapshots`,
+        `📱 Scriptable: 🃏 Reviewed execute timing — ${writesDoneAt - executeStartedAt}ms live analysis + writes (${aiStats.calls} AI request(s), ${aiStats.ms}ms), ${persistedAt - writesDoneAt}ms run-file save, ${Date.now() - persistedAt}ms log/metrics/cleanup + calendar snapshots`,
       );
       await this.presentSavedRunExecutionNotice(
         "Calendar Updated",

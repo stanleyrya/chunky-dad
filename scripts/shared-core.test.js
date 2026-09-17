@@ -23356,3 +23356,58 @@ test('flag, don\'t drop: an AI "not bear" on an event whose own title names a us
   core.getAiBearVerdict = async () => ({ verdict: 'bear', reason: 'names the series', evidence: ['HOT TAKE'] });
   assert.equal((await core.computeBearCheckDecision(series, parserConfig, {})).result, 'bear');
 });
+
+test('placeholder venues: an instruction is not a place, and a named venue beats it in the merge ladder', () => {
+  const core = createCore();
+  assert.equal(SharedCore.isPlaceholderVenueText('Check instagram for this week’s location.'), true);
+  assert.equal(SharedCore.isPlaceholderVenueText('Location TBA'), true);
+  assert.equal(SharedCore.isPlaceholderVenueText('Venue announced day-of'), true);
+  assert.equal(SharedCore.isPlaceholderVenueText('Rawhide'), false);
+  assert.equal(SharedCore.isPlaceholderVenueText("Ty's Bar NYC"), false);
+  assert.equal(SharedCore.isPlaceholderVenueText(''), false);
+  const context = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: {}, b: {} } };
+  assert.equal(core.resolveConflictDeterministically('bar', 'Check instagram for this week’s location.', 'Rawhide', context).winner, 'b');
+  assert.equal(core.resolveConflictDeterministically('bar', 'Rawhide', 'Location TBA', context).winner, 'a');
+});
+
+test('getCorroboratedVenueFromTitle: the "at <Venue>" tail counts only when the record corroborates it', () => {
+  const core = createCore();
+  assert.equal(core.getCorroboratedVenueFromTitle({ title: 'Bear Happy Hour at Rawhide', description: 'Early evening bear party at Rawhide.' }), 'Rawhide', 'named in the description');
+  assert.equal(core.getCorroboratedVenueFromTitle({ title: 'Bear Happy Hour at Rawhide', ticketUrl: 'https://linktr.ee/clubrawhidenyc' }), 'Rawhide', 'named in a link');
+  assert.equal(core.getCorroboratedVenueFromTitle({ title: 'Bear Happy Hour at Rawhide', description: 'Early evening bear party.' }), '', 'nothing else names it');
+  assert.equal(core.getCorroboratedVenueFromTitle({ title: 'Bear Happy Hour' }), '', 'no tail');
+});
+
+test('merge ladder: a value the owner approved on the deck is answered without arbitration, only while both sides still match', () => {
+  const core = createCore();
+  const approved = { _ownerApprovedChanges: { title: { from: 'Bear Happy Hour', to: 'Bear Happy Hour at Rawhide' } } };
+  const context = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: {}, b: approved } };
+  const hit = core.resolveConflictDeterministically('title', 'Bear Happy Hour', 'Bear Happy Hour at Rawhide', context);
+  assert.deepEqual(hit, { winner: 'b', reason: 'the owner approved this value on the review deck' });
+  const moved = core.resolveConflictDeterministically('title', 'Bear Happy Hour (moved)', 'Bear Happy Hour at Rawhide', context);
+  assert.ok(!moved || moved.reason !== 'the owner approved this value on the review deck', 'a calendar value that moved since is a fresh conflict');
+  const otherField = core.resolveConflictDeterministically('description', 'x', 'y', context);
+  assert.ok(!otherField || otherField.reason !== 'the owner approved this value on the review deck');
+});
+
+test('final trim pass: a saved title that fits and says more than the cut is kept — an update never makes a saved title say less', async () => {
+  const core = createCore();
+  const parserConfig = buildTrimParserConfig();
+  const original = 'Urban Bear Weekend: 8th Annual Urban Bear Street Fair at Little West 12th Street';
+  const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: 'Urban Bear Weekend:' } } }));
+  const merged = { title: original, description: 'x', _action: 'merge', _original: { calendar: { title: 'The 18th Annual Urban Bear NYC Street Fair' } } };
+  const records = await core.applyFinalOverlongFieldTrims(merged, parserConfig, adapter);
+  assert.equal(merged.title, 'The 18th Annual Urban Bear NYC Street Fair', merged.title);
+  assert.equal(records[0].status, 'saved-title-kept');
+
+  // A saved title the cut still covers ("D>U>R>O" over "D>U>R>O Saturday") yields to the cut as before.
+  const covered = { title: 'D>U>R>O — Precinct DTLA Los Angeles — Saturday — SOLD OUT — merch inside', description: 'x', _action: 'merge', _original: { calendar: { title: 'D>U>R>O Saturday' } } };
+  const adapter2 = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: 'D>U>R>O' } } }));
+  await core.applyFinalOverlongFieldTrims(covered, parserConfig, adapter2);
+  assert.equal(covered.title, 'D>U>R>O');
+
+  // A saved title over the limit itself never comes back.
+  const overlongSaved = { title: original, description: 'x', _action: 'merge', _original: { calendar: { title: original } } };
+  await core.applyFinalOverlongFieldTrims(overlongSaved, parserConfig, buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: 'Urban Bear Weekend:' } } })));
+  assert.equal(overlongSaved.title, 'Urban Bear Weekend');
+});

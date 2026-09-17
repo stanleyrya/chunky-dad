@@ -716,12 +716,31 @@ class LocationNormalizer extends BaseNormalizer {
         // Re-anchor wall-clock dates now that the city (and thus timezone) may be resolved
         this.resolveWallClockDates(event);
 
-        // Check if venue name indicates TBA/placeholder
-        const isTBAVenue = event.bar && (
-                          event.bar.toLowerCase().includes('tba') ||
-                          event.bar.toLowerCase().includes('to be announced'));
+        // A placeholder venue ("TBA", "Check instagram for this week's
+        // location.") is an instruction, not a place. Before giving up on
+        // it, the title's own "<Party> at <Venue>" tail is tried — corroborated
+        // by the description, a link on the record, or the city's curated
+        // bars (SharedCore.getCorroboratedVenueFromTitle): Thotyssey's "Bear
+        // Happy Hour at Rawhide" / "Early evening bear party at Rawhide" /
+        // linktr.ee/clubrawhidenyc row published the placeholder as its
+        // place (run 20260917-092851).
+        const isPlaceholderVenue = (value) => Boolean(this.core && typeof this.core.isPlaceholderVenueText === 'function' && this.core.isPlaceholderVenueText(value));
+        const isTBAVenue = Boolean(event.bar) && (
+            isPlaceholderVenue(event.bar) ||
+            event.bar.toLowerCase().includes('tba') ||
+            event.bar.toLowerCase().includes('to be announced'));
 
-        if (isTBAVenue) {
+        if (isTBAVenue || !event.bar) {
+            const fromTitle = this.core && typeof this.core.getCorroboratedVenueFromTitle === 'function'
+                ? this.core.getCorroboratedVenueFromTitle(event)
+                : '';
+            if (fromTitle) {
+                console.log(`🗺️ LocationNormalizer: venue "${fromTitle}" read from the title of "${event.title || 'unknown'}"${event.bar ? ` — replaces the placeholder "${event.bar}"` : ' — the record named no venue'} (corroborated on the record)`);
+                event.bar = fromTitle;
+            }
+        }
+
+        if (isTBAVenue && !(event.bar && !isPlaceholderVenue(event.bar) && !/tba|to be announced/i.test(event.bar))) {
             console.log(`🗺️ LocationNormalizer: TBA venue "${event.bar}" detected - removing fake location data`);
             event.location = null;
             event.address = null;
