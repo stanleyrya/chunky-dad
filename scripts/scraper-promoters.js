@@ -279,8 +279,11 @@ const scraperPromoters = [
   {
     "name": "Bears 4 Bareburger",
     "aliases": [
-      "Bears for Bareburger"
+      "Bears for Bareburger",
+      "Gay 4 Bareburger"
     ],
+    "favicon": "https://linktr.ee/Gay4bareburger",
+    "instagram": "https://www.instagram.com/gay4bareburger",
     "bearAffinity": "always"
   }
 ];
