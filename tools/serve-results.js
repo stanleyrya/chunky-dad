@@ -697,6 +697,8 @@ function renderReviewBadges(display = {}) {
     if (display.recurring) badges.push('<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
     if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
+    if (Array.isArray(display.slotWins) && display.slotWins.length > 0) badges.push(`<span class="badge">🪑 takes the slot from ${escapeHtmlText(display.slotWins.join(', '))} — that night is withheld</span>`);
+    if (display.slotTakeover && display.slotTakeover.from) badges.push(`<span class="badge">🪑 takes the slot of the saved ${escapeHtmlText(display.slotTakeover.fromCadence || '')} night “${escapeHtmlText(display.slotTakeover.from)}”</span>`);
     if (Array.isArray(display.venueOverlaps) && display.venueOverlaps.length > 0) badges.push(`<span class="badge warn">⚔️ overlaps ${escapeHtmlText(display.venueOverlaps.join(', '))}</span>`);
     return badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
 }

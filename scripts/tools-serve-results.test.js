@@ -1110,3 +1110,15 @@ test('renderReviewPage ships each card\'s series and each decided entry\'s via, 
   const decidedHtml = renderReviewPage(decidedDeck, { runs: [], scriptName: 'display-saved-run' });
   assert.ok(decidedHtml.includes('"via":"' + deck.cards[0].key + '"'), 'the inherited night says which night decided it');
 });
+
+test('renderReviewCard: a party that took a slot says whom it displaced', () => {
+  const ctx = buildReviewCtx();
+  const entry = { kind: 'new', key: 'k', proposal: {
+    title: 'Leather Daddy at Ty\'s', startDate: '2026-11-27T00:00:00.000Z', endDate: '2026-11-27T04:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Ty\'s Bar NYC', address: '114 Christopher St', city: 'nyc', location: '', source: 'ai-web', url: '', ticketUrl: '', image: '', cover: '', description: '', changes: {}
+  }, display: { slotWins: ['Fursdays at Ty\'s (weekly)'] } };
+  const html = renderReviewCard(entry, ctx);
+  assert.ok(html.includes('🪑 takes the slot from Fursdays at Ty&#39;s (weekly) — that night is withheld') || html.includes("🪑 takes the slot from Fursdays at Ty's (weekly) — that night is withheld"), html.match(/badge[^<]*/g));
+  const merge = renderReviewCard({ ...entry, kind: 'merge', display: { slotTakeover: { from: 'Fursdays at Ty\'s', fromCadence: 'weekly' } } }, ctx);
+  assert.ok(/takes the slot of the saved weekly night/.test(merge));
+});

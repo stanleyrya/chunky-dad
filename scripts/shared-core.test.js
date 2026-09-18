@@ -23497,3 +23497,88 @@ test('owner review proposal: a merge that moves the party to another venue carri
   assert.equal(core.isOwnerReviewCandidate(barOnly), true, 'a venue move is a card even when no stored field changes');
   assert.equal(core.isOwnerReviewCandidate(reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', _changes: ['notes'] })), false);
 });
+
+test('cadence yardstick: days between occurrences, one-off = none', () => {
+  assert.equal(SharedCore.getCadenceFrequencyDays('FREQ=WEEKLY;BYDAY=TH'), 7);
+  assert.equal(SharedCore.getCadenceFrequencyDays('FREQ=WEEKLY;INTERVAL=2;BYDAY=TH'), 14);
+  assert.equal(SharedCore.getCadenceFrequencyDays('FREQ=MONTHLY;BYDAY=-1TH'), 30);
+  assert.equal(SharedCore.getCadenceFrequencyDays(''), null);
+  assert.equal(SharedCore.describeCadenceRule('FREQ=WEEKLY;BYDAY=TH'), 'weekly');
+  assert.equal(SharedCore.describeCadenceRule('FREQ=WEEKLY;INTERVAL=2'), 'every 2 weeks');
+  assert.equal(SharedCore.describeCadenceRule(''), 'one-off');
+  const core = createCore();
+  assert.equal(core.getEventCadenceRule({ notes: 'bar: Ty\'s Bar NYC\ncadence: FREQ=WEEKLY;BYDAY=TH' }), 'FREQ=WEEKLY;BYDAY=TH', 'a saved night states its cadence in notes');
+  assert.equal(core.getEventCadenceRule({ _seriesInfo: { rrule: 'FREQ=MONTHLY;BYDAY=-1TH' } }), 'FREQ=MONTHLY;BYDAY=-1TH');
+});
+
+// Thotyssey lists Fursdays (weekly) and Leather Daddy (last Thursday) at
+// Ty's, both 7–11pm. The rarer party is the special night: it takes the
+// slot from the weekly, and the weekly night never lands beside it.
+function buildTysNight(overrides = {}) {
+  return {
+    title: 'Leather Daddy at Ty\'s',
+    startDate: new Date('2026-11-27T00:00:00.000Z'),
+    endDate: new Date('2026-11-27T04:00:00.000Z'),
+    bar: 'Ty\'s Bar NYC',
+    address: '114 Christopher St, New York, NY 10014, USA',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    location: '40.7333, -74.0031',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+function buildSavedTysNight(overrides = {}, notesLines = []) {
+  return {
+    name: 'Fursdays at Ty\'s',
+    startDate: new Date('2026-11-27T00:00:00.000Z'),
+    endDate: new Date('2026-11-27T04:00:00.000Z'),
+    coordinates: { lat: 40.7333, lng: -74.0031 },
+    calendarTimezone: 'America/New_York',
+    notes: ['bar: Ty\'s Bar NYC', 'address: 114 Christopher St, New York, NY 10014, USA', 'timezone: America/New_York'].concat(notesLines).join('\n'),
+    ...overrides
+  };
+}
+
+test('slot rule: an incoming monthly/one-off party takes the slot of the saved weekly night (merge); an incoming weekly night yields to a saved rarer party (withheld)', () => {
+  const core = createCore();
+  const takeover = core.analyzeEventAction(buildTysNight(), [buildSavedTysNight({}, ['cadence: FREQ=WEEKLY;BYDAY=TH'])]);
+  assert.equal(takeover.action, 'merge');
+  assert.match(takeover.reason, /takes the slot of the saved weekly night/);
+  assert.equal(takeover.existingEvent.name, 'Fursdays at Ty\'s');
+  assert.deepEqual(takeover.slotTakeover, { from: 'Fursdays at Ty\'s', fromCadence: 'weekly', cadence: 'one-off' });
+
+  const yielding = core.analyzeEventAction(buildTysNight({ title: 'Fursdays at Ty\'s', cadence: 'FREQ=WEEKLY;BYDAY=TH' }), [buildSavedTysNight({ name: 'Leather Daddy at Ty\'s' })]);
+  assert.equal(yielding.action, 'new');
+  assert.deepEqual(yielding.slotYield, { to: 'Leather Daddy at Ty\'s', toCadence: 'one-off', cadence: 'weekly', source: 'calendar' });
+
+  const equal = core.analyzeEventAction(buildTysNight(), [buildSavedTysNight()]);
+  assert.equal(equal.action, 'new');
+  assert.equal(equal.slotYield, undefined, 'two one-offs settle nothing — both stay, the overlap chip reports');
+  assert.equal(equal.slotTakeover, undefined);
+
+  const elsewhere = core.analyzeEventAction(buildTysNight({ startDate: new Date('2026-11-27T02:00:00.000Z'), endDate: new Date('2026-11-27T04:00:00.000Z') }), [buildSavedTysNight({}, ['cadence: FREQ=WEEKLY;BYDAY=TH'])]);
+  assert.equal(elsewhere.slotTakeover, undefined, 'a later start at the same bar is another slot, not a takeover');
+
+  const yieldedEvent = { ...buildTysNight(), _action: 'new', _parserConfig: { dryRun: false }, _slotYield: yielding.slotYield };
+  assert.equal(SharedCore.filterEventsForExecution([yieldedEvent]).length, 0, 'a yielded night never writes');
+  assert.equal(SharedCore.describeExecutionDisposition(yieldedEvent), 'WITHHELD (weekly night yields the slot to "Leather Daddy at Ty\'s")');
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_slotYield'), 'stripped on replay like every analysis stamp');
+});
+
+test('slot rule on one run: the weekly night yields to the one-off at the same bar and start; the winner records whom it displaced', () => {
+  const core = createCore();
+  const beerBust = buildBeerBustEvent({ cadence: 'FREQ=WEEKLY;BYDAY=SU', startDate: new Date('2026-09-13T23:00:00.000Z'), _action: 'new' });
+  const onyx = buildOnyxEvent({ _action: 'new' });
+  core.applyVenueOverlapFlags([
+    { event: beerBust, existingEvents: [] },
+    { event: onyx, existingEvents: [] }
+  ]);
+  assert.equal(beerBust._slotYield.to, 'ONYX');
+  assert.equal(beerBust._slotYield.source, 'run');
+  assert.equal(beerBust._slotYield.cadence, 'weekly');
+  assert.equal(onyx._slotWins.length, 1);
+  assert.equal(onyx._slotWins[0].from, beerBust.title);
+  assert.equal(onyx._slotYield, undefined);
+  assert.equal(SharedCore.filterEventsForExecution([{ ...beerBust, _parserConfig: { dryRun: false } }]).length, 0);
+});

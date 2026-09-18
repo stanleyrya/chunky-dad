@@ -18940,3 +18940,36 @@ test('foldSubheadingEvents: a record whose venue and address are only a sibling\
   // A real second event at a real venue is never a sub-heading.
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, bar: 'Kremwerk', address: '1809 Minor Ave' }]).length, 2);
 });
+
+test('getJsonApiRowOccurrenceIdentity: the occurrence half of a composite feed id; nothing on a plain row', () => {
+  const parser = createParser();
+  assert.equal(parser.getJsonApiRowOccurrenceIdentity({ eid: { uid: '22093', seq: 0, tid: 1794528000000, rid: 0 }, content: {} }), 'seq=0|tid=1794528000000|rid=0');
+  assert.equal(parser.getJsonApiRowOccurrenceIdentity({ id: 4821, occurrence_id: 'occ-9' }), 'occurrence_id=occ-9');
+  assert.equal(parser.getJsonApiRowOccurrenceIdentity({ slug: 'bears-in-excess-2026-2' }), '');
+});
+
+// Thotyssey lists Fursdays as ONE Tockify entry (uid 22093) that the feed
+// expands into dated rows, each with its own occurrence id (eid.tid). The
+// feed did the expansion — every Thursday is a published night, saved as a
+// single that carries the family cadence for the site's badge.
+test('applyDerivedCadenceStamps: a feed-expanded repeat (one row id, distinct occurrence ids) is occurrence-expanded and each night carries its cadence', () => {
+  const parser = createParser();
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: '',
+      _sourceRowFeed: 'tockify.com/api/ngevent',
+      _sourceRowId: '22093',
+      _sourceRowOccurrenceId: `22093#seq=0|tid=${Date.parse(`${date}T20:00:00.000Z`)}|rid=0`
+    }));
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, undefined, 'no series conversion');
+    assert.equal(record._recurring, undefined);
+    assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=WE');
+    assert.equal(record.cadence, 'FREQ=WEEKLY;BYDAY=WE', 'the night states its family cadence as a plain field (notes cadence:)');
+  }
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date feed occurrence id artifacts')),
+    `shape line expected, got: ${JSON.stringify(logs)}`);
+});
