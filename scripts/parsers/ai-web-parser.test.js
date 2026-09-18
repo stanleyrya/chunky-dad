@@ -18925,8 +18925,11 @@ test('foldSubheadingEvents: a record whose venue and address are only a sibling\
   const kept = parser.foldSubheadingEvents([card, heading]);
   assert.deepEqual(kept.map(e => e.title), ['Bearracuda | Seattle - Red Light District']);
 
-  // Its own description, its own link, or another day keeps it.
+  // Its own description, its own link, or another day keeps it — but a
+  // description that only restates the sibling's venue and street does not.
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, description: 'The last party of the season.' }]).length, 2);
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, description: 'Massive 619EPINE' }]).length, 1, 'names and addresses are not text of its own');
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, description: 'FINAL PARTY 2OF26' }]).length, 1, 'restating its own title is not text of its own');
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, ticketUrl: 'https://tixr.com/e/1' }]).length, 2);
   // The card's bare brand link is not a link of its own, and neither is the page it was scraped off.
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, website: 'https://bearracuda.com' }]).length, 1);

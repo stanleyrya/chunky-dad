@@ -2342,9 +2342,7 @@ class AiWebParser {
             const pageKey = typeof this.core.getUrlDedupeKey === 'function' ? this.core.getUrlDedupeKey(String(sourceUrl || event._sourcePageUrl || '')) : '';
             const isThisPage = (value) => Boolean(pageKey) && typeof this.core.getUrlDedupeKey === 'function' && this.core.getUrlDedupeKey(String(value || '')) === pageKey;
             const ownLink = (value) => Boolean(String(value || '').trim()) && !isBareRoot(value) && !isThisPage(value);
-            const hasOwnText = Boolean(String(event.description || '').trim())
-                || ownLink(event.ticketUrl)
-                || ownLink(event.url || event.website);
+            const hasOwnLink = ownLink(event.ticketUrl) || ownLink(event.url || event.website);
             let owner = null;
             if (placeTokens.length > 0) {
                 const day = dayOf(event);
@@ -2352,10 +2350,25 @@ class AiWebParser {
                     && (() => { const siblingTitle = new Set(tokensOf(sibling.title)); return placeTokens.every(token => siblingTitle.has(token)); })()
                     && tokensOf(sibling.bar).some(token => !placeTokens.includes(token)));
             }
-            if (owner && hasOwnText) {
+            // A description that only restates names and addresses ("Massive
+            // 619EPINE" — the sibling's venue and street, run
+            // 20260918-084930) says nothing of its own; one that says more
+            // keeps the record.
+            const descriptionSaysMore = (sibling) => {
+                const description = String(event.description || '').trim();
+                if (!description) return false;
+                const known = [sibling.title, sibling.bar, sibling.address, event.title, event.bar, event.address]
+                    .map(value => this.core.foldDiacritics ? this.core.foldDiacritics(String(value || '')) : String(value || '').toLowerCase())
+                    .join(' ').toLowerCase().replace(/[^a-z0-9]+/g, '');
+                // Words, not codes: "2OF26" on a flyer says nothing either.
+                const words = tokensOf(description).filter(token => /[a-z]{3,}/.test(token));
+                if (words.length === 0) return false;
+                return words.some(token => !known.includes(token));
+            };
+            if (owner && (hasOwnLink || descriptionSaysMore(owner))) {
                 // Named like a sub-heading but carrying its own text: kept,
                 // and the log says what kept it so the next miss is readable.
-                const carried = [String(event.description || '').trim() ? 'description' : '', ownLink(event.ticketUrl) ? `ticketUrl ${event.ticketUrl}` : '', ownLink(event.url || event.website) ? `link ${event.url || event.website}` : ''].filter(Boolean).join(', ');
+                const carried = [descriptionSaysMore(owner) ? `description "${String(event.description).trim().slice(0, 80)}"` : '', ownLink(event.ticketUrl) ? `ticketUrl ${event.ticketUrl}` : '', ownLink(event.url || event.website) ? `link ${event.url || event.website}` : ''].filter(Boolean).join(', ');
                 console.log(`🧽 SUBHEADING: kept "${event.title || 'event'}" — its venue/address only name the title of "${owner.title}" on the same day, but it carries its own ${carried}`);
                 owner = null;
             }
