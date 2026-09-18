@@ -281,7 +281,6 @@ const scraperPromoters = [
     "aliases": [
       "Bears for Bareburger"
     ],
-    "website": "https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018",
     "bearAffinity": "always"
   }
 ];
