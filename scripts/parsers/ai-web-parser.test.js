@@ -18928,8 +18928,10 @@ test('foldSubheadingEvents: a record whose venue and address are only a sibling\
   // Its own description, its own link, or another day keeps it.
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, description: 'The last party of the season.' }]).length, 2);
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, ticketUrl: 'https://tixr.com/e/1' }]).length, 2);
-  // The card's bare brand link is not a link of its own.
+  // The card's bare brand link is not a link of its own, and neither is the page it was scraped off.
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, website: 'https://bearracuda.com' }]).length, 1);
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, url: 'https://www.massive.club/calendar' }], 'https://www.massive.club/calendar').length, 1);
+  assert.equal(parser.foldSubheadingEvents([card, { ...heading, url: 'https://www.massive.club/calendar', _sourcePageUrl: 'https://www.massive.club/calendar' }]).length, 1, 'the stamped source page counts too');
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, website: 'https://bearracuda.com/events/seattlered/' }]).length, 2);
   assert.equal(parser.foldSubheadingEvents([card, { ...heading, startDate: new Date('2026-11-09T08:00:00.000Z') }]).length, 2);
   // A real second event at a real venue is never a sub-heading.
