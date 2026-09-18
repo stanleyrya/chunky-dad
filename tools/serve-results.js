@@ -588,7 +588,7 @@ function renderReviewRouteLine(ctx, place = {}) {
 
 // ---- merge change rows -----------------------------------------------------
 
-const REVIEW_CHANGE_LABELS = { title: 'Title', startDate: 'Starts', endDate: 'Ends', location: 'Pin', url: 'Event page' };
+const REVIEW_CHANGE_LABELS = { title: 'Title', startDate: 'Starts', endDate: 'Ends', location: 'Pin', url: 'Event page', bar: 'Venue' };
 
 // { fromHtml, toHtml, noteHtml, warn } for one changed field, in the
 // language of the field: dates in the event's zone with the day printed
@@ -672,8 +672,9 @@ const REVIEW_NOTES_LABELS = {
 function reviewVisibleText(value) {
     return String(value == null ? '' : value).replace(/\u00ad/g, '·').replace(/[\u200b\u200c\u200d\ufeff]/g, '⁞');
 }
-function renderReviewNotesChangeRows(display = {}) {
-    const list = Array.isArray(display.notesChanges) ? display.notesChanges : [];
+function renderReviewNotesChangeRows(display = {}, shown = {}) {
+    const list = (Array.isArray(display.notesChanges) ? display.notesChanges : [])
+        .filter((change) => !(change && shown && typeof shown === 'object' && shown[change.key]));
     if (list.length === 0) return '';
     const none = '<span class="none">∅</span>';
     const cell = (value) => {
@@ -813,8 +814,13 @@ function renderReviewPriorRow(prior) {
     const reason = prior.reason
         ? [Array.isArray(prior.reason.tags) ? prior.reason.tags.join(', ') : '', prior.reason.text || ''].filter(Boolean).join(' — ')
         : '';
-    const drift = Array.isArray(prior.drift) && prior.drift.length > 0 ? `changed since: ${prior.drift.join(', ')}` : 'nothing changed';
-    return `<div class="prior">↩︎ You ${prior.verdict === 'reject' ? 'rejected' : 'approved'} this${when ? ` on ${escapeHtmlText(when)}` : ''}${reason ? ` — “${escapeHtmlText(reason)}”` : ''}. Back for a second look: ${escapeHtmlText(drift)}.</div>`;
+    const changed = Array.isArray(prior.drift) && prior.drift.length > 0 ? prior.drift.join(', ') : '';
+    const drift = prior.night ? (changed || 'nothing visible') : (changed ? `changed since: ${changed}` : 'nothing changed');
+    // A decision on another night of the same party: this night is on the
+    // deck only because it looks different (a new flyer, another host).
+    const what = prior.night ? ` this party's ${escapeHtmlText(prior.night)} night` : ' this';
+    const back = prior.night ? 'This night differs' : 'Back for a second look';
+    return `<div class="prior">↩︎ You ${prior.verdict === 'reject' ? 'rejected' : 'approved'}${what}${when ? ` on ${escapeHtmlText(when)}` : ''}${reason ? ` — “${escapeHtmlText(reason)}”` : ''}. ${back}: ${escapeHtmlText(drift)}.</div>`;
 }
 
 // Calendar link memory on a NEW card: the link came from an earlier
@@ -888,7 +894,7 @@ function renderReviewCard(entry, ctx = {}) {
   ${chips ? `<div class="chips">${chips}</div>` : ''}
   ${renderReviewLinkHistory(entry, proposal, display)}
   ${renderReviewBearRow(display, proposal)}
-  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display)) : ''}
+  ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display, changes)) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
@@ -920,6 +926,7 @@ function renderReviewPage(deck, options = {}) {
         sourceIndex: entry.sourceIndex,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
+        series: entry.series || null,
         html: renderReviewCard(entry, ctx)
     }));
     const decided = deck.decided.map((entry) => ({
@@ -931,6 +938,7 @@ function renderReviewPage(deck, options = {}) {
         reason: entry.decision.reason || null,
         executed: entry.executed || null,
         pendingExecute: entry.pendingExecute === true,
+        via: entry.via || null,
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
@@ -1043,6 +1051,10 @@ a { color:var(--accent); }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
+.series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.series .nights .chip { font-size:12px; padding:2px 8px; }
+.series-split { font:inherit; font-size:12px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:2px 8px; cursor:pointer; }
 .prior { margin:0 0 8px; padding:6px 10px; border:1px dashed var(--no); border-radius:10px; font-size:13px; }
 .bear-stored { font-weight:600; }
 h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
@@ -1142,7 +1154,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var decided = deck.decided.slice();
   var history = [];
   var filter = 'all';
-  var pending = null; // card awaiting the reject sheet
+  var pending = null; // stack item awaiting the reject sheet
+  var solo = {}; // series the owner chose to decide night by night
   var stage = document.getElementById('stage');
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
@@ -1156,6 +1169,34 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function tabOf(kind) { return kind === 'override' ? 'merge' : kind; }
   function visible() {
     return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter; });
+  }
+  // The stack shows ITEMS: a card, or every pending night of one party
+  // (card.series) folded into one — one swipe decides them all, each under
+  // its own key. "one at a time" unfolds a party for this page load.
+  function items() {
+    var out = [], seen = {};
+    visible().forEach(function (c) {
+      var s = c.series && !solo[c.series.key] ? c.series.key : null;
+      if (!s) { out.push({ key: c.key, cards: [c] }); return; }
+      if (seen[s]) { seen[s].cards.push(c); return; }
+      seen[s] = { key: 'series:' + s, series: c.series, cards: [c] };
+      out.push(seen[s]);
+    });
+    return out;
+  }
+  function nightLabel(c) {
+    var nights = c.series && c.series.nights ? c.series.nights : [];
+    for (var i = 0; i < nights.length; i++) if (nights[i].key === c.key) return nights[i].label || nights[i].day;
+    return c.key.split('|')[3] || '';
+  }
+  function seriesStrip(item) {
+    if (!item.series || item.cards.length < 2) return '';
+    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button><div class="nights">'
+      + item.cards.map(function (c) { return '<span class="chip">' + escapeHtml(nightLabel(c)) + '</span>'; }).join('') + '</div></div>';
+  }
+  function bindSplit(el, item) {
+    var split = el.querySelector('.series-split');
+    if (split) split.onclick = function () { solo[item.series.key] = true; toast('Deciding ' + item.cards.length + ' nights one at a time'); render(); };
   }
   function counts() {
     var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
@@ -1179,22 +1220,26 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   // dropped frames. Elements mid-flight (gone-*) are left to finish and
   // removed afterwards.
   function renderStage() {
-    var list = visible();
+    var list = items();
     var keep = {};
-    list.slice(0, 3).forEach(function (card, i) {
-      keep[card.key] = i;
-      var el = stage.querySelector('.card[data-key="' + CSS.escape(card.key) + '"]');
+    list.slice(0, 3).forEach(function (item, i) {
+      keep[item.key] = i;
+      var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
       if (!el) {
         el = document.createElement('div');
-        el.setAttribute('data-key', card.key);
-        el.innerHTML = card.html + '<div class="stamp ok">APPROVE</div><div class="stamp no">REJECT</div>';
+        el.setAttribute('data-key', item.key);
+        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">REJECT</div>';
         el.className = 'card behind2';
         stage.appendChild(el);
+        bindSplit(el, item);
         void el.offsetWidth; // commit the entry state so the promotion animates
+      } else if (item.series) {
+        var strip = el.querySelector('.series');
+        if (strip && strip.querySelectorAll('.nights .chip').length !== item.cards.length) { strip.outerHTML = seriesStrip(item); bindSplit(el, item); }
       }
       el.className = 'card' + (i === 1 ? ' behind' : i === 2 ? ' behind2' : '');
       el.style.zIndex = String(3 - i); // the top card paints last
-      if (i === 0 && el.getAttribute('data-drag') !== '1') { attachDrag(el, card); el.setAttribute('data-drag', '1'); }
+      if (i === 0 && el.getAttribute('data-drag') !== '1') { attachDrag(el, item); el.setAttribute('data-drag', '1'); }
     });
     Array.prototype.forEach.call(stage.querySelectorAll('.card'), function (el) {
       var key = el.getAttribute('data-key');
@@ -1210,7 +1255,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     } else if (list.length > 0 && empty) {
       empty.remove();
     }
-    document.getElementById('left').textContent = list.length + ' left';
+    var nights = list.reduce(function (n, item) { return n + item.cards.length; }, 0);
+    document.getElementById('left').textContent = list.length + ' left' + (nights !== list.length ? ' (' + nights + ' nights)' : '');
     var disabled = list.length === 0;
     ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
     document.getElementById('btn-undo').disabled = history.length === 0;
@@ -1237,10 +1283,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       var li = document.createElement('li');
       var reason = d.reason ? [(d.reason.tags || []).join(', '), d.reason.text].filter(Boolean).join(' — ') : '';
       var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
-      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + executed + '</div>';
+      var via = d.via ? '<div class="r">↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night</div>' : '';
+      var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
+      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = 'Undo';
+      btn.textContent = d.via ? 'Decide alone' : 'Undo';
       btn.onclick = function () { undoDecision(d); };
       li.appendChild(btn);
       ul.appendChild(li);
@@ -1257,8 +1305,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   function post(body) { return postTo('/review/decide', body); }
   function postBear(card, verdict) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key }); }
-  function topCard() { return visible()[0] || null; }
-  function removeFromQueue(card) { queue = queue.filter(function (c) { return c.key !== card.key; }); }
+  function topItem() { return items()[0] || null; }
+  function removeFromQueue(item) {
+    var keys = {};
+    item.cards.forEach(function (c) { keys[c.key] = true; });
+    queue = queue.filter(function (c) { return !keys[c.key]; });
+  }
 
   // Fly-out starts from wherever the finger left the card (the drag's
   // inline transform is folded into the exit, never snapped to centre
@@ -1281,66 +1333,97 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     setTimeout(function () { if (el.parentNode) el.remove(); }, 360);
   }
 
-  function decide(card, verdict, reason, direction) {
-    var el = stage.querySelector('.card[data-key="' + CSS.escape(card.key) + '"]');
-    flyOut(el, direction);
-    removeFromQueue(card);
-    render();
-    // A dropped card's swipe is a bear verdict: right = "that IS bear"
-    // (rescued by the next run), left = "not bear, confirmed".
-    // "Not bear" as a reject reason on a kept card records the verdict too,
-    // so the next run drops the party without asking again.
+  // One card's save — a dropped card's swipe is a bear verdict: right =
+  // "that IS bear" (rescued by the next run), left = "not bear, confirmed".
+  // "Not bear" as a reject reason on a kept card records the verdict too,
+  // so the next run drops the party without asking again.
+  function saveOne(card, verdict, reason) {
     var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
     var request = card.kind === 'dropped'
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
       : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
-    request.then(function () {
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html };
+    return request.then(function () {
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
       decided.push(record);
-      history.push({ card: card, record: record });
-      toast(card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected')));
-      renderDecided(); renderExecute();
-    }).catch(function (error) {
-      toast('Not saved: ' + error.message);
-      queue.unshift(card);
-      render();
+      return record;
     });
   }
-  function approveTop() { var c = topCard(); if (c) decide(c, 'approve', null, 'gone-right'); }
+  // The whole item flies at once; its nights save one after another in
+  // the background (a slow tailnet round trip used to freeze the stack).
+  // A failed save puts the unsaved nights back on top.
+  function decide(item, verdict, reason, direction) {
+    var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
+    flyOut(el, direction);
+    removeFromQueue(item);
+    render();
+    var card = item.cards[0];
+    var records = [];
+    var entry = { item: item, records: records };
+    history.push(entry);
+    var left = item.cards.slice();
+    var chain = Promise.resolve();
+    item.cards.forEach(function (c) {
+      chain = chain.then(function () { return saveOne(c, verdict, reason).then(function (record) { records.push(record); left.shift(); }); });
+    });
+    chain.then(function () {
+      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '';
+      var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
+      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      renderDecided(); renderExecute();
+    }).catch(function (error) {
+      toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' nights back on the stack)' : ''));
+      if (records.length === 0) history = history.filter(function (h) { return h !== entry; });
+      queue = left.concat(queue);
+      render(); renderDecided(); renderExecute();
+    });
+  }
+  function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
   function rejectTop() {
-    var c = topCard(); if (!c) return;
-    if (c.kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    var c = topItem(); if (!c) return;
+    if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
     pending = c; openSheet(c);
   }
   function skipTop() {
-    var c = topCard(); if (!c) return;
+    var c = topItem(); if (!c) return;
     var el = stage.querySelector('.card[data-key="' + CSS.escape(c.key) + '"]');
     flyOut(el, 'gone-down');
-    removeFromQueue(c); queue.push(c);
+    removeFromQueue(c); queue = queue.concat(c.cards);
     render();
   }
+  function requeue(record) {
+    decided = decided.filter(function (d) { return d.key !== record.key; });
+    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html, series: record.series || null });
+    history.forEach(function (h) { h.records = h.records.filter(function (r) { return r.key !== record.key; }); });
+    history = history.filter(function (h) { return h.records.length > 0; });
+  }
   function undoDecision(record) {
+    // Covered by another night's decision: nothing stored under this key —
+    // the card comes back to be decided alone (that decision then wins).
+    if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
     var request = record.kind === 'dropped'
       ? postBear(record, 'clear')
       : post({ key: record.key, verdict: 'clear' })
           .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear').then(function () { return result; }) : result; });
-    request.then(function () {
-      decided = decided.filter(function (d) { return d.key !== record.key; });
-      var card = { id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html };
-      queue.unshift(card);
-      history = history.filter(function (h) { return h.card.key !== record.key; });
+    return request.then(function () {
+      requeue(record);
       toast('Undone');
       render();
     }).catch(function (error) { toast('Undo failed: ' + error.message); });
   }
-  function undoLast() { var last = history[history.length - 1]; if (last) undoDecision(last.record); }
+  function undoLast() {
+    var last = history[history.length - 1];
+    if (!last) return;
+    var chain = Promise.resolve();
+    last.records.slice().forEach(function (record) { chain = chain.then(function () { return undoDecision(record); }); });
+  }
 
   // Reject sheet
   var sheet = document.getElementById('sheet');
   var sheetTags = document.getElementById('sheet-tags');
-  function openSheet(card) {
-    document.getElementById('sheet-title').textContent = card.kind === 'bar' ? card.proposal.name : card.proposal.title;
+  function openSheet(item) {
+    var card = item.cards[0];
+    document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '');
     sheetTags.innerHTML = deck.tags.map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';

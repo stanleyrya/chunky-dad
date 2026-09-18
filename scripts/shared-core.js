@@ -1438,11 +1438,31 @@ class SharedCore {
 
     // A card-worthy proposal: executable by the normal gate AND either a new
     // event or a merge that changes a stored field.
+    // The merge's bar change when it names a DIFFERENT venue (a spelling —
+    // Jacques' Cabaret → Jacques Cabaret — is the same bar), from the
+    // notes diff the analysis stamped.
+    getOwnerReviewBarChange(event) {
+        const diff = event && event._mergeDiff && typeof event._mergeDiff === 'object' ? event._mergeDiff : null;
+        if (!diff) return null;
+        const lists = [['updated', diff.updated], ['added', diff.added], ['removed', diff.removed]];
+        for (const [name, list] of lists) {
+            const entry = (Array.isArray(list) ? list : []).find(item => item && typeof item === 'object' && item.key === 'bar');
+            if (!entry) continue;
+            const from = name === 'updated' ? entry.from : name === 'removed' ? entry.value : '';
+            const to = name === 'updated' ? entry.to : name === 'added' ? entry.value : '';
+            const fromKey = this.normalizeBarNameKey(String(from || ''));
+            const toKey = this.normalizeBarNameKey(String(to || ''));
+            if (fromKey === toKey) return null;
+            return { from: SharedCore.serializeOwnerReviewValue(from), to: SharedCore.serializeOwnerReviewValue(to) };
+        }
+        return null;
+    }
+
     isOwnerReviewCandidate(event) {
         if (!event || typeof event !== 'object') return false;
         if (SharedCore.filterEventsForExecution([event]).length !== 1) return false;
         if (event._action === 'new') return true;
-        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0;
+        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event));
         return false;
     }
 
@@ -1527,6 +1547,36 @@ class SharedCore {
         return text.replace(/^https?:\/\/(www\.)?/, '').split('#')[0].split('?')[0].replace(/\/+$/, '');
     }
 
+    // The host of a link — what a night shares with its siblings when every
+    // night has its own event page (eaglebarwm.com/event/daddy-pop/<date>/).
+    static normalizeOwnerReviewLinkHost(value) {
+        const text = SharedCore.normalizeOwnerReviewLinkValue(value);
+        return /^https?:\/\//i.test(String(value || '').trim()) ? text.split('/')[0] : text;
+    }
+
+    // A NEW card's series: its key without the night (event|<title>|<place>).
+    static getOwnerReviewSeriesKey(key) {
+        const parts = String(key || '').split('|');
+        return parts.length === 4 && parts[0] === 'event' ? parts.slice(0, 3).join('|') : '';
+    }
+
+    // What differs between a decided night and ANOTHER night of the same
+    // party: the fields the owner saw, minus the dates (a sibling night is
+    // exactly that) and with links compared by host (each night may have
+    // its own event page). Empty = the decision speaks for this night too.
+    static getOwnerReviewSeriesDrift(decision, proposal) {
+        const snapshot = decision && decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
+        if (!snapshot || !proposal || typeof proposal !== 'object') return [];
+        const hostFields = new Set(['url', 'ticketUrl']);
+        return SharedCore.getOwnerReviewFingerprintFields().filter(field => {
+            if (field === 'startDate' || field === 'endDate') return false;
+            const norm = hostFields.has(field) ? SharedCore.normalizeOwnerReviewLinkHost
+                : field === 'image' ? SharedCore.normalizeOwnerReviewLinkValue
+                    : SharedCore.normalizeOwnerReviewValue;
+            return norm(snapshot[field]) !== norm(proposal[field]);
+        });
+    }
+
     static ownerDecisionSaysNotBear(decision) {
         const tags = decision && decision.reason && Array.isArray(decision.reason.tags) ? decision.reason.tags : [];
         return tags.some(tag => String(tag || '').trim().toLowerCase() === 'not bear');
@@ -1575,6 +1625,11 @@ class SharedCore {
                     to: SharedCore.serializeOwnerReviewValue(event[field])
                 };
             }
+            // The venue lives in notes, not in a stored field: a merge that
+            // moves the party to another bar ("check instagram" → Rawhide)
+            // is shown and decided like a title change.
+            const barChange = this.getOwnerReviewBarChange(event);
+            if (barChange) changes.bar = barChange;
         }
         const parserName = event._parserConfig && typeof event._parserConfig.name === 'string'
             ? event._parserConfig.name
@@ -1612,8 +1667,21 @@ class SharedCore {
     // proposal that repeats a rejected value. Anything else is a new card.
     static ownerDecisionCovers(decision, proposal) {
         if (!decision || typeof decision !== 'object' || !proposal || typeof proposal !== 'object') return false;
-        if (!decision.key || decision.key !== proposal.key) return false;
+        if (!decision.key || !proposal.key) return false;
         if (decision.verdict !== 'approve' && decision.verdict !== 'reject') return false;
+        if (decision.key !== proposal.key) {
+            // Another night of the same party (same title and place, a
+            // different day) — the owner does not decide DADDY POP sixteen
+            // times. "Not bear" is about the party; an approval or any other
+            // rejection carries over while the night looks like the one
+            // decided (getOwnerReviewSeriesDrift), which needs its snapshot.
+            if (proposal.kind !== 'new' || (decision.kind && decision.kind !== 'new')) return false;
+            const series = SharedCore.getOwnerReviewSeriesKey(proposal.key);
+            if (!series || series !== SharedCore.getOwnerReviewSeriesKey(decision.key)) return false;
+            if (decision.verdict === 'reject' && SharedCore.ownerDecisionSaysNotBear(decision)) return true;
+            if (!decision.snapshot || typeof decision.snapshot !== 'object') return false;
+            return SharedCore.getOwnerReviewSeriesDrift(decision, proposal).length === 0;
+        }
         if (proposal.kind !== 'merge' && proposal.kind !== 'override') {
             // A rejection speaks for the proposal it was made on. When the
             // scraper later shows something else for the same card (a fixed
@@ -1631,16 +1699,24 @@ class SharedCore {
         const fields = Object.keys(proposed);
         const sameTo = (field) => Boolean(decided[field])
             && SharedCore.normalizeOwnerReviewValue(decided[field].to) === SharedCore.normalizeOwnerReviewValue(proposed[field].to);
-        if (decision.verdict === 'reject') return fields.length === 0 || fields.some(sameTo);
+        // A rejection speaks for the exact proposal it was made on: one
+        // that adds a change (the venue, now that the placeholder is
+        // resolved) or drops one is a different proposal — back for a look.
+        if (decision.verdict === 'reject') return fields.length === Object.keys(decided).length && fields.every(sameTo);
         return fields.every(sameTo);
     }
 
     static findOwnerDecision(proposal, decisions) {
         if (!proposal || !Array.isArray(decisions)) return null;
+        let inherited = null;
         for (const decision of decisions) {
-            if (SharedCore.ownerDecisionCovers(decision, proposal)) return decision;
+            if (!SharedCore.ownerDecisionCovers(decision, proposal)) continue;
+            if (decision.key === proposal.key) return decision;
+            // Another night's decision: the newest speaks (the owner may
+            // have changed their mind on a later night).
+            if (!inherited || String(decision.stampedAt || '') > String(inherited.stampedAt || '')) inherited = decision;
         }
-        return null;
+        return inherited;
     }
 
     // Stamp a FRESH plan with the owner's decisions (review execute path
@@ -1664,16 +1740,19 @@ class SharedCore {
             const proposal = this.buildOwnerReviewProposal(event);
             const decision = proposal ? SharedCore.findOwnerDecision(proposal, store) : null;
             const title = event.title || 'Unknown';
+            const via = decision && decision.key !== proposal.key
+                ? ` with the series (its ${String(decision.key).split('|')[3] || 'earlier'} night)`
+                : '';
             if (decision && decision.verdict === 'approve') {
-                event._ownerReviewApproved = { key: proposal.key, stampedAt: decision.stampedAt || null };
+                event._ownerReviewApproved = { key: proposal.key, stampedAt: decision.stampedAt || null, ...(via ? { via: decision.key } : {}) };
                 counts.approved++;
-                console.log(`✅ OWNER REVIEW: "${title}" approved${decision.stampedAt ? ` (${String(decision.stampedAt).slice(0, 10)})` : ''} — writing`);
+                console.log(`✅ OWNER REVIEW: "${title}" approved${via}${decision.stampedAt ? ` (${String(decision.stampedAt).slice(0, 10)})` : ''} — writing`);
             } else if (decision) {
                 const text = decision.reason && typeof decision.reason.text === 'string' ? decision.reason.text.trim() : '';
                 const tags = decision.reason && Array.isArray(decision.reason.tags) ? decision.reason.tags.slice() : [];
                 event._ownerReviewWithheld = { status: 'rejected', key: proposal.key, reason: text, tags };
                 counts.rejected++;
-                console.log(`🚫 OWNER REVIEW: "${title}" rejected${text ? ` — ${text}` : ''} — write withheld`);
+                console.log(`🚫 OWNER REVIEW: "${title}" rejected${via}${text ? ` — ${text}` : ''} — write withheld`);
             } else {
                 event._ownerReviewWithheld = { status: 'awaiting', key: proposal ? proposal.key : '', reason: '', tags: [] };
                 counts.awaiting++;

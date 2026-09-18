@@ -459,3 +459,32 @@ test('clearNotBearRejections: a 🐻 on the party removes its "not bear" rejecti
   assert.equal(cleared.store.decisions.length, 2, 'another party and a non-bear reason stay');
   assert.deepEqual(rq.clearNotBearRejections(store, core, { title: '' }).removed, [], 'no title identity: nothing removed');
 });
+
+test('buildDeck: pending nights of one party are one series card; a night decided covers its siblings (with `via`); a night that differs is back with the sibling as prior', () => {
+  const nights = [0, 7, 14].map((days) => newEvent({
+    title: 'DADDY POP', bar: 'Eagle Wilton Manors', city: 'fort-lauderdale', timezone: 'America/New_York',
+    startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000),
+    url: 'https://eaglebarwm.com/event/daddy-pop/' + days + '/', image: 'https://eaglebarwm.com/daddy-pop-1.png'
+  }));
+  const first = deckOf(runPayload({ analyzedEvents: nights }));
+  assert.equal(first.cards.length, 3);
+  assert.equal(first.cards[0].series.size, 3);
+  assert.deepEqual(first.cards.map((c) => c.series.key), Array(3).fill(first.cards[0].series.key));
+  assert.equal(first.cards[0].series.nights.length, 3);
+  assert.match(first.cards[0].series.nights[0].label, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/, 'nights are labelled in the event zone');
+  assert.equal(deckOf(runPayload({ analyzedEvents: [nights[0]] })).cards[0].series, undefined, 'a lone night is no series');
+
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: first.cards[0].key, kind: 'new', verdict: 'approve', snapshot: first.cards[0].proposal }));
+  const later = deckOf(runPayload({ analyzedEvents: nights }), store);
+  assert.equal(later.cards.length, 0, 'the other nights inherit the decision');
+  assert.equal(later.decided.length, 3);
+  assert.deepEqual(later.decided.map((d) => d.via || null), [null, first.cards[0].key, first.cards[0].key]);
+  assert.ok(later.decided.every((d) => d.pendingExecute), 'inherited approvals still wait for the phone');
+
+  const newFlyer = nights.map((night, i) => (i === 2 ? { ...night, image: 'https://eaglebarwm.com/daddy-pop-halloween.png' } : night));
+  const differs = deckOf(runPayload({ analyzedEvents: newFlyer }), store);
+  assert.equal(differs.cards.length, 1);
+  assert.equal(differs.cards[0].prior.verdict, 'approve');
+  assert.equal(differs.cards[0].prior.night, first.cards[0].key.split('|')[3]);
+  assert.deepEqual(differs.cards[0].prior.drift, ['image']);
+});

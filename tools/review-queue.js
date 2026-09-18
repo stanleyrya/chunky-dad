@@ -540,6 +540,56 @@ function buildImageUseCounts(payload) {
     return counts;
 }
 
+// The decision a re-surfacing NEW card is a second look after: one on its
+// own key, else the newest on another night of the same party (with the
+// night it was made on and what this night does differently).
+function findPriorDecision(proposal, decisions, SharedCore) {
+    const own = decisions.find((entry) => entry.key === proposal.key);
+    if (own) return { verdict: own.verdict, stampedAt: own.stampedAt || null, reason: own.reason || null, drift: SharedCore.getOwnerReviewDrift(own, proposal) };
+    if (proposal.kind !== 'new') return null;
+    const series = SharedCore.getOwnerReviewSeriesKey(proposal.key);
+    if (!series) return null;
+    const sibling = decisions
+        .filter((entry) => (entry.kind || 'new') === 'new' && SharedCore.getOwnerReviewSeriesKey(entry.key) === series)
+        .sort((a, b) => String(b.stampedAt || '').localeCompare(String(a.stampedAt || '')))[0];
+    if (!sibling) return null;
+    return {
+        verdict: sibling.verdict,
+        stampedAt: sibling.stampedAt || null,
+        reason: sibling.reason || null,
+        drift: SharedCore.getOwnerReviewSeriesDrift(sibling, proposal),
+        night: String(sibling.key).split('|')[3] || ''
+    };
+}
+
+// Pending NEW nights of one party (same title and place) are one card on
+// the deck — one swipe decides them all, each under its own key. Every
+// member carries the group and its nights, labelled in the event's zone.
+function formatNightLabel(proposal) {
+    const ms = proposal ? loadSharedCore().toEpochMillis(proposal.startDate) : null;
+    if (ms === null) return '';
+    try {
+        return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(proposal.timezone ? { timeZone: proposal.timezone } : {}) }).format(new Date(ms));
+    } catch (_) {
+        return new Date(ms).toISOString().slice(0, 10);
+    }
+}
+function stampSeries(cards, SharedCore) {
+    const groups = new Map();
+    for (const card of cards) {
+        if (card.kind !== 'new') continue;
+        const series = SharedCore.getOwnerReviewSeriesKey(card.key);
+        if (!series) continue;
+        if (!groups.has(series)) groups.set(series, []);
+        groups.get(series).push(card);
+    }
+    for (const [series, members] of groups) {
+        if (members.length < 2) continue;
+        const nights = members.map((card) => ({ key: card.key, day: String(card.key).split('|')[3] || '', label: formatNightLabel(card.proposal) }));
+        for (const card of members) card.series = { key: series, size: members.length, nights };
+    }
+}
+
 // One saved run + the decision store → { runId, cards, decided, counts }.
 // cards = proposals with no covering decision (past events dropped);
 // decided = proposals a stored decision already covers (with that decision).
@@ -583,7 +633,11 @@ function buildDeck(runPayload, store, options = {}) {
             // withheld there).
             const pendingExecute = isEventKind && decision.verdict === 'approve' && !executed
                 && (!lastExecutedAt || String(decision.stampedAt || '') > lastExecutedAt);
-            decided.push({ ...entry, decision, executed, pendingExecute });
+            // Decided on another night of the same party (series coverage —
+            // SharedCore.ownerDecisionCovers): the phone has not written THIS
+            // night until its row says so, whatever the decision's stamp.
+            const via = decision.key !== entry.key ? decision.key : '';
+            decided.push({ ...entry, decision, executed, pendingExecute: via ? isEventKind && decision.verdict === 'approve' && !executed : pendingExecute, ...(via ? { via } : {}) });
             counts.decided++;
             if (decision.verdict === 'approve') counts.approved++;
             else counts.rejected++;
@@ -621,7 +675,7 @@ function buildDeck(runPayload, store, options = {}) {
         // scraper changed what it shows — SharedCore.getOwnerReviewDrift)
         // rides on the card as `prior`, so the owner sees it is a second
         // look, what they said last time, and what changed since.
-        const prior = decision ? null : decisions.find((entry) => entry.key === proposal.key) || null;
+        const prior = decision ? null : findPriorDecision(proposal, decisions, SharedCore);
         file(
             {
                 id: `e${index}`,
@@ -630,11 +684,12 @@ function buildDeck(runPayload, store, options = {}) {
                 sourceIndex: index,
                 proposal,
                 display: buildReviewDisplayContext(event, payload, core, extras),
-                ...(prior ? { prior: { verdict: prior.verdict, stampedAt: prior.stampedAt || null, reason: prior.reason || null, drift: SharedCore.getOwnerReviewDrift(prior, proposal) } } : {})
+                ...(prior ? { prior } : {})
             },
             decision
         );
     });
+    stampSeries(cards, SharedCore);
 
     const candidates = Array.isArray(payload.newVenueCandidates) ? payload.newVenueCandidates : [];
     candidates.forEach((candidate, index) => {
