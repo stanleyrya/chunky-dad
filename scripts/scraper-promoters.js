@@ -279,9 +279,11 @@ const scraperPromoters = [
   {
     "name": "Bears 4 Bareburger",
     "aliases": [
-      "Bears for Bareburger"
+      "Bears for Bareburger",
+      "Gay 4 Bareburger"
     ],
-    "website": "https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018",
+    "favicon": "https://linktr.ee/Gay4bareburger",
+    "instagram": "https://www.instagram.com/gay4bareburger",
     "bearAffinity": "always"
   }
 ];

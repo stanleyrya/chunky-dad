@@ -15153,7 +15153,11 @@ class SharedCore {
     // identity), so a party that moves bars inherits nothing; a link the
     // row states itself always wins (inherit fills a blank only); the
     // source is the calendar as it stands (wide-window lookup), never this
-    // run's own proposals. Every event on the path is stamped
+    // run's own proposals. ONLY AN IDENTITY LINK carries over — the party's
+    // own site. A ticket page is one night's own ticket (an Eventbrite
+    // listing names its date; owner, 2026-09-17: "the link is
+    // date-specific"), so ticketUrl is never inherited and a website that
+    // is a ticketing/social platform link is skipped. Every event on the path is stamped
     // _calendarLinkHistory so the review deck can say "no link on the
     // calendar's earlier nights either". Fails open on any lookup error.
     async inheritLinksFromCalendarHistory(event, calendarAdapter) {
@@ -15184,33 +15188,29 @@ class SharedCore {
             if (!this.areIdentityPlacesSimilar(incoming, this.buildIdentityComparisonShape(record))) continue;
             const day = this.normalizeEventDateLocal(record.startDate, timezone) || '';
             if (day && day === ownDay) continue;
-            const website = [fields.website, fields.url, record.url]
+            const stated = [fields.website, fields.url, record.url]
                 .map(value => (typeof value === 'string' ? value.trim() : ''))
                 .find(Boolean) || '';
-            const ticketUrl = typeof fields.ticketUrl === 'string' ? fields.ticketUrl.trim() : '';
-            nights.push({ day, website, ticketUrl, title: record.title || '', bar: recordBar });
+            const dateSpecific = Boolean(stated) && this.isPlatformIdentityLinkUrl(stated);
+            if (dateSpecific) {
+                console.log(`🔗 LINKS: "${event.title || 'Unknown'}" — the calendar's ${day || 'earlier'} night carries ${stated}, a ticketing/social link: one night's own, not inherited`);
+            }
+            const website = dateSpecific ? '' : stated;
+            nights.push({ day, website, title: record.title || '', bar: recordBar });
         }
         if (nights.length === 0) return event;
         nights.sort((a, b) => String(b.day).localeCompare(String(a.day)));
-        const latestWithLink = nights.find(night => night.website || night.ticketUrl);
-        // The link lands in the field the earlier night held it in; the
-        // identity-link ladder still runs after this and files a ticketing
-        // link under ticketUrl either way.
+        const latestWithLink = nights.find(night => night.website);
         const history = {
             occurrences: nights.length,
             latest: nights[0].day || null,
-            website: latestWithLink ? (latestWithLink.website || latestWithLink.ticketUrl) : '',
+            website: latestWithLink ? latestWithLink.website : '',
             from: latestWithLink ? latestWithLink.day || null : null
         };
         const title = event.title || 'Unknown';
         if (latestWithLink) {
-            console.log(`🔗 LINKS: "${title}" inherited ${latestWithLink.website ? `website ${latestWithLink.website}` : `ticket link ${latestWithLink.ticketUrl}`} from the calendar's ${latestWithLink.day || 'earlier'} night of this party at ${latestWithLink.bar || 'the same place'} — this row stated no link`);
-            return {
-                ...event,
-                ...(latestWithLink.website ? { website: latestWithLink.website } : {}),
-                ...(latestWithLink.ticketUrl ? { ticketUrl: latestWithLink.ticketUrl } : {}),
-                _calendarLinkHistory: history
-            };
+            console.log(`🔗 LINKS: "${title}" inherited website ${latestWithLink.website} from the calendar's ${latestWithLink.day || 'earlier'} night of this party at ${latestWithLink.bar || 'the same place'} — this row stated no link`);
+            return { ...event, website: latestWithLink.website, _calendarLinkHistory: history };
         }
         console.log(`🔗 LINKS: "${title}" — no link on this row, and none on the calendar's ${nights.length} earlier night(s) of this party either`);
         return { ...event, _calendarLinkHistory: history };

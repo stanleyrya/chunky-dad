@@ -23357,9 +23357,9 @@ test('flag, don\'t drop: an AI "not bear" on an event whose own title names a us
   assert.equal((await core.computeBearCheckDecision(series, parserConfig, {})).result, 'bear');
 });
 
-test('calendar link memory: a new night of a party inherits the website its earlier nights carry — same title AND same place, only into a blank', async () => {
+test('calendar link memory: a new night of a party inherits the IDENTITY website its earlier nights carry — same title AND same place, only into a blank, never a ticket page', async () => {
   const core = createCore();
-  const eventbrite = 'https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018';
+  const eventbrite = 'https://www.bears4bareburger.com/';
   const earlier = {
     title: 'Bears 4 Bareburger at Bareburger HK', startDate: new Date('2026-09-18T01:00:00.000Z'), endDate: new Date('2026-09-18T05:00:00.000Z'),
     location: '40.7599, -73.9903', notes: `bar: Bareburger\naddress: 366 W 46th St, New York, NY 10036\nwebsite: ${eventbrite}\ntimezone: America/New_York`
@@ -23373,8 +23373,7 @@ test('calendar link memory: a new night of a party inherits the website its earl
 
   const inherited = await core.prepareEventsForCalendar([row()], adapter, {});
   assert.equal(inherited[0]._action, 'new');
-  assert.ok([inherited[0].website, inherited[0].url, inherited[0].ticketUrl].includes(eventbrite),
-    'the blank is filled from the earlier night (the identity ladder then files a ticketing link under ticketUrl)');
+  assert.ok([inherited[0].website, inherited[0].url].includes(eventbrite), 'the blank is filled from the earlier night');
   assert.equal(inherited[0]._calendarLinkHistory.occurrences, 1);
   assert.equal(inherited[0]._calendarLinkHistory.from, '2026-09-17');
 
@@ -23391,6 +23390,12 @@ test('calendar link memory: a new night of a party inherits the website its earl
   assert.ok(![none[0].website, none[0].url, none[0].ticketUrl].includes(eventbrite));
   assert.deepEqual(none[0]._calendarLinkHistory, { occurrences: 1, latest: '2026-09-17', website: '', from: null });
   assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_calendarLinkHistory'), 'a replay re-derives it');
+
+  // A ticket page is one night's own (an Eventbrite listing names its date): never inherited, whether it sits in website or ticketUrl.
+  const ticketed = buildSeriesLookupAdapter([{ ...earlier, notes: 'bar: Bareburger\naddress: 366 W 46th St, New York, NY 10036\nwebsite: https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018\nticketUrl: https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018' }]);
+  const notInherited = await core.prepareEventsForCalendar([row()], ticketed, {});
+  assert.ok(!JSON.stringify([notInherited[0].website, notInherited[0].url, notInherited[0].ticketUrl]).includes('eventbrite'), 'a date-specific ticket link never carries to another night');
+  assert.equal(notInherited[0]._calendarLinkHistory.website, '');
 });
 
 test('placeholder venues: an instruction is not a place, and a named venue beats it in the merge ladder', () => {
