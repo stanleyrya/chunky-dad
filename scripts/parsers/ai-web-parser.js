@@ -2332,9 +2332,15 @@ class AiWebParser {
         const kept = [];
         for (const event of list) {
             const placeTokens = [...new Set([...tokensOf(event.bar), ...tokensOf(event.address)])];
+            // A bare site root ("https://bearracuda.com") is the card's
+            // brand link, not a link of its own — the identity-link ladder
+            // clears it later for the same reason (run 20260917-205949: the
+            // FINAL PARTY headline carried one and escaped the fold).
+            const isBareRoot = (value) => /^https?:\/\/[^/?#]+\/?$/i.test(String(value || '').trim());
+            const ownLink = (value) => Boolean(String(value || '').trim()) && !isBareRoot(value);
             const hasOwnText = Boolean(String(event.description || '').trim())
-                || Boolean(String(event.ticketUrl || '').trim())
-                || Boolean(String(event.url || event.website || '').trim());
+                || ownLink(event.ticketUrl)
+                || ownLink(event.url || event.website);
             let owner = null;
             if (placeTokens.length > 0 && !hasOwnText) {
                 const day = dayOf(event);
