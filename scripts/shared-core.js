@@ -4688,6 +4688,21 @@ class SharedCore {
 
         // A placeholder venue ("Check instagram for this week's location.")
         // yields to any named venue, whichever side carries it.
+        if (fieldName === 'title' && context && context.records && context.sideLabels
+            && (context.sideLabels.a === 'calendar' || context.sideLabels.b === 'calendar')) {
+            // The same name in another case — "FUZZY" saved, "Fuzzy at
+            // Nowhere" scraped (the tail the final build drops aside) — is
+            // not a rename: the saved spelling stays. Case is the owner's
+            // call, not a scrape's (owner 2026-09-18: "I like how Fuzzy is caps").
+            const bar = (context.records.b && context.records.b.bar) || (context.records.a && context.records.a.bar) || '';
+            const fold = (value) => this.normalizeIdentityText(this.stripVenueSuffixFromTitle(String(value || ''), bar));
+            const foldedA = fold(valueA);
+            if (foldedA && foldedA === fold(valueB) && String(valueA || '').trim() !== String(valueB || '').trim()) {
+                const saved = context.sideLabels.a === 'calendar' ? 'a' : 'b';
+                return { winner: saved, reason: 'same title, another spelling — the saved spelling stays' };
+            }
+        }
+
         if (fieldName === 'bar') {
             const placeholderA = SharedCore.isPlaceholderVenueText(valueA);
             const placeholderB = SharedCore.isPlaceholderVenueText(valueB);

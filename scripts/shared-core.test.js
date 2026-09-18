@@ -23661,3 +23661,15 @@ test('final build: "Fuzzy at Nowhere" at Nowhere is written as "Fuzzy", with the
   assert.ok(!/Fuzzy at Nowhere/.test(analyzed.notes || ''), 'the notes carry the bare title');
   assert.ok(logs.some(line => line.includes('✂️ TITLE: "Fuzzy at Nowhere" → "Fuzzy"')), JSON.stringify(logs.filter(l => l.includes('TITLE'))));
 });
+
+test('merge: the same title in another case keeps the saved spelling ("FUZZY" stays FUZZY); a different name is still arbitrated', () => {
+  const core = createReviewCore();
+  const context = { records: { a: { title: 'FUZZY', bar: 'Nowhere' }, b: { title: 'Fuzzy at Nowhere', bar: 'Nowhere Bar' } }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  const kept = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy at Nowhere', context);
+  assert.equal(kept.winner, 'a');
+  assert.match(kept.reason, /saved spelling stays/);
+  const flipped = core.resolveConflictDeterministically('title', 'Fuzzy', 'FUZZY', { records: { a: context.records.b, b: context.records.a }, sideLabels: { a: 'scraped', b: 'calendar' } });
+  assert.equal(flipped.winner, 'b', 'whichever side the calendar is on');
+  const renamed = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy Fridays', context);
+  assert.ok(!renamed || !/saved spelling stays/.test(renamed.reason), 'a different name is a real conflict');
+});
