@@ -22652,7 +22652,7 @@ test('owner review proposal: a merge shows only stored-field changes (never note
   assert.equal(core.isOwnerReviewCandidate(reviewNewEvent({ _action: 'conflict' })), false);
 });
 
-test('ownerDecisionCovers: same key for new events; a merge approval covers a subset of what was okayed, a rejection any repeated value', () => {
+test('ownerDecisionCovers: same key for new events; a merge approval covers a subset of what was okayed, a rejection only the same proposal', () => {
   const approveNew = { key: 'event|a', verdict: 'approve' };
   assert.equal(SharedCore.ownerDecisionCovers(approveNew, { kind: 'new', key: 'event|a' }), true);
   assert.equal(SharedCore.ownerDecisionCovers(approveNew, { kind: 'new', key: 'event|b' }), false);
@@ -22665,10 +22665,12 @@ test('ownerDecisionCovers: same key for new events; a merge approval covers a su
   assert.equal(SharedCore.ownerDecisionCovers(approveMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'C' } } }), false);
 
   const rejectMerge = { key: 'event|m', verdict: 'reject', snapshot: { changes: { title: { from: 'A', to: 'B' } } } };
-  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, url: { to: 'u' } } }), true,
-    'a rejection covers any proposal that repeats the rejected value');
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' } } }), true,
+    'the same proposal stays rejected');
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'B' }, bar: { to: 'Rawhide' } } }), false,
+    'a proposal that adds a change (the venue, once resolved) is a different proposal — back for a look');
   assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: { title: { to: 'C' } } }), false);
-  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: {} }), true);
+  assert.equal(SharedCore.ownerDecisionCovers(rejectMerge, { kind: 'merge', key: 'event|m', changes: {} }), false, 'a proposal that dropped the rejected change is not the rejected one');
 
   const approveDate = { key: 'event|d', verdict: 'approve', snapshot: { changes: { startDate: { to: '2030-10-04T02:00:00.000Z' } } } };
   assert.equal(SharedCore.ownerDecisionCovers(approveDate, { kind: 'merge', key: 'event|d', changes: { startDate: { to: '2030-10-04T02:00:00Z' } } }), true,
@@ -23451,4 +23453,47 @@ test('final trim pass: a saved title that fits and says more than the cut is kep
   const overlongSaved = { title: original, description: 'x', _action: 'merge', _original: { calendar: { title: original } } };
   await core.applyFinalOverlongFieldTrims(overlongSaved, parserConfig, buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: 'Urban Bear Weekend:' } } })));
   assert.equal(overlongSaved.title, 'Urban Bear Weekend');
+});
+
+test('series coverage: a decision on one night of a party speaks for its other nights while they look the same', () => {
+  const core = createReviewCore();
+  const friday = core.buildOwnerReviewProposal(reviewNewEvent({ title: 'DADDY POP', bar: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'fort-lauderdale', url: 'https://eaglebarwm.com/event/daddy-pop/2030-10-03/', image: 'https://eaglebarwm.com/daddy-pop-1.png' }));
+  const nextFriday = core.buildOwnerReviewProposal(reviewNewEvent({ title: 'DADDY POP', bar: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'fort-lauderdale', url: 'https://eaglebarwm.com/event/daddy-pop/2030-10-10/', image: 'https://eaglebarwm.com/daddy-pop-1.png', startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z' }));
+  const saturday = core.buildOwnerReviewProposal(reviewNewEvent({ title: 'DADDY POP', bar: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'fort-lauderdale', url: 'https://eaglebarwm.com/event/daddy-pop-sat/2030-10-04/', image: 'https://eaglebarwm.com/daddy-pop-2.png', startDate: '2030-10-05T02:00:00.000Z', endDate: '2030-10-05T06:00:00.000Z' }));
+  assert.notEqual(friday.key, nextFriday.key);
+  assert.equal(SharedCore.getOwnerReviewSeriesKey(friday.key), SharedCore.getOwnerReviewSeriesKey(nextFriday.key));
+  assert.equal(SharedCore.getOwnerReviewSeriesKey('bar|nyc|julius'), '');
+
+  const approve = { key: friday.key, kind: 'new', verdict: 'approve', stampedAt: '2030-09-01T00:00:00.000Z', snapshot: friday };
+  assert.equal(SharedCore.ownerDecisionCovers(approve, nextFriday), true, 'next Friday: same party, same flyer, its own event page on the same host');
+  assert.deepEqual(SharedCore.getOwnerReviewSeriesDrift(approve, saturday), ['image']);
+  assert.equal(SharedCore.ownerDecisionCovers(approve, saturday), false, 'a night with another flyer is shown');
+  assert.equal(SharedCore.ownerDecisionCovers({ ...approve, snapshot: null }, nextFriday), false, 'no snapshot → nothing to compare a sibling against');
+  assert.equal(SharedCore.ownerDecisionCovers({ ...approve, kind: 'merge' }, nextFriday), false, 'a merge decision never speaks for new nights');
+  assert.equal(SharedCore.ownerDecisionCovers(approve, { ...nextFriday, kind: 'merge', changes: {} }), false);
+
+  const notBear = { key: friday.key, kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: friday };
+  assert.equal(SharedCore.ownerDecisionCovers(notBear, saturday), true, '"not bear" is about the party, any night, any flyer');
+  const wrongTime = { key: friday.key, kind: 'new', verdict: 'reject', reason: { tags: [], text: 'wrong time' }, snapshot: friday };
+  assert.equal(SharedCore.ownerDecisionCovers(wrongTime, nextFriday), true, 'the same problem on another night is not a new question');
+  assert.equal(SharedCore.ownerDecisionCovers(wrongTime, saturday), false);
+
+  const later = { key: saturday.key, kind: 'new', verdict: 'reject', reason: { tags: [], text: 'changed my mind' }, stampedAt: '2030-09-02T00:00:00.000Z', snapshot: { ...saturday, image: friday.image } };
+  assert.equal(SharedCore.findOwnerDecision(nextFriday, [approve, later]), later, 'between sibling nights the newest decision speaks');
+  const own = { key: nextFriday.key, kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: nextFriday };
+  assert.equal(SharedCore.findOwnerDecision(nextFriday, [later, own]), own, 'a decision on the night itself beats any sibling');
+});
+
+test('owner review proposal: a merge that moves the party to another venue carries the bar change; a spelling does not', () => {
+  const core = createReviewCore();
+  const moved = core.buildOwnerReviewProposal(reviewMergeEvent({
+    _mergeDiff: { updated: [{ key: 'bar', from: 'Check instagram for this week’s location.', to: 'Rawhide' }], added: [{ key: 'address', value: '250 W 26th St' }], removed: [] }
+  }));
+  assert.deepEqual(moved.changes.bar, { from: 'Check instagram for this week’s location.', to: 'Rawhide' });
+  assert.equal(moved.changes.address, undefined, 'addresses are normalisation noise, not a decision');
+  const spelled = core.buildOwnerReviewProposal(reviewMergeEvent({ _mergeDiff: { updated: [{ key: 'bar', from: "Jacques' Cabaret", to: 'Jacques Cabaret' }] } }));
+  assert.equal(spelled.changes.bar, undefined);
+  const barOnly = reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', _changes: ['notes'], _mergeDiff: { added: [{ key: 'bar', value: 'Rawhide' }] } });
+  assert.equal(core.isOwnerReviewCandidate(barOnly), true, 'a venue move is a card even when no stored field changes');
+  assert.equal(core.isOwnerReviewCandidate(reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', _changes: ['notes'] })), false);
 });

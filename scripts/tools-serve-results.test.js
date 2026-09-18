@@ -1074,3 +1074,39 @@ test('renderReviewCard: calendar link memory — an inherited link is named, and
   assert.ok(inherited.includes("link inherited from the calendar's 2026-09-17 night"), inherited);
   assert.ok(!renderReviewCard({ ...base, display: {} }, ctx).includes('🔗 no link'), 'no history, no line');
 });
+
+test('renderReviewCard: a night back because it differs from a decided sibling names that night; a venue change is one row, not two', () => {
+  const ctx = buildReviewCtx();
+  const base = { kind: 'new', key: 'event|daddy pop|eaglewiltonmanors|2027-01-30', proposal: {
+    title: 'DADDY POP', startDate: '2027-01-30T04:00:00.000Z', endDate: '2027-01-30T11:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'fort-lauderdale', location: '', source: 'ai-web', url: '', ticketUrl: '', image: '', cover: '', description: '', changes: {}
+  }, display: {} };
+  const html = renderReviewCard({ ...base, prior: { verdict: 'approve', stampedAt: '2026-09-18T13:42:00.000Z', reason: null, drift: ['image'], night: '2026-11-06' } }, ctx);
+  assert.ok(html.includes("You approved this party's 2026-11-06 night on 2026-09-18. This night differs: image."), html);
+
+  const merge = { kind: 'merge', key: 'event|bear happy hour|rawhide|2027-01-30', proposal: { ...base.proposal, title: 'Bear Happy Hour at Rawhide', bar: 'Rawhide', existingTitle: 'Bear Happy Hour',
+    changes: { title: { from: 'Bear Happy Hour', to: 'Bear Happy Hour at Rawhide' }, bar: { from: 'Check instagram for this week’s location.', to: 'Rawhide' } } },
+    display: { notesChanges: [{ key: 'bar', from: 'Check instagram for this week’s location.', to: 'Rawhide' }, { key: 'address', from: '', to: '250 W 26th St' }] } };
+  const mergeHtml = renderReviewCard(merge, ctx);
+  assert.equal((mergeHtml.match(/data-field="bar"/g) || []).length, 1, 'the venue row is shown once');
+  assert.ok(mergeHtml.includes('<span class="chg-k">Venue</span>'));
+  assert.ok(mergeHtml.includes('data-field="address"'), 'other notes rows stay');
+});
+
+test('renderReviewPage ships each card\'s series and each decided entry\'s via, and the deck folds a series into one item', () => {
+  const nights = [0, 7].map((days) => ({
+    ...reviewRunFixture('20300101-051500').analyzedEvents[0],
+    title: 'DADDY POP', startDate: new Date(Date.UTC(2030, 5, 5 + days, 2)).toISOString(), endDate: new Date(Date.UTC(2030, 5, 5 + days, 6)).toISOString(),
+    url: 'https://eaglebarwm.com/event/daddy-pop/' + days + '/', image: 'https://eaglebarwm.com/daddy-pop-1.png'
+  }));
+  const payload = { ...reviewRunFixture('20300101-051500'), analyzedEvents: nights };
+  const deck = reviewQueue.buildDeck(payload, reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  assert.equal(deck.cards.length, 2);
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(html.includes('"series":{"key":"' + deck.cards[0].series.key + '"'), 'series rides on the card payload');
+  assert.ok(html.includes('class="series-split"'), 'the one-at-a-time control is in the client');
+  const store = reviewQueue.upsertDecision(reviewQueue.emptyDecisionStore(), reviewQueue.buildDecision({ key: deck.cards[0].key, kind: 'new', verdict: 'approve', snapshot: deck.cards[0].proposal }));
+  const decidedDeck = reviewQueue.buildDeck(payload, store, { now: 0, curatedBars: {} });
+  const decidedHtml = renderReviewPage(decidedDeck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(decidedHtml.includes('"via":"' + deck.cards[0].key + '"'), 'the inherited night says which night decided it');
+});
