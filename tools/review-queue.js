@@ -579,9 +579,15 @@ function formatNightLabel(proposal) {
 function stampSeries(cards, SharedCore) {
     const groups = new Map();
     for (const card of cards) {
-        if (card.kind !== 'new') continue;
-        const series = SharedCore.getOwnerReviewSeriesKey(card.key);
+        if (card.kind !== 'new' && card.kind !== 'merge') continue;
+        let series = SharedCore.getOwnerReviewSeriesKey(card.key);
         if (!series) continue;
+        // Merges fold only when they say the same thing about every night.
+        if (card.kind === 'merge') {
+            const signature = SharedCore.getOwnerReviewMergeSignature(card.proposal);
+            if (!signature) continue;
+            series = `${series}|merge|${signature}`;
+        }
         if (!groups.has(series)) groups.set(series, []);
         groups.get(series).push(card);
     }
@@ -597,10 +603,12 @@ function stampSeries(cards, SharedCore) {
 // decided = proposals a stored decision already covers (with that decision).
 function buildDeck(runPayload, store, options = {}) {
     const payload = runPayload && typeof runPayload === 'object' ? runPayload : {};
-    const decisions = normalizeDecisionStore(store).decisions;
     const now = Number.isFinite(options.now) ? options.now : Date.now();
     const SharedCore = loadSharedCore();
     const core = createDeckCore(payload, options);
+    // Old keys re-keyed from their snapshots (SharedCore.rekeyOwnerDecisions)
+    // — a title rule that changed must not strand a decision.
+    const decisions = core.rekeyOwnerDecisions(normalizeDecisionStore(store).decisions);
     core.bearVerdicts = Array.isArray(options.bearVerdicts) ? options.bearVerdicts : [];
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];

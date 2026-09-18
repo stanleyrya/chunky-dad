@@ -23582,3 +23582,94 @@ test('slot rule on one run: the weekly night yields to the one-off at the same b
   assert.equal(onyx._slotYield, undefined);
   assert.equal(SharedCore.filterEventsForExecution([{ ...beerBust, _parserConfig: { dryRun: false } }]).length, 0);
 });
+
+test('venue tail: "Fuzzy at Nowhere" at Nowhere is "Fuzzy"; a tail that is not the bar stays; keys are the party either way', () => {
+  const core = createReviewCore();
+  assert.equal(core.stripVenueSuffixFromTitle('Fuzzy at Nowhere', 'Nowhere Bar'), 'Fuzzy');
+  assert.equal(core.stripVenueSuffixFromTitle('Fursdays at Ty\'s', 'Ty\'s Bar NYC'), 'Fursdays', 'the short name leads the bar\'s longer name');
+  assert.equal(core.stripVenueSuffixFromTitle('Bears 4 Bareburger at Bareburger HK', 'Bareburger'), 'Bears 4 Bareburger', 'the bar leads the tail');
+  assert.equal(core.stripVenueSuffixFromTitle('Jockstrap Wednesday at The Eagle NYC', 'Eagle NYC'), 'Jockstrap Wednesday', 'a leading article is not a different bar');
+  assert.equal(core.stripVenueSuffixFromTitle('Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors', 'Eagle'), 'Club Chub Presents: MEAT MARKET');
+  assert.equal(core.stripVenueSuffixFromTitle('Hibearnation: Body at Phoenix', 'Phoenix Bar'), 'Hibearnation: Body');
+  assert.equal(core.stripVenueSuffixFromTitle('Bears at the Beach 2026', 'Nantasket Beach'), 'Bears at the Beach 2026', 'the tail is not the bar');
+  assert.equal(core.stripVenueSuffixFromTitle('Bears at Sea', 'Eagle LA'), 'Bears at Sea');
+  assert.equal(core.stripVenueSuffixFromTitle('Fuzzy at Nowhere', ''), 'Fuzzy at Nowhere', 'no bar, nothing to match');
+  assert.equal(core.stripVenueSuffixFromTitle('Fuzzy', 'Nowhere'), 'Fuzzy');
+  assert.equal(core.stripVenueSuffixFromTitle('THIS WEEK AT MASSIVE', 'Massive'), 'THIS WEEK AT MASSIVE', 'a head that only says when is no title');
+  assert.equal(core.getBearVerdictTitleKey('Fursdays at Ty\'s', ['Ty\'s Bar NYC']), core.getBearVerdictTitleKey('Fursdays', ['Ty\'s Bar NYC']), 'both spellings key the same party');
+  assert.equal(core.getOwnerReviewKey(reviewNewEvent({ title: 'FURBALL NYC at Rockbar' })), core.getOwnerReviewKey(reviewNewEvent()));
+});
+
+test('rekeyOwnerDecisions: a stored decision keyed under an older title rule is re-keyed from its snapshot and keeps speaking', () => {
+  const core = createReviewCore();
+  const night = reviewNewEvent({ title: 'Fursdays at Ty\'s', bar: 'Ty\'s Bar NYC', address: '114 Christopher St' });
+  const proposal = core.buildOwnerReviewProposal(night);
+  const stale = { key: 'event|fursdays ty|tysbarnyc|2030-10-03', kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: proposal };
+  const [rekeyed] = core.rekeyOwnerDecisions([stale]);
+  assert.equal(rekeyed.key, proposal.key);
+  assert.equal(rekeyed.previousKey, stale.key);
+  assert.equal(SharedCore.findOwnerDecision(proposal, core.rekeyOwnerDecisions([stale])).key, proposal.key, 'the re-keyed decision covers the night');
+  const untouched = { key: proposal.key, kind: 'new', verdict: 'approve', snapshot: proposal };
+  assert.equal(core.rekeyOwnerDecisions([untouched])[0], untouched, 'a current key is left alone');
+  const bar = { key: 'bar|nyc|julius', kind: 'bar', verdict: 'approve', snapshot: { name: 'Julius' } };
+  assert.equal(core.rekeyOwnerDecisions([bar])[0], bar);
+});
+
+test('series coverage for merges: the same rename on another night of the party is one decision; a different change is not', () => {
+  const core = createReviewCore();
+  const renamedNight = (start, end) => {
+    const existing = { title: 'Fuzzy at Nowhere', startDate: start, endDate: end, location: '51.4863391, -0.1217784', notes: 'bar: Nowhere\nwebsite: https://beefmince.co.uk/' };
+    return core.buildOwnerReviewProposal(reviewMergeEvent({ title: 'Fuzzy', bar: 'Nowhere', startDate: start, endDate: end, _existingEvent: existing, _original: { scraper: {}, calendar: { ...existing, website: 'https://beefmince.co.uk/' } } }));
+  };
+  const friday = renamedNight(REVIEW_START, '2030-10-04T06:00:00.000Z');
+  const nextFriday = renamedNight('2030-10-11T02:00:00.000Z', '2030-10-11T06:00:00.000Z');
+  assert.deepEqual(Object.keys(friday.changes), ['title']);
+  assert.equal(SharedCore.getOwnerReviewMergeSignature(friday), 'title=Fuzzy');
+  assert.equal(SharedCore.getOwnerReviewMergeSignature(friday), SharedCore.getOwnerReviewMergeSignature(nextFriday));
+  const approve = { key: friday.key, kind: 'merge', verdict: 'approve', snapshot: friday };
+  assert.equal(SharedCore.ownerDecisionCovers(approve, nextFriday), true, 'the same rename on the next night');
+  const reject = { key: friday.key, kind: 'merge', verdict: 'reject', reason: { tags: [], text: 'old name was better' }, snapshot: friday };
+  assert.equal(SharedCore.ownerDecisionCovers(reject, nextFriday), true, 'so is a rejection of it');
+  assert.equal(SharedCore.ownerDecisionCovers(approve, { ...nextFriday, changes: { title: { from: 'Fuzzy at Nowhere', to: 'FUZZY!' } } }), false, 'a different rename is its own question');
+  assert.equal(SharedCore.ownerDecisionCovers({ ...approve, kind: 'new' }, nextFriday), false, 'a new-night decision never speaks for a merge');
+});
+
+test('final build: "Fuzzy at Nowhere" at Nowhere is written as "Fuzzy", with the rewrite recorded', async () => {
+  const core = createLaCore();
+  const adapter = buildSeriesLookupAdapter([]);
+  const event = {
+    title: 'Fuzzy at Nowhere',
+    bar: 'Nowhere Bar',
+    address: '322 E 14th St, New York, NY 10003',
+    city: 'la',
+    startDate: new Date('2026-10-17T02:00:00.000Z'),
+    endDate: new Date('2026-10-17T06:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: { name: 'Thotyssey', dryRun: false }
+  };
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(event, [], 'upsert', adapter);
+    analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed.title, 'Fuzzy');
+  assert.ok(!/Fuzzy at Nowhere/.test(analyzed.notes || ''), 'the notes carry the bare title');
+  assert.ok(logs.some(line => line.includes('✂️ TITLE: "Fuzzy at Nowhere" → "Fuzzy"')), JSON.stringify(logs.filter(l => l.includes('TITLE'))));
+});
+
+test('merge: the same title in another case keeps the saved spelling ("FUZZY" stays FUZZY); a different name is still arbitrated', () => {
+  const core = createReviewCore();
+  const context = { records: { a: { title: 'FUZZY', bar: 'Nowhere' }, b: { title: 'Fuzzy at Nowhere', bar: 'Nowhere Bar' } }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  const kept = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy at Nowhere', context);
+  assert.equal(kept.winner, 'a');
+  assert.match(kept.reason, /saved spelling stays/);
+  const flipped = core.resolveConflictDeterministically('title', 'Fuzzy', 'FUZZY', { records: { a: context.records.b, b: context.records.a }, sideLabels: { a: 'scraped', b: 'calendar' } });
+  assert.equal(flipped.winner, 'b', 'whichever side the calendar is on');
+  const renamed = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy Fridays', context);
+  assert.ok(!renamed || !/saved spelling stays/.test(renamed.reason), 'a different name is a real conflict');
+});
