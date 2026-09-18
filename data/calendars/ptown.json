@@ -5,6 +5,64 @@
   },
   "events": [
     {
+      "name": "The Belly Party (Bear Week)",
+      "day": "Friday",
+      "time": "10PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510351,
+        "lng": -70.1876798
+      },
+      "startDate": "2026-07-17T22:00:00",
+      "endDate": "2026-07-17T23:00:00",
+      "unprocessedDescription": "description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We \rcelebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY\\: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial Street, Provincetown, MA, 02657\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.club/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https://www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|red room\nbearSource: keyword\nshortName: THE BELLY PARTY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "uid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
+      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
+      "tea": "✨ BELLY is more than a party—it’s a MOVEMENT. ✨We celebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍",
+      "address": "258 Commercial Street, Provincetown, MA, 02657",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+      "instagram": "https://www.instagram.com/redroomptown",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "ticketUrl": "https://redroom.club/shows/376078",
+      "shortName": "THE BELLY PARTY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/redroomptown",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://redroom.club/shows/376078",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "the-belly-party-bear-week-68204385"
+    },
+    {
       "name": "FURBALL",
       "day": "Saturday",
       "time": "10PM",
@@ -121,62 +179,63 @@
       "slug": "furball-ptown-2d335fcd"
     },
     {
-      "name": "The Belly Party (Bear Week)",
+      "name": "The Belly Party - SPOOKY BEAR!",
       "day": "Friday",
-      "time": "10PM-11PM",
+      "time": "9PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 42.0510351,
-        "lng": -70.1876798
+        "lat": 42.0510476,
+        "lng": -70.1876737
       },
-      "startDate": "2026-07-17T22:00:00",
-      "endDate": "2026-07-17T23:00:00",
-      "unprocessedDescription": "description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We \rcelebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY\\: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial Street, Provincetown, MA, 02657\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.club/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https://www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|red room\nbearSource: keyword\nshortName: THE BELLY PARTY",
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "bar: Red Room\naddress: 258 Commercial Street Provincetown, Ma\rssachusetts, 02657 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-bear|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "A648996C-FBF3-4F80-B009-64E0FB665858",
-      "uid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "sourceUid": "34E17B66-94AA-4026-AC08-441617D79F1E",
+      "uid": "34E17B66-94AA-4026-AC08-441617D79F1E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Red Room",
-      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
-      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
-      "tea": "✨ BELLY is more than a party—it’s a MOVEMENT. ✨We celebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍",
-      "address": "258 Commercial Street, Provincetown, MA, 02657",
-      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
-      "instagram": "https://www.instagram.com/redroomptown",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
+      "address": "258 Commercial Street Provincetown, Massachusetts, 02657 United States",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "ticketUrl": "https://redroom.club/shows/376078",
-      "shortName": "THE BELLY PARTY",
+      "shortName": "SPOOKY BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/redroomptown",
+          "url": "https://www.instagram.com/ne.ursamen",
           "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
           "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://redroom.club/shows/376078",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "the-belly-party-bear-week-68204385"
+      "slug": "the-belly-party-spooky-bear-4b3e1332"
     },
     {
       "name": "Riptide",

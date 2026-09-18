@@ -105,8 +105,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 2016,
-      "eventCount": 1
+      "dataLength": 16639,
+      "eventCount": 16
     },
     "hong-kong": {
       "name": "Hong Kong",
@@ -135,8 +135,8 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 19599,
-      "eventCount": 11
+      "dataLength": 27069,
+      "eventCount": 16
     },
     "madrid": {
       "name": "Madrid",
@@ -147,8 +147,8 @@
     "manchester": {
       "name": "Manchester",
       "status": "success",
-      "dataLength": 197,
-      "eventCount": 0
+      "dataLength": 7653,
+      "eventCount": 6
     },
     "mexico-city": {
       "name": "Mexico City",
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 44036,
-      "eventCount": 38
+      "dataLength": 61341,
+      "eventCount": 55
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -219,8 +219,8 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 5481,
-      "eventCount": 4
+      "dataLength": 6961,
+      "eventCount": 5
     },
     "pv": {
       "name": "Puerto Vallarta",
@@ -255,8 +255,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 25851,
-      "eventCount": 18
+      "dataLength": 27903,
+      "eventCount": 20
     },
     "sitges": {
       "name": "Sitges",
