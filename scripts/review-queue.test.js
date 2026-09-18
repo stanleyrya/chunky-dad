@@ -488,3 +488,17 @@ test('buildDeck: pending nights of one party are one series card; a night decide
   assert.equal(differs.cards[0].prior.night, first.cards[0].key.split('|')[3]);
   assert.deepEqual(differs.cards[0].prior.drift, ['image']);
 });
+
+test('buildDeck: merges saying the same thing about sibling nights fold into one series card; a different change stays apart', () => {
+  const night = (days, title) => mergeEvent({
+    title, bar: 'Nowhere', startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000),
+    _existingEvent: { title: 'Fuzzy at Nowhere', identifier: 'F' + days, startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000), location: '40.7, -74.0', notes: 'bar: Nowhere' },
+    _original: { scraper: {}, calendar: { title: 'Fuzzy at Nowhere', startDate: iso(FUTURE + days * 86400000), notes: 'bar: Nowhere' } },
+    _changes: ['title', 'notes']
+  });
+  const deck = deckOf(runPayload({ analyzedEvents: [night(0, 'Fuzzy'), night(7, 'Fuzzy'), night(14, 'FUZZY!')] }));
+  assert.equal(deck.cards.length, 3);
+  assert.equal(deck.cards[0].series.size, 2, 'the two identical renames fold');
+  assert.equal(deck.cards[1].series.key, deck.cards[0].series.key);
+  assert.equal(deck.cards[2].series, undefined, 'the odd rename is its own card');
+});

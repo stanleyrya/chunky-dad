@@ -1299,11 +1299,84 @@ class SharedCore {
     // stripped) joined into one comparable string. "MEAT RACK" == "Meat Rack"
     // but != "MEAT RACK INFERNO" — equality, never subset, so a different
     // party at the same venue can never inherit a verdict.
+    // Does a title's "at <venue>" tail name THIS bar? The bar's key, the
+    // same name with descriptors either way ("Ty's" / "Ty's Bar NYC",
+    // "Bareburger HK" / "Bareburger"), or a leading article dropped.
+    titleTailNamesBar(tail, bar) {
+        const tailKey = this.normalizeBarNameKey(String(tail || '').replace(/^(the|le|la|el)\s+/i, ''));
+        const barKey = this.normalizeBarNameKey(String(bar || '').replace(/^(the|le|la|el)\s+/i, ''));
+        if (!tailKey || !barKey) return false;
+        if (tailKey === barKey) return true;
+        if (tailKey.length >= 4 && barKey.length >= 4 && (tailKey.includes(barKey) || barKey.includes(tailKey))) return true;
+        const leads = (shortName, longName) => {
+            const shortTokens = this.getCrossSourceTitleTokens(String(shortName || ''));
+            const longTokens = this.getCrossSourceTitleTokens(String(longName || ''));
+            return shortTokens.length >= 1 && shortTokens.length < longTokens.length
+                && shortTokens.every((token, index) => longTokens[index] === token);
+        };
+        return leads(tail, bar) || leads(bar, tail);
+    }
+
+    // "Fuzzy at Nowhere" with bar Nowhere is "Fuzzy": the venue is already
+    // the event's bar, and the site prints the bar beside the title (owner
+    // 2026-09-18). Only a tail that names THIS bar goes — "Bears at the
+    // Beach" at Nantasket Beach keeps its name. Returns the title unchanged
+    // when nothing is stripped.
+    stripVenueSuffixFromTitle(title, bar) {
+        const text = String(title || '').trim();
+        const match = text.match(/^(.*?\S)\s+(?:at|@)\s+(\S.*?)\s*$/i);
+        if (!match) return text;
+        const head = match[1].replace(/[\s:\-–—/|]+$/, '').trim();
+        if (!head || !/[a-z]/i.test(head)) return text;
+        // A head that only says WHEN ("Tonight", "This week") names no
+        // party — the venue was the whole title (umbrella rows).
+        const timeWords = new Set(['week', 'weekend', 'tonight', 'today', 'tomorrow', 'month', 'night', 'nights', 'day', 'days', 'evening', 'daily', 'weekly', 'monthly']);
+        const headTokens = this.getCrossSourceTitleTokens(head);
+        if (headTokens.length === 0 || headTokens.every(token => timeWords.has(token))) return text;
+        if (!this.titleTailNamesBar(match[2], bar)) return text;
+        return head;
+    }
+
     getBearVerdictTitleKey(title, barNames = []) {
-        const venueKeys = (Array.isArray(barNames) ? barNames : [barNames])
+        const names = (Array.isArray(barNames) ? barNames : [barNames]);
+        const venueKeys = names
             .map(name => this.normalizeBarNameKey(name))
             .filter(Boolean);
-        return this.getCrossSourceTitleTokens(title, venueKeys).join(' ');
+        // The key is the party, not the bar: a title spelled "Fuzzy at
+        // Nowhere" and one spelled "Fuzzy" key the same at Nowhere.
+        const bareTitle = names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(title || ''));
+        return this.getCrossSourceTitleTokens(bareTitle, venueKeys).join(' ');
+    }
+
+    // Stored decisions were keyed by the title spelling of their day; a
+    // key rule that changed since (the venue tail no longer counts) would
+    // strand them. Re-key each from its snapshot — the fields the key is
+    // made of — so old decisions keep speaking. Pure; the store is not
+    // rewritten here.
+    rekeyOwnerDecisions(decisions) {
+        if (!Array.isArray(decisions)) return [];
+        return decisions.map(decision => {
+            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped') return decision;
+            const snapshot = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
+            if (!snapshot || !snapshot.title || !snapshot.startDate) return decision;
+            const key = this.getOwnerReviewKey({
+                title: snapshot.title, bar: snapshot.bar, address: snapshot.address, city: snapshot.city,
+                location: snapshot.location, timezone: snapshot.timezone, startDate: snapshot.startDate
+            });
+            if (!key || key === decision.key) return decision;
+            return { ...decision, key, previousKey: decision.previousKey || decision.key };
+        });
+    }
+
+    // What a merge card proposes, night-independent: its changed fields and
+    // values, with date fields reduced to their presence (every night's
+    // start differs). Sibling nights whose merge says the same thing share
+    // one decision.
+    static getOwnerReviewMergeSignature(proposal) {
+        const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+        return Object.keys(changes).sort().map(field => (field === 'startDate' || field === 'endDate')
+            ? `${field}=*`
+            : `${field}=${SharedCore.normalizeOwnerReviewValue(changes[field] && changes[field].to)}`).join(';');
     }
 
     // The owner's stored manual verdict for this event, or null. Fail-closed
@@ -1675,9 +1748,17 @@ class SharedCore {
             // times. "Not bear" is about the party; an approval or any other
             // rejection carries over while the night looks like the one
             // decided (getOwnerReviewSeriesDrift), which needs its snapshot.
-            if (proposal.kind !== 'new' || (decision.kind && decision.kind !== 'new')) return false;
             const series = SharedCore.getOwnerReviewSeriesKey(proposal.key);
             if (!series || series !== SharedCore.getOwnerReviewSeriesKey(decision.key)) return false;
+            if (proposal.kind === 'merge') {
+                // A merge saying the same thing about another night of the
+                // party ("Fuzzy at Nowhere" → "Fuzzy" on every Friday) is one
+                // decision, whichever way it went.
+                if (decision.kind !== 'merge' || !decision.snapshot || typeof decision.snapshot !== 'object') return false;
+                const signature = SharedCore.getOwnerReviewMergeSignature(proposal);
+                return Boolean(signature) && signature === SharedCore.getOwnerReviewMergeSignature(decision.snapshot);
+            }
+            if (proposal.kind !== 'new' || (decision.kind && decision.kind !== 'new')) return false;
             if (decision.verdict === 'reject' && SharedCore.ownerDecisionSaysNotBear(decision)) return true;
             if (!decision.snapshot || typeof decision.snapshot !== 'object') return false;
             return SharedCore.getOwnerReviewSeriesDrift(decision, proposal).length === 0;
@@ -1726,7 +1807,7 @@ class SharedCore {
     // merges) rides along untouched. Returns the counts for the summary.
     applyOwnerDecisions(analyzedEvents, decisions) {
         const counts = { approved: 0, rejected: 0, awaiting: 0, housekeeping: 0, withheld: 0 };
-        const store = Array.isArray(decisions) ? decisions : [];
+        const store = this.rekeyOwnerDecisions(Array.isArray(decisions) ? decisions : []);
         for (const event of Array.isArray(analyzedEvents) ? analyzedEvents : []) {
             if (!event || typeof event !== 'object') continue;
             if (SharedCore.filterEventsForExecution([event]).length !== 1) {
@@ -18262,6 +18343,17 @@ class SharedCore {
             // passes through them) and BEFORE the notes generation/rebuild
             // below, so the cleaned values are what notes serialize.
             let notesNeedRebuild = false;
+
+            if (typeof analyzedEvent.title === 'string' && analyzedEvent.title.trim()) {
+                const bareTitle = this.stripVenueSuffixFromTitle(analyzedEvent.title, analyzedEvent.bar);
+                if (bareTitle !== analyzedEvent.title.trim()) {
+                    console.log(`✂️ TITLE: "${analyzedEvent.title}" → "${bareTitle}" — the venue tail names the event's own bar (${analyzedEvent.bar})`);
+                    analyzedEvent.title = bareTitle;
+                    notesNeedRebuild = true;
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'title',
+                        'venue tail dropped at final build — the tail names the event\'s own bar');
+                }
+            }
 
             // Description formatting sanitizer (run 20260729-125201: dice.fm
             // shipped markdown "**BEEFMINCE ...**" and a Wix site shipped raw
