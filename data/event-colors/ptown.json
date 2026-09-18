@@ -44,5 +44,12 @@
     "paletteSource": "flyer",
     "palette": "#ac0f11:20:19 #f4f4f3:16:0 #830308:14:15 #c45b5c:12:13 #53090a:12:11",
     "accent": "#ac0f11"
+  },
+  {
+    "slug": "the-belly-party-spooky-bear-4b3e1332",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+    "paletteSource": "flyer",
+    "palette": "#b21a0f:20:19 #d59b9b:14:7 #881a0b:12:15 #bc5c5a:12:12 #640c0b:12:12",
+    "accent": "#b21a0f"
   }
 ]

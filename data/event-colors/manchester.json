@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "beareoke-54c9b64e",
+    "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#dba55c:22:11 #f5dd74:17:13 #fdf5eb:17:2 #dc7b2b:12:15 #9d7b63:8:5",
+    "accent": "#dc7b2b"
+  },
+  {
+    "slug": "beareoke-5811bb2a",
+    "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-20-20-00",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#dba55c:22:11 #f5dd74:17:13 #fdf5eb:17:2 #dc7b2b:12:15 #9d7b63:8:5",
+    "accent": "#dc7b2b"
+  },
+  {
+    "slug": "dilf-manchester-leather-edition-5d5226d1",
+    "url": "https://www.eaglemanchester.com/event-details/dilf-manchester-leather-edition-3",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#010000:27:0 #3c1213:14:7 #bc7e5b:13:9 #671c17:11:11 #8d3118:11:13",
+    "accent": "#8d3118"
+  },
+  {
+    "slug": "manbears-social-157810dc",
+    "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#e7f1f1:34:1 #e18c7a:14:11 #d4b2ad:13:4 #ca4e36:10:16 #efe993:2:11",
+    "accent": "#ca4e36"
+  },
+  {
+    "slug": "manbears-social-2892fec2",
+    "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#e7f1f1:34:1 #e18c7a:14:11 #d4b2ad:13:4 #ca4e36:10:16 #efe993:2:11",
+    "accent": "#ca4e36"
+  },
+  {
+    "slug": "manbears-social-5763edd0",
+    "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-10-10-16-00",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#e7f1f1:34:1 #e18c7a:14:11 #d4b2ad:13:4 #ca4e36:10:16 #efe993:2:11",
+    "accent": "#ca4e36"
+  }
+]
