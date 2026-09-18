@@ -1664,7 +1664,7 @@ class AiWebParser {
             // time than the page-derived one?
             this.applyFlyerTimeConflictFlag(keptEvents);
             // One card, two "events": a sibling's sub-heading is not an event.
-            const foldedEvents = this.foldSubheadingEvents(keptEvents);
+            const foldedEvents = this.foldSubheadingEvents(keptEvents, sourceUrl);
 
             return {
                 events: foldedEvents,
@@ -2321,7 +2321,7 @@ class AiWebParser {
     // description and no link of its own, is that sibling's sub-heading.
     // Fails closed: any token the sibling's title does not carry, any
     // description, any link, or another day keeps the record.
-    foldSubheadingEvents(events) {
+    foldSubheadingEvents(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         if (list.length < 2 || !this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return list;
         const tokensOf = (value) => this.core.getCrossSourceTitleTokens(String(value || ''));
@@ -2333,20 +2333,31 @@ class AiWebParser {
         for (const event of list) {
             const placeTokens = [...new Set([...tokensOf(event.bar), ...tokensOf(event.address)])];
             // A bare site root ("https://bearracuda.com") is the card's
-            // brand link, not a link of its own — the identity-link ladder
-            // clears it later for the same reason (run 20260917-205949: the
-            // FINAL PARTY headline carried one and escaped the fold).
+            // brand link, and the page the record was scraped off is every
+            // record's url on that page — neither is a link of ITS OWN. The
+            // identity-link ladder clears both later for the same reason
+            // (runs 20260917-205949 and 20260918-084123: the FINAL PARTY
+            // headline carried each in turn and escaped the fold).
             const isBareRoot = (value) => /^https?:\/\/[^/?#]+\/?$/i.test(String(value || '').trim());
-            const ownLink = (value) => Boolean(String(value || '').trim()) && !isBareRoot(value);
+            const pageKey = typeof this.core.getUrlDedupeKey === 'function' ? this.core.getUrlDedupeKey(String(sourceUrl || event._sourcePageUrl || '')) : '';
+            const isThisPage = (value) => Boolean(pageKey) && typeof this.core.getUrlDedupeKey === 'function' && this.core.getUrlDedupeKey(String(value || '')) === pageKey;
+            const ownLink = (value) => Boolean(String(value || '').trim()) && !isBareRoot(value) && !isThisPage(value);
             const hasOwnText = Boolean(String(event.description || '').trim())
                 || ownLink(event.ticketUrl)
                 || ownLink(event.url || event.website);
             let owner = null;
-            if (placeTokens.length > 0 && !hasOwnText) {
+            if (placeTokens.length > 0) {
                 const day = dayOf(event);
                 owner = list.find(sibling => sibling !== event && day && dayOf(sibling) === day
                     && (() => { const siblingTitle = new Set(tokensOf(sibling.title)); return placeTokens.every(token => siblingTitle.has(token)); })()
                     && tokensOf(sibling.bar).some(token => !placeTokens.includes(token)));
+            }
+            if (owner && hasOwnText) {
+                // Named like a sub-heading but carrying its own text: kept,
+                // and the log says what kept it so the next miss is readable.
+                const carried = [String(event.description || '').trim() ? 'description' : '', ownLink(event.ticketUrl) ? `ticketUrl ${event.ticketUrl}` : '', ownLink(event.url || event.website) ? `link ${event.url || event.website}` : ''].filter(Boolean).join(', ');
+                console.log(`🧽 SUBHEADING: kept "${event.title || 'event'}" — its venue/address only name the title of "${owner.title}" on the same day, but it carries its own ${carried}`);
+                owner = null;
             }
             if (owner) {
                 console.log(`🧽 SUBHEADING: dropped "${event.title || 'event'}" — its venue/address ("${[event.bar, event.address].filter(Boolean).join(' / ')}") is only the title of "${owner.title}" on the same day, with no description or link of its own`);
