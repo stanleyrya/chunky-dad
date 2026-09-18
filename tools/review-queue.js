@@ -500,6 +500,8 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         recurring: SharedCore.isRecurringSeriesEvent(event),
         seriesMatchTitle: seriesMatch ? String(seriesMatch.title || '') : '',
         sanityCodes: Array.isArray(event._sanityFlags) ? event._sanityFlags.map((flag) => flag && flag.code).filter(Boolean) : [],
+        slotWins: Array.isArray(event._slotWins) ? event._slotWins.map((entry) => entry && entry.from ? `${entry.from} (${entry.fromCadence || 'unknown'})` : '').filter(Boolean).slice(0, 3) : [],
+        slotTakeover: event._slotTakeover && typeof event._slotTakeover === 'object' ? { from: String(event._slotTakeover.from || ''), fromCadence: String(event._slotTakeover.fromCadence || '') } : null,
         venueOverlaps: Array.isArray(event._venueOverlap) ? event._venueOverlap.map((entry) => entry && (entry.withTitle || entry.title)).filter(Boolean).slice(0, 3) : [],
         image,
         imageOrientation: image ? core.classifyImageOrientation(image) : 'unknown',
