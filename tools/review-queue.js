@@ -494,6 +494,7 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         analysisReason: event._analysis && typeof event._analysis.reason === 'string' ? event._analysis.reason : '',
         bearSource: typeof event.bearSource === 'string' ? event.bearSource : '',
         bearReview: typeof event.bearReview === 'string' ? event.bearReview : '',
+        linkHistory: event._calendarLinkHistory && typeof event._calendarLinkHistory === 'object' ? event._calendarLinkHistory : null,
         evidenceLines: Array.isArray(event._evidenceLines) ? event._evidenceLines.filter((line) => typeof line === 'string').slice(0, 6) : [],
         notes: typeof event.notes === 'string' ? event.notes : '',
         recurring: SharedCore.isRecurringSeriesEvent(event),

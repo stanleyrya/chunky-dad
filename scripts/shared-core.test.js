@@ -23357,6 +23357,42 @@ test('flag, don\'t drop: an AI "not bear" on an event whose own title names a us
   assert.equal((await core.computeBearCheckDecision(series, parserConfig, {})).result, 'bear');
 });
 
+test('calendar link memory: a new night of a party inherits the website its earlier nights carry — same title AND same place, only into a blank', async () => {
+  const core = createCore();
+  const eventbrite = 'https://www.eventbrite.com/e/bears-4-bareburger-tickets-1984094486018';
+  const earlier = {
+    title: 'Bears 4 Bareburger at Bareburger HK', startDate: new Date('2026-09-18T01:00:00.000Z'), endDate: new Date('2026-09-18T05:00:00.000Z'),
+    location: '40.7599, -73.9903', notes: `bar: Bareburger\naddress: 366 W 46th St, New York, NY 10036\nwebsite: ${eventbrite}\ntimezone: America/New_York`
+  };
+  const adapter = buildSeriesLookupAdapter([earlier]);
+  const row = (overrides = {}) => ({
+    title: 'Bears 4 Bareburger at Bareburger HK', bar: 'Bareburger', address: '366 W 46th St, New York, NY 10036', city: 'nyc', timezone: 'America/New_York',
+    location: '40.7599, -73.9903', startDate: new Date('2026-09-25T01:00:00.000Z'), endDate: new Date('2026-09-25T05:00:00.000Z'),
+    _parserConfig: { name: 'Thotyssey', parser: 'ai-web' }, ...overrides
+  });
+
+  const inherited = await core.prepareEventsForCalendar([row()], adapter, {});
+  assert.equal(inherited[0]._action, 'new');
+  assert.ok([inherited[0].website, inherited[0].url, inherited[0].ticketUrl].includes(eventbrite),
+    'the blank is filled from the earlier night (the identity ladder then files a ticketing link under ticketUrl)');
+  assert.equal(inherited[0]._calendarLinkHistory.occurrences, 1);
+  assert.equal(inherited[0]._calendarLinkHistory.from, '2026-09-17');
+
+  const stated = await core.prepareEventsForCalendar([row({ ticketUrl: 'https://tixr.com/e/1' })], adapter, {});
+  assert.equal(stated[0]._calendarLinkHistory, undefined, 'a row that states its own link inherits nothing');
+
+  const movedBars = await core.prepareEventsForCalendar([row({ bar: 'Rockbar', address: '185 Christopher St', location: '40.7331, -74.0055' })], adapter, {});
+  assert.ok(![movedBars[0].website, movedBars[0].url, movedBars[0].ticketUrl].includes(eventbrite), 'a different place is a different party');
+  assert.equal(movedBars[0]._calendarLinkHistory, undefined);
+
+  // Earlier nights with no link: nothing to inherit, and the deck is told so.
+  const linkless = buildSeriesLookupAdapter([{ ...earlier, notes: 'bar: Bareburger\naddress: 366 W 46th St, New York, NY 10036' }]);
+  const none = await core.prepareEventsForCalendar([row()], linkless, {});
+  assert.ok(![none[0].website, none[0].url, none[0].ticketUrl].includes(eventbrite));
+  assert.deepEqual(none[0]._calendarLinkHistory, { occurrences: 1, latest: '2026-09-17', website: '', from: null });
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_calendarLinkHistory'), 'a replay re-derives it');
+});
+
 test('placeholder venues: an instruction is not a place, and a named venue beats it in the merge ladder', () => {
   const core = createCore();
   assert.equal(SharedCore.isPlaceholderVenueText('Check instagram for this week’s location.'), true);

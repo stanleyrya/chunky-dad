@@ -15143,6 +15143,79 @@ class SharedCore {
         return analysis;
     }
 
+    // CALENDAR LINK MEMORY (owner, 2026-09-17: "maybe we can dynamically
+    // start to learn things like that"). An aggregator's weekly rows never
+    // carry a link (Thotyssey: 0 of 28 "Bears 4 Bareburger" rows), so a
+    // NEW night of a party the calendar already holds inherits the website
+    // its earlier nights carry — a link pasted once into any occurrence, or
+    // scraped once from a better source, reaches every later night. Same
+    // party = same title tokens AND the same place (the bear-verdict
+    // identity), so a party that moves bars inherits nothing; a link the
+    // row states itself always wins (inherit fills a blank only); the
+    // source is the calendar as it stands (wide-window lookup), never this
+    // run's own proposals. Every event on the path is stamped
+    // _calendarLinkHistory so the review deck can say "no link on the
+    // calendar's earlier nights either". Fails open on any lookup error.
+    async inheritLinksFromCalendarHistory(event, calendarAdapter) {
+        if (!event || typeof event !== 'object') return event;
+        const stated = [event.website, event.url, event.ticketUrl]
+            .some(value => typeof value === 'string' && value.trim());
+        if (stated) return event;
+        if (!calendarAdapter || typeof calendarAdapter.getWideWindowCalendarEvents !== 'function') return event;
+        const titleKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar || event.venue]);
+        if (!titleKey) return event;
+        let lookup = null;
+        try {
+            lookup = await calendarAdapter.getWideWindowCalendarEvents(event);
+        } catch (_) {
+            return event;
+        }
+        const candidates = lookup && Array.isArray(lookup.events) ? lookup.events : [];
+        if (candidates.length === 0) return event;
+        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        const ownDay = this.normalizeEventDateLocal(event.startDate, timezone) || '';
+        const incoming = this.buildIdentityComparisonShape(event);
+        const nights = [];
+        for (const record of candidates) {
+            if (!record || typeof record !== 'object') continue;
+            const fields = typeof record.notes === 'string' ? this.parseNotesIntoFields(record.notes) : {};
+            const recordBar = typeof fields.bar === 'string' ? fields.bar : (record.bar || '');
+            if (this.getBearVerdictTitleKey(record.title || record.name, [recordBar]) !== titleKey) continue;
+            if (!this.areIdentityPlacesSimilar(incoming, this.buildIdentityComparisonShape(record))) continue;
+            const day = this.normalizeEventDateLocal(record.startDate, timezone) || '';
+            if (day && day === ownDay) continue;
+            const website = [fields.website, fields.url, record.url]
+                .map(value => (typeof value === 'string' ? value.trim() : ''))
+                .find(Boolean) || '';
+            const ticketUrl = typeof fields.ticketUrl === 'string' ? fields.ticketUrl.trim() : '';
+            nights.push({ day, website, ticketUrl, title: record.title || '', bar: recordBar });
+        }
+        if (nights.length === 0) return event;
+        nights.sort((a, b) => String(b.day).localeCompare(String(a.day)));
+        const latestWithLink = nights.find(night => night.website || night.ticketUrl);
+        // The link lands in the field the earlier night held it in; the
+        // identity-link ladder still runs after this and files a ticketing
+        // link under ticketUrl either way.
+        const history = {
+            occurrences: nights.length,
+            latest: nights[0].day || null,
+            website: latestWithLink ? (latestWithLink.website || latestWithLink.ticketUrl) : '',
+            from: latestWithLink ? latestWithLink.day || null : null
+        };
+        const title = event.title || 'Unknown';
+        if (latestWithLink) {
+            console.log(`🔗 LINKS: "${title}" inherited ${latestWithLink.website ? `website ${latestWithLink.website}` : `ticket link ${latestWithLink.ticketUrl}`} from the calendar's ${latestWithLink.day || 'earlier'} night of this party at ${latestWithLink.bar || 'the same place'} — this row stated no link`);
+            return {
+                ...event,
+                ...(latestWithLink.website ? { website: latestWithLink.website } : {}),
+                ...(latestWithLink.ticketUrl ? { ticketUrl: latestWithLink.ticketUrl } : {}),
+                _calendarLinkHistory: history
+            };
+        }
+        console.log(`🔗 LINKS: "${title}" — no link on this row, and none on the calendar's ${nights.length} earlier night(s) of this party either`);
+        return { ...event, _calendarLinkHistory: history };
+    }
+
     // Identity gate for the saved-series lookup: the dedup's own name and
     // place helpers (areIdentityNamesSimilar / areIdentityPlacesSimilar —
     // nothing looser), minus getSameEventIdentitySignal's same-local-day
@@ -16080,6 +16153,7 @@ class SharedCore {
             '_seriesAuthority',
             '_recurringExport',
             '_savedRunSourceIndex',
+            '_calendarLinkHistory',
             'overrideUid',
             'overrideRecurrenceId'
         ];
@@ -17512,6 +17586,12 @@ class SharedCore {
                     delete preparedEvent.bearReview;
                     console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" → bear (manual override on calendar record${clearedFlag ? `, cleared review flag: ${clearedFlag}` : ''})`);
                 }
+            }
+
+            // A new night of a party the calendar already knows inherits the
+            // link its earlier nights carry (owner ruling 2026-09-17).
+            if (analysis && analysis.action === 'new') {
+                preparedEvent = await this.inheritLinksFromCalendarHistory(preparedEvent, calendarAdapter);
             }
 
             const analyzedEntry = await this.buildAnalyzedCalendarEvent(preparedEvent, analysis, calendarAdapter, config);
