@@ -419,6 +419,10 @@ class CalendarCore {
                         eventData.favicon = additionalData.favicon;
                     }
                     eventData.tea = additionalData.tea || additionalData.description;
+                    // A single night that states its family's cadence
+                    // (scraper notes `cadence:` on feed-expanded repeats):
+                    // wears the series badge without being a series.
+                    eventData.cadence = additionalData.cadence || null;
                     eventData.address = additionalData.address || null;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
@@ -1076,7 +1080,10 @@ class CalendarCore {
         const { recurring, eventType, recurrence, startDate } = event;
         
         if (!recurring || !recurrence) {
-            return null;
+            // A saved single night carrying its cadence (notes `cadence:`)
+            // reads like the series it belongs to — "Weekly", "Last Thu".
+            const cadence = typeof event.cadence === 'string' ? event.cadence.trim() : '';
+            return cadence ? this.getRecurrenceDescription(cadence, startDate) : null;
         }
 
         const recurrenceDesc = this.getRecurrenceDescription(recurrence, startDate);

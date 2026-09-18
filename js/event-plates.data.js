@@ -2,7 +2,7 @@
 // faviconPlate per event-website domain; the homepage reads it to tint
 // each bear-run icon's plate (see js/compact-card-renderer.js).
 window.EVENT_PLATES = {
- "generatedAt": "2026-09-17",
+ "generatedAt": "2026-09-18",
  "domains": {
   "furball.nyc": "#ffffff",
   "bearracuda.com": "#fffefe",
@@ -37,8 +37,10 @@ window.EVENT_PLATES = {
   "southerndecadence.com": "#ffffff",
   "bearitmtl.com": "#ffffff",
   "clubchubusa.com": "#ffffff",
+  "eaglebarwm.com": "#ffffff",
   "eaglela.com": "#000000",
   "clubxhubusa.com": "#ffffff",
+  "eaglemanchester.com": "#111113",
   "phoenixbarnola.com": "#000000",
   "whitney.org": "#ffffff",
   "animal.nyc": "#ffffff",
@@ -53,6 +55,7 @@ window.EVENT_PLATES = {
   "tickets.taverngroupevents.com": "#fed317",
   "dieselseattle.com": "#f6f6f6",
   "thelumberyardbar.com": "#010100",
+  "powerhousebar.com": "#ffffff",
   "scandalsitges.com": "#ffffff",
   "bearsevents.com": "#ffffff",
   "sitgesbearcave.com": "#ffffff",
