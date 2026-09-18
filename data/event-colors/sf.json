@@ -87,6 +87,26 @@
     "accent": "#ff2319"
   },
   {
+    "slug": "chub-rub-552df5bd",
+    "url": "https://powerhousebar.com/event/chub-rub/2026-10-17/",
+    "faviconBg": "#131719",
+    "faviconFg": "#14181b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#dcdcdc:49:0 #c5b9ab:21:2 #a39288:13:3 #866054:8:5 #eb567c:2:18",
+    "accent": "#eb567c"
+  },
+  {
+    "slug": "chub-rub-735cee19",
+    "url": "https://powerhousebar.com/event/chub-rub/2026-09-19/",
+    "faviconBg": "#131719",
+    "faviconFg": "#14181b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#dcdcdc:49:0 #c5b9ab:21:2 #a39288:13:3 #866054:8:5 #eb567c:2:18",
+    "accent": "#eb567c"
+  },
+  {
     "slug": "chunk-dore-alley-3bf852a2",
     "url": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
     "faviconBg": "#f6f4f5",
