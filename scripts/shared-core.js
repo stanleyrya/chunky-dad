@@ -16002,6 +16002,78 @@ class SharedCore {
     // WEEKLY brand is claiming one night a month out of that brand's series,
     // which is an instance-level assertion however schedule-shaped it looks.
     // Fails closed (false) on anything it cannot compare.
+    // How often a cadence rule fires, in days between occurrences — the
+    // slot rule's yardstick. null = no cadence stated: a one-off, the
+    // rarest thing of all.
+    static getCadenceFrequencyDays(rrule) {
+        const parts = SharedCore.parseCadenceParts(rrule);
+        if (!parts) return null;
+        const unit = { DAILY: 1, WEEKLY: 7, MONTHLY: 30, YEARLY: 365 }[parts.freq];
+        if (!unit) return null;
+        const interval = Number.isFinite(parts.interval) && parts.interval > 0 ? parts.interval : 1;
+        return unit * interval;
+    }
+
+    static describeCadenceRule(rrule) {
+        const parts = SharedCore.parseCadenceParts(rrule);
+        if (!parts) return 'one-off';
+        const interval = Number.isFinite(parts.interval) && parts.interval > 0 ? parts.interval : 1;
+        const word = { DAILY: 'daily', WEEKLY: 'weekly', MONTHLY: 'monthly', YEARLY: 'yearly' }[parts.freq] || parts.freq.toLowerCase();
+        if (interval === 1) return word;
+        const unit = { DAILY: 'days', WEEKLY: 'weeks', MONTHLY: 'months', YEARLY: 'years' }[parts.freq] || 'times';
+        return `every ${interval} ${unit}`;
+    }
+
+    // The cadence a record states for itself: the plain `cadence` field a
+    // saved single night carries (notes `cadence:`), the family cadence an
+    // occurrence-expanded row was stamped with, a series' own rule, or the
+    // cadence line in a calendar record's notes.
+    getEventCadenceRule(event) {
+        if (!event || typeof event !== 'object') return '';
+        const direct = [event.cadence, event._seriesInfo && event._seriesInfo.rrule, event.recurrenceRule, event.recurrence]
+            .map(value => (typeof value === 'string' ? value.trim() : ''))
+            .find(Boolean);
+        if (direct) return direct;
+        if (typeof event.notes === 'string' && /(^|\n)\s*cadence\s*:/i.test(event.notes)) {
+            try {
+                const fields = this.parseNotesIntoFields(event.notes);
+                if (fields && typeof fields.cadence === 'string' && fields.cadence.trim()) return fields.cadence.trim();
+            } catch (_) { /* notes that do not parse state no cadence */ }
+        }
+        return '';
+    }
+
+    // Two parties claim one slot (same bar, same start): the rarer one is
+    // the special night and takes it — a monthly edition beats the weekly
+    // it sits on, a one-off beats both (owner 2026-09-18: "a weekly event
+    // is overwritten by the monthly if same time and same bar"). Equal
+    // cadences settle nothing → null (both stay, the overlap chip reports).
+    getSlotPrecedence(eventA, eventB) {
+        const ruleA = this.getEventCadenceRule(eventA);
+        const ruleB = this.getEventCadenceRule(eventB);
+        const daysA = SharedCore.getCadenceFrequencyDays(ruleA);
+        const daysB = SharedCore.getCadenceFrequencyDays(ruleB);
+        if (daysA === daysB) return null;
+        const aMoreFrequent = daysA !== null && (daysB === null || daysA < daysB);
+        return {
+            winner: aMoreFrequent ? eventB : eventA,
+            loser: aMoreFrequent ? eventA : eventB,
+            winnerCadence: SharedCore.describeCadenceRule(aMoreFrequent ? ruleB : ruleA),
+            loserCadence: SharedCore.describeCadenceRule(aMoreFrequent ? ruleA : ruleB)
+        };
+    }
+
+    // The saved record that already holds this event's slot: same place,
+    // start within an hour, a different party (the identity rungs and the
+    // title-subset signal already said "not the same event").
+    findSlotHost(event, candidates) {
+        if (!event || !Array.isArray(candidates) || candidates.length === 0) return null;
+        const shape = this.buildIdentityComparisonShape(event);
+        return candidates.find(existing => existing && typeof existing === 'object'
+            && this.areDatesEqual(existing.startDate, event.startDate, 60)
+            && this.areIdentityPlacesSimilar(shape, this.buildIdentityComparisonShape(existing))) || null;
+    }
+
     static isNarrowerCadence(scrapedRule, seriesRule) {
         const scraped = SharedCore.parseCadenceParts(scrapedRule);
         const series = SharedCore.parseCadenceParts(seriesRule);
@@ -16164,6 +16236,8 @@ class SharedCore {
             // would only churn the calendar's modification time.
             event?._mergeNoOp !== true &&
             !SharedCore.isRecurringSeriesEvent(event) &&
+            // A night that yielded its slot to a rarer party (slot rule).
+            !event?._slotYield &&
             // An occurrence-expanded single whose date/identity the owner's
             // SAVED series already covers (#1655 series-match): writing it
             // would plant a duplicate single next to his imported series.
@@ -16233,6 +16307,9 @@ class SharedCore {
             '_recurringExport',
             '_savedRunSourceIndex',
             '_calendarLinkHistory',
+            '_slotYield',
+            '_slotTakeover',
+            '_slotWins',
             'overrideUid',
             'overrideRecurrenceId'
         ];
@@ -16267,6 +16344,7 @@ class SharedCore {
             return 'WITHHELD (awaiting owner review)';
         }
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
+        if (event._slotYield) return `WITHHELD (${event._slotYield.cadence} night yields the slot to "${event._slotYield.to}")`;
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
         if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
@@ -18164,6 +18242,20 @@ class SharedCore {
             if (event._seriesInfo && !analyzedEvent._seriesInfo) {
                 analyzedEvent._seriesInfo = event._seriesInfo;
             }
+            // Slot precedence (analyzeEventAction): a night that yields its
+            // slot is withheld (filterEventsForExecution); a party that takes
+            // a saved night's slot carries whose, and sheds that night's
+            // cadence — the weekly's badge must not survive on the special
+            // edition that replaced it.
+            if (analysis.slotYield) {
+                analyzedEvent._slotYield = analysis.slotYield;
+                console.log(`🪑 SLOT: "${analyzedEvent.title || 'Unknown'}" (${analysis.slotYield.cadence}) yields its slot to the saved ${analysis.slotYield.toCadence} party "${analysis.slotYield.to}" — same bar, same start; write withheld`);
+            }
+            if (analysis.slotTakeover) {
+                analyzedEvent._slotTakeover = analysis.slotTakeover;
+                if (!String(event.cadence || '').trim()) analyzedEvent.cadence = '';
+                console.log(`🪑 SLOT: "${analyzedEvent.title || 'Unknown'}" (${analysis.slotTakeover.cadence}) takes the slot of the saved ${analysis.slotTakeover.fromCadence} night "${analysis.slotTakeover.from}" — merging into it`);
+            }
 
             // Final-stage field cleanups. Both run at the FINAL analyzed-event
             // build (so every parser, merge result, and cached AI response
@@ -19275,6 +19367,27 @@ class SharedCore {
                 });
             }
             
+            // One slot, two parties. The rarer party takes it: an incoming
+            // monthly or one-off MERGES INTO the saved weekly night (the
+            // deck shows the rename); an incoming weekly night YIELDS to a
+            // saved rarer party (withheld, never a duplicate beside it).
+            const slotHost = SharedCore.isRecurringSeriesEvent(event) ? null : this.findSlotHost(event, timeConflicts);
+            const precedence = slotHost ? this.getSlotPrecedence(event, slotHost) : null;
+            if (precedence && precedence.winner === event) {
+                return finalize({
+                    action: 'merge',
+                    reason: `Rarer party takes the slot of the saved ${precedence.loserCadence} night`,
+                    existingEvent: slotHost,
+                    slotTakeover: { from: String(slotHost.title || slotHost.name || ''), fromCadence: precedence.loserCadence, cadence: precedence.winnerCadence }
+                });
+            }
+            if (precedence && precedence.loser === event) {
+                return finalize({
+                    action: 'new',
+                    reason: 'Overlapping event with different title/venue',
+                    slotYield: { to: String(slotHost.title || slotHost.name || ''), toCadence: precedence.winnerCadence, cadence: precedence.loserCadence, source: 'calendar' }
+                });
+            }
             return finalize({
                 action: 'new',
                 reason: 'Overlapping event with different title/venue'
@@ -20539,6 +20652,22 @@ class SharedCore {
     // another same-run analyzed event or an existing calendar record at the
     // same venue. entries: [{ event: analyzedEvent, existingEvents: [...] }].
     // Never throws; never changes actions, merges, or writes.
+    // Two records of ONE run claim one slot (same bar, start within an
+    // hour): the more frequent party yields — withheld, not written beside
+    // the special night. Only records that would otherwise write take part.
+    applySlotPrecedenceToPair(eventA, eventB) {
+        if (!eventA || !eventB || eventA._slotYield || eventB._slotYield) return;
+        if (SharedCore.isRecurringSeriesEvent(eventA) || SharedCore.isRecurringSeriesEvent(eventB)) return;
+        if (!this.areDatesEqual(eventA.startDate, eventB.startDate, 60)) return;
+        const precedence = this.getSlotPrecedence(eventA, eventB);
+        if (!precedence) return;
+        const { winner, loser } = precedence;
+        loser._slotYield = { to: String(winner.title || ''), toCadence: precedence.winnerCadence, cadence: precedence.loserCadence, source: 'run' };
+        if (!Array.isArray(winner._slotWins)) winner._slotWins = [];
+        winner._slotWins.push({ from: String(loser.title || ''), fromCadence: precedence.loserCadence });
+        console.log(`🪑 SLOT: "${loser.title || 'Unknown'}" (${precedence.loserCadence}) yields its slot to "${winner.title || 'Unknown'}" (${precedence.winnerCadence}) — same bar, same start on this run; write withheld`);
+    }
+
     applyVenueOverlapFlags(entries) {
         if (!Array.isArray(entries) || entries.length === 0) return;
         const seenPairs = new Set();
@@ -20575,6 +20704,7 @@ class SharedCore {
                 stamp(eventA, finding, finding.titleB, finding.windowA, finding.windowB, 'run');
                 stamp(eventB, finding, finding.titleA, finding.windowB, finding.windowA, 'run');
                 logFinding(finding);
+                this.applySlotPrecedenceToPair(eventA, eventB);
             }
         }
 

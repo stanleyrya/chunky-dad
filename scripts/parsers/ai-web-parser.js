@@ -7626,9 +7626,14 @@ class AiWebParser {
         // "Bears in Excess" rows, slugs bears-in-excess-2026/-2/-3/-4; with
         // only public artifacts in view they read as one stated series and
         // were synthesised into a withheld recurrence, audit 2026-09-13.)
-        // An id that is stable across dates (a Tockify series uid) stays
-        // invisible here — exactly the intended asymmetry.
-        const ARTIFACT_FIELDS = ['url', 'website', 'ticketUrl', 'image', '_sourceRowId'];
+        // An id that is stable across dates (a Tockify series uid) says
+        // nothing by itself — but the feed's per-occurrence id beside it
+        // (_sourceRowOccurrenceId, Tockify's eid.tid) does: the feed
+        // expanded the repeat into dated rows for us, so every night is a
+        // published occurrence (owner 2026-09-18: "save as single nights but
+        // mark as weekly on the website").
+        const ARTIFACT_FIELDS = ['url', 'website', 'ticketUrl', 'image', '_sourceRowId', '_sourceRowOccurrenceId'];
+        const ARTIFACT_LABELS = { _sourceRowId: 'feed row id', _sourceRowOccurrenceId: 'feed occurrence id' };
         for (const field of ARTIFACT_FIELDS) {
             const valuesByDate = new Map();
             for (const member of group.members) {
@@ -7646,7 +7651,7 @@ class AiWebParser {
                         if (!entries[j].has(value)) {
                             return {
                                 shape: 'occurrence-expanded',
-                                reason: `distinct per-date ${field === '_sourceRowId' ? 'feed row id' : field} artifacts across ${valuesByDate.size} dates`
+                                reason: `distinct per-date ${ARTIFACT_LABELS[field] || field} artifacts across ${valuesByDate.size} dates`
                             };
                         }
                     }
@@ -7805,6 +7810,13 @@ class AiWebParser {
                         occurrences: sortedDates.length,
                         family: `shape-${shapeIndex}`
                     };
+                    // The cadence rides on each night as a plain field
+                    // (notes `cadence:`): the site wears it as the badge a
+                    // series would get, and the slot rule reads it back off
+                    // saved nights. Never `recurrence:` — that marks a series.
+                    if (infoRrule && !String(member.event.cadence || '').trim()) {
+                        member.event.cadence = infoRrule;
+                    }
                     if (String(member.event.recurrenceRule || member.event.recurrence || '').trim()) {
                         delete member.event.recurrenceRule;
                         delete member.event.recurrence;
@@ -10337,6 +10349,47 @@ class AiWebParser {
     // party's 12 rows must share one id or every expanded calendar would read
     // as 12 different events. Occurrence discriminators are therefore dropped
     // and only the event-level member is kept.
+    /**
+     * The occurrence half of a feed row's identity: the members of a
+     * composite id object that are NOT the event id (Tockify's
+     * eid = { uid, seq, tid, rid } → "seq=0|tid=1794528000000|rid=0"), or a
+     * top-level occurrence/instance/recurrence id. A feed that hands out a
+     * different occurrence id per date has expanded the repeat itself —
+     * each row is a published night, not a restatement of one series.
+     * '' when the row carries no occurrence identity (fail closed: the
+     * shape classifier then sees nothing per-date here).
+     */
+    getJsonApiRowOccurrenceIdentity(row) {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return '';
+        const view = this.unwrapJsonApiCandidate(row);
+        const scalar = (value) => {
+            if (typeof value === 'string') return value.trim();
+            if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+            return '';
+        };
+        for (const source of [row, view]) {
+            for (const key of Object.keys(source)) {
+                const normalized = this.normalizeJsonApiKey(key);
+                const value = source[key];
+                if (/^(eid|uid|guid|id|event_?id|identifier)$/.test(normalized) && value && typeof value === 'object' && !Array.isArray(value)) {
+                    const parts = [];
+                    for (const innerKey of Object.keys(value)) {
+                        const innerNormalized = this.normalizeJsonApiKey(innerKey);
+                        if (/^(uid|id|guid|slug)$/.test(innerNormalized)) continue;
+                        const inner = scalar(value[innerKey]);
+                        if (inner) parts.push(`${innerNormalized}=${inner}`);
+                    }
+                    if (parts.length > 0) return parts.join('|');
+                }
+                if (/^(rid|tid|occurrence(_?id)?|instance(_?id)?|recurrence_?id|occurrence_?date|instance_?date)$/.test(normalized)) {
+                    const direct = scalar(value);
+                    if (direct) return `${normalized}=${direct}`;
+                }
+            }
+        }
+        return '';
+    }
+
     getJsonApiRowIdentity(row) {
         if (!row || typeof row !== 'object' || Array.isArray(row)) return '';
         const view = this.unwrapJsonApiCandidate(row);
@@ -12103,6 +12156,10 @@ class AiWebParser {
         if (rowId && feedKey) {
             event._sourceRowId = rowId;
             event._sourceRowFeed = feedKey;
+            // The feed's OWN per-occurrence identity, when it expanded a
+            // repeat into dated rows for us (Tockify eid.tid per night).
+            const occurrence = this.getJsonApiRowOccurrenceIdentity(obj);
+            if (occurrence) event._sourceRowOccurrenceId = `${rowId}#${occurrence}`;
         }
         return event;
     }
