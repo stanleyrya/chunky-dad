@@ -4703,6 +4703,21 @@ class SharedCore {
             }
         }
 
+        if (fieldName === 'title' && context && context.records && context.records.a && context.records.b) {
+            // Both sides point at ONE event page: its slug names the event.
+            // The title that slug spells out beats the one it does not
+            // ("Hellbent" over the page tagline "Where Fetish Meets Pop!",
+            // both linking eaglemanchester.com/event-details/hellbent-13).
+            const slug = this.getSharedEventLinkSlug(context.records.a, context.records.b);
+            if (slug) {
+                const namesA = this.eventSlugNamesTitle(slug, valueA);
+                const namesB = this.eventSlugNamesTitle(slug, valueB);
+                if (namesA !== namesB) {
+                    return { winner: namesA ? 'a' : 'b', reason: `the event page both records share (${slug}) names this title` };
+                }
+            }
+        }
+
         if (fieldName === 'bar') {
             const placeholderA = SharedCore.isPlaceholderVenueText(valueA);
             const placeholderB = SharedCore.isPlaceholderVenueText(valueB);
@@ -16168,6 +16183,28 @@ class SharedCore {
         return candidates.find(existing => existing && typeof existing === 'object'
             && this.areDatesEqual(existing.startDate, event.startDate, 60)
             && this.areIdentityPlacesSimilar(shape, this.buildIdentityComparisonShape(existing))) || null;
+    }
+
+    // The slug of an event/ticket link BOTH records carry (the same page,
+    // spelling and tracking aside) — '' when they share none.
+    getSharedEventLinkSlug(recordA, recordB) {
+        const links = (record) => ['url', 'ticketUrl', 'website']
+            .map(field => SharedCore.normalizeOwnerReviewLinkValue(record && record[field]))
+            .filter(value => value && value.includes('/'));
+        const shared = links(recordA).find(link => links(recordB).includes(link));
+        if (!shared) return '';
+        const segments = shared.split('/').filter(Boolean);
+        return segments.length > 1 ? segments[segments.length - 1] : '';
+    }
+
+    // Does a page slug spell out this title? A title word of four letters
+    // or more found in the slug ("hellbent-13" ← "Hellbent"); page-chrome
+    // words never count.
+    eventSlugNamesTitle(slug, title) {
+        const flat = String(slug || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        if (!flat) return false;
+        return this.getCrossSourceTitleTokens(String(title || ''))
+            .some(token => token.length >= 4 && flat.includes(token));
     }
 
     static isNarrowerCadence(scrapedRule, seriesRule) {

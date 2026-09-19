@@ -18973,3 +18973,25 @@ test('applyDerivedCadenceStamps: a feed-expanded repeat (one row id, distinct oc
   assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date feed occurrence id artifacts')),
     `shape line expected, got: ${JSON.stringify(logs)}`);
 });
+
+// Eagle Manchester's HELLBENT series page (run 20260918-211318): two Wix
+// cards, each with JSON-LD. The second card's title lines were claimed with
+// the first window; its timed date line opened a new text window that ran
+// into the page tail — the tagline "Where Fetish Meets Pop!", a category
+// GUID, "bottom of page" — and that tail became an event with the page's
+// cover image and the card's ticket link.
+test('coverage audit: a window whose timed date line already belongs to a structured card is that card\'s spillover, not a listing', () => {
+  const parser = createParser();
+  const html = `<html><body>
+    <ul><li><a href="https://eagle.example/event-details/hellbent-12">Sat 17 Oct</a><p>Hellbent / Eagle Bar Manchester</p><p>17 Oct 2026, 23:00 – 18 Oct 2026, 04:00</p><p>Eagle Bar Manchester, 15 Bloom St</p></li>
+    <li><a href="https://eagle.example/event-details/hellbent-13">Sat 19 Dec</a><p>Hellbent / Eagle Bar Manchester</p><p>19 Dec 2026, 23:00 – 20 Dec 2026, 04:00</p></li></ul>
+    <p>Where Fetish Meets Pop!</p><p>2fd60d1c-770c-4f88-b1cf-467cabadfa78</p><a href="#top">bottom of page</a>
+  </body></html>`;
+  const octCard = { lines: ['Sat 17 Oct', 'Hellbent / Eagle Bar Manchester', '17 Oct 2026, 23:00 – 18 Oct 2026, 04:00', 'Eagle Bar Manchester, 15 Bloom St'], html: '' };
+  const decCard = { lines: ['Sat 19 Dec', 'Hellbent / Eagle Bar Manchester', '19 Dec 2026, 23:00 – 20 Dec 2026, 04:00'], html: '' };
+  const logs = withCapturedLogs(() => {
+    const out = parser.coverUnclaimedDatedWindows(html, [octCard, decCard]);
+    assert.equal(out.length, 2, 'nothing added: the tail after the December date line is not a third listing');
+  });
+  assert.ok(logs.some(line => line.includes('is the tail of a structured card')), JSON.stringify(logs));
+});

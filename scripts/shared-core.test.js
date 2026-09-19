@@ -23673,3 +23673,18 @@ test('merge: the same title in another case keeps the saved spelling ("FUZZY" st
   const renamed = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy Fridays', context);
   assert.ok(!renamed || !/saved spelling stays/.test(renamed.reason), 'a different name is a real conflict');
 });
+
+test('merge: when both records share one event page, the title its slug spells out wins', () => {
+  const core = createReviewCore();
+  const tagline = { title: 'Where Fetish Meets Pop!', ticketUrl: 'https://www.eaglemanchester.com/event-details/hellbent-13', bar: 'Eagle Bar Manchester' };
+  const named = { title: 'Hellbent', ticketUrl: 'https://www.eaglemanchester.com/event-details/hellbent-13?utm_source=x', bar: 'Eagle Bar Manchester' };
+  assert.equal(core.getSharedEventLinkSlug(tagline, named), 'hellbent-13');
+  assert.equal(core.eventSlugNamesTitle('hellbent-13', 'Hellbent'), true);
+  assert.equal(core.eventSlugNamesTitle('hellbent-13', 'Where Fetish Meets Pop!'), false);
+  const decision = core.resolveConflictDeterministically('title', 'Where Fetish Meets Pop!', 'Hellbent', { records: { a: tagline, b: named } });
+  assert.equal(decision.winner, 'b');
+  assert.match(decision.reason, /hellbent-13/);
+  const both = core.resolveConflictDeterministically('title', 'HELLBENT', 'Hellbent', { records: { a: tagline, b: named } });
+  assert.ok(!both || !/names this title/.test(both.reason), 'both spell the slug — no verdict from it');
+  assert.equal(core.getSharedEventLinkSlug({ ticketUrl: 'https://a.example/e/1' }, { ticketUrl: 'https://a.example/e/2' }), '', 'different pages share nothing');
+});
