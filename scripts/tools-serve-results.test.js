@@ -1122,3 +1122,17 @@ test('renderReviewCard: a party that took a slot says whom it displaced', () => 
   const merge = renderReviewCard({ ...entry, kind: 'merge', display: { slotTakeover: { from: 'Fursdays at Ty\'s', fromCadence: 'weekly' } } }, ctx);
   assert.ok(/takes the slot of the saved weekly night/.test(merge));
 });
+
+test('renderReviewPage labels a single-parser run in the picker and the header, and names the calendars the phone lacks', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  deck.missingCalendars = [{ city: 'berlin', calendarName: 'chunky-dad-berlin', events: 3 }];
+  deck.runShape = { configured: 29, ran: ['The Bear Calendar'], trigger: 'app', type: 'manual' };
+  const html = renderReviewPage(deck, {
+    runs: [{ runId: '20300101-100554', available: true, shape: { configured: 29, ran: ['The Bear Calendar'] } }, { runId: '20300101-051500', available: true, shape: { configured: 29, ran: Array(25).fill('x') } }],
+    scriptName: 'display-saved-run'
+  });
+  assert.ok(html.includes('>20300101-100554 · The Bear Calendar only</option>'), 'picker label');
+  assert.ok(html.includes('>20300101-051500</option>'), 'a full run carries no label');
+  assert.ok(/run [^<]*· The Bear Calendar only/.test(html), 'header says what this run covered');
+  assert.ok(html.includes('No calendar on the phone for <b>berlin</b> (chunky-dad-berlin · 3 events)'), html.match(/missing-cal[^<]*/));
+});

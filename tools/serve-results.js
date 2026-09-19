@@ -965,12 +965,18 @@ function renderReviewPage(deck, options = {}) {
     }
     const runOptions = listed.map((run) => {
         const selected = run.runId === deck.runId ? ' selected' : '';
-        const label = `${run.runId}${run.available ? '' : ' (syncing)'}`;
+        const shapeLabel = reviewQueue.describeRunShapeLabel(run.shape);
+        const label = `${run.runId}${run.available ? '' : ' (syncing)'}${shapeLabel ? ` · ${shapeLabel}` : ''}`;
         return `<option value="${escapeHtmlText(run.runId)}"${selected}${run.available ? '' : ' disabled'}>${escapeHtmlText(label)}</option>`;
     }).join('');
     const SharedCore = require(path.join(repoRoot, 'scripts', 'shared-core')).SharedCore;
+    const shapeLabel = reviewQueue.describeRunShapeLabel(deck.runShape);
     const savedLabel = deck.savedAt || deck.runId
-        ? escapeHtmlText(`run ${SharedCore.formatRunAgeLabel(deck.savedAt, deck.runId)}`)
+        ? escapeHtmlText(`run ${SharedCore.formatRunAgeLabel(deck.savedAt, deck.runId)}${shapeLabel ? ` · ${shapeLabel}` : ''}`)
+        : '';
+    const missingCalendars = Array.isArray(deck.missingCalendars) ? deck.missingCalendars : [];
+    const missingCalendarNotice = missingCalendars.length > 0
+        ? `<div class="missing-cal">❌ No calendar on the phone for ${missingCalendars.map((entry) => `<b>${escapeHtmlText(entry.city)}</b> (${escapeHtmlText(entry.calendarName)} · ${entry.events} event${entry.events === 1 ? '' : 's'})`).join(', ')} — the phone cannot write those until a calendar with that exact name exists.</div>`
         : '';
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -1053,6 +1059,7 @@ a { color:var(--accent); }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
 .series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
 .series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .series .nights .chip { font-size:12px; padding:2px 8px; }
@@ -1112,6 +1119,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <div class="pills" id="filters"></div>
   <a href="/" style="margin-left:auto; font-size:13px;">Results</a>
 </div>
+${missingCalendarNotice}
 <div class="stage" id="stage"></div>
 <div class="controls">
   <button class="btn-no" id="btn-reject" type="button">✕ Reject</button>
@@ -1685,7 +1693,7 @@ function lookupIcsEvent(state, id) {
 // Latest shared-dir run, or ?run=<id>. { sharedRoot, runs, run|null }.
 function resolveReviewRun(query) {
     const sharedRoot = reviewQueue.resolveSharedRoot();
-    const runs = reviewQueue.listRunFiles(sharedRoot);
+    const runs = reviewQueue.describeRunFiles(sharedRoot);
     const wanted = query && typeof query.run === 'string' && reviewQueue.RUN_ID_PATTERN.test(query.run.trim())
         ? query.run.trim()
         : null;
@@ -1703,7 +1711,8 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
     const core = reviewQueue.createDeckCore(run.payload, { curatedBars });
     const executions = reviewQueue.collectExecutions(sharedRoot);
-    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions });
+    const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot);
+    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, ...(phoneCalendars ? { phoneCalendars } : {}) });
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
