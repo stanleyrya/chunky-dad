@@ -7061,7 +7061,16 @@ class AiWebParser {
             source: 'squarespace',
             _titleFromListing: true
         };
-        if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) event.bar = '';
+        // An address title that is itself the street line ("1354 Harrison
+        // St" with only "San Francisco CA 94103" beneath it — lonestarsf.com)
+        // is the address's first line, not a venue name: keep it as the
+        // address so the place survives, and leave the venue to the site.
+        if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) {
+            if (!this.addressAlreadyContainsPart(event.address, event.bar)) {
+                event.address = [event.bar, event.address].filter(Boolean).join(', ');
+            }
+            event.bar = '';
+        }
         // The map pin (mapLat/mapLng) is where the venue IS; markerLat/Lng is
         // the template's default marker (massbearsandcubs: every event carried
         // the New York default marker beside a Boston map pin, audit 2026-09-13).

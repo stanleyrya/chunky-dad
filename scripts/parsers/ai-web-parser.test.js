@@ -19126,3 +19126,19 @@ test('expandJsonApiSeriesRow drops a series whose UNTIL has passed instead of ke
   assert.equal(kept.length, 1, 'a rule without an UNTIL keeps the row when no night falls in the window');
   assert.equal(kept[0].title, 'Yearly Ball');
 });
+
+test('buildEventFromSquarespaceItem keeps an address title that is the street line as the address, not a venue name', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromSquarespaceItem({
+    title: 'LEWD', startDate: 1789876800083, endDate: 1789894800083, fullUrl: '/new-events-1/2026/9/19/lewd',
+    location: { addressTitle: '1354 Harrison St', addressLine1: '', addressLine2: 'San Francisco CA 94103', markerLat: 37.7727, markerLng: -122.4106 }
+  }, 'https://www.lonestarsf.com/new-events-1');
+  assert.equal(event.bar, '', 'a street line is not a venue name');
+  assert.equal(event.address, '1354 Harrison St, San Francisco CA 94103', 'the street line leads the address');
+  const named = parser.buildEventFromSquarespaceItem({
+    title: 'Cuff Presents: Deanne', startDate: 1789880400590, endDate: 1789885800590, fullUrl: '/events/x',
+    location: { addressTitle: 'The Cuff Complex', addressLine1: '1533 13th Avenue', addressLine2: 'Seattle, WA, 98122' }
+  }, 'https://cuffcomplex.com/events');
+  assert.equal(named.bar, 'The Cuff Complex');
+  assert.equal(named.address, '1533 13th Avenue, Seattle, WA, 98122');
+});
