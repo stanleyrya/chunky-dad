@@ -95,9 +95,104 @@ function listRunFiles(sharedRoot) {
     return entries;
 }
 
+// What a run covered: the parsers it was configured with, the ones that
+// produced results, and how it was triggered. A hand-run single parser
+// from the phone app ("app manual") is a look at that source, not the
+// day's picture — it must not become the deck's default run.
+function describeRunShape(payload) {
+    const configured = payload && payload.config && Array.isArray(payload.config.parsers)
+        ? payload.config.parsers.map((parser) => parser && parser.name).filter(Boolean)
+        : [];
+    const ran = Array.isArray(payload && payload.parserResults)
+        ? payload.parserResults.map((result) => result && result.name).filter(Boolean)
+        : [];
+    const context = payload && payload.runContext && typeof payload.runContext === 'object' ? payload.runContext : {};
+    return {
+        configured: configured.length,
+        ran,
+        trigger: context.trigger || null,
+        type: context.type || null,
+        environment: context.environment || null
+    };
+}
+
+// A run that covered the sources: at least half of the configured parsers
+// produced results (the daily run skips the automation-disabled ones and
+// the template). Unknown shape never excludes a run.
+function isCompleteRunShape(shape) {
+    if (!shape || !Number.isFinite(shape.configured) || shape.configured === 0) return true;
+    return shape.ran.length >= Math.ceil(shape.configured / 2);
+}
+
+function describeRunShapeLabel(shape) {
+    if (!shape || isCompleteRunShape(shape)) return '';
+    if (shape.ran.length === 1) return `${shape.ran[0]} only`;
+    if (shape.ran.length === 0) return 'no parser results';
+    return `${shape.ran.length} of ${shape.configured} parsers`;
+}
+
+// listRunFiles plus, for each available file, its executions and shape —
+// parsed once per path + mtime + size and cached, since every deck request
+// and every pending-count asks.
+const runInfoCache = new Map();
+function describeRunFiles(sharedRoot) {
+    const entries = [];
+    for (const entry of listRunFiles(sharedRoot)) {
+        if (!entry.available) {
+            entries.push({ ...entry, executions: [], shape: null });
+            continue;
+        }
+        const cached = runInfoCache.get(entry.path);
+        let info;
+        if (cached && cached.mtimeMs === entry.mtimeMs && cached.size === entry.size) {
+            info = cached.info;
+        } else {
+            try {
+                const payload = readRunFile(entry.path);
+                info = {
+                    executions: Array.isArray(payload.executions) ? payload.executions : [],
+                    shape: describeRunShape(payload)
+                };
+            } catch (error) {
+                info = { executions: [], shape: null };
+            }
+            runInfoCache.set(entry.path, { mtimeMs: entry.mtimeMs, size: entry.size, info });
+        }
+        entries.push({ ...entry, executions: info.executions, shape: info.shape });
+    }
+    return entries;
+}
+
+// The deck's default run: the newest FULL run; a newer single-parser run
+// stays one click away in the picker (run 20260919-100554, The Bear
+// Calendar run by hand, hid the whole day's deck behind 68 rows).
 function pickLatestRunId(sharedRoot) {
-    const first = listRunFiles(sharedRoot).find((entry) => entry.available);
-    return first ? first.runId : null;
+    const available = describeRunFiles(sharedRoot).filter((entry) => entry.available);
+    const complete = available.find((entry) => isCompleteRunShape(entry.shape));
+    const chosen = complete || available[0];
+    return chosen ? chosen.runId : null;
+}
+
+// The calendars the phone has, as the phone lists them itself
+// (calendar-snapshot/calendars.json, written with every snapshot pass),
+// mapped to the city keys whose configured calendar name it holds. null
+// when the phone has not written the list — then nothing is claimed
+// missing. Never inferred from the per-city snapshot files: those exist
+// only for cities a run touched.
+function listPhoneCalendars(sharedRoot, cities) {
+    let payload;
+    try {
+        payload = JSON.parse(fs.readFileSync(path.join(sharedRoot, 'calendar-snapshot', 'calendars.json'), 'utf8'));
+    } catch (error) {
+        return null;
+    }
+    const titles = new Set((payload && Array.isArray(payload.calendars) ? payload.calendars : []).map((title) => String(title || '').trim()).filter(Boolean));
+    if (titles.size === 0) return null;
+    const keys = new Set();
+    for (const [key, config] of Object.entries(cities && typeof cities === 'object' ? cities : {})) {
+        if (config && typeof config.calendar === 'string' && titles.has(config.calendar.trim())) keys.add(key);
+    }
+    return keys;
 }
 
 // Run files are large (a full Mac run is ~13 MB); keep the last few parsed
@@ -126,25 +221,11 @@ function readRunFile(filePath) {
 // on run 164140 as pending again, because only the displayed run's own
 // executions[] was consulted. Run files are large, so each file's
 // executions are cached by path + mtime + size and re-read only on change.
-const executionsCache = new Map();
 function collectExecutions(sharedRoot) {
     const collected = [];
-    for (const entry of listRunFiles(sharedRoot)) {
+    for (const entry of describeRunFiles(sharedRoot)) {
         if (!entry.available) continue;
-        const cached = executionsCache.get(entry.path);
-        let executions;
-        if (cached && cached.mtimeMs === entry.mtimeMs && cached.size === entry.size) {
-            executions = cached.executions;
-        } else {
-            try {
-                const payload = readRunFile(entry.path);
-                executions = Array.isArray(payload.executions) ? payload.executions : [];
-            } catch (error) {
-                executions = [];
-            }
-            executionsCache.set(entry.path, { mtimeMs: entry.mtimeMs, size: entry.size, executions });
-        }
-        for (const execution of executions) {
+        for (const execution of entry.executions) {
             if (!execution || typeof execution.executedAt !== 'string') continue;
             collected.push({ ...execution, runId: entry.runId });
         }
@@ -598,6 +679,27 @@ function stampSeries(cards, SharedCore) {
     }
 }
 
+// Cities with cards on this deck whose calendar the phone does not have
+// (the phone marks those rows MISSING CALENDAR and cannot write them):
+// [{ city, calendarName, events }], most events first. Empty without a
+// phone calendar list.
+function findMissingPhoneCalendars(payload, entries, phoneCalendars) {
+    if (!(phoneCalendars instanceof Set)) return [];
+    const cities = (payload && payload.config && payload.config.cities) || {};
+    const counts = new Map();
+    for (const entry of Array.isArray(entries) ? entries : []) {
+        if (!entry || (entry.kind !== 'new' && entry.kind !== 'merge' && entry.kind !== 'override')) continue;
+        const city = String((entry.proposal && entry.proposal.city) || '').trim();
+        if (!city || phoneCalendars.has(city)) continue;
+        const calendarName = cities[city] && typeof cities[city].calendar === 'string' ? cities[city].calendar : '';
+        if (!calendarName) continue;
+        const current = counts.get(city) || { city, calendarName, events: 0 };
+        current.events++;
+        counts.set(city, current);
+    }
+    return [...counts.values()].sort((a, b) => b.events - a.events || a.city.localeCompare(b.city));
+}
+
 // One saved run + the decision store → { runId, cards, decided, counts }.
 // cards = proposals with no covering decision (past events dropped);
 // decided = proposals a stored decision already covers (with that decision).
@@ -785,6 +887,8 @@ function buildDeck(runPayload, store, options = {}) {
         runId,
         savedAt: (payload.summary && payload.summary.timestamp) || null,
         environment: (payload.runContext && payload.runContext.environment) || null,
+        runShape: describeRunShape(payload),
+        missingCalendars: findMissingPhoneCalendars(payload, cards.concat(decided), options.phoneCalendars),
         cards,
         decided,
         counts,
@@ -832,6 +936,12 @@ module.exports = {
     getDecisionsPath,
     listRunFiles,
     pickLatestRunId,
+    describeRunShape,
+    isCompleteRunShape,
+    describeRunShapeLabel,
+    describeRunFiles,
+    listPhoneCalendars,
+    findMissingPhoneCalendars,
     readRunFile,
     loadRun,
     collectExecutions,

@@ -148,7 +148,6 @@ const scraperConfig = {
     // ── Festival-week schedules 2026-07-28 (recon-verified) ─────────────
     {
       name: "Bears Sitges Week",
-      automationEnabled: false,
       // Official Bears Sitges Club programme — one long WordPress page,
       // ~45 timed activities Sept 3-13 with venues inline. Spanish text;
       // day headers carry day-of-month only (month/year stated once).
@@ -160,7 +159,6 @@ const scraperConfig = {
     },
     {
       name: "Spooky Bear",
-      automationEnabled: false,
       // Northeast Ursamen's Provincetown Halloween weekend. 2026 schedule
       // publishes on THIS url ~Sept/Oct (2025 precedent: full text schedule,
       // venues inline, weekday-only headers — dates anchor to the announced
@@ -239,7 +237,9 @@ const scraperConfig = {
     },
     {
       name: "The Bear Calendar",
-      automationEnabled: false,
+      // Automation switched on 2026-09-19: the hand runs of that day showed
+      // the first-run verification below holding (12 aggregator dupes
+      // merged by ticket-url identity, websites the original hosts).
       // Aggregator (Astro, server-rendered). The listing links /feed.ics and
       // serves /feed.json — the crawler finds that door itself (🚪 MACHINE
       // DOOR) and reads the whole upcoming set in one request: title, venue,

@@ -16139,9 +16139,29 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return [...keys];
   }
 
+  // The calendars this phone has, as one file beside the per-city
+  // snapshots. It is the only honest source for "no calendar on the phone
+  // for <city>": the per-city snapshots exist only for cities a run
+  // touched, and reading their absence as missing calendars named 20
+  // cities the phone in fact had (2026-09-19).
+  writePhoneCalendarList(calendars, now) {
+    try {
+      const dir = this.getCalendarSnapshotDir();
+      this.ensureDirectoryExists(dir);
+      const titles = (calendars || [])
+        .map((cal) => (cal && typeof cal.title === "string" ? cal.title.trim() : ""))
+        .filter(Boolean)
+        .sort();
+      const payload = { version: 1, capturedAt: (now instanceof Date ? now : new Date()).toISOString(), calendars: titles };
+      this.fm.writeString(this.fm.joinPath(dir, "calendars.json"), JSON.stringify(payload));
+      console.log(`📱 Scriptable: 📸 Calendar list — ${titles.length} calendar(s) on this phone → calendars.json`);
+    } catch (error) {
+      console.log(`📱 Scriptable: Calendar list not written: ${error.message}`);
+    }
+  }
+
   async writeCalendarSnapshots(cityKeys, options = {}) {
     const keys = Array.isArray(cityKeys) ? cityKeys : [];
-    if (keys.length === 0) return [];
     if (typeof CalendarEvent === "undefined" || typeof Calendar === "undefined") {
       console.log("📱 Scriptable: Calendar snapshot skipped (no calendar API in this environment)");
       return [];
@@ -16198,6 +16218,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         console.log(`📱 Scriptable: Calendar snapshot failed for ${cityKey}: ${error.message}`);
       }
     }
+    this.writePhoneCalendarList(calendars, now);
     return written;
   }
 

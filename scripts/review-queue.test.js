@@ -502,3 +502,44 @@ test('buildDeck: merges saying the same thing about sibling nights fold into one
   assert.equal(deck.cards[1].series.key, deck.cards[0].series.key);
   assert.equal(deck.cards[2].series, undefined, 'the odd rename is its own card');
 });
+
+test('run picker: the deck defaults to the newest FULL run; a newer hand-run single parser is labelled and stays selectable', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-shape-'));
+  const runsDir = rq.getRunsDir(dir);
+  fs.mkdirSync(runsDir);
+  const parsers = Array.from({ length: 29 }, (_, i) => ({ name: 'Parser ' + i }));
+  const full = runPayload({ summary: { runId: '20300101-051500' }, config: { cities: CITIES, config: { dryRun: true }, parsers }, parserResults: parsers.slice(0, 25).map((p) => ({ name: p.name })), runContext: { environment: 'node', type: 'automated', trigger: 'scheduled' } });
+  const single = runPayload({ summary: { runId: '20300101-100554' }, config: { cities: CITIES, config: { dryRun: true }, parsers }, parserResults: [{ name: 'The Bear Calendar' }], runContext: { environment: 'scriptable', type: 'manual', trigger: 'app' } });
+  fs.writeFileSync(path.join(runsDir, '20300101-051500.json'), JSON.stringify(full));
+  fs.writeFileSync(path.join(runsDir, '20300101-100554.json'), JSON.stringify(single));
+  try {
+    assert.equal(rq.pickLatestRunId(dir), '20300101-051500', 'the full run, not the newer single-parser one');
+    const described = rq.describeRunFiles(dir);
+    assert.deepEqual(described.map((r) => [r.runId, rq.describeRunShapeLabel(r.shape)]), [['20300101-100554', 'The Bear Calendar only'], ['20300101-051500', '']]);
+    assert.equal(rq.isCompleteRunShape(rq.describeRunShape(runPayload())), true, 'a run with no parser list is never excluded');
+    assert.equal(rq.describeRunShapeLabel({ configured: 29, ran: ['A', 'B', 'C'] }), '3 of 29 parsers');
+    fs.rmSync(path.join(runsDir, '20300101-051500.json'));
+    assert.equal(rq.pickLatestRunId(dir), '20300101-100554', 'with no full run, the newest run');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('buildDeck: cards for a city whose calendar the phone lacks are listed with the exact calendar name to create', () => {
+  const payload = runPayload({ analyzedEvents: [newEvent(), newEvent({ title: 'BEAR NIGHT BERLIN', city: 'berlin', bar: 'Woof', address: 'Fuggerstr 37', timezone: 'Europe/Berlin' })], config: { cities: { ...CITIES, berlin: { ...(CITIES.berlin || {}), name: 'Berlin', timezone: 'Europe/Berlin', calendar: 'chunky-dad-berlin', patterns: ['berlin'] } }, config: { dryRun: true }, parsers: [] } });
+  const withPhone = deckOf(payload, rq.emptyDecisionStore(), { phoneCalendars: new Set(['nyc']) });
+  assert.deepEqual(withPhone.missingCalendars, [{ city: 'berlin', calendarName: 'chunky-dad-berlin', events: 1 }]);
+  assert.deepEqual(deckOf(payload).missingCalendars, [], 'no phone calendar list → nothing claimed');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-cal-'));
+  try {
+    const cities = { nyc: { calendar: 'chunky-dad-nyc' }, berlin: { calendar: 'chunky-dad-berlin' }, nola: { calendar: 'chunky-dad-new-orleans' } };
+    assert.equal(rq.listPhoneCalendars(dir, cities), null, 'the phone has not listed its calendars → nothing is claimed');
+    fs.mkdirSync(path.join(dir, 'calendar-snapshot'));
+    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'berlin.json'), '{}');
+    assert.equal(rq.listPhoneCalendars(dir, cities), null, 'per-city snapshots prove nothing about the phone\'s calendar list');
+    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'calendars.json'), JSON.stringify({ version: 1, calendars: ['chunky-dad-nyc', 'chunky-dad-new-orleans', 'Holidays in United States'] }));
+    assert.deepEqual([...rq.listPhoneCalendars(dir, cities)].sort(), ['nola', 'nyc'], 'calendar titles mapped to city keys');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
