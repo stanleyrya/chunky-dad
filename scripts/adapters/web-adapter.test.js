@@ -1194,3 +1194,23 @@ test('sanitizeParserResultsForRunSave keeps the public fields of raw records and
   assert.ok(raw[0].events[0]._aiPrompts, 'the live record is untouched');
   assert.deepEqual(WebAdapter.prototype.sanitizeParserResultsForRunSave.call(adapter, null), []);
 });
+
+test('bear verdict store: with a shared storage root active, the web adapter reads the store the phone and the deck write', async () => {
+  const adapter = makeAdapter();
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-verdicts-local-'));
+  const sharedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-verdicts-shared-'));
+  adapter.localStateDir = stateDir;
+  try {
+    fs.writeFileSync(path.join(stateDir, 'bear-verdicts.json'), JSON.stringify({ version: 1, verdicts: [{ verdict: 'not_bear', title: 'STALE LOCAL', venue: 'Eagle LA' }] }));
+    fs.writeFileSync(path.join(sharedDir, 'bear-verdicts.json'), JSON.stringify({ version: 1, verdicts: [{ verdict: 'bear', stampedAt: '2026-09-19T01:31:53.842Z', title: 'ONYX', venue: 'Eagle LA' }] }));
+    adapter.sharedStorageRoot = sharedDir;
+    assert.equal(adapter.getBearVerdictsFilePath(), path.join(sharedDir, 'bear-verdicts.json'));
+    const loaded = await adapter.loadBearVerdicts();
+    assert.deepEqual(loaded.map((entry) => entry.title), ['ONYX'], 'the shared store, not the local one');
+    adapter.sharedStorageRoot = null;
+    assert.deepEqual((await adapter.loadBearVerdicts()).map((entry) => entry.title), ['STALE LOCAL'], 'no shared root → the local store as before');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(sharedDir, { recursive: true, force: true });
+  }
+});
