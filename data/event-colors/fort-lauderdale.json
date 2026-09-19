@@ -1,5 +1,15 @@
 [
   {
+    "slug": "club-chub-presents-meat-market-56d7ebd4",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3d2a2c:20:3 #564333:17:4 #1e1a19:14:1 #9ba364:10:9 #c3d18c:7:9",
+    "accent": "#9ba364"
+  },
+  {
     "slug": "club-chub-presents-meat-market-eagle-wilton-manors-56d7ebd4",
     "url": "https://www.clubchubusa.com",
     "faviconBg": "#e43383",

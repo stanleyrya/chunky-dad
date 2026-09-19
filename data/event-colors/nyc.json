@@ -1,5 +1,23 @@
 [
   {
+    "slug": "bear-belly-0353b2d4",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
+    "slug": "bear-belly-4f2123da",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
+    "slug": "bear-belly-57a8cf68",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
     "slug": "bear-happy-hour-66e240de",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
@@ -19,10 +37,136 @@
     "palette": "#ffffff:92:0 #cccccc:3:0 #a2a2a2:3:0"
   },
   {
+    "slug": "bear-milk-44ca222f",
+    "paletteSource": "flyer",
+    "palette": "#1b1b1c:18:0 #3b3b3c:17:0 #040409:14:2 #944e3b:12:10 #b3836c:11:7",
+    "accent": "#944e3b"
+  },
+  {
     "slug": "bear-milk-at-the-deep-end-44ca222f",
     "paletteSource": "flyer",
     "palette": "#1b1b1c:18:0 #3b3b3c:17:0 #040409:14:2 #944e3b:12:10 #b3836c:11:7",
     "accent": "#944e3b"
+  },
+  {
+    "slug": "bears-4-bareburger-0dc682ab",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-0de8e13d",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-16991f62",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-1fb73ea1",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-2aaa7e43",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-46b3d3d2",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-58bac2d9",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-5ca25eab",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-64598503",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-77292936",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-7ace31dd",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-7f5b7648",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
   },
   {
     "slug": "bears-4-bareburger-at-bareburger-hk-0dc682ab",
@@ -164,6 +308,36 @@
     "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
   },
   {
+    "slug": "bears-night-out-3fa8f00d",
+    "url": "https://www.theurbanbear.com/",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#010101:29:0 #231a14:28:2 #553b2c:13:4 #83694c:11:5",
+    "accent": "#83694c"
+  },
+  {
+    "slug": "bears-night-out-40ae3252",
+    "url": "https://www.theurbanbear.com/",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#010101:29:0 #231a14:28:2 #553b2c:13:4 #83694c:11:5",
+    "accent": "#83694c"
+  },
+  {
+    "slug": "bears-night-out-7df013ce",
+    "url": "https://www.theurbanbear.com/",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#010101:29:0 #231a14:28:2 #553b2c:13:4 #83694c:11:5",
+    "accent": "#83694c"
+  },
+  {
     "slug": "beer-blast-15963ca2",
     "url": "https://eagle-ny.com",
     "faviconBg": "#f0f0f0",
@@ -243,10 +417,28 @@
     "accent": "#ca815e"
   },
   {
+    "slug": "fat-bunny-5b4c768d",
+    "paletteSource": "flyer",
+    "palette": "#15168a:18:18 #13154c:18:10 #121cbb:17:23 #132dea:16:27 #8462cb:12:16",
+    "accent": "#132dea"
+  },
+  {
     "slug": "fat-bunny-at-nowhere-5b4c768d",
     "paletteSource": "flyer",
     "palette": "#15168a:18:18 #13154c:18:10 #121cbb:17:23 #132dea:16:27 #8462cb:12:16",
     "accent": "#132dea"
+  },
+  {
+    "slug": "fat-fuc-6288d7fb",
+    "paletteSource": "flyer",
+    "palette": "#2b2b2b:19:0 #c3b5b4:19:2 #5b6ab5:15:12 #729ed3:11:9",
+    "accent": "#5b6ab5"
+  },
+  {
+    "slug": "fat-fuc-78e31898",
+    "paletteSource": "flyer",
+    "palette": "#2b2b2b:19:0 #cab5b5:19:2 #5a6cbb:15:12 #7e9dd4:11:9 #a77d7e:7:5",
+    "accent": "#5a6cbb"
   },
   {
     "slug": "fat-fuc-at-nowhere-6288d7fb",
@@ -286,6 +478,16 @@
     "faviconFg": "#140b10"
   },
   {
+    "slug": "goldiloxx-bear-tea-31dcc897",
+    "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
+    "paletteSource": "flyer",
+    "palette": "#131314:18:0 #f3197b:18:24 #332c2c:15:1 #a37166:13:7 #dda27b:10:9",
+    "accent": "#f3197b"
+  },
+  {
     "slug": "goldiloxx-bear-tea-at-3-dollar-bill-31dcc897",
     "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
     "faviconBg": "#4a3f2e",
@@ -322,6 +524,24 @@
     "accent": "#f8c709"
   },
   {
+    "slug": "gorditos-0f31acb7",
+    "paletteSource": "flyer",
+    "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
+    "accent": "#d5ad8c"
+  },
+  {
+    "slug": "gorditos-28f1826f",
+    "paletteSource": "flyer",
+    "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
+    "accent": "#d5ad8c"
+  },
+  {
+    "slug": "gorditos-2dd5a849",
+    "paletteSource": "flyer",
+    "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
+    "accent": "#d5ad8c"
+  },
+  {
     "slug": "gorditos-at-rockbar-0f31acb7",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
@@ -340,6 +560,12 @@
     "accent": "#d5ad8c"
   },
   {
+    "slug": "grunt-657361b5",
+    "paletteSource": "flyer",
+    "palette": "#060609:57:1 #231916:15:2 #363332:9:0 #98140f:3:17",
+    "accent": "#98140f"
+  },
+  {
     "slug": "grunt-at-cmon-everybody-657361b5",
     "paletteSource": "flyer",
     "palette": "#060609:57:1 #231916:15:2 #363332:9:0 #98140f:3:17",
@@ -354,6 +580,24 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:32:0 #188218:30:17 #051705:13:4 #0a400a:9:10",
     "accent": "#188218"
+  },
+  {
+    "slug": "hibearnation-body-290a22b6",
+    "paletteSource": "flyer",
+    "palette": "#090c0c:70:0 #dc39b2:11:23 #b2b5b3:6:0",
+    "accent": "#dc39b2"
+  },
+  {
+    "slug": "hibearnation-body-679edda0",
+    "paletteSource": "flyer",
+    "palette": "#090c0c:70:0 #dc39b2:11:23 #b2b5b3:6:0",
+    "accent": "#dc39b2"
+  },
+  {
+    "slug": "hibearnation-body-6f08be72",
+    "paletteSource": "flyer",
+    "palette": "#09090a:38:0 #9e9275:11:4 #a0d6c6:10:6 #d2e521:10:19 #e31292:10:25",
+    "accent": "#e31292"
   },
   {
     "slug": "hibearnation-body-at-phoenix-290a22b6",
@@ -372,6 +616,21 @@
     "paletteSource": "flyer",
     "palette": "#09090a:38:0 #9e9275:11:4 #a0d6c6:10:6 #d2e521:10:19 #e31292:10:25",
     "accent": "#e31292"
+  },
+  {
+    "slug": "leather-daddy-070dcff4",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
+  },
+  {
+    "slug": "leather-daddy-19eaa976",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
+  },
+  {
+    "slug": "leather-daddy-3568f504",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
   {
     "slug": "leather-daddy-at-tys-19eaa976",
@@ -430,6 +689,15 @@
     "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
   },
   {
+    "slug": "the-urban-bear-weekend-truck-stop-fat-fuc-486ee2b3",
+    "url": "https://www.theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
+  },
+  {
     "slug": "the-urban-bear-weekend-truck-stop-fat-fuc-at-nowhere-486ee2b3",
     "url": "https://www.theurbanbear.com",
     "faviconBg": "#141414",
@@ -468,6 +736,22 @@
     "accent": "#0b1167"
   },
   {
+    "slug": "underbear-party-49903d26",
+    "paletteSource": "flyer",
+    "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
+    "accent": "#7b3d1b"
+  },
+  {
+    "slug": "underbear-party-5e8d54d4",
+    "url": "https://theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
+    "accent": "#7b3d1b"
+  },
+  {
     "slug": "underbear-party-at-rockbar-49903d26",
     "paletteSource": "flyer",
     "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
@@ -482,6 +766,16 @@
     "paletteSource": "flyer",
     "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
     "accent": "#7b3d1b"
+  },
+  {
+    "slug": "urban-bear-mega-bear-blast-435aeee7",
+    "url": "https://www.theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1a1614:69:1 #624214:8:7 #ffffff:7:0 #ef8811:5:17 #f6cf05:5:18",
+    "accent": "#f6cf05"
   },
   {
     "slug": "urban-bear-mega-bear-blast-at-rockbar-435aeee7",
@@ -511,5 +805,15 @@
     "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#ffffff:62:0 #1a1a1a:30:0 #b3b3b3:2:0"
+  },
+  {
+    "slug": "urban-bear-weekend-burgers-bangles-bears-roper-romp-7e32319f",
+    "url": "https://www.theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#f5eede:37:2 #f86108:25:20 #dbb294:10:6 #845534:7:8 #f5d55a:2:14",
+    "accent": "#f86108"
   }
 ]

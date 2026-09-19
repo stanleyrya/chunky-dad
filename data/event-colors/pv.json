@@ -30,6 +30,16 @@
     "accent": "#6c3385"
   },
   {
+    "slug": "dinner-under-the-stars-12356a88",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
     "slug": "dinner-under-the-stars-tryst-12356a88",
     "url": "https://beefdip.com/tags/",
     "faviconBg": "#e30309",
