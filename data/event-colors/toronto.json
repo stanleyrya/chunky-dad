@@ -1,5 +1,41 @@
 [
   {
+    "slug": "bears-in-excess-64a0ef36",
+    "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #f9f9f6:17:0 #ccaa96:16:5 #834b52:11:8 #c25f41:9:13",
+    "accent": "#c25f41"
+  },
+  {
+    "slug": "bears-in-excess-68750c47",
+    "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #f9f9f6:17:0 #ccaa96:16:5 #834b52:11:8 #c25f41:9:13",
+    "accent": "#c25f41"
+  },
+  {
+    "slug": "bears-in-excess-7592f66c",
+    "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #f9f9f6:17:0 #ccaa96:16:5 #834b52:11:8 #c25f41:9:13",
+    "accent": "#c25f41"
+  },
+  {
+    "slug": "chubs-at-the-tubs-4216de53",
+    "paletteSource": "flyer",
+    "palette": "#d5d4db:23:1 #ad929d:16:3 #fbf7f8:14:0 #3d1634:10:8 #332a85:3:15",
+    "accent": "#332a85"
+  },
+  {
     "slug": "playground-toronto-2a1597db",
     "url": "https://www.bearitmtl.com/event/playground-toronto/",
     "faviconBg": "#1a1a1a",

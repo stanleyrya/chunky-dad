@@ -10,6 +10,24 @@
     "accent": "#df0209"
   },
   {
+    "slug": "bearadise-ibff-bear-week-2027-414b6776",
+    "paletteSource": "flyer",
+    "palette": "#190f16:24:2 #aa9d8a:19:3 #5a4d44:13:2 #c3549a:4:16",
+    "accent": "#c3549a"
+  },
+  {
+    "slug": "bearadise-love-boat-bearsgiving-2026-4ebbcc1c",
+    "paletteSource": "flyer",
+    "palette": "#ea0a8e:20:25 #d3dde5:15:2 #c78674:13:9 #a36363:12:8 #73394f:11:9",
+    "accent": "#ea0a8e"
+  },
+  {
+    "slug": "bearsgiving-2026-6d123f30",
+    "paletteSource": "flyer",
+    "palette": "#8d6a5b:24:5 #b47c52:20:9 #e49a3c:18:14 #dd4f8b:2:18",
+    "accent": "#e49a3c"
+  },
+  {
     "slug": "booze-cruise-1d04b529",
     "url": "https://beefdip.com/",
     "faviconBg": "#e30309",

@@ -27,5 +27,22 @@
     "paletteSource": "flyer",
     "palette": "#0b1c2c:20:4 #030a14:17:3 #50b167:16:14 #2d753b:13:12 #82f38b:10:18",
     "accent": "#82f38b"
+  },
+  {
+    "slug": "sticky-rice-4f2be4aa",
+    "url": "https://www.sticky-rice.org/",
+    "faviconBg": "#191919",
+    "faviconFg": "#1c1c1c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#df573d:35:18 #edeadd:18:2 #b5827d:12:6 #a4dbd4:11:6 #ecbbaa:6:6",
+    "accent": "#df573d"
+  },
+  {
+    "slug": "western-xposure-xxl-27c8c346",
+    "url": "https://www.westernxposure.com/westernxposurexxl",
+    "paletteSource": "flyer",
+    "palette": "#130102:27:4 #3b0b0d:18:8 #732224:16:11 #e42125:13:22 #b52224:10:18",
+    "accent": "#e42125"
   }
 ]

@@ -8,5 +8,11 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:63:0 #cb2026:26:20 #eaaf6c:4:11 #db713d:2:15 #d45228:2:17",
     "accent": "#cb2026"
+  },
+  {
+    "slug": "madbear-party-2026-madrid-620cefcf",
+    "paletteSource": "flyer",
+    "palette": "#0b0303:20:2 #5d130d:20:11 #320905:19:7 #8c2b23:19:13 #d73027:10:20",
+    "accent": "#d73027"
   }
 ]

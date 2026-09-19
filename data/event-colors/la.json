@@ -387,6 +387,16 @@
     "accent": "#93030b"
   },
   {
+    "slug": "cruisingbearscom-ibc-balcony-bears-bash-4c92e667",
+    "url": "https://www.cruisingbears.com/cruising-bears-balcony-bear-bash-2027",
+    "faviconBg": "#5d5f5b",
+    "faviconFg": "#c17535",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#c5e7f2:53:4 #95c7d2:14:5 #739c7c:14:7 #f59d2b:7:16 #f8d941:5:16",
+    "accent": "#f59d2b"
+  },
+  {
     "slug": "cubscout-23f066df",
     "url": "https://eaglela.com/events/cub-scout-3/?occurrence=2026-11-06",
     "faviconBg": "#040404",

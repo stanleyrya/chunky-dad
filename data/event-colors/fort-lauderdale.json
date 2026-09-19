@@ -1,5 +1,15 @@
 [
   {
+    "slug": "adventure-bears-panama-canal-cruise-2026-188ddf2a",
+    "url": "https://www.adventurebears.com/panama-26",
+    "faviconBg": "#1479bf",
+    "faviconFg": "#d7e7f3",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cccdd3:22:1 #52a49b:15:8 #2b8b7e:15:9 #555b3b:12:5 #7b7d4d:9:7",
+    "accent": "#2b8b7e"
+  },
+  {
     "slug": "beartrap-0c35209b",
     "url": "https://eaglebarwm.com/event/beartrap/",
     "faviconBg": "#ededed",
@@ -8,6 +18,16 @@
     "paletteSource": "flyer",
     "palette": "#0b0b0a:37:0 #242215:16:2 #c3853d:11:12 #945b24:11:10 #e4b354:10:13",
     "accent": "#e4b354"
+  },
+  {
+    "slug": "cannonball-bash-2026-72ca808d",
+    "url": "https://cannonballbash.com/product/registration-package/",
+    "faviconBg": "#e05f03",
+    "faviconFg": "#f16703",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0e1027:23:5 #142185:21:16 #5a3523:16:6 #de3b00:12:21 #11ec4a:4:25",
+    "accent": "#de3b00"
   },
   {
     "slug": "club-chub-presents-meat-market-56d7ebd4",
@@ -288,6 +308,16 @@
     "paletteSource": "flyer",
     "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
     "accent": "#d29679"
+  },
+  {
+    "slug": "eastern-caribbean-adventure-cruise-6ee4f942",
+    "url": "https://www.adventurebears.com/eastern-caribbean-puerto-rico-cruise-2027",
+    "faviconBg": "#1479bf",
+    "faviconFg": "#d7e7f3",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#d6e1e6:29:1 #7294a5:20:5 #527b8e:16:5 #646c43:12:6 #8cc3ee:6:8",
+    "accent": "#8cc3ee"
   },
   {
     "slug": "honey-pot-206931fd",

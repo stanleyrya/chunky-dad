@@ -1,5 +1,15 @@
 [
   {
+    "slug": "biggervegas-2027-6a56d8a4",
+    "url": "https://www.biggervegas.com/",
+    "faviconBg": "#5e31a7",
+    "faviconFg": "#efecf2",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#05193b:51:7 #edf2f3:22:1 #daaf82:8:8 #6598c5:8:9 #9d40f0:2:25",
+    "accent": "#9d40f0"
+  },
+  {
     "slug": "megawoof-00b39ef8",
     "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
     "faviconBg": "#ff5e30",
