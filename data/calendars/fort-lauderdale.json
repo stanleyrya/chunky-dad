@@ -6,56 +6,6 @@
   "events": [
     {
       "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-09-26T21:30:00",
-      "endDate": "2026-09-27T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-27|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
-      "uid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-31564bff"
-    },
-    {
-      "name": "DADDY POP",
       "day": "Friday",
       "time": "9:30PM-2:30AM",
       "eventType": "routine",
@@ -64,15 +14,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-02T21:30:00",
-      "endDate": "2026-10-03T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-03|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-12-04T21:30:00",
+      "endDate": "2026-12-05T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-05|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "EAC75A23-5725-4BEC-AE02-5A2E36370767",
-      "uid": "EAC75A23-5725-4BEC-AE02-5A2E36370767",
+      "sourceUid": "37075FF3-BAF7-4582-8A3D-CD7AFDE0B485",
+      "uid": "37075FF3-BAF7-4582-8A3D-CD7AFDE0B485",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -81,14 +31,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/",
           "label": "🌐 Website"
         },
         {
@@ -102,43 +52,43 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-323e3f94"
+      "slug": "daddy-pop-540b7de3"
     },
     {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-30T21:30:00",
-      "endDate": "2026-10-31T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-31|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-09-16T18:00:00",
+      "endDate": "2026-09-16T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-09-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "30E1B544-D1B6-4F74-A44A-411371733920",
-      "uid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "sourceUid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
+      "uid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "cadence": null,
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
           "label": "🌐 Website"
         },
         {
@@ -152,57 +102,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-07d4afe3"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-10-23T21:30:00",
-      "endDate": "2026-10-24T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-24|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "3E7AD39C-4375-403D-903C-3C713F664E41",
-      "uid": "3E7AD39C-4375-403D-903C-3C713F664E41",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-542f3289"
+      "slug": "honey-pot-206931fd"
     },
     {
       "name": "DADDY POP",
@@ -214,15 +114,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-24T21:30:00",
-      "endDate": "2026-10-25T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-25|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-10-03T21:30:00",
+      "endDate": "2026-10-04T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-04|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "21D75B2B-BADD-4692-8A78-0FA760279F10",
-      "uid": "21D75B2B-BADD-4692-8A78-0FA760279F10",
+      "sourceUid": "E6A9D3BB-4628-4154-AF92-25761260E642",
+      "uid": "E6A9D3BB-4628-4154-AF92-25761260E642",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -231,14 +131,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
           "label": "🌐 Website"
         },
         {
@@ -252,107 +152,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-3fafddc8"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-09-18T21:30:00",
-      "endDate": "2026-09-19T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-19|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "D421FABC-1FB7-4C94-8AED-B0B83CB22F65",
-      "uid": "D421FABC-1FB7-4C94-8AED-B0B83CB22F65",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-4a29495a"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-10-17T21:30:00",
-      "endDate": "2026-10-18T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-18|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
-      "uid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-0c0c29f7"
+      "slug": "daddy-pop-04a1a646"
     },
     {
       "name": "DADDY POP",
@@ -414,15 +214,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-09-25T21:30:00",
-      "endDate": "2026-09-26T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-26|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-10-02T21:30:00",
+      "endDate": "2026-10-03T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-03|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "2067700C-74F8-485F-A698-0D2E38824C42",
-      "uid": "2067700C-74F8-485F-A698-0D2E38824C42",
+      "sourceUid": "EAC75A23-5725-4BEC-AE02-5A2E36370767",
+      "uid": "EAC75A23-5725-4BEC-AE02-5A2E36370767",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -431,14 +231,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-02/",
           "label": "🌐 Website"
         },
         {
@@ -452,7 +252,57 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-14f46cf0"
+      "slug": "daddy-pop-323e3f94"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-11T21:30:00",
+      "endDate": "2026-12-12T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-12|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
+      "uid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5d859f8d"
     },
     {
       "name": "DADDY POP",
@@ -464,15 +314,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-03T21:30:00",
-      "endDate": "2026-10-04T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-04|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-11-14T21:30:00",
+      "endDate": "2026-11-15T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-15|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "E6A9D3BB-4628-4154-AF92-25761260E642",
-      "uid": "E6A9D3BB-4628-4154-AF92-25761260E642",
+      "sourceUid": "3782BDD5-3E89-46B5-8906-C775B2711296",
+      "uid": "3782BDD5-3E89-46B5-8906-C775B2711296",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -481,14 +331,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/",
           "label": "🌐 Website"
         },
         {
@@ -502,7 +352,57 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-04a1a646"
+      "slug": "daddy-pop-4a14133a"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-10T21:30:00",
+      "endDate": "2026-10-11T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-11|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
+      "uid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0c95cc2b"
     },
     {
       "name": "DADDY POP",
@@ -514,15 +414,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-09T21:30:00",
-      "endDate": "2026-10-10T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-10|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-10-23T21:30:00",
+      "endDate": "2026-10-24T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-24|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
-      "uid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
+      "sourceUid": "3E7AD39C-4375-403D-903C-3C713F664E41",
+      "uid": "3E7AD39C-4375-403D-903C-3C713F664E41",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -531,14 +431,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-23/",
           "label": "🌐 Website"
         },
         {
@@ -552,7 +452,57 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-7978927b"
+      "slug": "daddy-pop-542f3289"
+    },
+    {
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-16T18:00:00",
+      "endDate": "2026-12-16T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-12-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
+      "uid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "honey-pot-3e2ea5a4"
     },
     {
       "name": "DADDY POP",
@@ -564,15 +514,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-11-06T21:30:00",
-      "endDate": "2026-11-07T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-07|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-09-18T21:30:00",
+      "endDate": "2026-09-19T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-19|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
-      "uid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
+      "sourceUid": "D421FABC-1FB7-4C94-8AED-B0B83CB22F65",
+      "uid": "D421FABC-1FB7-4C94-8AED-B0B83CB22F65",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -581,14 +531,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
           "label": "🌐 Website"
         },
         {
@@ -602,7 +552,159 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-5e31d272"
+      "slug": "daddy-pop-4a29495a"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-09-19T21:30:00",
+      "endDate": "2026-09-20T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-20|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "EE2E26CB-C2B3-444A-89D0-46D83A18D985",
+      "uid": "EE2E26CB-C2B3-444A-89D0-46D83A18D985",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-3e809493"
+    },
+    {
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-18T18:00:00",
+      "endDate": "2026-11-18T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-11-18|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "31158504-87C9-4736-89C0-A254DDC18B19",
+      "uid": "31158504-87C9-4736-89C0-A254DDC18B19",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "honey-pot-25713e6a"
+    },
+    {
+      "name": "BEARTRAP",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-23T21:00:00",
+      "endDate": "2026-10-24T03:00:00",
+      "unprocessedDescription": "description: BEARTRAP Music By\\: GLOVIBES\nbar: Eagle Wilton M\ranors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/beartrap/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: beartrap|2026-10-24|eagle wilton manors\nbearSource: keyword\nshortName: BEAR-TRAP",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
+      "uid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr",
+      "tea": "BEARTRAP Music By: GLOVIBES",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/beartrap/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "shortName": "BEAR-TRAP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/beartrap/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beartrap-0c35209b"
     },
     {
       "name": "DADDY POP",
@@ -614,15 +716,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-16T21:30:00",
-      "endDate": "2026-10-17T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-17|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-11-20T21:30:00",
+      "endDate": "2026-11-21T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-21|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "59886F2D-D522-45F6-BA2E-2D0799825719",
-      "uid": "59886F2D-D522-45F6-BA2E-2D0799825719",
+      "sourceUid": "EE295E29-F1F9-4475-B5CC-645600D5FEDC",
+      "uid": "EE295E29-F1F9-4475-B5CC-645600D5FEDC",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -631,14 +733,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/",
           "label": "🌐 Website"
         },
         {
@@ -652,7 +754,57 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-10e120d1"
+      "slug": "daddy-pop-3d2dc279"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-05T21:30:00",
+      "endDate": "2026-12-06T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-06|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
+      "uid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-71dc7658"
     },
     {
       "name": "Club Chub Presents: MEAT MARKET",
@@ -716,7 +868,7 @@
     },
     {
       "name": "DADDY POP",
-      "day": "Saturday",
+      "day": "Friday",
       "time": "9:30PM-2:30AM",
       "eventType": "routine",
       "recurring": false,
@@ -724,31 +876,31 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-10T21:30:00",
-      "endDate": "2026-10-11T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-11|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-11-13T21:30:00",
+      "endDate": "2026-11-14T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-14|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
-      "uid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
+      "sourceUid": "A199BA26-479D-4B6C-8256-BEBAC0D04A5F",
+      "uid": "A199BA26-479D-4B6C-8256-BEBAC0D04A5F",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/",
           "label": "🌐 Website"
         },
         {
@@ -762,7 +914,57 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-0c95cc2b"
+      "slug": "daddy-pop-1ef4ee62"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-16T21:30:00",
+      "endDate": "2026-10-17T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-17|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "59886F2D-D522-45F6-BA2E-2D0799825719",
+      "uid": "59886F2D-D522-45F6-BA2E-2D0799825719",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-16/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-10e120d1"
     },
     {
       "name": "DADDY POP",
@@ -774,15 +976,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-09-19T21:30:00",
-      "endDate": "2026-09-20T02:30:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-20|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-11-21T21:30:00",
+      "endDate": "2026-11-22T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-22|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "EE2E26CB-C2B3-444A-89D0-46D83A18D985",
-      "uid": "EE2E26CB-C2B3-444A-89D0-46D83A18D985",
+      "sourceUid": "CC0403AD-98A4-4120-945C-A5D1853E0607",
+      "uid": "CC0403AD-98A4-4120-945C-A5D1853E0607",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -791,14 +993,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/",
           "label": "🌐 Website"
         },
         {
@@ -812,7 +1014,557 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-3e809493"
+      "slug": "daddy-pop-17a88367"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-17T21:30:00",
+      "endDate": "2026-10-18T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-18|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
+      "uid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0c0c29f7"
+    },
+    {
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-21T18:00:00",
+      "endDate": "2026-10-21T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-10-21|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
+      "uid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "honey-pot-50edb9db"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-24T21:30:00",
+      "endDate": "2026-10-25T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-25|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "21D75B2B-BADD-4692-8A78-0FA760279F10",
+      "uid": "21D75B2B-BADD-4692-8A78-0FA760279F10",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-24/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-3fafddc8"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-09T21:30:00",
+      "endDate": "2026-10-10T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-10|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
+      "uid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-7978927b"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-12T21:30:00",
+      "endDate": "2026-12-13T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-13|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
+      "uid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0800982f"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-09-26T21:30:00",
+      "endDate": "2026-09-27T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-27|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
+      "uid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-31564bff"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-27T21:30:00",
+      "endDate": "2026-11-28T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-28|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
+      "uid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-2080205b"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-30T21:30:00",
+      "endDate": "2026-10-31T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-31|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "uid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-30/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-07d4afe3"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-06T21:30:00",
+      "endDate": "2026-11-07T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-07|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
+      "uid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5e31d272"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-28T21:30:00",
+      "endDate": "2026-11-29T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-29|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
+      "uid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5088aad2"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-09-25T21:30:00",
+      "endDate": "2026-09-26T02:30:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-26|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2067700C-74F8-485F-A698-0D2E38824C42",
+      "uid": "2067700C-74F8-485F-A698-0D2E38824C42",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-14f46cf0"
     }
   ]
 }
