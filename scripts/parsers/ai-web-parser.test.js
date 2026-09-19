@@ -19118,6 +19118,9 @@ test('expandJsonApiSeriesRow drops a series whose UNTIL has passed instead of ke
   const parser = createParser();
   const ended = { title: 'The Bear Party', startDate: new Date('2024-06-07T22:00:00Z'), endDate: new Date('2024-06-08T01:00:00Z'), _jsonApiRrule: 'FREQ=WEEKLY;UNTIL=20240906T035959Z;BYDAY=FR' };
   assert.deepEqual(parser.expandJsonApiSeriesRow(ended), [], 'a finished series is not an event');
+  const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  const justEnding = { title: "Workman's Lunch", startDate: new Date('2024-06-05T16:00:00Z'), endDate: null, _jsonApiRrule: `FREQ=WEEKLY;UNTIL=${soon}T035959Z;BYDAY=${['SU','MO','TU','WE','TH','FR','SA'][(new Date().getUTCDay() + 4) % 7]}` };
+  assert.deepEqual(parser.expandJsonApiSeriesRow(justEnding), [], 'an UNTIL inside the window with no night left is finished too — its first night is never resurrected');
   const dormant = { title: 'Yearly Ball', startDate: new Date('2024-06-07T22:00:00Z'), endDate: null, _jsonApiRrule: 'FREQ=YEARLY;COUNT=3;BYMONTH=6' };
   const kept = parser.expandJsonApiSeriesRow(dormant);
   assert.equal(kept.length, 1, 'a rule without an UNTIL keeps the row when no night falls in the window');

@@ -11253,8 +11253,11 @@ class AiWebParser {
             // series it ever ran (Lodge NY's Google Calendar: 2023 weekly
             // parties, each with its UNTIL). A rule with no UNTIL, or a
             // COUNT, has simply no night in the window — the row stays dated.
+            // (An UNTIL still inside the window with no night before it —
+            // Lodge NY's "Workman's Lunch … UNTIL=20260916" read on the 19th
+            // — is the same finished series.)
             const until = rrule.match(/(?:^|;)UNTIL=(\d{4})(\d{2})(\d{2})/i);
-            if (until && Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3]), 23, 59, 59) < windowStart.getTime()) {
+            if (until && Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3]), 23, 59, 59) < windowEnd.getTime()) {
                 console.log(`🔁 SERIES: "${event.title}" (${rrule}) ended ${until[1]}-${until[2]}-${until[3]} — a finished series, not an event`);
                 return [];
             }
