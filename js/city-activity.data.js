@@ -98,13 +98,19 @@ window.CITY_ACTIVITY = {
     "2026-12-26",
     "2026-12-27",
     "2026-12-31",
-    "2027-01-01"
+    "2027-01-01",
+    "2027-10-09"
    ],
    "recurring": 2,
    "festivalUntil": null
   },
   "toronto": {
-   "dates": [],
+   "dates": [
+    "2026-09-20",
+    "2026-10-18",
+    "2026-11-15",
+    "2027-01-31"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -134,7 +140,10 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "palm-springs": {
-   "dates": [],
+   "dates": [
+    "2026-09-25",
+    "2026-10-15"
+   ],
    "recurring": 0,
    "festivalUntil": "2027-02-22"
   },
@@ -158,7 +167,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "vegas": {
-   "dates": [],
+   "dates": [
+    "2027-06-16"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -186,7 +197,6 @@ window.CITY_ACTIVITY = {
   },
   "portland": {
    "dates": [
-    "2026-09-19",
     "2026-10-10",
     "2026-12-31"
    ],
@@ -194,7 +204,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "sitges": {
-   "dates": [],
+   "dates": [
+    "2027-09-11"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -255,6 +267,8 @@ window.CITY_ACTIVITY = {
   },
   "pv": {
    "dates": [
+    "2026-11-27",
+    "2027-01-22",
     "2027-01-23",
     "2027-01-24",
     "2027-01-25",
@@ -312,6 +326,7 @@ window.CITY_ACTIVITY = {
     "2026-10-21",
     "2026-10-23",
     "2026-10-24",
+    "2026-10-28",
     "2026-10-30",
     "2026-11-01",
     "2026-11-06",
@@ -327,7 +342,8 @@ window.CITY_ACTIVITY = {
     "2026-12-05",
     "2026-12-11",
     "2026-12-12",
-    "2026-12-16"
+    "2026-12-16",
+    "2027-11-21"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -397,7 +413,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "madrid": {
-   "dates": [],
+   "dates": [
+    "2026-12-03"
+   ],
    "recurring": 0,
    "festivalUntil": "2026-12-09"
   },
