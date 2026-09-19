@@ -105,7 +105,7 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 16639,
+      "dataLength": 16628,
       "eventCount": 16
     },
     "hong-kong": {
@@ -129,14 +129,14 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 47453,
+      "dataLength": 47928,
       "eventCount": 40
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 27069,
-      "eventCount": 16
+      "dataLength": 29083,
+      "eventCount": 17
     },
     "madrid": {
       "name": "Madrid",
@@ -147,7 +147,7 @@
     "manchester": {
       "name": "Manchester",
       "status": "success",
-      "dataLength": 7653,
+      "dataLength": 7764,
       "eventCount": 6
     },
     "mexico-city": {
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 61341,
-      "eventCount": 55
+      "dataLength": 84098,
+      "eventCount": 73
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -225,7 +225,7 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 26709,
+      "dataLength": 26678,
       "eventCount": 23
     },
     "sacramento": {

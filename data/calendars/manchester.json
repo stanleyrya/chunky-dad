@@ -52,42 +52,42 @@
       "slug": "beareoke-5811bb2a"
     },
     {
-      "name": "Manbears Social",
-      "day": "Saturday",
-      "time": "4PM-8PM",
+      "name": "Beareoke",
+      "day": "Sunday",
+      "time": "8PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 53.4776757,
         "lng": -2.2369046
       },
-      "startDate": "2026-11-14T16:00:00",
-      "endDate": "2026-11-14T20:00:00",
-      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\nimageSource: json-api\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046\nkey: manbears-social|2026-11-14|the eagle bar\nbearSource: keyword\nshortName: MANBEARS",
+      "startDate": "2026-09-27T20:00:00",
+      "endDate": "2026-09-28T01:00:00",
+      "unprocessedDescription": "description: From 8pm every week, straight after Sunday Servic\re, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out! Get down early, get your song requests in and finish the weekend off with a bang!\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nimage: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\ntimezone: Europe/London\npinSource: page\naddressSource: page\nwebsite: https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046\nkey: beareoke|2026-09-27|the eagle bar\nimageHorizontal: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\nimageSource: jsonld\nbearSource: keyword\nshortName: BEAREOKE",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
       "wasUTC": true,
-      "sourceUid": "E9C492CE-BB9F-4C9B-BC5D-E1865D97CC5A",
-      "uid": "E9C492CE-BB9F-4C9B-BC5D-E1865D97CC5A",
+      "sourceUid": "91362F50-9FFC-413B-A7E1-E75F56ED0DD1",
+      "uid": "91362F50-9FFC-413B-A7E1-E75F56ED0DD1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "The Eagle Bar",
-      "image": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
-      "imageHorizontal": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
-      "tea": "The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.",
+      "image": "https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp",
+      "imageHorizontal": "https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp",
+      "tea": "From 8pm every week, straight after Sunday Service, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out! Get down early, get your song requests in and finish the weekend off with a bang!",
       "cadence": null,
       "address": "15 Bloom St, Manchester M1 3HZ, UK",
-      "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00",
+      "website": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
-      "shortName": "MANBEARS",
+      "shortName": "BEAREOKE",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00",
+          "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
           "label": "🌐 Website"
         },
         {
@@ -96,7 +96,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "manbears-social-2892fec2"
+      "slug": "beareoke-54c9b64e"
     },
     {
       "name": "DILF Manchester: Leather Edition",
@@ -152,42 +152,42 @@
       "slug": "dilf-manchester-leather-edition-5d5226d1"
     },
     {
-      "name": "Beareoke",
-      "day": "Sunday",
-      "time": "8PM-1AM",
+      "name": "Manbears Social",
+      "day": "Saturday",
+      "time": "4PM-8PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 53.4776757,
         "lng": -2.2369046
       },
-      "startDate": "2026-09-27T20:00:00",
-      "endDate": "2026-09-28T01:00:00",
-      "unprocessedDescription": "description: From 8pm every week, straight after Sunday Servic\re, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out! Get down early, get your song requests in and finish the weekend off with a bang!\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nimage: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\ntimezone: Europe/London\npinSource: page\naddressSource: page\nwebsite: https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046\nkey: beareoke|2026-09-27|the eagle bar\nimageHorizontal: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\nimageSource: jsonld\nbearSource: keyword\nshortName: BEAREOKE",
+      "startDate": "2026-11-14T16:00:00",
+      "endDate": "2026-11-14T20:00:00",
+      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\ncadence: FREQ=MONTHLY;BYDAY=2SA\nkey: manbears-social|2026-11-14|the eagle bar\nbearSource: keyword\nshortName: MANBEARS\npinSource: page\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
       "wasUTC": true,
-      "sourceUid": "91362F50-9FFC-413B-A7E1-E75F56ED0DD1",
-      "uid": "91362F50-9FFC-413B-A7E1-E75F56ED0DD1",
+      "sourceUid": "E9C492CE-BB9F-4C9B-BC5D-E1865D97CC5A",
+      "uid": "E9C492CE-BB9F-4C9B-BC5D-E1865D97CC5A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "The Eagle Bar",
-      "image": "https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp",
-      "imageHorizontal": "https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp",
-      "tea": "From 8pm every week, straight after Sunday Service, your host - Moodybear, takes your requests and lets you get on stage to sing your heart out! Get down early, get your song requests in and finish the weekend off with a bang!",
-      "cadence": null,
+      "image": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
+      "imageHorizontal": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
+      "tea": "The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.",
+      "cadence": "FREQ=MONTHLY;BYDAY=2SA",
       "address": "15 Bloom St, Manchester M1 3HZ, UK",
-      "website": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
+      "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
-      "shortName": "BEAREOKE",
+      "shortName": "MANBEARS",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.eaglemanchester.com/event-details/beareoke-2026-09-27-20-00",
+          "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-11-14-16-00",
           "label": "🌐 Website"
         },
         {
@@ -196,7 +196,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "beareoke-54c9b64e"
+      "slug": "manbears-social-2892fec2"
     },
     {
       "name": "Manbears Social",
@@ -210,7 +210,7 @@
       },
       "startDate": "2026-12-12T16:00:00",
       "endDate": "2026-12-12T20:00:00",
-      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\ntimezone: Europe/London\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\npinSource: page\naddressSource: page\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046\nkey: manbears-social|2026-12-12|the eagle bar\nimageSource: json-api\nbearSource: keyword\nshortName: MANBEARS",
+      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\ntimezone: Europe/London\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00\ncadence: FREQ=MONTHLY;BYDAY=2SA\nkey: manbears-social|2026-12-12|the eagle bar\nbearSource: keyword\nshortName: MANBEARS\npinSource: page\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
@@ -225,7 +225,7 @@
       "image": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
       "imageHorizontal": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
       "tea": "The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.",
-      "cadence": null,
+      "cadence": "FREQ=MONTHLY;BYDAY=2SA",
       "address": "15 Bloom St, Manchester M1 3HZ, UK",
       "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
@@ -257,7 +257,7 @@
       },
       "startDate": "2026-10-10T16:00:00",
       "endDate": "2026-10-10T20:00:00",
-      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-10-10-16-00\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\nimageSource: json-api\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046\nkey: manbears-social|2026-10-10|the eagle bar\nbearSource: keyword\nshortName: MANBEARS",
+      "unprocessedDescription": "description: The Manbears Social takes place in The Black Eagle\r at 4pm on the second Saturday of every month.\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Bloom St, Manchester M1 3HZ, UK\nwebsite: https://www.eaglemanchester.com/event-details/manbears-social-2026-10-10-16-00\nimage: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg\ncadence: FREQ=MONTHLY;BYDAY=2SA\nkey: manbears-social|2026-10-10|the eagle bar\nbearSource: keyword\nshortName: MANBEARS\npinSource: page\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
@@ -272,7 +272,7 @@
       "image": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
       "imageHorizontal": "https://static.wixstatic.com/media/741c1a_3877412e042d4568a4db8d29d11b4746~mv2.jpg",
       "tea": "The Manbears Social takes place in The Black Eagle at 4pm on the second Saturday of every month.",
-      "cadence": null,
+      "cadence": "FREQ=MONTHLY;BYDAY=2SA",
       "address": "15 Bloom St, Manchester M1 3HZ, UK",
       "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-10-10-16-00",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.2369046",
