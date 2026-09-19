@@ -208,8 +208,17 @@ class WebAdapter {
     // for Mac-server runs) and fails soft to empty everywhere else. Browser
     // runs have no local file access and report an empty store.
     // -----------------------------------------------------------------------
+    // The store lives where the phone and the review deck write it: the
+    // shared root when active (run 20260918-214248 read ~/.chunky-dad-scraper
+    // instead and dropped ONYX, MEAT RACK and eleven other parties the
+    // owner had just marked bear on the deck); the local state dir only
+    // when no shared root is configured.
     getBearVerdictsFilePath() {
-        if (!this.isNode || !this.path || !this.localStateDir) return null;
+        if (!this.isNode || !this.path) return null;
+        if (this.sharedStorageRoot) {
+            return this.path.join(this.sharedStorageRoot, 'bear-verdicts.json');
+        }
+        if (!this.localStateDir) return null;
         return this.path.join(this.localStateDir, 'bear-verdicts.json');
     }
 
@@ -226,7 +235,9 @@ class WebAdapter {
                 console.log('🟢 Node.js: Bear verdict store has unexpected shape — starting empty');
                 return [];
             }
-            return verdicts.filter(entry => entry && typeof entry === 'object');
+            const usable = verdicts.filter(entry => entry && typeof entry === 'object');
+            console.log(`🟢 Node.js: Bear verdicts — ${usable.length} loaded from ${filePath}`);
+            return usable;
         } catch (error) {
             console.log(`🟢 Node.js: Bear verdict store read failed (${error.message}) — starting empty`);
             return [];
