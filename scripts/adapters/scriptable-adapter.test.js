@@ -11487,7 +11487,7 @@ test('executeReviewedSavedRun skips rows this run\'s earlier execution already w
   assert.deepEqual(captured.analyzed.map((event) => event.title), ['Approved Party'], 'the written row is not re-analyzed');
   assert.equal(summary.alreadyWritten, 1);
   assert.equal(summary.skipped, 0);
-  assert.ok(lines.some((line) => /1 row\(s\) were written by this run's earlier execution/.test(line)), lines.join('\n'));
+  assert.ok(lines.some((line) => /1 row\(s\) already written by an earlier execution/.test(line)), lines.join('\n'));
   const timing = lines.find((line) => /Reviewed execute timing/.test(line));
   assert.ok(timing && /for 1 row\(s\)/.test(timing) && /calendar searches 1 \(/.test(timing), timing);
   assert.equal(Object.prototype.hasOwnProperty.call(adapter, 'getExistingEvents'), true, 'the test stub survives the timer restore');
@@ -11517,4 +11517,45 @@ test('route link: the app form carries the same legs in comgooglemaps daddr "+to
   }
   delete global.Safari;
   assert.equal(adapter.handOffMapsNavigation(web), false, 'no Safari API (tests, Node) → the web link stands');
+});
+
+test('written ledger: an execute records what it wrote; a later execute skips approvals the ledger shows written, unless re-approved since', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const first = reviewedNew('Approved Party');
+  const second = reviewedNew('Written Party');
+  const freshPlan = [first, second];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  core.prepareEventsForCalendar = async (events) => {
+    captured.analyzed = events;
+    return events.map((event) => ({ ...freshPlan.find((fresh) => fresh.title === event.title), _savedRunSourceIndex: event._savedRunSourceIndex }));
+  };
+  const keys = freshPlan.map((event) => core.getOwnerReviewKey(event));
+  let stored = null;
+  adapter.fm = { ...fileManagerStub,
+    fileExists: (p) => String(p).endsWith('written-ledger.json') && stored !== null,
+    readString: () => stored,
+    writeString: (p, text) => { if (String(p).endsWith('written-ledger.json')) stored = text; }
+  };
+  // Written Party was written yesterday; Approved Party never.
+  stored = JSON.stringify({ version: 1, entries: { [keys[1]]: { executedAt: '2030-01-05T00:00:00.000Z', action: 'created', title: 'Written Party' } } });
+  const decisions = keys.map((key) => ({ key, kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }));
+  const stale = freshPlan.map((event) => ({ ...event, _action: 'new' }));
+  const summary = await adapter.executeReviewedSavedRun(buildReviewedRunResults(stale), decisions);
+  assert.deepEqual(captured.analyzed.map((event) => event.title), ['Approved Party'], 'the ledger-written row is not re-analyzed');
+  assert.equal(summary.alreadyWritten, 1);
+  assert.equal(summary.created, 1);
+  const ledger = JSON.parse(stored);
+  assert.ok(ledger.entries[keys[0]] && ledger.entries[keys[0]].action === 'created', 'the write is recorded under the row key');
+  assert.ok(ledger.entries[keys[1]], 'earlier entries survive');
+
+  // Re-approved after the write → written again.
+  const captured2 = { notices: [] };
+  const adapter2 = buildAdapter();
+  const core2 = instrumentReviewedRunAdapter(adapter2, freshPlan, captured2);
+  core2.prepareEventsForCalendar = async (events) => { captured2.analyzed = events; return events.map((event) => ({ ...freshPlan.find((fresh) => fresh.title === event.title), _savedRunSourceIndex: event._savedRunSourceIndex })); };
+  adapter2.fm = adapter.fm;
+  const reapproved = keys.map((key) => ({ key, kind: 'new', verdict: 'approve', stampedAt: '2030-02-01T00:00:00.000Z', snapshot: {} }));
+  await adapter2.executeReviewedSavedRun(buildReviewedRunResults(stale), reapproved);
+  assert.deepEqual(captured2.analyzed.map((event) => event.title).sort(), ['Approved Party', 'Written Party'], 'approvals newer than the write run again');
 });

@@ -173,6 +173,18 @@ function pickLatestRunId(sharedRoot) {
     return chosen ? chosen.runId : null;
 }
 
+// The phone's written ledger (written-ledger.json, phone-owned): review
+// key → { executedAt, action, title, runId } for every approved row the
+// phone wrote. Empty map when absent.
+function loadWrittenLedger(sharedRoot) {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(path.join(sharedRoot, 'written-ledger.json'), 'utf8'));
+        return parsed && parsed.entries && typeof parsed.entries === 'object' ? parsed.entries : {};
+    } catch (error) {
+        return {};
+    }
+}
+
 // The calendars the phone has, as the phone lists them itself
 // (calendar-snapshot/calendars.json, written with every snapshot pass),
 // mapped to the city keys whose configured calendar name it holds. null
@@ -730,7 +742,15 @@ function buildDeck(runPayload, store, options = {}) {
         .filter((entry) => entry && typeof entry.executedAt === 'string')
         .sort((a, b) => a.executedAt.localeCompare(b.executedAt));
     const lastExecutedAt = executions.length > 0 ? executions[executions.length - 1].executedAt : '';
-    const executedMark = (entry) => {
+    const ledger = options.writtenLedger && typeof options.writtenLedger === 'object' ? options.writtenLedger : {};
+    const executedMark = (entry, decision) => {
+        // The phone's ledger: written since this approval was made, on any
+        // run (a newer approval than the write is a re-approval, pending).
+        const written = ledger[entry.key];
+        if (written && typeof written === 'object' && written.executedAt
+            && (!decision || String(written.executedAt) >= String(decision.stampedAt || ''))) {
+            return { at: written.executedAt, as: written.action || 'created' };
+        }
         const event = analyzed[entry.sourceIndex];
         if (!event || !event._ownerReviewApproved) return null;
         return { at: lastExecutedAt || null, as: event._action === 'merge' ? 'updated' : 'created' };
@@ -738,7 +758,7 @@ function buildDeck(runPayload, store, options = {}) {
     const file = (entry, decision) => {
         if (decision) {
             const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override';
-            const executed = isEventKind ? executedMark(entry) : null;
+            const executed = isEventKind ? executedMark(entry, decision) : null;
             // Still waiting for "Execute on phone": an approval the phone has
             // not written, and that is newer than the run's last execution
             // (an older one was already handed to the phone — written or
@@ -941,6 +961,7 @@ module.exports = {
     describeRunShapeLabel,
     describeRunFiles,
     listPhoneCalendars,
+    loadWrittenLedger,
     findMissingPhoneCalendars,
     readRunFile,
     loadRun,

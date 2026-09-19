@@ -543,3 +543,26 @@ test('buildDeck: cards for a city whose calendar the phone lacks are listed with
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('buildDeck: the phone\'s written ledger marks an approval written on any run, and a re-approval since the write is pending again', () => {
+  const first = deckOf(runPayload({ analyzedEvents: [newEvent()] }));
+  const key = first.cards[0].key;
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), { key, kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: first.cards[0].proposal, runId: null, reason: null });
+  const ledger = { [key]: { executedAt: '2030-01-01T12:00:00.000Z', action: 'created', title: 'FURBALL NYC' } };
+  const written = deckOf(runPayload({ analyzedEvents: [newEvent()] }), store, { writtenLedger: ledger });
+  assert.equal(written.decided.length, 1);
+  assert.deepEqual(written.decided[0].executed, { at: '2030-01-01T12:00:00.000Z', as: 'created' });
+  assert.equal(written.decided[0].pendingExecute, false, 'written → nothing to execute');
+  const reapproved = rq.upsertDecision(rq.emptyDecisionStore(), { key, kind: 'new', verdict: 'approve', stampedAt: '2030-01-02T00:00:00.000Z', snapshot: first.cards[0].proposal, runId: null, reason: null });
+  const again = deckOf(runPayload({ analyzedEvents: [newEvent()] }), reapproved, { writtenLedger: ledger });
+  assert.equal(again.decided[0].executed, null);
+  assert.equal(again.decided[0].pendingExecute, true, 'approved after the write → pending');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-ledger-'));
+  try {
+    assert.deepEqual(rq.loadWrittenLedger(dir), {});
+    fs.writeFileSync(path.join(dir, 'written-ledger.json'), JSON.stringify({ version: 1, entries: ledger }));
+    assert.deepEqual(rq.loadWrittenLedger(dir), ledger);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

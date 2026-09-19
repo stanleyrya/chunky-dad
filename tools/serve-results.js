@@ -1713,7 +1713,8 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const executions = reviewQueue.collectExecutions(sharedRoot);
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot, cities);
-    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, ...(phoneCalendars ? { phoneCalendars } : {}) });
+    const writtenLedger = reviewQueue.loadWrittenLedger(sharedRoot);
+    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
