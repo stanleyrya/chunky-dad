@@ -15727,6 +15727,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       created: 0,
       updated: 0,
       wrote: false,
+      alreadyWritten: 0,
     };
     try {
       const savedEvents = Array.isArray(results && results.analyzedEvents)
@@ -15760,6 +15761,45 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // Leave a trace BEFORE the heavy part: a review log under its own id
       // (never over the run's own log), so a hang or a kill mid-way still
       // shows the run reached this point.
+      // Per-phase tally for the timing line. The phone's log carries no
+      // shared-core lines, so this is the only view of where an execute's
+      // minutes go (run 20260919-051656: 112 s for 203 rows, unexplained).
+      // The adapter's slow doors are shadowed on THIS instance for the
+      // analysis and restored right after it.
+      const phases = {};
+      const tally = (name, ms) => {
+        const phase = phases[name] || (phases[name] = { calls: 0, ms: 0 });
+        phase.calls++;
+        phase.ms += ms;
+      };
+      const restorePhaseTimers = [];
+      for (const [name, method] of [
+        ["calendar searches", "getExistingEvents"],
+        ["wide-window lookups", "getWideWindowCalendarEvents"],
+        ["reverse geocodes", "reverseGeocodePlacemark"],
+        ["HTTP fetches", "fetchData"],
+      ]) {
+        if (typeof this[method] !== "function") continue;
+        const hadOwn = Object.prototype.hasOwnProperty.call(this, method);
+        const original = this[method];
+        this[method] = async function (...args) {
+          const startedAt = Date.now();
+          try {
+            return await original.apply(this, args);
+          } finally {
+            tally(name, Date.now() - startedAt);
+          }
+        };
+        restorePhaseTimers.push(() => {
+          if (hadOwn) this[method] = original;
+          else delete this[method];
+        });
+      }
+      const stopPhaseTimers = () => {
+        while (restorePhaseTimers.length > 0) restorePhaseTimers.pop()();
+      };
+      const aiCallsBefore = this._postJsonStats ? { ...this._postJsonStats } : { calls: 0, ms: 0 };
+
       const runIdForLog = results.savedRunId || results.sourceRunId || "";
       const stamp = new Date()
         .toISOString()
@@ -15814,18 +15854,35 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         const decision = proposal ? SharedCore.findOwnerDecision(proposal, reviewStore) : null;
         return decision && decision.verdict === "approve" ? decision : null;
       };
+      // A row this run's EARLIER execution already wrote (its stamp is on
+      // the row, the execution is on the file) is done: re-analyzing it
+      // only proves it a no-op, at the price of its calendar search and
+      // merge work — the owner re-runs after a few more swipes, not to
+      // rewrite what landed.
+      const executedBefore = (Array.isArray(results.savedRunExecutions) && results.savedRunExecutions.length > 0)
+        || (Array.isArray(results.executions) && results.executions.length > 0);
       const selected = [];
       savedEvents.forEach((event, index) => {
+        if (executedBefore && event && event._ownerReviewApproved && typeof event._ownerReviewApproved === "object") {
+          summary.alreadyWritten++;
+          return;
+        }
         const decision = approvalFor(event);
         if (decision) selected.push({ event, index, decision });
       });
-      summary.skipped = savedEvents.length - selected.length;
+      summary.skipped = savedEvents.length - selected.length - summary.alreadyWritten;
+      if (summary.alreadyWritten > 0) {
+        console.log(
+          `📱 Scriptable: 🃏 ${summary.alreadyWritten} row(s) were written by this run's earlier execution — not re-analyzed.`,
+        );
+      }
       console.log(
         `📱 Scriptable: 🃏 ${selected.length} of ${savedEvents.length} saved event(s) carry an approval — only those are re-analyzed; ${summary.skipped} skipped (not approved on the deck).`,
       );
       if (selected.length === 0) {
+        stopPhaseTimers();
         await this.presentSavedRunExecutionNotice(
-          "Nothing Approved",
+          summary.alreadyWritten > 0 ? "Nothing New to Write" : "Nothing Approved",
           `None of this run's ${savedEvents.length} event(s) has an approval on the Mac's review deck (${store.length} decision(s) loaded). Swipe right on the cards you want written, then tap Execute again.`,
         );
         return summary;
@@ -15862,12 +15919,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           globalConfig,
         );
       } catch (error) {
+        stopPhaseTimers();
         await this.presentSavedRunExecutionNotice(
           "Live Analysis Failed",
           `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written.`,
         );
         return summary;
       }
+      stopPhaseTimers();
       if (!Array.isArray(freshAnalyzed)) freshAnalyzed = [];
 
       const counts = core.applyOwnerDecisions(freshAnalyzed, reviewStore);
@@ -15980,6 +16039,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         trigger: "owner-review",
       };
       const writesDoneAt = Date.now();
+      // Logged BEFORE the run-file save and the log write, so it lands in
+      // the review log (the earlier timing line came after the log was
+      // written and never did).
+      {
+        const aiNow = this._postJsonStats || { calls: 0, ms: 0 };
+        const aiCalls = aiNow.calls - aiCallsBefore.calls;
+        const aiMs = aiNow.ms - aiCallsBefore.ms;
+        const seconds = (ms) => (ms / 1000).toFixed(1);
+        const phaseText = Object.keys(phases)
+          .map((name) => `${name} ${phases[name].calls} (${seconds(phases[name].ms)} s)`)
+          .join(", ");
+        console.log(
+          `📱 Scriptable: 🃏 Reviewed execute timing — ${seconds(writesDoneAt - executeStartedAt)} s live analysis + writes for ${toAnalyze.length} row(s): AI requests ${aiCalls} (${seconds(aiMs)} s)${phaseText ? `, ${phaseText}` : ""}; the remainder is in-memory analysis.`,
+        );
+      }
       await this.persistExecutedSavedRunSnapshot(results);
       const persistedAt = Date.now();
       await this.runPostRunHousekeeping(results, 30, {
@@ -15989,16 +16063,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // The phone's calendars are the truth the Mac run should compare
       // against next — snapshot the cities this plan touched.
       await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
-      const aiStats = this._postJsonStats || { calls: 0, ms: 0 };
-      console.log(
-        `📱 Scriptable: 🃏 Reviewed execute timing — ${writesDoneAt - executeStartedAt}ms live analysis + writes (${aiStats.calls} AI request(s), ${aiStats.ms}ms), ${persistedAt - writesDoneAt}ms run-file save, ${Date.now() - persistedAt}ms log/metrics/cleanup + calendar snapshots`,
-      );
+      void persistedAt;
       await this.presentSavedRunExecutionNotice(
         "Calendar Updated",
         [
           `➕ Created ${summary.created}`,
           `🔄 Updated ${summary.updated}`,
           `🃏 Approved ${counts.approved} · ${summary.skipped} not approved (skipped)`,
+          summary.alreadyWritten > 0 ? `✅ ${summary.alreadyWritten} written by this run's earlier execution` : "",
           counts.awaiting || counts.rejected ? `⏸️ Approval no longer matches ${counts.awaiting} · rejected ${counts.rejected}` : "",
           failureCount > 0
             ? `⚠️ ${failureCount} write(s) FAILED (recorded on the run file)`
