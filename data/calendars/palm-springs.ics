@@ -6,9 +6,116 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-palm-springs
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20261008T160000Z
+DTEND:20261012T065959Z
+DTSTAMP:20260919T180740Z
+UID:CF94E9E5-F620-4918-AB7E-6B3BC007FB5C
+CREATED:20260919T161250Z
+DESCRIPTION:description: Western Xposure's HAUNTED GAY RESORT returns this 
+ October!\nbar: CCBC Resort Hotel\naddress: 68-300 Gay Resort Drive\, Cathed
+ ral City\, CA 92234\nticketUrl: https://www.eventbrite.com/e/western-xposur
+ e-fall-2026-tickets-1975198341410\nimage: https://acqvlhciredwtlbpisso.supa
+ base.co/storage/v1/object/public/event-images/a0b5ba9d91f6f3dc.jpg\ncover: 
+ $28.52-$193.92\ntimezone: America/Los_Angeles\nimageHorizontal: https://acq
+ vlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a0b5ba9
+ d91f6f3dc.jpg\naddressSource: page\nwebsite: https://www.westernxposure.com
+ /westernxposurefall\ngmaps: https://www.google.com/maps/search/?api=1&query
+ =CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20
+ City%2C%20CA%2092234\npinSource: geocoded-exact\nkey: western-xposure-fall-
+ 2026|2026-10-08|ccbc resort hotel\nimageSource: json-api\nbarSource: geo-po
+ i\nbearReview: unlikely — ai\\: The title and description mention 'Western 
+ Xposure' and 'HAUNTED GAY RESORT' but contain no bear-specific vocabulary\,
+  bear party branding\, or explicit targeting of the bear community.\nshortN
+ ame: WESTERN XPOSURE
+LAST-MODIFIED:20260919T161250Z
+LOCATION:33.7796835\, -116.4689784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Western Xposure: Fall 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260222T050000Z
+DTEND:20260222T200000Z
+DTSTAMP:20260919T180740Z
+UID:88686A1C-DD82-4C9B-A917-74B3647FD814
+CREATED:20260117T210201Z
+DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
+ address: 333 S Palm Canyon Dr Unit\, Palm Springs\, CA 92262\ntimezone: Ame
+ rica/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls
+ -ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84
+  - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?cr
+ op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
+ x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\nin
+ stagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee
+ /megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=3
+ 3.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: m
+ egawoof|2026-02-22|palm springs
+LAST-MODIFIED:20260208T200152Z
+LOCATION:33.8189101\, -116.5470896
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260925T070000Z
+DTEND:20260928T065959Z
+DTSTAMP:20260919T180740Z
+UID:1FF301F0-00FE-4849-BB32-A779D9362E83
+CREATED:20260919T161248Z
+DESCRIPTION:bar: Casa Oliver\naddress: 535 South Warm Sands Drive\, Palm Sp
+ rings\, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https
+ ://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabas
+ e.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSourc
+ e: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ 3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com
+ /maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20D
+ rive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSou
+ rce: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshor
+ tName: STICKY RICE
+LAST-MODIFIED:20260919T161248Z
+LOCATION:33.8147765\, -116.5376249
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Sticky Rice
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261015T070000Z
+DTEND:20261019T065959Z
+DTSTAMP:20260919T180740Z
+UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
+CREATED:20260919T161250Z
+DESCRIPTION:bar: CCBC Resort\naddress: Cathedral City\, CA\nwebsite: https:
+ //www.westernxposure.com/westernxposurexxl\nticketUrl: https://xxl2026.even
+ tbrite.com/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/obj
+ ect/public/event-images/cc0bf12ecfeed9c6.jpg\nimageSource: json-api\ncover:
+  $1-$180\ntimezone: America/Los_Angeles\nimageHorizontal: https://acqvlhcir
+ edwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed
+ 9c6.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=CCBC%20Resort%2C%20Cathedral%20City%2C%20CA\nkey: western-xposure
+ -xxl|2026-10-15|ccbc resort\nbearSource: ai\nshortName: WESTERN XPOSURE
+LAST-MODIFIED:20260919T161250Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Western Xposure XXL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20260913T140602Z
+DTSTAMP:20260919T180740Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:bar: CCBC Resort\naddress: 68-300 Gay Resort Dr\, Cathedral Cit
@@ -34,33 +141,6 @@ LOCATION:33.7796835\, -116.4689784
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Club Chub Weekend 2026 — The Ultimate Celebration!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260222T050000Z
-DTEND:20260222T200000Z
-DTSTAMP:20260913T140602Z
-UID:88686A1C-DD82-4C9B-A917-74B3647FD814
-CREATED:20260117T210201Z
-DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
- address: 333 S Palm Canyon Dr Unit\, Palm Springs\, CA 92262\ntimezone: Ame
- rica/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls
- -ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84
-  - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?cr
- op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
- x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\nin
- stagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee
- /megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=3
- 3.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: m
- egawoof|2026-02-22|palm springs
-LAST-MODIFIED:20260208T200152Z
-LOCATION:33.8189101\, -116.5470896
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

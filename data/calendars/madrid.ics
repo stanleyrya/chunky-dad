@@ -5,4 +5,27 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-madrid
 X-WR-TIMEZONE:Europe/Madrid
+BEGIN:VEVENT
+DTSTART:20261203T104500Z
+DTEND:20261209T050000Z
+DTSTAMP:20260919T180740Z
+UID:61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6
+CREATED:20260919T161240Z
+DESCRIPTION:bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett
+ ailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade95008
+ 25/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/publ
+ ic/event-images/a5fbc49d391cbd2c.jpg\nimageSource: json-api\ntimezone: Euro
+ pe/Madrid\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storag
+ e/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\naddressSource: page\n
+ gmaps: https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Mad
+ rid\nkey: madbear-party-2026-madrid|2026-12-03|bears bar\nbearSource: keywo
+ rd\nshortName: MADBEAR PARTY
+LAST-MODIFIED:20260919T161241Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MADBEAR PARTY 2026 - MADRID
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -105,8 +105,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 31462,
-      "eventCount": 31
+      "dataLength": 34535,
+      "eventCount": 34
     },
     "hong-kong": {
       "name": "Hong Kong",
@@ -129,20 +129,20 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 104289,
-      "eventCount": 95
+      "dataLength": 105817,
+      "eventCount": 96
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 29083,
+      "dataLength": 29085,
       "eventCount": 17
     },
     "madrid": {
       "name": "Madrid",
       "status": "success",
-      "dataLength": 193,
-      "eventCount": 0
+      "dataLength": 1221,
+      "eventCount": 1
     },
     "manchester": {
       "name": "Manchester",
@@ -177,14 +177,14 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 93124,
+      "dataLength": 93246,
       "eventCount": 80
     },
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 3287,
-      "eventCount": 2
+      "dataLength": 7145,
+      "eventCount": 5
     },
     "paris": {
       "name": "Paris",
@@ -213,7 +213,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 28795,
+      "dataLength": 29076,
       "eventCount": 20
     },
     "ptown": {
@@ -225,8 +225,8 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 26678,
-      "eventCount": 23
+      "dataLength": 29827,
+      "eventCount": 26
     },
     "sacramento": {
       "name": "Sacramento",
@@ -255,14 +255,14 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 27903,
-      "eventCount": 20
+      "dataLength": 29044,
+      "eventCount": 21
     },
     "sitges": {
       "name": "Sitges",
       "status": "success",
-      "dataLength": 61753,
-      "eventCount": 53
+      "dataLength": 63032,
+      "eventCount": 54
     },
     "tokyo": {
       "name": "Tokyo",
@@ -273,8 +273,8 @@
     "toronto": {
       "name": "Toronto",
       "status": "success",
-      "dataLength": 1810,
-      "eventCount": 1
+      "dataLength": 6281,
+      "eventCount": 5
     },
     "torremolinos": {
       "name": "Torremolinos",
@@ -291,8 +291,8 @@
     "vegas": {
       "name": "Las Vegas",
       "status": "success",
-      "dataLength": 6301,
-      "eventCount": 4
+      "dataLength": 7364,
+      "eventCount": 5
     }
   }
 }

@@ -6,277 +6,117 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-pv
 X-WR-TIMEZONE:America/Mexico_City
 BEGIN:VEVENT
-DTSTART:20270130T040000Z
-DTEND:20270130T110000Z
-DTSTAMP:20260919T020938Z
-UID:803706A1-C0E5-4190-A58C-42E8AE5E5545
-CREATED:20260917T215054Z
-DESCRIPTION:description: MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRO
- DUCER CHRIS COX PLAYING HOUSE\, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS\nba
- r: Joe Fiore's\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://be
- efdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026
- -01-30-Furball-Gear.webp\nimageSource: page\nimageVertical: https://beefdip
- .com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\naddressSource
- : page\nwebsite: https://www.furball.nyc\ntimezone: America/Mexico_City\ngm
- aps: https://www.google.com/maps/search/?api=1&query=joe%20fiore's%2C%20L%C
- 3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX\nshortName: FUR­BALL\ninstagram
- : https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\
- nkey: furball-gear-night|2027-01-30|joe fiore's\nbearSource: keyword
-LAST-MODIFIED:20260917T215054Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL GEAR NIGHT
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270126T170000Z
-DTEND:20270127T010000Z
-DTSTAMP:20260919T020938Z
-UID:765F235D-ADFF-4EBD-902F-F9D7571BB187
-CREATED:20260917T215048Z
-DESCRIPTION:description: DJ Giaco serves iconic hits and fresh beats all da
- y at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — S
- PLASH! is pure joy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111\nt
- imezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads
- /2026/01/2026-01-27%20Splash%20Pool%20Party.webp\nimageSource: page\nimageV
- ertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash
- %20Pool%20Party.webp\naddressSource: page\nwebsite: https://beefdip.com/tag
- s/\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2
- C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­D
- IP\nfavicon: https://beefdip.com\nkey: splash-classic-anthems-pool-party|20
- 27-01-26|hotel delfin\nbearSource: ai
-LAST-MODIFIED:20260917T215048Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SPLASH! Classic Anthems Pool Party
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270128T040000Z
-DTEND:20270128T110000Z
-DTSTAMP:20260919T020938Z
-UID:8D954FCB-BAC7-44C8-AF6F-5A855C5D49CB
-CREATED:20260917T215052Z
-DESCRIPTION:description: All white\, all night. Grammy-winner DJ Tracy Youn
- g headlines a dazzling night of glamour and big-room energy.\nbar: CC Slaug
- hters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://beefdip.com
- /tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20
- White%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: https:
- //beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.co
- m/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\ns
- hortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: white-party|2027-01-
- 28|cc slaughters\nbearSource: ai
-LAST-MODIFIED:20260917T215052Z
-LOCATION:20.6483408\, -105.1980403
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:WHITE PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20270125T180000Z
-DTEND:20270126T110000Z
-DTSTAMP:20260919T020938Z
-UID:3D6B9B6F-A474-41A5-B7F3-63768FB1700E
-CREATED:20260916T121805Z
-DESCRIPTION:description: Dive into waves of beats and bubbles as DJ Divisio
- n 4 (Australia) unleashes a high-energy soundtrack. Sun\, foam\, friends — 
- the ultimate poolside playground.\nbar: CC Slaughters\naddress: 4 Malecon\,
-  Puerto Vallarta\, Jalisco\nticketUrl: https://beefdip.com/tags/\nimage: ht
- tps://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20Flower
- Power.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2
- 026-01-26%20Foam%20Pool%20Party.webp\naddressSource: page\nwebsite: https:/
- /beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.com
- /maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nsh
- ortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: foam-pool-party|2027-
- 01-25|cc slaughters\nimageSource: page\nbearSource: ai
-LAST-MODIFIED:20260916T121805Z
-LOCATION:20.5973207\, -105.2392083
+DTEND:20270126T030000Z
+DTSTAMP:20260919T180740Z
+UID:E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D
+CREATED:20260916T121802Z
+DESCRIPTION:description: Take a breather and savor flavors at Vallarta’s ne
+ w Tryst Hotel restaurant. A perfect reset before going back out.\nbar: The 
+ Tryst Hotel Restaurant\ntimezone: America/Mexico_City\nwebsite: https://bee
+ fdip.com/tags/\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: din
+ ner-under-the-stars-tryst|2027-01-25|the tryst hotel restaurant\nbearSource
+ : ai\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20
+ Hotel%20Restaurant
+LAST-MODIFIED:20260919T012744Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FOAM POOL PARTY
+SUMMARY:DINNER UNDER THE STARS
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270131T040000Z
-DTEND:20270131T070000Z
-DTSTAMP:20260919T020938Z
-UID:3EF2A697-311A-4656-82D1-935346E6DD71
-CREATED:20260917T215055Z
-DESCRIPTION:description: Leather. Fetish. Freedom. DJ Jose Spinnin Cortes d
- elivers dark\, sexy house with performances by the BeefDip Dancers.\nbar: C
- C Slaughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\ntimezone: America/Mexic
- o_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20
- Black%20Ball.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp
- -content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nbarSource: curated
- \naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://w
- ww.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource
- : curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: the-blac
- k-ball|2027-01-31|cc slaughters\nbearSource: keyword
-LAST-MODIFIED:20260917T215055Z
-LOCATION:20.6483408\, -105.1980403
+DTSTART:20270124T180000Z
+DTEND:20270125T010000Z
+DTSTAMP:20260919T180740Z
+UID:263AC9ED-D5C1-48DE-BB56-9C16365DC46A
+CREATED:20260916T121802Z
+DESCRIPTION:description: STAGE PRESENTS\nBeefDip Bear Week & Delfin Hotel P
+ resent\nWEDNESDAY JANUARY 28· 12 PM - 7 PM\nJOE FIORE'S\nFURBALL\nPOOL PART
+ Y\nMUSIC BY BILLBOARD #1 PRODUCER\nMATT CONSOLA\nDELFIN BEACH RESORT· CALLE
+  RODOLFO GOMEZ 111\, PV\nFOOD FOR SALE\, BAG CHECK & TOWEL RENTALS AVAILABL
+ E\nCOVER INCLUDED WITH YOUR TAG · BIENVENIDOS TODOS · ALL ARE WELCOME\nbar:
+  Delfin Beach Resort\naddress: Calle Rodolfo Gomez 111\, PV\naddressSource:
+  page\nwebsite: http://beefdip.com/tags/\ntimezone: America/Mexico_City\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resor
+ t%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV\nshortName: BEEF­DIP\nfavicon:
+  https://beefdip.com\nkey: 🍸-cocktail-party|2027-01-24|delfin beach resort
+ \nbearSource: keyword
+LAST-MODIFIED:20260916T121802Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:THE BLACK BALL
+SUMMARY:🍸 Cocktail Party
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270123T210000Z
-DTEND:20270124T060000Z
-DTSTAMP:20260919T020938Z
-UID:0178A334-0562-44EC-99D3-5370DFF0C29F
-CREATED:20260916T121800Z
-DESCRIPTION:description: BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT\nb
- ar: Blue Chairs Resort\naddress: 4 Malecon\, Puerto Vallarta\, Jalisco\ntim
- ezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2
- 026/01/2026-01-25%20Welcome%20Party.webp\nimageSource: page\nimageVertical:
-  https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Part
- y.webp\naddressSource: geo-poi\nwebsite: https://beefdip.com\ngmaps: https:
- //www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20M
- alecon%2C%20Puerto%20Vallarta%2C%20Jalisco\npinSource: geocoded-exact\nbarS
- ource: geo-poi\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wel
- come-t-dance|2027-01-23|blue chairs resort\nbearSource: keyword
-LAST-MODIFIED:20260916T121801Z
-LOCATION:20.5973207\, -105.2392083
+DTSTART:20261127T060000Z
+DTEND:20261130T055959Z
+DTSTAMP:20260919T180740Z
+UID:72EFB160-A79F-4681-B5D1-24BF667B5FF7
+CREATED:20260919T161243Z
+DESCRIPTION:address: Puerto Vallarta\, Jalisco\nticketUrl: https://bearadis
+ emx.com/en/festivals/bearsgiving\nimage: https://acqvlhciredwtlbpisso.supab
+ ase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg\nimageSou
+ rce: json-api\ncover: $9-$230\ntimezone: America/Mexico_City\nimageVertical
+ : https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-i
+ mages/ac4b2c38d26f26f2.jpg\naddressSource: page\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco\nkey: bearsgivi
+ ng-2026|2026-11-27|\nbearSource: keyword
+LAST-MODIFIED:20260919T161244Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Welcome T-Dance
+SUMMARY:Bearsgiving 2026
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270129T020000Z
-DTEND:20270129T040000Z
-DTSTAMP:20260919T020938Z
-UID:0FC50D96-BE09-483F-A401-6A71C70977F9
-CREATED:20260916T121803Z
-DESCRIPTION:description: A new chill-out moment. Learn\, puff\, and mingle 
- with Papa Dirk at a relaxed rooftop social.\nbar: Blue Chairs Rooftop Bar\n
- address: MALECÓN 4\, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nimage: 
- https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.
- webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uplo
- ads/2026/01/2026-01-29%20Cigar%20Social.webp\naddressSource: page\nwebsite:
-  https://beefdip.com\ngmaps: https://www.google.com/maps/search/?api=1&quer
- y=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81
- NTICA\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: papa-dirk-ro
- oftop-cigar-social|2027-01-29|blue chairs rooftop bar\nbearSource: ai
-LAST-MODIFIED:20260916T121803Z
+DTSTART:20270129T150000Z
+DTEND:20270129T154500Z
+DTSTAMP:20260919T180740Z
+UID:959013F4-94D4-42C4-9389-BC3E068A5EE0
+CREATED:20260916T121808Z
+DESCRIPTION:description: Sail Banderas Bay\\: snorkeling\, whale watching\,
+  swims\, and beachside lunch. Food & drinks included ON THE BOAT. Lunch inc
+ luded at the Beach\, drinks at the beach restaurant are paid separately.\nb
+ ar: The Pier by Hotel Delfin\nimage: https://beefdip.com/wp-content/uploads
+ /2025/09/bd-event-banner-BOOZE.jpg\ncover: $150 USD\nimageVertical: https:/
+ /beefdip.com/wp-content/uploads/2026/01/2026-01-30%20BoozeCruise.webp\nwebs
+ ite: https://beefdip.com/\nshortName: BEEF­DIP\nfavicon: https://beefdip.co
+ m\nkey: booze-cruise|2027-01-29|the pier by hotel delfin\nbearSource: ai\nt
+ imezone: America/Mexico_City\nimageSource: page\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=The%20Pier%20by%20Hotel%20Delfin
+LAST-MODIFIED:20260917T215056Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:PAPA DIRK ROOFTOP CIGAR SOCIAL
+SUMMARY:BOOZE CRUISE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270129T020000Z
-DTEND:20270129T070000Z
-DTSTAMP:20260919T020938Z
-UID:79A9F181-A0E1-4E38-B6BE-1FAD0BFE461A
-CREATED:20260916T121807Z
-DESCRIPTION:description: Glow on the sand with live drummers\, fire dancers
- \, and DJ Matt Consola . Primal beats under the stars.\nbar: Blue Chairs Be
- ach\naddress: MALECÓN 4\, ZONA ROMÁNTICA\, EMILIANO ZAPATA\, P.V.\ntimezone
- : America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/0
- 1/2026-01-29%20Jungle%20Lust.webp\nimageSource: page\nimageVertical: https:
- //beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Jungle%20Lust.webp\na
- ddressSource: page\nwebsite: https://beefdip.com/\ngmaps: https://www.googl
- e.com/maps/search/?api=1&query=Blue%20Chairs%20Beach%2C%20MALEC%C3%93N%204%
- 2C%20ZONA%20ROM%C3%81NTICA%2C%20EMILIANO%20ZAPATA%2C%20P.V.\nshortName: BEE
- F­DIP\nfavicon: https://beefdip.com\nkey: jungle-lust-–-neon-beach-party|20
- 27-01-29|blue chairs beach\nbearSource: ai
-LAST-MODIFIED:20260916T121807Z
+DTSTART:20270122T220000Z
+DTEND:20270201T053000Z
+DTSTAMP:20260919T180740Z
+UID:DEB2EF89-219B-4873-A9F0-128850B81271
+CREATED:20260919T161244Z
+DESCRIPTION:bar: Majahuitas\naddress: Puerto Vallarta\, Jalisco\nticketUrl:
+  https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=r
+ eferral&utm_campaign=ibff2027\nimage: https://acqvlhciredwtlbpisso.supabase
+ .co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg\nimageSource
+ : json-api\ncover: $225\ntimezone: America/Mexico_City\nimageVertical: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ 33f77fcbc30504e3.jpg\naddressSource: page\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco\nkey:
+  bearadise-ibff-bear-week-2027|2027-01-22|majahuitas\nbearSource: keyword\n
+ shortName: BEARADISE IBFF
+LAST-MODIFIED:20260919T161245Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:JUNGLE LUST – NEON BEACH PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270124T210000Z
-DTEND:20270125T060000Z
-DTSTAMP:20260919T020938Z
-UID:4AA8B150-948A-4511-8DE5-59B86DCD915E
-CREATED:20260917T215049Z
-DESCRIPTION:description: The official kickoff! As the sun sets over Bandera
- s Bay\, DJ Giaco fires up the decks and resident drag queens bring the dram
- a. Expect rooftop beats\, stunning views\, and the thrill of reuniting with
-  the global bear family.\nbar: BLUE CHAIRS RESORT\naddress: 4 Malecon\, Pue
- rto Vallarta\, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefd
- ip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageS
- ource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/
- 2026-01-25%20Welcome%20Party.webp\naddressSource: geo-poi\nwebsite: https:/
- /beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=
- BLUE%20CHAIRS%20RESORT%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco
- \npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEEF­DIP\nfavic
- on: https://beefdip.com\nkey: welcome-party|2027-01-24|blue chairs resort\n
- bearSource: ai
-LAST-MODIFIED:20260917T215049Z
-LOCATION:20.5973207\, -105.2392083
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:WELCOME PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270126T040000Z
-DTEND:20270126T110000Z
-DTSTAMP:20260919T020938Z
-UID:BDC6E620-007E-48C9-872A-DF47D5409A7D
-CREATED:20260917T215050Z
-DESCRIPTION:description: OUR LEGENDARY DISCO NIGHT INSPIRED BY THE SUMMER O
- F LOVE!\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUr
- l: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads
- /2026/01/2026-01-26%20Bearland%20FlowerPower.webp\nimageSource: page\nimage
- Vertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearl
- and%20FlowerPower.webp\naddressSource: page\nwebsite: https://beefdip.com\n
- timezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?q=
- place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­D
- IP\nfavicon: https://beefdip.com\nkey: flower-power-disco|2027-01-26|cc sla
- ughters\nbearSource: ai
-LAST-MODIFIED:20260917T215050Z
-LOCATION:20.6483408\, -105.1980403
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FLOWER POWER DISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270129T180000Z
-DTEND:20270130T000000Z
-DTSTAMP:20260919T020938Z
-UID:12A249A3-C5EE-41A2-A583-F7FE4ADCA58C
-CREATED:20260917T215053Z
-DESCRIPTION:description: A foamy fiesta with our friends from Mad.Bear Spai
- n. DJ Benjamin Koll and DJ Nalgaroth bring the heat.\nbar: Blue Chairs Reso
- rt\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://beefdip.com/ta
- gs/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20Mad
- Bear%20Foam%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: 
- https://beefdip.com/\ngmaps: https://www.google.com/maps/search/?api=1&quer
- y=Blue%20Chairs%20Resort%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20M
- X\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-foam-po
- ol-party|2027-01-29|blue chairs resort\nbearSource: keyword\ntimezone: Amer
- ica/Mexico_City
-LAST-MODIFIED:20260917T215053Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MAD.BEAR FOAM POOL PARTY
+SUMMARY:Bearadise IBFF Bear Week 2027
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -284,7 +124,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20270127T180000Z
 DTEND:20270128T010000Z
-DTSTAMP:20260919T020938Z
+DTSTAMP:20260919T180740Z
 UID:07B0F9A5-C206-412E-B246-BF0E501F9D43
 CREATED:20260916T121806Z
 DESCRIPTION:description: Straight from New York—home to one of the most ico
@@ -313,125 +153,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270127T040000Z
-DTEND:20270127T110000Z
-DTSTAMP:20260919T020938Z
-UID:92931656-EB15-4AE0-80EB-1D3F9AC2B955
-CREATED:20260916T121806Z
-DESCRIPTION:description: DJ Division 4 brings Sydney fire to Vallarta. Red 
- lights\, hot bodies\, and relentless beats until dawn. Come burn up the dan
- ce floor.\nbar: CC Slaughters\naddress: Lázaro Cárdenas 254\ntimezone: Amer
- ica/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefd
- ip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\ni
- mageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/202
- 6/01/2026-01-27%20MadBear%20Red%20Ball.webp\naddressSource: page\nwebsite: 
- https://beefdip.com/\ngmaps: https://www.google.com/maps/place/?q=place_id:
- ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavic
- on: https://beefdip.com\nkey: mad-bear-red-ball|2027-01-27|cc slaughters\nb
- earSource: keyword
-LAST-MODIFIED:20260916T121806Z
-LOCATION:20.6483408\, -105.1980403
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MAD.BEAR RED BALL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270125T180000Z
-DTEND:20270126T030000Z
-DTSTAMP:20260919T020938Z
-UID:E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D
-CREATED:20260916T121802Z
-DESCRIPTION:description: Take a breather and savor flavors at Vallarta’s ne
- w Tryst Hotel restaurant. A perfect reset before going back out.\nbar: The 
- Tryst Hotel Restaurant\ntimezone: America/Mexico_City\nwebsite: https://bee
- fdip.com/tags/\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: din
- ner-under-the-stars-tryst|2027-01-25|the tryst hotel restaurant\nbearSource
- : ai\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20
- Hotel%20Restaurant
-LAST-MODIFIED:20260919T012744Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DINNER UNDER THE STARS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270128T180000Z
-DTEND:20270129T010000Z
-DTSTAMP:20260919T020938Z
-UID:3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F
-CREATED:20260916T121807Z
-DESCRIPTION:description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea
- ch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\
- nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%2
- 0WAVE%20FIX.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-
- content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\naddressSource
- : page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/m
- aps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gome
- z%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­DIP\nfavicon: https://beefd
- ip.com\nkey: tidal-wave|2027-01-28|delfin beach resort\nbearSource: keyword
-LAST-MODIFIED:20260916T121807Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:TIDAL WAVE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270129T150000Z
-DTEND:20270129T154500Z
-DTSTAMP:20260919T020938Z
-UID:959013F4-94D4-42C4-9389-BC3E068A5EE0
-CREATED:20260916T121808Z
-DESCRIPTION:description: Sail Banderas Bay\\: snorkeling\, whale watching\,
-  swims\, and beachside lunch. Food & drinks included ON THE BOAT. Lunch inc
- luded at the Beach\, drinks at the beach restaurant are paid separately.\nb
- ar: The Pier by Hotel Delfin\nimage: https://beefdip.com/wp-content/uploads
- /2025/09/bd-event-banner-BOOZE.jpg\ncover: $150 USD\nimageVertical: https:/
- /beefdip.com/wp-content/uploads/2026/01/2026-01-30%20BoozeCruise.webp\nwebs
- ite: https://beefdip.com/\nshortName: BEEF­DIP\nfavicon: https://beefdip.co
- m\nkey: booze-cruise|2027-01-29|the pier by hotel delfin\nbearSource: ai\nt
- imezone: America/Mexico_City\nimageSource: page\ngmaps: https://www.google.
- com/maps/search/?api=1&query=The%20Pier%20by%20Hotel%20Delfin
-LAST-MODIFIED:20260917T215056Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BOOZE CRUISE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270131T170000Z
-DTEND:20270201T010000Z
-DTSTAMP:20260919T020938Z
-UID:E7A1168A-C5EA-4DBA-9375-24484BD73E43
-CREATED:20260916T121804Z
-DESCRIPTION:description: Two brunch seatings available\\: 11\\:00 AM and 1\
- \:00 PM\nExpect fierce drag performances\, delicious brunch\, laughs\, and 
- vacation vibes.\nAnd yes… the rooftop pool opens at 1\\:00 PM\nCome for bru
- nch\, stay for the pool—sun\, cocktails\, and an elevated afternoon at The 
- Tryst.\nbar: The Tryst Hotel\nwebsite: http://beefdip.com/tags/\ngmaps: htt
- ps://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel\nshortName
- : BEEF­DIP\nfavicon: https://beefdip.com\nkey: drag-brunch-rooftop-pool|202
- 7-01-31|the tryst hotel\nbearSource: ai\ntimezone: America/Mexico_City
-LAST-MODIFIED:20260916T121804Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Drag Brunch + Rooftop Pool
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20270129T040000Z
 DTEND:20270129T110000Z
-DTSTAMP:20260919T020938Z
+DTSTAMP:20260919T180740Z
 UID:AF6E75DC-2199-42BC-B873-2329FC71A561
 CREATED:20260916T121808Z
 DESCRIPTION:description: Step into a full-throttle Mardi Gras frenzy at Val
@@ -455,26 +179,268 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270124T180000Z
-DTEND:20270125T010000Z
-DTSTAMP:20260919T020938Z
-UID:263AC9ED-D5C1-48DE-BB56-9C16365DC46A
-CREATED:20260916T121802Z
-DESCRIPTION:description: STAGE PRESENTS\nBeefDip Bear Week & Delfin Hotel P
- resent\nWEDNESDAY JANUARY 28· 12 PM - 7 PM\nJOE FIORE'S\nFURBALL\nPOOL PART
- Y\nMUSIC BY BILLBOARD #1 PRODUCER\nMATT CONSOLA\nDELFIN BEACH RESORT· CALLE
-  RODOLFO GOMEZ 111\, PV\nFOOD FOR SALE\, BAG CHECK & TOWEL RENTALS AVAILABL
- E\nCOVER INCLUDED WITH YOUR TAG · BIENVENIDOS TODOS · ALL ARE WELCOME\nbar:
-  Delfin Beach Resort\naddress: Calle Rodolfo Gomez 111\, PV\naddressSource:
-  page\nwebsite: http://beefdip.com/tags/\ntimezone: America/Mexico_City\ngm
- aps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resor
- t%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV\nshortName: BEEF­DIP\nfavicon:
-  https://beefdip.com\nkey: 🍸-cocktail-party|2027-01-24|delfin beach resort
- \nbearSource: keyword
-LAST-MODIFIED:20260916T121802Z
+DTSTART:20270124T030000Z
+DTEND:20270124T060000Z
+DTSTAMP:20260919T180740Z
+UID:91A74D31-4AB8-4FC2-B65B-A08647D661EA
+CREATED:20260916T121801Z
+DESCRIPTION:description: Kick off early with a sneak preview of BeefDip ene
+ rgy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury\, s
+ tyle\, and rooftop vibes set the scene for bears from all over the world to
+  meet before the madness begins.\nbar: The Tryst Hotel RoofTop\nwebsite: ht
+ tp://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&qu
+ ery=The%20Tryst%20Hotel%20RoofTop\nshortName: BEEF­DIP\nfavicon: https://be
+ efdip.com\nkey: pre-welcome-party|2027-01-23|the tryst hotel rooftop\nbearS
+ ource: keyword\ntimezone: America/Mexico_City
+LAST-MODIFIED:20260916T121801Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:🍸 Cocktail Party
+SUMMARY:PRE WELCOME PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270125T180000Z
+DTEND:20270126T110000Z
+DTSTAMP:20260919T180740Z
+UID:3D6B9B6F-A474-41A5-B7F3-63768FB1700E
+CREATED:20260916T121805Z
+DESCRIPTION:description: Dive into waves of beats and bubbles as DJ Divisio
+ n 4 (Australia) unleashes a high-energy soundtrack. Sun\, foam\, friends — 
+ the ultimate poolside playground.\nbar: CC Slaughters\naddress: 4 Malecon\,
+  Puerto Vallarta\, Jalisco\nticketUrl: https://beefdip.com/tags/\nimage: ht
+ tps://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20Flower
+ Power.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2
+ 026-01-26%20Foam%20Pool%20Party.webp\naddressSource: page\nwebsite: https:/
+ /beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nsh
+ ortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: foam-pool-party|2027-
+ 01-25|cc slaughters\nimageSource: page\nbearSource: ai
+LAST-MODIFIED:20260916T121805Z
+LOCATION:20.5973207\, -105.2392083
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FOAM POOL PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270123T210000Z
+DTEND:20270124T060000Z
+DTSTAMP:20260919T180740Z
+UID:0178A334-0562-44EC-99D3-5370DFF0C29F
+CREATED:20260916T121800Z
+DESCRIPTION:description: BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT\nb
+ ar: Blue Chairs Resort\naddress: 4 Malecon\, Puerto Vallarta\, Jalisco\ntim
+ ezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2
+ 026/01/2026-01-25%20Welcome%20Party.webp\nimageSource: page\nimageVertical:
+  https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Part
+ y.webp\naddressSource: geo-poi\nwebsite: https://beefdip.com\ngmaps: https:
+ //www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20M
+ alecon%2C%20Puerto%20Vallarta%2C%20Jalisco\npinSource: geocoded-exact\nbarS
+ ource: geo-poi\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wel
+ come-t-dance|2027-01-23|blue chairs resort\nbearSource: keyword
+LAST-MODIFIED:20260916T121801Z
+LOCATION:20.5973207\, -105.2392083
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Welcome T-Dance
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270201T040000Z
+DTEND:20270201T110000Z
+DTSTAMP:20260919T180740Z
+UID:92F85CD7-9A03-4F71-AFDE-06D029A42E79
+CREATED:20260916T121805Z
+DESCRIPTION:description: Underwear\, Jockstrap & Singlet Party\nbar: CC Sla
+ ughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nimage: https://beefdip.com/w
+ p-content/uploads/2026/01/2026-02-01%20Sweat.webp\nimageVertical: https://b
+ eefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\naddressSourc
+ e: page\nwebsite: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01
+ \ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?
+ q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF
+ ­DIP\nfavicon: https://beefdip.com\nkey: sweat-–-singlet-underwear-jockstra
+ p-party|2027-02-01|cc slaughters\nimageSource: page\nbearSource: keyword
+LAST-MODIFIED:20260916T121805Z
+LOCATION:20.6483408\, -105.1980403
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SWEAT – SINGLET\, UNDERWEAR & JOCKSTRAP PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270126T040000Z
+DTEND:20270126T110000Z
+DTSTAMP:20260919T180740Z
+UID:BDC6E620-007E-48C9-872A-DF47D5409A7D
+CREATED:20260917T215050Z
+DESCRIPTION:description: OUR LEGENDARY DISCO NIGHT INSPIRED BY THE SUMMER O
+ F LOVE!\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUr
+ l: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads
+ /2026/01/2026-01-26%20Bearland%20FlowerPower.webp\nimageSource: page\nimage
+ Vertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearl
+ and%20FlowerPower.webp\naddressSource: page\nwebsite: https://beefdip.com\n
+ timezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?q=
+ place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­D
+ IP\nfavicon: https://beefdip.com\nkey: flower-power-disco|2027-01-26|cc sla
+ ughters\nbearSource: ai
+LAST-MODIFIED:20260917T215050Z
+LOCATION:20.6483408\, -105.1980403
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FLOWER POWER DISCO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270127T040000Z
+DTEND:20270127T110000Z
+DTSTAMP:20260919T180740Z
+UID:92931656-EB15-4AE0-80EB-1D3F9AC2B955
+CREATED:20260916T121806Z
+DESCRIPTION:description: DJ Division 4 brings Sydney fire to Vallarta. Red 
+ lights\, hot bodies\, and relentless beats until dawn. Come burn up the dan
+ ce floor.\nbar: CC Slaughters\naddress: Lázaro Cárdenas 254\ntimezone: Amer
+ ica/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefd
+ ip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\ni
+ mageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/202
+ 6/01/2026-01-27%20MadBear%20Red%20Ball.webp\naddressSource: page\nwebsite: 
+ https://beefdip.com/\ngmaps: https://www.google.com/maps/place/?q=place_id:
+ ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavic
+ on: https://beefdip.com\nkey: mad-bear-red-ball|2027-01-27|cc slaughters\nb
+ earSource: keyword
+LAST-MODIFIED:20260916T121806Z
+LOCATION:20.6483408\, -105.1980403
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MAD.BEAR RED BALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270129T020000Z
+DTEND:20270129T070000Z
+DTSTAMP:20260919T180740Z
+UID:79A9F181-A0E1-4E38-B6BE-1FAD0BFE461A
+CREATED:20260916T121807Z
+DESCRIPTION:description: Glow on the sand with live drummers\, fire dancers
+ \, and DJ Matt Consola . Primal beats under the stars.\nbar: Blue Chairs Be
+ ach\naddress: MALECÓN 4\, ZONA ROMÁNTICA\, EMILIANO ZAPATA\, P.V.\ntimezone
+ : America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/0
+ 1/2026-01-29%20Jungle%20Lust.webp\nimageSource: page\nimageVertical: https:
+ //beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Jungle%20Lust.webp\na
+ ddressSource: page\nwebsite: https://beefdip.com/\ngmaps: https://www.googl
+ e.com/maps/search/?api=1&query=Blue%20Chairs%20Beach%2C%20MALEC%C3%93N%204%
+ 2C%20ZONA%20ROM%C3%81NTICA%2C%20EMILIANO%20ZAPATA%2C%20P.V.\nshortName: BEE
+ F­DIP\nfavicon: https://beefdip.com\nkey: jungle-lust-–-neon-beach-party|20
+ 27-01-29|blue chairs beach\nbearSource: ai
+LAST-MODIFIED:20260916T121807Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:JUNGLE LUST – NEON BEACH PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270126T170000Z
+DTEND:20270127T010000Z
+DTSTAMP:20260919T180740Z
+UID:765F235D-ADFF-4EBD-902F-F9D7571BB187
+CREATED:20260917T215048Z
+DESCRIPTION:description: DJ Giaco serves iconic hits and fresh beats all da
+ y at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — S
+ PLASH! is pure joy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111\nt
+ imezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads
+ /2026/01/2026-01-27%20Splash%20Pool%20Party.webp\nimageSource: page\nimageV
+ ertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash
+ %20Pool%20Party.webp\naddressSource: page\nwebsite: https://beefdip.com/tag
+ s/\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2
+ C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­D
+ IP\nfavicon: https://beefdip.com\nkey: splash-classic-anthems-pool-party|20
+ 27-01-26|hotel delfin\nbearSource: ai
+LAST-MODIFIED:20260917T215048Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SPLASH! Classic Anthems Pool Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270129T020000Z
+DTEND:20270129T040000Z
+DTSTAMP:20260919T180740Z
+UID:0FC50D96-BE09-483F-A401-6A71C70977F9
+CREATED:20260916T121803Z
+DESCRIPTION:description: A new chill-out moment. Learn\, puff\, and mingle 
+ with Papa Dirk at a relaxed rooftop social.\nbar: Blue Chairs Rooftop Bar\n
+ address: MALECÓN 4\, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nimage: 
+ https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.
+ webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uplo
+ ads/2026/01/2026-01-29%20Cigar%20Social.webp\naddressSource: page\nwebsite:
+  https://beefdip.com\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81
+ NTICA\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: papa-dirk-ro
+ oftop-cigar-social|2027-01-29|blue chairs rooftop bar\nbearSource: ai
+LAST-MODIFIED:20260916T121803Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:PAPA DIRK ROOFTOP CIGAR SOCIAL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270128T180000Z
+DTEND:20270129T010000Z
+DTSTAMP:20260919T180740Z
+UID:3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F
+CREATED:20260916T121807Z
+DESCRIPTION:description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea
+ ch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\
+ nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%2
+ 0WAVE%20FIX.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-
+ content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\naddressSource
+ : page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/m
+ aps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gome
+ z%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­DIP\nfavicon: https://beefd
+ ip.com\nkey: tidal-wave|2027-01-28|delfin beach resort\nbearSource: keyword
+LAST-MODIFIED:20260916T121807Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TIDAL WAVE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270131T170000Z
+DTEND:20270201T010000Z
+DTSTAMP:20260919T180740Z
+UID:E7A1168A-C5EA-4DBA-9375-24484BD73E43
+CREATED:20260916T121804Z
+DESCRIPTION:description: Two brunch seatings available\\: 11\\:00 AM and 1\
+ \:00 PM\nExpect fierce drag performances\, delicious brunch\, laughs\, and 
+ vacation vibes.\nAnd yes… the rooftop pool opens at 1\\:00 PM\nCome for bru
+ nch\, stay for the pool—sun\, cocktails\, and an elevated afternoon at The 
+ Tryst.\nbar: The Tryst Hotel\nwebsite: http://beefdip.com/tags/\ngmaps: htt
+ ps://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel\nshortName
+ : BEEF­DIP\nfavicon: https://beefdip.com\nkey: drag-brunch-rooftop-pool|202
+ 7-01-31|the tryst hotel\nbearSource: ai\ntimezone: America/Mexico_City
+LAST-MODIFIED:20260916T121804Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Drag Brunch + Rooftop Pool
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -482,7 +448,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20270124T040000Z
 DTEND:20270124T110000Z
-DTSTAMP:20260919T020938Z
+DTSTAMP:20260919T180740Z
 UID:916C5FDB-AA7D-4630-902A-8E5CF3308C44
 CREATED:20260916T121809Z
 DESCRIPTION:description: MUSIC BY GRAMMY AWARD WINNING PRODUCER TRACY YOUNG
@@ -503,31 +469,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270124T030000Z
-DTEND:20270124T060000Z
-DTSTAMP:20260919T020938Z
-UID:91A74D31-4AB8-4FC2-B65B-A08647D661EA
-CREATED:20260916T121801Z
-DESCRIPTION:description: Kick off early with a sneak preview of BeefDip ene
- rgy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury\, s
- tyle\, and rooftop vibes set the scene for bears from all over the world to
-  meet before the madness begins.\nbar: The Tryst Hotel RoofTop\nwebsite: ht
- tp://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&qu
- ery=The%20Tryst%20Hotel%20RoofTop\nshortName: BEEF­DIP\nfavicon: https://be
- efdip.com\nkey: pre-welcome-party|2027-01-23|the tryst hotel rooftop\nbearS
- ource: keyword\ntimezone: America/Mexico_City
-LAST-MODIFIED:20260916T121801Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:PRE WELCOME PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20270130T180000Z
 DTEND:20270131T010000Z
-DTSTAMP:20260919T020938Z
+DTSTAMP:20260919T180740Z
 UID:EABC3808-0E0D-466A-910C-872639C83676
 CREATED:20260916T121804Z
 DESCRIPTION:description: Our biggest pool party of the week\, definitely ho
@@ -551,25 +495,151 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20270201T040000Z
-DTEND:20270201T110000Z
-DTSTAMP:20260919T020938Z
-UID:92F85CD7-9A03-4F71-AFDE-06D029A42E79
-CREATED:20260916T121805Z
-DESCRIPTION:description: Underwear\, Jockstrap & Singlet Party\nbar: CC Sla
- ughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nimage: https://beefdip.com/w
- p-content/uploads/2026/01/2026-02-01%20Sweat.webp\nimageVertical: https://b
- eefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\naddressSourc
- e: page\nwebsite: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01
- \ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?
- q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF
- ­DIP\nfavicon: https://beefdip.com\nkey: sweat-–-singlet-underwear-jockstra
- p-party|2027-02-01|cc slaughters\nimageSource: page\nbearSource: keyword
-LAST-MODIFIED:20260916T121805Z
+DTSTART:20261127T203000Z
+DTEND:20261128T013000Z
+DTSTAMP:20260919T180740Z
+UID:3BD804A4-9548-4006-848B-2823AB4D3B32
+CREATED:20260919T161244Z
+DESCRIPTION:bar: Majahuitas Beach Club\naddress: Puerto Vallarta\, Jalisco\
+ nticketUrl: https://bearadisemx.com/en/love-boat\nimage: https://acqvlhcire
+ dwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb0
+ 10.webp\nimageSource: json-api\ncover: $215\ntimezone: America/Mexico_City\
+ nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/
+ public/event-images/21738e910aedb010.webp\naddressSource: page\ngmaps: http
+ s://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20
+ Puerto%20Vallarta%2C%20Jalisco\nkey: bearadise-love-boat-bearsgiving-2026|2
+ 026-11-27|majahuitas beach club\nbearSource: keyword\nshortName: BEARADISE 
+ LOVE
+LAST-MODIFIED:20260919T161244Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearadise Love Boat - Bearsgiving 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270130T040000Z
+DTEND:20270130T110000Z
+DTSTAMP:20260919T180740Z
+UID:803706A1-C0E5-4190-A58C-42E8AE5E5545
+CREATED:20260917T215054Z
+DESCRIPTION:description: MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRO
+ DUCER CHRIS COX PLAYING HOUSE\, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS\nba
+ r: Joe Fiore's\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://be
+ efdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026
+ -01-30-Furball-Gear.webp\nimageSource: page\nimageVertical: https://beefdip
+ .com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\naddressSource
+ : page\nwebsite: https://www.furball.nyc\ntimezone: America/Mexico_City\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=joe%20fiore's%2C%20L%C
+ 3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX\nshortName: FUR­BALL\ninstagram
+ : https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\
+ nkey: furball-gear-night|2027-01-30|joe fiore's\nbearSource: keyword
+LAST-MODIFIED:20260917T215054Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL GEAR NIGHT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270124T210000Z
+DTEND:20270125T060000Z
+DTSTAMP:20260919T180740Z
+UID:4AA8B150-948A-4511-8DE5-59B86DCD915E
+CREATED:20260917T215049Z
+DESCRIPTION:description: The official kickoff! As the sun sets over Bandera
+ s Bay\, DJ Giaco fires up the decks and resident drag queens bring the dram
+ a. Expect rooftop beats\, stunning views\, and the thrill of reuniting with
+  the global bear family.\nbar: BLUE CHAIRS RESORT\naddress: 4 Malecon\, Pue
+ rto Vallarta\, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefd
+ ip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageS
+ ource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/
+ 2026-01-25%20Welcome%20Party.webp\naddressSource: geo-poi\nwebsite: https:/
+ /beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ BLUE%20CHAIRS%20RESORT%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco
+ \npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEEF­DIP\nfavic
+ on: https://beefdip.com\nkey: welcome-party|2027-01-24|blue chairs resort\n
+ bearSource: ai
+LAST-MODIFIED:20260917T215049Z
+LOCATION:20.5973207\, -105.2392083
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:WELCOME PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270128T040000Z
+DTEND:20270128T110000Z
+DTSTAMP:20260919T180740Z
+UID:8D954FCB-BAC7-44C8-AF6F-5A855C5D49CB
+CREATED:20260917T215052Z
+DESCRIPTION:description: All white\, all night. Grammy-winner DJ Tracy Youn
+ g headlines a dazzling night of glamour and big-room energy.\nbar: CC Slaug
+ hters\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://beefdip.com
+ /tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20
+ White%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: https:
+ //beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.co
+ m/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\ns
+ hortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: white-party|2027-01-
+ 28|cc slaughters\nbearSource: ai
+LAST-MODIFIED:20260917T215052Z
 LOCATION:20.6483408\, -105.1980403
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:SWEAT – SINGLET\, UNDERWEAR & JOCKSTRAP PARTY
+SUMMARY:WHITE PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270129T180000Z
+DTEND:20270130T000000Z
+DTSTAMP:20260919T180740Z
+UID:12A249A3-C5EE-41A2-A583-F7FE4ADCA58C
+CREATED:20260917T215053Z
+DESCRIPTION:description: A foamy fiesta with our friends from Mad.Bear Spai
+ n. DJ Benjamin Koll and DJ Nalgaroth bring the heat.\nbar: Blue Chairs Reso
+ rt\naddress: LÁZARO CÁRDENAS 254\, PV MX\nticketUrl: https://beefdip.com/ta
+ gs/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20Mad
+ Bear%20Foam%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: 
+ https://beefdip.com/\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=Blue%20Chairs%20Resort%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20M
+ X\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-foam-po
+ ol-party|2027-01-29|blue chairs resort\nbearSource: keyword\ntimezone: Amer
+ ica/Mexico_City
+LAST-MODIFIED:20260917T215053Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MAD.BEAR FOAM POOL PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270131T040000Z
+DTEND:20270131T070000Z
+DTSTAMP:20260919T180740Z
+UID:3EF2A697-311A-4656-82D1-935346E6DD71
+CREATED:20260917T215055Z
+DESCRIPTION:description: Leather. Fetish. Freedom. DJ Jose Spinnin Cortes d
+ elivers dark\, sexy house with performances by the BeefDip Dancers.\nbar: C
+ C Slaughters\naddress: LÁZARO CÁRDENAS 254\, PV MX\ntimezone: America/Mexic
+ o_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20
+ Black%20Ball.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp
+ -content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nbarSource: curated
+ \naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://w
+ ww.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource
+ : curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: the-blac
+ k-ball|2027-01-31|cc slaughters\nbearSource: keyword
+LAST-MODIFIED:20260917T215055Z
+LOCATION:20.6483408\, -105.1980403
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THE BLACK BALL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

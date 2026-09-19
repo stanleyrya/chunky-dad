@@ -6,9 +6,108 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-toronto
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART:20260920T170000Z
+DTEND:20260920T220000Z
+DTSTAMP:20260919T180740Z
+UID:65B3C505-B6ED-45D9-8AD5-13E45BE68C7C
+CREATED:20260919T161238Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\nwebsite
+ : https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://ac
+ qvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda
+ 00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVert
+ ical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/eve
+ nt-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.
+ google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Stree
+ t%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FRE
+ Q=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2026-09-20|spa excess\nbearSourc
+ e: keyword\nshortName: BEARS IN EXCESS
+LAST-MODIFIED:20260919T161238Z
+LOCATION:43.6620695\, -79.3773558
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears in Excess
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270131T180000Z
+DTEND:20270131T230000Z
+DTSTAMP:20260919T180740Z
+UID:A16A6303-3DBC-48D0-995D-8DCAE323008B
+CREATED:20260919T161240Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
+ o\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public
+ /event-images/746b86430162dac9.jpg\nimageSource: json-api\ntimezone: Americ
+ a/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/
+ v1/object/public/event-images/746b86430162dac9.jpg\naddressSource: geo-poi\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%201
+ 05%20Carlton%20Street%2C%20Toronto%2C%20Ontario\npinSource: geocoded-exact\
+ nbarSource: geo-poi\nkey: chubs-at-the-tubs|2027-01-31|spa excess\nbearSour
+ ce: keyword\nshortName: CHUBS
+LAST-MODIFIED:20260919T161240Z
+LOCATION:43.6620695\, -79.3773558
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Chubs at the Tubs
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261018T170000Z
+DTEND:20261018T220000Z
+DTSTAMP:20260919T180740Z
+UID:F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940
+CREATED:20260919T161239Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\nwebsite
+ : https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://ac
+ qvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda
+ 00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVert
+ ical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/eve
+ nt-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.
+ google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Stree
+ t%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FRE
+ Q=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2026-10-18|spa excess\nbearSourc
+ e: keyword\nshortName: BEARS IN EXCESS
+LAST-MODIFIED:20260919T161239Z
+LOCATION:43.6620695\, -79.3773558
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears in Excess
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261115T180000Z
+DTEND:20261115T230000Z
+DTSTAMP:20260919T180740Z
+UID:E9B485C8-C499-41BE-8039-3CEB6008761A
+CREATED:20260919T161239Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\nwebsite
+ : https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://ac
+ qvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda
+ 00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVert
+ ical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/eve
+ nt-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.
+ google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Stree
+ t%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FRE
+ Q=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2026-11-15|spa excess\nbearSourc
+ e: keyword\nshortName: BEARS IN EXCESS
+LAST-MODIFIED:20260919T161239Z
+LOCATION:43.6620695\, -79.3773558
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears in Excess
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251206T150000Z
 DTEND:20251207T080000Z
-DTSTAMP:20260829T221118Z
+DTSTAMP:20260919T180740Z
 UID:ACED9449-C269-4068-8EAF-ED9E84842207
 CREATED:20260829T204850Z
 DESCRIPTION:description: Toronto… get ready for it. Montreal\\\\'s PLAYGROU

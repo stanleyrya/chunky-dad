@@ -5,6 +5,185 @@
   },
   "events": [
     {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-09-20T13:00:00",
+      "endDate": "2026-09-20T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto\nwebsite\r: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-09-20|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
+      "uid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-64a0ef36"
+    },
+    {
+      "name": "Chubs at the Tubs",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2027-01-31T13:00:00",
+      "endDate": "2027-01-31T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: chubs-at-the-tubs|2027-01-31|spa excess\nbearSource: keyword\nshortName: CHUBS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A16A6303-3DBC-48D0-995D-8DCAE323008B",
+      "uid": "A16A6303-3DBC-48D0-995D-8DCAE323008B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg",
+      "cadence": null,
+      "address": "105 Carlton Street, Toronto, Ontario",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "shortName": "CHUBS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chubs-at-the-tubs-4216de53"
+    },
+    {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-10-18T13:00:00",
+      "endDate": "2026-10-18T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto\nwebsite\r: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-10-18|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
+      "uid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-7592f66c"
+    },
+    {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-11-15T13:00:00",
+      "endDate": "2026-11-15T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto\nwebsite\r: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto\npinSource: geocoded-exact\nbarSource: geo-poi\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-11-15|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
+      "uid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-68750c47"
+    },
+    {
       "name": "Playground Toronto",
       "day": "Saturday",
       "time": "10AM-3AM",

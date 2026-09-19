@@ -3,5 +3,49 @@
     "calendarTimezone": "Europe/Madrid",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "MADBEAR PARTY 2026 - MADRID",
+      "day": "Thursday",
+      "time": "11:45AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-03T11:45:00",
+      "endDate": "2026-12-09T06:00:00",
+      "unprocessedDescription": "bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett\railor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\nimageSource: json-api\ntimezone: Europe/Madrid\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid\nkey: madbear-party-2026-madrid|2026-12-03|bears bar\nbearSource: keyword\nshortName: MADBEAR PARTY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
+      "uid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "BEARS BAR",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+      "cadence": null,
+      "address": "Madrid",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
+      "ticketUrl": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
+      "shortName": "MADBEAR PARTY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "madbear-party-2026-madrid-620cefcf"
+    }
+  ]
 }
