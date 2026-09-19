@@ -3110,8 +3110,24 @@ class AiWebParser {
                 const sharedContent = contentKeys.filter(key => keySet.has(key)).length;
                 return sharedContent >= 2 || sharedContent >= Math.ceil(contentKeys.length * 0.6);
             });
-            if (claimed) {
+            // A window whose every TIMED date line is already inside one
+            // structured card is that card's spillover — the card's title
+            // came before its date line and stayed with the previous
+            // window, and what follows the date is the page's tail (Eagle
+            // Manchester's HELLBENT page: "19 Dec 2026, 23:00 – 04:00" then
+            // the page tagline "Where Fetish Meets Pop!", a GUID, "bottom
+            // of page" — run 20260918-211318 made that tagline an event).
+            const timedDateKeys = lines
+                .filter(line => this.hasMultiEventDateSignal(line) && /\b\d{1,2}:\d{2}\b|\b\d{1,2}\s*[ap]\.?m\b/i.test(line))
+                .map(lineKey)
+                .filter(Boolean);
+            const claimedByDate = timedDateKeys.length > 0
+                && structuredKeySets.some(keySet => timedDateKeys.every(key => keySet.has(key)));
+            if (claimed || claimedByDate) {
                 claimedCount++;
+                if (claimedByDate && !claimed) {
+                    console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" is the tail of a structured card (its timed date line is that card's) — not a listing of its own`);
+                }
                 continue;
             }
             // One listing states at most a start and an end — the same bound
