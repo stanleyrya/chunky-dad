@@ -11427,3 +11427,26 @@ test('executeReviewedSavedRun writes a re-analyzed merge back to the run file ev
   assert.equal(results.analyzedEvents[1].title, 'Other Party', 'untouched rows stay');
   assert.equal(adapter.lastExecutionActionCounts.analyzed, 2);
 });
+
+test('executeReviewedSavedRun selects a night covered by a SIBLING night\'s approval (series coverage), exactly as the deck shows it', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const friday = reviewedNew('DADDY POP');
+  const nextFriday = { ...reviewedNew('DADDY POP'), startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z' };
+  const freshPlan = [friday, nextFriday];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  core.prepareEventsForCalendar = async (events) => {
+    captured.analyzed = events;
+    return events.map((event) => ({ ...freshPlan.find((fresh) => fresh.startDate === event.startDate), _savedRunSourceIndex: event._savedRunSourceIndex }));
+  };
+  const stale = freshPlan.map((event) => ({ ...event, _action: 'new', _analysis: { action: 'new', reason: 'Mac-run time' } }));
+  const decisions = [{
+    key: core.getOwnerReviewKey(friday), kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z',
+    snapshot: core.buildOwnerReviewProposal(stale[0])
+  }];
+  const summary = await adapter.executeReviewedSavedRun(buildReviewedRunResults(stale), decisions);
+  assert.equal(captured.analyzed.length, 2, 'the sibling night rides on the Friday approval');
+  assert.deepEqual(captured.executed.map((event) => event.startDate), [friday.startDate, nextFriday.startDate]);
+  assert.equal(summary.approved, 2);
+  assert.equal(summary.created, 2);
+});

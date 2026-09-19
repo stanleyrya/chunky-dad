@@ -15783,20 +15783,41 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // strict coverage check (values as approved) runs after the live
       // analysis via applyOwnerDecisions. Everything else is skipped, not
       // withheld: the phone's own run→sheet→execute flow still handles it.
+      // Decisions re-keyed from their snapshots (an older title rule must
+      // not strand one), and coverage exactly as the deck computes it:
+      // a night approved under its own key, or a sibling night of the same
+      // party whose approval speaks for it (SharedCore.ownerDecisionCovers —
+      // the deck's "with the series" rows). Run 20260918-214248: ten
+      // DADDY POP nights waited on the deck while an exact-key match here
+      // selected none of them and the phone reported "Created 0".
+      const reviewStore = typeof core.rekeyOwnerDecisions === "function" ? core.rekeyOwnerDecisions(store) : store;
       const approvedKeys = new Set(
-        store
+        reviewStore
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
           .map((decision) => decision.key),
       );
       const approvedByKey = new Map(
-        store
+        reviewStore
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
           .map((decision) => [decision.key, decision]),
       );
+      const approvalFor = (event) => {
+        const key = core.getOwnerReviewKey(event);
+        if (key && approvedKeys.has(key)) return approvedByKey.get(key);
+        if (typeof core.buildOwnerReviewProposal !== "function" || typeof SharedCore.findOwnerDecision !== "function") return null;
+        let proposal = null;
+        try {
+          proposal = core.buildOwnerReviewProposal(event);
+        } catch (_) {
+          proposal = null;
+        }
+        const decision = proposal ? SharedCore.findOwnerDecision(proposal, reviewStore) : null;
+        return decision && decision.verdict === "approve" ? decision : null;
+      };
       const selected = [];
       savedEvents.forEach((event, index) => {
-        const key = core.getOwnerReviewKey(event);
-        if (key && approvedKeys.has(key)) selected.push({ event, index, decision: approvedByKey.get(key) });
+        const decision = approvalFor(event);
+        if (decision) selected.push({ event, index, decision });
       });
       summary.skipped = savedEvents.length - selected.length;
       console.log(
@@ -15849,7 +15870,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       }
       if (!Array.isArray(freshAnalyzed)) freshAnalyzed = [];
 
-      const counts = core.applyOwnerDecisions(freshAnalyzed, store);
+      const counts = core.applyOwnerDecisions(freshAnalyzed, reviewStore);
       Object.assign(summary, counts);
       // Every row here was pre-selected by an approval. One the live
       // analysis turned into housekeeping (a notes-only merge) is still an
