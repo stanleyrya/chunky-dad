@@ -14727,13 +14727,17 @@ class SharedCore {
                 continue;
             }
             const door = this.readMachineDoorBody(body, candidate);
-            if (!door || door.count < 2 || door.count < pageEventCount) {
+            // A feed that says it has more, or declares a total beyond its
+            // page, is judged by that claim — the reader pages it to the
+            // horizon, so the page it answered with is not its size.
+            const claimedCount = door ? Math.max(door.count, door.declaredTotal || 0, door.hasMore ? pageEventCount : 0) : 0;
+            if (!door || door.count < 2 || claimedCount < pageEventCount) {
                 if (statusCode !== null && statusCode >= 400) {
                     this.recordDeadEndFetchFailure({ url: candidate, currentDepth: 1, statusCode });
                 } else {
                     this.recordDeadEndObservation({ url: candidate, currentDepth: 1, parseResult: { events: [], additionalLinks: [] }, pageClassification: 'unknown' });
                 }
-                tried.push(`${candidate} (${door ? `${door.count} event(s)` : 'not a feed'})`);
+                tried.push(`${candidate} (${door ? `${door.count} event(s)${door.declaredTotal ? ` of ${door.declaredTotal} declared` : ''}${door.hasMore ? ', more pages' : ''}` : 'not a feed'})`);
                 continue;
             }
             answered.push({ candidate, door });
@@ -14751,7 +14755,7 @@ class SharedCore {
         const { candidate, door } = answered[0];
         if (hostKey) this.machineDoorsByHost.set(hostKey, candidate);
         const others = answered.slice(1).map(entry => `${entry.candidate} (${entry.door.count} ${entry.door.kind}, ${entry.door.richness} field(s)/row)`);
-        await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl} → ${candidate} answered with ${door.count} ${door.kind} event record(s), ${door.richness} field(s)/row${pageEventCount ? ` (page's own structured data: ${pageEventCount})` : ''}${others.length ? `; also answered: ${others.join(', ')}` : ''} — reading the page through it`);
+        await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl} → ${candidate} answered with ${door.count} ${door.kind} event record(s)${door.declaredTotal ? ` of ${door.declaredTotal} declared` : ''}${door.hasMore ? ' (more pages)' : ''}, ${door.richness} field(s)/row${pageEventCount ? ` (page's own structured data: ${pageEventCount})` : ''}${others.length ? `; also answered: ${others.join(', ')}` : ''} — reading the page through it`);
         return {
             ...htmlData,
             url: candidate,
@@ -14844,14 +14848,38 @@ class SharedCore {
         if (text[0] === '{' || text[0] === '[') {
             const count = this.countJsonApiEventObjects(text);
             let rows = [];
+            let declaredTotal = null;
+            let hasMore = false;
             try {
                 const parsed = JSON.parse(text);
                 const isRowArray = (value) => Array.isArray(value) && value.length > 0 && value.every(item => item && typeof item === 'object' && !Array.isArray(item));
                 rows = isRowArray(parsed) ? parsed : (Object.values(parsed || {}).find(isRowArray) || []);
+                // A paged feed states its size beyond the page it answered
+                // with: The Events Calendar's REST route says total 453 /
+                // total_pages 10 / next_rest_url on a 50-row page. The page
+                // count alone read as "fewer than the listing's own 63
+                // JSON-LD nodes" and the door was refused (eagle-ny.com,
+                // 2026-09-19); the declared total is the feed's own claim.
+                const envelope = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+                const containers = [envelope, envelope.meta, envelope.pagination, envelope.links, envelope.meta && envelope.meta.pagination].filter(value => value && typeof value === 'object' && !Array.isArray(value));
+                for (const container of containers) {
+                    for (const key of Object.keys(container)) {
+                        const normalized = String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+                        const value = container[key];
+                        if (/^(total|total_count|total_events|total_results|count_total)$/.test(normalized) && Number.isFinite(Number(value)) && Number(value) > 0) {
+                            declaredTotal = Math.max(declaredTotal || 0, Number(value));
+                        }
+                        if (/^(next|next_url|next_page|next_page_url|next_link|next_rest_url)$/.test(normalized) && typeof value === 'string' && value.trim()) hasMore = true;
+                        if (/^(has_next|has_more|has_next_page|has_more_upcoming)$/.test(normalized) && value === true) hasMore = true;
+                    }
+                }
             } catch (_) {
                 rows = [];
             }
-            return { kind: 'json', count, richness: this.machineDoorRowRichness(rows), body: text };
+            const door = { kind: 'json', count, richness: this.machineDoorRowRichness(rows), body: text };
+            if (count > 0 && declaredTotal !== null && declaredTotal > count) door.declaredTotal = declaredTotal;
+            if (count > 0 && hasMore) door.hasMore = true;
+            return door;
         }
         if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) return null;
         const records = SharedCore.parsePublishedCalendarIcs(text) || [];

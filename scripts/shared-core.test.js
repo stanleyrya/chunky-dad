@@ -23778,3 +23778,23 @@ test('stripAddressTailFromTitle drops the event\'s own street address from its t
   assert.equal(core.stripAddressTailFromTitle('Fuzzy', ''), 'Fuzzy');
   assert.equal(core.stripAddressTailFromTitle('Fuzzy 232 W 37th', '457 W 56th St, New York'), 'Fuzzy 232 W 37th', 'another address is not this event\'s');
 });
+
+test('resolveMachineDoor adopts a paged feed whose declared total exceeds the page\'s own structured data', async () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const row = (i) => ({ id: i, title: `Night ${i}`, start_date: `2026-10-${String(10 + (i % 15)).padStart(2, '0')} 22:00:00`, venue: { venue: 'The Eagle NYC' }, url: `https://eagle.example/e/${i}` });
+  const page1 = { events: Array.from({ length: 50 }, (_, i) => row(i)), total: 453, total_pages: 10, next_rest_url: 'https://eagle.example/wp-json/tribe/events/v1/events?per_page=50&page=2' };
+  // The listing's own JSON-LD marks up 63 nodes — more than one feed page.
+  const jsonLd = Array.from({ length: 63 }, (_, i) => ({ '@context': 'https://schema.org', '@type': 'Event', name: `Night ${i}`, startDate: '2026-10-10T22:00:00-04:00', location: { '@type': 'Place', name: 'The Eagle NYC' } }));
+  const html = `<html><head><link rel="alternate" type="application/json" href="/wp-json/tribe/events/v1/events?per_page=50"><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head><body><div class="wp-content">list</div></body></html>`;
+  const fetched = [];
+  const logs = [];
+  const result = await core.resolveMachineDoor({ url: 'https://eagle.example/calendarofevents/', html }, 'https://eagle.example/calendarofevents/', {
+    fetchData: async (url) => { fetched.push(url); if (url.includes('tribe/events/v1/events')) return { html: JSON.stringify(page1), statusCode: 200 }; throw new Error('HTTP 404'); }
+  }, { logInfo: async (m) => logs.push(m) });
+  assert.ok(result.machineDoor, logs.join('\n'));
+  assert.equal(result.machineDoor.kind, 'json');
+  assert.equal(result.machineDoor.count, 50, 'the page it answered with');
+  assert.ok(logs.some(line => line.includes('of 453 declared')), logs.join('\n'));
+  const door = core.readMachineDoorBody(JSON.stringify({ events: [row(1), row(2)], total: 2 }), 'https://x/feed');
+  assert.equal(door.declaredTotal, undefined, 'a total equal to the page is not a claim of more');
+});
