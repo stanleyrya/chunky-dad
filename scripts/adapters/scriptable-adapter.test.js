@@ -2400,7 +2400,8 @@ test('route link chains origin bar → waypoint address → destination pin, ful
     'https://www.google.com/maps/dir/?api=1'
     + '&origin=Bear%20%26%20Bull%2C%20new%20york'
     + '&destination=40.7223%2C-73.9874'
-    + '&waypoints=225%20E%20Houston%20St%2C%20new%20york');
+    + '&waypoints=225%20E%20Houston%20St%2C%20new%20york'
+    + '&travelmode=walking');
   // The route legs are the EXACT query strings the single links search for,
   // so a ~0 m rendered route proves all three resolve to one venue.
   assert.ok(adapter.buildBarMapsSearchUrl('Bear & Bull', 'nyc')
@@ -2419,21 +2420,21 @@ test('route link with two points maps them to origin → destination, no waypoin
       bar: 'Massive', city: 'seattle', coordinates: '47.6135, -122.3163'
     }),
     'https://www.google.com/maps/dir/?api=1'
-    + '&origin=Massive%2C%20seattle&destination=47.6135%2C-122.3163');
+    + '&origin=Massive%2C%20seattle&destination=47.6135%2C-122.3163&travelmode=walking');
   // bar + address
   assert.equal(
     adapter.buildRouteMapsDirectionsUrl({
       bar: 'Massive', city: 'seattle', address: '1400 12th Ave'
     }),
     'https://www.google.com/maps/dir/?api=1'
-    + '&origin=Massive%2C%20seattle&destination=1400%2012th%20Ave%2C%20seattle');
+    + '&origin=Massive%2C%20seattle&destination=1400%2012th%20Ave%2C%20seattle&travelmode=walking');
   // address + pin
   assert.equal(
     adapter.buildRouteMapsDirectionsUrl({
       city: 'seattle', address: '1400 12th Ave', coordinates: '47.6135, -122.3163'
     }),
     'https://www.google.com/maps/dir/?api=1'
-    + '&origin=1400%2012th%20Ave%2C%20seattle&destination=47.6135%2C-122.3163');
+    + '&origin=1400%2012th%20Ave%2C%20seattle&destination=47.6135%2C-122.3163&travelmode=walking');
 });
 
 test('route link needs at least two resolvable points', () => {
@@ -11491,4 +11492,29 @@ test('executeReviewedSavedRun skips rows this run\'s earlier execution already w
   assert.ok(timing && /for 1 row\(s\)/.test(timing) && /calendar searches 1 \(/.test(timing), timing);
   assert.equal(Object.prototype.hasOwnProperty.call(adapter, 'getExistingEvents'), true, 'the test stub survives the timer restore');
   assert.ok(captured.notices[captured.notices.length - 1].message.includes('1 written by this run'), captured.notices[captured.notices.length - 1].message);
+});
+
+test('route link: the app form carries the same legs in comgooglemaps daddr "+to:" order, walking; the WebView hands it to iOS and cancels the navigation', () => {
+  const adapter = buildMapsAdapter();
+  const web = adapter.buildRouteMapsDirectionsUrl({ bar: 'Bear & Bull', city: 'nyc', address: '225 E Houston St', coordinates: '40.7223, -73.9874' });
+  assert.equal(adapter.toGoogleMapsAppUrl(web),
+    'comgooglemaps://?saddr=Bear%20%26%20Bull%2C%20new%20york&daddr=225%20E%20Houston%20St%2C%20new%20york+to:40.7223%2C-73.9874&directionsmode=walking');
+  const two = adapter.buildRouteMapsDirectionsUrl({ bar: 'Massive', city: 'seattle', coordinates: '47.6135, -122.3163' });
+  assert.equal(adapter.toGoogleMapsAppUrl(two), 'comgooglemaps://?saddr=Massive%2C%20seattle&daddr=47.6135%2C-122.3163&directionsmode=walking');
+  assert.equal(adapter.toGoogleMapsAppUrl('https://www.google.com/maps/search/?api=1&query=Massive'), '', 'only the directions link');
+  assert.equal(adapter.toGoogleMapsAppUrl('chunkyscrape://a=page&id=2'), '');
+
+  const opened = [];
+  const originalSafari = global.Safari;
+  global.Safari = { open: (url) => { opened.push(url); } };
+  try {
+    assert.equal(adapter.handOffMapsNavigation(web), true, 'handled → the caller cancels the WebView navigation');
+    assert.equal(opened.length, 1);
+    assert.ok(opened[0].startsWith('comgooglemaps://'));
+    assert.equal(adapter.handOffMapsNavigation('https://eaglela.com/events/'), false, 'other links navigate as before');
+  } finally {
+    if (originalSafari === undefined) delete global.Safari; else global.Safari = originalSafari;
+  }
+  delete global.Safari;
+  assert.equal(adapter.handOffMapsNavigation(web), false, 'no Safari API (tests, Node) → the web link stands');
 });
