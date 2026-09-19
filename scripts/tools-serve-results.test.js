@@ -135,17 +135,14 @@ test('the repo scraper-input parsers carry no static enabled flags (picker owns 
     'no parser entry declares enabled — manual selection is the picker\'s job'
   );
 
-  // automationEnabled is a different knob (scheduled runs have no picker) and
-  // must survive: these festival/aggregator entries opt out of automation.
+  // automationEnabled is a different knob (scheduled runs have no picker).
+  // Owner 2026-09-19: "Turn on all automation!" — no entry opts out; the
+  // template entry is skipped by kind, never by flag.
   const automationOptOuts = parsers
     .filter((parser) => parser && parser.automationEnabled === false)
     .map((parser) => parser.name)
     .sort();
-  assert.deepEqual(
-    automationOptOuts,
-    ['Bears Sitges Week', 'Spooky Bear', 'The Bear Calendar'],
-    'automationEnabled: false preserved where it was'
-  );
+  assert.deepEqual(automationOptOuts, [], 'every parser joins the daily run');
 });
 
 // ---------------------------------------------------------------------------
