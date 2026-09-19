@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "source": "The Heretic",
+  "slug": "the-heretic",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://hereticatlanta.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://hereticatlanta.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 16,
+        "truthFlag": "no feed, no paging, no completeness flag — a hand-built Gutenberg page; 16 flyer+caption blocks: 5 under the \"this_weeks_events.png\" header (MONDAY … SATURDAY), 2 under <h4>September 2026</h4>, 9 under <h4>October 2026</h4>",
+        "note": "Configured parser URL. WordPress 7.0.5, Astra theme, Ultimate Addons for Gutenberg: every entry is a wp-block-image (the flyer) followed by an info box whose <p class=\"uagb-ifb-title-prefix\"> holds the weekday-or-date and hours (\"WEDNESDAY<br>10pm-3am\", \"FRIDAY, SEPT. 25<br>10pm-3am\") and whose <h5 class=\"uagb-ifb-title\"> holds the name, with \"– No Cover\" / \"– Free Lessons\" lines inside the title element; ten blocks add a TICKETS button and all ten point at the same site-wide /tickets page. No per-event pages, no JSON-LD, no ICS, no address on the page. The dated section headings carry the year. Read from the 2026-09-19 13:06 local curl cache (236,639 bytes)."
+      },
+      {
+        "url": "https://hereticatlanta.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 6,
+        "truthFlag": "a swiper slider of six Facebook-event-format banner images, no text",
+        "note": "Home page (curl cache 2026-09-19 13:02 local, 218,522 bytes). Not in parser urls; read to cross-check the weekday grid. Slides: Heretic_Randy_BallChain_FBevent.jpg → /tickets, AngelX_Sep18_FBevent2.jpg → /tickets, Heretic_Circuit_Ben_Sep26_FBevent_v2.jpg → /tickets, QB_CLUB-TRADE_925_FBevent.jpg → /tickets, Heretic_Thursday_Country_RW_FBevent.jpg → /events, 230825_PupNight_EveryWed_FBevent.jpg → /events. Socials: facebook.com/profile.php?id=100063628747097, instagram.com/hereticatlanta. No street address anywhere on the two cached pages."
+      }
+    ],
+    "notes": "Platform: static WordPress (Astra + UAGB blocks); everything is in the HTML, nothing loads by script. /events/ has two sections. (1) A weekday grid headed by the image this_weeks_events.png — MONDAY Stars of the Century, WEDNESDAY Pup Night & Warpzone, THURSDAY Thursday Country, FRIDAY Throwback Friday, SATURDAY Randy: Ball & Chain w/ Tony Moran — each block a weekday + hours and a name, never a date and never the words \"every\"/\"weekly\". (2) Dated specials under \"September 2026\" and \"October 2026\" headings (\"FRIDAY, SEPT. 25 10pm-3am …\"). Reading of the grid used here: Monday/Wednesday/Thursday are standing weekly nights (evergreen flyers from 2024–2025, the home-page banner literally named PupNight_EveryWed, \"Thursday\" in the night's name, and Pride-week editions of the Wednesday and Thursday nights listed in October at the same hours), so they are series with FREQ=WEEKLY and their Oct 7 / Oct 8 Pride editions folded in as listed occurrences with overrides. Friday and Saturday are this week's bookings, not series: their flyers are dated (AngelX_Sep18, uploaded this month), they have TICKETS buttons like the dated specials, and the home-page slider presents them as Facebook-event banners linking to /tickets, while the two standing nights' banners link to /events. They are documented as singles for Fri Sep 18 (already over at recon) and Sat Sep 19 with confidence ambiguous and expect.extracted \"unknown\" — see openQuestions. Every TICKETS button is the generic /tickets page, so ticketUrl is that page, not a per-event link. One dated special (Atlanta Pride Official Kickoff, Oct 9 7pm) is off-site at Georgia Aquarium. The street address in defaults is the parser config's (2069 Cheshire Bridge Rd NE); the cached pages publish none, and /contact/ was not read."
+  },
+  "defaults": {
+    "city": "atlanta",
+    "timezone": "America/New_York",
+    "bar": "The Heretic",
+    "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
+    "location": null,
+    "website": "https://hereticatlanta.com",
+    "instagram": "https://www.instagram.com/hereticatlanta/",
+    "facebook": "https://www.facebook.com/profile.php?id=100063628747097"
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "All counts come from the single configured door, https://hereticatlanta.com/events/, a static page with no feed and no paging: 16 flyer+caption blocks. Weekday grid (5 blocks): 3 standing weekly nights → 3 series (Stars of the Century MO, Pup Night & Warpzone WE, Thursday Country TH), and 2 this-week bookings → 2 singles (Throwback Friday Sep 18, Randy: Ball & Chain Sep 19). Dated sections (2 September + 9 October blocks = 11): the Oct 7 Pup Pride and Oct 8 Country Pride blocks are the Pride editions of the Wednesday and Thursday series and are folded in as listed occurrences with overrides, leaving 9 singles (Club Trade Sep 25, Ben Bakson Sep 26, Pride Kickoff at Georgia Aquarium Oct 9, Kickoff After Party Oct 9, Bootea Oct 10, DJ Alex Ramos Oct 10, Randy Outdoor Tea Dance Oct 11, Dan Slater Oct 11, Vampire Ball Oct 23). publishedEventCount = 3 + 2 + 9 = 14. Series occurrences are RRULE arithmetic for 2026-09-19..2026-12-18 (origin rule) except the two dated Pride editions (origin listed). The home page (not in parser urls) adds no event the /events/ page lacks. Confidence is medium rather than high because the grid states no repeat in words and the Friday/Saturday reading (booking vs weekly) cannot be settled from one snapshot. No past listings: the page shows this week and the two months ahead only.",
+    "publishedEventCount": 14,
+    "documentedEventCount": 14,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": [
+      "The FRIDAY and SATURDAY blocks of the weekday grid carry no date; they are documented as this week's bookings (Sep 18 / Sep 19) on flyer-filename and banner-link evidence, not on page text. A second snapshot in a later week settles it (same names → weekly series; new names → bookings).",
+      "The /tickets/ page was not read, so the ticketing platform and per-event ticket links (if any) are unknown; every ticketUrl here is the generic /tickets/ page the buttons point at.",
+      "The site publishes no street address on the cached pages; defaults.address is the parser config's value and /contact/ was not read.",
+      "Series occurrences after the October Pride week are rule-derived; the site itself lists only the current week plus dated specials through Oct 23."
+    ]
+  },
+  "events": [
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "stars-of-the-century",
+      "kind": "series",
+      "title": "Stars of the Century",
+      "startTime": "22:30",
+      "endTime": null,
+      "image": "https://hereticatlanta.com/wp-content/uploads/2024/01/p000000_Stars_v1a_.jpg",
+      "description": "Showtime 11:15pm",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "MONDAY 10:30pm (Showtime 11:15pm) Stars of the Century",
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "rule"
+        }
+      ],
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "MONDAY 10:30pm (Showtime 11:15pm) Stars of the Century"
+      },
+      "note": "First block of the weekday grid (the section header is the image this_weeks_events.png). Doors 10:30pm, show 11:15pm, no end stated (endTime null). The site never writes \"every Monday\"; the weekly reading rests on the bare weekday label plus the evergreen flyer (uploaded 2024/01, no date on the filename) that has fronted the slot since the page was built. Confidence ambiguous for that reason. No ticket button."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "pup-night-warpzone",
+      "kind": "series",
+      "title": "Pup Night & Warpzone w/ DJ Tracy Levine",
+      "startTime": "22:00",
+      "endTime": "03:00",
+      "cover": "No Cover",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2024/01/230320_PupNight_Wed_InSq1080x1080.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "WEDNESDAY 10pm-3am Pup Night & Warpzone w/ DJ Tracy Levine – No Cover",
+      "occurrences": [
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://hereticatlanta.com/events/",
+            "quote": "WEDNESDAY, OCT. 7 10pm-3am Pride 2026: Pup Pride & Warpzone w/ DJ Tracy Levine – No Cover"
+          },
+          "overrides": {
+            "title": "Pride 2026: Pup Pride & Warpzone w/ DJ Tracy Levine",
+            "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Wednesday_Pup_InstaSquare.jpg"
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        }
+      ],
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "WEDNESDAY 10pm-3am Pup Night & Warpzone w/ DJ Tracy Levine – No Cover"
+      },
+      "note": "Weekday-grid block. Weekly reading corroborated by the home-page slider banner whose filename is 230825_PupNight_EveryWed_FBevent.jpg (links to /events) and by the \"October 2026\" section listing the Pride edition on Wednesday Oct 7 at the same 10pm-3am hours — that dated instance is the origin \"listed\" occurrence with title/image overrides. \"– No Cover\" is the cover line, not part of the title. Ends 03:00 the next calendar day. No ticket button."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "thursday-country",
+      "kind": "series",
+      "title": "Thursday Country",
+      "startTime": "20:00",
+      "endTime": "03:00",
+      "cover": "No Cover",
+      "description": "Free Lessons",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2025/11/Heretic_Thursday_Country_RW_Insta_Square.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "THURSDAY 8pm-3am Thursday Country – No Cover – Free Lessons",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://hereticatlanta.com/events/",
+            "quote": "THURSDAY, OCT. 8 8pm-3am Pride 2026: Country Pride – No Cover – Free Lessons"
+          },
+          "overrides": {
+            "title": "Pride 2026: Country Pride",
+            "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Thursday_Country_IGsquare.jpg"
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "THURSDAY 8pm-3am Thursday Country – No Cover – Free Lessons"
+      },
+      "note": "Weekday-grid block; the night is named after its weekday, the flyer is evergreen (2025/11), the home-page slider carries a generic Thursday Country banner linking to /events, and the \"October 2026\" section lists the Pride edition on Thursday Oct 8 at the same 8pm-3am hours (origin \"listed\" occurrence with overrides). Ends 03:00 the next calendar day. No ticket button."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "The block carries a weekday and hours but no date; the date here (Fri Sep 18, the Friday of the week the grid describes) is taken from the flyer filename AngelX_Sep18.avif. A run on or after Sep 19 may resolve the bare \"FRIDAY\" to the next Friday (Sep 25), or to a weekly rule, or drop it — which is the open question below."
+      },
+      "bearVerdict": null,
+      "id": "throwback-friday-angel-x-2026-09-18",
+      "kind": "single",
+      "title": "Dream Team, Angel X & Scrilla Ent. present Throwback Friday",
+      "startDate": "2026-09-18",
+      "startTime": "23:00",
+      "endDate": "2026-09-19",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/09/AngelX_Sep18.avif",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "FRIDAY 11pm-3am Dream Team, Angel X & Scrilla Ent. present Throwback Friday TICKETS"
+      },
+      "note": "FRIDAY block of the weekday grid. Treated as this week's booking rather than a weekly series: the flyer is dated (AngelX_Sep18, uploaded 2026/09), the home-page slider shows the same flyer as a Facebook-event banner (AngelX_Sep18_FBevent2.jpg) linking to /tickets exactly like the dated specials, whereas the standing Wed/Thu banners link to /events. Already over at recon (Sep 19). Ticket button goes to the site-wide /tickets page."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "The block carries a weekday and hours but no date; Sat Sep 19 is the Saturday of the week the grid describes (fetched Sat Sep 19). A run may resolve the bare \"SATURDAY\" to a different Saturday or to a weekly rule."
+      },
+      "bearVerdict": null,
+      "id": "randy-ball-and-chain-tony-moran-2026-09-19",
+      "kind": "single",
+      "title": "Mike Woodside & Alan Collins present Randy: Ball & Chain w/ Tony Moran",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Randy_BallChain_IGsquare.jpg",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SATURDAY 10pm-3am Mike Woodside & Alan Collins present Randy: Ball & Chain w/ Tony Moran TICKETS"
+      },
+      "note": "SATURDAY block of the weekday grid. Treated as this week's booking, not a weekly: a headline touring DJ (Tony Moran) in a promoter-presented party, a ticket button, and a Facebook-event banner for it on the home-page slider (Heretic_Randy_BallChain_FBevent.jpg, uploaded 2026/09) linking to /tickets like the dated specials. \"Randy\" is the Woodside/Collins party brand (the Pride Sunday tea dance is also \"Randy\"). Ticket button goes to the site-wide /tickets page."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "club-trade-ron-pullman-2026-09-25",
+      "kind": "single",
+      "title": "Queen Butch presents Club Trade w/ Ron Pullman",
+      "startDate": "2026-09-25",
+      "startTime": "22:00",
+      "endDate": "2026-09-26",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/09/QB_CLUB-TRADE_925_TILE-C.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "FRIDAY, SEPT. 25 10pm-3am Queen Butch presents Club Trade w/ Ron Pullman TICKETS"
+      },
+      "note": "First block under the \"September 2026\" heading (year from the heading; Sep 25 2026 is a Friday). Also on the home-page slider as QB_CLUB-TRADE_925_FBevent.jpg. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "ben-bakson-mike-pope-2026-09-26",
+      "kind": "single",
+      "title": "Alan Collins presents Ben Bakson w/ DJ Mike Pope",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endDate": "2026-09-27",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/09/Heretic_Circuit_Ben_Sep26_IGsquare_v2.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SATURDAY, SEPT. 26 10pm-3am Alan Collins presents Ben Bakson w/ DJ Mike Pope TICKETS"
+      },
+      "note": "Second \"September 2026\" block. Flyer filename says Circuit_Ben_Sep26. Also on the home-page slider (Heretic_Circuit_Ben_Sep26_FBevent_v2.jpg). Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "atlanta-pride-official-kickoff-georgia-aquarium-2026-10-09",
+      "kind": "single",
+      "title": "Atlanta Pride Official Kickoff at Georgia Aquarium",
+      "bar": "Georgia Aquarium",
+      "address": null,
+      "location": null,
+      "startDate": "2026-10-09",
+      "startTime": "19:00",
+      "endDate": "2026-10-09",
+      "endTime": "23:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/06/GAQ-Pride-2026-Social_Square.png",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "FRIDAY, OCT. 9 7pm-11pm Atlanta Pride Official Kickoff at Georgia Aquarium TICKETS"
+      },
+      "note": "OFF-SITE: the title places it at Georgia Aquarium, not at the bar, so bar is overridden and address/location are null (the page publishes no aquarium address). The Heretic sells tickets for it (/tickets) and hosts the after party at 9pm (next entry). Flyer GAQ-Pride-2026-Social_Square.png."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "pride-kickoff-after-party-abel-2026-10-09",
+      "kind": "single",
+      "title": "Pride 2026: Atlanta Pride Official Kickoff After Party w/ Abel",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Friday_Abel_IGsquare.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "FRIDAY, OCT. 9 9pm-3am Pride 2026: Atlanta Pride Official Kickoff After Party w/ Abel TICKETS"
+      },
+      "note": "Second Oct 9 block; at the bar. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bootea-carry-nation-2026-10-10",
+      "kind": "single",
+      "title": "Queen Butch presents Bootea w/ The Carry Nation, Mister Wallace & NSA",
+      "startDate": "2026-10-10",
+      "startTime": "14:00",
+      "endDate": "2026-10-10",
+      "endTime": "20:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/09/QB_ATL-PRODE_BOOTEA_1010_TILE.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SATURDAY, OCT. 10 2pm-8pm Queen Butch presents Bootea w/ The Carry Nation, Mister Wallace & NSA TICKETS"
+      },
+      "note": "Pride Saturday daytime party, 2–8 PM. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "dj-alex-ramos-mike-pope-2026-10-10",
+      "kind": "single",
+      "title": "Pride 2026: DJ Alex Ramos w/ DJ Mike Pope",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-11",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Sat_Alex_InstaSquare.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SATURDAY, OCT. 10 9pm-3am Pride 2026: DJ Alex Ramos w/ DJ Mike Pope TICKETS"
+      },
+      "note": "Pride Saturday night. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "randy-outdoor-tea-dance-sam-gee-2026-10-11",
+      "kind": "single",
+      "title": "Pride 2026: Randy Outdoor Tea Dance w/ Sam Gee",
+      "startDate": "2026-10-11",
+      "startTime": "15:00",
+      "endDate": "2026-10-11",
+      "endTime": "20:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Sunday_Randy_InstaSquare.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SUNDAY, OCT. 11 3pm-8pm Pride 2026: Randy Outdoor Tea Dance w/ Sam Gee TICKETS"
+      },
+      "note": "Pride Sunday afternoon, 3–8 PM. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "dan-slater-volos-2026-10-11",
+      "kind": "single",
+      "title": "Pride 2026: Dan Slater w/ VOLOS",
+      "startDate": "2026-10-11",
+      "startTime": "21:00",
+      "endDate": "2026-10-12",
+      "endTime": "03:00",
+      "ticketUrl": "https://hereticatlanta.com/tickets/",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/07/Heretic_Pride26_Sunday_Dan_IGsquare_v2.jpg",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "SUNDAY, OCT. 11 9pm-3am Pride 2026: Dan Slater w/ VOLOS TICKETS"
+      },
+      "note": "Pride Sunday night. Ticket button goes to /tickets."
+    },
+    {
+      "sourceRung": "static",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "rituals-18th-annual-vampire-ball-2026-10-23",
+      "kind": "single",
+      "title": "Ritual’s 18th Annual Vampire Ball",
+      "startDate": "2026-10-23",
+      "startTime": "22:00",
+      "endDate": "2026-10-24",
+      "endTime": "03:00",
+      "image": "https://hereticatlanta.com/wp-content/uploads/2026/09/261023_RitualsVampireBall_InSq1080x1080.png",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "FRIDAY, OCT. 23 10pm-3am Ritual’s 18th Annual Vampire Ball"
+      },
+      "note": "Last block under \"October 2026\"; the only dated special with no TICKETS button. Flyer filename 261023 = 2026-10-23."
+    }
+  ],
+  "traps": [
+    {
+      "id": "home-slider-flyer-banners",
+      "kind": "gallery",
+      "label": "Home-page swiper slider of six Facebook-event banner images (no caption text)",
+      "why": "The home page is a flyer carousel: six wp-block-image slides (Randy: Ball & Chain, Angel X Sep 18, Ben Bakson Sep 26, Club Trade 9/25, Thursday Country, Pup Night Every Wed) with empty alt text, linking to /tickets or /events. Every one duplicates an /events/ entry, and the page carries no dates or times, so anything read from here is either a duplicate or an OCR guess. The home page is not in the parser's urls.",
+      "evidence": {
+        "url": "https://hereticatlanta.com/",
+        "quote": "<a href=\"/tickets\"><img fetchpriority=\"high\" decoding=\"async\" width=\"2400\" height=\"1260\" src=\"https://hereticatlanta.com/wp-content/uploads/2026/09/Heretic_Randy_BallChain_FBevent.jpg\""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Recorded because the slide filenames (…_FBevent.jpg, PupNight_EveryWed) are the best corroboration on the site for which weekday-grid entries are standing nights."
+    },
+    {
+      "id": "generic-tickets-button",
+      "kind": "navigation",
+      "label": "TICKETS button under ten /events/ blocks, all href=\"/tickets\"",
+      "why": "The button looks like a per-event ticket link but every one of the ten points at the same site-wide tickets page (https://hereticatlanta.com/tickets/). It is not an event and it does not identify which event it belongs to; a scraper that follows it finds a page, not a ticket for that night.",
+      "evidence": {
+        "url": "https://hereticatlanta.com/events/",
+        "quote": "<a href=\"/tickets\" class=\"uagb-infobox-cta-link wp-block-button__link\" target=\"_self\" rel=\"noopener noreferrer\" onclick=\"return true;\"><span class=\"uagb-inline-editing\">TICKETS</span></a>"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "The events above carry that page as ticketUrl because it is what the site publishes; the trap is about not treating the button as a distinct event or as proof of a per-event link."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Are the FRIDAY (\"Throwback Friday\", flyer AngelX_Sep18) and SATURDAY (\"Randy: Ball & Chain w/ Tony Moran\") blocks of the \"this week's events\" grid standing weekly nights or this week's bookings? This file documents them as singles (Sep 18 / Sep 19). Re-read /events/ in a later week: if the same two names are still there, convert them to FREQ=WEEKLY series.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Should the Oct 7 \"Pride 2026: Pup Pride & Warpzone\" and Oct 8 \"Pride 2026: Country Pride\" blocks count as separate published events (singles) rather than overridden occurrences of the Wednesday/Thursday series? This file folds them in; counting them separately would make publishedEventCount 16.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

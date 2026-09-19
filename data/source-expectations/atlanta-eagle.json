@@ -1,0 +1,481 @@
+{
+  "schemaVersion": 1,
+  "source": "Atlanta Eagle",
+  "slug": "atlanta-eagle",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://atlantaeagle.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://atlantaeagle.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 16,
+        "truthFlag": "list container data-status=\"upcoming\" data-show=\"-1\" data-pagination=\"no\" data-sort=\"ASC\" data-cat=\"0\" — every upcoming event, unlimited, unpaged; 16 mep_event_list_item rows, 16 distinct /event/<slug>/ links",
+        "note": "Configured parser URL. WordPress 7.0.5 + WooCommerce Event Manager (plugin slug mage-eventpress, classes mep_event_native_list); the rows are server-rendered inside <div class=\"mage_grid_box\"> so a static fetch sees them all — the three \"mep_event_list_skeleton__card\" shimmer cards and the \"Loading events…\" line above the list are an empty shimmer stand-in, not events. Each row: data-title, data-date (the END date), data-category, data-organizer, a flyer <img>, the title <h5 class=\"mep_list_title\">, one \"start – end\" datetime line (\"September 19, 2026 9:00 pm – September 20, 2026 1:00 am\"; same-day rows omit the second date), a status/price label (\"Happening Now\", \"Ending Soon\" or \"Free\") and a footer button (\"View More →\" or \"Book →\", both to the event page). No JSON-LD, no Tribe/ICS feed, no ical link. Read from the 2026-09-19 13:06 local curl cache (221,238 bytes)."
+      },
+      {
+        "url": "https://atlantaeagle.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": "home-page list block data-show=\"1\" — shows only the next event (\"Coming up..\")",
+        "note": "Home page (curl cache 2026-09-19 13:04 local, 226,089 bytes): the same plugin block limited to one row (Atlanta Bucks Bar Night, identical datetime line). Not in parser urls; read only to confirm the address block (1492 Piedmont Ave NE, Atlanta, GA 30309), hours (Mon–Fri 3pm–3am, Sat 1pm–3am, Sun 1pm–MIDNIGHT), socials (facebook.com/atlantaeagle, instagram.com/atlantaeagle, x.com/atlantaeagle) and the WP Go Maps block data-lat=\"33.7961866\" data-lng=\"-84.3711336\", which /events/ also carries."
+      }
+    ],
+    "notes": "Platform: WordPress + WooCommerce Event Manager (MagePeople \"mage-eventpress\"), confirmed by the mep_* class family and the plugin path in the HTML. The /events/ list is a static, unpaged, ASC-sorted \"upcoming\" query, so its 16 rows are the site's whole published future as of 2026-09-19. Every row carries an explicit start and end datetime with the year, so no year or time inference is needed. TRAP FOR EXTRACTION: the card's big date badge (mep_event_native_list__month/day) and the data-date attribute are the END date — for the eleven after-midnight rows the badge is one day later than the start (e.g. badge \"Sep 20\" for Atlanta Bucks Bar Night, which starts Sep 19 9:00 pm); the datetime line is the truth. No row states a repeat and no title recurs in the list, so all 16 are singles. Nine rows are the \"Atlanta Pride 2026: Louder & Prouder\" programme (Oct 8–11, back-to-back DJ slots with the venue as the venue-organizer); a \"Pride Weekend\" nav page (/pride/) exists but was not read. Two rows (Sips & Singlets, Cruise Control) leave data-organizer empty; the rest say Atlanta Eagle or nothing. The event pages (/event/<slug>/) were not opened: descriptions, ticket prices and any per-page JSON-LD are unknown. Coordinates come from the WP Go Maps block in the footer (33.7961866, -84.3711336)."
+  },
+  "defaults": {
+    "city": "atlanta",
+    "timezone": "America/New_York",
+    "bar": "Atlanta Eagle",
+    "address": "1492 Piedmont Ave NE, Atlanta, GA 30309",
+    "location": "33.7961866, -84.3711336",
+    "website": "https://atlantaeagle.com",
+    "instagram": "https://instagram.com/atlantaeagle",
+    "facebook": "https://facebook.com/atlantaeagle"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "One door carries everything: https://atlantaeagle.com/events/ renders 16 event rows server-side under a list container whose attributes say upcoming / show -1 (unlimited) / pagination no, so nothing is hidden behind a load-more or a second page; 16 rows = 16 distinct /event/<slug>/ links = 16 flyers. The home page (not in parser urls) shows the first of the same rows with the same datetime line and confirms the address and coordinates. No row states a repeat and no title appears twice, so publishedEventCount = 16 singles, 0 series. Occurrence window is nominal (no series). Past listings: the list query is status \"upcoming\"; the nav's \"Archive\"/\"Gallery\" pages were not read, so past rows are neither shown here nor counted.",
+    "publishedEventCount": 16,
+    "documentedEventCount": 16,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": [
+      "Event pages (/event/<slug>/) were not read: descriptions, ticket prices behind the four \"Book →\" buttons (AWOL, BULGE Night Session, LEATHER SLUT, Pride Day Play) and any per-page JSON-LD are not documented.",
+      "The nav pages /first-friday/, /pride/ and /leather-pride/ were not read; if /first-friday/ describes a standing monthly night, it is not on the /events/ list and is not counted here.",
+      "Only one snapshot (2026-09-19) was read, so how far ahead the venue posts is unknown; the furthest row is Oct 11."
+    ]
+  },
+  "events": [
+    {
+      "id": "atlanta-bucks-bar-night-2026-09-19",
+      "kind": "single",
+      "title": "Atlanta Bucks Bar Night",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "01:00",
+      "website": "https://atlantaeagle.com/event/atlanta-bucks-bar-night/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/Flyer-scaled.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Atlanta Bucks Bar Night September 19, 2026 9:00 pm – September 20, 2026 1:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Organizer field (data-organizer) says Atlanta Eagle. Card status label at recon: \"Happening Now\" (fetched Saturday 2026-09-19 13:06 local, before doors) — the plugin flags same-day events as happening. Date badge on the card reads \"Sep 20\" (the end date); the start is Sep 19 9:00 pm."
+    },
+    {
+      "id": "cruise-control-2026-09-19",
+      "kind": "single",
+      "title": "Cruise Control",
+      "startDate": "2026-09-19",
+      "startTime": "20:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/cruise-control/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/CruiseControl_Flyer_091926.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Cruise Control September 19, 2026 8:00 pm – September 20, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card status label \"Happening Now\" at recon (same-day). Date badge \"Sep 20\" = end date; start Sep 19 8:00 pm. Flyer filename CruiseControl_Flyer_091926 matches 09/19/26."
+    },
+    {
+      "id": "awol-2026-09-25",
+      "kind": "single",
+      "title": "AWOL",
+      "startDate": "2026-09-25",
+      "startTime": "20:00",
+      "endDate": "2026-09-26",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/awol/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/AWOL-925-FL-scaled.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "AWOL September 25, 2026 8:00 pm – September 26, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Footer button reads \"Book →\" (WooCommerce Event Manager ticketing on the event page, not read). Status label \"Ending Soon\". Badge \"Sep 26\" = end date; start Sep 25 8:00 pm."
+    },
+    {
+      "id": "sips-singlets-day-party-2026-09-26",
+      "kind": "single",
+      "title": "Sips & Singlets Day Party",
+      "startDate": "2026-09-26",
+      "startTime": "17:00",
+      "endDate": "2026-09-26",
+      "endTime": "20:00",
+      "website": "https://atlantaeagle.com/event/sips-singlets-day-party/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/Sips_Singlets_Flyer-scaled.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Sips & Singlets Day Party September 26, 2026 5:00 pm – 8:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Same-day 5–8 PM; status label \"Ending Soon\". \"View More →\" (no booking)."
+    },
+    {
+      "id": "international-house-of-bulge-night-session-featuring-rob-moore-2026-09-26",
+      "kind": "single",
+      "title": "International House of BULGE Night Session featuring Rob Moore",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/international-house-of-bulge-night-session-featuring-rob-moore/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/Bulge-Rob-Moore-FL-scaled.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "International House of BULGE Night Session featuring Rob Moore September 26, 2026 9:00 pm – September 27, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Price label \"Free\" and a \"Book →\" button (free RSVP tickets on the event page, not read). Badge \"Sep 27\" = end date; start Sep 26 9:00 pm."
+    },
+    {
+      "id": "international-house-of-bulge-presents-leather-2026-09-26",
+      "kind": "single",
+      "title": "International House of BULGE presents: LeatHER! 🖤✨",
+      "startDate": "2026-09-26",
+      "startTime": "13:00",
+      "endDate": "2026-09-27",
+      "endTime": "16:00",
+      "website": "https://atlantaeagle.com/event/international-house-of-bulge-presents-leather-%f0%9f%96%a4%e2%9c%a8/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/leatHER-5.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "International House of BULGE presents: LeatHER! 🖤✨ September 26, 2026 1:00 pm – September 27, 2026 4:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The list states \"September 26, 2026 1:00 pm – September 27, 2026 4:00 pm\", a 27-hour span; the end is most likely a data-entry slip for 4:00 pm the same day (the Night Session starts at 9 pm on the 26th), so the end is documented as stated but flagged ambiguous. Title carries two emoji; the event URL is the percent-encoded form of them. Price label \"Free\"."
+    },
+    {
+      "id": "leather-slut-2026-10-02",
+      "kind": "single",
+      "title": "LEATHER SLUT",
+      "startDate": "2026-10-02",
+      "startTime": "21:00",
+      "endDate": "2026-10-03",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/leather-slut/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "LEATHER SLUT October 2, 2026 9:00 pm – October 3, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Flyer filename ONYXSE-10-OCT02 (ONYX Southeast). Price label \"Free\" plus \"Book →\". Badge \"Oct 03\" = end date; start Oct 2 9:00 pm."
+    },
+    {
+      "id": "pre-pride-with-jason-james-2026-10-03",
+      "kind": "single",
+      "title": "Pre-Pride with Jason James",
+      "startDate": "2026-10-03",
+      "startTime": "20:00",
+      "endDate": "2026-10-04",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/pre-pride-with-jason-james/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/PrePride-Jason-James-DC-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Pre-Pride with Jason James October 3, 2026 8:00 pm – October 4, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Price label \"Free\". Badge \"Oct 04\" = end date; start Oct 3 8:00 pm."
+    },
+    {
+      "id": "pat-scott-2026-10-08",
+      "kind": "single",
+      "title": "Pat Scott – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-08",
+      "startTime": "20:00",
+      "endDate": "2026-10-09",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/thursday-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-PAT-THUR-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Pat Scott – Atlanta Pride 2026: Louder & Prouder October 8, 2026 8:00 pm – October 9, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Event URL slug is /event/thursday-atlanta-pride-2026-louder-prouder/ (the post was renamed after creation). Row carries no category label. Badge \"Oct 09\" = end date; start Thu Oct 8 8:00 pm. Price label \"Free\"."
+    },
+    {
+      "id": "gorp-2026-10-09",
+      "kind": "single",
+      "title": "GORP – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-09",
+      "startTime": "20:00",
+      "endDate": "2026-10-09",
+      "endTime": "23:00",
+      "website": "https://atlantaeagle.com/event/gorp-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-GORP-FRI-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "GORP – Atlanta Pride 2026: Louder & Prouder October 9, 2026 8:00 pm – 11:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Same-evening 8–11 PM slot, followed on the list by DANEON B2B FER JUZ at 11 PM. Row carries no category label. Price label \"Free\"."
+    },
+    {
+      "id": "daneon-b2b-fer-juz-2026-10-09",
+      "kind": "single",
+      "title": "DANEON B2B FER JUZ – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-09",
+      "startTime": "23:00",
+      "endDate": "2026-10-10",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/daneon-b2b-fer-juz-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-Daneon-b2b-Fer-FRI-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "DANEON B2B FER JUZ – Atlanta Pride 2026: Louder & Prouder October 9, 2026 11:00 pm – October 10, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Late slot of Pride Friday. Row carries no category label. Badge \"Oct 10\" = end date; start Fri Oct 9 11:00 pm. Price label \"Free\"."
+    },
+    {
+      "id": "pride-day-play-2026-10-10",
+      "kind": "single",
+      "title": "Pride Day Play – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-10",
+      "startTime": "15:00",
+      "endDate": "2026-10-10",
+      "endTime": "19:00",
+      "website": "https://atlantaeagle.com/event/pride-day-play-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/PRIDE-DAY-PLAY.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Pride Day Play – Atlanta Pride 2026: Louder & Prouder October 10, 2026 3:00 pm – 7:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Afternoon 3–7 PM. Price label \"Free\" plus \"Book →\"."
+    },
+    {
+      "id": "kyle-house-2026-10-10",
+      "kind": "single",
+      "title": "KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-10",
+      "startTime": "20:00",
+      "endDate": "2026-10-10",
+      "endTime": "23:00",
+      "website": "https://atlantaeagle.com/event/kyle-house-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-KYLE-FRI-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder October 10, 2026 8:00 pm – 11:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Pride Saturday 8–11 PM slot; flyer filename says FRI but the row says Saturday October 10. Price label \"Free\"."
+    },
+    {
+      "id": "brady-prince-2026-10-10",
+      "kind": "single",
+      "title": "BRADY PRINCE – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-10",
+      "startTime": "23:00",
+      "endDate": "2026-10-11",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/brady-prince-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-Brady-SAT-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "BRADY PRINCE – Atlanta Pride 2026: Louder & Prouder October 10, 2026 11:00 pm – October 11, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Late slot of Pride Saturday. Badge \"Oct 11\" = end date; start Sat Oct 10 11:00 pm. Price label \"Free\"."
+    },
+    {
+      "id": "neon-the-glowgobear-2026-10-11",
+      "kind": "single",
+      "title": "NEON THE GLOWGOBEAR – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-11",
+      "startTime": "16:00",
+      "endDate": "2026-10-11",
+      "endTime": "22:00",
+      "website": "https://atlantaeagle.com/event/neon-the-glowgobear-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-NEON-FINAL-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "NEON THE GLOWGOBEAR – Atlanta Pride 2026: Louder & Prouder October 11, 2026 4:00 pm – 10:00 pm"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Pride Sunday 4–10 PM. Price label \"Free\"."
+    },
+    {
+      "id": "james-anthony-2026-10-11",
+      "kind": "single",
+      "title": "JAMES ANTHONY – Atlanta Pride 2026: Louder & Prouder",
+      "startDate": "2026-10-11",
+      "startTime": "22:00",
+      "endDate": "2026-10-12",
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/james-anthony-atlanta-pride-2026-louder-prouder/",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/26-PRIDE-James-Anthony-FINAL-SUN-FL.webp",
+      "cover": "Free",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "JAMES ANTHONY – Atlanta Pride 2026: Louder & Prouder October 11, 2026 10:00 pm – October 12, 2026 3:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Late slot of Pride Sunday. Badge \"Oct 12\" = end date; start Sun Oct 11 10:00 pm. Price label \"Free\"."
+    }
+  ],
+  "traps": [
+    {
+      "id": "nav-pages-first-friday-pride-leather-pride",
+      "kind": "navigation",
+      "label": "Header menu items \"First Friday\", \"Pride Weekend\", \"Atlanta Leather Pride\"",
+      "why": "These are site navigation links (/first-friday/, /pride/, /leather-pride/), not rows of the events list. \"First Friday\" reads like a recurring event name and \"Pride Weekend\" like a dated one, but on /events/ they carry no date, time or flyer; the Pride programme itself is already on the list as nine dated rows (Oct 8–11).",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "First Friday"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Menu order on /events/: Events, First Friday, Pride Weekend, Jobs, Gallery, Archive, Atlanta Leather Pride. The linked pages were not read."
+    },
+    {
+      "id": "loading-skeleton-cards",
+      "kind": "announcement",
+      "label": "\"Loading events…\" line with three empty shimmer cards above the list",
+      "why": "The plugin prints an empty skeleton (mep_event_list_skeleton__card ×3, no text) and a \"Loading events…\" status line before the server-rendered list; it is a progressive-enhancement stand-in, not a sign that events load by JavaScript — all 16 rows are already in the HTML below it.",
+      "evidence": {
+        "url": "https://atlantaeagle.com/events/",
+        "quote": "Loading events…"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Recorded so nobody reads \"Loading events…\" in a page cache as evidence that the list needs a browser."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "International House of BULGE presents: LeatHER! is listed as \"September 26, 2026 1:00 pm – September 27, 2026 4:00 pm\" (27 hours). Is the end a typo for 4:00 pm on the 26th? The event page was not read.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

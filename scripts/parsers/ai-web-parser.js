@@ -10313,10 +10313,35 @@ class AiWebParser {
         if (!text || (text[0] !== '{' && text[0] !== '[')) return null;
         try {
             const parsed = JSON.parse(text);
-            return parsed && typeof parsed === 'object' ? parsed : null;
+            return parsed && typeof parsed === 'object' ? this.normalizeJsonApiRowMap(parsed) : null;
         } catch (_) {
             return null;
         }
+    }
+
+    // A feed whose rows sit in an id-keyed MAP rather than an array
+    // (events.ticketsauce.com's events_by_organization: { data: { "<uuid>":
+    // { Event: {…} }, … } }) publishes the same rows — the keys are the
+    // ids. Rewritten once, at detection, into the array shape every
+    // downstream reader (candidates, horizon, paging, counts) already
+    // understands. Only the wrapper keys the readers look under are
+    // touched, only when EVERY value is an object, and never when the
+    // wrapper is itself one event-shaped record (a detail envelope).
+    normalizeJsonApiRowMap(parsed) {
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed;
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        let rewritten = null;
+        for (const key of Object.keys(parsed)) {
+            if (!/^(data|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
+            const value = parsed[key];
+            if (!isPlainObject(value)) continue;
+            const values = Object.values(value);
+            if (values.length === 0 || !values.every(isPlainObject)) continue;
+            if (this.jsonApiObjectLooksEventLike(value)) continue;
+            if (!rewritten) rewritten = { ...parsed };
+            rewritten[key] = values;
+        }
+        return rewritten || parsed;
     }
 
     // camelCase → snake_case, lowercased ('startDate' → 'start_date';
@@ -10349,7 +10374,34 @@ class AiWebParser {
                 return { ...obj, ...wrapped };
             }
         }
+        // A row that is an ENVELOPE around its event: no title of its own,
+        // and exactly one member object that carries a title and a start
+        // (TicketSauce: { Event: {…}, EventTopic, Logo, Masthead,
+        // Organization }). The event's fields come up one level; the
+        // envelope's other members (an image record, the organization)
+        // stay beneath them as siblings, as a detail envelope's do.
+        const envelope = this.findJsonApiEnvelopeEvent(obj);
+        if (envelope) return { ...obj, ...envelope };
         return obj;
+    }
+
+    // The single member object of `obj` that reads as an event (a title key
+    // with text plus a start-ish dated key) when `obj` itself states no
+    // title; null otherwise — two such members would be two events, not
+    // one envelope.
+    findJsonApiEnvelopeEvent(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+        const hasTitle = (view) => Object.keys(view).some(key => /^(name|title|summary)$/.test(this.normalizeJsonApiKey(key))
+            && this.jsonApiTextValue(view[key]).trim() !== '');
+        if (hasTitle(obj)) return null;
+        const found = [];
+        for (const value of Object.values(obj)) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+            if (!hasTitle(value)) continue;
+            if (!Object.keys(value).some(key => this.jsonApiStartDateFromEntry(key, value[key]) !== null)) continue;
+            found.push(value);
+        }
+        return found.length === 1 ? found[0] : null;
     }
 
     // THE FEED'S OWN ROW IDENTITY, or '' when the payload publishes none.
@@ -11195,6 +11247,17 @@ class AiWebParser {
             .filter(date => date && !Number.isNaN(date.getTime()))
             .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
         if (starts.length === 0) {
+            // A rule whose UNTIL has passed is a series that has ENDED: its
+            // first night (the row's own start, months or years back) is not
+            // an event anyone can attend, and a calendar export lists every
+            // series it ever ran (Lodge NY's Google Calendar: 2023 weekly
+            // parties, each with its UNTIL). A rule with no UNTIL, or a
+            // COUNT, has simply no night in the window — the row stays dated.
+            const until = rrule.match(/(?:^|;)UNTIL=(\d{4})(\d{2})(\d{2})/i);
+            if (until && Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3]), 23, 59, 59) < windowStart.getTime()) {
+                console.log(`🔁 SERIES: "${event.title}" (${rrule}) ended ${until[1]}-${until[2]}-${until[3]} — a finished series, not an event`);
+                return [];
+            }
             console.log(`🔁 SERIES: "${event.title}" (${rrule}) has no occurrence in the next ${JSON_API_FEED_HORIZON_DAYS} days — row kept as dated`);
             return [event];
         }
@@ -11968,8 +12031,17 @@ class AiWebParser {
             console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
             bar = '';
         }
+        // A scalar `location` is usually the place as free text, which is
+        // why it is not a venue key above. When the row ALSO states a street
+        // address under its own key, a `location` that is not itself an
+        // address is the venue's name (TicketSauce: location "Jackhammer",
+        // address "6406 North Clark Street").
+        if (!bar && addressParts[0]) {
+            const locationName = clean(firstValue(/^location$/, isNonEmptyString));
+            if (locationName && !this.venueNameLooksLikeStreetAddress(locationName, address)) bar = locationName;
+        }
 
-        const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
+        const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster|thumb)/;
         // Objects, sets and nested rendition lists all read the same way (see
         // collectJsonApiImageCandidates); the best rendition is the image and
         // the rest ride along as crop fallbacks.

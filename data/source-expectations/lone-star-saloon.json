@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "source": "Lone Star Saloon",
+  "slug": "lone-star-saloon",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.lonestarsf.com/new-events-1"
+    ],
+    "doors": [
+      {
+        "url": "https://www.lonestarsf.com/new-events-1",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 43,
+        "truthFlag": null,
+        "note": "Squarespace events collection, static: one card per event with date, title, start/end, venue line, Google Calendar / ICS links, and a link to its own /…/<yyyy>/<m>/<d>/<slug> page. Upcoming and past cards are both rendered."
+      },
+      {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 13,
+        "truthFlag": "upcoming: 13; past: 30 (the past list is the collection's most recent 30 — a cap, not the archive size); website.timeZone: America/Los_Angeles",
+        "note": "The collection's ?format=json twin: $.upcoming[] and $.past[] items with title, startDate/endDate (epoch ms), location { addressTitle, addressLine1, addressLine2, markerLat/markerLng }, fullUrl (the event page), assetUrl (the flyer), excerpt/body (HTML). No recurrence fields — a weekly night is a separate item per date."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-19. 13 upcoming items (2026-09-19 → 2026-12-18) and 30 past items in the feed's past list."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the collection JSON's $.upcoming[] (13 items) is every future card the listing renders; each is a single (the site states no rule). The 30 past items are counted as past listings, not enumerated.",
+    "publishedEventCount": 13,
+    "documentedEventCount": 13,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "bar": "Lone Star Saloon",
+    "address": "1354 Harrison St, San Francisco, CA 94103",
+    "website": "https://www.lonestarsf.com"
+  },
+  "events": [
+    {
+      "id": "lewd-2026-09-19",
+      "kind": "single",
+      "title": "LEWD",
+      "description": "Join us Saturday, Sept 19th, for LEWD: A BEAR-Y SEXY JOCKSTRAP PARTY w/ DJ Omnibot @ Lone Star Saloon: 1354 Harrison St. San Francisco, CA 94103 Jockstraps, Short Shorts, Onesies, and/or Gear are encouraged! However, feel free to wear any clothing, accessories, and/or under garments that make you feel sexy! LEWD is Door - 9 PM Cover - $10 Clothes Check included w/ cover GoGo s shakin’ it Snacks provided",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "02:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/9/19/lewd",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788488665771-QZFI07ARL86R04CNLNU5/Screenshot+2026-09-03+at+7.23.36%E2%80%AFPM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gettin-knit-2026-09-21",
+      "kind": "single",
+      "title": "Gettin Knit",
+      "description": "🧶 🧶 Get together on Monday nights with some very talented and creative knitters. If you can knit (or crochet hooker) or if you want to learn come on by and enjoy the company of like minded folk. 🧶 🧶 5p - whenever. DJ Bartender",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-21",
+      "startTime": "17:00",
+      "endDate": "2026-09-21",
+      "endTime": "22:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/8/10/gettin-knit-6kwz6-ryj42-2r9xp-3sz24-7k2tp",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1786156382219-BOTXH2R9A5BIZI8N0VZK/GettinKnit_Poster1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "leather-and-gear-happy-hour-2026-09-25",
+      "kind": "single",
+      "title": "Leather and Gear Happy Hour",
+      "description": "Mr Lone Star Leather, Brett Poe is hosting a Leather & Gear Happy Hour to kick off Folsom Weekend. So get your gear on, come and meet some tourists and show them just how friendly we can be. $5 Wells and $5 Draft Beer 5pm - 8pm",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-25",
+      "startTime": "17:00",
+      "endDate": "2026-09-25",
+      "endTime": "20:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-gear-happy-hour",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788662272779-0OWI1ZSVNUV59UOIEOFS/1f51d7d1-fe35-485f-9650-d0daae5e36a8.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[2]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "big-boy-2026-09-25",
+      "kind": "single",
+      "title": "Big Boy",
+      "description": "Big Boy is held on the last Friday of the month and this month that means Folsom Weekend. Same Big Boys, same fun, just dirtier. Big Boys know how to have a good time.... especially for Folsom Weekend. 9p - 2a DJ bodyrolls & M.Luc",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "02:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/9/25/big-boy",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788715934852-T1Y54SHDEAKWH94QIDE5/BigBoyPoster_96_Folsom.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "noche-de-ronda-folsom-2026-09-26",
+      "kind": "single",
+      "title": "Noche de Ronda: Folsom",
+      "description": "Noche de Ronda celebrates Lone Star’s proud latin roots with a night of good drinks - good people - good times. Noche de Ronda was owned and operated by the Salazar family and was the name of the bar before it became The Lone Star Saloon. A little has changed since then but it is still owned and operated by proud members of their own community for their own community. We’ve come along since those beginnings but not so far that we can’t remember and honor our collective heritage. The music will be mixed up hot thanks to DJ Miguelitooo (CDMX) We promise a night of good drinks - good people - good times. Noche de Ronda celebra las orgullosas raíces latinas de Lone Star con una noche de buenas bebidas, buena gente y buenos momentos. Noche de Ronda fue propiedad y estuvo operado por la familia Salazar, y era el nombre original del bar antes de convertirse en The Lone Star Saloon . Mucho ha cambiado desde entonces, pero sigue siendo un lugar propiedad y operado por orgullosos miembros de su propia comunidad, para su propia comunidad. Hemos recorrido un largo camino desde aquellos comienzos, pero no tanto como para olvidar y honrar nuestra herencia colectiva. La música estará al rojo vivo gracias a DJ Miguelitooo (CDMX) , quien nos traerá una mezcla irresistible de ritmos para mantener la pista encendida toda la noche. Les prometemos una noche de buenas bebidas, buena gente y buenos momentos .",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "22:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/9/26/noche-de-ronda-folsom",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1789079901352-N4MGIG372MXSTJGBGWO6/Screenshot+2026-09-10+at+3.36.04%E2%80%AFPM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "screw-nut-bolt-2026-09-27",
+      "kind": "single",
+      "title": "screw, nut, bolt",
+      "description": "As Folsom winds down a young man’s fancy turns to making it happen. The mechanics of getting a screw. Ultimately to nut. Then yeh, listen, uuummm, hey ysa know what, I gotta bolt. The perfect premise for an underwear party. Bring your spanner, tighten your nuts and get to work. 9p - 2a",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-27",
+      "startTime": "21:00",
+      "endDate": "2026-09-28",
+      "endTime": "02:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/9/27/screw-nut-bolt",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1789603180352-3I8P5UZUO57DMVAQXK6A/Screenshot+2026-09-16+at+4.52.46%E2%80%AFPM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[5]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gettin-knit-2026-09-28",
+      "kind": "single",
+      "title": "Gettin Knit",
+      "description": "🧶 🧶 Get together on Monday nights with some very talented and creative knitters. If you can knit (or crochet hooker) or if you want to learn come on by and enjoy the company of like minded folk. 🧶 🧶 5p - whenever. DJ Bartender",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-09-28",
+      "startTime": "17:00",
+      "endDate": "2026-09-28",
+      "endTime": "22:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/8/10/gettin-knit-6kwz6-ryj42-2r9xp-3sz24-a8ykn",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1786156382219-BOTXH2R9A5BIZI8N0VZK/GettinKnit_Poster1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[6]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gettin-knit-2026-10-05",
+      "kind": "single",
+      "title": "Gettin Knit",
+      "description": "🧶 🧶 Get together on Monday nights with some very talented and creative knitters. If you can knit (or crochet hooker) or if you want to learn come on by and enjoy the company of like minded folk. 🧶 🧶 5p - whenever. DJ Bartender",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-10-05",
+      "startTime": "17:00",
+      "endDate": "2026-10-05",
+      "endTime": "22:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/8/10/gettin-knit-6kwz6-ryj42-2r9xp-3sz24-hrp7f",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1786156382219-BOTXH2R9A5BIZI8N0VZK/GettinKnit_Poster1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[7]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bark-cade-2026-10-07",
+      "kind": "single",
+      "title": "Bark-Cade",
+      "description": "Have you been craving a casual weeknight hangout with friends, gear optional, where you can sprawl out on the mats, play some video games, or curl up under blankets with popcorn and cartoons? Then come check out Bark•Cade at Lone Star Saloon. Think of it as a low-effort, low-intensity midweek reset. Mark your calendars and hope to see you at Bark•Cade from 5-9 PM. No cover, come hang out and play",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-10-07",
+      "startTime": "17:00",
+      "endDate": "2026-10-07",
+      "endTime": "21:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/6/3/bark-cade-sklkp-9zcah",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1779971802117-ZTGVPZX83DGU3E37PFVC/Screenshot+2026-05-28+at+5.35.58%E2%80%AFAM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "slut-puppy-2026-10-16",
+      "kind": "single",
+      "title": "Slut Puppy",
+      "description": "Tuck yourself in… then immediately misbehave. Slut Puppy: Pajama Party is your excuse to come comfy, cozy, and ready to play all night long. Slip into your cutest, sluttiest sleepwear—pj shorts, flannel, silk robes, onesies, pup hoods, or whatever you’d never wear to bed alone. Cuddle up—or cut loose—in the mosh space, dive into the ball pit, and stash your layers at the coat check once things start heating up. Ditch your usual bedtime routine, and get tangled up after the lights go off. Come comfy. Stay late. Leave a little messy. For tickets and more information, visit: https://www.slut-puppy.com",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-10-16",
+      "startTime": "20:00",
+      "endDate": "2026-10-17",
+      "endTime": "21:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/10/16/slut-puppy",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788569173941-TB2VGLP38KSR0FHIRMFG/Generic-Poster.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[9]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bark-cade-2026-11-04",
+      "kind": "single",
+      "title": "Bark-Cade",
+      "description": "Have you been craving a casual weeknight hangout with friends, gear optional, where you can sprawl out on the mats, play some video games, or curl up under blankets with popcorn and cartoons? Then come check out Bark•Cade at Lone Star Saloon. Think of it as a low-effort, low-intensity midweek reset. Mark your calendars and hope to see you at Bark•Cade from 5-9 PM. No cover, come hang out and play",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-11-04",
+      "startTime": "17:00",
+      "endDate": "2026-11-04",
+      "endTime": "21:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/6/3/bark-cade-x34aj",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1779971802117-ZTGVPZX83DGU3E37PFVC/Screenshot+2026-05-28+at+5.35.58%E2%80%AFAM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[10]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bark-cade-2026-12-02",
+      "kind": "single",
+      "title": "Bark-Cade",
+      "description": "Have you been craving a casual weeknight hangout with friends, gear optional, where you can sprawl out on the mats, play some video games, or curl up under blankets with popcorn and cartoons? Then come check out Bark•Cade at Lone Star Saloon. Think of it as a low-effort, low-intensity midweek reset. Mark your calendars and hope to see you at Bark•Cade from 5-9 PM. No cover, come hang out and play",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-12-02",
+      "startTime": "17:00",
+      "endDate": "2026-12-02",
+      "endTime": "21:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/6/3/bark-cade-sklkp",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1779971802117-ZTGVPZX83DGU3E37PFVC/Screenshot+2026-05-28+at+5.35.58%E2%80%AFAM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[11]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "slut-puppy-2026-12-18",
+      "kind": "single",
+      "title": "Slut Puppy",
+      "description": "Tuck yourself in… then immediately misbehave. Slut Puppy: Pajama Party is your excuse to come comfy, cozy, and ready to play all night long. Slip into your cutest, sluttiest sleepwear—pj shorts, flannel, silk robes, onesies, pup hoods, or whatever you’d never wear to bed alone. Cuddle up—or cut loose—in the mosh space, dive into the ball pit, and stash your layers at the coat check once things start heating up. Ditch your usual bedtime routine, and get tangled up after the lights go off. Come comfy. Stay late. Leave a little messy. For tickets and more information, visit: https://www.slut-puppy.com",
+      "address": "1354 Harrison St, San Francisco CA 94103",
+      "startDate": "2026-12-18",
+      "startTime": "20:00",
+      "endDate": "2026-12-19",
+      "endTime": "02:00",
+      "website": "https://www.lonestarsf.com/new-events-1/2026/12/18/slut-puppy",
+      "image": "https://images.squarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788569584568-OF6VU0K7LI49LKQN4ZE1/Generic-Poster.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.lonestarsf.com/new-events-1?format=json",
+        "jsonPath": "$.upcoming[12]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

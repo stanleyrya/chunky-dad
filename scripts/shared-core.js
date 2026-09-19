@@ -47,6 +47,9 @@ const DEAD_END_CAPABILITY = 'machine-door-2026-09';
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
+// An iCalendar feed's records that ended more than this many days ago are
+// its archive, not its events (see readMachineDoorBody).
+const ICS_FEED_HISTORY_DAYS = 30;
 const MACHINE_DOOR_WELL_KNOWN_PATHS = [
     '/feed.json',
     '/events.json',
@@ -971,21 +974,27 @@ class SharedCore {
             if (/(^|_)when$/.test(key)) return isPlainObject(value) && isScalarDate(value.start);
             return false;
         };
+        const hasTitleKey = (view) => Object.keys(view).some(key => /^(name|title|summary)$/.test(normalizeKey(key))
+            && textValue(view[key]).trim() !== '');
+        const hasStartKey = (view) => Object.keys(view).some(key => isStartEntry(normalizeKey(key), view[key]));
         const unwrap = (obj) => {
             for (const key of Object.keys(obj)) {
                 if (!/^(content|attributes|properties|fields)$/.test(normalizeKey(key))) continue;
                 if (isPlainObject(obj[key])) return { ...obj, ...obj[key] };
+            }
+            // Envelope row (mirror of ai-web-parser findJsonApiEnvelopeEvent):
+            // no title of its own, exactly one member object with a title
+            // and a start — TicketSauce { Event: {…}, Logo, Organization }.
+            if (!hasTitleKey(obj)) {
+                const members = Object.values(obj).filter(value => isPlainObject(value) && hasTitleKey(value) && hasStartKey(value));
+                if (members.length === 1) return { ...obj, ...members[0] };
             }
             return obj;
         };
         const looksEventLike = (obj) => {
             if (!isPlainObject(obj)) return false;
             const view = unwrap(obj);
-            const keys = Object.keys(view);
-            const hasTitle = keys.some(key => /^(name|title|summary)$/.test(normalizeKey(key))
-                && textValue(view[key]).trim() !== '');
-            if (!hasTitle) return false;
-            return keys.some(key => isStartEntry(normalizeKey(key), view[key]));
+            return hasTitleKey(view) && hasStartKey(view);
         };
         if (isArrayOfObjects(parsed)) {
             return parsed.filter(looksEventLike).length;
@@ -998,6 +1007,11 @@ class SharedCore {
             const value = parsed[key];
             if (isArrayOfObjects(value)) return value.filter(looksEventLike).length;
             if (isPlainObject(value) && looksEventLike(value)) return 1;
+            // Rows in an id-keyed map (mirror of normalizeJsonApiRowMap).
+            if (isPlainObject(value)) {
+                const values = Object.values(value);
+                if (values.length > 0 && values.every(isPlainObject)) return values.filter(looksEventLike).length;
+            }
         }
         for (const value of Object.values(parsed)) {
             if (!isArrayOfObjects(value)) continue;
@@ -1334,6 +1348,34 @@ class SharedCore {
         const headTokens = this.getCrossSourceTitleTokens(head);
         if (headTokens.length === 0 || headTokens.every(token => timeWords.has(token))) return text;
         if (!this.titleTailNamesBar(match[2], bar)) return text;
+        return head;
+    }
+
+    // "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues" with
+    // address "232 W 37th St 2nd fl, New York, NY 10018" is "The Bear Party":
+    // a calendar that puts the venue's street address in the title has named
+    // the place twice, and the address field already carries it (Lodge NY's
+    // Google Calendar, 2026-09-19). Only a tail that starts with THIS
+    // address's house number followed by its street's next word goes — a
+    // number that is part of the party's name ("Studio 54 Night") stays.
+    // Returns the title unchanged when nothing is stripped.
+    stripAddressTailFromTitle(title, address) {
+        const text = String(title || '').trim();
+        const streetLine = String(address || '').split(',')[0].trim();
+        const street = streetLine.match(/^(\d+[A-Za-z]?(?:[-/]\d+[A-Za-z]?)?)\s+([A-Za-z0-9'.]+)/);
+        if (!text || !street) return text;
+        const houseNumber = street[1];
+        const streetWord = street[2].replace(/[.']/g, '');
+        if (!streetWord) return text;
+        const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const tail = new RegExp(`(^|\\s)${escape(houseNumber)}\\s+${escape(streetWord)}\\b`, 'i');
+        const match = text.match(tail);
+        if (!match || match.index === undefined || match.index === 0) return text;
+        const head = text.slice(0, match.index)
+            .replace(/[\s,:\-–—/|@(]+$/, '')
+            .replace(/\s+(?:at|in|@)$/i, '')
+            .trim();
+        if (!head || !/[a-z]/i.test(head)) return text;
         return head;
     }
 
@@ -14631,11 +14673,26 @@ class SharedCore {
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return htmlData;
         if (htmlData.dataDoor || htmlData.machineDoor) return htmlData;
-        const head = html.trim().slice(0, 64);
-        if (head[0] === '{' || head[0] === '[' || /^BEGIN:VCALENDAR/i.test(head)) return htmlData;
         const log = displayAdapter && typeof displayAdapter.logInfo === 'function'
             ? (message) => displayAdapter.logInfo(message)
             : async () => {};
+        const head = html.trim().slice(0, 64);
+        if (head[0] === '{' || head[0] === '[') return htmlData;
+        // A configured root that IS an iCalendar (a public Google Calendar's
+        // basic.ics, a site's own .ics export named in scraper-input) is the
+        // same feed a probed door would be — converted to feed rows here so
+        // the JSON-API reader reads it; the HTML machinery never sees
+        // VEVENT text as a page.
+        if (/^BEGIN:VCALENDAR/i.test(head)) {
+            const door = this.readMachineDoorBody(html, pageUrl);
+            if (!door) return htmlData;
+            await log(`SYSTEM: 🚪 MACHINE DOOR: ${pageUrl} is an iCalendar feed — ${door.count} event record(s), ${door.richness} field(s)/row — reading it as the feed`);
+            return {
+                ...htmlData,
+                html: door.body,
+                machineDoor: { doorUrl: pageUrl, pageUrl, kind: door.kind, count: door.count }
+            };
+        }
         const parts = this.parseUrl(pageUrl);
         const hostKey = parts ? String(parts.host || '').toLowerCase().replace(/^www\./, '') : '';
         if (!this.machineDoorsByHost) this.machineDoorsByHost = new Map();
@@ -14798,8 +14855,38 @@ class SharedCore {
         }
         if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) return null;
         const records = SharedCore.parsePublishedCalendarIcs(text) || [];
-        const rows = records.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
+        // An iCalendar export is the calendar's whole history (a public
+        // Google Calendar keeps every party since the calendar was made);
+        // a listing page publishes what is coming. Read the feed the way
+        // the page would be read: records that ended more than a month ago
+        // are the site's archive, not its events — unless the record is a
+        // series that is still running (no UNTIL, or an UNTIL still ahead).
+        const nowMs = Date.now();
+        const current = records.filter(record => !SharedCore.isHistoricalCalendarRecord(record, nowMs));
+        if (current.length < records.length) {
+            console.log(`📅 ICS FEED: ${doorUrl} — ${records.length - current.length} of ${records.length} record(s) ended more than ${ICS_FEED_HISTORY_DAYS} days ago (the calendar's archive) — ${current.length} read`);
+        }
+        const rows = current.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
         return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows), body: JSON.stringify({ events: rows }) };
+    }
+
+    // A VEVENT whose span ended more than ICS_FEED_HISTORY_DAYS ago and
+    // whose rule (if any) has also run out. A rule with no UNTIL (or a COUNT,
+    // whose end this does not compute) is still running. Undated records
+    // are never historical (the reader decides what to do with them).
+    static isHistoricalCalendarRecord(record, nowMs = Date.now()) {
+        if (!record || !record.start) return false;
+        const instant = (entry) => (entry && entry.date instanceof Date && !isNaN(entry.date.getTime()) ? entry.date.getTime() : null);
+        const endMs = instant(record.end) !== null ? instant(record.end) : instant(record.start);
+        if (endMs === null) return false;
+        const cutoff = nowMs - ICS_FEED_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+        if (endMs >= cutoff) return false;
+        const rrule = String(record.rrule || '').trim();
+        if (!rrule) return true;
+        const until = rrule.match(/(?:^|;)UNTIL=(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?Z?)?/i);
+        if (!until) return false;
+        const untilMs = Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3]), Number(until[4] || 23), Number(until[5] || 59), Number(until[6] || 59));
+        return untilMs < cutoff;
     }
 
     icsRecordToFeedRow(record, doorUrl) {
@@ -18446,6 +18533,14 @@ class SharedCore {
                     notesNeedRebuild = true;
                     this.recordDeterministicFieldRewrite(analyzedEvent, 'title',
                         'venue tail dropped at final build — the tail names the event\'s own bar');
+                }
+                const bareOfAddress = this.stripAddressTailFromTitle(analyzedEvent.title, analyzedEvent.address);
+                if (bareOfAddress !== analyzedEvent.title.trim()) {
+                    console.log(`✂️ TITLE: "${analyzedEvent.title}" → "${bareOfAddress}" — the tail is the event's own street address (${analyzedEvent.address})`);
+                    analyzedEvent.title = bareOfAddress;
+                    notesNeedRebuild = true;
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'title',
+                        'address tail dropped at final build — the tail is the event\'s own street address');
                 }
             }
 

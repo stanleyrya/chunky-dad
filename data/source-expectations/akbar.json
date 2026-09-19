@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "source": "Akbar",
+  "slug": "akbar",
+  "status": "complete",
+  "recheckAfter": "2026-10-01",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://akbarsilverlake.com/upcoming-events/"
+    ],
+    "doors": [
+      {
+        "url": "https://akbarsilverlake.com/upcoming-events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 18,
+        "truthFlag": "<p class=\"edgtf-page-subtitle\">This Month's</p> EVENTS. — one section (id=\"section_current\") of 18 <article class=\"akbar-eg-item\"> cards, no pagination, no next/previous-month control, no JSON-LD; a second section (id=\"section_calendars\", \"Archive PAST EVENT CALENDARS.\") is a gallery of 33 monthly poster PDFs",
+        "note": "Configured parser URL. WordPress (WPBakery + Slider Revolution 6.7.57, Offbeat theme 1.8 with its offbeat-event post type). Each card: <a class=\"akbar-eg-link\" href=\"/event/<slug>/\">, a poster <img>, <time class=\"akbar-eg-date\" datetime=\"YYYY-MM-DD\"> with day/month/weekday spans, <h4 class=\"akbar-eg-title\"> and an optional <p class=\"akbar-eg-sub\"> tagline. The 18 datetime values run 2026-09-02 … 2026-09-26 and match the 18 event pages exactly. The page is a calendar of the CURRENT month, not an upcoming filter: 13 of the 18 dates are before the recon date. Read from the cached copy fetched 2026-09-19 (scratchpad probe/bars/akbar-events.html, 105,456 chars)."
+      },
+      {
+        "url": "https://akbarsilverlake.com/event/<slug>/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 18,
+        "truthFlag": null,
+        "note": "All 18 slugs the listing links, cached 2026-09-19 (probe/bars/akbar-events/<slug>.html). Each page: <h2 class=\"edgtf-page-title\"> title with an edgtf-page-subtitle tagline, an offbeat-event-featured-image poster whose alt is \"<Title> – <Month D, YYYY> at AKBAR\", a \"Details\" block (Date: <Month D, YYYY>; Duration: 1 Day; sometimes Category: Special Events; Type: open) and a short offbeat-event-content body that carries the start time as prose (\"From 10 PM\", \"Starts at: 9PM\"). No JSON-LD, no Open Graph tags, no <time> element, no address, no ticket links. Times, covers and cadence words exist only in that body prose."
+      },
+      {
+        "url": "https://akbarsilverlake.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "Home page (cached 2026-09-19, probe/bars/akbar-la.html), NOT a parser URL — read only for venue facts. Footer: \"AKBAR Silverlake 4356 W Sunset Blvd Los Angeles, CA 90029\", \"Open Daily: 4 PM to 2 AM\". A \"Coming Up — DJs, Parties & Stuff.\" section says \"Every day is an event at Akbar.\" and links 4 of the listing's pages as \"Special Events:\" (sebastiane, the-plastics, laces, crazy-disco-underground); a \"Recurring Events:\" blurb reads \"Tuesdays: Drunk on Stage / Wednesdays: CraftNight\" with no dates, times or pages (see traps)."
+      }
+    ],
+    "notes": "WordPress with the Offbeat theme's event post type (body class offbeat-event-template-default, offbeat-core-1.4 / offbeat-ver-1.8); WPBakery builds the listing. There is no events feed of any kind: no wp-json event route, no ICS, no JSON-LD. The listing is \"This Month's EVENTS.\" — the venue posts one page per party for the current month (a monthly poster PDF twin sits in the archive gallery) and the list is not filtered to upcoming, so on 2026-09-19 it links 13 past pages, 1 page dated today and 4 future pages. Nothing for October 2026 is published anywhere on the site at recon, so the crawl horizon is at most the rest of the current month. Every page states exactly one date; only Broadway Sing-Along states a repeat in text (\"Our monthly Showtunes Sing-Along\"). Several posters are reused from earlier months (Funk That! from 2025/01, Crazy, Disco Underground from the 2026-02 run), which hints at recurrence but is not a statement of one. Address per the site is \"4356 W Sunset Blvd\"; defaults use the config spelling without the W."
+  },
+  "defaults": {
+    "city": "la",
+    "timezone": "America/Los_Angeles",
+    "bar": "Akbar",
+    "address": "4356 Sunset Blvd, Los Angeles, CA 90029",
+    "location": null,
+    "website": "https://akbarsilverlake.com",
+    "instagram": "https://www.instagram.com/akbarsilverlake/",
+    "facebook": "https://www.facebook.com/Akbarsilverlake/"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Single door: the configured /upcoming-events/ listing (18 akbar-eg-item cards, each with a datetime attribute) cross-checked against all 18 /event/<slug>/ pages it links (each with a \"Date:\" line) — 18/18 dates agree, zero extra pages, zero pagination. The home page (not a parser URL) links a 4-item \"Special Events\" subset of the same pages and adds nothing dated. Collapse: 12 pages are dated before 2026-09-19 (Sep 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 17, 18) → past-event traps, counted here and enumerated in traps because the crawler reaches every one of them from the listing and allowPastEvents keeps them; 5 pages are dated today or later (The Plastics Sep 19, Planet Queer Sep 21, Funk That! Sep 24, Laces Sep 25, Crazy, Disco Underground Sep 26) and state no repeat → 5 singles; 1 page (Broadway Sing-Along, Sep 14) states \"Our monthly Showtunes Sing-Along\" → 1 series whose only listed instance is past, materialized in the window by rule (2nd Mondays) with ambiguous confidence. publishedEventCount = 5 + 1 = 6. No page states no date, so there are no recurring-blurb pages among the 18; the home page's \"Recurring Events: Tuesdays: Drunk on Stage / Wednesdays: CraftNight\" blurb and the 33-PDF poster archive are the non-event traps. Past listings: 12 of the 18 cards on the listing itself, plus the poster-PDF archive back to 2024-01.",
+    "publishedEventCount": 6,
+    "documentedEventCount": 6,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "The current-month poster PDF (wp-content/uploads/2026/09/AKBAR-Events_2026-09.pdf, linked from the listing's archive gallery) was not read; it may print times or covers the pages omit (e.g. Diva Down and Slash Fiction publish no start time).",
+      "Nothing dated October 2026 or later is published at recon; the window's Oct–Dec content is only the rule-derived Broadway Sing-Along dates. The listing is expected to be replaced wholesale on or around Oct 1 (recheckAfter).",
+      "Broadway Sing-Along's weekday slot (2nd Monday) is derived from its single listed date, Sep 14 2026; the site says only \"monthly\"."
+    ]
+  },
+  "events": [
+    {
+      "id": "the-plastics",
+      "kind": "single",
+      "title": "The Plastics",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endTime": null,
+      "cover": null,
+      "description": "THE PLASTICS WITH DJ GLEN COCO From 10 PM",
+      "website": "https://akbarsilverlake.com/event/the-plastics/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2026/08/event_The-Plastics_2026-09.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/the-plastics/",
+        "quote": "<span class=\"offbeat-event-info-item-title\">Date:</span>\n    <span class=\"offbeat-event-info-item-desc\">September 19, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Dated the recon day itself (a Saturday), so it is the first upcoming card. Listing tagline \"with DJ Glen Coco\"; Category: Special Events. Body is three headings only: \"THE PLASTICS / WITH DJ GLEN COCO / From 10 PM\". No end, no cover stated."
+    },
+    {
+      "id": "planet-queer",
+      "kind": "single",
+      "title": "Planet Queer",
+      "startDate": "2026-09-21",
+      "startTime": "20:00",
+      "endTime": null,
+      "cover": null,
+      "description": "Manic Monday. An Experimental Space Cabaret. Presented by Ian MacKinnon & Travis Wood.",
+      "website": "https://akbarsilverlake.com/event/planet-queer/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2026/08/event_Planet-Queer_2026-09.jpg",
+      "facebook": "https://www.facebook.com/planetqakbar/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/planet-queer/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 21, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Manic Monday / Starts at: 8PM / An Experimental Space Cabaret / Presented by Ian MacKinnon & Travis Wood. / Facebook: https://www.facebook.com/planetqakbar/\". \"Manic Monday\" is a heading, not a cadence statement — the page gives one date. The facebook field is the event's own page, overriding the venue default."
+    },
+    {
+      "id": "funk-that",
+      "kind": "single",
+      "title": "Funk That!",
+      "startDate": "2026-09-24",
+      "startTime": "21:00",
+      "endTime": null,
+      "cover": "$10",
+      "description": "FUNK THAT! IN THE OTHER SIDE. @Bootypopqueen Presents: Funk, House, Disco, Pop… It’s Funk’n Amazing!",
+      "website": "https://akbarsilverlake.com/event/funk-that/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2025/01/event_Funk-That-01.jpg",
+      "instagram": "https://www.instagram.com/bootypopqueen/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/funk-that/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 24, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"FUNK THAT! / IN THE OTHER SIDE / From 9 PM: $10 Entry / LINK: https://www.instagram.com/bootypopqueen/ / @Bootypopqueen Presents: Funk, House, Disco, Pop… It’s Funk’n Amazing!\". \"In the Other Side\" names Akbar's back room, not another venue. Poster is a reused January 2025 upload (event_Funk-That-01.jpg) with an empty alt on the listing card — the only card besides Crazy, Disco Underground without the \"<Title> – <date> at AKBAR\" alt. The instagram field is the promoter's, overriding the venue default."
+    },
+    {
+      "id": "laces",
+      "kind": "single",
+      "title": "Laces",
+      "startDate": "2026-09-25",
+      "startTime": "22:00",
+      "endTime": null,
+      "cover": null,
+      "description": "LACES — JACK MONFORTE’S BIRTHDAY CELEBRATION. Tie Up the Laces and Come Celebrate! House All Night with DJs Jack & Tony",
+      "website": "https://akbarsilverlake.com/event/laces/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2026/09/event_Laces_2026-09.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/laces/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 25, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listing tagline \"Jack Monforte's Birthday Celebration\"; Category: Special Events. Body: \"LACES / JACK MONFORTE’S BIRTHDAY CELEBRATION / From 10 PM / Tie Up the Laces and Come Celebrate! House All Night with DJs Jack & Tony\". A one-off by its own wording."
+    },
+    {
+      "id": "crazy-disco-underground",
+      "kind": "single",
+      "title": "Crazy, Disco Underground",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endTime": null,
+      "cover": null,
+      "description": "Tobate Sounds Spins ‘70s & ‘80s Rare Disco, Funk, Soul & Hi-NRG",
+      "website": "https://akbarsilverlake.com/event/crazy-disco-underground/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2025/12/event_Crazy-Disco-Underground_2026-02.jpg",
+      "instagram": "https://www.instagram.com/tobatesounds/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/crazy-disco-underground/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 26, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Crazy, Disco Underground / Saturday Night at 10 PM / Tobate Sounds Spins ‘70s & ‘80s Rare Disco, Funk, Soul & Hi-NRG / Follow: https://www.instagram.com/tobatesounds/\". \"Saturday Night\" describes the one listed date (Sep 26 is a Saturday), not a weekly rule. Poster is the February 2026 run's upload (event_Crazy-Disco-Underground_2026-02.jpg) reused with an empty alt on the listing card. Category: Special Events."
+    },
+    {
+      "id": "broadway-sing-along",
+      "kind": "series",
+      "title": "Broadway Sing-Along",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "cover": null,
+      "description": "BROADWAY SING-ALONG — SHOWTUNES KARAOKE. Our monthly Showtunes Sing-Along, 8PM to Midnight",
+      "website": "https://akbarsilverlake.com/event/broadway-sing-along/",
+      "image": "https://akbarsilverlake.com/wp-content/uploads/2026/09/event_Broadway-Sing-Along_2026-09.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2MO",
+      "recurrenceStatedAs": "Our monthly Showtunes Sing-Along, 8PM to Midnight",
+      "occurrences": [
+        {
+          "startDate": "2026-10-12",
+          "origin": "rule",
+          "note": "Second Monday; not published by the site at recon (the listing is September-only)."
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/broadway-sing-along/",
+        "quote": "<p>Our monthly Showtunes Sing-Along, 8PM to Midnight</p>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The only page of the 18 that states a repeat. The site says \"monthly\" and gives ONE date, Monday September 14, 2026 (the 2nd Monday) — BYDAY=2MO is derived from that single date, hence ambiguous confidence; the three window occurrences are rule arithmetic, not site listings. The Sep 14 instance itself is past at recon and outside the window, so it is not an occurrence here; the crawler will still extract it from the page as a Sep 14 record (allowPastEvents), which is what expect.extracted refers to. The scraper never writes series (identifier suffix == ICS UID doctrine), so no October–December records are expected from this run. Body: \"BROADWAY SING-ALONG / SHOWTUNES KARAOKE / From 8 PM / Our monthly Showtunes Sing-Along, 8PM to Midnight\"; midnight end recorded as endTime 00:00 (next day)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "past-craftaoke",
+      "kind": "past-event",
+      "label": "Craftaoke — September 2, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "Craft Captain JP & KJ Terioke's \"Craftnight & Karaoke\", from 8 PM. Its page states one date, September 2, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/craftaoke/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 2, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-gaymers-night",
+      "kind": "past-event",
+      "label": "Gaymers Night — September 3, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"Presented by the Los Angeles Gayming Society\", from 7 PM, \"Meet, Mingle & Find Your Player 2\". Its page states one date, September 3, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/gaymers-night/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 3, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-tommy-rockers-time-machine",
+      "kind": "past-event",
+      "label": "Tommy Rocker’s Time Machine — September 4, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"NO COVER / From 10 PM / DJ Tommy Rocker spins from 10PM to 2AM\" — one of only two pages that states an end time. Its page states one date, September 4, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/tommy-rockers-time-machine/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 4, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-slash-fiction",
+      "kind": "past-event",
+      "label": "Slash Fiction — September 5, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "Category: Special Events; the body is the bare heading \"SLASH FICTION\" — no time, no description, poster only. Its page states one date, September 5, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/slash-fiction/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 5, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-bears-in-space",
+      "kind": "past-event",
+      "label": "BEARS IN SPACE!! — September 6, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "Listing tagline \"Season Closer!\" while the page body still says \"The Season Opener / Starts at: 3PM / More Info: Best in Space Universe / Resident DJs: Chris Bowen, Victor Rodriguez / Space Cadet: Stacy Christine, Perfect Lovers\" (links instagram.com/bearsinspaceuniverse) — the body is stale copy carried over from an earlier month. The bear-run lot party the config comment names; the only bear-coded page of the 18, and it is past. Its page states one date, September 6, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/bears-in-space/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 6, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-learn-the-words-bitch",
+      "kind": "past-event",
+      "label": "Learn the Words, Bitch! — September 7, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"THE LEGENDARY LIP SYNC CONTEST / From 9 PM\". Its page states one date, September 7, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/learn-the-words-bitch/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 7, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-no-chaser-8",
+      "kind": "past-event",
+      "label": "No Chaser 8 — September 10, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"A TRANS FOR TRANS EXPERIENCE / From 9 PM / Sounds by Hardbopnymph\". The \"8\" in the title is an edition number, not a time. Its page states one date, September 10, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/no-chaser-8/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 10, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-hoe-in-the-dark",
+      "kind": "past-event",
+      "label": "Hoe in the Dark — September 11, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"WITH DJ CASEY ALVA / From 10 PM / Joshua Flores Presents a Skanky Glow In The Dark Dance Party with Gogos\"; Category: Special Events. Its page states one date, September 11, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/hoe-in-the-dark/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 11, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-diva-down",
+      "kind": "past-event",
+      "label": "Diva Down — September 12, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"Your Disco Needs You! Big Divas. Bigger Drama. Biggest Bangers. with DJ Reba Snackentire\" — \"NO COVER\", \"Sexy Gogo Studs\"; no start time published. Category: Special Events. Its page states one date, September 12, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/diva-down/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 12, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-cumunity",
+      "kind": "past-event",
+      "label": "Cumunity — September 13, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"CUMUNITY Starts at 9PM / Music by DJs Josh Peace & Flabbergast\" (links instagram.com/djjoshpeace and /flabbergast4eva). Its page states one date, September 13, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/cumunity/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 13, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-the-rocksteady-lounge",
+      "kind": "past-event",
+      "label": "The Rocksteady Lounge — September 17, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"SKA, BOSS REGGAE, ROCKSTEADY & NORTHERN SOUL / From 9:30 PM / Guest Selectors from 9:30PM\". Its page states one date, September 17, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/the-rocksteady-lounge/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 17, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-sebastiane",
+      "kind": "past-event",
+      "label": "Sebastiane — September 18, 2026 (listed under \"This Month's EVENTS.\")",
+      "why": "\"Bacchanal / Discotheque / Starts at: 10:00 PM / with DJs Sindri 1& Dick Ensalada / Electro / Homoerotic Disco / Sexy Dancers.\"; Category: Special Events. Dated the day before recon. Its page states one date, September 18, 2026, already past at recon (2026-09-19); the configured listing still shows it because the page is the whole September calendar, not an upcoming filter. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/event/sebastiane/",
+        "quote": "<span class=\"offbeat-event-info-item-desc\">September 18, 2026</span>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "home-recurring-events-blurb",
+      "kind": "recurring-blurb",
+      "label": "Recurring Events: Tuesdays: Drunk on Stage / Wednesdays: CraftNight (home page)",
+      "why": "Two weekday-only lines on the home page with no date, time, page or poster — a house blurb, not events. It lives on https://akbarsilverlake.com/ which is not a parser URL, and the configured listing does not carry it; \"CraftNight\" is the same programming the listing dates once a month as \"Craftaoke — Craftnight & Karaoke\" (Wed Sep 2). Neither line should be minted as a weekly series from the venue site.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/",
+        "quote": "Recurring Events:<span class=\"edgtf-st-title-dot\">.</span>\t\t\t</h4>\n\t\t\t\t\t\t\t<p class=\"edgtf-st-text\" style=\"font-size: 20px;line-height: 30px;margin-top: 24px\">\n\t\t\t\tTuesdays: Drunk on Stage<br />\nWednesdays: CraftNight\t\t\t</p>"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-event-calendars-pdf-gallery",
+      "kind": "gallery",
+      "label": "Archive — PAST EVENT CALENDARS. (33 monthly poster PDFs, 2024-01 … 2026-09)",
+      "why": "The second section of the configured listing is a wpmf gallery whose 33 tiles link one poster PDF per month (AKBAR-Events_YYYY-MM.pdf) back to January 2024. They are month posters, not event records; the September 2026 tile duplicates the 18 cards above it. Nothing here should become an event, and the crawler should not follow 33 PDFs.",
+      "evidence": {
+        "url": "https://akbarsilverlake.com/upcoming-events/",
+        "quote": "data-href=\"https://akbarsilverlake.com/wp-content/uploads/2026/09/AKBAR-Events_2026-09.pdf\" title=\"AKBAR | Events Calendar - 2026-09\""
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The listing is \"This Month's EVENTS.\" with no next-month view and no October pages at recon (Sep 19). Does the venue publish the next month early (last days of the month) or only on the 1st? A daily crawl in the final week of each month may see 0–4 upcoming events; a run on the 1st should see the whole new month. Worth reading the listing again around Sep 28 and Oct 1.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Broadway Sing-Along says \"monthly\" and shows one date (Mon Sep 14). Is the slot the 2nd Monday? The October page will settle it; until then the rule-derived occurrences are a hypothesis.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

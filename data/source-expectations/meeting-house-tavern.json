@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "source": "Meeting House Tavern",
+  "slug": "meeting-house-tavern",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0"
+    ],
+    "doors": [
+      {
+        "url": "https://meetinghousetavern.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Squarespace page whose only calendar is the TicketSauce widget: <script src=\"https://www.sickening.events/js/events/widget.js\"> then TsEventWidget.fetchEvents({ pid: '60a71c30-a1e8-48e8-a5b0-1f640ad1e030', oid: '69c6fe50-50d4-48fb-9a04-12a60a1e618f', layout: 'calendar' }). No event text in the static HTML."
+      },
+      {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 14,
+        "truthFlag": "status: \"success\"; no paging — the widget's default arguments (start 0, end 0, incldateless true) request the organization's whole upcoming list in one response",
+        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs)."
+      }
+    ],
+    "notes": "Meeting House Tavern (2Bears Tavern Group). Recon from one cached read of each door on 2026-09-19. 14 rows, 9 distinct titles, 2026-09-19 → 2026-10-24. The feed is upcoming-only; no past rows."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the TicketSauce events_by_organization JSON answered 14 rows (all future, 2026-09-19 → 2026-10-24); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: POKÉMON RAID SOCIAL | POP'D! Vol. 10: Latin Divas, Fuego y Fama | POKER IN THE BOTTOM | LET'S GET GLAM BINGO | KARAOKE CABARET | FRIDAY NIGHT HOUSE PARTY | GROUP THERAPY (WITHOUT THE COPAY) | DRINKING AND DRAGONS | SIPS 'N' SPELLS.",
+    "publishedEventCount": 14,
+    "documentedEventCount": 14,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "chicago",
+    "timezone": "America/Chicago",
+    "bar": "Meeting House Tavern",
+    "address": "5025 N Clark St, Chicago, IL 60640",
+    "website": "https://meetinghousetavern.com"
+  },
+  "events": [
+    {
+      "id": "pokemon-raid-social-2026-09-19",
+      "kind": "single",
+      "title": "POKÉMON RAID SOCIAL",
+      "description": "Pokémon Raid Social Raids • Trades • Community • Drinks Every Third Saturday • 2PM – 5PM Join Meeting House Tavern for Pokémon Raid Social — a free monthly Pokémon GO hangout where trainers can team up for raids, trade Pokémon, complete challenges, and meet fellow players in a fun, laid-back atmosphere. Hosted by Flops, this casual community meetup combines gaming, drinks, and social energy perfect for longtime trainers, competitive players, and newcomers alike. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-19",
+      "startTime": "14:00",
+      "endDate": "2026-09-19",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/pokémon-raid-social-2-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279079/saas/logos/image_1778279070568_suzd1kpnd.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe6427-5f68-490b-964a-00380a1e627c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pop-d-vol-10-latin-divas-fuego-y-fama-2026-09-19",
+      "kind": "single",
+      "title": "POP'D! Vol. 10: Latin Divas, Fuego y Fama",
+      "description": "ODDYSEE Presents POP'D! Vol. 10 Latin Divas Fuego y Fama Siente el fuego. Vive la fama. La pista de baile est&aacute; llamando. This month we're celebrating the icons of Latin pop, from timeless legends to today's global superstars. Expect fiery anthems, sing at the top of your lungs choruses, and a dancefloor that doesn't stop. Saturday, September 19th 9PM to 1AM No Cover &middot; 21+ DJ Pedrito Hosted By Ari Urso & Eduardo Third Saturdays at Meeting House Tavern, 5025 N Clark Street. Come dance. Come shine. Come get POP'D!",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/pop-d-vol-10-latin-divas-fuego-y-fama",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788374123/saas/logos/image_1788374116913_jv1n2xlhj.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a986c5b-34c4-45e9-83bc-00380a1e6195\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-09-20",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday • 7PM – 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new along. No gambling. No stress. Just a damn good game night. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-20",
+      "startTime": "19:00",
+      "endDate": "2026-09-20",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fd7f2b-d28c-422d-8b95-00350a1e623c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-09-23",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday • 7:30PM – 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-23",
+      "startTime": "19:00",
+      "endDate": "2026-09-23",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe3f5b-459c-4f91-bf97-00170a1e6282\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-09-24",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM – 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret — a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level — from power ballad divas to first-time mic grabbers. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-24",
+      "startTime": "21:00",
+      "endDate": "2026-09-25",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe51a3-0d94-4859-8616-5eef0a1e6170\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-09-25",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday • 9PM–2AM House Party Cheap Drinks • No Cover • Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or cover charge. Free pool, darts, shuffleboard, board games, skee-ball, strong drinks, and nonstop music keep the party moving all night long. Start The Weekend",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe72af-ac08-4988-91a5-00140a1e6282\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "group-therapy-without-the-copay-2026-09-26",
+      "kind": "single",
+      "title": "GROUP THERAPY (WITHOUT THE COPAY)",
+      "description": "GROUP THERAPY Without the Copay Every 4th Saturday • 2PM – 5PM Welcome to Group Therapy — the kind that comes with cocktails instead of co-pays. Join us for an afternoon of laughs, questionable answers, and communal chaos featuring Cards Against Humanity and other adult party games. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973228, -87.667824",
+      "startDate": "2026-09-26",
+      "startTime": "14:00",
+      "endDate": "2026-09-26",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/group-therapy-without-the-copay-2-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279867/saas/logos/image_1778279858660_s1vc5hny6.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe676f-9150-40ee-a766-60710a1e6016\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-09-27",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday • 7PM – 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new along. No gambling. No stress. Just a damn good game night. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-27",
+      "startTime": "19:00",
+      "endDate": "2026-09-27",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fd80cf-90c4-4027-aa24-00140a1e6170\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-09-30",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday • 7:30PM – 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-09-30",
+      "startTime": "19:00",
+      "endDate": "2026-09-30",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe3ea7-121c-4826-9df9-6e360a1e6170\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-10-01",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM – 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret — a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level — from power ballad divas to first-time mic grabbers. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-01",
+      "startTime": "21:00",
+      "endDate": "2026-10-02",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe50b3-7fbc-41e9-9510-4c6b0a1e609d\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "drinking-and-dragons-2026-10-03",
+      "kind": "single",
+      "title": "DRINKING AND DRAGONS",
+      "description": "DRINKING AND DRAGONS TTRPG One-Shot Adventures Every 1st Saturday • 2PM – 6PM Fellow travelers, ho! Drinking and Dragons brings fantasy roleplay, epic quests, and tabletop adventure to Meeting House Tavern every first Saturday. Hosted by Rough Magic, professional Game Masters guide beginner-friendly one-shot adventures where no prior experience or preparation is required. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-03",
+      "startTime": "14:00",
+      "endDate": "2026-10-03",
+      "endTime": "18:00",
+      "website": "https://events.humanitix.com/drinking-and-dragons-at-meeting-house-tavern-088bu41d?fbclid=IwY2xjawOp",
+      "ticketUrl": "https://www.sickening.events/e/drinking-and-dragons-2-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778280475/saas/logos/image_1778280469746_l14g27x3a.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe694f-1968-4c2a-878b-18610a1e63c5\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sips-n-spells-2026-10-10",
+      "kind": "single",
+      "title": "SIPS 'N' SPELLS",
+      "description": "SIP N' SPELLS EDH • Drinks • Raffles • Community 2nd Saturdays • 2PM – 5PM Shuffle up, sip something tasty, and sling some spells at Sip N' Spells — a laid-back Magic: The Gathering hangout built for casual games, good company, and community. Whether you're brewing a new deck, jumping into EDH, or just looking for a chill tabletop afternoon, pull up a chair and tap in. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-10",
+      "startTime": "14:00",
+      "endDate": "2026-10-10",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/sips-n-spells-2-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778276419/saas/logos/image_1778276413840_btbtu4w6z.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe5ca7-a440-47c5-b084-00160a1e6170\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pokemon-raid-social-2026-10-17",
+      "kind": "single",
+      "title": "POKÉMON RAID SOCIAL",
+      "description": "Pokémon Raid Social Raids • Trades • Community • Drinks Every Third Saturday • 2PM – 5PM Join Meeting House Tavern for Pokémon Raid Social — a free monthly Pokémon GO hangout where trainers can team up for raids, trade Pokémon, complete challenges, and meet fellow players in a fun, laid-back atmosphere. Hosted by Flops, this casual community meetup combines gaming, drinks, and social energy perfect for longtime trainers, competitive players, and newcomers alike. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-17",
+      "startTime": "14:00",
+      "endDate": "2026-10-17",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/pokémon-raid-social-2-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279079/saas/logos/image_1778279070568_suzd1kpnd.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe6518-21c8-4ee6-a583-3f0f0a1e63d9\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "group-therapy-without-the-copay-2026-10-24",
+      "kind": "single",
+      "title": "GROUP THERAPY (WITHOUT THE COPAY)",
+      "description": "GROUP THERAPY Without the Copay Every 4th Saturday • 2PM – 5PM Welcome to Group Therapy — the kind that comes with cocktails instead of co-pays. Join us for an afternoon of laughs, questionable answers, and communal chaos featuring Cards Against Humanity and other adult party games. Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973228, -87.667824",
+      "startDate": "2026-10-24",
+      "startTime": "14:00",
+      "endDate": "2026-10-24",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/group-therapy-without-the-copay-2-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279867/saas/logos/image_1778279858660_s1vc5hny6.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69fe6733-36d8-4a18-8218-00130a1e6388\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}
