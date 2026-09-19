@@ -2288,6 +2288,42 @@ class SharedCore {
     // over the promoter homepage the calendar held (theurbanbear.com). The
     // run's own read of the page decides (_pageClassification): a page
     // classified as one event's page, or never classified, is not a listing.
+    // Every parser's configured URL is a listing page — a front door, never
+    // an event's own page — whichever source later hands it to us (The Bear
+    // Calendar copies beefmince.com/events as every BEEFMINCE event's link,
+    // straight from that site's own page-level JSON-LD).
+    noteConfiguredListingUrls(parserConfigs) {
+        const keys = new Set();
+        for (const parserConfig of Array.isArray(parserConfigs) ? parserConfigs : []) {
+            for (const url of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) {
+                const key = this.getUrlDedupeKey(String(url || '').trim());
+                if (key) keys.add(key);
+            }
+        }
+        this._configuredListingUrlKeys = keys;
+    }
+
+    isConfiguredListingUrl(value) {
+        const keys = this._configuredListingUrlKeys;
+        if (!(keys instanceof Set) || keys.size === 0) return false;
+        const key = this.getUrlDedupeKey(String(value || '').trim());
+        return Boolean(key) && keys.has(key);
+    }
+
+    // A listing page on the promoter's OWN site (the page this record was
+    // scraped off, or any parser's configured listing URL) is that site's
+    // front door: the curated identity link says the same thing, shorter
+    // and stable. A deeper page on the same host (an event page) is kept.
+    isCuratedHostListingPage(event, value, curatedIdentityUrls) {
+        const parts = this.getUrlRuleParts(value);
+        if (!parts || parts.segments.length === 0) return false;
+        const curatedHosts = (Array.isArray(curatedIdentityUrls) ? curatedIdentityUrls : [curatedIdentityUrls])
+            .map(url => this.getHostFromUrl(url).toLowerCase().replace(/^www\./, ''))
+            .filter(Boolean);
+        if (!curatedHosts.includes(parts.host)) return false;
+        return this.isOwnListingPageUrl(event, value) || this.isConfiguredListingUrl(value);
+    }
+
     isOwnListingPageUrl(event, value) {
         if (!event || typeof event !== 'object') return false;
         const classification = String(event._pageClassification || '');
@@ -6027,6 +6063,7 @@ class SharedCore {
         const globalProcessedUrls = new Set();
         // Parsers never started because the network gave up part-way through.
         const networkTruncatedParsers = [];
+        this.noteConfiguredListingUrls(config.parsers);
 
         for (let i = 0; i < config.parsers.length; i++) {
             // Network gave up mid-run: stop starting new parsers. Whatever the
@@ -6928,7 +6965,8 @@ class SharedCore {
                 // (promoter) should mostly win"). Bare roots only: a deep
                 // page the parser stamped is a page-stated site and stands.
                 if (promoterEntry && curatedWebsite && curatedWebsite !== website
-                    && this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite])) {
+                    && (this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite])
+                        || this.isCuratedHostListingPage(event, website, [curatedWebsite]))) {
                     event.website = curatedWebsite;
                     event._staticFields.website = curatedWebsite;
                     console.log(`🔗 LINKS: website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — the source site's front door yields to the promoter the event names`);
@@ -6960,11 +6998,15 @@ class SharedCore {
                 const curatedFavicon = promoterEntry && typeof promoterEntry.favicon === 'string'
                     ? promoterEntry.favicon.trim()
                     : '';
+                const ownHostListing = Boolean(promoterEntry && curatedWebsite && curatedWebsite !== website
+                    && this.isCuratedHostListingPage(event, website, [curatedWebsite, curatedFavicon]));
                 if (promoterEntry && (curatedWebsite || curatedFavicon) && curatedWebsite !== website
-                    && this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite, curatedFavicon])) {
-                    const frontDoor = this.isOwnListingPageUrl(event, website)
-                        ? 'the listing it was scraped off is a front door'
-                        : 'a bare root is a front door';
+                    && (ownHostListing || this.isForeignBareRootIdentityUrl(event, website, [curatedWebsite, curatedFavicon]))) {
+                    const frontDoor = ownHostListing
+                        ? 'a listing page on the promoter\'s own site is its front door'
+                        : this.isOwnListingPageUrl(event, website)
+                            ? 'the listing it was scraped off is a front door'
+                            : 'a bare root is a front door';
                     if (curatedWebsite) {
                         event.website = curatedWebsite;
                         if (!event._staticFields) event._staticFields = {};
