@@ -25874,16 +25874,23 @@ TEXT:
             let identityAppliedCount = 0;
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
                 if (!identity.hostLevel) {
                     // POI promotion: without an address consensus, identity
                     // applies only to events whose accepted pin's map POI IS
-                    // this venue.
+                    // this venue — or whose own stated address IS the curated
+                    // bar's (a Squarespace collection prints "1354 Harrison
+                    // St" on every card and geocodes no POI; lonestarsf.com
+                    // 2026-09-19 left 43 events with no bar).
                     const poiName = typeof event._geoPoiName === 'string' ? event._geoPoiName.trim() : '';
-                    if (!poiName || this.core.normalizeBarNameKey(poiName) !== identityKey) continue;
+                    const poiMatches = Boolean(poiName) && this.core.normalizeBarNameKey(poiName) === identityKey;
+                    const addressMatches = Boolean(existingAddress)
+                        && typeof curatedBar.address === 'string' && curatedBar.address.trim() !== ''
+                        && this.venueSiteIdentityAddressesAgree(existingAddress, curatedBar.address);
+                    if (!poiMatches && !addressMatches) continue;
                 }
                 // Multi-venue skip: a party at ANOTHER street address
                 // announced on this site keeps its own bar untouched.
-                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
                 if (existingAddress
                     && this.normalizeVenueSiteAddressKey(existingAddress) !== entry.consensusKey
                     && !this.venueSiteIdentityAddressesAgree(existingAddress, curatedBar.address)) {

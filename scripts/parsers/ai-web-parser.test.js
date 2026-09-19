@@ -19161,3 +19161,20 @@ test('hasDateEvidence accepts "Sept" as September, with or without a year', () =
   assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEP 26'), '2026-09-26'), true, 'the three-letter form still works');
   assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEPT 26'), '2026-09-19'), false, 'a different day is still unsupported');
 });
+
+test('venue-site identity without an address consensus fills the bar when the event states the curated address', () => {
+  const parser = createIdentityParser();
+  parser.lastVenueSiteConsensus = {
+    'cuffcomplex.example': { consensusKey: '', consensusAddress: '', blocked: false, venueRoleSeen: true, venueName: 'The Cuff Complex' }
+  };
+  const events = [
+    { title: 'Cuff Presents: Deanne', bar: '', city: 'seattle', address: '1533 13th Avenue, Seattle, WA, 98122', _venueSitePageHost: 'cuffcomplex.example' },
+    { title: 'Offsite', bar: '', city: 'seattle', address: '4216 University Way NE, Seattle, WA', _venueSitePageHost: 'cuffcomplex.example' },
+    { title: 'Unplaced', bar: '', city: 'seattle', address: '', _venueSitePageHost: 'cuffcomplex.example' }
+  ];
+  parser.applyVenueSiteIdentityCorrections(events, null);
+  assert.equal(events[0].bar, 'The Cuff Complex', 'the stated address is the curated bar\'s');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.equal(events[1].bar, '', 'another street address stays untouched');
+  assert.equal(events[2].bar, '', 'no address and no POI: nothing to go on');
+});
