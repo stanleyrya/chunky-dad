@@ -768,6 +768,13 @@ const scraperBars = {
       "city": "portland",
       "address": "335 Southeast 99th Avenue, Portland, Oregon",
       "coordinates": "45.5202731, -122.5626174"
+    },
+    {
+      "name": "Eagle Portland",
+      "city": "portland",
+      "address": "835 N Lombard St, Portland, OR 97217",
+      "coordinates": "45.5773587, -122.6755256",
+      "website": "https://www.eagleportland.com"
     }
   ],
   "ptown": [
@@ -1065,6 +1072,13 @@ const scraperBars = {
       "city": "toronto",
       "address": "105 Carlton Street, Toronto, Ontario",
       "coordinates": "43.6620695, -79.3773558"
+    },
+    {
+      "name": "Black Eagle Toronto",
+      "city": "toronto",
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "coordinates": "43.6641525, -79.3801656",
+      "website": "https://www.blackeagletoronto.com"
     }
   ],
   "torremolinos": [

@@ -19142,3 +19142,13 @@ test('buildEventFromSquarespaceItem keeps an address title that is the street li
   assert.equal(named.bar, 'The Cuff Complex');
   assert.equal(named.address, '1533 13th Avenue, Seattle, WA, 98122');
 });
+
+test('isArchivedElfsightRow: a one-off that ended more than a month ago is archive; repeats and recent nights are not', () => {
+  const parser = createParser();
+  const now = new Date('2026-09-19T12:00:00Z');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'PUP ROMP', start: { date: '2024-07-20', time: '15:00' }, end: { date: '2024-07-20', time: '19:00' }, repeatPeriod: 'noRepeat' }, now), true);
+  assert.equal(parser.isArchivedElfsightRow({ name: 'NAKED NIGHT', start: { date: '2026-07-16', time: '21:00' }, end: { date: '2026-07-16', time: '21:00' }, repeatPeriod: 'nthDayInMonth' }, now), false, 'a repeating entry is judged by its rule');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'TORN', start: { date: '2026-09-01', time: '17:00' }, end: { date: '2026-09-01', time: '21:00' }, repeatPeriod: 'noRepeat' }, now), false, 'within the month');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'Weekend', start: { date: '2026-07-01', time: '10:00' }, end: { date: '2026-09-10', time: '10:00' }, repeatPeriod: 'noRepeat' }, now), false, 'a span that ended recently');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'Undated', start: {}, end: {}, repeatPeriod: 'noRepeat' }, now), false);
+});

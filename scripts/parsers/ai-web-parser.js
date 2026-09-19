@@ -216,6 +216,9 @@ const JSON_API_FEED_MAX_PAGES = 6;
 // feeds above, and the same 90-day horizon.
 const WIX_EVENTS_MAX_PAGES = 6;
 const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// An Elfsight calendar entry that ended more than this many days ago is the
+// widget's archive, not an event (see collectElfsightCalendarEvents).
+const ELFSIGHT_ARCHIVE_DAYS = 30;
 // Distinct MEC event pages read per grid for their wall-clock times.
 const MEC_EVENT_PAGE_ENRICH_CAP = 60;
 
@@ -6722,12 +6725,33 @@ class AiWebParser {
                 console.warn(`🤖 AI Web: Elfsight widget ${widgetId} could not be read (${error.message}) — page left unchanged`);
                 continue;
             }
-            const rows = this.readElfsightWidgetEvents(payload, widgetId);
+            const published = this.readElfsightWidgetEvents(payload, widgetId);
+            if (published.length === 0) continue;
+            // The boot payload is the widget's whole history (Black Eagle
+            // Toronto: 253 entries, 213 of them over — 408 bear checks for
+            // nights nobody can attend). A one-off that ended more than a
+            // month ago is the calendar's archive, read the way an iCalendar
+            // export's archive is; a repeating entry stays, its rule decides.
+            const rows = published.filter(row => !this.isArchivedElfsightRow(row));
+            console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${published.length} event(s)${rows.length < published.length ? ` — ${published.length - rows.length} ended more than ${ELFSIGHT_ARCHIVE_DAYS} days ago (the calendar's archive), ${rows.length} read` : ''}`);
             if (rows.length === 0) continue;
-            console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${rows.length} event(s)`);
             events.push(...rows);
         }
         return events;
+    }
+
+    // A widget entry with no repeat whose last day (end, else start) is more
+    // than ELFSIGHT_ARCHIVE_DAYS days ago. Dates are the entry's own wall
+    // dates (YYYY-MM-DD), so no zone is needed to tell a month-old night.
+    isArchivedElfsightRow(row, now = new Date()) {
+        if (!row || typeof row !== 'object') return false;
+        const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod : '';
+        if (period && period !== 'noRepeat' && period !== 'none') return false;
+        const day = (entry) => (entry && typeof entry === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String(entry.date || '')) ? String(entry.date) : '');
+        const last = day(row.end) || day(row.start);
+        if (!last) return false;
+        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        return last < cutoff;
     }
 
     // Is this URL one the parser was configured to fetch? Compared on the
