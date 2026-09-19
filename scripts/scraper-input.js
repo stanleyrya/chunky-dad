@@ -239,7 +239,9 @@ const scraperConfig = {
     },
     {
       name: "The Bear Calendar",
-      automationEnabled: false,
+      // Automation switched on 2026-09-19: the hand runs of that day showed
+      // the first-run verification below holding (12 aggregator dupes
+      // merged by ticket-url identity, websites the original hosts).
       // Aggregator (Astro, server-rendered). The listing links /feed.ics and
       // serves /feed.json — the crawler finds that door itself (🚪 MACHINE
       // DOOR) and reads the whole upcoming set in one request: title, venue,
