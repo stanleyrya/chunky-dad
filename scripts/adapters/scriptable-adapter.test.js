@@ -11450,3 +11450,39 @@ test('executeReviewedSavedRun selects a night covered by a SIBLING night\'s appr
   assert.equal(summary.approved, 2);
   assert.equal(summary.created, 2);
 });
+
+test('executeReviewedSavedRun skips rows this run\'s earlier execution already wrote, and logs a per-phase timing line before the log is written', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const freshPlan = [reviewedNew('Approved Party'), reviewedNew('Written Party')];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  core.prepareEventsForCalendar = async (events) => {
+    captured.analyzed = events;
+    await adapter.getExistingEvents(events[0]);
+    return events.map((event) => ({ ...freshPlan.find((fresh) => fresh.title === event.title), _savedRunSourceIndex: event._savedRunSourceIndex }));
+  };
+  adapter.getExistingEvents = async () => [];
+  const decisions = freshPlan.map((event) => ({ key: core.getOwnerReviewKey(event), kind: 'new', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }));
+  const stale = [
+    { ...freshPlan[0], _action: 'new' },
+    { ...freshPlan[1], _action: 'new', _ownerReviewApproved: { key: decisions[1].key, stampedAt: '2030-01-01T00:00:00.000Z' } }
+  ];
+  const results = { ...buildReviewedRunResults(stale), savedRunExecutions: [{ executedAt: '2030-01-02T00:00:00.000Z', via: 'owner-review', processed: 1 }] };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let summary;
+  try {
+    summary = await adapter.executeReviewedSavedRun(results, decisions);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(captured.analyzed.map((event) => event.title), ['Approved Party'], 'the written row is not re-analyzed');
+  assert.equal(summary.alreadyWritten, 1);
+  assert.equal(summary.skipped, 0);
+  assert.ok(lines.some((line) => /1 row\(s\) were written by this run's earlier execution/.test(line)), lines.join('\n'));
+  const timing = lines.find((line) => /Reviewed execute timing/.test(line));
+  assert.ok(timing && /for 1 row\(s\)/.test(timing) && /calendar searches 1 \(/.test(timing), timing);
+  assert.equal(Object.prototype.hasOwnProperty.call(adapter, 'getExistingEvents'), true, 'the test stub survives the timer restore');
+  assert.ok(captured.notices[captured.notices.length - 1].message.includes('1 written by this run'), captured.notices[captured.notices.length - 1].message);
+});
