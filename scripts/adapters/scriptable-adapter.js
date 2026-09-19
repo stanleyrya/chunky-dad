@@ -5331,6 +5331,7 @@ class ScriptableAdapter {
     // handler and become a live main-frame navigation mid-load.
     webView.shouldAllowRequest = (request) => {
       const url = request && request.url ? String(request.url) : "";
+      if (this.handOffMapsNavigation(url)) return false;
       if (url.indexOf("chunkyreview://") !== 0) {
         return true; // normal navigation (OSM map iframes, about:blank, …)
       }
@@ -6446,6 +6447,7 @@ class ScriptableAdapter {
           // 2 of the same run rendered.
           webView.shouldAllowRequest = (request) => {
             const url = request && request.url ? String(request.url) : "";
+            if (this.handOffMapsNavigation(url)) return false;
             if (url.indexOf("chunkyscrape://") !== 0) {
               return true; // normal navigation (links, about:blank, …)
             }
@@ -10281,7 +10283,55 @@ class ScriptableAdapter {
       `&origin=${encodeURIComponent(origin)}` +
       `&destination=${encodeURIComponent(destination)}`;
     if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    // Always on foot: the route exists to show that three location
+    // readings are one place, and a walking route never asks which mode
+    // (owner 2026-09-19: "always use walking directions").
+    url += "&travelmode=walking";
     return url;
+  }
+
+  // The same route as a Google Maps APP link (comgooglemaps://): the
+  // phone's WebView hands it to iOS directly, which opens the app with no
+  // "Open in Google Maps?" question. Waypoints ride in daddr's "+to:"
+  // form. '' for anything that is not our directions link.
+  toGoogleMapsAppUrl(httpsUrl) {
+    const text = String(httpsUrl || "");
+    const match = /^https:\/\/(?:www\.)?google\.com\/maps\/dir\/\?(.*)$/i.exec(text);
+    if (!match) return "";
+    const params = {};
+    for (const pair of match[1].split("&")) {
+      const eq = pair.indexOf("=");
+      if (eq <= 0) continue;
+      try {
+        params[decodeURIComponent(pair.slice(0, eq))] = decodeURIComponent(pair.slice(eq + 1));
+      } catch (error) {
+        return "";
+      }
+    }
+    if (!params.origin || !params.destination) return "";
+    const legs = [params.waypoints, params.destination].filter(Boolean).map((leg) => encodeURIComponent(leg));
+    return (
+      "comgooglemaps://" +
+      `?saddr=${encodeURIComponent(params.origin)}` +
+      `&daddr=${legs.join("+to:")}` +
+      "&directionsmode=walking"
+    );
+  }
+
+  // A WebView navigation to our directions link is handed to iOS as the
+  // app link (Safari.open on the scheme opens Google Maps outright, no
+  // prompt). true when handled — the caller cancels the navigation.
+  handOffMapsNavigation(url) {
+    const appUrl = this.toGoogleMapsAppUrl(url);
+    if (!appUrl) return false;
+    if (typeof Safari === "undefined" || typeof Safari.open !== "function") return false;
+    try {
+      Safari.open(appUrl);
+    } catch (error) {
+      console.log(`📱 Scriptable: Google Maps app link not opened (${error.message}) — the page follows the web link instead`);
+      return false;
+    }
+    return true;
   }
 
   // Best single maps URL for a compact list row (owner: "make the route
