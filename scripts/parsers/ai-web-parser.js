@@ -18346,6 +18346,15 @@ TEXT:
             variants.add(`${monthNames[monthIndex]} ${paddedDay}`);
             variants.add(`${monthShortNames[monthIndex]} ${paddedDay}`);
         }
+        // September's other abbreviation: "SEPT 26" contains neither "sep 26"
+        // nor "september 26", so a page dating its party "SATURDAY, SEPT 26"
+        // corroborated nothing and the date was dropped as unsupported
+        // (gruntparty.monster, run 2026-09-19 — the Folsom night vanished).
+        if (monthIndex === 8) {
+            variants.add(`sept ${day}`);
+            if (paddedDay !== String(day)) variants.add(`sept ${paddedDay}`);
+            if (Number.isFinite(year) && year > 0) variants.add(`sept ${day}, ${year}`);
+        }
         if (Number.isFinite(year) && year > 0) {
             variants.add(`${monthNames[monthIndex]} ${day}, ${year}`);
             variants.add(`${monthShortNames[monthIndex]} ${day}, ${year}`);

@@ -19152,3 +19152,12 @@ test('isArchivedElfsightRow: a one-off that ended more than a month ago is archi
   assert.equal(parser.isArchivedElfsightRow({ name: 'Weekend', start: { date: '2026-07-01', time: '10:00' }, end: { date: '2026-09-10', time: '10:00' }, repeatPeriod: 'noRepeat' }, now), false, 'a span that ended recently');
   assert.equal(parser.isArchivedElfsightRow({ name: 'Undated', start: {}, end: {}, repeatPeriod: 'noRepeat' }, now), false);
 });
+
+test('hasDateEvidence accepts "Sept" as September, with or without a year', () => {
+  const parser = createParser();
+  const ctx = (text) => parser.buildAiEvidenceContextFromText(text);
+  assert.equal(parser.hasDateEvidence(ctx('FOLSOM SATURDAY, SEPT 26 MOZHGAN & DEL At THE STUD'), '2026-09-26'), true);
+  assert.equal(parser.hasDateEvidence(ctx('Sept 5, 2026 doors 9pm'), '2026-09-05'), true);
+  assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEP 26'), '2026-09-26'), true, 'the three-letter form still works');
+  assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEPT 26'), '2026-09-19'), false, 'a different day is still unsupported');
+});
