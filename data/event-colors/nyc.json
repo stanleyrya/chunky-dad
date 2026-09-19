@@ -79,6 +79,16 @@
     "accent": "#e52229"
   },
   {
+    "slug": "bears-4-bareburger-17deea7a",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#534443:19:2 #8c645b:19:5 #bc8d7b:17:6 #9d69ed:8:19 #6374c3:6:12",
+    "accent": "#9d69ed"
+  },
+  {
     "slug": "bears-4-bareburger-1fb73ea1",
     "url": "https://linktr.ee/Gay4bareburger",
     "faviconBg": "#e5dd82",
@@ -90,6 +100,16 @@
   },
   {
     "slug": "bears-4-bareburger-2aaa7e43",
+    "url": "https://linktr.ee/Gay4bareburger",
+    "faviconBg": "#e5dd82",
+    "faviconFg": "#6f5a34",
+    "faviconPlate": "#ffff66",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:34:0 #05090b:14:1 #fdcb51:11:15 #f09333:11:15 #e52229:9:22",
+    "accent": "#e52229"
+  },
+  {
+    "slug": "bears-4-bareburger-2f5d1ca6",
     "url": "https://linktr.ee/Gay4bareburger",
     "faviconBg": "#e5dd82",
     "faviconFg": "#6f5a34",
@@ -662,6 +682,16 @@
     "accent": "#3f41a8"
   },
   {
+    "slug": "rockstrap-24b5fb5a",
+    "url": "https://www.rockbarnyc.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#12110e:40:1 #f6e3e3:19:2 #e3abab:11:7 #8a3541:7:12 #e02a8f:5:23",
+    "accent": "#e02a8f"
+  },
+  {
     "slug": "rockstrap-42266312",
     "url": "https://www.rockbarnyc.com/",
     "faviconBg": "#030303",
@@ -669,6 +699,26 @@
     "faviconPlate": "#000000",
     "paletteSource": "favicon",
     "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
+  },
+  {
+    "slug": "rockstrap-456b9bca",
+    "url": "https://www.rockbarnyc.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#12110e:40:1 #f6e3e3:19:2 #e3abab:11:7 #8a3541:7:12 #e02a8f:5:23",
+    "accent": "#e02a8f"
+  },
+  {
+    "slug": "rockstrap-59194f68",
+    "url": "https://www.rockbarnyc.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#12110e:40:1 #f6e3e3:19:2 #e3abab:11:7 #8a3541:7:12 #e02a8f:5:23",
+    "accent": "#e02a8f"
   },
   {
     "slug": "the-18th-annual-urban-bear-nyc-street-fair-5cc259e6",

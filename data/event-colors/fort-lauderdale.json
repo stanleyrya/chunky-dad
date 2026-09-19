@@ -1,5 +1,15 @@
 [
   {
+    "slug": "beartrap-0c35209b",
+    "url": "https://eaglebarwm.com/event/beartrap/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0a:37:0 #242215:16:2 #c3853d:11:12 #945b24:11:10 #e4b354:10:13",
+    "accent": "#e4b354"
+  },
+  {
     "slug": "club-chub-presents-meat-market-56d7ebd4",
     "url": "https://www.clubchubusa.com",
     "faviconBg": "#e43383",
@@ -50,6 +60,16 @@
     "accent": "#d29679"
   },
   {
+    "slug": "daddy-pop-0800982f",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-12/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
+    "accent": "#fd7dac"
+  },
+  {
     "slug": "daddy-pop-0c0c29f7",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-17/",
     "faviconBg": "#ededed",
@@ -90,6 +110,36 @@
     "accent": "#d29679"
   },
   {
+    "slug": "daddy-pop-17a88367",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-21/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
+    "accent": "#fd7dac"
+  },
+  {
+    "slug": "daddy-pop-1ef4ee62",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-13/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
+    "slug": "daddy-pop-2080205b",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-27/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
     "slug": "daddy-pop-31564bff",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
     "faviconBg": "#ededed",
@@ -120,6 +170,16 @@
     "accent": "#fd7dac"
   },
   {
+    "slug": "daddy-pop-3d2dc279",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-20/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
     "slug": "daddy-pop-3e809493",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-19/",
     "faviconBg": "#ededed",
@@ -140,8 +200,38 @@
     "accent": "#fd7dac"
   },
   {
+    "slug": "daddy-pop-4a14133a",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-14/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
+    "accent": "#fd7dac"
+  },
+  {
     "slug": "daddy-pop-4a29495a",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-18/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
+    "slug": "daddy-pop-5088aad2",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-11-28/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
+    "accent": "#fd7dac"
+  },
+  {
+    "slug": "daddy-pop-540b7de3",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-04/",
     "faviconBg": "#ededed",
     "faviconFg": "#161314",
     "faviconPlate": "#ffffff",
@@ -160,6 +250,16 @@
     "accent": "#d29679"
   },
   {
+    "slug": "daddy-pop-5d859f8d",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-11/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
     "slug": "daddy-pop-5e31d272",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-11-06/",
     "faviconBg": "#ededed",
@@ -170,6 +270,16 @@
     "accent": "#d29679"
   },
   {
+    "slug": "daddy-pop-71dc7658",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-12-05/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
+    "accent": "#fd7dac"
+  },
+  {
     "slug": "daddy-pop-7978927b",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
     "faviconBg": "#ededed",
@@ -178,5 +288,45 @@
     "paletteSource": "flyer",
     "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
     "accent": "#d29679"
+  },
+  {
+    "slug": "honey-pot-206931fd",
+    "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1b1512:29:1 #422e29:19:3 #734d3b:16:6 #e6bb5c:11:12 #ca3f3c:3:18",
+    "accent": "#e6bb5c"
+  },
+  {
+    "slug": "honey-pot-25713e6a",
+    "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1b1512:29:1 #422e29:19:3 #734d3b:16:6 #e6bb5c:11:12 #ca3f3c:3:18",
+    "accent": "#e6bb5c"
+  },
+  {
+    "slug": "honey-pot-3e2ea5a4",
+    "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1b1512:29:1 #422e29:19:3 #734d3b:16:6 #e6bb5c:11:12 #ca3f3c:3:18",
+    "accent": "#e6bb5c"
+  },
+  {
+    "slug": "honey-pot-50edb9db",
+    "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1b1512:29:1 #422e29:19:3 #734d3b:16:6 #e6bb5c:11:12 #ca3f3c:3:18",
+    "accent": "#e6bb5c"
   }
 ]
