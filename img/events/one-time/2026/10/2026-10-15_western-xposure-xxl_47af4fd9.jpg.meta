@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+  "type": "event",
+  "filename": "2026-10-15_western-xposure-xxl_47af4fd9.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "101253",
+  "eventInfo": {
+    "name": "Western Xposure XXL",
+    "startDate": "2026-10-15T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:59.530Z",
+  "etag": "\"a4e30e7d4b0fcfd677be16216ef084a2\"",
+  "lastModified": "Sat, 11 Jul 2026 08:52:37 GMT",
+  "flyerOptimized": 1
+}

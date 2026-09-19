@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/382eded4ab0a93d3.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/382eded4ab0a93d3.png",
+  "type": "event",
+  "filename": "2027-06-16_biggervegas-2027_39647516.png",
+  "contentType": "image/jpeg",
+  "contentLength": "294209",
+  "eventInfo": {
+    "name": "BiggerVegas 2027",
+    "startDate": "2027-06-16T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:08:04.622Z",
+  "etag": "\"06a6d55ea79055dda793ace17b41cd94\"",
+  "lastModified": "Fri, 18 Sep 2026 13:31:27 GMT",
+  "flyerOptimized": 1
+}

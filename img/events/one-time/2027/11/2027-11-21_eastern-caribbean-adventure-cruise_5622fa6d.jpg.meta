@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg",
+  "type": "event",
+  "filename": "2027-11-21_eastern-caribbean-adventure-cruise_5622fa6d.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "277906",
+  "eventInfo": {
+    "name": "Eastern Caribbean Adventure Cruise",
+    "startDate": "2027-11-21T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:57.438Z",
+  "etag": "\"4743083c342705a90c164bb792da54ea\"",
+  "lastModified": "Fri, 10 Jul 2026 04:22:44 GMT",
+  "flyerOptimized": 1
+}

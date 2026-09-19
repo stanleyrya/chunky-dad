@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d50b4907e35a1faa.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d50b4907e35a1faa.jpg",
+  "type": "event",
+  "filename": "2026-10-30_adventure-bears-panama-canal-cruise-2026_3c584b7c.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "364292",
+  "eventInfo": {
+    "name": "Adventure Bears Panama Canal Cruise 2026",
+    "startDate": "2026-10-30T19:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:56.750Z",
+  "etag": "\"1c760b0f57b307e93fc55eee9a1af29e\"",
+  "lastModified": "Fri, 10 Jul 2026 04:35:29 GMT",
+  "flyerOptimized": 1
+}

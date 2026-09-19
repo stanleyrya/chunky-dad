@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3220db63f1047f48.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3220db63f1047f48.jpg",
+  "type": "event",
+  "filename": "2027-10-09_cruisingbearscom-ibc-balcony-bears-bash_51597f48.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "66302",
+  "eventInfo": {
+    "name": "CruisingBears.com IBC Balcony Bears Bash",
+    "startDate": "2027-10-09T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:58.054Z",
+  "etag": "\"34bdc1e70b3660964456ba15035d4d04\"",
+  "lastModified": "Wed, 08 Jul 2026 04:28:47 GMT",
+  "flyerOptimized": 1
+}

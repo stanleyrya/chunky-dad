@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ec6dfb6a818834b9.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ec6dfb6a818834b9.jpg",
+  "type": "event",
+  "filename": "2026-10-17_bearrison-street-fair-2026_48d8e8a2.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "400554",
+  "eventInfo": {
+    "name": "Bearrison Street Fair 2026",
+    "startDate": "2026-10-17T12:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:08:01.278Z",
+  "etag": "\"ab39a560b4ff19ba2bc43eefadc64254\"",
+  "lastModified": "Thu, 17 Sep 2026 14:05:04 GMT",
+  "flyerOptimized": 1
+}

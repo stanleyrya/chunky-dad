@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
+  "type": "event",
+  "filename": "2026-11-27_bearsgiving-2026_24fec90e.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "173418",
+  "eventInfo": {
+    "name": "Bearsgiving 2026",
+    "startDate": "2026-11-27T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:08:00.001Z",
+  "etag": "\"9658a589adbd5d51885db284ad5de3ea\"",
+  "lastModified": "Sun, 06 Sep 2026 12:25:24 GMT",
+  "flyerOptimized": 1
+}

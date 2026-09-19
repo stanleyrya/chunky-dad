@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+  "type": "event",
+  "filename": "2026-12-03_madbear-party-2026-madrid_13219ab.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "207374",
+  "eventInfo": {
+    "name": "MADBEAR PARTY 2026 - MADRID",
+    "startDate": "2026-12-03T11:45:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:58.246Z",
+  "etag": "\"3d828cc7b2421b780f5c89c15cb19071\"",
+  "lastModified": "Fri, 18 Sep 2026 13:32:27 GMT",
+  "flyerOptimized": 1
+}

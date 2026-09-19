@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg",
+  "type": "event",
+  "filename": "2027-01-31_chubs-at-the-tubs_3d8207f4.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "428052",
+  "eventInfo": {
+    "name": "Chubs at the Tubs",
+    "startDate": "2027-01-31T13:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:08:03.466Z",
+  "etag": "\"ac82015c5373b6a3f5a87e015d9337cc\"",
+  "lastModified": "Mon, 24 Aug 2026 06:25:47 GMT",
+  "flyerOptimized": 1
+}

@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
+  "type": "event",
+  "filename": "2027-01-22_bearadise-ibff-bear-week-2027_5463b93c.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "372079",
+  "eventInfo": {
+    "name": "Bearadise IBFF Bear Week 2027",
+    "startDate": "2027-01-22T16:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:08:00.369Z",
+  "etag": "\"496eb9b077b4e2ed7a0573266246cc2a\"",
+  "lastModified": "Thu, 17 Sep 2026 20:15:48 GMT",
+  "flyerOptimized": 1
+}

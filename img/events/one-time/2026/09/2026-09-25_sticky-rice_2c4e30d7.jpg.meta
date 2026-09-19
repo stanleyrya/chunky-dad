@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+  "type": "event",
+  "filename": "2026-09-25_sticky-rice_2c4e30d7.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "31840",
+  "eventInfo": {
+    "name": "Sticky Rice",
+    "startDate": "2026-09-25T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-19T18:07:59.097Z",
+  "etag": "\"1f87bd099e84423d9ad220ea4784a314\"",
+  "lastModified": "Fri, 10 Jul 2026 04:30:24 GMT",
+  "flyerOptimized": 1
+}
