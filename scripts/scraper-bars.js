@@ -27,6 +27,12 @@ const scraperBars = {
       "website": "https://hereticatlanta.com",
       "faviconBg": "#481818",
       "faviconFg": "#a09f9f"
+    },
+    {
+      "name": "Atlanta Eagle",
+      "city": "atlanta",
+      "address": "1492 Piedmont Avenue Northeast, Atlanta",
+      "coordinates": "33.7961866, -84.3711336"
     }
   ],
   "bangkok": [
@@ -277,6 +283,12 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK4HWoYMB2YgRf442vxEUrM8",
       "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
       "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z"
+    },
+    {
+      "name": "The Westin Fort Lauderdale",
+      "city": "fort-lauderdale",
+      "address": "400 Corporate Drive, Fort Lauderdale, Florida",
+      "coordinates": "26.2053310, -80.1394930"
     }
   ],
   "hong-kong": [
@@ -329,12 +341,14 @@ const scraperBars = {
       "name": "Eagle LA",
       "city": "la",
       "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com",
       "coordinates": "34.0912127, -118.2840632",
+      "website": "https://eaglela.com",
       "instagram": "dirtybird_la",
       "facebook": "https://www.facebook.com/eagle.bar.la/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
       "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la",
+      "faviconBg": "#040404",
+      "faviconFg": "#74706a",
       "gayCitiesLastScrapedAt": "2026-06-13T15:14:53.360Z"
     },
     {
@@ -448,6 +462,14 @@ const scraperBars = {
       "coordinates": "51.5022544, -0.1231736"
     }
   ],
+  "manchester": [
+    {
+      "name": "The Eagle Bar",
+      "city": "manchester",
+      "address": "15 Bloom Street, Manchester, England",
+      "coordinates": "53.4776882, -2.2368676"
+    }
+  ],
   "montreal": [
     {
       "name": "Le Stud",
@@ -496,12 +518,14 @@ const scraperBars = {
       "name": "Rockbar",
       "city": "nyc",
       "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://www.rockbarnyc.com",
       "coordinates": "40.7326534, -74.0096996",
+      "website": "https://www.rockbarnyc.com",
       "instagram": "https://www.instagram.com/rockbarnyc",
       "facebook": "https://www.facebook.com/Rockbar-NYC",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
       "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+      "faviconBg": "#030303",
+      "faviconFg": "#7a7a7a",
       "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z"
     },
     {
@@ -629,6 +653,18 @@ const scraperBars = {
       "city": "nyc",
       "address": "355 West 41st Street, New York NY 10036",
       "coordinates": "40.7577763, -73.9925418"
+    },
+    {
+      "name": "Julius'",
+      "city": "nyc",
+      "address": "159 W 10th St, New York, NY 10014, USA",
+      "coordinates": "40.7345357, -74.0016300"
+    },
+    {
+      "name": "Phoenix Bar",
+      "city": "nyc",
+      "address": "447 E 13th St, New York, NY 10009, USA",
+      "coordinates": "40.7299744, -73.9811697"
     }
   ],
   "palm-springs": [
@@ -642,6 +678,18 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJbXdJHxEb24ARI5sarz94EAI",
       "gayCities": "https://palmsprings.gaycities.com/bars/588-hunters-palm-springs",
       "gayCitiesLastScrapedAt": "2026-06-14T03:19:28.458Z"
+    },
+    {
+      "name": "CCBC Resort Hotel",
+      "city": "palm-springs",
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "coordinates": "33.7796835, -116.4689784"
+    },
+    {
+      "name": "Casa Oliver",
+      "city": "palm-springs",
+      "address": "535 South Warm Sands Drive, Palm Springs, California",
+      "coordinates": "33.8147765, -116.5376249"
     }
   ],
   "paris": [
@@ -671,6 +719,12 @@ const scraperBars = {
       "city": "phoenix",
       "address": "3110 N Central Ave",
       "coordinates": "33.4834859, -112.0757318"
+    },
+    {
+      "name": "Royale",
+      "city": "phoenix",
+      "address": "4230 N. 6th Drive, PHOENIX, AZ 85013",
+      "coordinates": "33.4977695, -112.0823699"
     }
   ],
   "poconos": [
@@ -708,6 +762,12 @@ const scraperBars = {
       "city": "portland",
       "address": "33 Northwest 9th Avenue",
       "coordinates": "45.5235278, -122.6802991"
+    },
+    {
+      "name": "Hawks PDX",
+      "city": "portland",
+      "address": "335 Southeast 99th Avenue, Portland, Oregon",
+      "coordinates": "45.5202731, -122.5626174"
     }
   ],
   "ptown": [
@@ -782,6 +842,12 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
       "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
       "gayCitiesLastScrapedAt": "2026-06-13T22:28:59.439Z"
+    },
+    {
+      "name": "Blue Chairs Resort",
+      "city": "pv",
+      "address": "4 Malecon, Puerto Vallarta, Jalisco",
+      "coordinates": "20.5973207, -105.2392083"
     }
   ],
   "san-diego": [
@@ -789,6 +855,12 @@ const scraperBars = {
       "name": "The Rail",
       "city": "san-diego",
       "address": "3796 5th Avenue, San Diego, California, 92103",
+      "coordinates": "32.7468104, -117.1606487"
+    },
+    {
+      "name": "The Brass Rail",
+      "city": "san-diego",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
       "coordinates": "32.7468104, -117.1606487"
     }
   ],
@@ -987,6 +1059,14 @@ const scraperBars = {
       "gayCitiesLastScrapedAt": "2026-06-14T09:13:55.162Z"
     }
   ],
+  "toronto": [
+    {
+      "name": "Spa Excess",
+      "city": "toronto",
+      "address": "105 Carlton Street, Toronto, Ontario",
+      "coordinates": "43.6620695, -79.3773558"
+    }
+  ],
   "torremolinos": [
     {
       "name": "Aqua Emporio",
@@ -1015,6 +1095,12 @@ const scraperBars = {
       "city": "vegas",
       "address": "855 East Twain Avenue, Winchester, Nevada, 89169",
       "coordinates": "36.1213962, -115.1450910"
+    },
+    {
+      "name": "Tuscany Suites & Casino",
+      "city": "vegas",
+      "address": "255 East Flamingo Road, Las Vegas, Nevada",
+      "coordinates": "36.1131556, -115.1599087"
     }
   ]
 };

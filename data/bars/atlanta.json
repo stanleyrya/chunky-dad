@@ -11,5 +11,11 @@
     "palette": "#ffffff:38:0 #bdbdbc:16:0 #020101:14:1 #710403:5:14 #c10303:4:21",
     "accent": "#c10303",
     "faviconPlate": "#ffffff"
+  },
+  {
+    "name": "Atlanta Eagle",
+    "city": "atlanta",
+    "address": "1492 Piedmont Avenue Northeast, Atlanta",
+    "coordinates": "33.7961866, -84.3711336"
   }
 ]

@@ -162,5 +162,17 @@
     "city": "nyc",
     "address": "355 West 41st Street, New York NY 10036",
     "coordinates": "40.7577763, -73.9925418"
+  },
+  {
+    "name": "Julius'",
+    "city": "nyc",
+    "address": "159 W 10th St, New York, NY 10014, USA",
+    "coordinates": "40.7345357, -74.0016300"
+  },
+  {
+    "name": "Phoenix Bar",
+    "city": "nyc",
+    "address": "447 E 13th St, New York, NY 10009, USA",
+    "coordinates": "40.7299744, -73.9811697"
   }
 ]

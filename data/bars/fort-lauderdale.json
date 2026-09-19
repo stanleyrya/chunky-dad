@@ -47,5 +47,11 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK4HWoYMB2YgRf442vxEUrM8",
     "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z"
+  },
+  {
+    "name": "The Westin Fort Lauderdale",
+    "city": "fort-lauderdale",
+    "address": "400 Corporate Drive, Fort Lauderdale, Florida",
+    "coordinates": "26.2053310, -80.1394930"
   }
 ]
