@@ -6,63 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-london
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART:20261031T220000Z
-DTEND:20261101T040000Z
-DTSTAMP:20260919T180740Z
-UID:C35D68BF-3219-4B72-8EE8-CD8360B483BA
-CREATED:20260729T165210Z
-DESCRIPTION:website: https://beefmince.com/events\nticketUrl: https://dice.
- fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets\nimage:
-  https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72
- d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080\ncover: £15\ntimezone: Europe/L
- ondon\nshortName: SPOOK­MINCE\nfavicon: https://beefmince.com\nkey: spookmi
- nce|2026-10-31|\nbearSource: ai\ndescription: BEEFMINCE's big Halloween bas
- h is back\, and we're haunting a new venue this year! Full info and line up
-  soon.\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-2
- 0/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300
- &h=630&auto=compress\nbar: Venue TBA\nbearReview: unsure — ai\\: The event 
- title 'SPOOKMINCE' and minimal description provide no clear indication of b
- ear-scene alignment or audience\, and no evidence confirms it was produced 
- by the bear-scene promoter.\naddress: London\, UK\naddressSource: page\nima
- geSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Ve
- nue%20TBA%2C%20London%2C%20UK
-LAST-MODIFIED:20260919T161245Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SPOOKMINCE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260926T170000Z
-DTEND:20260927T000000Z
-DTSTAMP:20260919T180740Z
-UID:CFC7B434-180D-48FE-B68C-44C2A2C1685E
-CREATED:20260910T195517Z
-DESCRIPTION:timezone: Europe/London\nbar: Duke of Wellington\naddress: 77 W
- ardour Street\, London\, W1D 6QA\nwebsite: https://beefmince.com/events\nti
- cketUrl: https://www.dukeofwellingtonsoho.co.uk/london/events\nimage: https
- ://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e1
- 86408156.jpg?rect=0%2C0%2C1080%2C1080\nimageSource: json-api\npinSource: pa
- ge\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_
- id:ChIJkUcf6v4PdkgR8zHSLztcmdw\ninstagram: https://www.instagram.com/dukeof
- wellington_soho\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey
- : beefmince-welly-takeover-x-london-bear-pride|2026-09-26|duke of wellingto
- n\nbearSource: keyword
-LAST-MODIFIED:20260910T195517Z
-LOCATION:51.512334\, -0.133008
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE Welly Takeover x London Bear Pride
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261018T190000Z
 DTEND:20261019T020000Z
-DTSTAMP:20260919T180740Z
+DTSTAMP:20260919T220621Z
 UID:DD7A027F-FEA2-4D1B-88DC-864EE3A1D325
 CREATED:20260918T134813Z
 DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
@@ -91,202 +37,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260920T190000Z
-DTEND:20260921T020000Z
-DTSTAMP:20260919T180740Z
-UID:30BDB6A1-9EB1-48EE-8D60-F3816AA4C3D3
-CREATED:20260919T012745Z
-DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
-  Sunday at Eagle London for 22 years!\nbar: Eagle London\ntimezone: Europe/
- London\ninstagram: https://www.instagram.com/horsemeatdisco\nfacebook: http
- s://www.facebook.com/EagleLDN\nwebsite: https://www.eaglelondon.com/event-d
- etails/horse-meat-disco-2026-09-20-20-00\ngmaps: https://www.google.com/map
- s/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk\naddress: 349 Kennington La
- ne\, London\, England SE11 5QY\naddressSource: curated\npinSource: curated\
- ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: http
- s://horsemeatdisco.net\nkey: horse-meat-disco|2026-09-20|eagle london\nimag
- e: https://static.wixstatic.com/media/54aaee_164a2fd3a4af467bae74d794125ec2
- 50~mv2.png\ncover: 8 GBP\nimageSource: json-api\nbarSource: venue-site\nbea
- rReview: unsure — ai\\: The event's title and description contain no bear-s
- pecific vocabulary\, bear party branding\, or body-type targeting\; it is d
- escribed as a general discotheque at a known bear venue\, which is context\
- , not evidence. — held\\: the event's own organizer names Horse Meat Disco\
- , a usually-bear promoter
-LAST-MODIFIED:20260919T012745Z
-LOCATION:51.4863306\, -0.1193328
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Horse Meat Disco
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260717T210000Z
-DTEND:20260718T030000Z
-DTSTAMP:20260919T180740Z
-UID:0EF35488-A88B-49E8-8D79-A864F11A8113
-CREATED:20260715T120616Z
-DESCRIPTION:description: Super excited to be relaunching in London on July 
- 17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road\, London\, EC1V 
- 1JN\, London\, England\nticketUrl: https://www.eventbrite.com/e/twisted-bea
- r-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/htt
- ps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Forigin
- al.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=
- 75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11
- .55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram
- : https://www.instagram.com/twistedbearparty\nfacebook: https://www.faceboo
- k.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-lo
- ndon-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/s
- earch/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20Lo
- ndon%2C%20EC1V%201JN%2C%20London%2C%20England
-LAST-MODIFIED:20260715T120616Z
-LOCATION:51.5284734\, -0.0925783
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:TWISTED BEAR LONDON - THE RETURN
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260927T190000Z
-DTEND:20260928T020000Z
-DTSTAMP:20260919T180740Z
-UID:CA82711D-5DD6-4122-A20F-AAEA56D1B0B7
-CREATED:20260918T134811Z
-DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
-  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
- ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
- /54aaee_fb08cb234dd14feeaf1c967efd551636~mv2.png\ncover: 8 GBP\ntimezone: E
- urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
- -disco-2026-09-27-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
- o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
- tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-09-27|eagle london\nbe
- arReview: unsure — ai\\: The event's title and description contain no bear-
- specific vocabulary\, bear party branding\, or body-type targeting\; it is 
- described as a general discotheque at a known bear venue\, which is context
- \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
-  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
- json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
- i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
- Y%2C%20UK
-LAST-MODIFIED:20260919T012745Z
-LOCATION:51.4863306\, -0.1193328
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Horse Meat Disco
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261121T220000Z
-DTEND:20261122T040000Z
-DTSTAMP:20260919T180740Z
-UID:8DB25B07-9E96-4DB2-84F9-D779A742997D
-CREATED:20260729T165211Z
-DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
- \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/927gr7-beefmin
- ce-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets\nimage: https://
- dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0
- f6e3f.jpg?rect=0%2C0%2C768%2C768\ncover: From £10\ntimezone: Europe/London\
- nimageVertical: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb
- 8-c358-44be-8461-889edd0f6e3f.jpg?rect=173%2C0%2C422%2C768\nwebsite: https:
- //beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshortNam
- e: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-rvt|2026-11
- -21|royal vauxhall tavern\nbearSource: keyword\nimageHorizontal: https://di
- ce-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6
- e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\ndescription: B
- EEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the 
- Royal Vauxhall Tavern's biggest\, longest running and most loved club night
-  at this iconic LGBTQ+ venue. We're famous for our fun\, social\, bear full
- - attitude free parties with the best DJs playing the tastiest party athems
-  ranging from disco\, house and electro. For Bears\, Cubs\, Chubs\, Muscle 
- Bears\, Trans Men\, Admirers & everyone in between! *More information & FAQ
- s at beefmince.com* This is an 18+ event (valid physical photo ID\, passpor
- t or driver’s license\, is required for entry\, no digital copies accepted.
- )\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource:
-  curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wE
- dkgRD-0ylWTyMkw
-LAST-MODIFIED:20260910T195519Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE x RVT
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261231T220000Z
-DTEND:20270101T050000Z
-DTSTAMP:20260919T180740Z
-UID:CF73C0A5-B8BB-4602-A640-C75193FDE578
-CREATED:20260801T211705Z
-DESCRIPTION:description: BEEFMINCE New Year's Eve - more info soon. Present
- ed by BEEFMINCE. This is an 18+ event\nticketUrl: https://dice.fm/event/bb9
- e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets\nimage
- : https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b4
- 4e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\ncover: £17\ntimezone: Europe/
- London\nimageVertical: https://dice-media.imgix.net/attachments/2026-07-27/
- ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=243%2C0%2C594%2C1080\nwebsite
- : https://beefmince.com\nshortName: BEEF­MINCE\nfavicon: https://beefmince.
- com\nkey: beefmince-new-year-s-eve|2026-12-31|\nbearSource: keyword\nimageH
- orizontal: https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823
- f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=co
- mpress\naddress: Venue TBA\, London\npinSource: page\naddressSource: page\n
- imageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query
- =51.5073509%2C-0.1277583
-LAST-MODIFIED:20260913T130051Z
-LOCATION:51.5073509\, -0.1277583
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE New Year's Eve
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261219T220000Z
-DTEND:20261220T040000Z
-DTSTAMP:20260919T180740Z
-UID:764FD17D-536F-411D-872C-66604B20D142
-CREATED:20260801T211704Z
-DESCRIPTION:description: TIS' THE SEASON TO BE BEARY! Get your stockings ou
- t\, defrost your bird and mince your way down to The Royal Vauxhall Tavern 
- for our big annual BEEFMINCE Christmas Party on Saturday 19 December!\nbar:
-  Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London\, United Kingdo
- m SE11 5HY\nticketUrl: https://dice.fm/event/ww93qg-turkeymince-19th-dec-th
- e-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net
- /attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C0
- %2C768%2C768\ncover: £10\ntimezone: Europe/London\nimageVertical: https://d
- ice-media.imgix.net/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0
- fd67.jpg?rect=173%2C0%2C422%2C768\nwebsite: https://beefmince.com\ninstagra
- m: https://www.instagram.com/rvtofficial\nshortName: BEEF­MINCE\nfavicon: h
- ttps://beefmince.com\nkey: beefmince-turkeymince|2026-12-19|royal vauxhall 
- tavern\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-08-0
- 9/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C154%2C768%2C461&w=1300&
- h=630&auto=compress\nbearSource: keyword\nbearReview: unsure — ai\\: The ev
- ent title 'TURKEYMINCE' and venue 'Royal Vauxhall Tavern' suggest a possibl
- e connection to the bear scene (e.g.\, pun on 'beefmince')\, but no clear b
- ear-specific content or audience signals are present in the minimal descrip
- tion provided.\npinSource: curated\naddressSource: page\nimageSource: jsonl
- d\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id
- :ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260913T130050Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE: TURKEYMINCE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260815T210000Z
 DTEND:20260816T030000Z
-DTSTAMP:20260919T180740Z
+DTSTAMP:20260919T220621Z
 UID:0B1AA776-F366-45ED-850F-FA5F026D4257
 CREATED:20260729T165208Z
 DESCRIPTION:description: BEEFMINCE is turning the RVT into a sea of banana 
@@ -319,122 +72,19 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261017T210000Z
-DTEND:20261018T030000Z
-DTSTAMP:20260919T180740Z
-UID:6044CC3C-18AF-4FC8-83F3-26FA56293E04
-CREATED:20260729T165209Z
-DESCRIPTION:description: BEEFMINCE | The UK's Tastiest Bear Club *Now on Sa
- turdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest\, longest running
-  and most loved club night at this iconic LGBTQ+ venue. We're famous for ou
- r fun\, social\, bear full- attitude free parties with the best DJs playing
-  the tastiest party athems ranging from disco\, house and electro. For Bear
- s\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in betwee
- n! *More information & FAQs at beefmince.com*\nbar: Royal Vauxhall Tavern\n
- address: 372 Kennington Ln\, London\, United Kingdom SE11 5HY\nticketUrl: h
- ttps://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tav
- ern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2024-12
- -17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ncover:
-  From £10\ntimezone: Europe/London\nimageVertical: https://dice-media.imgix
- .net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=1
- 73%2C0%2C422%2C768\nwebsite: https://beefmince.com\ninstagram: https://www.
- instagram.com/rvtofficial\nshortName: BEEF­MINCE\nfavicon: https://beefminc
- e.com\nkey: beefmince-x-rvt|2026-10-17|royal vauxhall tavern\nimageHorizont
- al: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-
- 8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\n
- bearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: 
- jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=pla
- ce_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260910T195519Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE x RVT
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T210000Z
-DTEND:20260920T030000Z
-DTSTAMP:20260919T180740Z
-UID:04826FFC-6A1D-4636-AC9A-EECF52C24A31
-CREATED:20260729T165209Z
-DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
- \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/yoepxa-beefmin
- ce-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\nimage: https://
- dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903df
- b3142.jpg?rect=0%2C0%2C1080%2C1080\ncover: £12\ntimezone: Europe/London\nim
- ageVertical: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-3
- 08f-4a7e-a729-4e903dfb3142.jpg?rect=243%2C0%2C594%2C1080\nwebsite: https://
- beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshortName:
-  BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-brief-encounter
- |2026-09-19|royal vauxhall tavern\nimageHorizontal: https://dice-media.imgi
- x.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=
- 0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nbearSource: keyword\ndescr
- iption: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINC
- E is the Royal Vauxhall Tavern's biggest\, longest running and most loved c
- lub night at this iconic LGBTQ+ venue. We're famous for our fun\, social\, 
- bear full- attitude free parties with the best DJs playing the tastiest par
- ty athems ranging from disco\, house and electro. For Bears\, Cubs\, Chubs\
- , Muscle Bears\, Trans Men\, Admirers & everyone in between! *More informat
- ion & FAQs at beefmince.com*\npinSource: curated\naddressSource: page\nimag
- eSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/pla
- ce/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260910T195518Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE Brief Encounter
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261011T190000Z
-DTEND:20261012T020000Z
-DTSTAMP:20260919T180740Z
-UID:313F31B9-EAED-4AC1-B51A-7499DBDCA42E
-CREATED:20260918T134812Z
-DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
-  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
- ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
- /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
- urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
- -disco-2026-10-11-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
- o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
- tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-11|eagle london\nbe
- arReview: unsure — ai\\: The event's title and description contain no bear-
- specific vocabulary\, bear party branding\, or body-type targeting\; it is 
- described as a general discotheque at a known bear venue\, which is context
- \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
-  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
- json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
- i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
- Y%2C%20UK
-LAST-MODIFIED:20260919T012746Z
-LOCATION:51.4863306\, -0.1193328
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Horse Meat Disco
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261004T190000Z
-DTEND:20261005T020000Z
-DTSTAMP:20260919T180740Z
-UID:3D29A276-31B1-40F7-AA7C-EAAC40C6719E
+DTSTART:20260927T190000Z
+DTEND:20260928T020000Z
+DTSTAMP:20260919T220621Z
+UID:CA82711D-5DD6-4122-A20F-AAEA56D1B0B7
 CREATED:20260918T134811Z
 DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
   Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
  ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
- /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
+ /54aaee_fb08cb234dd14feeaf1c967efd551636~mv2.png\ncover: 8 GBP\ntimezone: E
  urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
- -disco-2026-10-04-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
+ -disco-2026-09-27-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
  o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
- tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-04|eagle london\nbe
+ tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-09-27|eagle london\nbe
  arReview: unsure — ai\\: The event's title and description contain no bear-
  specific vocabulary\, bear party branding\, or body-type targeting\; it is 
  described as a general discotheque at a known bear venue\, which is context
@@ -443,38 +93,7 @@ DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
  json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
  i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
  Y%2C%20UK
-LAST-MODIFIED:20260919T012746Z
-LOCATION:51.4863306\, -0.1193328
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Horse Meat Disco
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261025T200000Z
-DTEND:20261026T030000Z
-DTSTAMP:20260919T180740Z
-UID:8302C2CF-7862-4C85-86AA-5E3A99BBD5B1
-CREATED:20260918T134813Z
-DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
-  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
- ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
- /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
- urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
- -disco-2026-10-25-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
- o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
- tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-25|eagle london\nbe
- arReview: unsure — ai\\: The event's title and description contain no bear-
- specific vocabulary\, bear party branding\, or body-type targeting\; it is 
- described as a general discotheque at a known bear venue\, which is context
- \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
-  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
- json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
- i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
- Y%2C%20UK
-LAST-MODIFIED:20260919T012748Z
+LAST-MODIFIED:20260919T012745Z
 LOCATION:51.4863306\, -0.1193328
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -486,7 +105,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20270829T111500Z
 DTEND:20270829T160000Z
-DTSTAMP:20260919T180740Z
+DTSTAMP:20260919T220621Z
 UID:FDDFAB30-CB6A-41C7-A6D6-E6CCCED81AE0
 CREATED:20260910T195518Z
 DESCRIPTION:description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon
@@ -519,9 +138,168 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260717T210000Z
+DTEND:20260718T030000Z
+DTSTAMP:20260919T220621Z
+UID:0EF35488-A88B-49E8-8D79-A864F11A8113
+CREATED:20260715T120616Z
+DESCRIPTION:description: Super excited to be relaunching in London on July 
+ 17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road\, London\, EC1V 
+ 1JN\, London\, England\nticketUrl: https://www.eventbrite.com/e/twisted-bea
+ r-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/htt
+ ps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Forigin
+ al.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=
+ 75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11
+ .55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram
+ : https://www.instagram.com/twistedbearparty\nfacebook: https://www.faceboo
+ k.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-lo
+ ndon-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20Lo
+ ndon%2C%20EC1V%201JN%2C%20London%2C%20England
+LAST-MODIFIED:20260715T120616Z
+LOCATION:51.5284734\, -0.0925783
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR LONDON - THE RETURN
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261011T190000Z
+DTEND:20261012T020000Z
+DTSTAMP:20260919T220621Z
+UID:313F31B9-EAED-4AC1-B51A-7499DBDCA42E
+CREATED:20260918T134812Z
+DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
+  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
+ ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
+ /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
+ urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
+ -disco-2026-10-11-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
+ o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
+ tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-11|eagle london\nbe
+ arReview: unsure — ai\\: The event's title and description contain no bear-
+ specific vocabulary\, bear party branding\, or body-type targeting\; it is 
+ described as a general discotheque at a known bear venue\, which is context
+ \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
+  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
+ json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
+ Y%2C%20UK
+LAST-MODIFIED:20260919T012746Z
+LOCATION:51.4863306\, -0.1193328
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Horse Meat Disco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T190000Z
+DTEND:20260921T020000Z
+DTSTAMP:20260919T220621Z
+UID:30BDB6A1-9EB1-48EE-8D60-F3816AA4C3D3
+CREATED:20260919T012745Z
+DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
+  Sunday at Eagle London for 22 years!\nbar: Eagle London\ntimezone: Europe/
+ London\ninstagram: https://www.instagram.com/horsemeatdisco\nfacebook: http
+ s://www.facebook.com/EagleLDN\nwebsite: https://www.eaglelondon.com/event-d
+ etails/horse-meat-disco-2026-09-20-20-00\ngmaps: https://www.google.com/map
+ s/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk\naddress: 349 Kennington La
+ ne\, London\, England SE11 5QY\naddressSource: curated\npinSource: curated\
+ ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: http
+ s://horsemeatdisco.net\nkey: horse-meat-disco|2026-09-20|eagle london\nimag
+ e: https://static.wixstatic.com/media/54aaee_164a2fd3a4af467bae74d794125ec2
+ 50~mv2.png\ncover: 8 GBP\nimageSource: json-api\nbarSource: venue-site\nbea
+ rReview: unsure — ai\\: The event's title and description contain no bear-s
+ pecific vocabulary\, bear party branding\, or body-type targeting\; it is d
+ escribed as a general discotheque at a known bear venue\, which is context\
+ , not evidence. — held\\: the event's own organizer names Horse Meat Disco\
+ , a usually-bear promoter
+LAST-MODIFIED:20260919T012745Z
+LOCATION:51.4863306\, -0.1193328
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Horse Meat Disco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T210000Z
+DTEND:20260920T030000Z
+DTSTAMP:20260919T220621Z
+UID:04826FFC-6A1D-4636-AC9A-EECF52C24A31
+CREATED:20260729T165209Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUr
+ l: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall
+ -tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/202
+ 6-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C0%2C1080%2C1080\n
+ cover: £12\ntimezone: Europe/London\ninstagram: https://www.instagram.com/r
+ vtofficial\ncadence: FREQ=MONTHLY\;BYDAY=3SA\nshortName: BEEF­MINCE\nfavico
+ n: https://beefmince.com\nkey: beefmince-brief-encounter|2026-09-19|royal v
+ auxhall tavern\nbearSource: keyword\nimageVertical: https://dice-media.imgi
+ x.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=
+ 243%2C0%2C594%2C1080\nimageHorizontal: https://dice-media.imgix.net/attachm
+ ents/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C216%2C108
+ 0%2C648&w=1300&h=630&auto=compress\ndescription: BEEFMINCE | The UK's Tasti
+ est Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's b
+ iggest\, longest running and most loved club night at this iconic LGBTQ+ ve
+ nue. We're famous for our fun\, social\, bear full- attitude free parties w
+ ith the best DJs playing the tastiest party athems ranging from disco\, hou
+ se and electro. For Bears\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admir
+ ers & everyone in between! *More information & FAQs at beefmince.com*\npinS
+ ource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: cur
+ ated\ngmaps: https://www.google.com/maps/search/?api=1&query=Royal%20Vauxha
+ ll%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20
+ SE11%205HY
+LAST-MODIFIED:20260919T211308Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE Brief Encounter
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261025T200000Z
+DTEND:20261026T030000Z
+DTSTAMP:20260919T220621Z
+UID:8302C2CF-7862-4C85-86AA-5E3A99BBD5B1
+CREATED:20260918T134813Z
+DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
+  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
+ ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
+ /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
+ urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
+ -disco-2026-10-25-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
+ o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
+ tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-25|eagle london\nbe
+ arReview: unsure — ai\\: The event's title and description contain no bear-
+ specific vocabulary\, bear party branding\, or body-type targeting\; it is 
+ described as a general discotheque at a known bear venue\, which is context
+ \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
+  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
+ json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
+ Y%2C%20UK
+LAST-MODIFIED:20260919T012748Z
+LOCATION:51.4863306\, -0.1193328
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Horse Meat Disco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260830T111500Z
 DTEND:20260830T160000Z
-DTSTAMP:20260919T180740Z
+DTSTAMP:20260919T220621Z
 UID:C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E
 CREATED:20260729T165209Z
 DESCRIPTION:description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon
@@ -549,6 +327,234 @@ LOCATION:51.5022544\, -0.1231736
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BOATMINCE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261231T220000Z
+DTEND:20270101T050000Z
+DTSTAMP:20260919T220621Z
+UID:CF73C0A5-B8BB-4602-A640-C75193FDE578
+CREATED:20260801T211705Z
+DESCRIPTION:website: https://beefmince.com/events\nticketUrl: https://dice.
+ fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-ti
+ ckets\nimage: https://dice-media.imgix.net/attachments/2026-07-27/ed641899-
+ 823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\ncover: £17\ntimez
+ one: Europe/London\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\n
+ key: beefmince-new-year-s-eve|2026-12-31|\nbearSource: keyword\ndescription
+ : BEEFMINCE New Year's Eve - more info soon. Presented by BEEFMINCE. This i
+ s an 18+ event\nimageVertical: https://dice-media.imgix.net/attachments/202
+ 6-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=243%2C0%2C594%2C1080\
+ nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-27/ed641
+ 899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&
+ auto=compress\naddress: Venue TBA\, London\npinSource: page\naddressSource:
+  page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=
+ 1&query=51.5073509%2C-0.1277583
+LAST-MODIFIED:20260919T211310Z
+LOCATION:51.5073509\, -0.1277583
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE New Year's Eve
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261121T220000Z
+DTEND:20261122T040000Z
+DTSTAMP:20260919T220621Z
+UID:8DB25B07-9E96-4DB2-84F9-D779A742997D
+CREATED:20260729T165211Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUr
+ l: https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall
+ -tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/202
+ 4-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\nco
+ ver: From £10\ntimezone: Europe/London\ninstagram: https://www.instagram.co
+ m/rvtofficial\ncadence: FREQ=MONTHLY\;BYDAY=3SA\nshortName: BEEF­MINCE\nfav
+ icon: https://beefmince.com\nkey: beefmince-x-rvt|2026-11-21|royal vauxhall
+  tavern\nbearSource: keyword\nimageVertical: https://dice-media.imgix.net/a
+ ttachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=173%2C0
+ %2C422%2C768\nimageHorizontal: https://dice-media.imgix.net/attachments/202
+ 4-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w
+ =1300&h=630&auto=compress\ndescription: BEEFMINCE | The UK's Tastiest Bear 
+ Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest\, 
+ longest running and most loved club night at this iconic LGBTQ+ venue. We'r
+ e famous for our fun\, social\, bear full- attitude free parties with the b
+ est DJs playing the tastiest party athems ranging from disco\, house and el
+ ectro. For Bears\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & eve
+ ryone in between! *More information & FAQs at beefmince.com* This is an 18+
+  event (valid physical photo ID\, passport or driver’s license\, is require
+ d for entry\, no digital copies accepted.)\npinSource: curated\naddressSour
+ ce: curated\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.go
+ ogle.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kenn
+ ington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY
+LAST-MODIFIED:20260919T211309Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE x RVT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261219T220000Z
+DTEND:20261220T040000Z
+DTSTAMP:20260919T220621Z
+UID:764FD17D-536F-411D-872C-66604B20D142
+CREATED:20260801T211704Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUr
+ l: https://dice.fm/event/ww93qg-turkeymince-19th-dec-the-royal-vauxhall-tav
+ ern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2025-08
+ -09/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C0%2C768%2C768\ncover:
+  £10\ntimezone: Europe/London\ninstagram: https://www.instagram.com/rvtoffi
+ cial\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince
+ -turkeymince|2026-12-19|royal vauxhall tavern\nbearSource: ai\ndescription:
+  TIS' THE SEASON TO BE BEARY! Get your stockings out\, defrost your bird an
+ d mince your way down to The Royal Vauxhall Tavern for our big annual BEEFM
+ INCE Christmas Party on Saturday 19 December!\nimageVertical: https://dice-
+ media.imgix.net/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67
+ .jpg?rect=173%2C0%2C422%2C768\nimageHorizontal: https://dice-media.imgix.ne
+ t/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C
+ 154%2C768%2C461&w=1300&h=630&auto=compress\nbearReview: unsure — ai\\: The 
+ event title 'TURKEYMINCE' and venue 'Royal Vauxhall Tavern' suggest a possi
+ ble connection to the bear scene (e.g.\, pun on 'beefmince')\, but no clear
+  bear-specific content or audience signals are present in the minimal descr
+ iption provided.\npinSource: curated\naddressSource: curated\nimageSource: 
+ jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=
+ 1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C
+ %20United%20Kingdom%20SE11%205HY
+LAST-MODIFIED:20260919T211309Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE: TURKEYMINCE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T190000Z
+DTEND:20261005T020000Z
+DTSTAMP:20260919T220621Z
+UID:3D29A276-31B1-40F7-AA7C-EAAC40C6719E
+CREATED:20260918T134811Z
+DESCRIPTION:description: London's Legendary Sunday Night Discotheque. Every
+  Sunday at Eagle London for 22 years!\nbar: Eagle London\naddress: 349 Kenn
+ ington Ln\, London SE11 5QY\, UK\nimage: https://static.wixstatic.com/media
+ /54aaee_54bb827fc53e455cad622e1b93fb911a~mv2.png\ncover: 8 GBP\ntimezone: E
+ urope/London\nwebsite: https://www.eaglelondon.com/event-details/horse-meat
+ -disco-2026-10-04-20-00\ninstagram: https://www.instagram.com/horsemeatdisc
+ o\ncadence: FREQ=WEEKLY\;BYDAY=SU\nshortName: HORSE MEAT DISCO\nfavicon: ht
+ tps://horsemeatdisco.net\nkey: horse-meat-disco|2026-10-04|eagle london\nbe
+ arReview: unsure — ai\\: The event's title and description contain no bear-
+ specific vocabulary\, bear party branding\, or body-type targeting\; it is 
+ described as a general discotheque at a known bear venue\, which is context
+ \, not evidence. — held\\: the event's own title names Horse Meat Disco\, a
+  usually-bear promoter\npinSource: page\naddressSource: page\nimageSource: 
+ json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=Eagle%20London%2C%20349%20Kennington%20Ln%2C%20London%20SE11%205Q
+ Y%2C%20UK
+LAST-MODIFIED:20260919T012746Z
+LOCATION:51.4863306\, -0.1193328
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Horse Meat Disco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261017T210000Z
+DTEND:20261018T030000Z
+DTSTAMP:20260919T220621Z
+UID:6044CC3C-18AF-4FC8-83F3-26FA56293E04
+CREATED:20260729T165209Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUr
+ l: https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall
+ -tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/202
+ 4-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\nco
+ ver: From £10\ntimezone: Europe/London\ninstagram: https://www.instagram.co
+ m/rvtofficial\ncadence: FREQ=MONTHLY\;BYDAY=3SA\nshortName: BEEF­MINCE\nfav
+ icon: https://beefmince.com\nkey: beefmince-x-rvt|2026-10-17|royal vauxhall
+  tavern\nbearSource: keyword\ndescription: BEEFMINCE | The UK's Tastiest Be
+ ar Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest
+ \, longest running and most loved club night at this iconic LGBTQ+ venue. W
+ e're famous for our fun\, social\, bear full- attitude free parties with th
+ e best DJs playing the tastiest party athems ranging from disco\, house and
+  electro. For Bears\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & 
+ everyone in between! *More information & FAQs at beefmince.com*\nimageVerti
+ cal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be
+ -8461-889edd0f6e3f.jpg?rect=173%2C0%2C422%2C768\nimageHorizontal: https://d
+ ice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f
+ 6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\npinSource: cu
+ rated\naddressSource: curated\nimageSource: jsonld\nbarSource: curated\ngma
+ ps: https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tave
+ rn%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205H
+ Y
+LAST-MODIFIED:20260919T211308Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE x RVT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260926T170000Z
+DTEND:20260927T000000Z
+DTSTAMP:20260919T220621Z
+UID:CFC7B434-180D-48FE-B68C-44C2A2C1685E
+CREATED:20260910T195517Z
+DESCRIPTION:timezone: Europe/London\nbar: Duke of Wellington\naddress: 77 W
+ ardour Street\, London\, W1D 6QA\nwebsite: https://beefmince.com/events\nti
+ cketUrl: https://www.dukeofwellingtonsoho.co.uk/london/events\nimage: https
+ ://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e1
+ 86408156.jpg?rect=0%2C0%2C1080%2C1080\nimageSource: json-api\npinSource: pa
+ ge\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_
+ id:ChIJkUcf6v4PdkgR8zHSLztcmdw\ninstagram: https://www.instagram.com/dukeof
+ wellington_soho\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey
+ : beefmince-welly-takeover-x-london-bear-pride|2026-09-26|duke of wellingto
+ n\nbearSource: keyword
+LAST-MODIFIED:20260910T195517Z
+LOCATION:51.512334\, -0.133008
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE Welly Takeover x London Bear Pride
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T220000Z
+DTEND:20261101T040000Z
+DTSTAMP:20260919T220621Z
+UID:C35D68BF-3219-4B72-8EE8-CD8360B483BA
+CREATED:20260729T165210Z
+DESCRIPTION:website: https://beefmince.com/events\nticketUrl: https://dice.
+ fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets\nimage:
+  https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72
+ d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080\ncover: £15\ntimezone: Europe/L
+ ondon\nshortName: SPOOK­MINCE\nfavicon: https://beefmince.com\nkey: spookmi
+ nce|2026-10-31|\nbearSource: ai\ndescription: BEEFMINCE's big Halloween bas
+ h is back\, and we're haunting a new venue this year! Full info and line up
+  soon.\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-2
+ 0/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300
+ &h=630&auto=compress\nbar: Venue TBA\nbearReview: unsure — ai\\: The event 
+ title 'SPOOKMINCE' and minimal description provide no clear indication of b
+ ear-scene alignment or audience\, and no evidence confirms it was produced 
+ by the bear-scene promoter.\naddress: London\, UK\naddressSource: page\nima
+ geSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Ve
+ nue%20TBA%2C%20London%2C%20UK
+LAST-MODIFIED:20260919T161245Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SPOOKMINCE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

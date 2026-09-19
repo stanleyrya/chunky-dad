@@ -39,7 +39,7 @@
     "birmingham": {
       "name": "Birmingham",
       "status": "success",
-      "dataLength": 2295,
+      "dataLength": 2305,
       "eventCount": 1
     },
     "bogota": {
@@ -57,7 +57,7 @@
     "brighton": {
       "name": "Brighton",
       "status": "success",
-      "dataLength": 3884,
+      "dataLength": 3897,
       "eventCount": 2
     },
     "chicago": {
@@ -135,7 +135,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 29085,
+      "dataLength": 29543,
       "eventCount": 17
     },
     "madrid": {
