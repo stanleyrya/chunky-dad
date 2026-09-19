@@ -29,8 +29,16 @@ class LocationManager {
         // is travel, and a stale value is served ONLY as a fallback when a
         // live fix fails (getLocationForMap), so the cost of a longer window
         // is small and the benefit is not re-prompting on every visit.
-        this.cacheExpiry = 24 * 60 * 60 * 1000; // 1 day: served as "fresh"
-        this.maxCacheAge = 30 * 24 * 60 * 60 * 1000; // 30 days: served as "stale" but usable
+        // Owner 2026-09-19: the site kept him "in Iceland" for weeks after
+        // flying to Sitges — every path handed back ANY cached fix, up to 30
+        // days old, without asking the browser again. Now a fix is "fresh"
+        // for an hour; older than that a real request is made (silently when
+        // the browser already granted, always on the button), and the old
+        // fix is only a FALLBACK when that request fails — marked stale so
+        // the UI can say so. Whether a prompt appears is the browser's call
+        // (Safari: Settings → Safari → Location → chunky.dad → Allow).
+        this.cacheExpiry = 60 * 60 * 1000; // 1 hour: served as "fresh"
+        this.maxCacheAge = 30 * 24 * 60 * 60 * 1000; // 30 days: kept as a fallback only
         this.isPrivateMode = this.detectPrivateMode();
         
         // Initialize logger if available
@@ -116,11 +124,11 @@ class LocationManager {
             if (age > this.cacheExpiry) {
                 // Cache is stale but not too old, return with warning
                 this.logger.debug('LOCATION', 'Using stale cache', { age, accuracy });
-                return { lat, lng, accuracy, stale: true };
+                return { lat, lng, accuracy, stale: true, ageMs: age, timestamp };
             }
 
             this.logger.debug('LOCATION', 'Using fresh cache', { age, accuracy });
-            return { lat, lng, accuracy, stale: false };
+            return { lat, lng, accuracy, stale: false, ageMs: age, timestamp };
         } catch (error) {
             this.logger.warn('LOCATION', 'Cache read failed', { error: error.message });
             return null;
@@ -163,7 +171,8 @@ class LocationManager {
             maximumAge: 300000 // 5 minutes
         };
 
-        const finalOptions = { ...defaultOptions, ...options };
+        // A forced refresh never accepts the browser's own cached position.
+        const finalOptions = { ...defaultOptions, ...(forceRefresh ? { maximumAge: 0 } : {}), ...options };
 
         // Check if geolocation is supported
         if (!this.isGeolocationSupported()) {
@@ -179,9 +188,11 @@ class LocationManager {
         const permissionState = 'unchecked';
 
         // Try cached location first (unless force refresh)
+        // A FRESH cached fix answers without asking the browser; a stale one
+        // never does (it is the fallback below, when the request fails).
         if (!forceRefresh) {
             const cached = this.getCachedLocation();
-            if (cached) {
+            if (cached && !cached.stale) {
                 this.logger.info('LOCATION', 'Using cached location', { 
                     source: 'cache',
                     stale: cached.stale,
@@ -251,6 +262,14 @@ class LocationManager {
                         userMessage: errorMessage
                     });
 
+                    // The last known fix, marked as such: better than nothing
+                    // for city-scale features, and the UI can say it is old.
+                    const fallback = this.getCachedLocation();
+                    if (fallback) {
+                        this.logger.warn('LOCATION', 'Using last known location as fallback', { error: errorMessage, cachedAgeMs: fallback.ageMs });
+                        resolve({ lat: fallback.lat, lng: fallback.lng, accuracy: fallback.accuracy, source: 'cache_fallback', stale: true, ageMs: fallback.ageMs, error: errorMessage });
+                        return;
+                    }
                     reject(new Error(errorMessage));
                 },
                 finalOptions
@@ -262,59 +281,14 @@ class LocationManager {
      * Get location for map display (with fallback to cached)
      * @param {boolean} preferCached - Prefer cached location if available
      */
+    // preferCached = false is the map's location BUTTON: a press always asks
+    // the browser for a new fix (the fallback lives in getCurrentLocation).
     async getLocationForMap(preferCached = true) {
-        try {
-            if (preferCached) {
-                const cached = this.getCachedLocation();
-                if (cached && !cached.stale) {
-                    return await this.getCurrentLocation({}, false);
-                }
-            }
-            return await this.getCurrentLocation({}, false);
-        } catch (error) {
-            // If fresh location fails, try cached as fallback
-            const cached = this.getCachedLocation();
-            if (cached) {
-                this.logger.warn('LOCATION', 'Using stale cache as fallback', { 
-                    error: error.message,
-                    cachedAge: Date.now() - (cached.timestamp || 0)
-                });
-                return {
-                    lat: cached.lat,
-                    lng: cached.lng,
-                    accuracy: cached.accuracy,
-                    source: 'cache_fallback',
-                    stale: true
-                };
-            }
-            throw error;
-        }
+        return this.getCurrentLocation({}, !preferCached);
     }
 
-    /**
-     * Get location for event data (always try fresh first)
-     * This will be used for future event sorting/filtering features
-     */
     async getLocationForEvents() {
-        try {
-            return await this.getCurrentLocation({}, false);
-        } catch (error) {
-            // For event data, we might want to be more strict about stale data
-            const cached = this.getCachedLocation();
-            if (cached && !cached.stale) {
-                this.logger.warn('LOCATION', 'Using fresh cache for events', { 
-                    error: error.message 
-                });
-                return {
-                    lat: cached.lat,
-                    lng: cached.lng,
-                    accuracy: cached.accuracy,
-                    source: 'cache',
-                    stale: false
-                };
-            }
-            throw error;
-        }
+        return this.getCurrentLocation({}, false);
     }
 
     /**
@@ -349,28 +323,27 @@ class LocationManager {
      * Check if user location is available for features (no popup)
      * Returns location if available, null if not
      */
+    // The silent path (page load): a fresh fix is used as is; a stale or
+    // missing one is refreshed only when the browser already granted (no
+    // prompt on load); with the grant still unanswered a stale fix is
+    // served marked stale — the button is where the browser gets asked.
     async getLocationForFeatures() {
         try {
             const status = await this.getLocationStatus();
-            
-            // If we have cached location, use it
-            if (status.hasCachedLocation) {
-                const cached = this.getCachedLocation();
-                this.logger.debug('LOCATION', 'Using cached location for features', { 
-                    lat: cached.lat, 
-                    lng: cached.lng,
-                    stale: cached.stale 
-                });
-                return cached;
+            const cached = this.getCachedLocation();
+            if (cached && !cached.stale) {
+                this.logger.debug('LOCATION', 'Using fresh cached location for features', { lat: cached.lat, lng: cached.lng });
+                return { ...cached, source: 'cache' };
             }
-            
-            // If we have permission but no cache, request silently
             if (status.supported && status.permissionState === 'granted') {
-                this.logger.debug('LOCATION', 'Requesting fresh location for features');
-                const location = await this.getCurrentLocation({}, false);
-                return location;
+                this.logger.debug('LOCATION', 'Refreshing location for features (granted, cache stale or missing)');
+                return await this.getCurrentLocation({}, true);
             }
-            
+            if (cached) {
+                this.logger.debug('LOCATION', 'Using stale cached location for features (browser not yet granted)', { lat: cached.lat, lng: cached.lng, ageMs: cached.ageMs });
+                return { ...cached, source: 'cache' };
+            }
+
             // No permission or not supported
             this.logger.debug('LOCATION', 'Location not available for features', { 
                 supported: status.supported, 
@@ -471,23 +444,16 @@ class LocationManager {
     async updateLocationStatus(updateButtonStatus) {
         try {
             const status = await this.getLocationStatus();
-            
-            if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
+            const freshCached = status.supported && status.permissionState === 'granted' ? this.getCachedLocation() : null;
+            if (freshCached && !freshCached.stale) {
                 updateButtonStatus('success', 'cached');
-                
-                // Store cached location for features
-                const cached = this.getCachedLocation();
-                if (cached) {
-                    window.userLocation = cached;
-                    this.logger.debug('LOCATION', 'Cached location stored for features', { 
-                        lat: cached.lat, 
-                        lng: cached.lng,
-                        stale: cached.stale 
-                    });
-                    return cached;
-                }
-            } else if (status.supported && status.permissionState === 'granted' && !status.hasCachedLocation) {
-                // We have permission but no cached location - request silently
+                window.userLocation = freshCached;
+                this.logger.debug('LOCATION', 'Fresh cached location stored for features', { lat: freshCached.lat, lng: freshCached.lng });
+                return freshCached;
+            } else if (status.supported && status.permissionState === 'granted') {
+                // Granted, and the cache is stale or missing: refresh silently
+                // (getLocationForFeatures falls back to the stale fix if the
+                // request fails).
                 updateButtonStatus('loading', 'checking');
                 
                 try {

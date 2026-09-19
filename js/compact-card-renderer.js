@@ -302,7 +302,7 @@ class CityRenderer extends CompactCardRenderer {
 
         const trySilent = () => {
             this.locationManager.getLocationForFeatures()
-                .then(loc => { if (loc) this.applyDistanceOrder(loc, btn); })
+                .then(loc => { if (loc) this.applyDistanceOrder(loc, btn); this.markLocationAge(loc, btn); })
                 .catch(() => {});
         };
         // cards render async — sort once they exist
@@ -317,8 +317,11 @@ class CityRenderer extends CompactCardRenderer {
             btn.classList.remove('near-me-error');
             btn.classList.add('near-me-loading');
             try {
-                const loc = await this.locationManager.getCurrentLocation();
+                // A press always asks the browser for a new fix; an old one
+                // is only the fallback when that fails.
+                const loc = await this.locationManager.getCurrentLocation({}, true);
                 this.applyDistanceOrder(loc, btn);
+                this.markLocationAge(loc, btn);
             } catch (e) {
                 btn.classList.add('near-me-error');
                 btn.title = (e && e.message) ? e.message : 'Unable to get your location';
@@ -328,6 +331,35 @@ class CityRenderer extends CompactCardRenderer {
             }
         });
     }
+
+    // The near-me button says when the sort came from an old fix (the
+
+    // browser could not be asked, or the request failed): a press asks again.
+
+    markLocationAge(loc, btn) {
+
+        if (!btn) return;
+
+        const stale = Boolean(loc && loc.stale);
+
+        btn.classList.toggle('near-me-stale', stale);
+
+        if (stale) {
+
+            const hours = Number.isFinite(loc.ageMs) ? Math.round(loc.ageMs / 3600000) : null;
+
+            const age = hours === null ? 'a while' : hours < 48 ? `${hours} h` : `${Math.round(hours / 24)} days`;
+
+            btn.title = `Sorted by your location from ${age} ago — tap to refresh`;
+
+        } else if (loc) {
+
+            btn.title = 'Sorted by distance from you';
+
+        }
+
+    }
+
 
     applyDistanceOrder(location, btn) {
         if (!location || !this.container) return;

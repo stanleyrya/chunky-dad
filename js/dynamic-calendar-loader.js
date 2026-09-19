@@ -6892,7 +6892,8 @@ async function showMyLocation(panMap = true) {
         }
 
         // Get location with caching and permission awareness
-        const location = await window.locationManager.getLocationForMap(true);
+        // A press of the map's location button always asks for a new fix.
+        const location = await window.locationManager.getLocationForMap(false);
         
         if (window.eventsMap) {
             // Remove existing location circle
