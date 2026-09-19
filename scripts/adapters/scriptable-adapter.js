@@ -1533,6 +1533,62 @@ class ScriptableAdapter {
     return this.fm.joinPath(this.baseDir, "bear-verdicts.json");
   }
 
+  // ---------------------------------------------------------------------
+  // WRITTEN LEDGER — chunky-dad-scraper/written-ledger.json, phone-owned:
+  // every approved row this phone wrote, by its review key, with when and
+  // as what. A later execute skips an approval the ledger already shows
+  // written (unless the approval is newer than that write — a re-approval
+  // after an undo), and the deck reads the same file for its "written on
+  // the phone" marks across runs. Before it, every execute re-analyzed
+  // every approval ever made: 198 rows, 67 AI arbitrations, 64 s, to
+  // write 24 (run 20260919-110239).
+  // ---------------------------------------------------------------------
+  getWrittenLedgerPath() {
+    return this.fm.joinPath(this.baseDir, "written-ledger.json");
+  }
+
+  async loadWrittenLedger() {
+    const path = this.getWrittenLedgerPath();
+    const empty = { version: 1, entries: {} };
+    try {
+      if (!this.fm.fileExists(path)) return empty;
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      const entries = parsed && typeof parsed === "object" && parsed.entries && typeof parsed.entries === "object"
+        ? parsed.entries
+        : null;
+      if (!entries) {
+        console.log("📱 Scriptable: Written ledger has unexpected shape — starting empty");
+        return empty;
+      }
+      return { version: 1, entries };
+    } catch (error) {
+      console.log(`📱 Scriptable: Written ledger read failed (${error.message}) — starting empty`);
+      return empty;
+    }
+  }
+
+  async recordWrittenLedger(ledger, rows, executedAt, runId) {
+    const entries = ledger && ledger.entries && typeof ledger.entries === "object" ? ledger.entries : {};
+    let recorded = 0;
+    for (const row of Array.isArray(rows) ? rows : []) {
+      if (!row || typeof row.key !== "string" || !row.key) continue;
+      entries[row.key] = { executedAt, action: row.action, title: row.title, runId: runId || null };
+      recorded++;
+    }
+    if (recorded === 0) return 0;
+    try {
+      await this.ensureRelativeStorageDirs();
+      this.fm.writeString(this.getWrittenLedgerPath(), JSON.stringify({ version: 1, updatedAt: executedAt, entries }));
+      console.log(`📱 Scriptable: 🧾 Written ledger — ${recorded} row(s) recorded (${Object.keys(entries).length} total)`);
+    } catch (error) {
+      console.log(`📱 Scriptable: Written ledger not saved (${error.message}) — the next execute re-analyzes these rows`);
+    }
+    return recorded;
+  }
+
   async loadBearVerdicts() {
     const path = this.getBearVerdictsFilePath();
     try {
@@ -15881,6 +15937,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // DADDY POP nights waited on the deck while an exact-key match here
       // selected none of them and the phone reported "Created 0".
       const reviewStore = typeof core.rekeyOwnerDecisions === "function" ? core.rekeyOwnerDecisions(store) : store;
+      const ledger = await this.loadWrittenLedger();
       const approvedKeys = new Set(
         reviewStore
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
@@ -15918,12 +15975,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           return;
         }
         const decision = approvalFor(event);
-        if (decision) selected.push({ event, index, decision });
+        if (!decision) return;
+        // Written by an earlier execute (any run) since this approval was
+        // made: done. A newer approval than the write is a re-approval.
+        const rowKey = core.getOwnerReviewKey(event);
+        const written = rowKey ? ledger.entries[rowKey] : null;
+        if (written && String(written.executedAt || "") >= String(decision.stampedAt || "")) {
+          summary.alreadyWritten++;
+          return;
+        }
+        selected.push({ event, index, decision });
       });
       summary.skipped = savedEvents.length - selected.length - summary.alreadyWritten;
       if (summary.alreadyWritten > 0) {
         console.log(
-          `📱 Scriptable: 🃏 ${summary.alreadyWritten} row(s) were written by this run's earlier execution — not re-analyzed.`,
+          `📱 Scriptable: 🃏 ${summary.alreadyWritten} row(s) already written by an earlier execution (this run's, or the ledger's) — not re-analyzed.`,
         );
       }
       console.log(
@@ -16044,9 +16110,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
       summary.wrote = true;
       results.calendarEvents = processedCount;
+      const failedTitles = new Set(
+        (Array.isArray(this.lastExecutionFailures) ? this.lastExecutionFailures : [])
+          .map((failure) => (failure && failure.title ? String(failure.title) : ""))
+          .filter(Boolean),
+      );
       const failureCount = this.recordCalendarWriteFailures(results);
       summary.processed = processedCount;
       summary.failed = failureCount;
+      const writtenAt = new Date().toISOString();
+      await this.recordWrittenLedger(
+        ledger,
+        freshExecutable
+          .filter((event) => event && typeof event === "object" && !failedTitles.has(String(event.title || "")))
+          .map((event) => ({
+            key: (event._ownerReviewApproved && event._ownerReviewApproved.key) || core.getOwnerReviewKey(event),
+            action: event._action === "merge" ? "updated" : "created",
+            title: String(event.title || ""),
+          })),
+        writtenAt,
+        results.savedRunId || results.sourceRunId || null,
+      );
 
       // Metrics honesty: buildMetricsRecord only reports "executed" counts
       // when `analyzed` equals the plan it is summarizing. The write ran on
