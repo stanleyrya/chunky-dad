@@ -23688,3 +23688,28 @@ test('merge: when both records share one event page, the title its slug spells o
   assert.ok(!both || !/names this title/.test(both.reason), 'both spell the slug — no verdict from it');
   assert.equal(core.getSharedEventLinkSlug({ ticketUrl: 'https://a.example/e/1' }, { ticketUrl: 'https://a.example/e/2' }), '', 'different pages share nothing');
 });
+
+test('canonicalizeIdentityLinks: a listing page on the promoter\'s own site yields to the curated identity link; its event pages do not', () => {
+  const core = createRegistryCore();
+  core.noteConfiguredListingUrls([{ name: 'Bearracuda', urls: ['https://bearracuda.com/events'] }]);
+  assert.equal(core.isConfiguredListingUrl('https://www.bearracuda.com/events/'), true, 'www and trailing slash fold');
+  assert.equal(core.isConfiguredListingUrl('https://bearracuda.com/events/ttoct'), false);
+
+  // The Bear Calendar copies the promoter's listing page as the event link.
+  const copied = { title: 'Bearracuda Portland: PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z'), website: 'https://bearracuda.com/events' };
+  core.applyPromoterRegistryMatches([copied], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  core.canonicalizeIdentityLinks([copied]);
+  assert.equal(copied.website, 'https://bearracuda.com/', 'the listing page is the site\'s front door — the identity link says it shorter');
+
+  // The promoter's own page-level JSON-LD hands every event its listing URL.
+  const scraped = { title: 'Bearracuda Portland: PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z'), website: 'https://bearracuda.com/events', _pageClassification: 'multi-event-page', _sourcePageUrl: 'https://bearracuda.com/events' };
+  core._configuredListingUrlKeys = new Set();
+  core.applyPromoterRegistryMatches([scraped], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  core.canonicalizeIdentityLinks([scraped]);
+  assert.equal(scraped.website, 'https://bearracuda.com/', 'the page it was scraped off is a front door too');
+
+  const own = { title: 'Bearracuda Portland: PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z'), website: 'https://bearracuda.com/events/ttoct/' };
+  core.applyPromoterRegistryMatches([own], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  core.canonicalizeIdentityLinks([own]);
+  assert.equal(own.website, 'https://bearracuda.com/events/ttoct/', 'an event page on the promoter\'s own site is this event\'s page and stays');
+});
