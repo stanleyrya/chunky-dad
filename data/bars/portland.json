@@ -19,5 +19,11 @@
     "city": "portland",
     "address": "33 Northwest 9th Avenue",
     "coordinates": "45.5235278, -122.6802991"
+  },
+  {
+    "name": "Hawks PDX",
+    "city": "portland",
+    "address": "335 Southeast 99th Avenue, Portland, Oregon",
+    "coordinates": "45.5202731, -122.5626174"
   }
 ]

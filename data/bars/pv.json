@@ -18,5 +18,11 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
     "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
     "gayCitiesLastScrapedAt": "2026-06-13T22:28:59.439Z"
+  },
+  {
+    "name": "Blue Chairs Resort",
+    "city": "pv",
+    "address": "4 Malecon, Puerto Vallarta, Jalisco",
+    "coordinates": "20.5973207, -105.2392083"
   }
 ]

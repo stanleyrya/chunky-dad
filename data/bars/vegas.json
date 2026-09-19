@@ -14,5 +14,11 @@
     "city": "vegas",
     "address": "855 East Twain Avenue, Winchester, Nevada, 89169",
     "coordinates": "36.1213962, -115.1450910"
+  },
+  {
+    "name": "Tuscany Suites & Casino",
+    "city": "vegas",
+    "address": "255 East Flamingo Road, Las Vegas, Nevada",
+    "coordinates": "36.1131556, -115.1599087"
   }
 ]

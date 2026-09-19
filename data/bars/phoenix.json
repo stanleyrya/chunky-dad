@@ -4,5 +4,11 @@
     "city": "phoenix",
     "address": "3110 N Central Ave",
     "coordinates": "33.4834859, -112.0757318"
+  },
+  {
+    "name": "Royale",
+    "city": "phoenix",
+    "address": "4230 N. 6th Drive, PHOENIX, AZ 85013",
+    "coordinates": "33.4977695, -112.0823699"
   }
 ]

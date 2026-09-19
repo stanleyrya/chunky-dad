@@ -9,5 +9,17 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJbXdJHxEb24ARI5sarz94EAI",
     "gayCities": "https://palmsprings.gaycities.com/bars/588-hunters-palm-springs",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:28.458Z"
+  },
+  {
+    "name": "CCBC Resort Hotel",
+    "city": "palm-springs",
+    "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+    "coordinates": "33.7796835, -116.4689784"
+  },
+  {
+    "name": "Casa Oliver",
+    "city": "palm-springs",
+    "address": "535 South Warm Sands Drive, Palm Springs, California",
+    "coordinates": "33.8147765, -116.5376249"
   }
 ]
