@@ -173,23 +173,26 @@ function pickLatestRunId(sharedRoot) {
     return chosen ? chosen.runId : null;
 }
 
-// The calendars the phone has, read off its calendar snapshots
-// (chunky-dad-scraper/calendar-snapshot/<city>.json, one per calendar the
-// phone found); null when the phone has never written snapshots here.
-function listPhoneCalendars(sharedRoot) {
-    const dir = path.join(sharedRoot, 'calendar-snapshot');
-    let names;
+// The calendars the phone has, as the phone lists them itself
+// (calendar-snapshot/calendars.json, written with every snapshot pass),
+// mapped to the city keys whose configured calendar name it holds. null
+// when the phone has not written the list — then nothing is claimed
+// missing. Never inferred from the per-city snapshot files: those exist
+// only for cities a run touched.
+function listPhoneCalendars(sharedRoot, cities) {
+    let payload;
     try {
-        names = fs.readdirSync(dir);
+        payload = JSON.parse(fs.readFileSync(path.join(sharedRoot, 'calendar-snapshot', 'calendars.json'), 'utf8'));
     } catch (error) {
         return null;
     }
-    const cities = new Set();
-    for (const name of names) {
-        const match = /^([a-z0-9-]+)\.json$/.exec(name);
-        if (match) cities.add(match[1]);
+    const titles = new Set((payload && Array.isArray(payload.calendars) ? payload.calendars : []).map((title) => String(title || '').trim()).filter(Boolean));
+    if (titles.size === 0) return null;
+    const keys = new Set();
+    for (const [key, config] of Object.entries(cities && typeof cities === 'object' ? cities : {})) {
+        if (config && typeof config.calendar === 'string' && titles.has(config.calendar.trim())) keys.add(key);
     }
-    return cities;
+    return keys;
 }
 
 // Run files are large (a full Mac run is ~13 MB); keep the last few parsed

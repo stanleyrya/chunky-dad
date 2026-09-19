@@ -1711,10 +1711,10 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
     const core = reviewQueue.createDeckCore(run.payload, { curatedBars });
     const executions = reviewQueue.collectExecutions(sharedRoot);
-    const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot);
+    const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
+    const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot, cities);
     const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, ...(phoneCalendars ? { phoneCalendars } : {}) });
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
-    const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
 

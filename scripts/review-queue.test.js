@@ -532,11 +532,13 @@ test('buildDeck: cards for a city whose calendar the phone lacks are listed with
   assert.deepEqual(deckOf(payload).missingCalendars, [], 'no phone calendar list → nothing claimed');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-cal-'));
   try {
-    assert.equal(rq.listPhoneCalendars(dir), null, 'no snapshots yet');
+    const cities = { nyc: { calendar: 'chunky-dad-nyc' }, berlin: { calendar: 'chunky-dad-berlin' }, nola: { calendar: 'chunky-dad-new-orleans' } };
+    assert.equal(rq.listPhoneCalendars(dir, cities), null, 'the phone has not listed its calendars → nothing is claimed');
     fs.mkdirSync(path.join(dir, 'calendar-snapshot'));
-    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'nyc.json'), '{}');
-    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'notes.txt'), '');
-    assert.deepEqual([...rq.listPhoneCalendars(dir)], ['nyc']);
+    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'berlin.json'), '{}');
+    assert.equal(rq.listPhoneCalendars(dir, cities), null, 'per-city snapshots prove nothing about the phone\'s calendar list');
+    fs.writeFileSync(path.join(dir, 'calendar-snapshot', 'calendars.json'), JSON.stringify({ version: 1, calendars: ['chunky-dad-nyc', 'chunky-dad-new-orleans', 'Holidays in United States'] }));
+    assert.deepEqual([...rq.listPhoneCalendars(dir, cities)].sort(), ['nola', 'nyc'], 'calendar titles mapped to city keys');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

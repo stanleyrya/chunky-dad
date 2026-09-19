@@ -11399,6 +11399,12 @@ test('writeCalendarSnapshots writes one JSON per touched city with EventKit\'s e
     assert.equal(payload.calendarName, 'chunky-dad-nyc');
     assert.equal(payload.capturedAt, '2030-09-14T12:00:00.000Z');
     assert.deepEqual(payload.events, [{ identifier: 'ek-1', title: 'FURBALL NYC', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T06:00:00.000Z', location: '40.7331, -74.0055', notes: 'bar: Rockbar', url: '', isAllDay: false }]);
+    const list = writes[writes.length - 1];
+    assert.ok(list.filePath.endsWith('/chunky-dad-scraper/calendar-snapshot/calendars.json'), 'the phone lists every calendar it has beside the snapshots');
+    assert.deepEqual(JSON.parse(list.text), { version: 1, capturedAt: '2030-09-14T12:00:00.000Z', calendars: ['chunky-dad-nyc'] });
+    writes.length = 0;
+    await adapter.writeCalendarSnapshots([], { now: new Date('2030-09-14T12:00:00.000Z') });
+    assert.ok(writes.length === 1 && writes[0].filePath.endsWith('calendars.json'), 'no touched city still leaves the calendar list');
   } finally {
     global.Calendar = originalCalendar;
     if (originalCalendarEvent === undefined) delete global.CalendarEvent; else global.CalendarEvent = originalCalendarEvent;
