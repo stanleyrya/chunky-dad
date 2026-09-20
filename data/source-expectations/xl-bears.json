@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "source": "XL Bears",
+  "slug": "xl-bears",
+  "status": "complete",
+  "recheckAfter": "2026-10-20",
+  "recon": {
+    "date": "2026-09-20",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics"
+    ],
+    "doors": [
+      {
+        "url": "https://xlbears.org/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "WordPress home page: \"XL Bears is a Seattle social group for bears and bear admirers\" with an \"Upcoming Events\" blurb list stating cadences in prose (Game Night [2nd Sundays], Spa Day [3rd Saturdays], XL Bear Bust [4th Fridays] …) but no dates of its own."
+      },
+      {
+        "url": "https://xlbears.org/calendar/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Embeds the group's public Google Calendar (src=xl.bears.seattle@gmail.com) and publishes its iCal address verbatim: https://calendar.google.com/calendar/ical/xl.bears.seattle@gmail.com/public/basic.ics."
+      },
+      {
+        "url": "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 152,
+        "truthFlag": "152 VEVENTs, no paging; 148 ended more than 30 days before recon",
+        "note": "The calendar's public iCalendar export (text/calendar). Wall-clock DTSTART with TZID, monthly RRULEs for the standing socials, LOCATION as \"Venue, street, city\". Read by the scraper as a machine door; the archive is dropped."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-20. 152 VEVENTs: 148 archive, 3 live series, 0 upcoming singles, 1 recent past singles, 0 series with nothing in the window."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the iCalendar export read whole. Every record live on 2026-09-20 is documented — series as ONE entry each with the rule's dates in the window, dated records as singles. 148 archive records and 1 recent past singles are counted as past listings. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
+    "occurrenceWindow": {
+      "start": "2026-09-20",
+      "end": "2026-12-19"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "seattle",
+    "timezone": "America/Los_Angeles",
+    "website": "https://xlbears.org"
+  },
+  "events": [
+    {
+      "id": "game-night",
+      "kind": "series",
+      "title": "Game Night",
+      "description": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website! http://xlbears.org/ http://xlbears.org/about/code-of-conduct/",
+      "bar": "Phoenix Comics & Games",
+      "address": "113 Broadway E, Seattle, WA 98102",
+      "startDate": "2023-07-09",
+      "startTime": "16:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=2SU",
+      "occurrences": [
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID _6hhjgohh68q3cb9mcop3ib9k6gsjib9pcks64bb660sm6dhhccojce1n68_R20230709T230000@google.com. The scraper reads the rule's dated occurrences, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/Los_Angeles:20250209T160000 / SUMMARY:Game Night / RRULE:FREQ=MONTHLY;BYDAY=2SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "xl-bear-bust",
+      "kind": "series",
+      "title": "XL Bear Bust",
+      "description": "Come and hang out with your friendly neighborhood bears, have a beer, share some stories, get frisky. XL Bear Busts are a monthly bear social meetup at CC Attle's. We are located in the upper area on the left as you walk into the bar. Mark your calendar for 4th Fridays of each month at 8pm. Telegram link can be found on our website! http://xlbears.org http://xlbears.org/about/code-of-conduct/",
+      "bar": "C C Attle's",
+      "address": "1701 E Olive Wy, Seattle, WA 98102, USA",
+      "startDate": "2024-04-26",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=4FR",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 1rf1apqm5n96qrq60mtfcvkon5@google.com. The scraper reads the rule's dated occurrences, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/Los_Angeles:20240426T200000 / SUMMARY:XL Bear Bust / RRULE:FREQ=MONTHLY;BYDAY=4FR"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "spa-day",
+      "kind": "series",
+      "title": "Spa Day",
+      "description": "Spend some time relaxing at a Korean Spa! Admission is $48 https://qspalynnwood.com/ https://xlbears.org/ Telegram link can be found on our website!",
+      "bar": "Q Sauna & Spa",
+      "address": "17420 Hwy 99, Lynnwood, WA 98037, USA",
+      "startDate": "2024-09-21",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=3SA",
+      "occurrences": [
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-19",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 770pvrgsdmhoi275jptn7e6nfv@google.com. The scraper reads the rule's dated occurrences, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/Los_Angeles:20240921T150000 / SUMMARY:Spa Day / RRULE:FREQ=MONTHLY;BYDAY=3SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

@@ -516,6 +516,18 @@ const scraperConfig = {
       urlDiscoveryDepth: 0,
     },
     {
+      name: "XL Bears",
+      // Seattle social group for bears and admirers ("usually doing something
+      // every week": game night, spa day, XL Bear Bust, hikes). xlbears.org's
+      // calendar page embeds — and publishes the address of — its public
+      // Google Calendar; the iCalendar export is the door, read as a feed
+      // (RRULEs become dated nights, the archive is dropped), exactly like
+      // Lodge NY. Socials, not ticketed parties: no ticket links, no flyers.
+      urls: ["https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics"],
+      alwaysBear: true,
+      metadata: { website: { value: "https://xlbears.org" } },
+    },
+    {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,
       // URL blocking, AI/OCR settings, and field merging are all automatic.
