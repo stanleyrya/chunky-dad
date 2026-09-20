@@ -941,6 +941,7 @@ function renderReviewPage(deck, options = {}) {
         executed: entry.executed || null,
         pendingExecute: entry.pendingExecute === true,
         via: entry.via || null,
+        rejectionMode: entry.rejectionMode || '',
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
@@ -952,6 +953,7 @@ function renderReviewPage(deck, options = {}) {
         environment: deck.environment,
         cards,
         decided,
+        waitingGone: Array.isArray(deck.waitingGone) ? deck.waitingGone : [],
         counts: deck.counts,
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
@@ -1063,6 +1065,13 @@ a { color:var(--accent); }
 .series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
 .series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .series .nights .chip { font-size:12px; padding:2px 8px; }
+.sheet-modes { display:grid; gap:8px; margin:10px 0 12px; }
+.sheet-modes .mode { display:flex; flex-direction:column; gap:2px; text-align:left; font:inherit; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+.sheet-modes .mode b { font-size:16px; }
+.sheet-modes .mode span { font-size:12px; color:var(--muted); }
+.sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
+.sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
+.waiting li .status { font-size:12px; color:var(--muted); }
 .series-note { margin-top:4px; color:var(--muted); font-size:12px; }
 .series .nights a.chip { text-decoration:none; color:inherit; }
 .night-compare { margin-top:6px; font-size:12px; }
@@ -1089,9 +1098,10 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .stamp { position:absolute; top:22px; padding:6px 12px; border:3px solid; border-radius:8px; font-weight:800; font-size:22px; letter-spacing:.08em; opacity:0; transform:rotate(-12deg); pointer-events:none; }
 .stamp.ok { left:18px; color:var(--ok); border-color:var(--ok); }
 .stamp.no { right:18px; color:var(--no); border-color:var(--no); transform:rotate(12deg); }
-.controls { display:flex; justify-content:center; align-items:center; gap:18px; padding:16px 14px 6px; }
-.controls button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:12px 18px; color:#fff; cursor:pointer; min-width:96px; }
-.btn-no { background:var(--no); } .btn-ok { background:var(--ok); } .btn-skip { background:var(--skip); min-width:auto; padding:10px 14px; }
+.controls { display:flex; justify-content:center; align-items:center; gap:8px; padding:16px 10px 6px; }
+.controls button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:12px 14px; color:#fff; cursor:pointer; min-width:0; white-space:nowrap; flex:1 1 auto; max-width:150px; }
+.btn-no { background:var(--no); } .btn-ok { background:var(--ok); } .btn-skip { background:var(--skip); flex:0 1 auto; padding:10px 12px; }
+.controls .btn-notbear { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:600; font-size:13px; padding:11px 10px; }
 .controls button:disabled { opacity:.35; cursor:default; }
 .meta { text-align:center; color:var(--muted); font-size:13px; padding:0 14px 8px; }
 .meta button { font:inherit; background:none; border:none; color:var(--accent); cursor:pointer; padding:0 6px; }
@@ -1132,24 +1142,35 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 ${missingCalendarNotice}
 <div class="stage" id="stage"></div>
 <div class="controls">
-  <button class="btn-no" id="btn-reject" type="button">✕ Reject</button>
+  <button class="btn-no" id="btn-reject" type="button">✕ Not yet</button>
+  <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)">Not bear</button>
   <button class="btn-skip" id="btn-skip" type="button">↷ Skip</button>
   <button class="btn-ok" id="btn-approve" type="button">✓ Approve</button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← reject · → approve · ␣ skip</div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · n not bear · → approve · ␣ skip</div>
 <div class="execute" id="execute"></div>
+<details class="decided waiting" id="waiting-wrap" hidden>
+  <summary>🔧 Waiting on a fix <span id="waiting-count"></span></summary>
+  <p class="waiting-note">Sent back with a note. Each comes back to the stack by itself when the scraper's card for it changes — nothing to hunt for. "Bring back" returns it now.</p>
+  <ul id="waiting"></ul>
+</details>
 <details class="decided" id="decided-wrap">
   <summary>Decided <span id="decided-count"></span> · <button type="button" id="btn-copy-rejections" onclick="event.preventDefault(); copyRejections();">Copy rejections</button></summary>
   <ul id="decided"></ul>
 </details>
 <div class="sheet" id="sheet">
   <div class="panel">
-    <h3>Why not? <span class="muted" id="sheet-title"></span></h3>
+    <h3>Not yet — why? <span class="muted" id="sheet-title"></span></h3>
+    <div class="sheet-modes">
+      <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
+      <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
+      <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
+    </div>
+    <div class="sheet-fix-note">What is wrong? (for "Needs a fix" — this is what gets fixed)</div>
     <div class="chips" id="sheet-tags"></div>
-    <textarea id="sheet-text" placeholder="Anything else (optional) — this is what gets fixed"></textarea>
+    <textarea id="sheet-text" placeholder="Anything else (optional)"></textarea>
     <div class="actions">
       <button type="button" id="sheet-cancel" style="background:var(--line); color:var(--ink);">Cancel</button>
-      <button type="button" id="sheet-reject" style="background:var(--no); color:#fff;">Reject</button>
     </div>
   </div>
 </div>
@@ -1176,6 +1197,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var filter = 'all';
   var pending = null; // stack item awaiting the reject sheet
   var solo = {}; // series the owner chose to decide night by night
+  var clearedGone = {}; // waiting notes dropped on this page load
   var stage = document.getElementById('stage');
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
@@ -1356,7 +1378,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
       var via = d.via ? '<div class="r">↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night</div>' : '';
       var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
-      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
+      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = d.via ? 'Decide alone' : 'Undo';
@@ -1365,7 +1387,45 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       ul.appendChild(li);
     });
   }
-  function render() { renderFilters(); renderStage(); renderExecute(); renderDecided(); }
+  // "Needs a fix" rejections: the ones still covering a card on this run,
+  // and the ones this run no longer proposes at all (deck.waitingGone).
+  function renderWaiting() {
+    var wrap = document.getElementById('waiting-wrap');
+    var ul = document.getElementById('waiting');
+    var rows = decided.filter(function (d) { return d.rejectionMode === 'fix' && !d.via; });
+    var gone = (deck.waitingGone || []).filter(function (g) { return !clearedGone[g.key]; });
+    wrap.hidden = rows.length + gone.length === 0;
+    document.getElementById('waiting-count').textContent = '(' + (rows.length + gone.length) + ')';
+    ul.innerHTML = '';
+    function noteOf(reason) { return reason ? [(reason.tags || []).join(', '), reason.text].filter(Boolean).join(' — ') : ''; }
+    rows.slice().reverse().forEach(function (d) {
+      var li = document.createElement('li');
+      var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + '</span></div>'
+        + (noteOf(d.reason) ? '<div class="r">' + escapeHtml(noteOf(d.reason)) + '</div>' : '')
+        + '<div class="status">unchanged since you sent it back' + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</div></div>';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = 'Bring back';
+      btn.onclick = function () { undoDecision(d); };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    gone.forEach(function (g) {
+      var li = document.createElement('li');
+      var day = g.key && g.key.split('|').length === 4 ? ' · ' + escapeHtml(g.key.split('|')[3]) : '';
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(g.title || g.key) + ' <span class="r">' + escapeHtml(g.bar || '') + day + '</span></div>'
+        + (noteOf(g.reason) ? '<div class="r">' + escapeHtml(noteOf(g.reason)) + '</div>' : '')
+        + '<div class="status">' + (g.seriesPresent
+          ? 'this night is not in this run — other nights of the party are on the deck'
+          : 'not in this run under this title, place and day — a fix that changed one of those brings it back as a new card') + '</div></div>';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = 'Drop note';
+      btn.onclick = function () { post({ key: g.key, verdict: 'clear' }).then(function () { clearedGone[g.key] = true; toast('Note dropped'); render(); }).catch(function (error) { toast('Failed: ' + error.message); }); };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+  function render() { renderFilters(); renderStage(); renderExecute(); renderWaiting(); renderDecided(); }
   function escapeHtml(text) {
     return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -1415,7 +1475,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     return request.then(function () {
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -1495,7 +1555,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function openSheet(item) {
     var card = item.cards[0];
     document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '');
-    sheetTags.innerHTML = deck.tags.map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     sheet.classList.add('open');
@@ -1503,14 +1563,29 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   function closeSheet() { sheet.classList.remove('open'); pending = null; render(); }
   document.getElementById('sheet-cancel').onclick = closeSheet;
-  document.getElementById('sheet-reject').onclick = function () {
+  function answerSheet(mode) {
     if (!pending) return closeSheet();
     var tags = Array.prototype.map.call(sheetTags.querySelectorAll('.chip.on'), function (el) { return el.getAttribute('data-tag'); });
     var text = document.getElementById('sheet-text').value.trim();
     var card = pending;
     sheet.classList.remove('open'); pending = null;
-    decide(card, 'reject', { tags: tags, text: text }, 'gone-left');
-  };
+    // "Not bear" rides as the tag every reader already understands (the
+    // phone, older decisions, the bear verdict); the other two as a mode.
+    var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
+    decide(card, 'reject', reason, 'gone-left');
+    toast(mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
+  }
+  document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
+  document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
+  document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
+  function notBearTop() {
+    var c = topItem(); if (!c) return;
+    if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    if (c.cards[0].kind === 'bar') { pending = c; openSheet(c); return; }
+    decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
+    toast('Not bear — final');
+  }
+  document.getElementById('btn-notbear').onclick = notBearTop;
 
   // Drag — touch + mouse (iOS Safari delivers pointer events but starts
   // its own scroll first, so horizontal swipes died as pointercancel).
@@ -1606,6 +1681,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (e.key === 'ArrowRight') { e.preventDefault(); approveTop(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(); }
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); notBearTop(); }
     else if (e.key === 'z' || e.key === 'Z') { undoLast(); }
   });
 

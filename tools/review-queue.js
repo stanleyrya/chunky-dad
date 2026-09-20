@@ -308,8 +308,13 @@ function normalizeReason(reason) {
         ? reason.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
         : [];
     const text = typeof reason.text === 'string' ? reason.text.trim() : '';
-    if (tags.length === 0 && !text) return null;
-    return { tags, text };
+    // The left swipe's answer (see SharedCore.getOwnerRejectionMode): 'fix'
+    // waits for the card to change, 'never' is final. "Not bear" stays a tag —
+    // older stores, the phone and the bear verdict all read it there.
+    const rawMode = typeof reason.mode === 'string' ? reason.mode.trim().toLowerCase() : '';
+    const mode = rawMode === 'fix' || rawMode === 'never' ? rawMode : '';
+    if (tags.length === 0 && !text && !mode) return null;
+    return mode ? { tags, text, mode } : { tags, text };
 }
 
 // One decision record from a swipe. Throws on a malformed request so the
@@ -775,7 +780,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -817,7 +822,9 @@ function buildDeck(runPayload, store, options = {}) {
             // SharedCore.ownerDecisionCovers): the phone has not written THIS
             // night until its row says so, whatever the decision's stamp.
             const via = decision.key !== entry.key ? decision.key : '';
-            decided.push({ ...entry, decision, executed, pendingExecute: via ? isEventKind && decision.verdict === 'approve' && !executed : pendingExecute, ...(via ? { via } : {}) });
+            const rejectionMode = SharedCore.getOwnerRejectionMode(decision);
+            decided.push({ ...entry, decision, executed, pendingExecute: via ? isEventKind && decision.verdict === 'approve' && !executed : pendingExecute, ...(via ? { via } : {}), ...(rejectionMode ? { rejectionMode } : {}) });
+            if (rejectionMode === 'fix') counts.waiting++;
             counts.decided++;
             if (decision.verdict === 'approve') counts.approved++;
             else counts.rejected++;
@@ -950,9 +957,31 @@ function buildDeck(runPayload, store, options = {}) {
         }
     }
 
+    // "Needs a fix" rejections this run no longer proposes at all: the fix
+    // changed the card's identity (its title, place or day — so it is back on
+    // the stack as a new card), or the event went away. Named so a note is
+    // never silently orphaned.
+    const presentKeys = new Set(cards.concat(decided).map((entry) => entry.key));
+    const presentSeries = new Set(cards.concat(decided).map((entry) => SharedCore.getOwnerReviewSeriesKey(entry.key)).filter(Boolean));
+    const waitingGone = decisions
+        .filter((decision) => SharedCore.getOwnerRejectionMode(decision) === 'fix' && !presentKeys.has(decision.key))
+        .map((decision) => ({
+            key: decision.key,
+            kind: decision.kind || 'new',
+            title: (decision.snapshot && (decision.snapshot.title || decision.snapshot.name)) || '',
+            startDate: (decision.snapshot && decision.snapshot.startDate) || null,
+            bar: (decision.snapshot && (decision.snapshot.bar || decision.snapshot.city)) || '',
+            reason: decision.reason || null,
+            stampedAt: decision.stampedAt || null,
+            // Another night of the same party is on this deck: the party
+            // lives on, this night is simply not in the run (past, or gone).
+            seriesPresent: presentSeries.has(SharedCore.getOwnerReviewSeriesKey(decision.key))
+        }));
+
     const lastExecution = executions.length > 0 ? executions[executions.length - 1] : null;
     return {
         runId,
+        waitingGone,
         savedAt: (payload.summary && payload.summary.timestamp) || null,
         environment: (payload.runContext && payload.runContext.environment) || null,
         runShape: describeRunShape(payload),
@@ -978,6 +1007,7 @@ function formatRejectionsText(store) {
     const lines = [];
     for (const decision of normalizeDecisionStore(store).decisions) {
         if (decision.verdict !== 'reject') continue;
+        const mode = loadSharedCore().getOwnerRejectionMode(decision);
         const snap = decision.snapshot || {};
         const label = snap.kind === 'bar'
             ? `BAR ${snap.name || ''} (${snap.city || ''})`
@@ -989,9 +1019,11 @@ function formatRejectionsText(store) {
         const changes = snap.changes && typeof snap.changes === 'object'
             ? Object.keys(snap.changes).map((field) => `${field}: ${snap.changes[field].from || '∅'} → ${snap.changes[field].to || '∅'}`).join('; ')
             : '';
-        lines.push(`- ${label}${tags}${text}${changes ? ` (${changes})` : ''}`);
+        const modeLabel = mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
+        lines.push({ rank: mode === 'fix' ? 0 : mode === '' ? 1 : 2, line: `- [${modeLabel}] ${label}${tags}${text}${changes ? ` (${changes})` : ''}` });
     }
-    return lines.join('\n');
+    // What needs fixing first; final answers last.
+    return lines.sort((a, b) => a.rank - b.rank).map((entry) => entry.line).join('\n');
 }
 
 module.exports = {

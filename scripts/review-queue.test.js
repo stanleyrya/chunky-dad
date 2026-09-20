@@ -247,7 +247,7 @@ test('formatRejectionsText lists every rejection with its tags, text and the val
       changes: { title: { from: 'BEEFMINCE Brief Encounter', to: 'BEEFMINCE x RVT' } } }
   }));
   const text = rq.formatRejectionsText(store);
-  assert.match(text, /^- MERGE BEEFMINCE x RVT — 2030-10-04 @ RVT \[The Bear Calendar\] \{wrong title\} — aggregator renamed it \(title: BEEFMINCE Brief Encounter → BEEFMINCE x RVT\)$/m);
+  assert.match(text, /^- \[REJECTED\] MERGE BEEFMINCE x RVT — 2030-10-04 @ RVT \[The Bear Calendar\] \{wrong title\} — aggregator renamed it \(title: BEEFMINCE Brief Encounter → BEEFMINCE x RVT\)$/m);
   assert.equal(rq.formatRejectionsText(rq.emptyDecisionStore()), '');
 });
 
@@ -565,4 +565,35 @@ test('buildDeck: the phone\'s written ledger marks an approval written on any ru
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('the left swipe\'s answers: "needs a fix" is counted as waiting and returns when the card changes; an orphaned note is named', () => {
+  const payloadWith = (event) => runPayload({ analyzedEvents: event ? [event] : [] });
+  const first = deckOf(payloadWith(newEvent()));
+  const card = first.cards.find((entry) => entry.kind === 'new');
+  assert.ok(card, 'the fixture has a new card');
+  const decision = rq.buildDecision({ key: card.key, kind: 'new', verdict: 'reject', snapshot: card.proposal, reason: { tags: ['bad image'], text: 'wrong flyer', mode: 'fix' } });
+  assert.deepEqual(decision.reason, { tags: ['bad image'], text: 'wrong flyer', mode: 'fix' }, 'the mode is stored');
+  assert.equal(rq.buildDecision({ key: 'k', verdict: 'reject', reason: { mode: 'banana', tags: ['x'] } }).reason.mode, undefined, 'an unknown mode is dropped');
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), decision);
+
+  const waiting = deckOf(payloadWith(newEvent()), store);
+  assert.equal(waiting.counts.waiting, 1);
+  assert.equal(waiting.decided.find((entry) => entry.key === card.key).rejectionMode, 'fix');
+  assert.deepEqual(waiting.waitingGone, []);
+
+  // The scraper now shows another image for the same card → back on the stack.
+  const returned = deckOf(payloadWith(newEvent({ image: 'https://cdn.example/the-right-flyer.jpg' })), store);
+  assert.ok(returned.cards.some((entry) => entry.key === card.key), 'the fixed card is pending again');
+  assert.equal(returned.counts.waiting, 0);
+
+  // The run no longer proposes that card at all → the note is named, not lost.
+  const orphaned = deckOf(payloadWith(null), store);
+  assert.deepEqual(orphaned.waitingGone.map((entry) => entry.key), [card.key]);
+  assert.equal(orphaned.waitingGone[0].reason.text, 'wrong flyer');
+
+  const text = rq.formatRejectionsText(rq.upsertDecision(store, rq.buildDecision({ key: 'event|junk|x|2030-01-01', verdict: 'reject', snapshot: { title: 'Junk' }, reason: { tags: ['fragment'], mode: 'never' } })));
+  const lines = text.split('\n');
+  assert.ok(lines[0].startsWith('- [NEEDS FIX]'), text);
+  assert.ok(lines[1].startsWith('- [NOT AN EVENT]'), text);
 });

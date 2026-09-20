@@ -1692,6 +1692,38 @@ class SharedCore {
         });
     }
 
+    // What a rejection MEANS — the left swipe's three answers:
+    //   'fix'      the event is good, the card is wrong. It waits, and comes
+    //              back by itself when the scraper's card for it changes.
+    //   'not-bear' not ours. Final, and it covers every night of the party.
+    //   'never'    not an event at all (a duplicate, a fragment, junk).
+    //              Final, whatever the card later says.
+    //   ''         a rejection from before the modes: judged as it always
+    //              was (final if tagged "not bear", else back on a change).
+    static getOwnerRejectionMode(decision) {
+        if (!decision || decision.verdict !== 'reject') return '';
+        if (SharedCore.ownerDecisionSaysNotBear(decision)) return 'not-bear';
+        const mode = decision.reason && typeof decision.reason.mode === 'string' ? decision.reason.mode.trim().toLowerCase() : '';
+        return mode === 'fix' || mode === 'never' ? mode : '';
+    }
+
+    // Everything the owner sees on a card. A "needs a fix" rejection waits on
+    // ANY of it changing — the fix may be to the cover, the city or the
+    // description, which the approval fingerprint deliberately leaves out.
+    static getOwnerReviewFixFields() {
+        return [...SharedCore.getOwnerReviewFingerprintFields(), 'city', 'cover', 'description', 'timezone'];
+    }
+
+    static getOwnerReviewFixDrift(decision, proposal) {
+        const snapshot = decision && decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
+        if (!snapshot || !proposal || typeof proposal !== 'object') return [];
+        const linkFields = new Set(['url', 'ticketUrl', 'image']);
+        return SharedCore.getOwnerReviewFixFields().filter(field => {
+            const norm = linkFields.has(field) ? SharedCore.normalizeOwnerReviewLinkValue : SharedCore.normalizeOwnerReviewValue;
+            return norm(snapshot[field]) !== norm(proposal[field]);
+        });
+    }
+
     static ownerDecisionSaysNotBear(decision) {
         const tags = decision && decision.reason && Array.isArray(decision.reason.tags) ? decision.reason.tags : [];
         return tags.some(tag => String(tag || '').trim().toLowerCase() === 'not bear');
@@ -1801,7 +1833,8 @@ class SharedCore {
                 return Boolean(signature) && signature === SharedCore.getOwnerReviewMergeSignature(decision.snapshot);
             }
             if (proposal.kind !== 'new' || (decision.kind && decision.kind !== 'new')) return false;
-            if (decision.verdict === 'reject' && SharedCore.ownerDecisionSaysNotBear(decision)) return true;
+            const siblingMode = SharedCore.getOwnerRejectionMode(decision);
+            if (siblingMode === 'not-bear' || siblingMode === 'never') return true;
             if (!decision.snapshot || typeof decision.snapshot !== 'object') return false;
             return SharedCore.getOwnerReviewSeriesDrift(decision, proposal).length === 0;
         }
@@ -1812,7 +1845,11 @@ class SharedCore {
             // comes back with the earlier verdict pinned on it — that is
             // how a fix gets a second look. "Not bear" is about the party,
             // not the proposal, and holds whatever changed.
-            if (decision.verdict === 'approve' || SharedCore.ownerDecisionSaysNotBear(decision)) return true;
+            const mode = SharedCore.getOwnerRejectionMode(decision);
+            if (decision.verdict === 'approve' || mode === 'not-bear' || mode === 'never') return true;
+            // Waiting on a fix: covered only while the card is exactly the
+            // card that was sent back — ANY visible field changing returns it.
+            if (mode === 'fix') return SharedCore.getOwnerReviewFixDrift(decision, proposal).length === 0;
             return SharedCore.getOwnerReviewDrift(decision, proposal).length === 0;
         }
         const proposed = proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};

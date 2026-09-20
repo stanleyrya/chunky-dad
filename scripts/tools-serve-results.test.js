@@ -1162,3 +1162,15 @@ test('a folded series says what differs per night, ships each night\'s values, a
   assert.ok(scripts.length >= 2);
   for (const source of scripts) assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
 });
+
+test('the review page offers the three left-swipe answers, a one-tap Not bear, and the Waiting section — and its scripts parse', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  deck.waitingGone = [{ key: 'event|gone|bar|2030-01-05', kind: 'new', title: 'Gone Party', startDate: null, bar: 'Bar', reason: { tags: ['wrong date'], text: '', mode: 'fix' }, stampedAt: '2030-01-01T00:00:00.000Z', seriesPresent: false }];
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  for (const id of ['sheet-fix', 'sheet-notbear', 'sheet-never', 'btn-notbear', 'waiting-wrap']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.ok(html.includes('"waitingGone":[{"key":"event|gone|bar|2030-01-05"'), 'orphaned notes ride into the client');
+  assert.ok(!html.includes('id="sheet-reject"'), 'the single Reject button is gone');
+  for (const source of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
+    assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
+  }
+});
