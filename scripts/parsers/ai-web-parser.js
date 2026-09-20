@@ -27409,10 +27409,33 @@ TEXT:
     //   "New Orleans⚜️ | BEARRACUDA"), so when the brand-stripped og:title is
     //   an emoji-richer variant of the title (equal after emoji-strip +
     //   case-fold), the og:title variant is used to preserve the emoji.
+    // "BROOKLYN-SEPT-19" → "BROOKLYN": a label whose words are joined by
+    // hyphens/underscores/slashes, minus the ones that only say WHEN (month
+    // names and their abbreviations incl. "sept", weekdays, day numbers,
+    // ordinals, years). '' when nothing but date words is left; the title
+    // unchanged when it carries no date word at all.
+    stripDateWordsFromLabelTitle(title) {
+        const text = String(title || '').trim();
+        if (!text) return '';
+        const dateWord = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|\d{1,2}(?:st|nd|rd|th)?|(?:19|20)\d{2})$/i;
+        const words = text.split(/[\s\-_/·|,]+/).filter(Boolean);
+        const kept = words.filter(word => !dateWord.test(word));
+        if (kept.length === words.length) return text;
+        return kept.join(' ').trim();
+    }
+
     buildOrganizerPrefixedTitle(title, cityValue, pageBrandNames, htmlData, cityConfig) {
         if (!title || !cityValue) return '';
         if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
-        if (!this.isCityOnlyTitle(title, cityValue, cityConfig)) return '';
+        // A page named after its city AND its date is the same non-name:
+        // gruntparty.monster/brooklyn is titled "BROOKLYN-SEPT-19 — GRUNT",
+        // which the brand strip leaves as "BROOKLYN-SEPT-19". Take the date
+        // words away and what remains is judged like any city-only title.
+        if (!this.isCityOnlyTitle(title, cityValue, cityConfig)) {
+            const dateless = this.stripDateWordsFromLabelTitle(title);
+            if (!dateless || dateless === title || !this.isCityOnlyTitle(dateless, cityValue, cityConfig)) return '';
+            title = dateless;
+        }
         if (this.titleContainsPageBrandName(title, pageBrandNames)) return '';
         const organizerDisplay = this.getOrganizerDisplayName(pageBrandNames, htmlData);
         let baseTitle = title;

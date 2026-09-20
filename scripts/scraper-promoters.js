@@ -285,6 +285,20 @@ const scraperPromoters = [
     "favicon": "https://linktr.ee/Gay4bareburger",
     "instagram": "https://www.instagram.com/gay4bareburger",
     "bearAffinity": "always"
+  },
+  {
+    "name": "GRUNT",
+    "aliases": [
+      "GRUNT PARTY",
+      "GRUNT PARTY SF",
+      "GRUNT Brooklyn"
+    ],
+    "shortName": "GRUNT",
+    "website": "https://gruntparty.monster",
+    "urlPatterns": [
+      "gruntparty.monster"
+    ],
+    "bearAffinity": "always"
   }
 ];
 

@@ -7837,6 +7837,20 @@ test('parseEvents fails open on unrecognizable JSON: linearized lines feed the A
   assert.ok(logs.includes('🤖 AI Web: JSON API payload linearized to 3 line(s) for AI extraction (structured conversion incomplete: missing title, startDate)'));
 });
 
+test('a page labelled with its city and its date is a city-only title: the organizer names the party', () => {
+  const parser = createParser();
+  assert.equal(parser.stripDateWordsFromLabelTitle('BROOKLYN-SEPT-19'), 'BROOKLYN');
+  assert.equal(parser.stripDateWordsFromLabelTitle('New Orleans Saturday Oct 3rd 2026'), 'New Orleans');
+  assert.equal(parser.stripDateWordsFromLabelTitle('SEPT-19'), '', 'nothing but date words');
+  assert.equal(parser.stripDateWordsFromLabelTitle('Bear Trap'), 'Bear Trap', 'no date word: unchanged');
+  assert.equal(parser.stripDateWordsFromLabelTitle('MAY DAY MAYHEM'), 'DAY MAYHEM', 'only ever consulted when the rest is a bare city');
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'brooklyn'] } };
+  const htmlData = { url: 'https://gruntparty.example/brooklyn', html: '<html><head><meta property="og:site_name" content="GRUNT"><title>BROOKLYN-SEPT-19 &mdash; GRUNT</title></head><body></body></html>' };
+  assert.equal(parser.buildOrganizerPrefixedTitle('BROOKLYN-SEPT-19', 'nyc', ['GRUNT'], htmlData, cityConfig), 'GRUNT: BROOKLYN');
+  assert.equal(parser.buildOrganizerPrefixedTitle('MAY DAY MAYHEM', 'nyc', ['GRUNT'], htmlData, cityConfig), '', 'a real name that contains a month word is left alone');
+  assert.equal(parser.buildOrganizerPrefixedTitle('BROOKLYN', 'nyc', ['GRUNT'], htmlData, cityConfig), 'GRUNT: BROOKLYN', 'the bare-city rule is unchanged');
+});
+
 test('detectJsonApiPayload ignores HTML and malformed JSON; the JSON-LD fast path is unchanged', async () => {
   const parser = createParser();
   assert.equal(parser.detectJsonApiPayload(SICKENING_JSONLD_HTML), null);
