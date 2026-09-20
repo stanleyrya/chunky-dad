@@ -943,12 +943,21 @@ function buildDeck(runPayload, store, options = {}) {
         // without the notes table — 160 of them per run add up.
         const display = buildReviewDisplayContext(event, payload, core, extras);
         display.notes = '';
-        const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display };
+        // "It IS bear, but the card is wrong" is a bear verdict PLUS a
+        // needs-a-fix note — and the note has to sit where the next run's
+        // kept card will look for it: under the event's own review key, with
+        // the card as it stands today as its snapshot.
+        const fixTarget = core.buildOwnerReviewProposal(event);
+        if (fixTarget) fixTarget.kind = 'new';
+        const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display, fixTarget: fixTarget || null };
         droppedByKey.set(key, card);
     });
     for (const card of droppedByKey.values()) {
         if (card.display.bearVerdict) {
-            decided.push({ ...card, decision: { key: card.key, kind: 'dropped', verdict: card.display.bearVerdict === 'bear' ? 'approve' : 'reject', stampedAt: card.display.bearVerdictStampedAt, reason: null, bearVerdict: card.display.bearVerdict } });
+            // The note left with the verdict (under the event's own key)
+            // rides along, so the decided row shows it and an undo clears both.
+            const note = card.fixTarget ? decisions.find((entry) => entry.key === card.fixTarget.key && entry.verdict === 'reject' && ['fix', 'never'].includes(SharedCore.getOwnerRejectionMode(entry))) : null;
+            decided.push({ ...card, noteKey: note ? note.key : '', rejectionMode: note ? SharedCore.getOwnerRejectionMode(note) : '', decision: { key: card.key, kind: 'dropped', verdict: card.display.bearVerdict === 'bear' ? 'approve' : 'reject', stampedAt: card.display.bearVerdictStampedAt, reason: note ? note.reason : null, bearVerdict: card.display.bearVerdict } });
             counts.decided++;
             counts.droppedDecided++;
         } else {
@@ -961,7 +970,9 @@ function buildDeck(runPayload, store, options = {}) {
     // changed the card's identity (its title, place or day — so it is back on
     // the stack as a new card), or the event went away. Named so a note is
     // never silently orphaned.
-    const presentKeys = new Set(cards.concat(decided).map((entry) => entry.key));
+    // A note left on a not-bear card waits under the event's own key: the
+    // event is in this run (dropped), so its note is not orphaned.
+    const presentKeys = new Set(cards.concat(decided).flatMap((entry) => (entry.fixTarget && entry.fixTarget.key ? [entry.key, entry.fixTarget.key] : [entry.key])));
     const presentSeries = new Set(cards.concat(decided).map((entry) => SharedCore.getOwnerReviewSeriesKey(entry.key)).filter(Boolean));
     const waitingGone = decisions
         .filter((decision) => SharedCore.getOwnerRejectionMode(decision) === 'fix' && !presentKeys.has(decision.key))
