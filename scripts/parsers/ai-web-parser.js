@@ -1977,6 +1977,7 @@ class AiWebParser {
                         text: this.trimToMaxLength(segment.lines.join(' \u2022 '), 600)
                     };
                     this.applyCardStatedDateOverFlyerDate(event, segment.lines, pageDateContext);
+                    this.applySegmentOwnPageLink(event, segmentHtmlData);
                     events.push(event);
                 }
             } catch (err) {
@@ -2007,6 +2008,64 @@ class AiWebParser {
             console.log(`🤖 AI Web: Miss budget ${missBudget} spent — ${uncachedSegmentsSkipped} of ${segments.length} segments still uncached; ~${runsToConverge} more run${runsToConverge === 1 ? '' : 's'} to full coverage at this budget`);
         }
         return events;
+    }
+
+    // Add-to-calendar / subscribe / export links: they encode an event (or a
+    // whole feed) into a calendar app, so they are never a page about the
+    // event. Query-SHAPE and calendar-scheme only — no site is named.
+    //   .ics paths · ?format=ical|ics|outlook|vcs|webcal · /calendar/render ·
+    //   ?ical=1 / ?outlook-ical=1 · ?tribe-bar-date= · ?rru=addsubscription ·
+    //   ?action=TEMPLATE · a webcal: target (plain or URL-encoded, which is
+    //   what Google's "calendar/r?cid=webcal%3A…" subscribe link carries).
+    isCalendarExportUrl(url, path = null) {
+        const lowerUrl = String(url || '').toLowerCase();
+        const lowerPath = path !== null ? String(path).toLowerCase() : (lowerUrl.match(/^https?:\/\/[^/?#]+([^?#]*)/) || ['', ''])[1];
+        return lowerPath.endsWith('.ics')
+            || /[?&]format=(?:ical(?:endar)?|ics|outlook|vcs|webcal)(?:[&#]|$)/.test(lowerUrl)
+            || /\/calendar\/render(?:[/?#]|$)/.test(lowerUrl)
+            || /[?&](?:outlook-)?ical=1(?!\d)/.test(lowerUrl)
+            || /[?&]tribe-bar-date=/.test(lowerUrl)
+            || /[?&]rru=add(?:subscription|event)/.test(lowerUrl)
+            || /[?&]action=template(?:[&#]|$)/.test(lowerUrl)
+            || /webcal(?::|%3a)(?:\/\/|%2f%2f)/.test(lowerUrl);
+    }
+
+    // A listing card's own link is the event's page. The card's single
+    // visible link rides into the prompt as SEGMENT_LINK_URL, and whether
+    // the model hands it back is a coin toss — sf-eagle.com/events/ (run
+    // 20260920-102047): WOOF!'s three cards each link their own page, two
+    // nights came back with it and one with nothing, so the same party
+    // linked its page on two dates and the bar's homepage on the third.
+    // When the model returned no link of its own, the card's link on the
+    // page's OWN host is adopted as the ticket link — downstream link
+    // handling already promotes an own-site page to the event's website.
+    // A link to another host is left to the model and the evidence gate:
+    // it may be a sponsor, a ticket vendor or a neighbour's page.
+    applySegmentOwnPageLink(event, segmentHtmlData) {
+        if (!event || typeof event !== 'object' || !segmentHtmlData) return false;
+        if (typeof event.ticketUrl === 'string' && event.ticketUrl.trim()) return false;
+        const pageUrl = typeof segmentHtmlData.url === 'string' ? segmentHtmlData.url : '';
+        const hostOf = (value) => (String(value || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const pageHost = hostOf(pageUrl);
+        if (!pageHost) return false;
+        const links = String(segmentHtmlData.html || '').split('\n')
+            .map(line => (line.match(/^SEGMENT_LINK_URL:\s*(\S+)/) || ['', ''])[1])
+            .filter(Boolean);
+        if (links.length !== 1) return false;
+        const link = links[0];
+        if (hostOf(link) !== pageHost) return false;
+        const key = (value) => (typeof this.getUrlDedupeKey === 'function' ? this.getUrlDedupeKey(value) : String(value || '').replace(/[?#].*$/, '').replace(/\/+$/, ''));
+        const path = (link.match(/^https?:\/\/[^/?#]+([^?#]*)/i) || ['', ''])[1].replace(/\/+$/, '');
+        if (!path || key(link) === key(pageUrl)) return false;
+        const current = typeof event.url === 'string' ? event.url.trim() : '';
+        if (current && key(current) === key(link)) return false;
+        // The event already points at a deeper page of this site than the
+        // listing itself: the model found the page, nothing to add.
+        if (current && hostOf(current) === pageHost && key(current) !== key(pageUrl)
+            && (current.match(/^https?:\/\/[^/?#]+([^?#]*)/i) || ['', ''])[1].replace(/\/+$/, '') !== '') return false;
+        event.ticketUrl = link;
+        console.log(`🔗 LINKS: "${event.title || 'event'}" takes its listing card's own link ${link} — the model returned none`);
+        return true;
     }
 
     async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null, httpAdapter = null) {
@@ -5428,6 +5487,11 @@ class AiWebParser {
             const normalized = this.normalizeUrl(candidate, sourceUrl);
             if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
             if (this.hasSupportedImageFilenameAtEnd(normalized) || this.hasLikelyImageUrl(normalized)) continue;
+            // A "subscribe to this calendar" link is page furniture, never the
+            // card's link (sf-eagle.com/events/: the last card's segment ran
+            // into the footer, and its only link was Google's
+            // calendar/r?cid=webcal%3A… — shipped as that night's url).
+            if (this.isCalendarExportUrl(normalized)) continue;
             const beforeCount = lines.length;
             addLine('SEGMENT_LINK_URL', normalized);
             if (lines.length > beforeCount) linkCount++;
@@ -6388,7 +6452,7 @@ class AiWebParser {
 
     readMecGridCells(grid, sourceUrl) {
         const rows = [];
-        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const cellPattern = /<dt\b[^>]*class="[^"]*mec-calendar-day\b[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<dt\b[^>]*class="[^"]*mec-calendar-day\b|<\/dl>)/gi;
         let cell;
         while ((cell = cellPattern.exec(grid)) !== null) {
@@ -6438,7 +6502,7 @@ class AiWebParser {
                 }
                 if (!node || typeof node !== 'object' || !/event/i.test(String(node['@type'] || ''))) continue;
                 const href = this.normalizeHttpUrlValue(String(node.url || '').trim()) || '';
-                const cleanText = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+                const cleanText = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
                 const title = cleanText(node.name);
                 if (!title || !href) continue;
                 const startText = String(node.startDate || '');
@@ -6448,7 +6512,7 @@ class AiWebParser {
                 const event = this.buildMecOccurrenceEvent({
                     title, href, day,
                     timeText: timeMatch ? timeMatch[1] : '',
-                    description: cleanText(this.decodeBasicEntities(String(node.description || '')).replace(/&amp;/gi, '&')),
+                    description: cleanText(this.decodeEntitiesFully(String(node.description || ''))),
                     image: this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || ''
                 }, sourceUrl);
                 if (event) rows.push(event);
@@ -6501,7 +6565,7 @@ class AiWebParser {
             const start = clock(node.startDate);
             const end = clock(node.endDate);
             const image = this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || '';
-            const description = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(this.decodeBasicEntities(String(node.description || '')))).replace(/&amp;/gi, '&'));
+            const description = this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(this.decodeBasicEntities(String(node.description || '')))));
             for (const event of group) {
                 if (start && this.isMidnightWallClock(event.startDate, event)) {
                     const day = event.startDate;
@@ -6821,7 +6885,7 @@ class AiWebParser {
             endDate = new Date(endDate.getTime() + (24 * 60 * 60 * 1000));
         }
         const description = this.normalizeWhitespace(
-            this.decodeBasicEntities(this.stripTags(String(row.description || ''))).replace(/&amp;/gi, '&')
+            this.decodeEntitiesFully(this.stripTags(String(row.description || '')))
         );
         const event = {
             title: this.normalizeWhitespace(String(row.name || '')),
@@ -7053,7 +7117,7 @@ class AiWebParser {
         if (!item || typeof item !== 'object') return null;
         const startDate = new Date(Number(item.startDate));
         if (Number.isNaN(startDate.getTime())) return null;
-        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const title = clean(item.title);
         if (!title) return null;
         const endCandidate = typeof item.endDate === 'number' ? new Date(item.endDate) : null;
@@ -7214,7 +7278,7 @@ class AiWebParser {
             ? row.venues[0]
             : null;
         const location = row.location && typeof row.location === 'object' ? row.location : {};
-        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const addressParts = [clean(location.street), clean(location.city), clean(location.zip)].filter(Boolean);
         const event = {
             title: clean(row.name),
@@ -9331,7 +9395,7 @@ class AiWebParser {
     buildEventFromJsonLdNode(node, sourceUrl, cityConfig = null, nodesById = null) {
         if (!node || typeof node !== 'object') return null;
         const clean = (value) => this.normalizeWhitespace(
-            this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
+            this.decodeEntitiesFully(this.stripTags(String(value || '')))
         );
         const title = clean(node.name);
         // The node's raw startDate STRING is kept alongside the Date it becomes:
@@ -11121,11 +11185,11 @@ class AiWebParser {
         for (const rawLine of source.split('\u0003')) {
             const withoutLabels = rawLine.replace(/\u0001[^\u0002]*\u0002/g, ' ');
             const text = this.normalizeWhitespace(
-                this.decodeBasicEntities(this.stripTags(rawLine.replace(/[\u0001\u0002]/g, ''))).replace(/&amp;/gi, '&')
+                this.decodeEntitiesFully(this.stripTags(rawLine.replace(/[\u0001\u0002]/g, '')))
             );
             if (!text) continue;
             const prose = this.normalizeWhitespace(
-                this.decodeBasicEntities(this.stripTags(withoutLabels.replace(/[\u0001\u0002]/g, ''))).replace(/&amp;/gi, '&')
+                this.decodeEntitiesFully(this.stripTags(withoutLabels.replace(/[\u0001\u0002]/g, '')))
             );
             const hasAlphanumeric = (value) => /[\p{L}\p{N}]/u.test(value);
             chunks.push({
@@ -14562,22 +14626,7 @@ class AiWebParser {
         // `rru=addsubscription` links off bearitmtl.com's archive. The Google
         // `action=TEMPLATE` twin is already blocked by the google.com host
         // entry; matching it here covers the other providers that use it.
-        if (lowerPath.endsWith('.ics')
-            // "Add to calendar" EXPORT endpoints: a generator script whose
-            // query names the calendar format it renders
-            // (sickening.events/download.php?format=icalendar|outlook — 2 of
-            // the 4 discovery slots on every goldiloxx event page, audit
-            // 2026-09-13), and the third-party calendar UIs that the same
-            // widget row links out to. Query-SHAPE and calendar-host only,
-            // no site is named; the google.com twin is already covered by the
-            // google.com host entry below.
-            || /[?&]format=(?:ical(?:endar)?|ics|outlook|vcs|webcal)(?:[&#]|$)/.test(lowerUrl)
-            || /\/calendar\/render(?:[/?#]|$)/.test(lowerUrl)
-            || /[?&](?:outlook-)?ical=1(?!\d)/.test(lowerUrl)
-            || /[?&]tribe-bar-date=/.test(lowerUrl)
-            || /[?&]rru=add(?:subscription|event)/.test(lowerUrl)
-            || /[?&]action=template(?:[&#]|$)/.test(lowerUrl)
-            || /webcal(?::|%3a)(?:\/\/|%2f%2f)/.test(lowerUrl)) {
+        if (this.isCalendarExportUrl(lowerUrl, lowerPath)) {
             return { valid: false, reason: 'calendar-export-url' };
         }
         const blockedPattern = invalidUrlPatterns.find(invalid => {
@@ -16315,7 +16364,7 @@ class AiWebParser {
             try {
                 names = this.core.extractJsonLdEventNodes(typeof htmlData.html === 'string' ? htmlData.html : '')
                     .map(node => (node && typeof node.name === 'string'
-                        ? this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(node.name)).replace(/&amp;/gi, '&'))
+                        ? this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(node.name)))
                         : ''))
                     .filter(Boolean);
             } catch (error) {
@@ -16349,7 +16398,7 @@ class AiWebParser {
         // Segments and listing windows carry their own listing title; this is
         // a single-page rule only.
         if (htmlData.segmentListingTitle !== undefined || htmlData.segmentText !== undefined) return title;
-        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const titleTag = clean((html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || ['', ''])[1]);
         const headings = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => clean(m[1])).filter(Boolean);
         if (headings.length === 0 || !titleTag) return title;
@@ -21656,14 +21705,14 @@ TEXT:
         // tag carries one, else clears.
         if (typeof event.description === 'string' && event.description && /<[^>]+>/.test(event.description)) {
             const strippedDescription = this.normalizeWhitespace(
-                this.decodeBasicEntities(this.stripTags(event.description)).replace(/&amp;/gi, '&')
+                this.decodeEntitiesFully(this.stripTags(event.description))
             );
             if (strippedDescription) {
                 event.description = strippedDescription;
             } else {
                 const altMatch = event.description.match(/<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
                 const altText = this.normalizeWhitespace(
-                    this.decodeBasicEntities(altMatch ? (altMatch[1] || altMatch[2] || '') : '').replace(/&amp;/gi, '&')
+                    this.decodeEntitiesFully(altMatch ? (altMatch[1] || altMatch[2] || '') : '')
                 );
                 if (altText) {
                     console.log(`🤖 AI Web: Description was markup-only — using image alt text for "${event.title}"`);
@@ -27473,6 +27522,18 @@ TEXT:
     // longer ship with raw entities. &amp; deliberately stays encoded here
     // (URL-candidate scanning depends on it; normalizeUrl decodes it exactly
     // once), so its numeric forms (&#38;/&#x26;) are skipped too.
+    // decodeBasicEntities keeps the ampersand encoded (so a second decode pass
+    // can never turn "&amp;lt;" into a tag). Text that is about to become an
+    // event field is decoded to the end here: every spelling of the ampersand
+    // — &amp; and the numeric forms WordPress prefers ("B&#038;B", "&#38;",
+    // "&#x26;"), including the doubly-encoded "&amp;#038;" — becomes "&".
+    decodeEntitiesFully(text) {
+        const unwrapped = String(text || '').replace(/&amp;(#\d{1,7};|#x[0-9a-f]{1,6};|[a-z]{2,8};)/gi, '&$1');
+        return this.decodeBasicEntities(unwrapped)
+            .replace(/&amp;/gi, '&')
+            .replace(/&#0*38;|&#x0*26;/gi, '&');
+    }
+
     decodeBasicEntities(text) {
         return String(text || '')
             .replace(/&nbsp;/gi, ' ')

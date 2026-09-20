@@ -19178,3 +19178,46 @@ test('venue-site identity without an address consensus fills the bar when the ev
   assert.equal(events[1].bar, '', 'another street address stays untouched');
   assert.equal(events[2].bar, '', 'no address and no POI: nothing to go on');
 });
+
+test('decodeEntitiesFully finishes the ampersand in every spelling, and the structured builders use it', () => {
+  const parser = createParser();
+  assert.equal(parser.decodeEntitiesFully('CALF B&#038;B EVENT'), 'CALF B&B EVENT');
+  assert.equal(parser.decodeEntitiesFully('UNDERWEAR &amp;#038; SINGLET NIGHT'), 'UNDERWEAR & SINGLET NIGHT');
+  assert.equal(parser.decodeEntitiesFully('Rock &amp; Roll &#38; Beer &#x26; Bears'), 'Rock & Roll & Beer & Bears');
+  assert.equal(parser.decodeEntitiesFully('Tom&rsquo;s &ldquo;night&rdquo;'), 'Tom’s “night”');
+  assert.equal(parser.decodeBasicEntities('B&#038;B'), 'B&#038;B', 'the basic decoder still keeps the ampersand encoded');
+  const event = parser.buildEventFromSquarespaceItem({ title: 'B&#038;B Brunch', startDate: 1789876800083, fullUrl: '/events/bb', location: { addressTitle: 'Bed &#038; Breakfast Bar', addressLine1: '1 Main St', addressLine2: 'Seattle, WA' } }, 'https://site.example/events');
+  assert.equal(event.title, 'B&B Brunch');
+  assert.equal(event.bar, 'Bed & Breakfast Bar');
+});
+
+test('applySegmentOwnPageLink adopts a listing card\'s own-site link when the model returned none', () => {
+  const parser = createParser();
+  const segment = (link) => ({ url: 'https://www.sf-eagle.example/events/', html: `SEGMENT_IMAGE_URL: https://wp.sf-eagle.example/a.webp\nSEGMENT_LINK_URL: ${link}\nSAT · OCT 3 WOOF! 3 PM - 6 PM` });
+  const bare = { title: 'WOOF!', url: 'https://www.sf-eagle.example/events/' };
+  assert.equal(parser.applySegmentOwnPageLink(bare, segment('https://www.sf-eagle.example/events/woof/')), true);
+  assert.equal(bare.ticketUrl, 'https://www.sf-eagle.example/events/woof/');
+  const already = { title: 'WOOF!', ticketUrl: 'https://tickets.example/woof' };
+  assert.equal(parser.applySegmentOwnPageLink(already, segment('https://www.sf-eagle.example/events/woof/')), false, 'a link the model returned is kept');
+  const foreign = { title: 'WOOF!' };
+  assert.equal(parser.applySegmentOwnPageLink(foreign, segment('https://sponsor.example/shop')), false, 'another host is not the event\'s page');
+  assert.equal(foreign.ticketUrl, undefined);
+  const listing = { title: 'WOOF!' };
+  assert.equal(parser.applySegmentOwnPageLink(listing, segment('https://www.sf-eagle.example/events')), false, 'the listing page itself is not a page of the event');
+  const found = { title: 'WOOF!', url: 'https://www.sf-eagle.example/events/woof-10015820/' };
+  assert.equal(parser.applySegmentOwnPageLink(found, segment('https://www.sf-eagle.example/events/woof-10015820/')), false, 'already the event\'s url');
+});
+
+test('isCalendarExportUrl names subscribe/export links, and a segment never takes one as its link', () => {
+  const parser = createParser();
+  for (const url of ['https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwp.sf-eagle.example%2Fevents%2F%3Fical%3D1', 'https://site.example/events/?ical=1', 'https://site.example/feed.ics', 'webcal://site.example/cal', 'https://outlook.live.com/owa?rru=addsubscription&url=x', 'https://www.sickening.example/download.php?format=icalendar&id=3']) {
+    assert.equal(parser.isCalendarExportUrl(url), true, url);
+  }
+  for (const url of ['https://site.example/events/woof/', 'https://site.example/musical=1', 'https://site.example/calendar']) {
+    assert.equal(parser.isCalendarExportUrl(url), false, url);
+  }
+  const lines = parser.extractMultiEventSegmentResourceLines(
+    '<div><a href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwp.site.example%2Fevents%2F%3Fical%3D1">Subscribe</a><h3>WOOF!</h3><a href="/events/woof-3/">Details</a></div>',
+    'https://site.example/events/', [], [], null);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_LINK_URL')), ['SEGMENT_LINK_URL: https://site.example/events/woof-3/']);
+});

@@ -17894,9 +17894,19 @@ class SharedCore {
                     // the page-derived value. Identity fields only — every
                     // other metadata key clobbers exactly as before.
                     if (key === 'website' || key === 'url') {
-                        const pageDerived = (typeof event.website === 'string' && event.website.trim())
-                            ? event.website.trim()
-                            : (typeof event.url === 'string' ? event.url.trim() : '');
+                        const extractedWebsite = typeof event.website === 'string' ? event.website.trim() : '';
+                        const extractedUrl = typeof event.url === 'string' ? event.url.trim() : '';
+                        // url and website are one field, and the extraction can
+                        // fill both: the site's front door in `website` and the
+                        // event's own page in `url` (sf-eagle.com, run
+                        // 20260920-102047: every card's `url` was its own
+                        // /events/<slug>/ page while `website` said the
+                        // homepage, so the homepage was read as "what the page
+                        // gave us" and the event page was lost). The deeper
+                        // same-site value is the page-derived one.
+                        const urlIsDeeperThanWebsite = Boolean(extractedWebsite && extractedUrl)
+                            && this.isBareRootBuryingSameSiteEventPage(extractedWebsite, extractedUrl);
+                        const pageDerived = urlIsDeeperThanWebsite ? extractedUrl : (extractedWebsite || extractedUrl);
                         if (this.isBareRootBuryingSameSiteEventPage(resolvedValue, pageDerived)) {
                             if (this.isOwnListingPageUrl(event, pageDerived)) {
                                 // …unless the "deeper URL" is the listing the
@@ -17907,6 +17917,9 @@ class SharedCore {
                                 console.log(`🔗 LINKS: curated ${resolvedValue} stamped over ${pageDerived} for "${event.title || 'event'}" — that is the listing the event was scraped off, not this event's page`);
                             } else {
                                 console.log(`🔗 LINKS: kept the page's own ${pageDerived} over curated ${resolvedValue} for "${event.title || 'event'}" — same site, and the deeper URL is the one that describes THIS event`);
+                                // One field: the front door the extraction put in
+                                // `website` must not outlive the event page in `url`.
+                                if (urlIsDeeperThanWebsite) event.website = pageDerived;
                                 return;
                             }
                         }
