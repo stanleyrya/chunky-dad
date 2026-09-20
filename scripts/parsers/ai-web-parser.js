@@ -10699,7 +10699,7 @@ class AiWebParser {
     // one envelope.
     findJsonApiEnvelopeEvent(obj) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
-        const hasTitle = (view) => Object.keys(view).some(key => /^(name|title|summary)$/.test(this.normalizeJsonApiKey(key))
+        const hasTitle = (view) => Object.keys(view).some(key => this.jsonApiKeyNamesTheEvent(this.normalizeJsonApiKey(key))
             && this.jsonApiTextValue(view[key]).trim() !== '');
         if (hasTitle(obj)) return null;
         const found = [];
@@ -10905,7 +10905,7 @@ class AiWebParser {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
         const view = this.unwrapJsonApiCandidate(obj);
         const keys = Object.keys(view);
-        const hasTitle = keys.some(key => /^(name|title|summary)$/.test(this.normalizeJsonApiKey(key))
+        const hasTitle = keys.some(key => this.jsonApiKeyNamesTheEvent(this.normalizeJsonApiKey(key))
             && this.jsonApiTextValue(view[key]).trim() !== '');
         if (!hasTitle) return false;
         return keys.some(key => this.jsonApiStartDateFromEntry(key, view[key]) !== null);
@@ -11128,10 +11128,19 @@ class AiWebParser {
     // Title-ish key of a row, folded — the FAMILY a pre-expanded feed row
     // belongs to. Same key resolution the builder uses (name/title, then
     // VEVENT's `summary`).
+    // The key a feed row names its event under. `name`/`title` (and VEVENT's
+    // `summary`) first; else a title key prefixed with what the row IS —
+    // TicketLeap's organization listing says `listing_title`, others
+    // `event_name` / `show_title`. Never a name that belongs to something
+    // else on the row (venue_name, organizer_name, host_name …).
+    jsonApiKeyNamesTheEvent(normalizedKey) {
+        return /^(name|title|summary)$/.test(normalizedKey) || /^(event|listing|show|party|performance)_(title|name)$/.test(normalizedKey);
+    }
+
     jsonApiRowFamilyKey(row) {
         const view = this.unwrapJsonApiCandidate(row);
         let text = '';
-        for (const pattern of [/^(name|title)$/, /^summary$/]) {
+        for (const pattern of [/^(name|title)$/, /^summary$/, /^(event|listing|show|party|performance)_(title|name)$/]) {
             for (const key of Object.keys(view)) {
                 if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
                 const value = this.jsonApiTextValue(view[key]);
@@ -11613,7 +11622,10 @@ class AiWebParser {
             let statedFree = false;
             let statedText = '';
             const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
-            const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency)(_|$)|display/;
+            // `_fmt` / `_formatted` twins are the same price rendered for display
+            // (TicketLeap min_price "10.00" beside min_price_fmt "$11.55" with
+            // fees) — a second amount that reads as a range.
+            const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency|fmt|formatted)(_|$)|display/;
             const visit = (node, depth, ancestorUnavailable = false) => {
                 if (!node || depth > 3) return;
                 if (Array.isArray(node)) {
@@ -12148,6 +12160,9 @@ class AiWebParser {
             if (value === null || value === undefined || depth > 4) return;
             if (typeof value === 'string') {
                 if (/^https?:\/\//i.test(value.trim())) push(value, 0, 0);
+                // Protocol-relative ("//cdn.example/x.jpeg" — TicketLeap's
+                // listing images): the scheme is the feed's own, https.
+                else if (/^\/\/[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\//i.test(value.trim())) push(`https:${value.trim()}`, 0, 0);
                 return;
             }
             if (Array.isArray(value)) {
@@ -12244,6 +12259,7 @@ class AiWebParser {
         const summaryText = clean(firstTextValue(/^summary$/));
         let title = clean(firstTextValue(/^(name|title)$/));
         if (!title) title = summaryText;
+        if (!title) title = clean(firstTextValue(/^(event|listing|show|party|performance)_(title|name)$/));
         // Start: explicit start-ish keys, bare date/datetime keys, or a
         // when-container — the same rule the recognizer applied (see
         // jsonApiStartDateFromEntry); end likewise, containers resolving

@@ -503,6 +503,19 @@ const scraperConfig = {
       metadata: { website: { value: "https://campoutpoconos.com" } },
     },
     {
+      name: "South Seattle Bear Social",
+      // Seattle bear social (GLOW, Bear Pride, drag trivia brunch) — all
+      // ticketed on TicketLeap. The organization page is a JavaScript shell;
+      // its bundle reads this JSON door (…/api/organization-listing/<org>/
+      // upcoming → { listings: [...], hasMore }). Rows name the event
+      // `listing_title`, state local start/end, venue_name/venue_city and a
+      // protocol-relative image — all read generically by the JSON-API
+      // reader. Empty between parties (0 upcoming on 2026-09-20; five past
+      // listings through 2026-07-31 on the /past twin).
+      urls: ["https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming"],
+      urlDiscoveryDepth: 0,
+    },
+    {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,
       // URL blocking, AI/OCR settings, and field merging are all automatic.

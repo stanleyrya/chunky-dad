@@ -974,7 +974,8 @@ class SharedCore {
             if (/(^|_)when$/.test(key)) return isPlainObject(value) && isScalarDate(value.start);
             return false;
         };
-        const hasTitleKey = (view) => Object.keys(view).some(key => /^(name|title|summary)$/.test(normalizeKey(key))
+        // Mirror of ai-web-parser jsonApiKeyNamesTheEvent (listing_title, event_name …).
+        const hasTitleKey = (view) => Object.keys(view).some(key => (/^(name|title|summary)$/.test(normalizeKey(key)) || /^(event|listing|show|party|performance)_(title|name)$/.test(normalizeKey(key)))
             && textValue(view[key]).trim() !== '');
         const hasStartKey = (view) => Object.keys(view).some(key => isStartEntry(normalizeKey(key), view[key]));
         const unwrap = (obj) => {
