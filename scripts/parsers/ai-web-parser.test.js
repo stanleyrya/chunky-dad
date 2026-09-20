@@ -7837,6 +7837,20 @@ test('parseEvents fails open on unrecognizable JSON: linearized lines feed the A
   assert.ok(logs.includes('🤖 AI Web: JSON API payload linearized to 3 line(s) for AI extraction (structured conversion incomplete: missing title, startDate)'));
 });
 
+test('a page labelled with its city and its date is a city-only title: the organizer names the party', () => {
+  const parser = createParser();
+  assert.equal(parser.stripDateWordsFromLabelTitle('BROOKLYN-SEPT-19'), 'BROOKLYN');
+  assert.equal(parser.stripDateWordsFromLabelTitle('New Orleans Saturday Oct 3rd 2026'), 'New Orleans');
+  assert.equal(parser.stripDateWordsFromLabelTitle('SEPT-19'), '', 'nothing but date words');
+  assert.equal(parser.stripDateWordsFromLabelTitle('Bear Trap'), 'Bear Trap', 'no date word: unchanged');
+  assert.equal(parser.stripDateWordsFromLabelTitle('MAY DAY MAYHEM'), 'DAY MAYHEM', 'only ever consulted when the rest is a bare city');
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'brooklyn'] } };
+  const htmlData = { url: 'https://gruntparty.example/brooklyn', html: '<html><head><meta property="og:site_name" content="GRUNT"><title>BROOKLYN-SEPT-19 &mdash; GRUNT</title></head><body></body></html>' };
+  assert.equal(parser.buildOrganizerPrefixedTitle('BROOKLYN-SEPT-19', 'nyc', ['GRUNT'], htmlData, cityConfig), 'GRUNT: BROOKLYN');
+  assert.equal(parser.buildOrganizerPrefixedTitle('MAY DAY MAYHEM', 'nyc', ['GRUNT'], htmlData, cityConfig), '', 'a real name that contains a month word is left alone');
+  assert.equal(parser.buildOrganizerPrefixedTitle('BROOKLYN', 'nyc', ['GRUNT'], htmlData, cityConfig), 'GRUNT: BROOKLYN', 'the bare-city rule is unchanged');
+});
+
 test('detectJsonApiPayload ignores HTML and malformed JSON; the JSON-LD fast path is unchanged', async () => {
   const parser = createParser();
   assert.equal(parser.detectJsonApiPayload(SICKENING_JSONLD_HTML), null);
@@ -16121,13 +16135,17 @@ test('the ticketUrl rescue fails closed: ambiguous platform anchors, or no asset
   }, {}, { url: BEARRACUDA_PORTLANDNYE_URL, html: repeatedHtml }, null, null);
   assert.equal(repeated.ticketUrl, SICKENING_ANCHOR_URL, 'dedupe-key repeats are one pointer');
 
-  // No asset-rejected candidate → no harvest at all: an absent ticketUrl
-  // stays absent even with a platform anchor on the page.
-  const untouched = parser.normalizeAiEvent({
+  // No asset-rejected candidate → the POINTER rescue does not fire. Since
+  // 2026-09-20 (owner: "surprised we don't get the ticket link" —
+  // gruntparty.monster's "TICKETS AVAILABLE" → ra.co) a single-event page
+  // whose content carries exactly ONE ticket link still gets it, through
+  // fillTicketUrlFromPageCta: same fail-closed shape (two distinct links →
+  // nothing, asserted above), chrome links never considered.
+  const filled = parser.normalizeAiEvent({
     title: 'Portland NYE',
     startDate: '2026-12-31T21:00:00'
   }, {}, { url: BEARRACUDA_PORTLANDNYE_URL, html: BEARRACUDA_PORTLANDNYE_SNIPPET }, null, null);
-  assert.equal(untouched.ticketUrl, '', 'the rescue only fires for asset-rejected extractions');
+  assert.equal(filled.ticketUrl, SICKENING_ANCHOR_URL, 'the page content\'s one ticket link is the event\'s');
 });
 
 // Real Goldiloxx search payload shape (cached
@@ -19295,4 +19313,51 @@ test('coverage audit: a "sync this calendar" strip under the last card\'s date i
     console.log = originalLog;
   }
   assert.ok(logs.some(line => line.includes('links only a calendar subscription')), logs.join('\n'));
+});
+
+// Single-event pages: the page's one labelled ticket link, and its one poster.
+// ---------------------------------------------------------------------------
+const POSTER_PAGE = (extraBody = '') => `<html><head><meta property="og:image" content="http://static1.cms.example/t/STICKER-01.png?format=1500w"></head><body>
+<header><a href="/"><img src="https://static1.cms.example/t/STICKER-01.png" alt="GRUNT"></a><nav><a href="https://www.instagram.com/party/">Instagram</a><a href="https://ra.co/promoters/1">All our parties</a></nav></header>
+<main><img src="https://images.cms.example/content/v1/abc/STICKER-01.png?format=1500w" alt="GRUNT">
+<img data-src="https://images.cms.example/content/v1/abc/Folsom+Poster-01.jpg" src="https://images.cms.example/content/v1/abc/Folsom+Poster-01.jpg?format=1000w" alt="">
+<h2>FOLSOM SATURDAY, SEPT 26</h2><h3><a href="https://ra.co/events/2447663"><span>TICKETS AVAILABLE</span></a></h3>${extraBody}</main>
+<footer><a href="https://www.facebook.com/party/">Facebook</a></footer></body></html>`;
+
+test('fillTicketUrlFromPageCta takes the page content\'s one labelled ticket link, never the chrome\'s and never a guess between two', () => {
+  const parser = createParser();
+  const event = { title: 'GRUNT' };
+  parser.fillTicketUrlFromPageCta(event, { url: 'https://party.example/', html: POSTER_PAGE() });
+  assert.equal(event.ticketUrl, 'https://ra.co/events/2447663');
+  const kept = { title: 'GRUNT', ticketUrl: 'https://tickets.example/x' };
+  parser.fillTicketUrlFromPageCta(kept, { url: 'https://party.example/', html: POSTER_PAGE() });
+  assert.equal(kept.ticketUrl, 'https://tickets.example/x', 'a link the model returned is kept');
+  const two = { title: 'GRUNT' };
+  parser.fillTicketUrlFromPageCta(two, { url: 'https://party.example/', html: POSTER_PAGE('<a href="https://ra.co/events/2369544">TICKETS for last month</a>') });
+  assert.equal(two.ticketUrl, undefined, 'two labelled ticket links: no guess');
+});
+
+test('the page\'s sole large content picture is its artwork: adopted when nothing else is, and not refused as a brand-only logo', () => {
+  const parser = createParser();
+  const html = POSTER_PAGE();
+  const htmlData = { url: 'https://party.example/', html };
+  for (const [url, width, height] of [
+    ['https://images.cms.example/content/v1/abc/STICKER-01.png?format=1500w', 900, 900],
+    ['https://static1.cms.example/t/STICKER-01.png', 900, 900],
+    ['https://images.cms.example/content/v1/abc/Folsom+Poster-01.jpg', 1044, 1063],
+    ['https://images.cms.example/content/v1/abc/Folsom+Poster-01.jpg?format=1000w', 1000, 1018]
+  ]) parser.recordMeasuredImageDimensions(url, { width, height });
+  const sole = parser.getSoleBodyArtworkUrl(htmlData);
+  assert.equal(parser.getPictureIdentityKey(sole), parser.getPictureIdentityKey('https://images.cms.example/content/v1/abc/Folsom+Poster-01.jpg'), 'the header logo is known by its file name even on another CDN path');
+  const event = { title: 'GRUNT' };
+  parser.fillImageFromSoleBodyArtwork(event, htmlData);
+  assert.equal(parser.getPictureIdentityKey(event.image), parser.getPictureIdentityKey(sole));
+  assert.equal(event.imageSource, 'page');
+  // Two large content pictures → there is no "the" artwork.
+  const twoPosters = { url: 'https://party.example/', html: POSTER_PAGE('<img src="https://images.cms.example/content/v1/abc/Other+Poster.jpg">') };
+  parser.recordMeasuredImageDimensions('https://images.cms.example/content/v1/abc/Other+Poster.jpg', { width: 1200, height: 1500 });
+  assert.equal(parser.getSoleBodyArtworkUrl(twoPosters), '');
+  // An unmeasured picture is never assumed large.
+  const fresh = createParser();
+  assert.equal(fresh.getSoleBodyArtworkUrl(htmlData), '');
 });
