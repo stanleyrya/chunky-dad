@@ -21852,6 +21852,104 @@ test('SPA door: fails open — a content page, an unreadable bundle, or an endpo
   assert.ok(!silent.fetched.some(url => url.includes('checkout') || url.includes('auth')), 'excluded paths are never probed');
 });
 
+// ── Inline bundle data: an app that ships its event list inside its script ──
+const INLINE_BUNDLE_JS = 'const FL="x",Nav=[{label:"NYC",sublabel:"Manhattan and Brooklyn",page:"NYC"},{label:"Provincetown Bear Week",page:"PT"},{label:"Folsom Street Fair",page:"FL"}],Rg={PT:"Provincetown Bear Week",FL:"Folsom Street Fair"},Ev=['
+  + '{id:"pt1",title:"Tea Dance",venue:"Boatslip",date:"Jul 14",time:"4:00 PM",ticketLink:"https://www.instagram.com/boatslip/",region:"PT"},'
+  + '{id:1,title:"Bears Are Animals",venue:"Animal",date:"Feb 5",time:"7:00 PM",price:"Free",about:"Weekly bear happy hour",image:"https://i.example/a.jpeg",tags:["happy hour"],recurringDays:[4],maxShowCount:3},'
+  + '{id:"fl2",title:"Dirty Alley",venue:"Powerhouse",date:"Sep 23",time:"TBD",price:"TBD",about:"Kick-off night",image:"",ticketLink:"https://promoter.example/events",region:"FL"},'
+  + '{id:"fl3",title:\'Brüt\',venue:"DNA",date:"Sep 25",time:"9:00 PM - 4:00 AM",price:"$65",about:`Big room`,featured:!0,soldOut:!1,ticketLink:"https://tickets.example/brut",region:"FL"},'
+  + '{id:"fl4",title:"Big Muscle",venue:"DNA Lounge",date:"Sep 26, 2026",time:"10:00 PM",price:"$15-$20",about:"Saturday",region:"FL"},'
+  + '{id:"x",title:"Not an event",label:"no date here"},'
+  + '{id:"fl4",title:"Big Muscle",venue:"DNA Lounge",date:"Sep 26, 2026",time:"10:00 PM"}'
+  + '];function render(){return Ev.map(e=>e.title)}';
+
+test('inline data: a JS object literal parses without being evaluated', () => {
+  const at = INLINE_BUNDLE_JS.indexOf('{id:"fl3"');
+  const parsed = SharedCore.parseJsLiteralAt(INLINE_BUNDLE_JS, at);
+  assert.equal(parsed.value.title, 'Brüt');
+  assert.equal(parsed.value.about, 'Big room', 'template-literal string');
+  assert.equal(parsed.value.featured, true, '!0 is true');
+  assert.equal(parsed.value.soldOut, false, '!1 is false');
+  assert.deepEqual(SharedCore.parseJsLiteralAt('{a:[1,-2.5,"x"],"b":null,3:void 0}', 0).value, { a: [1, -2.5, 'x'], b: null, 3: null });
+  assert.throws(() => SharedCore.parseJsLiteralAt('{a:fetch("/x")}', 0), 'a call is code, not data');
+  assert.throws(() => SharedCore.parseJsLiteralAt('{a:b}', 0), 'an identifier is code, not data');
+});
+
+test('inline data: event objects are harvested from a bundle — titled, dated, deduped', () => {
+  const core = createCore();
+  const objects = core.harvestBundleInlineEventObjects(INLINE_BUNDLE_JS);
+  assert.deepEqual(objects.map(o => o.title), ['Tea Dance', 'Bears Are Animals', 'Dirty Alley', 'Brüt', 'Big Muscle']);
+  assert.deepEqual(core.harvestBundleInlineEventObjects('var a={title:"Settings",name:"x"};'), []);
+});
+
+test('inline data: a date with no year takes the season the list states, or the weekday its repeat names', () => {
+  const now = new Date('2026-09-20T12:00:00Z');
+  assert.deepEqual(SharedCore.parseInlineDateText('2026-10-31', now), { year: 2026, month: 10, day: 31, yearStated: true });
+  assert.equal(SharedCore.parseInlineDateText('Sep 26, 2026', now).yearStated, true);
+  const near = SharedCore.parseInlineDateText('Sep 23', now);
+  assert.equal(near.year, 2026); assert.equal(near.confident, true);
+  assert.equal(SharedCore.parseInlineDateText('Jan 10', now).year, 2027, 'alone, the nearest reading is next January');
+  assert.equal(SharedCore.parseInlineDateText('Jan 10', now, { anchorMs: Date.UTC(2026, 6, 1) }).year, 2026, 'a list whose dated rows sit in 2026 keeps it there');
+  // Feb 5 2026 is a Thursday; Feb 5 2027 is a Friday.
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', now, { weekdays: [4] }).year, 2026);
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', now, { weekdays: [5] }).year, 2027);
+  assert.equal(SharedCore.parseInlineDateText('TBD', now), null);
+  assert.equal(SharedCore.parseInlineDateText('Feb 30', now), null);
+});
+
+test('inline data: a printed clock becomes start/end; words state no clock', () => {
+  assert.deepEqual(SharedCore.parseInlineTimeText('10:00 PM - 4:00 AM'), { start: '22:00', end: '04:00' });
+  assert.deepEqual(SharedCore.parseInlineTimeText('12:00 PM – 6:00 PM'), { start: '12:00', end: '18:00' });
+  assert.deepEqual(SharedCore.parseInlineTimeText('9PM'), { start: '21:00', end: '' });
+  assert.deepEqual(SharedCore.parseInlineTimeText('TBD'), { start: '', end: '' });
+  assert.deepEqual(SharedCore.parseInlineTimeText('Weekend Pass (Sep 17-20)'), { start: '', end: '' });
+});
+
+test('inline data: an object becomes a feed row — overnight end, repeat rule, no placeholder venue', () => {
+  const now = new Date('2026-09-20T12:00:00Z');
+  const row = SharedCore.inlineEventObjectToFeedRow({ title: 'Brüt', venue: 'DNA', date: 'Sep 25', time: '9:00 PM - 4:00 AM', price: '$65', ticketLink: 'https://tickets.example/brut', image: '', region: 'FL' }, now);
+  assert.equal(row.start, '2026-09-25T21:00:00');
+  assert.equal(row.end, '2026-09-26T04:00:00', 'an end before the start is the next morning');
+  assert.equal(row.ticket_url, 'https://tickets.example/brut');
+  assert.equal(row.image, undefined, 'an empty image is no image');
+  const weekly = SharedCore.inlineEventObjectToFeedRow({ title: 'Bears Are Animals', venue: 'Animal', date: 'Feb 5', time: '7:00 PM', recurringDays: [4] }, now);
+  assert.equal(weekly.start, '2026-02-05T19:00:00');
+  assert.equal(weekly.rrule, 'FREQ=WEEKLY;BYDAY=TH');
+  assert.equal(SharedCore.inlineEventObjectToFeedRow({ title: 'Last Sunday Tea', date: 'Sep 27', recurringDays: [0], recurringLast: true }, now).rrule, 'FREQ=MONTHLY;BYDAY=-1SU');
+  const tbd = SharedCore.inlineEventObjectToFeedRow({ title: 'Dirty Alley', venue: 'TBA', date: 'Sep 23', time: 'TBD' }, now);
+  assert.equal(tbd.all_day, true); assert.equal(tbd.start, '2026-09-23'); assert.equal(tbd.venue, undefined);
+  assert.equal(SharedCore.inlineEventObjectToFeedRow({ title: 'No date' }, now), null);
+});
+
+test('SPA door: a shell with no endpoint that ships its events in its own bundle is read from the bundle', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const pageUrl = 'https://aggregator.example/';
+  const bundleUrl = 'https://aggregator.example/assets/index-AbC123.js';
+  // Site-level JSON-LD (WebSite) is not content; an Event node would be.
+  const shellHtml = '<html><head><script type="application/ld+json">{"@type":"WebSite","name":"Agg"}</script>'
+    + '<script type="module" src="/assets/index-AbC123.js"></script></head><body><div id="root"></div></body></html>';
+  assert.equal(core.looksLikeSpaShell(shellHtml), true, 'site-level JSON-LD does not make a shell a page');
+  const { httpAdapter, fetched } = spaStubAdapter({ [pageUrl]: shellHtml, [bundleUrl]: INLINE_BUNDLE_JS });
+  const shell = { html: shellHtml, url: pageUrl, statusCode: 200, headers: {} };
+  const opened = await core.resolveSpaDataDoor(shell, pageUrl, httpAdapter, display);
+  assert.notEqual(opened, shell);
+  assert.equal(opened.dataDoor.inline, true);
+  const rows = JSON.parse(opened.html).events;
+  assert.equal(rows.length, 5);
+  assert.equal(rows.find(r => r.title === 'Dirty Alley').region_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
+  assert.equal(rows.find(r => r.title === 'Bears Are Animals').region_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
+  const tea = rows.find(r => r.title === 'Tea Dance');
+  assert.equal(tea.ticket_url, undefined, 'a social profile is not a ticket page');
+  assert.equal(tea.website_url, 'https://www.instagram.com/boatslip/');
+  assert.ok(display.logs.some(line => line.includes('inside its own bundle')));
+  assert.ok(fetched.every(url => url.startsWith('https://aggregator.example/')), 'nothing off-site is fetched');
+
+  // Fewer than three event objects is an app's own furniture, not a list.
+  const thin = spaStubAdapter({ [pageUrl]: shellHtml, [bundleUrl]: 'var a=[{title:"One",date:"Sep 23"}];' });
+  assert.equal(await core.resolveSpaDataDoor(shell, pageUrl, thin.httpAdapter, display), shell);
+});
+
 test('SPA door: countJsonApiEventObjects accepts the singular `event` envelope, mirroring the parser', () => {
   const core = createCore();
   assert.equal(core.countJsonApiEventObjects(SPA_DOOR_JSON), 1);

@@ -18037,6 +18037,26 @@ test('data-door context fills the ticket link from the page and the address from
     'never a substring match');
 });
 
+test('inline bundle rows: the page is an aggregator, never the ticket link; the group label names the city; "TBD" is no cover', () => {
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  parser.core.festivals = [{ name: 'Folsom Street Fair', cityKey: 'sf', start: '2026-09-27', end: '2026-09-27' }];
+  const payload = ({ events: [
+    { title: 'Dirty Alley', start: '2026-09-23', all_day: true, venue: 'Powerhouse', price_text: 'TBD', region: 'FL', region_label: 'Folsom Street Fair' },
+    { title: 'Tea Dance', start: '2026-10-14T16:00:00', venue: 'Boatslip', price_text: 'Free', region: 'PT', region_label: 'Provincetown Bear Week' },
+    { title: 'Mystery', start: '2026-09-24T21:00:00', venue: 'Somewhere', region: 'ZZ', region_label: 'Folsom-ish Weekend' }
+  ] });
+  const events = parser.extractEventsFromJsonApiPayload(payload, 'https://aggregator.example/', cities);
+  const byTitle = Object.fromEntries(events.map(e => [e.title, e]));
+  assert.equal(byTitle['Dirty Alley'].city, 'sf', 'a curated festival named exactly lends its city');
+  assert.ok(!byTitle['Dirty Alley'].cover, '"TBD" states that no price is known');
+  assert.equal(byTitle['Tea Dance'].city, 'ptown', 'a label that names a place resolves by itself');
+  assert.equal(byTitle['Tea Dance'].cover, 'Free');
+  assert.ok(!byTitle['Mystery'].city, 'a label that only resembles a festival resolves nothing');
+  parser.applyDataDoorContext(events, { apiUrl: '', template: '', pageUrl: 'https://aggregator.example/', venueDirectory: [], inline: true }, cities);
+  assert.ok(events.every(e => !e.ticketUrl), 'an inline list page sells nothing itself');
+});
+
 test('a navigation label is not an event name: "NEXT (UK):" leaves the title missing, "Next Level Party" is a title', () => {
   const parser = createParser();
   for (const label of ['NEXT', 'NEXT (UK):', 'Next up', 'UPCOMING EVENTS', 'Coming soon', 'Events', 'See all events', 'Tonight —']) {

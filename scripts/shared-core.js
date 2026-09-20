@@ -14538,7 +14538,11 @@ class SharedCore {
         if (!source || source.length > 60000) return false;
         if (source.trim()[0] === '{' || source.trim()[0] === '[') return false;
         if (!/<script\b[^>]*\ssrc\s*=/i.test(source)) return false;
-        if (/<script\b[^>]*type\s*=\s*["']application\/ld\+json["']/i.test(source)) return false;
+        // Structured data that describes EVENTS means the page has content
+        // to read. A shell that only marks up its site and pages (WebSite /
+        // WebPage — gathrparty.com) is still a shell.
+        if (/<script\b[^>]*type\s*=\s*["']application\/ld\+json["']/i.test(source)
+            && (/"@type"\s*:\s*(?:\[[^\]]*)?"[A-Za-z]*Event"/.test(source) || this.extractJsonLdEventNodes(source).length > 0)) return false;
         const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
         const body = bodyMatch ? bodyMatch[1] : source;
         const visible = body
@@ -14681,6 +14685,316 @@ class SharedCore {
         return entries;
     }
 
+    // === Inline bundle data ===
+    // Some apps have no data endpoint at all: the events are typed into the
+    // source and ship INSIDE the JavaScript bundle as object literals
+    // (gathrparty.com: ~270 of them — {id:143,title:"GRUNT",venue:"Cmon
+    // Everybody",date:"Sep 19",time:"10:30 PM",ticketLink:"https://…"}).
+    // There is nothing to fetch beyond the bundle the shell already names, so
+    // the literals are read where they are: a small literal parser (never
+    // eval), a row normalizer into the feed vocabulary the JSON-API reader
+    // already maps, and the same "html becomes the door's JSON" hand-off the
+    // other doors use. Nothing here names a site.
+
+    // Parse ONE JavaScript literal starting at text[index]: objects (bare,
+    // quoted or numeric keys), arrays, "…"/'…'/`…` strings (a template with
+    // ${…} is refused), numbers, true/false/null, and the minifier's !0 / !1 /
+    // void 0. Anything else — an identifier, a call, an operator — throws,
+    // and the caller skips that object. Returns { value, end }.
+    static parseJsLiteralAt(text, index) {
+        const source = String(text || '');
+        let i = index;
+        const fail = (why) => { throw new Error(`not a plain literal at ${i}: ${why}`); };
+        const skipSpace = () => { while (i < source.length && /\s/.test(source[i])) i++; };
+        const readString = () => {
+            const quote = source[i];
+            let out = '';
+            i++;
+            while (i < source.length && source[i] !== quote) {
+                const ch = source[i];
+                if (ch === '\\') {
+                    const next = source[i + 1];
+                    if (next === 'n') out += '\n';
+                    else if (next === 't') out += '\t';
+                    else if (next === 'r') out += '\r';
+                    else if (next === 'u' && /^[0-9a-fA-F]{4}$/.test(source.slice(i + 2, i + 6))) { out += String.fromCharCode(parseInt(source.slice(i + 2, i + 6), 16)); i += 4; }
+                    else if (next === 'x' && /^[0-9a-fA-F]{2}$/.test(source.slice(i + 2, i + 4))) { out += String.fromCharCode(parseInt(source.slice(i + 2, i + 4), 16)); i += 2; }
+                    else out += next;
+                    i += 2;
+                    continue;
+                }
+                if (quote === '`' && ch === '$' && source[i + 1] === '{') fail('template with an expression');
+                if (quote !== '`' && ch === '\n') fail('unterminated string');
+                out += ch;
+                i++;
+            }
+            if (source[i] !== quote) fail('unterminated string');
+            i++;
+            return out;
+        };
+        const readValue = (depth) => {
+            if (depth > 8) fail('too deep');
+            skipSpace();
+            const ch = source[i];
+            if (ch === '"' || ch === "'" || ch === '`') return readString();
+            if (ch === '{') {
+                i++;
+                const obj = {};
+                skipSpace();
+                if (source[i] === '}') { i++; return obj; }
+                for (;;) {
+                    skipSpace();
+                    let key;
+                    if (source[i] === '"' || source[i] === "'") key = readString();
+                    else {
+                        const match = /^[A-Za-z_$][\w$]*|^\d+/.exec(source.slice(i, i + 80));
+                        if (!match) fail('bad key');
+                        key = match[0];
+                        i += key.length;
+                    }
+                    skipSpace();
+                    if (source[i] !== ':') fail('no colon');
+                    i++;
+                    obj[key] = readValue(depth + 1);
+                    skipSpace();
+                    if (source[i] === ',') { i++; skipSpace(); if (source[i] === '}') { i++; return obj; } continue; }
+                    if (source[i] === '}') { i++; return obj; }
+                    fail('bad object');
+                }
+            }
+            if (ch === '[') {
+                i++;
+                const list = [];
+                skipSpace();
+                if (source[i] === ']') { i++; return list; }
+                for (;;) {
+                    list.push(readValue(depth + 1));
+                    skipSpace();
+                    if (source[i] === ',') { i++; skipSpace(); if (source[i] === ']') { i++; return list; } continue; }
+                    if (source[i] === ']') { i++; return list; }
+                    fail('bad array');
+                }
+            }
+            const rest = source.slice(i, i + 40);
+            let match;
+            if ((match = /^!0/.exec(rest))) { i += 2; return true; }
+            if ((match = /^!1/.exec(rest))) { i += 2; return false; }
+            if ((match = /^void 0/.exec(rest))) { i += 6; return null; }
+            if ((match = /^(true|false|null)(?![\w$])/.exec(rest))) { i += match[0].length; return match[1] === 'true' ? true : (match[1] === 'false' ? false : null); }
+            if ((match = /^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?(?![\w$])/i.exec(rest))) { i += match[0].length; return Number(match[0]); }
+            return fail('not a literal');
+        };
+        const value = readValue(0);
+        return { value, end: i };
+    }
+
+    // Every object literal in a bundle that reads as an event: a title/name
+    // string plus a date-ish string. Capped, deduped on (title, date, venue).
+    harvestBundleInlineEventObjects(bundleText, limit = 600) {
+        const text = String(bundleText || '');
+        if (!text) return [];
+        const found = [];
+        const seen = new Set();
+        const opener = /\{(?:[A-Za-z_$][\w$]*:(?:"[^"\\]{0,60}"|'[^'\\]{0,60}'|-?\d+(?:\.\d+)?),){0,3}(?:title|name|eventName):["'`]/g;
+        let match;
+        while ((match = opener.exec(text)) !== null && found.length < limit) {
+            let parsed;
+            try {
+                parsed = SharedCore.parseJsLiteralAt(text, match.index);
+            } catch (_) {
+                continue;
+            }
+            const obj = parsed.value;
+            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) continue;
+            const title = [obj.title, obj.name, obj.eventName].find(value => typeof value === 'string' && value.trim());
+            const dateText = [obj.date, obj.startDate, obj.start, obj.when, obj.day].find(value => typeof value === 'string' && value.trim());
+            if (!title || !dateText) continue;
+            if (!SharedCore.parseInlineDateText(dateText, new Date())) continue;
+            const key = `${title}|${dateText}|${obj.venue || obj.location || ''}`.toLowerCase();
+            if (seen.has(key)) { opener.lastIndex = parsed.end; continue; }
+            seen.add(key);
+            found.push(obj);
+            opener.lastIndex = parsed.end;
+        }
+        return found;
+    }
+
+    // "Sep 19", "June 21", "Sep 19, 2026", "2026-09-19" → { year, month, day }.
+    // A date with no year takes the year that puts it nearest to now, looking
+    // four months back and eight ahead — a listing types what is coming and
+    // keeps what just happened; nobody lists next autumn without the year.
+    // With options.anchorMs the year nearest THAT instant wins, unbounded
+    // (the listing's own season — see resolveSpaInlineData); with
+    // options.weekdays (0-6) only a year that puts the date on one of them
+    // qualifies (a repeating row's first date falls on the day it repeats).
+    static parseInlineDateText(text, now = new Date(), options = {}) {
+        const value = String(text || '').trim();
+        let match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+        if (match) return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]), yearStated: true };
+        match = /^(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$/.exec(value);
+        if (!match) return null;
+        const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+        const month = months[match[1].slice(0, 3).toLowerCase()];
+        const day = Number(match[2]);
+        if (!month || day < 1 || day > 31) return null;
+        if (match[3]) return { year: Number(match[3]), month, day, yearStated: true };
+        const anchored = Number.isFinite(options.anchorMs);
+        const referenceMs = anchored ? options.anchorMs : now.getTime();
+        const weekdays = Array.isArray(options.weekdays) && options.weekdays.length > 0 ? options.weekdays : null;
+        const dayMs = 24 * 60 * 60 * 1000;
+        const pick = (requireWeekday) => {
+            let best = null;
+            for (const year of [now.getUTCFullYear() - 1, now.getUTCFullYear(), now.getUTCFullYear() + 1]) {
+                const at = Date.UTC(year, month - 1, day);
+                if (new Date(at).getUTCDate() !== day) continue; // Feb 29 of a common year
+                if (requireWeekday && !weekdays.includes(new Date(at).getUTCDay())) continue;
+                const offsetDays = (at - referenceMs) / dayMs;
+                if (!anchored && !requireWeekday && (offsetDays < -125 || offsetDays > 245)) continue;
+                if (!best || Math.abs(offsetDays) < Math.abs(best.offsetDays)) best = { year, offsetDays };
+            }
+            return best;
+        };
+        const best = (weekdays && pick(true)) || pick(false);
+        if (!best) return null;
+        // Confident = the plain nearest-to-now reading lands close to now.
+        return { year: best.year, month, day, yearStated: false, confident: !anchored && Math.abs(best.offsetDays) <= 125 };
+    }
+
+    // "10:00 PM - 4:00 AM" / "10:30 PM" / "9PM" → { start: 'HH:MM', end }.
+    // Anything else ("TBD", "Weekend Pass (Sep 17-20)") states no clock.
+    static parseInlineTimeText(text) {
+        const clock = (raw) => {
+            const match = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i.exec(String(raw || '').trim());
+            if (!match) return '';
+            let hour = Number(match[1]) % 12;
+            if (match[3].toLowerCase() === 'p') hour += 12;
+            return `${String(hour).padStart(2, '0')}:${match[2] || '00'}`;
+        };
+        const parts = String(text || '').split(/\s*(?:-|–|—|to)\s*/i);
+        if (parts.length > 2) return { start: '', end: '' };
+        const start = clock(parts[0]);
+        return { start, end: start && parts[1] ? clock(parts[1]) : '' };
+    }
+
+    // One inline object → a feed row in the vocabulary the JSON-API reader
+    // maps (title, start, end, venue, description, image, ticket_url, rrule).
+    // Times are the venue's wall clock with no offset — the reader resolves
+    // the zone from the city, as it does for every offset-less feed value.
+    static inlineEventObjectToFeedRow(obj, now = new Date(), options = {}) {
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        const title = text(obj.title) || text(obj.name) || text(obj.eventName);
+        const repeatDays = Array.isArray(obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
+        const date = SharedCore.parseInlineDateText(text(obj.date) || text(obj.startDate) || text(obj.start) || text(obj.when) || text(obj.day), now,
+            { anchorMs: options.anchorMs, weekdays: repeatDays });
+        if (!title || !date) return null;
+        const pad = (value) => String(value).padStart(2, '0');
+        const dayIso = `${date.year}-${pad(date.month)}-${pad(date.day)}`;
+        const time = SharedCore.parseInlineTimeText(text(obj.time) || text(obj.startTime));
+        const row = { title, start: time.start ? `${dayIso}T${time.start}:00` : dayIso };
+        if (time.start && time.end) {
+            const endDay = time.end <= time.start
+                ? new Date(Date.UTC(date.year, date.month - 1, date.day + 1)).toISOString().slice(0, 10)
+                : dayIso;
+            row.end = `${endDay}T${time.end}:00`;
+        }
+        if (!time.start) row.all_day = true;
+        const venue = text(obj.venue) || text(obj.location) || text(obj.place);
+        if (venue && !/^(tba|tbd|various\b.*|location shared.*)$/i.test(venue)) row.venue = venue;
+        const description = text(obj.about) || text(obj.description) || text(obj.details);
+        if (description) row.description = description;
+        const image = text(obj.image) || text(obj.flyer) || text(obj.poster);
+        if (/^https?:\/\//i.test(image)) row.image = image;
+        const ticket = text(obj.ticketLink) || text(obj.ticketUrl) || text(obj.tickets) || text(obj.link) || text(obj.url);
+        // A social profile sells nothing: it is where the party lives, not
+        // a ticket page (and never a page worth crawling).
+        if (/^https?:\/\/(?:www\.|m\.)?(?:instagram|facebook|fb|x|twitter|tiktok|threads)\.(?:com|net)\//i.test(ticket)) row.website_url = ticket;
+        else if (/^https?:\/\//i.test(ticket)) row.ticket_url = ticket;
+        const price = text(obj.price) || text(obj.cover);
+        if (price) row.price_text = price;
+        if (text(obj.region)) row.region = text(obj.region);
+        // A weekday list is a weekly repeat; with an ordinal it is monthly.
+        const weekdays = Array.isArray(obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
+        if (weekdays.length > 0) {
+            const codes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            const ordinals = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, last: -1 };
+            const ordinal = obj.recurringLast === true ? -1 : ordinals[text(obj.recurringOrdinal).toLowerCase()];
+            if (ordinal && weekdays.length === 1) row.rrule = `FREQ=MONTHLY;BYDAY=${ordinal}${codes[weekdays[0]]}`;
+            else if (!text(obj.recurringType) || text(obj.recurringType).toLowerCase() === 'weekly') row.rrule = `FREQ=WEEKLY;BYDAY=${weekdays.map(day => codes[day]).join(',')}`;
+        }
+        return row;
+    }
+
+    // The shell's bundles, read for inline event objects. Returns htmlData
+    // with { events: rows } as its html (and a dataDoor record marked inline)
+    // when the bundles hold at least three; the same htmlData otherwise.
+    async resolveSpaInlineData(htmlData, pageUrl, httpAdapter, log) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const scriptUrls = this.extractSpaScriptUrls(html, pageUrl);
+        const rows = [];
+        const labels = {};
+        let defaultLabel = '';
+        for (const scriptUrl of scriptUrls) {
+            let bundle = '';
+            try {
+                const response = await httpAdapter.fetchData(scriptUrl, { headers: { Accept: '*/*' } });
+                bundle = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            const objects = this.harvestBundleInlineEventObjects(bundle);
+            // A date typed without a year belongs to the listing's own
+            // season. The rows that are unambiguous (a stated year, or a
+            // date within four months of today) say when that season is;
+            // every other row takes the year nearest its middle — "Mar 6"
+            // beside a summer of 2026 parties is last March, not next.
+            const now = new Date();
+            const sure = [];
+            for (const obj of objects) {
+                const raw = [obj.date, obj.startDate, obj.start, obj.when, obj.day].find(value => typeof value === 'string' && value.trim());
+                const parsed = SharedCore.parseInlineDateText(raw, now);
+                if (parsed && (parsed.yearStated || parsed.confident)) sure.push(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
+            }
+            sure.sort((a, b) => a - b);
+            const anchorMs = sure.length >= 3 ? sure[Math.floor(sure.length / 2)] : undefined;
+            for (const obj of objects) {
+                const row = SharedCore.inlineEventObjectToFeedRow(obj, now, { anchorMs });
+                if (row) rows.push(row);
+            }
+            // A short code the rows carry (region:"PT") is spelled out
+            // somewhere in the same bundle (PT:"Provincetown Bear Week").
+            const usedCodes = new Set(rows.map(row => row.region).filter(Boolean));
+            for (const code of usedCodes) {
+                if (labels[code] || !/^[A-Za-z0-9_-]{1,12}$/.test(code)) continue;
+                const label = new RegExp(`[{,]\\s*["']?${code}["']?\\s*:\\s*"([^"]{3,80})"`).exec(bundle);
+                if (label) labels[code] = label[1];
+            }
+            // The app's own menu lists its groups ({label:"NYC",page:"NYC"},
+            // {label:"Folsom Street Fair",page:"FL"} …). When the rows' codes
+            // name every entry but one, the rows that carry no code
+            // are that one's — the home list the other groups were split from.
+            if (!defaultLabel && usedCodes.size > 0) {
+                const menu = new Map();
+                for (const entry of bundle.matchAll(/\{label:"([^"]{2,60})"(?:,[A-Za-z]+:"[^"]{0,80}")*?,(?:page|region|tab|key|id|value):"([A-Za-z0-9_-]{1,12})"/g)) {
+                    if (!menu.has(entry[2])) menu.set(entry[2], entry[1]);
+                }
+                const named = [...menu.keys()].filter(code => usedCodes.has(code));
+                const unnamed = [...menu.keys()].filter(code => !usedCodes.has(code));
+                if (named.length >= 2 && unnamed.length === 1) defaultLabel = menu.get(unnamed[0]);
+            }
+        }
+        if (rows.length < 3) return htmlData;
+        for (const row of rows) {
+            if (row.region && labels[row.region]) row.region_label = labels[row.region];
+            else if (!row.region && defaultLabel) row.region_label = defaultLabel;
+        }
+        await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} ships its events inside its own bundle — ${rows.length} inline event object(s) read (${rows.filter(row => row.rrule).length} repeating)`);
+        return {
+            ...htmlData,
+            html: JSON.stringify({ events: rows }),
+            dataDoor: { apiUrl: '', template: '', pageUrl, venueDirectory: [], inline: true }
+        };
+    }
+
     // Returns htmlData with the door's JSON as its html (plus a dataDoor
     // record) when a door answers; the same htmlData object otherwise.
     async resolveSpaDataDoor(htmlData, pageUrl, httpAdapter, displayAdapter) {
@@ -14692,6 +15006,8 @@ class SharedCore {
             : async () => {};
         const identifiers = this.spaPageIdentifiers(pageUrl);
         if (identifiers.length === 0) {
+            const inlineOnly = await this.resolveSpaInlineData(htmlData, pageUrl, httpAdapter, log);
+            if (inlineOnly !== htmlData) return inlineOnly;
             await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} is a JavaScript shell (${html.length} bytes, no visible content) but names no slug to ask for — leaving it`);
             return htmlData;
         }
@@ -14730,6 +15046,10 @@ class SharedCore {
                 .map(([template]) => template)
                 .slice(0, 6);
             if (templates.length === 0) {
+                {
+                    const inlineData = await this.resolveSpaInlineData(htmlData, pageUrl, httpAdapter, log);
+                    if (inlineData !== htmlData) return inlineData;
+                }
                 await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl}: its bundle names no plausible read endpoint (${scored.size} API path(s) seen) — leaving it`);
                 return htmlData;
             }
@@ -14753,6 +15073,10 @@ class SharedCore {
                 html: body,
                 dataDoor: { apiUrl: probe.url, template: probe.template, pageUrl, venueDirectory }
             };
+        }
+        {
+            const inlineData = await this.resolveSpaInlineData(htmlData, pageUrl, httpAdapter, log);
+            if (inlineData !== htmlData) return inlineData;
         }
         await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl}: no endpoint answered with events (probed ${probes.length}: ${probes.map(probe => probe.template).filter((template, index, all) => all.indexOf(template) === index).join(', ')}) — leaving it`);
         return htmlData;
