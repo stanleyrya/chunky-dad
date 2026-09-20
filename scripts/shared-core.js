@@ -6144,6 +6144,13 @@ class SharedCore {
         // Parsers never started because the network gave up part-way through.
         const networkTruncatedParsers = [];
         this.noteConfiguredListingUrls(config.parsers);
+        // Which source reads which configured page IN THIS RUN — only a
+        // source that will actually run owns its page (a one-parser run, or a
+        // source switched off, owns nothing, so nothing is left unread).
+        this.noteRunOwnedRootUrls(config.parsers.filter(candidate => candidate
+            && candidate.template !== true
+            && (automationContext.filterParsers || candidate.enabled !== false)
+            && this.evaluateAutomationForParser(candidate, automationContext).shouldRun));
 
         for (let i = 0; i < config.parsers.length; i++) {
             // Network gave up mid-run: stop starting new parsers. Whatever the
@@ -8419,6 +8426,19 @@ class SharedCore {
                 }
                 discoveryTreeCollector.allNodes.add(url);
             }
+            // A link to ANOTHER source's own configured page is that source's
+            // to read, with its own settings. Crawled from here it was parsed
+            // under the wrong config AND marked processed, so the source that
+            // owns it was then skipped as a "duplicate" and produced nothing
+            // (C'mon Everybody, run 20260920-124419: reached first through a
+            // neighbour's link, 0 events for days).
+            if (currentDepth > 0) {
+                const owner = this.findOtherParserOwningUrl(url, mainConfig, parserConfig);
+                if (owner) {
+                    await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own source ("${owner}") — not crawled from here`);
+                    continue;
+                }
+            }
             if (this.hasProcessedUrl(processedUrls, url)) {
                 if (currentDepth === 0) {
                     await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
@@ -10234,6 +10254,29 @@ class SharedCore {
         }
         
         return result;
+    }
+
+    // Configured urls[] of the sources running in this run, keyed for
+    // lookup: dedupe key → source name (first configured wins).
+    noteRunOwnedRootUrls(parserConfigs) {
+        const owners = new Map();
+        for (const parserConfig of Array.isArray(parserConfigs) ? parserConfigs : []) {
+            for (const url of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) {
+                const key = this.getUrlDedupeKey(String(url || '').trim());
+                if (key && !owners.has(key)) owners.set(key, String(parserConfig.name || 'another source'));
+            }
+        }
+        this._runOwnedRootUrls = owners;
+    }
+
+    // Name of ANOTHER source running in this run whose configured urls[]
+    // include this URL ('' when none, or when no run has noted its sources).
+    findOtherParserOwningUrl(url, mainConfig, parserConfig) {
+        const owners = this._runOwnedRootUrls;
+        if (!(owners instanceof Map) || owners.size === 0) return '';
+        const owner = owners.get(this.getUrlDedupeKey(url)) || '';
+        const ownName = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name : '';
+        return owner && owner !== ownName ? owner : '';
     }
 
     hasProcessedUrl(processedUrls, url) {

@@ -9915,6 +9915,37 @@ test('script-bundle URLs never reach classification or extraction', async () => 
   assert.ok(fetched.includes('https://promoter.example/events/two'));
 });
 
+test('a link to another running source\'s own configured page is left to that source', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const future = new Date(Date.now() + 5 * 86400000).toISOString();
+  const pages = {
+    'https://neighbour.example/': { events: [], additionalLinks: ['https://venue.example/events', 'https://neighbour.example/party'] },
+    'https://neighbour.example/party': { events: [{ title: 'Neighbour Party', startDate: future }] },
+    'https://venue.example/events': { events: [{ title: 'Venue Night', startDate: future }] }
+  };
+  const { fetched, parsedConfigs, httpAdapter, parsers } = createCrawlHarness(pages);
+  const neighbour = { name: 'Neighbour', urls: ['https://neighbour.example/'], alwaysBear: true, urlDiscoveryDepth: 1, ai: CRAWL_AI };
+  const venue = { name: 'Venue', urls: ['https://venue.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  core.noteRunOwnedRootUrls([neighbour, venue]);
+  assert.equal(core.findOtherParserOwningUrl('https://venue.example/events/', null, neighbour), 'Venue');
+  assert.equal(core.findOtherParserOwningUrl('https://venue.example/events', null, venue), '', 'a source never yields its own page');
+  const processed = new Set();
+  const first = await core.processParser(neighbour, { parsers: [neighbour, venue] }, httpAdapter, display, parsers, processed);
+  assert.ok(!fetched.includes('https://venue.example/events'), 'not crawled from the neighbour');
+  assert.ok(display.logs.some(l => l.includes('Leaving https://venue.example/events to its own source ("Venue")')));
+  assert.deepEqual(first.events.map(e => e.title), ['Neighbour Party']);
+
+  // A one-source run owns nothing else: the link is crawled as before.
+  core.noteRunOwnedRootUrls([neighbour]);
+  const alone = createCrawlHarness(pages);
+  await core.processParser(neighbour, { parsers: [neighbour, venue] }, alone.httpAdapter, display, alone.parsers);
+  assert.ok(alone.fetched.includes('https://venue.example/events'));
+  assert.equal(parsedConfigs['https://venue.example/events'], undefined);
+
+});
+
 test('parsePageForCrawl refuses non-page responses and ad pages before any parser runs', async () => {
   const core = createCore();
   const display = createDisplayAdapterStub();
