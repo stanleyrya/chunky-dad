@@ -13,8 +13,8 @@
     "website": "https://www.blackeagletoronto.com",
     "faviconBg": "#f4f4f4",
     "faviconFg": "#252525",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
-    "palette": "#ffffff:71:0 #000000:16:0 #8b8b8b:3:0"
+    "palette": "#ffffff:71:0 #000000:16:0 #8b8b8b:3:0",
+    "faviconPlate": "#ffffff"
   }
 ]

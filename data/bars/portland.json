@@ -34,8 +34,8 @@
     "website": "https://www.eagleportland.com",
     "faviconBg": "#020202",
     "faviconFg": "#ededed",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
-    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0",
+    "faviconPlate": "#ffffff"
   }
 ]
