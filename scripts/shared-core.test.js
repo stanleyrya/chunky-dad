@@ -23952,3 +23952,33 @@ test('static website metadata: the event page in `url` beats the front door the 
   core.applyStaticMetadataBlock(listed, metadata, {});
   assert.equal(listed.website, 'https://www.sf-eagle.example');
 });
+
+// ── The left swipe's three answers ──────────────────────────────────────────
+test('ownerDecisionCovers: "needs a fix" waits until ANY visible field changes; "not an event" and "not bear" are final', () => {
+  const proposal = { kind: 'new', key: 'event|woof|sf eagle|2026-10-03', title: 'WOOF!', startDate: '2026-10-03T22:00:00.000Z', endDate: '2026-10-04T01:00:00.000Z', bar: 'SF Eagle', address: '398 12th St', city: 'sf', url: 'https://www.sf-eagle.com', ticketUrl: '', image: '', cover: '', description: 'Pups and handlers.', timezone: 'America/Los_Angeles' };
+  const reject = (reason) => ({ key: proposal.key, kind: 'new', verdict: 'reject', stampedAt: '2026-09-20T10:00:00.000Z', reason, snapshot: { ...proposal } });
+  const fix = reject({ tags: ['wrong link'], text: 'should link its own page', mode: 'fix' });
+  assert.equal(SharedCore.getOwnerRejectionMode(fix), 'fix');
+  assert.equal(SharedCore.ownerDecisionCovers(fix, proposal), true, 'unchanged card: still waiting');
+  assert.equal(SharedCore.ownerDecisionCovers(fix, { ...proposal, url: 'https://www.sf-eagle.com/events/woof/' }), false, 'the link was fixed: back on the stack');
+  assert.equal(SharedCore.ownerDecisionCovers(fix, { ...proposal, description: 'Pups, handlers and friends.' }), false, 'a description fix counts too');
+  assert.equal(SharedCore.ownerDecisionCovers(fix, { ...proposal, cover: '$10' }), false, 'and a cover');
+  assert.deepEqual(SharedCore.getOwnerReviewFixDrift(fix, { ...proposal, city: 'oakland' }), ['city']);
+
+  const never = reject({ tags: ['fragment'], text: '', mode: 'never' });
+  assert.equal(SharedCore.getOwnerRejectionMode(never), 'never');
+  assert.equal(SharedCore.ownerDecisionCovers(never, { ...proposal, url: 'https://elsewhere.example', image: 'https://cdn.example/x.jpg', title: 'WOOF!' }), true, 'final whatever the card later says');
+  assert.equal(SharedCore.ownerDecisionCovers(never, { ...proposal, key: 'event|woof|sf eagle|2026-11-07', startDate: '2026-11-07T23:00:00.000Z' }), true, 'and for the party\'s other nights');
+
+  const notBear = reject({ tags: ['not bear'], text: '' });
+  assert.equal(SharedCore.getOwnerRejectionMode(notBear), 'not-bear');
+  assert.equal(SharedCore.ownerDecisionCovers(notBear, { ...proposal, url: 'https://elsewhere.example' }), true);
+
+  // A rejection from before the modes behaves exactly as it did.
+  const legacy = reject({ tags: ['wrong time'], text: '' });
+  assert.equal(SharedCore.getOwnerRejectionMode(legacy), '');
+  assert.equal(SharedCore.ownerDecisionCovers(legacy, proposal), true);
+  assert.equal(SharedCore.ownerDecisionCovers(legacy, { ...proposal, description: 'changed' }), false === false && SharedCore.getOwnerReviewDrift(legacy, { ...proposal, description: 'changed' }).length === 0, 'the description is not in the legacy fingerprint');
+  assert.equal(SharedCore.ownerDecisionCovers(legacy, { ...proposal, startDate: '2026-10-03T23:00:00.000Z' }), false);
+  assert.equal(SharedCore.getOwnerRejectionMode({ verdict: 'approve', reason: { mode: 'fix' } }), '', 'an approval has no rejection mode');
+});
