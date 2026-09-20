@@ -1214,3 +1214,70 @@ test('bear verdict store: with a shared storage root active, the web adapter rea
     fs.rmSync(sharedDir, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Politeness on the Mac: every live page request passes one gate.
+// ---------------------------------------------------------------------------
+function withRoutedFetch(route, run) {
+  const originalFetch = global.fetch;
+  const requested = [];
+  global.fetch = async (url, options) => {
+    requested.push(String(url));
+    const answer = route(String(url), options) || { status: 404, body: 'nope' };
+    return {
+      ok: answer.status >= 200 && answer.status < 300,
+      status: answer.status,
+      statusText: answer.statusText || '',
+      headers: { get: (name) => (answer.headers || {})[String(name).toLowerCase()] || null, entries: () => Object.entries(answer.headers || {}) },
+      text: async () => answer.body
+    };
+  };
+  return run(requested).finally(() => { global.fetch = originalFetch; });
+}
+
+test('fetchData: a host that answers 429 is parked for the run — one request, no second URL, other hosts untouched', async () => {
+  const adapter = makeAdapter({ politeness: { minHostGapMs: 0, robots: 'off' } });
+  await withRoutedFetch((url) => (/dilf\.example/.test(url)
+    ? { status: 429, statusText: 'Too Many Requests', headers: { 'retry-after': '120' }, body: '' }
+    : { status: 200, body: '<html>ok</html>' }), async (requested) => {
+    await assert.rejects(adapter.fetchData('https://dilf.example/events/1'), (error) => error.retryable === false && error.statusCode === 429);
+    await assert.rejects(adapter.fetchData('https://www.dilf.example/'), (error) => Boolean(error.politeness) && error.politeness.reason === 'parked');
+    assert.equal((await adapter.fetchData('https://fine.example/events')).html, '<html>ok</html>');
+    assert.deepEqual(requested, ['https://dilf.example/events/1', 'https://fine.example/events']);
+  });
+  const summary = adapter.getFetchPolitenessSummary();
+  assert.match(summary.text, /2 live page request\(s\) to 2 host\(s\)/);
+  assert.match(summary.text, /parked: dilf\.example \(HTTP 429, Retry-After 120\)/);
+});
+
+test('fetchData: robots.txt is read once per host through the same fetch, report-only requests the disallowed path, enforce does not', async () => {
+  const route = (url) => (url.endsWith('/robots.txt')
+    ? { status: 200, body: 'User-agent: *\nDisallow: /o/\n' }
+    : { status: 200, body: '<html>page</html>' });
+  const report = makeAdapter({ politeness: { minHostGapMs: 0, robots: 'report' } });
+  await withRoutedFetch(route, async (requested) => {
+    await report.fetchData('https://tickets.example/o/organizer');
+    await report.fetchData('https://tickets.example/e/party');
+    assert.deepEqual(requested, ['https://tickets.example/robots.txt', 'https://tickets.example/o/organizer', 'https://tickets.example/e/party']);
+  });
+  assert.match(report.getFetchPolitenessSummary().text, /robots\.txt disallowed path\(s\) \(report\): tickets\.example 1/);
+  const enforce = makeAdapter({ politeness: { minHostGapMs: 0, robots: 'enforce' } });
+  await withRoutedFetch(route, async (requested) => {
+    await assert.rejects(enforce.fetchData('https://tickets.example/o/organizer'), (error) => error.politeness && error.politeness.reason === 'robots');
+    await enforce.fetchData('https://tickets.example/e/party');
+    assert.deepEqual(requested, ['https://tickets.example/robots.txt', 'https://tickets.example/e/party']);
+  });
+});
+
+test('fetchData: two requests to one host are spaced by the configured gap; an adapter built without the block is ungated', async () => {
+  const adapter = makeAdapter({ politeness: { minHostGapMs: 120, robots: 'off' } });
+  await withRoutedFetch(() => ({ status: 200, body: '<html>ok</html>' }), async () => {
+    const started = Date.now();
+    await adapter.fetchData('https://paced.example/a');
+    await adapter.fetchData('https://paced.example/b');
+    assert.ok(Date.now() - started >= 110, 'the second request waited for the gap');
+  });
+  const bare = makeAdapter();
+  assert.equal(bare.getFetchPoliteness(), null);
+  assert.equal(bare.config.userAgent, 'chunky-dad-scraper/1.0 (+https://chunky.dad)');
+});

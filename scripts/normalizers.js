@@ -2657,7 +2657,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // Cache-worthiness hook honored by the adapters' fetchData: never
             // persist an empty/unparseable Nominatim body to the disk cache and
             // treat an already-cached one as a miss (see isCacheableGeocodeResponse).
-            isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData)
+            isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData),
+            // A geocoder is an API used under its usage policy (paced like any
+            // host by the politeness gate), not a site being crawled — its
+            // robots.txt "Disallow: /search" addresses crawlers, not callers.
+            apiCall: true
         };
 
         // Venue-POI rescue eligibility: an event with a bar but NO usable

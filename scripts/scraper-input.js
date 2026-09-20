@@ -626,6 +626,28 @@ const scraperConfig = {
       enabled: true,
       ttlDays: 3,
     },
+    // How the scraper behaves on other people's sites. Only LIVE requests
+    // pass through this — a page served from the cache above costs the site
+    // nothing and is never paced or counted. The run log ends with one
+    // "🚦 POLITE:" line (requests per host, pacing spent, parked hosts).
+    politeness: {
+      // Minimum gap between two live requests to the same host, one at a
+      // time. A site's own robots.txt Crawl-delay raises this (capped at 15s).
+      minHostGapMs: 2000,
+      // A host that answers 429 — or 403 before serving anything — is parked
+      // for the rest of the run and never retried. This is the ceiling on
+      // live requests to one host per run; past it the host is skipped and
+      // named in the run log.
+      maxRequestsPerHost: 120,
+      // robots.txt (read once per host, through the page cache):
+      //   "report"  — log every path it disallows, request it anyway
+      //   "enforce" — never request a disallowed path
+      //   "off"     — do not read robots.txt at all
+      // Report-only first: some ticket platforms disallow the very listing
+      // pages we read, so see what it would cut before switching it on.
+      robots: "report",
+      // exemptHosts: ["example.org"], // never paced/parked (chunky.dad, localhost and the tailnet always are)
+    },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
     geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
     promoterRegistry: { mode: "enforce" }, // Curated promoter identity matching — see data/promoters.json; enforce stamps matched metadata + bearAffinity (flipped 2026-07-28: verification battery — 37 matches, 0 false positives, 100% precision)

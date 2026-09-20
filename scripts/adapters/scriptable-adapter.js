@@ -415,7 +415,9 @@ class ScriptableAdapter {
   constructor(config = {}) {
     this.config = {
       timeout: config.timeout || 30000,
-      userAgent: config.userAgent || "chunky-dad-scraper/1.0",
+      // Honest and reachable: a site owner who dislikes the traffic can find
+      // out who we are instead of blocking an anonymous client.
+      userAgent: config.userAgent || "chunky-dad-scraper/1.0 (+https://chunky.dad)",
       ...config,
     };
 
@@ -2102,8 +2104,10 @@ class ScriptableAdapter {
         };
       }
     }
+    // A form POST replays a site's own AJAX call against the site — paced,
+    // budgeted and parked like any page request.
     const response = await this.withNetworkResilience("form POST", url, () =>
-      this.postFormOnce(url, body, options),
+      this.runPolitely(url, options, () => this.postFormOnce(url, body, options)),
     );
     if (
       response &&
@@ -2227,6 +2231,76 @@ class ScriptableAdapter {
     this._runPageMemo.set(key, { ...responseData });
   }
 
+  // The one gate every live page request passes through (per-host pacing,
+  // 429/403 parking, per-run budget, robots.txt) — SharedCore.FetchPoliteness,
+  // the same class the Mac adapter uses. Null when the config switches it off.
+  getFetchPoliteness() {
+    if (this._fetchPoliteness !== undefined) return this._fetchPoliteness;
+    this._fetchPoliteness = null;
+    const settings =
+      this.config && this.config.politeness && typeof this.config.politeness === "object"
+        ? this.config.politeness
+        : null;
+    // The orchestrator always hands a politeness object to a run's adapter
+    // ({} = defaults). No key at all = an adapter built outside a run.
+    if (!settings || settings.enabled === false) return null;
+    if (typeof SharedCore === "undefined" || typeof SharedCore.FetchPoliteness !== "function") return null;
+    this._fetchPoliteness = new SharedCore.FetchPoliteness({
+      minHostGapMs: settings.minHostGapMs,
+      maxCrawlDelayMs: settings.maxCrawlDelayMs,
+      maxRequestsPerHost: settings.maxRequestsPerHost,
+      robots: settings.robots,
+      exemptHosts: Array.isArray(settings.exemptHosts)
+        ? [...SharedCore.FetchPoliteness.DEFAULT_EXEMPT_HOSTS, ...settings.exemptHosts]
+        : undefined,
+      userAgentToken: String(this.config.userAgent || "").split("/")[0],
+      sleep: (delayMs) => this.sleepForNetworkRetry(delayMs),
+      now: () => Date.now(),
+      log: (message) => console.log(message),
+      fetchRobotsText: (robotsUrl) => this.fetchRobotsText(robotsUrl),
+    });
+    return this._fetchPoliteness;
+  }
+
+  // robots.txt through the page cache (and the failure-note cache for a
+  // missing file), so a host is asked once per cache lifetime, not per run.
+  async fetchRobotsText(robotsUrl) {
+    try {
+      const response = await this.fetchData(robotsUrl, {
+        politenessBypass: true,
+        headers: { Accept: "text/plain,*/*;q=0.5" },
+      });
+      return response && typeof response.html === "string" ? response.html : "";
+    } catch (error) {
+      const statusCode = this.extractHttpStatusCodeFromError(error);
+      if (statusCode === 404 || statusCode === 410) {
+        try {
+          const pageCacheConfig = this.getPageCacheConfig();
+          if (pageCacheConfig.enabled) {
+            await this.writeCachedPage(
+              robotsUrl,
+              { html: `# no robots.txt (HTTP ${statusCode})\n`, url: robotsUrl, statusCode: 200, headers: {} },
+              pageCacheConfig,
+            );
+          }
+        } catch (_) {
+          // Remembering the absence is a courtesy, never a failure.
+        }
+      }
+      return "";
+    }
+  }
+
+  async runPolitely(url, options, perform, kind = "page") {
+    const gate = options && options.politenessBypass ? null : this.getFetchPoliteness();
+    return gate ? gate.run(url, perform, { kind: options && options.apiCall ? "api" : kind }) : perform();
+  }
+
+  getFetchPolitenessSummary() {
+    const gate = this._fetchPoliteness;
+    return gate ? { text: gate.describeSummary(), ...gate.summary() } : null;
+  }
+
   async fetchData(url, options = {}) {
     try {
       const memoKey = this.getRunPageMemoKey(url, options);
@@ -2259,10 +2333,14 @@ class ScriptableAdapter {
       // Only the round trip is retried — the cache read above is not network
       // and must never be re-run (nor counted as a network success) just
       // because the fetch behind it needs another attempt.
+      // The politeness gate sits INSIDE the retried operation: a retry after
+      // a timeout is paced and counted like any request, and a 429/403 (or a
+      // refusal by the gate itself) comes back stamped non-retryable, so the
+      // ladder never re-sends it.
       const responseData = await this.withNetworkResilience(
         "page fetch",
         url,
-        async () => {
+        () => this.runPolitely(url, options, async () => {
           const request = new Request(url);
           request.method = options.method || "GET";
           request.headers = {
@@ -2284,7 +2362,11 @@ class ScriptableAdapter {
             : 200;
 
           if (statusCode >= 400) {
-            throw new Error(`HTTP ${statusCode} error from ${url}`);
+            const failure = new Error(`HTTP ${statusCode} error from ${url}`);
+            failure.statusCode = statusCode;
+            const responseHeaders = request.response && request.response.headers ? request.response.headers : {};
+            failure.retryAfter = responseHeaders["Retry-After"] || responseHeaders["retry-after"] || "";
+            throw failure;
           }
 
           if (response && response.length > 0) {
@@ -2297,7 +2379,7 @@ class ScriptableAdapter {
           }
           console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
           throw new Error(`Empty response from ${url}`);
-        },
+        }),
       );
 
       if (canUseCache && isCacheableResponse(responseData)) {
@@ -2313,9 +2395,18 @@ class ScriptableAdapter {
       if (error?.cachedFailure || error?.networkGiveUp) {
         throw error;
       }
-      const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
-      console.log(errorMessage);
-      throw new Error(`HTTP request failed for ${url}: ${error.message}`);
+      // A refusal by the politeness gate never left the phone: a skip, said
+      // as one, and its non-retryable stamp survives the rewrap.
+      if (error && error.politeness) {
+        console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
+      } else {
+        console.log(`📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`);
+      }
+      const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
+      if (error && typeof error.retryable === "boolean") wrapped.retryable = error.retryable;
+      if (error && error.politeness) wrapped.politeness = error.politeness;
+      if (error && Number.isFinite(error.statusCode)) wrapped.statusCode = error.statusCode;
+      throw wrapped;
     }
   }
 

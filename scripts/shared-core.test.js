@@ -23798,3 +23798,144 @@ test('resolveMachineDoor adopts a paged feed whose declared total exceeds the pa
   const door = core.readMachineDoorBody(JSON.stringify({ events: [row(1), row(2)], total: 2 }), 'https://x/feed');
   assert.equal(door.declaredTotal, undefined, 'a total equal to the page is not a claim of more');
 });
+
+// ============================================================================
+// FetchPoliteness — how the scraper behaves on other people's sites
+// ============================================================================
+function makePoliteness(overrides = {}) {
+  const clock = { now: 1_000_000 };
+  const sleeps = [];
+  const logs = [];
+  const gate = new SharedCore.FetchPoliteness({
+    sleep: async (ms) => { sleeps.push(ms); clock.now += ms; },
+    now: () => clock.now,
+    log: (message) => logs.push(message),
+    robots: 'off',
+    ...overrides
+  });
+  return { gate, clock, sleeps, logs };
+}
+const httpError = (status, retryAfter = '') => { const e = new Error(`HTTP ${status}: nope`); e.statusCode = status; e.retryAfter = retryAfter; return e; };
+
+test('FetchPoliteness paces one host, one request at a time, and never paces another host or our own', async () => {
+  const { gate, clock, sleeps } = makePoliteness({ minHostGapMs: 2000 });
+  const order = [];
+  const hit = (url, cost = 100) => gate.run(url, async () => { order.push(`start ${url}`); clock.now += cost; order.push(`end ${url}`); return url; });
+  await Promise.all([hit('https://www.site.example/a'), hit('https://site.example/b'), hit('https://other.example/x')]);
+  assert.deepEqual(sleeps, [2000], 'only the second request to site.example waits, and for the full gap after the first ENDED');
+  assert.ok(order.indexOf('end https://www.site.example/a') < order.indexOf('start https://site.example/b'), 'www and bare host are one site, served in turn');
+  await hit('https://chunky.dad/data/calendars/nyc.ics'); await hit('https://chunky.dad/data/calendars/la.ics');
+  await hit('http://rybook.taila7523c.ts.net:8000/v1/models'); await hit('http://rybook.taila7523c.ts.net:8000/v1/models');
+  assert.deepEqual(sleeps, [2000], 'chunky.dad and the tailnet are exempt');
+  clock.now += 5000;
+  await hit('https://site.example/c');
+  assert.deepEqual(sleeps, [2000], 'a gap that already passed costs nothing');
+});
+
+test('FetchPoliteness parks a host on 429 for the rest of the run and stamps the failure non-retryable', async () => {
+  const { gate, logs } = makePoliteness();
+  let calls = 0;
+  await assert.rejects(gate.run('https://dilf.example/events/1', async () => { calls++; throw httpError(429, '120'); }), (error) => {
+    assert.equal(error.retryable, false, 'a resilience ladder must not re-send it');
+    return true;
+  });
+  await assert.rejects(gate.run('https://www.dilf.example/', async () => { calls++; return 'never'; }), (error) => {
+    assert.equal(error.retryable, false);
+    assert.equal(error.politeness.reason, 'parked');
+    return true;
+  });
+  assert.equal(calls, 1, 'the parked host is never asked again — www or not');
+  assert.ok(logs.some(line => line.includes('dilf.example answered 429') && line.includes('Retry-After: 120')), logs.join('\n'));
+  assert.match(gate.refusalReasonFor('https://dilf.example/x'), /parked/);
+  assert.equal(gate.refusalReasonFor('https://elsewhere.example/x'), '');
+  // A status only named in the message (the phone's "HTTP 429 error from …") counts too.
+  const { gate: second } = makePoliteness();
+  await assert.rejects(second.run('https://b.example/', async () => { throw new Error('HTTP 429 error from https://b.example/'); }));
+  assert.match(second.refusalReasonFor('https://b.example/other'), /parked/);
+});
+
+test('FetchPoliteness parks on 403 only when the host never answered, or says it three times running', async () => {
+  const { gate } = makePoliteness({ minHostGapMs: 0 });
+  await assert.rejects(gate.run('https://wall.example/', async () => { throw httpError(403); }));
+  assert.match(gate.refusalReasonFor('https://wall.example/a'), /parked/, 'a bot wall: 403 before any page');
+  await gate.run('https://site.example/', async () => 'ok');
+  await assert.rejects(gate.run('https://site.example/wp-json/private', async () => { throw httpError(403); }), (error) => error.retryable === false);
+  assert.equal(gate.refusalReasonFor('https://site.example/events'), '', 'one private route on a site that answers is not a wall');
+  await assert.rejects(gate.run('https://site.example/p2', async () => { throw httpError(403); }));
+  await assert.rejects(gate.run('https://site.example/p3', async () => { throw httpError(403); }));
+  assert.match(gate.refusalReasonFor('https://site.example/events'), /parked/, 'three in a row is a wall');
+  // A 404 or a timeout parks nothing and stays whatever the classifier says.
+  const { gate: third } = makePoliteness({ minHostGapMs: 0 });
+  await assert.rejects(third.run('https://gone.example/x', async () => { throw httpError(404); }), (error) => error.retryable === undefined);
+  assert.equal(third.refusalReasonFor('https://gone.example/y'), '');
+});
+
+test('FetchPoliteness stops a host at its per-run budget and says so once', async () => {
+  const { gate, logs } = makePoliteness({ minHostGapMs: 0, maxRequestsPerHost: 3 });
+  for (let i = 0; i < 3; i++) await gate.run(`https://big.example/p${i}`, async () => i);
+  await assert.rejects(gate.run('https://big.example/p3', async () => 'never'), (error) => error.politeness.reason === 'budget' && error.retryable === false);
+  await assert.rejects(gate.run('https://big.example/p4', async () => 'never'));
+  assert.equal(logs.filter(line => line.includes('reached its budget of 3')).length, 1);
+  assert.ok(gate.describeSummary().includes('budget reached: big.example'));
+  // Assets (images on a CDN) are counted, never gated.
+  for (let i = 0; i < 5; i++) await gate.run(`https://cdn.example/i${i}.jpg`, async () => i, { kind: 'asset' });
+  assert.equal(gate.summary().hosts.find(entry => entry.host === 'cdn.example').assets, 5);
+});
+
+test('robots.txt: groups, longest match, wildcards, and the group that names us', () => {
+  const P = SharedCore.FetchPoliteness;
+  const groups = P.parseRobotsTxt([
+    '# comment', 'User-agent: *', 'Disallow: /private/', 'Allow: /private/events/', 'Disallow: /*?ical=1', 'Disallow: /tmp$', 'Crawl-delay: 5', '',
+    'User-agent: googlebot', 'User-agent: bingbot', 'Disallow:', '',
+    'User-agent: chunky-dad-scraper', 'Disallow: /o/', 'Crawl-delay: 30'
+  ].join('\n'));
+  assert.equal(groups.length, 3);
+  const star = P.selectRobotsGroup(groups, 'someone-else');
+  assert.equal(star.crawlDelaySeconds, 5);
+  assert.equal(P.robotsVerdict(star, '/events').allowed, true);
+  assert.equal(P.robotsVerdict(star, '/private/x').allowed, false);
+  assert.equal(P.robotsVerdict(star, '/private/events/1').allowed, true, 'the longer Allow wins');
+  assert.equal(P.robotsVerdict(star, '/events/?ical=1').allowed, false, 'wildcard');
+  assert.equal(P.robotsVerdict(star, '/tmp').allowed, false, 'anchored');
+  assert.equal(P.robotsVerdict(star, '/tmp/file').allowed, true, 'the anchor stops it');
+  const ours = P.selectRobotsGroup(groups, 'chunky-dad-scraper');
+  assert.equal(ours.crawlDelaySeconds, 30, 'a group naming us replaces the wildcard group');
+  assert.equal(P.robotsVerdict(ours, '/o/organizer-1').allowed, false);
+  assert.equal(P.robotsVerdict(ours, '/private/x').allowed, true);
+  assert.equal(P.robotsVerdict(null, '/anything').allowed, true, 'no robots.txt allows everything');
+  assert.equal(P.selectRobotsGroup(P.parseRobotsTxt('User-agent: googlebot\nDisallow: /'), 'chunky-dad-scraper'), null, 'rules for someone else are not ours');
+});
+
+test('FetchPoliteness reads robots.txt once per host: report logs and requests, enforce refuses, Crawl-delay paces (capped)', async () => {
+  const robotsBody = 'User-agent: *\nDisallow: /o/\nCrawl-delay: 60\n';
+  let robotsReads = 0;
+  const report = makePoliteness({ robots: 'report', minHostGapMs: 2000, maxCrawlDelayMs: 15000, fetchRobotsText: async (url) => { robotsReads++; assert.equal(url, 'https://tickets.example/robots.txt'); return robotsBody; } });
+  let served = 0;
+  await report.gate.run('https://tickets.example/o/organizer-1', async () => { served++; });
+  await report.gate.run('https://tickets.example/e/party', async () => { served++; });
+  assert.equal(robotsReads, 1);
+  assert.equal(served, 2, 'report-only still requests a disallowed path');
+  assert.ok(report.logs.some(line => line.includes('disallows /o/organizer-1') && line.includes('report-only')), report.logs.join('\n'));
+  assert.deepEqual(report.sleeps, [15000], 'Crawl-delay 60s is honoured up to the cap');
+  assert.ok(report.gate.describeSummary().includes('robots.txt disallowed path(s) (report): tickets.example 1'));
+
+  const enforce = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
+  await assert.rejects(enforce.gate.run('https://tickets.example/o/organizer-1', async () => 'never'), (error) => error.politeness.reason === 'robots' && error.retryable === false);
+  assert.equal(await enforce.gate.run('https://tickets.example/e/party', async () => 'ok'), 'ok');
+
+  // A failing read, an empty file and an HTML soft-404 all mean "no rules".
+  for (const answer of [async () => { throw new Error('HTTP 404'); }, async () => '', async () => '<!DOCTYPE html><html>not found</html>']) {
+    const lenient = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: answer });
+    assert.equal(await lenient.gate.run('https://plain.example/o/x', async () => 'ok'), 'ok');
+  }
+});
+
+test('FetchPoliteness: an API call (a geocoder) is paced and parked like a page but never judged by robots.txt', async () => {
+  let robotsReads = 0;
+  const { gate, sleeps, logs } = makePoliteness({ robots: 'enforce', minHostGapMs: 1000, fetchRobotsText: async () => { robotsReads++; return 'User-agent: *\nDisallow: /search\n'; } });
+  assert.equal(await gate.run('https://geo.example/search?q=a', async () => 'a', { kind: 'api' }), 'a');
+  assert.equal(await gate.run('https://geo.example/search?q=b', async () => 'b', { kind: 'api' }), 'b');
+  assert.equal(robotsReads, 0);
+  assert.deepEqual(sleeps, [1000], 'still one second apart');
+  assert.equal(logs.filter(line => line.includes('ROBOTS')).length, 0);
+});

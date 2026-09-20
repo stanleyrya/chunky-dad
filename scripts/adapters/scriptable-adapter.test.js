@@ -11559,3 +11559,45 @@ test('written ledger: an execute records what it wrote; a later execute skips ap
   await adapter2.executeReviewedSavedRun(buildReviewedRunResults(stale), reapproved);
   assert.deepEqual(captured2.analyzed.map((event) => event.title).sort(), ['Approved Party', 'Written Party'], 'approvals newer than the write run again');
 });
+
+// ---------------------------------------------------------------------------
+// Politeness on the phone: the gate sits inside the retried operation, so a
+// 429 is never re-sent by the resilience ladder and the host is parked.
+// ---------------------------------------------------------------------------
+test('fetchData on the phone: a 429 is requested once, parks the host (www or not), and other hosts are untouched', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, politeness: { minHostGapMs: 0, robots: 'off' } });
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  const requested = [];
+  global.Request = class {
+    constructor(url) { this.url = url; this.response = null; }
+    async loadString() {
+      requested.push(this.url);
+      if (/dilf\.example/.test(this.url)) {
+        this.response = { statusCode: 429, headers: { 'Retry-After': '300' } };
+        return 'slow down';
+      }
+      this.response = { statusCode: 200, headers: {} };
+      return '<html>ok</html>';
+    }
+  };
+  try {
+    await assert.rejects(adapter.fetchData('https://dilf.example/events/1'), (error) => error.retryable === false && error.statusCode === 429);
+    await assert.rejects(adapter.fetchData('https://www.dilf.example/'), (error) => Boolean(error.politeness) && error.politeness.reason === 'parked');
+    const ok = await adapter.fetchData('https://fine.example/events');
+    assert.equal(ok.html, '<html>ok</html>');
+  } finally {
+    delete global.Request;
+  }
+  assert.deepEqual(requested, ['https://dilf.example/events/1', 'https://fine.example/events'],
+    'one request to the host that said 429 — no ladder retry, no second URL');
+  assert.deepEqual(slept, [], 'no backoff was spent on a host that asked us to stop');
+  const summary = adapter.getFetchPolitenessSummary();
+  assert.match(summary.text, /parked: dilf\.example \(HTTP 429, Retry-After 300\)/);
+});
+
+test('fetchData on the phone: an adapter built without a politeness block fetches ungated, and the default User-Agent says who we are', async () => {
+  const adapter = buildAdapter();
+  assert.equal(adapter.getFetchPoliteness(), null);
+  assert.equal(adapter.config.userAgent, 'chunky-dad-scraper/1.0 (+https://chunky.dad)');
+});

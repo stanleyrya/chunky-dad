@@ -6225,6 +6225,18 @@ class SharedCore {
             results.automationSkippedParsers = automationSkipped;
         }
 
+        // How the run behaved on other people's sites: live requests per
+        // host, pacing spent, hosts parked after a 429/403, budgets reached,
+        // robots.txt paths it would refuse. One line in the log, the full
+        // table on the results (results.fetchPoliteness) for the run file.
+        if (httpAdapter && typeof httpAdapter.getFetchPolitenessSummary === 'function') {
+            const politeness = httpAdapter.getFetchPolitenessSummary();
+            if (politeness) {
+                await displayAdapter.logInfo(`SYSTEM: ${politeness.text}`);
+                results.fetchPoliteness = politeness;
+            }
+        }
+
         // Discovered venue calendars (enrich-only ticket crawl drops): logged
         // here and attached to results so the UI summaries can render the same
         // block with a paste-ready parser entry.
@@ -8910,6 +8922,15 @@ class SharedCore {
                 }
             } catch (error) {
                 const message = error?.message || 'Unknown error';
+                // A refusal by the politeness gate (the host is parked after a
+                // 429/403, its per-run budget is spent, or robots.txt forbids
+                // the path under "enforce") never left the machine. It is a
+                // skip — logged once by the adapter — not a fetch failure:
+                // no dead-end learning, no failure note, no run error.
+                if (error && error.politeness) {
+                    await displayAdapter.logInfo(`SYSTEM: 🚦 POLITE: ${currentDepth === 0 ? 'URL' : 'crawl page'} ${url} not requested (${error.politeness.reason})`);
+                    continue;
+                }
                 // Bot-wall responses (401/403) are permanent for this client:
                 // learn them as dead ends so later runs skip the fetch entirely.
                 // Generic status check — no host list. Cached-failure replays
@@ -22850,6 +22871,343 @@ NetworkResilience.DEFAULT_SUSPENSION_SLACK_MS = 30000;
 // Hung off SharedCore so it travels through every environment's export shape
 // (module.exports / window / Scriptable `this`) without a second export line.
 SharedCore.NetworkResilience = NetworkResilience;
+
+// ============================================================================
+// FETCH POLITENESS — one gate every live page request passes through
+// ============================================================================
+// The scraper reads other people's sites. This class is how it behaves there:
+//   • one request at a time per host, a minimum gap between them (and the
+//     site's own robots.txt Crawl-delay when it states one, capped);
+//   • a host that answers 429 (or 403 before it ever answered 200) is PARKED
+//     for the rest of the run — never retried, never asked again. The error
+//     carries retryable=false so no resilience ladder re-sends it;
+//   • a per-host request budget per run, so a parser that suddenly wants 300
+//     pages of one site is stopped and named the same day;
+//   • robots.txt read once per host (through the adapter's page cache):
+//     "report" logs what it would refuse, "enforce" refuses it, "off" skips it.
+// Cache hits never reach this class — it only sees requests that would leave
+// the machine. Pure: clock, sleep, logging and the robots fetch are injected
+// (shared-core never imports a platform timer or HTTP client).
+class FetchPoliteness {
+    constructor(options = {}) {
+        if (typeof options.sleep !== 'function') {
+            throw new Error('FetchPoliteness requires a sleep(ms) function — shared-core never imports a platform timer');
+        }
+        this.sleep = options.sleep;
+        this.now = typeof options.now === 'function' ? options.now : (() => Date.now());
+        this.log = typeof options.log === 'function' ? options.log : (() => {});
+        this.fetchRobotsText = typeof options.fetchRobotsText === 'function' ? options.fetchRobotsText : null;
+        const number = (value, fallback, min = 0) => (Number.isFinite(Number(value)) && Number(value) >= min ? Number(value) : fallback);
+        this.minHostGapMs = number(options.minHostGapMs, FetchPoliteness.DEFAULT_MIN_HOST_GAP_MS);
+        this.maxCrawlDelayMs = number(options.maxCrawlDelayMs, FetchPoliteness.DEFAULT_MAX_CRAWL_DELAY_MS);
+        this.maxRequestsPerHost = number(options.maxRequestsPerHost, FetchPoliteness.DEFAULT_MAX_REQUESTS_PER_HOST, 1);
+        const mode = String(options.robots || '').trim().toLowerCase();
+        this.robotsMode = ['off', 'report', 'enforce'].includes(mode) ? mode : 'report';
+        this.userAgentToken = String(options.userAgentToken || 'chunky-dad-scraper').trim().toLowerCase();
+        this.exemptHosts = (Array.isArray(options.exemptHosts) ? options.exemptHosts : FetchPoliteness.DEFAULT_EXEMPT_HOSTS)
+            .map(host => String(host || '').trim().toLowerCase()).filter(Boolean);
+        this.hosts = new Map();
+    }
+
+    // Host key: lowercased, "www." dropped — dilf.uk and www.dilf.uk are one
+    // site answering one rate limiter. '' for anything that is not http(s).
+    static hostKeyOf(url) {
+        const match = String(url || '').match(/^https?:\/\/([^/?#:@]+)(?::\d+)?/i);
+        return match ? match[1].toLowerCase().replace(/^www\./, '') : '';
+    }
+
+    static originOf(url) {
+        const match = String(url || '').match(/^(https?:\/\/[^/?#]+)/i);
+        return match ? match[1] : '';
+    }
+
+    static pathOf(url) {
+        const match = String(url || '').match(/^https?:\/\/[^/?#]+([^#]*)/i);
+        const path = match && match[1] ? match[1] : '/';
+        return path.startsWith('/') ? path : `/${path}`;
+    }
+
+    isExempt(hostKey) {
+        if (!hostKey) return true;
+        return this.exemptHosts.some(entry => (entry.startsWith('.')
+            ? hostKey.endsWith(entry) || hostKey === entry.slice(1)
+            : hostKey === entry));
+    }
+
+    getHostState(hostKey) {
+        if (!this.hosts.has(hostKey)) {
+            this.hosts.set(hostKey, {
+                requests: 0, successes: 0, refusals: 0, consecutiveForbidden: 0,
+                lastRequestAt: null, waitedMs: 0, parked: null, budgetLogged: false,
+                robots: undefined, robotsDisallowed: [], queue: Promise.resolve()
+            });
+        }
+        return this.hosts.get(hostKey);
+    }
+
+    // A refusal the caller must not retry.
+    buildRefusal(message, reason, hostKey) {
+        const error = new Error(message);
+        error.retryable = false;
+        error.politeness = { reason, host: hostKey };
+        return error;
+    }
+
+    // Parse a robots.txt body into groups. Only what a polite reader needs:
+    // User-agent, Allow, Disallow, Crawl-delay. Unknown lines are ignored.
+    static parseRobotsTxt(text) {
+        const groups = [];
+        let current = null;
+        let lastWasAgent = false;
+        for (const rawLine of String(text || '').split(/\r?\n/)) {
+            const line = rawLine.replace(/#.*$/, '').trim();
+            if (!line) continue;
+            const split = line.indexOf(':');
+            if (split <= 0) continue;
+            const field = line.slice(0, split).trim().toLowerCase();
+            const value = line.slice(split + 1).trim();
+            if (field === 'user-agent') {
+                if (!current || !lastWasAgent) {
+                    current = { agents: [], rules: [], crawlDelaySeconds: null };
+                    groups.push(current);
+                }
+                current.agents.push(value.toLowerCase());
+                lastWasAgent = true;
+                continue;
+            }
+            lastWasAgent = false;
+            if (!current) continue;
+            if (field === 'allow' || field === 'disallow') {
+                // An empty Disallow allows everything — it is not a rule.
+                if (value) current.rules.push({ allow: field === 'allow', pattern: value });
+            } else if (field === 'crawl-delay') {
+                const seconds = Number(value);
+                if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelaySeconds = seconds;
+            }
+        }
+        return groups;
+    }
+
+    // The group that speaks to us: one naming our own token, else "*".
+    static selectRobotsGroup(groups, userAgentToken) {
+        const token = String(userAgentToken || '').toLowerCase();
+        const list = Array.isArray(groups) ? groups : [];
+        const named = token ? list.filter(group => group.agents.some(agent => agent !== '*' && token.includes(agent))) : [];
+        if (named.length > 0) return FetchPoliteness.mergeRobotsGroups(named);
+        const wildcard = list.filter(group => group.agents.includes('*'));
+        return wildcard.length > 0 ? FetchPoliteness.mergeRobotsGroups(wildcard) : null;
+    }
+
+    static mergeRobotsGroups(groups) {
+        const merged = { rules: [], crawlDelaySeconds: null };
+        for (const group of groups) {
+            merged.rules.push(...group.rules);
+            if (group.crawlDelaySeconds !== null) {
+                merged.crawlDelaySeconds = Math.max(merged.crawlDelaySeconds || 0, group.crawlDelaySeconds);
+            }
+        }
+        return merged;
+    }
+
+    // Longest matching pattern wins; on a tie Allow wins (RFC 9309). "*"
+    // matches any run of characters, a trailing "$" anchors the end.
+    static robotsVerdict(group, path) {
+        if (!group || !Array.isArray(group.rules) || group.rules.length === 0) return { allowed: true, rule: '' };
+        let best = null;
+        for (const rule of group.rules) {
+            const anchored = rule.pattern.endsWith('$');
+            const body = anchored ? rule.pattern.slice(0, -1) : rule.pattern;
+            const source = body.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+            let matches = false;
+            try {
+                matches = new RegExp(`^${source}${anchored ? '$' : ''}`).test(path);
+            } catch (_) {
+                matches = false;
+            }
+            if (!matches) continue;
+            const length = rule.pattern.length;
+            if (!best || length > best.length || (length === best.length && rule.allow && !best.allow)) {
+                best = { allow: rule.allow, length, pattern: rule.pattern };
+            }
+        }
+        if (!best) return { allowed: true, rule: '' };
+        return { allowed: best.allow, rule: `${best.allow ? 'Allow' : 'Disallow'}: ${best.pattern}` };
+    }
+
+    async loadRobots(hostKey, url, state) {
+        if (state.robots !== undefined) return state.robots;
+        state.robots = null;
+        if (this.robotsMode === 'off' || !this.fetchRobotsText) return null;
+        const origin = FetchPoliteness.originOf(url);
+        if (!origin) return null;
+        let text = '';
+        try {
+            text = await this.fetchRobotsText(`${origin}/robots.txt`);
+        } catch (_) {
+            text = '';
+        }
+        // An HTML body is a soft-404, not a robots file.
+        if (typeof text !== 'string' || !text.trim() || /^\s*<(?:!doctype|html)/i.test(text)) return null;
+        const group = FetchPoliteness.selectRobotsGroup(FetchPoliteness.parseRobotsTxt(text), this.userAgentToken);
+        state.robots = group;
+        if (group && group.crawlDelaySeconds !== null && group.crawlDelaySeconds * 1000 > this.minHostGapMs) {
+            const honoured = Math.min(group.crawlDelaySeconds * 1000, this.maxCrawlDelayMs);
+            this.log(`🚦 POLITE: ${hostKey} asks for Crawl-delay ${group.crawlDelaySeconds}s — pacing its requests ${Math.round(honoured / 100) / 10}s apart${honoured < group.crawlDelaySeconds * 1000 ? ` (capped at ${this.maxCrawlDelayMs / 1000}s)` : ''}`);
+        }
+        return group;
+    }
+
+    gapFor(state) {
+        const crawlDelayMs = state.robots && state.robots.crawlDelaySeconds !== null
+            ? Math.min(state.robots.crawlDelaySeconds * 1000, this.maxCrawlDelayMs)
+            : 0;
+        return Math.max(this.minHostGapMs, crawlDelayMs);
+    }
+
+    // Run one live request through the gate. `perform` does the round trip and
+    // may throw; an error carrying (or naming) an HTTP status is recorded.
+    // options.kind: 'page' (default) is gated in full; 'asset' (an image on a
+    // CDN) is only counted.
+    async run(url, perform, options = {}) {
+        const hostKey = FetchPoliteness.hostKeyOf(url);
+        if (!hostKey || this.isExempt(hostKey)) return perform();
+        const state = this.getHostState(hostKey);
+        if (options.kind === 'asset') {
+            state.assets = (state.assets || 0) + 1;
+            return perform();
+        }
+        const turn = state.queue.then(() => this.runInTurn(hostKey, url, state, perform, options));
+        // The chain survives a failed request: the next caller still gets a turn.
+        state.queue = turn.then(() => undefined, () => undefined);
+        return turn;
+    }
+
+    async runInTurn(hostKey, url, state, perform, options = {}) {
+        if (state.parked) {
+            throw this.buildRefusal(`Host ${hostKey} is parked for this run (${state.parked.reason}) — not requesting ${url}`, 'parked', hostKey);
+        }
+        // kind 'api' (a geocoder, a JSON service called under its own usage
+        // policy) is paced, budgeted and parked like a page — robots.txt is
+        // about crawling pages and does not apply to it.
+        const robots = options.kind === 'api' ? null : await this.loadRobots(hostKey, url, state);
+        if (robots) {
+            const path = FetchPoliteness.pathOf(url);
+            const verdict = FetchPoliteness.robotsVerdict(robots, path);
+            if (!verdict.allowed) {
+                state.robotsDisallowed.push({ path, rule: verdict.rule });
+                if (this.robotsMode === 'enforce') {
+                    this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — not requested`);
+                    throw this.buildRefusal(`robots.txt of ${hostKey} disallows ${path} (${verdict.rule})`, 'robots', hostKey);
+                }
+                this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — report-only, requested anyway`);
+            }
+        }
+        if (state.requests >= this.maxRequestsPerHost) {
+            if (!state.budgetLogged) {
+                state.budgetLogged = true;
+                this.log(`🚦 POLITE: ${hostKey} reached its budget of ${this.maxRequestsPerHost} live request(s) this run — further requests to it are skipped`);
+            }
+            state.refusals++;
+            throw this.buildRefusal(`Host ${hostKey} reached its per-run budget of ${this.maxRequestsPerHost} live request(s) — not requesting ${url}`, 'budget', hostKey);
+        }
+        if (state.lastRequestAt !== null) {
+            const wait = this.gapFor(state) - (this.now() - state.lastRequestAt);
+            if (wait > 0) {
+                state.waitedMs += wait;
+                await this.sleep(wait);
+            }
+        }
+        state.requests++;
+        try {
+            const result = await perform();
+            state.lastRequestAt = this.now();
+            state.successes++;
+            state.consecutiveForbidden = 0;
+            return result;
+        } catch (error) {
+            state.lastRequestAt = this.now();
+            this.recordFailure(hostKey, url, state, error);
+            throw error;
+        }
+    }
+
+    // 429 = "slow down": park at once. 403 = "not you": park when the host
+    // never answered this run (a bot wall) or keeps saying it (three in a
+    // row) — one forbidden route on a site that otherwise answers is just a
+    // private route. Either way the error is stamped non-retryable.
+    recordFailure(hostKey, url, state, error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const stamped = error && Number.isFinite(error.statusCode) ? error.statusCode : null;
+        const named = message.match(/HTTP\s+(\d{3})/i);
+        const statusCode = stamped !== null ? stamped : (named ? Number(named[1]) : null);
+        if (statusCode !== 429 && statusCode !== 403) return;
+        if (error && typeof error === 'object') error.retryable = false;
+        const retryAfter = error && error.retryAfter ? String(error.retryAfter).trim() : '';
+        if (statusCode === 429) {
+            state.parked = { reason: `HTTP 429${retryAfter ? `, Retry-After ${retryAfter}` : ''}`, url };
+            this.log(`🚦 POLITE: ${hostKey} answered 429 Too Many Requests${retryAfter ? ` (Retry-After: ${retryAfter})` : ''} — parked for the rest of this run, no retry`);
+            return;
+        }
+        state.consecutiveForbidden++;
+        if (state.successes === 0 || state.consecutiveForbidden >= 3) {
+            state.parked = { reason: state.successes === 0 ? 'HTTP 403 before any page was served' : 'HTTP 403 three times running', url };
+            this.log(`🚦 POLITE: ${hostKey} answered 403 Forbidden (${state.parked.reason}) — parked for the rest of this run, no retry`);
+        }
+    }
+
+    // '' when a request for this URL would be attempted; otherwise why not
+    // (parked host / budget spent). Read-only — nothing is counted.
+    refusalReasonFor(url) {
+        const hostKey = FetchPoliteness.hostKeyOf(url);
+        const state = hostKey ? this.hosts.get(hostKey) : null;
+        if (!state) return '';
+        if (state.parked) return `${hostKey} is parked for this run (${state.parked.reason})`;
+        if (state.requests >= this.maxRequestsPerHost) return `${hostKey} reached its budget of ${this.maxRequestsPerHost} live request(s) this run`;
+        return '';
+    }
+
+    // What happened this run, for the log line and the results payload.
+    summary() {
+        const hosts = [];
+        for (const [host, state] of this.hosts) {
+            if (state.requests === 0 && !state.parked && state.robotsDisallowed.length === 0 && !state.assets) continue;
+            hosts.push({
+                host, requests: state.requests, assets: state.assets || 0, waitedMs: state.waitedMs,
+                parked: state.parked ? state.parked.reason : null, budgetReached: state.budgetLogged,
+                robotsDisallowed: state.robotsDisallowed.slice(0, 10), robotsDisallowedCount: state.robotsDisallowed.length
+            });
+        }
+        hosts.sort((a, b) => b.requests - a.requests || a.host.localeCompare(b.host));
+        return {
+            robotsMode: this.robotsMode, minHostGapMs: this.minHostGapMs, maxRequestsPerHost: this.maxRequestsPerHost,
+            totalRequests: hosts.reduce((sum, entry) => sum + entry.requests, 0),
+            totalWaitedMs: hosts.reduce((sum, entry) => sum + entry.waitedMs, 0),
+            hosts
+        };
+    }
+
+    describeSummary() {
+        const summary = this.summary();
+        const busiest = summary.hosts.filter(entry => entry.requests > 0).slice(0, 5).map(entry => `${entry.host} ${entry.requests}`);
+        const parked = summary.hosts.filter(entry => entry.parked).map(entry => `${entry.host} (${entry.parked})`);
+        const budget = summary.hosts.filter(entry => entry.budgetReached).map(entry => entry.host);
+        const robots = summary.hosts.filter(entry => entry.robotsDisallowedCount > 0).map(entry => `${entry.host} ${entry.robotsDisallowedCount}`);
+        const hostCount = summary.hosts.filter(entry => entry.requests > 0).length;
+        return `🚦 POLITE: ${summary.totalRequests} live page request(s) to ${hostCount} host(s), ${Math.round(summary.totalWaitedMs / 1000)}s spent pacing`
+            + (busiest.length ? `; busiest: ${busiest.join(', ')}` : '')
+            + (parked.length ? `; parked: ${parked.join(', ')}` : '')
+            + (budget.length ? `; budget reached: ${budget.join(', ')}` : '')
+            + (robots.length ? `; robots.txt disallowed path(s) (${summary.robotsMode}): ${robots.join(', ')}` : '');
+    }
+}
+FetchPoliteness.DEFAULT_MIN_HOST_GAP_MS = 2000;
+FetchPoliteness.DEFAULT_MAX_CRAWL_DELAY_MS = 15000;
+FetchPoliteness.DEFAULT_MAX_REQUESTS_PER_HOST = 120;
+// Our own infrastructure and the machine itself are never paced or parked.
+FetchPoliteness.DEFAULT_EXEMPT_HOSTS = ['chunky.dad', 'localhost', '127.0.0.1', '.ts.net', '.local'];
+
+SharedCore.FetchPoliteness = FetchPoliteness;
+
 
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
