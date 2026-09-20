@@ -31,6 +31,11 @@
     "city": "portland",
     "address": "835 N Lombard St, Portland, OR 97217",
     "coordinates": "45.5773587, -122.6755256",
-    "website": "https://www.eagleportland.com"
+    "website": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
   }
 ]
