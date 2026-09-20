@@ -9,10 +9,7 @@
       "recurring": "annual",
       "website": "https://www.lazybearfund.org/events",
       "instagram": "https://www.instagram.com/lazybear_official/",
-      "nextDates": {
-        "start": "2026-07-27",
-        "end": "2026-08-03"
-      }
+      "nextDates": { "start": "2026-07-27", "end": "2026-08-03" }
     },
     {
       "key": "bear-week-provincetown",
@@ -21,10 +18,7 @@
       "typicalTiming": "",
       "recurring": "annual",
       "website": "https://www.eventbrite.com/o/ptownbears-78481077703",
-      "nextDates": {
-        "start": "2026-08-28",
-        "end": "2026-08-29"
-      }
+      "nextDates": { "start": "2026-08-28", "end": "2026-08-29" }
     },
     {
       "key": "southern-decadence",
@@ -35,10 +29,7 @@
       "typicalTiming": "Labor Day weekend (Thursday through Monday, early September)",
       "recurring": "annual",
       "website": "https://www.southerndecadence.com/",
-      "nextDates": {
-        "start": "2026-09-03",
-        "end": "2026-09-07"
-      }
+      "nextDates": { "start": "2026-09-03", "end": "2026-09-07" }
     },
     {
       "key": "bears-sitges-week",
@@ -49,10 +40,7 @@
       "typicalTiming": "first two weekends of September",
       "recurring": "annual",
       "website": "https://bearssitges.org/",
-      "nextDates": {
-        "start": "2026-09-04",
-        "end": "2026-09-13"
-      }
+      "nextDates": { "start": "2026-09-04", "end": "2026-09-13" }
     },
     {
       "key": "folsom-europe",
@@ -64,10 +52,7 @@
       "recurring": "annual",
       "website": "https://folsomeurope.berlin/",
       "instagram": "https://www.instagram.com/folsomeurope/",
-      "nextDates": {
-        "start": "2026-09-10",
-        "end": "2026-09-13"
-      }
+      "nextDates": { "start": "2026-09-10", "end": "2026-09-13" }
     },
     {
       "key": "urban-bear-nyc",
@@ -79,10 +64,7 @@
       "recurring": "annual",
       "website": "https://www.theurbanbear.com/urbanbearnyc",
       "instagram": "https://www.instagram.com/urbanbearnyc/",
-      "nextDates": {
-        "start": "2026-09-17",
-        "end": "2026-09-20"
-      }
+      "nextDates": { "start": "2026-09-17", "end": "2026-09-20" }
     },
     {
       "key": "folsom-street-fair",
@@ -94,10 +76,7 @@
       "recurring": "annual",
       "website": "https://www.folsomstreet.org/",
       "instagram": "https://www.instagram.com/folsomstreet/",
-      "nextDates": {
-        "start": "2026-09-27",
-        "end": "2026-09-27"
-      }
+      "nextDates": { "start": "2026-09-27", "end": "2026-09-27" }
     },
     {
       "key": "spooky-bear",
@@ -109,10 +88,7 @@
       "recurring": "annual",
       "website": "https://www.ursamen.org/spookybear",
       "instagram": "https://www.instagram.com/ne.ursamen",
-      "nextDates": {
-        "start": "2026-10-29",
-        "end": "2026-11-01"
-      }
+      "nextDates": { "start": "2026-10-29", "end": "2026-11-01" }
     },
     {
       "key": "mad-bear-madrid",
@@ -124,10 +100,7 @@
       "recurring": "annual",
       "website": "https://madbear.org/en",
       "instagram": "https://www.instagram.com/madbear_spain/",
-      "nextDates": {
-        "start": "2026-12-03",
-        "end": "2026-12-09"
-      }
+      "nextDates": { "start": "2026-12-03", "end": "2026-12-09" }
     },
     {
       "key": "hibearnation",
@@ -138,10 +111,7 @@
       "recurring": "annual",
       "website": "https://www.hibearnation.org/",
       "instagram": "https://www.instagram.com/showmebears/",
-      "nextDates": {
-        "start": "2027-01-21",
-        "end": "2027-01-24"
-      }
+      "nextDates": { "start": "2027-01-21", "end": "2027-01-24" }
     },
     {
       "key": "beefdip-bear-week",
@@ -152,10 +122,7 @@
       "typicalTiming": "late January / early February",
       "recurring": "annual",
       "website": "https://beefdip.com/planned-events/",
-      "nextDates": {
-        "start": "2027-01-23",
-        "end": "2027-01-31"
-      }
+      "nextDates": { "start": "2027-01-23", "end": "2027-01-31" }
     },
     {
       "key": "ibc",
@@ -167,10 +134,7 @@
       "recurring": "annual",
       "website": "https://www.ibc-ps.com/",
       "instagram": "https://www.instagram.com/ibcpalmsprings",
-      "nextDates": {
-        "start": "2027-02-18",
-        "end": "2027-02-22"
-      }
+      "nextDates": { "start": "2027-02-18", "end": "2027-02-22" }
     },
     {
       "key": "tbru",
@@ -182,10 +146,7 @@
       "recurring": "annual",
       "website": "https://www.tbru.org/",
       "instagram": "https://www.instagram.com/texas_bear_round_up/",
-      "nextDates": {
-        "start": "2027-03-25",
-        "end": "2027-03-28"
-      }
+      "nextDates": { "start": "2027-03-25", "end": "2027-03-28" }
     },
     {
       "key": "sugar-bear-festival",
@@ -196,10 +157,7 @@
       "typicalTiming": "early-to-mid April (sugar shack season)",
       "recurring": "annual",
       "website": "https://www.bearitmtl.com/",
-      "nextDates": {
-        "start": "2027-04-07",
-        "end": "2027-04-11"
-      }
+      "nextDates": { "start": "2027-04-07", "end": "2027-04-11" }
     },
     {
       "key": "bear-carnival",
@@ -210,10 +168,7 @@
       "recurring": "annual",
       "website": "https://bearcarnival.com/",
       "instagram": "https://www.instagram.com/maspalomasbearcarnival/",
-      "nextDates": {
-        "start": "2027-04-08",
-        "end": "2027-04-18"
-      }
+      "nextDates": { "start": "2027-04-08", "end": "2027-04-18" }
     },
     {
       "key": "bear-pride-chicago",
@@ -223,10 +178,7 @@
       "recurring": "annual",
       "website": "https://www.instagram.com/bearpridechicago/",
       "instagram": "https://www.instagram.com/bearpridechicago/",
-      "nextDates": {
-        "start": "2027-08-28",
-        "end": "2027-08-29"
-      }
+      "nextDates": { "start": "2027-08-28", "end": "2027-08-29" }
     },
     {
       "key": "amsterdam-bear-pride",
@@ -266,16 +218,6 @@
       "typicalTiming": "early June",
       "recurring": "annual",
       "website": "https://www.bearjamboree.com/"
-    },
-    {
-      "key": "big-bear-romp",
-      "name": "Big Bear Romp",
-      "category": "bear-run",
-      "location": "Big Bear Lake, CA",
-      "typicalTiming": "mid August (Thursday to Sunday)",
-      "recurring": "annual",
-      "website": "https://www.bigbearromp.com/",
-      "instagram": "https://www.instagram.com/big_bear_romp"
     },
     {
       "key": "bear-pride-cologne",
