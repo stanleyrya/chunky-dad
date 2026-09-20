@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-19",
+ "generatedAt": "2026-09-20",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-09-19",
     "2026-09-20",
     "2026-09-24",
     "2026-09-25",
@@ -48,7 +47,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-09-19",
     "2026-09-20",
     "2026-09-24",
     "2026-09-26",
@@ -116,7 +114,6 @@ window.CITY_ACTIVITY = {
   },
   "london": {
    "dates": [
-    "2026-09-19",
     "2026-09-26",
     "2026-10-17",
     "2026-11-21",
@@ -128,7 +125,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-09-19",
     "2026-10-10"
    ],
    "recurring": 2,
@@ -187,7 +183,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-09-19",
     "2026-09-25",
     "2026-09-26",
     "2026-10-17"
@@ -212,7 +207,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-09-19",
     "2026-09-20",
     "2026-09-26",
     "2026-10-09",
@@ -314,7 +308,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-09-19",
     "2026-09-25",
     "2026-09-26",
     "2026-10-02",
@@ -350,7 +343,6 @@ window.CITY_ACTIVITY = {
   },
   "montreal": {
    "dates": [
-    "2026-09-19",
     "2026-10-03"
    ],
    "recurring": 0,
