@@ -1,0 +1,1607 @@
+{
+  "schemaVersion": 1,
+  "source": "Gathr",
+  "slug": "gathr",
+  "status": "complete",
+  "recheckAfter": "2026-10-20",
+  "recon": {
+    "date": "2026-09-20",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://gathrparty.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://gathrparty.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "React shell: an empty mount, site-level JSON-LD (WebSite) and one hashed module script. No event text in the HTML."
+      },
+      {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "kind": "js",
+        "role": "feed",
+        "rowsReturned": 201,
+        "truthFlag": "201 event object literals, no paging",
+        "note": "The app bundle. The whole event list is written into it as object literals {id,title,venue,date,time,price,about,image,ticketLink,region}; region codes map to printed labels (PT = Provincetown Bear Week, FIBW = Fire Island Bear Weekend, DA = Dore Alley, FL = Folsom Street Fair). Dates print without a year. The hash in the file name changes with every deploy; the scraper finds it from the shell each run."
+      },
+      {
+        "url": "https://gathrparty.com/api/pt-events",
+        "kind": "json",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 500",
+        "note": "The only event-shaped endpoint the bundle names. Answers 500 \"REST API fetch failed: 403\" — their upstream refuses them. Not retried."
+      }
+    ],
+    "notes": "Recon from one cached read of the shell and one of the bundle on 2026-09-20. 201 objects: 8 live repeats, 39 upcoming singles, 154 past singles (the bear weeks of the summer), 0 repeats with nothing in the window."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: every event object literal in the bundle was read. Repeats are ONE entry each with their nights in the window; dated objects on or after 2026-09-20 are singles; 154 earlier ones are counted as past listings. City is stated only by the row's group (Provincetown Bear Week, Folsom Street Fair, Dore Alley, Fire Island Bear Weekend); ungrouped rows are New York regulars whose city comes from the venue.",
+    "publishedEventCount": 47,
+    "documentedEventCount": 47,
+    "occurrenceWindow": {
+      "start": "2026-09-20",
+      "end": "2026-12-19"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {},
+  "events": [
+    {
+      "id": "the-bear-party",
+      "kind": "series",
+      "title": "The Bear Party",
+      "description": "For more info, check out out bearpartynyc.com. For more Lodge parties, view their calendar at lodgeny.com. The Bear Party is a weekly bear party happening every Wednesday, Friday, and Sunday. $30, cash only. Clothes check included. Wednesday & Friday: 6-9pm, Sunday: 1-4pm.",
+      "bar": "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "image": "https://i.imgur.com/8m2h923.png",
+      "cover": "$30",
+      "startDate": "2026-01-28",
+      "startTime": "18:00",
+      "endTime": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU,WE,FR",
+      "recurrenceStatedAs": "recurringDays:[0,3,5]",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"The Bear Party\",venue:\"232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues\",date:\"Jan 28\",time:\"6:00 PM\",recurringDays:[0,3,5]}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bear-happy-hour",
+      "kind": "series",
+      "title": "Bear Happy Hour",
+      "description": "Weekly bear happy hour. 1st Thursday: Hush (5-9pm), 2nd Thursday: Atlas Social Club (5-9pm), 3rd Thursday: The Dickens (5-9pm), 4th Thursday: The Eagle (6-10pm). The Eagle does not allow entry or re-entry after 9:30pm. Double-check their instagram for updates.",
+      "image": "https://i.imgur.com/eiEbgvg.jpeg",
+      "cover": "Free",
+      "startDate": "2026-02-05",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "recurringDays:[4]",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Bear Happy Hour\",date:\"Feb 5\",time:\"5:00 PM - 9:00 PM\",recurringDays:[4]}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bears-are-animals",
+      "kind": "series",
+      "title": "Bears Are Animals",
+      "description": "Weekly bear happy hour at Animal",
+      "bar": "Animal",
+      "image": "https://i.imgur.com/U1c1BL0.jpeg",
+      "cover": "Free",
+      "startDate": "2026-02-05",
+      "startTime": "19:00",
+      "endTime": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "recurringDays:[4]",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Bears Are Animals\",venue:\"Animal\",date:\"Feb 5\",time:\"7:00 PM\",recurringDays:[4]}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "cake-sunday-tea",
+      "kind": "series",
+      "title": "Cake | Sunday Tea",
+      "description": "Big boys | Chubs | Chasers | Bears",
+      "bar": "Nowhere Bar",
+      "image": "https://i.imgur.com/XOmUMkI.jpeg",
+      "cover": "$10",
+      "startDate": "2026-03-29",
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SU",
+      "recurrenceStatedAs": "recurringDays:[0] recurringLast:true",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Cake | Sunday Tea\",venue:\"Nowhere Bar\",date:\"Mar 29\",time:\"3:00 PM - 8:00 PM\",recurringDays:[0],recurringLast:!0}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "beef",
+      "kind": "series",
+      "title": "BEEF",
+      "description": "Every third thursday.",
+      "bar": "Albatross Bar",
+      "image": "https://i.imgur.com/sRYBDbF.jpeg",
+      "cover": "$5",
+      "startDate": "2026-04-16",
+      "startTime": "22:00",
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
+      "recurrenceStatedAs": "recurringDays:[4] recurringOrdinal:\"third\"",
+      "occurrences": [
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"BEEF\",venue:\"Albatross Bar\",date:\"Apr 16\",time:\"10:00 PM\",recurringDays:[4],recurringOrdinal:\"third\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fuzzy",
+      "kind": "series",
+      "title": "Fuzzy",
+      "description": "every fourth friday.",
+      "bar": "Nowhere",
+      "image": "https://i.imgur.com/geF08M2.png",
+      "cover": "$5",
+      "startDate": "2026-04-24",
+      "startTime": "22:00",
+      "endTime": "04:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
+      "recurrenceStatedAs": "recurringDays:[5] recurringOrdinal:\"fourth\"",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Fuzzy\",venue:\"Nowhere\",date:\"Apr 24\",time:\"10:00 PM - 4:00 AM\",recurringDays:[5],recurringOrdinal:\"fourth\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gorditos",
+      "kind": "series",
+      "title": "Gorditos",
+      "description": "The last saturday of every month. Hip Hop, Latin, top 40.",
+      "bar": "Rockbar",
+      "image": "https://i.imgur.com/zlmkDZK.jpeg",
+      "cover": "$10",
+      "startDate": "2026-04-25",
+      "startTime": "22:00",
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "recurrenceStatedAs": "recurringDays:[6] recurringLast:true",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Gorditos\",venue:\"Rockbar\",date:\"Apr 25\",time:\"10:00 PM\",recurringDays:[6],recurringLast:!0}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bears-4-bareburger",
+      "kind": "series",
+      "title": "Bears 4 Bareburger",
+      "description": "Weekly bear happy hour at Bareburger",
+      "bar": "Bareburger",
+      "image": "https://i.imgur.com/oyEpuOs.png",
+      "cover": "Free",
+      "startDate": "2026-06-04",
+      "startTime": "21:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "recurringDays:[4]",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Bears 4 Bareburger\",venue:\"Bareburger\",date:\"Jun 4\",time:\"9:00 PM - 1:00 AM\",recurringDays:[4]}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "leatherwalk-2026-2026-09-20",
+      "kind": "single",
+      "title": "LeatherWalk 2026",
+      "description": "Annual walk and fundraiser from the LEATHER & LGBTQ Cultural District. Walkers gather at City Hall and head through SOMA, stopping at neighborhood bars along the way, and finish at Eagle Plaza with the Leather Pride Flag raising. Proceeds fund the Leather Legacy Landmarks plaque project and the Leather Community Center.",
+      "bar": "SF City Hall to Eagle Plaza",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.leatherwalk.org/",
+      "cover": "Free to register",
+      "startDate": "2026-09-20",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 20\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"LeatherWalk 2026\",venue:\"SF City Hall to Eagle Plaza\",date:\"Sep 20\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "leather-pride-festival-2026-09-20",
+      "kind": "single",
+      "title": "Leather Pride Festival",
+      "description": "The street festival at Eagle Plaza that closes out LeatherWalk, capped by the raising of the Leather Pride Flag. You don't have to do the walk to come, plenty of people just turn up for the fest.",
+      "bar": "Eagle Plaza",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://sf-eagle.com/",
+      "startDate": "2026-09-20",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 20\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Leather Pride Festival\",venue:\"Eagle Plaza\",date:\"Sep 20\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "18th-annual-urban-bear-nyc-street-fair-2026-09-20",
+      "kind": "single",
+      "title": "18th Annual Urban Bear NYC Street Fair",
+      "description": "Music: NOBL3 B3AR",
+      "bar": "Little West 12th Street, between Washington St. & 10th Ave.",
+      "startDate": "2026-09-20",
+      "startTime": "13:00",
+      "endDate": "2026-09-20",
+      "endTime": "19:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 20\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"18th Annual Urban Bear NYC Street Fair\",venue:\"Little West 12th Street, between Washington St. & 10th Ave.\",date:\"Sep 20\",time:\"1:00 PM - 7:00 PM\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "urban-bear-mega-bear-blast-closing-night-party-2026-09-20",
+      "kind": "single",
+      "title": "[Urban Bear] Mega Bear Blast Closing Night Party",
+      "description": null,
+      "bar": "Rockbar",
+      "startDate": "2026-09-20",
+      "startTime": "18:00",
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 20\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"[Urban Bear] Mega Bear Blast Closing Night Party\",venue:\"Rockbar\",date:\"Sep 20\",time:\"6:00 PM\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dirty-alley-2026-09-23",
+      "kind": "single",
+      "title": "Dirty Alley",
+      "description": "Mr. S Leather kicks the week off at Powerhouse with fetish demos, gogos, and a night built for the dive-bar crowd.",
+      "bar": "Powerhouse",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.mr-s-leather.com/events",
+      "startDate": "2026-09-23",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 23\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Dirty Alley\",venue:\"Powerhouse\",date:\"Sep 23\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "truck-2026-09-23",
+      "kind": "single",
+      "title": "Truck",
+      "description": "The Truck crew is back, taking over The Stud for a raunchy midweek warm-up. Advance tickets through the Stud.",
+      "bar": "The Stud",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.truck-sf.com/",
+      "startDate": "2026-09-23",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 23\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Truck\",venue:\"The Stud\",date:\"Sep 23\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "red-hanky-social-2026-09-24",
+      "kind": "single",
+      "title": "Red Hanky Social",
+      "description": "Thursday social hosted by Red, a Bay Area group for handball enthusiasts and the curious. Low-key, friendly, and a good first stop of the weekend.",
+      "bar": "SF Eagle",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.red-sf.com/",
+      "startDate": "2026-09-24",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 24\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Red Hanky Social\",venue:\"SF Eagle\",date:\"Sep 24\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sublimina-2026-09-24",
+      "kind": "single",
+      "title": "Sublimina",
+      "description": "DJs Sythra and Moltony.",
+      "bar": "H0l0",
+      "cover": "Free before 11:00 PM",
+      "startDate": "2026-09-24",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 24\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Sublimina\",venue:\"H0l0\",date:\"Sep 24\",time:\"10:00 PM\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "geared-up-block-party-2026-09-25",
+      "kind": "single",
+      "title": "Geared Up Block Party",
+      "description": "Two-day block party in and around the Mr. S store. DJs, gogos, bootblacks, bartenders, and a sidewalk full of guys cruising while hundreds try on gear inside. Come early in the weekend if you want alterations done; their leatherworkers get slammed as the days go on.",
+      "bar": "Mr. S Leather",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.mr-s-leather.com/events",
+      "cover": "Free",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Geared Up Block Party\",venue:\"Mr. S Leather\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "prime-2026-09-25",
+      "kind": "single",
+      "title": "Prime",
+      "description": "TrophyDad's party for men in their prime and the guys who love them. Main floor upstairs runs celebratory vocals and classics; downstairs is the Daddy Pit, low ceilings, darker sound, and a play space. Get there early, the line has historically wrapped the block.",
+      "bar": "Club Six",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.eventbrite.com/e/prime-the-san-francisco-meat-2026-tickets-1983682844788",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Prime\",venue:\"Club Six\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearracuda-presents-horse-meat-disco-2026-09-25",
+      "kind": "single",
+      "title": "Bearracuda presents Horse Meat Disco",
+      "description": "Bearracuda brings London's Horse Meat Disco to the Public Works main floor for the full six hours. Disco classics, italo, and punk funk, with a second room upstairs in the lounge. The friendliest big-guy crowd of the weekend.",
+      "bar": "Public Works",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://bearracuda.com/events/flsm/",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Bearracuda presents Horse Meat Disco\",venue:\"Public Works\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stank-2026-09-25",
+      "kind": "single",
+      "title": "Stank",
+      "description": "A night devoted to the natural smell of men. Skip the shower, hit the gym, and show up ripe. Get there before midnight for the Ripe Pits Contest.",
+      "bar": "Powerhouse",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.instagram.com/stankpartysf/",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Stank\",venue:\"Powerhouse\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "twisted-windows-folsom-foreplay-2026-09-25",
+      "kind": "single",
+      "title": "Twisted Windows: Folsom Foreplay",
+      "description": "Night one of the Twisted Windows and Dual Demons gala. An interactive space of games, activities, and prizes, plus a fully outfitted playspace hosted by Dual Demons. Bring your toy bag; the playspace is Friday only.",
+      "bar": "KinkStore",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://forbiddentickets.com/events/twisted-windows",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Twisted Windows: Folsom Foreplay\",venue:\"KinkStore\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "horsemarket-2026-09-25",
+      "kind": "single",
+      "title": "HorseMarket",
+      "description": "Friday's edition is typically the fresh-meat night, geared toward first timers. Blindfolded, lightly bound mares are inspected and claimed by stallions, inspired by the European Fickstutenmarkt parties. Venue announced to ticket holders.",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://horsemarket.net/",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"HorseMarket\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "cumunion-2026-09-25",
+      "kind": "single",
+      "title": "Cumunion",
+      "description": "No DJs, no production, all play. The long-running all-male play party returns for its Folsom edition in the Transform1060 dungeon space.",
+      "bar": "Transform1060",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.cumunion.com/",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Cumunion\",venue:\"Transform1060\",date:\"Sep 25\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bru-t-2026-09-25",
+      "kind": "single",
+      "title": "Brüt",
+      "description": "The leather-and-muscle party that started in New York and now runs in cities worldwide. Expect a packed room, hard primal house, and a crowd that came to dance.",
+      "bar": "DNA",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.dnalounge.com/calendar/2026/09-25.html?utm_source=brut&utm_campaign=Folsom-2026&utm_medium=website",
+      "cover": "$65+",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "03:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 25\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Brüt\",venue:\"DNA\",date:\"Sep 25\",time:\"9:00 PM - 3:00 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "geared-up-block-party-day-2-2026-09-26",
+      "kind": "single",
+      "title": "Geared Up Block Party (Day 2)",
+      "description": "Day two of the Mr. S block party. Same setup of DJs, gogos, bootblacks, and cruising in the sun outside the store.",
+      "bar": "Mr. S Leather",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.mr-s-leather.com/events",
+      "cover": "Free",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Geared Up Block Party (Day 2)\",venue:\"Mr. S Leather\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "big-muscle-2026-09-26",
+      "kind": "single",
+      "title": "Big Muscle",
+      "description": "Saturday afternoon at DNA Lounge with several hundred muscle guys of every size and their admirers. Multiple floors, bars, and a wraparound balcony with a photo booth that closes before the party does. Halfway through you'll meet this year's Bare Chest Calendar men. Benefits Bare Chest Calendar. Sells out, buy ahead.",
+      "bar": "DNA Lounge",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.dnalounge.com/calendar/2026/09.html",
+      "cover": "$15-$20 at the door (cheaper in advance)",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Big Muscle\",venue:\"DNA Lounge\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "latexxx-2026-09-26",
+      "kind": "single",
+      "title": "LateXXX",
+      "description": "SF Rubber returns with their afternoon latex social for the Bay Area rubber crowd and anyone curious about it.",
+      "bar": "The Stud",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.sfrubber.org/",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"LateXXX\",venue:\"The Stud\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "milked-2026-09-26",
+      "kind": "single",
+      "title": "Milked",
+      "description": "Guerilla Jax's JO-only party. Milking stations with a St. Andrew's Cross, restraints and blindfolds, separate zones for different styles, a chill-out area, and snacks. Red wristbands available if you'd rather just watch.",
+      "bar": "StopGap",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.guerillajax.com/",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Milked\",venue:\"StopGap\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "magnitude-2026-09-26",
+      "kind": "single",
+      "title": "Magnitude",
+      "description": "Folsom's flagship Saturday night party from Brian Kent Productions, staged in the 100,000 sq ft former Fillmore West. Big sound, laser and lighting production, live performances, a dark room, a rooftop patio, and complimentary clothes check.",
+      "bar": "SVN West",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://magnitude2026.eventbrite.com/",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Magnitude\",venue:\"SVN West\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pervert-xxl-folsom-edition-2026-09-26",
+      "kind": "single",
+      "title": "Pervert XXL: Folsom Edition",
+      "description": "XOXO teams with Barcelona's Matinée to bring Pervert to San Francisco. Ten hours of music across the Midway plus the Gods and Monsters room. High-gloss Euro circuit production, and it runs deep into the morning if you want an all-nighter.",
+      "bar": "The Midway",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.xoxopresents.com/event-details/xoxo-and-matinee-presents-pervert-xxl-folsom-main-event",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Pervert XXL: Folsom Edition\",venue:\"The Midway\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "black-brown-kinky-2026-09-26",
+      "kind": "single",
+      "title": "Black, Brown, & Kinky",
+      "description": "Onyx Northwest takes over Powerhouse with QTBIPOC leather folk, geared-up gogos, fetish demos, and jello shots. Kinky dress encouraged.",
+      "bar": "Powerhouse",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.instagram.com/onyx_northwest/",
+      "cover": "$5 suggested donation",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Black, Brown, & Kinky\",venue:\"Powerhouse\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "twisted-windows-folsom-saturday-2026-09-26",
+      "kind": "single",
+      "title": "Twisted Windows: Folsom Saturday",
+      "description": "Night two of the Twisted Windows gala. Queer performance art including aerial acrobatics, suspension bondage, pole, and fetish acts, plus interactive and display art you move through at your own pace. Fetish or formal, leather, lace, latex, or lingerie; bits covered outside the playspace. No effort, no entry.",
+      "bar": "KinkStore",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://forbiddentickets.com/events/twisted-windows",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Twisted Windows: Folsom Saturday\",venue:\"KinkStore\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "code-2026-09-26",
+      "kind": "single",
+      "title": "Code",
+      "description": "Edge's monthly leather night brings the gear back to the Castro. Geared-up gogos, a no-frills bar, and dark cruisy beats. Theme not yet announced.",
+      "bar": "Edge",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.edgesf.com/edgesf/code.html",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Code\",venue:\"Edge\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "horsemarket-2026-09-26",
+      "kind": "single",
+      "title": "HorseMarket",
+      "description": "Saturday is the standard HorseMarket format: mares arrive first, are stripped, lightly bound, and blindfolded, then stallions inspect and choose. A Best In Show is named at the end. Venue announced to ticket holders.",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://horsemarket.net/",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"HorseMarket\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "rated-x-2026-09-26",
+      "kind": "single",
+      "title": "Rated X",
+      "description": "Ky Martinez's Saturday night party at Space 550, positioned as the pre-party to Aftershock. Do the math on timing if you plan to hit both.",
+      "bar": "Space 550",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.kymartinezevents.com/",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Rated X\",venue:\"Space 550\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "electroluxx-2026-09-26",
+      "kind": "single",
+      "title": "Electroluxx",
+      "description": "A friendlier, less circuit-coded option for Saturday night. Three stages plus an outdoor play zone. Venue not yet announced.",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Electroluxx\",date:\"Sep 26\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grunt-2026-09-26",
+      "kind": "single",
+      "title": "GRUNT",
+      "description": "Big beats, big guys, big sleaze. Cruising party with a dark room and a dance floor. Suggested dress runs the full range: leather, rubber, boots, punk, biker, heavy fetish, jocks, trackies. Free coat check.",
+      "bar": "The Stud",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://ra.co/events/2447663",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "02:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"GRUNT\",venue:\"The Stud\",date:\"Sep 26\",time:\"9:00 PM - 2:00 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "chunk-san-francisco-folsom-26-bear-playground-2026-09-26",
+      "kind": "single",
+      "title": "CHUNK: San Francisco Folsom '26 - Bear Playground",
+      "description": "CHUNK presents SAN FRANCISCO FOLSOM '26 - Bear Playground! Chicago DJ Shaun J Wright & Marceaux Marceaux & THCKRTANKER & E.Feld & Ben Fonik. Hot gogo bears and performances.",
+      "bar": "F8 (1192 Folsom St)",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+      "cover": "$25+",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 26\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"CHUNK: San Francisco Folsom '26 - Bear Playground\",venue:\"F8 (1192 Folsom St)\",date:\"Sep 26\",time:\"10:00 PM - 4:00 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "real-bad-xxxvii-2026-09-27",
+      "kind": "single",
+      "title": "REAL BAD XXXVII",
+      "description": "The Sunday night closer and the weekend's hardest ticket. Thousands pack 1015 Folsom across the main floor, the balcony and Red Room, the upstairs lounge, and the basement Underground, which runs its own DJ and its own sound. Produced by the nonprofit Grass Roots Gay Rights Foundation; general admission money goes straight to beneficiaries. Peak moments include the midnight popsicle run and the leather flag drop. Most tickets go out through a host network rather than a public sale, so start asking around early.",
+      "bar": "1015 Folsom",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://realbad.org/",
+      "startDate": "2026-09-27",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"REAL BAD XXXVII\",venue:\"1015 Folsom\",date:\"Sep 27\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "hot-tea-2026-09-27",
+      "kind": "single",
+      "title": "Hot Tea",
+      "description": "Starts as the fair ends, a short walk from the fair grounds. Two floors and four DJs across Audio and the first floor of neighboring Bergerac, with leather-clad gogos all night. VIP includes a lounge near the booth, water, and snacks.",
+      "bar": "Audio",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://glossmagazine.net/glosspresents/",
+      "startDate": "2026-09-27",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Hot Tea\",venue:\"Audio\",date:\"Sep 27\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "horsemarket-unbridled-2026-09-27",
+      "kind": "single",
+      "title": "HorseMarket: Unbridled",
+      "description": "Sunday night runs closer to a traditional fuck party. No lottery, no picking top or bottom in advance. A smaller HorseMarket setup sits inside a large space full of furniture, with non-alcoholic drinks for sale and free snacks. No WS or FF.",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://horsemarket.net/",
+      "startDate": "2026-09-27",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"HorseMarket: Unbridled\",date:\"Sep 27\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "aftershock-2026-09-27",
+      "kind": "single",
+      "title": "Aftershock",
+      "description": "The after-hours BEFORE the fair. It starts at 3am Sunday morning, not after. Over 30 years running and one of the few parties left from the crisis years, with a dark, forbidden ambiance and DJ Abel at the decks. Benefits Folsom Street. The line starts early and coat check is famously slow, so plan accordingly. VIP gets a separate entrance, coat check, and balcony lounge. Sells out.",
+      "bar": "City Nights",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.kymartinezevents.com/",
+      "startDate": "2026-09-27",
+      "startTime": "03:00",
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Aftershock\",venue:\"City Nights\",date:\"Sep 27\",time:\"3:00 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-43rd-annual-folsom-street-fair-2026-09-27",
+      "kind": "single",
+      "title": "The 43rd Annual Folsom Street Fair",
+      "description": "The main event. The world's largest leather and fetish street fair, packing hundreds of thousands of people into thirteen city blocks for seven hours. Over 200 vendor booths, multiple DJ and live music stages, and fetish demo areas. Admission is free but the suggested donation gets you a discount on every drink. Enter from a side street like Harrison to get in faster. Bring sunblock and a refillable bottle; single-use water bottles can't be sold at the fair.",
+      "bar": "Folsom St between 8th & 13th",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.folsomstreet.org/folsom-street-fair",
+      "image": "https://48hills.org/wp-content/uploads/2020/04/Folsom-Street-Fair-in-San-Francisco-1-1500x750-1-696x348.png",
+      "cover": "$20 suggested donation",
+      "startDate": "2026-09-27",
+      "startTime": "11:00",
+      "endDate": "2026-09-27",
+      "endTime": "18:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"The 43rd Annual Folsom Street Fair\",venue:\"Folsom St between 8th & 13th\",date:\"Sep 27\",time:\"11:00 AM - 6:00 PM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sanctum-2026-09-27",
+      "kind": "single",
+      "title": "Sanctum",
+      "description": "Ky Martinez's main post-fair event, taking over City Nights for the Sunday night slot and running straight into Nocturnal as its official pre-party. Two dance halls with separate DJs and three bars.",
+      "bar": "City Nights",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.kymartinezevents.com/",
+      "startDate": "2026-09-27",
+      "startTime": "22:00",
+      "endDate": "2026-09-28",
+      "endTime": "04:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 27\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Sanctum\",venue:\"City Nights\",date:\"Sep 27\",time:\"10:00 PM - 4:00 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nocturnal-2026-09-28",
+      "kind": "single",
+      "title": "Nocturnal",
+      "description": "The Sunday night into Monday morning after-hours, running after the closing parties let out. Halcyon is one of a handful of clubs anywhere with a Dolby Atmos rig, and one of the few venues in the city with a 24-hour license. VIP gets a lounge behind and beside the booth, away from the crowd.",
+      "bar": "Halcyon",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.kymartinezevents.com/",
+      "startDate": "2026-09-28",
+      "startTime": "03:30",
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 28\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Nocturnal\",venue:\"Halcyon\",date:\"Sep 28\",time:\"3:30 AM\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "folsom-recovery-2026-09-28",
+      "kind": "single",
+      "title": "Folsom Recovery",
+      "description": "Monday afternoon wind-down. Lookout is the busiest of the recovery bars and usually has a local DJ on hand; expect most of the weekend's producers and DJs to turn up. Kitchen can be slow but the food is good. No official event page yet.",
+      "bar": "Lookout",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "ticketUrl": "https://www.facebook.com/LookoutSF",
+      "startDate": "2026-09-28",
+      "startTime": "13:00",
+      "endDate": null,
+      "endTime": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Sep 28\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Folsom Recovery\",venue:\"Lookout\",date:\"Sep 28\",time:\"1:00 PM - 9:00 PM (usual)\",region:\"FL\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "goldiloxx-bear-tea-outside-2026-10-03",
+      "kind": "single",
+      "title": "Goldiloxx | Bear Tea Outside",
+      "description": "outdoor bear party at 3db",
+      "bar": "270 Meserole St",
+      "ticketUrl": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/bcd4ba35-e7f4-4b4e-83aa-b2e503d03d20/BEARTEA+SEP12.png?format=1500w",
+      "cover": "$25",
+      "startDate": "2026-10-03",
+      "startTime": "16:00",
+      "endDate": "2026-10-03",
+      "endTime": "22:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The list prints \"Oct 3\" with no year; the year is the season the rest of the list states.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"Goldiloxx | Bear Tea Outside\",venue:\"270 Meserole St\",date:\"Oct 3\",time:\"4:00 PM - 10:00 PM\"}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

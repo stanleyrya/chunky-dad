@@ -11679,7 +11679,10 @@ class AiWebParser {
                         // price — a sentence is prose, not a cover.
                         else if (!statedText) {
                             const phrase = this.normalizeWhitespace(decoded).replace(/[!.]+$/, '').trim();
+                            // "TBD" / "TBA" / "N/A" states that NO price is known
+                            // yet — a placeholder, never a cover.
                             if (phrase && phrase.length <= 24 && /[a-z]/i.test(phrase)
+                                && !/^(?:tb[ad]\b.*|t\.b\.[ad]\.?|n\/?a|to be (?:announced|determined|confirmed)|coming soon|unknown)$/i.test(phrase)
                                 && !/\d/.test(phrase) && !/https?:|@|[<>]/i.test(phrase)
                                 && phrase.split(/\s+/).length <= 3) {
                                 statedText = phrase;
@@ -12042,7 +12045,9 @@ class AiWebParser {
     // keeps it.
     applyDataDoorContext(events, dataDoor, cityConfig = null) {
         if (!dataDoor || typeof dataDoor !== 'object' || !Array.isArray(events)) return;
-        const pageUrl = typeof dataDoor.pageUrl === 'string'
+        // An INLINE door (events typed into the app's own bundle) sits behind
+        // a listing, not a ticketing page: the page is never the ticket link.
+        const pageUrl = typeof dataDoor.pageUrl === 'string' && dataDoor.inline !== true
             ? (this.normalizeHttpUrlValue(dataDoor.pageUrl) || '')
             : '';
         const directory = Array.isArray(dataDoor.venueDirectory) ? dataDoor.venueDirectory : [];
@@ -12219,6 +12224,24 @@ class AiWebParser {
     // authoritative — no _timezoneUnresolved), street-address-shaped venue
     // gate, and address→city resolution. NEVER fabricates a public URL from a
     // slug: url is always the fetched sourceUrl.
+    // City of the curated festival a group label names ("Folsom Street
+    // Fair" → sf). Exact folded-name match only (years and punctuation
+    // aside) — a label that merely resembles a festival resolves nothing.
+    findCityKeyForFestivalLabel(label, cityConfig = null) {
+        const festivals = this.core && Array.isArray(this.core.festivals) ? this.core.festivals : [];
+        const fold = (value) => String(value || '').toLowerCase().replace(/\b(?:19|20)\d{2}\b/g, ' ').replace(/[^a-z0-9]+/g, '');
+        const wanted = fold(label);
+        if (!wanted) return '';
+        for (const festival of festivals) {
+            if (!festival || !festival.cityKey) continue;
+            const names = [festival.name].concat(Array.isArray(festival.aliases) ? festival.aliases : []);
+            if (!names.some(name => fold(name) === wanted)) continue;
+            if (cityConfig && !cityConfig[festival.cityKey]) continue;
+            return festival.cityKey;
+        }
+        return '';
+    }
+
     buildEventFromJsonApiObject(obj, sourceUrl, cityConfig = null) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
         // WordPress REST strings arrive entity-encoded and sometimes doubly so
@@ -12530,8 +12553,14 @@ class AiWebParser {
         const placeCountry = clean(venueField(/^(country|country_name)$/) || firstValue(/(^|_)country$/, isNonEmptyString));
         const placeText = [placeCity, placeRegion, placeCountry].filter(Boolean).join(', ');
         if (cityConfig) {
+            // …else from the GROUP the payload files the row under: an
+            // aggregator sorts its rows by gathering ("Provincetown Bear Week",
+            // "Folsom Street Fair"), and that label names a place either in
+            // its own words or as a curated festival that has one.
+            const groupLabel = clean(firstValue(/^(region|group|category|section)_(label|name|title)$/, isNonEmptyString));
             const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
-                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '');
+                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '')
+                || (groupLabel ? (this.findCityKeyInText(groupLabel, cityConfig) || this.findCityKeyForFestivalLabel(groupLabel, cityConfig)) : '');
             if (cityKey) {
                 event.city = cityKey;
                 if (!event.timezone) {

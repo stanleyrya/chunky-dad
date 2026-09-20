@@ -528,6 +528,21 @@ const scraperConfig = {
       metadata: { website: { value: "https://xlbears.org" } },
     },
     {
+      name: "Gathr",
+      // Aggregator for bear-week crowds (Provincetown Bear Week, Fire Island
+      // Bear Weekend, Dore Alley, Folsom, plus NYC regulars). A React app with
+      // no feed and no API: the whole event list is written into its script
+      // bundle as object literals. The crawler reads the shell, finds no
+      // endpoint, and reads the bundle's own data instead (🚪 SPA DOOR …
+      // "ships its events inside its own bundle") — two requests per run.
+      // Dates print without a year ("Sep 19"); the reader anchors them to the
+      // season the rest of the list states. Links are the original
+      // ticket/promoter pages — this host must never become a website.
+      urls: ["https://gathrparty.com/"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 0,
+    },
+    {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,
       // URL blocking, AI/OCR settings, and field merging are all automatic.
