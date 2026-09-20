@@ -7718,6 +7718,23 @@ test('parseEvents extracts the Red Eye search payload via the JSON-API structure
   assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)'));
 });
 
+test('the JSON reader names an event by a prefixed title key, reads a protocol-relative image, and ignores display-price twins', () => {
+  const parser = createParser();
+  const payload = { listings: [{ type: 'listing', event_start: '2026-07-31 21:00:00', event_end: '2026-08-01 01:00:00', min_price: '10.00', min_price_fmt: '$11.55', venue_name: 'The Lumberyard Bar', venue_city: 'Seattle', image: '//tlt-events.s3.amazonaws.com/101434/2147196/poster.jpeg', listing_title: 'GLOW! The Sequel', listing_slug: 'southseattlebearsocial/glow2' }], hasMore: false };
+  assert.equal(parser.core.countJsonApiEventObjects(JSON.stringify(payload)), 1);
+  const cityConfig = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+  const [event] = parser.extractEventsFromJsonApiPayload(payload, 'https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming', cityConfig);
+  assert.equal(event.title, 'GLOW! The Sequel');
+  assert.equal(event.bar, 'The Lumberyard Bar', 'venue_name is the venue, never the title');
+  assert.equal(event.city, 'seattle');
+  assert.equal(event.image, 'https://tlt-events.s3.amazonaws.com/101434/2147196/poster.jpeg');
+  assert.equal(event.cover, '$10', 'min_price_fmt is the same price with fees, not a second tier');
+  assert.equal(parser.jsonApiKeyNamesTheEvent('venue_name'), false);
+  assert.equal(parser.jsonApiKeyNamesTheEvent('event_name'), true);
+  // An empty listing is an empty feed, not a page to hand to the model.
+  assert.deepEqual(parser.extractEventsFromJsonApiPayload({ listings: [], hasMore: false }, 'https://x/api', cityConfig), []);
+});
+
 // The structured route returns before the ocr-all sweep, which left the ONE
 // image that reaches the calendar unread — so every downstream image judgment
 // (furniture rejection, flyer/page time conflict, and shared-core's merge-time

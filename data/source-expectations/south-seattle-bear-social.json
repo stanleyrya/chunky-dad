@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "source": "South Seattle Bear Social",
+  "slug": "south-seattle-bear-social",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-10-20",
+  "recon": {
+    "date": "2026-09-20",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming"
+    ],
+    "doors": [
+      {
+        "url": "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "{\"listings\":[],\"hasMore\":false}",
+        "note": "The door the organization page's own bundle calls (organization-listing/3cf0919a/js/bundle.js: fetch(apiUrl + \"/organization-listing/\" + sellerShortName + \"/upcoming\")). HTTP 200, application/vnd.api+json, 31 bytes: an empty listings array and hasMore false — the site's own statement that nothing is on sale."
+      },
+      {
+        "url": "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/past?limit=5",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 5,
+        "truthFlag": "hasMore: false",
+        "note": "The /past twin: five listings, every one already over on the recon date — Goldilocks and the Bears (2025-05-17), GLOW (2025-11-21), BEAR PRIDE DRAG TRIVIA BRUNCH and BEAR PRIDE 2026 (2026-06-07), GLOW! The Sequel (2026-07-31), all at The Lumberyard Bar, Seattle. Row shape: listing_title, event_start/event_end (local wall clock), venue_name, venue_city, image (protocol-relative), min_price, listing_slug. Agrees with the empty upcoming door: the organizer's whole catalogue is in the past."
+      },
+      {
+        "url": "https://events.ticketleap.com/events/southseattlebearsocial",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The human page: a 10 KB JavaScript shell (<div id=\"listing\">, AppWrapper config with apiUrl https://events.ticketleap.com/api). No events in the HTML."
+      },
+      {
+        "url": "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/range?start=2026-09-20&end=2027-03-31",
+        "kind": "json",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 500",
+        "note": "The calendar view's range door answered {\"errors\":[{\"status\":500}]} for this query shape — not retried, not relied on."
+      }
+    ],
+    "notes": "Organizer southseattlebearsocial on TicketLeap; promoter registry entry \"South Seattle Bear Social\" (bearAffinity always). Parties run a few times a year, so an empty upcoming list is the normal state between them."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two doors agree nothing is upcoming on 2026-09-20: the upcoming listing door returns an empty array with hasMore false, and the past door's five listings (hasMore false) are all dated before the recon date, the latest 2026-07-31. Past listings are counted (5), not enumerated.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": null,
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "seattle",
+    "timezone": "America/Los_Angeles"
+  },
+  "events": [],
+  "traps": [],
+  "openQuestions": []
+}
