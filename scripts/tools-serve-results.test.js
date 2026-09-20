@@ -1133,3 +1133,32 @@ test('renderReviewPage labels a single-parser run in the picker and the header, 
   assert.ok(/run [^<]*· The Bear Calendar only/.test(html), 'header says what this run covered');
   assert.ok(html.includes('No calendar on the phone for <b>berlin</b> (chunky-dad-berlin · 3 events)'), html.match(/missing-cal[^<]*/));
 });
+
+test('a folded series says what differs per night, ships each night\'s values, and the page script still parses', () => {
+  const base = reviewRunFixture('20300101-051500').analyzedEvents[0];
+  const nights = [0, 7, 14].map((days, index) => ({
+    ...base,
+    title: 'BEARAOKE', startDate: new Date(Date.UTC(2030, 5, 5 + days, 2)).toISOString(), endDate: new Date(Date.UTC(2030, 5, 5 + days, 6)).toISOString(),
+    url: 'https://thesofotap.example', ticketUrl: 'https://www.sickening.example/e/bearaoke-' + (index + 2), image: 'https://cdn.example/bearaoke.webp',
+    description: 'Sing. '.repeat(60)
+  }));
+  const deck = reviewQueue.buildDeck({ ...reviewRunFixture('20300101-051500'), analyzedEvents: nights }, reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  assert.equal(deck.cards.length, 3);
+  const series = deck.cards[0].series;
+  assert.deepEqual(series.differs, ['ticketUrl'], 'only the ticket link differs — same time, link, flyer, description');
+  assert.deepEqual(series.nights.map((night) => night.values.ticketUrl), ['https://www.sickening.example/e/bearaoke-2', 'https://www.sickening.example/e/bearaoke-3', 'https://www.sickening.example/e/bearaoke-4']);
+  assert.ok(series.nights[0].values.time.includes('–'), series.nights[0].values.time);
+  assert.ok(series.nights[0].values.description.length <= 161, 'a long description rides as its opening');
+  // A later start on one night is a difference too.
+  const shifted = nights.map((night, index) => (index === 2 ? { ...night, startDate: new Date(Date.UTC(2030, 5, 19, 3)).toISOString() } : night));
+  const shiftedDeck = reviewQueue.buildDeck({ ...reviewRunFixture('20300101-051500'), analyzedEvents: shifted }, reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  assert.deepEqual(shiftedDeck.cards[0].series.differs, ['time', 'ticketUrl']);
+
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(html.includes('Each night is saved as its own event.'), 'the strip says nights are separate events');
+  assert.ok(html.includes("compare the ' + item.cards.length + ' nights"), 'the compare control is in the client');
+  assert.ok(html.includes('"label":"ticket link"'), 'field labels ride into the client');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  assert.ok(scripts.length >= 2);
+  for (const source of scripts) assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
+});

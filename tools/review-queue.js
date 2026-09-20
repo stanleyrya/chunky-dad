@@ -669,6 +669,44 @@ function formatNightLabel(proposal) {
         return new Date(ms).toISOString().slice(0, 10);
     }
 }
+// The fields a folded series compares night by night, in display order.
+// Every night is written as ITS OWN calendar event with its own values —
+// these are what may legitimately differ (a per-date ticket page, a new
+// flyer, a one-off later start).
+const NIGHT_COMPARE_FIELDS = [
+    { key: 'time', label: 'time' },
+    { key: 'title', label: 'title' },
+    { key: 'bar', label: 'venue' },
+    { key: 'address', label: 'address' },
+    { key: 'url', label: 'link' },
+    { key: 'ticketUrl', label: 'ticket link' },
+    { key: 'image', label: 'image' },
+    { key: 'cover', label: 'cover' },
+    { key: 'description', label: 'description' }
+];
+function formatNightClock(proposal) {
+    const core = loadSharedCore();
+    const clock = (value) => {
+        const ms = core.toEpochMillis(value);
+        if (ms === null) return '';
+        try {
+            return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', ...(proposal.timezone ? { timeZone: proposal.timezone } : {}) }).format(new Date(ms));
+        } catch (_) {
+            return new Date(ms).toISOString().slice(11, 16);
+        }
+    };
+    const start = clock(proposal.startDate);
+    const end = clock(proposal.endDate);
+    return end ? `${start} – ${end}` : start;
+}
+function nightCompareValues(proposal) {
+    const p = proposal || {};
+    const text = (value) => String(value === null || value === undefined ? '' : value).trim();
+    return {
+        time: formatNightClock(p), title: text(p.title), bar: text(p.bar), address: text(p.address), url: text(p.url),
+        ticketUrl: text(p.ticketUrl), image: text(p.image), cover: text(p.cover), description: text(p.description)
+    };
+}
 function stampSeries(cards, SharedCore) {
     const groups = new Map();
     for (const card of cards) {
@@ -686,8 +724,18 @@ function stampSeries(cards, SharedCore) {
     }
     for (const [series, members] of groups) {
         if (members.length < 2) continue;
-        const nights = members.map((card) => ({ key: card.key, day: String(card.key).split('|')[3] || '', label: formatNightLabel(card.proposal) }));
-        for (const card of members) card.series = { key: series, size: members.length, nights };
+        const nights = members.map((card) => ({ key: card.key, day: String(card.key).split('|')[3] || '', label: formatNightLabel(card.proposal), values: nightCompareValues(card.proposal) }));
+        const differsOnFullText = NIGHT_COMPARE_FIELDS.filter((field) => new Set(nights.map((night) => night.values[field.key])).size > 1).map((field) => field.key);
+        // Compared in full, shipped short: every card of the series carries
+        // the whole table, so a long description rides as its opening.
+        for (const night of nights) {
+            if (night.values.description.length > 160) night.values.description = `${night.values.description.slice(0, 160).trim()}…`;
+        }
+        // What actually differs between the nights (the date aside): one
+        // swipe decides them all, so the owner sees at a glance whether the
+        // nights are copies or each carries its own link / flyer / time.
+        const differs = differsOnFullText;
+        for (const card of members) card.series = { key: series, size: members.length, nights, differs };
     }
 }
 
@@ -947,6 +995,7 @@ function formatRejectionsText(store) {
 }
 
 module.exports = {
+    NIGHT_COMPARE_FIELDS,
     DEFAULT_SHARED_ROOT,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,
