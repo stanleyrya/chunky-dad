@@ -538,8 +538,11 @@ const scraperConfig = {
       // Dates print without a year ("Sep 19"); the reader anchors them to the
       // season the rest of the list states. Links are the original
       // ticket/promoter pages — this host must never become a website.
+      // Its New York list is bear parties; its Folsom and Dore Alley lists are
+      // the whole leather week (Magnitude, Real Bad …), so the bear check
+      // decides and the rest waits in the deck's Not bear pile.
       urls: ["https://gathrparty.com/"],
-      alwaysBear: true,
+      alwaysBear: false,
       urlDiscoveryDepth: 0,
     },
     {

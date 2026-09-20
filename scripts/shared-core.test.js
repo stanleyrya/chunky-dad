@@ -21822,7 +21822,8 @@ test('SPA door: fails open — a content page, an unreadable bundle, or an endpo
 });
 
 // ── Inline bundle data: an app that ships its event list inside its script ──
-const INLINE_BUNDLE_JS = 'const FL="x",Rg={PT:"Provincetown Bear Week",FL:"Folsom Street Fair"},Ev=['
+const INLINE_BUNDLE_JS = 'const FL="x",Nav=[{label:"NYC",sublabel:"Manhattan and Brooklyn",page:"NYC"},{label:"Provincetown Bear Week",page:"PT"},{label:"Folsom Street Fair",page:"FL"}],Rg={PT:"Provincetown Bear Week",FL:"Folsom Street Fair"},Ev=['
+  + '{id:"pt1",title:"Tea Dance",venue:"Boatslip",date:"Jul 14",time:"4:00 PM",ticketLink:"https://www.instagram.com/boatslip/",region:"PT"},'
   + '{id:1,title:"Bears Are Animals",venue:"Animal",date:"Feb 5",time:"7:00 PM",price:"Free",about:"Weekly bear happy hour",image:"https://i.example/a.jpeg",tags:["happy hour"],recurringDays:[4],maxShowCount:3},'
   + '{id:"fl2",title:"Dirty Alley",venue:"Powerhouse",date:"Sep 23",time:"TBD",price:"TBD",about:"Kick-off night",image:"",ticketLink:"https://promoter.example/events",region:"FL"},'
   + '{id:"fl3",title:\'Brüt\',venue:"DNA",date:"Sep 25",time:"9:00 PM - 4:00 AM",price:"$65",about:`Big room`,featured:!0,soldOut:!1,ticketLink:"https://tickets.example/brut",region:"FL"},'
@@ -21846,7 +21847,7 @@ test('inline data: a JS object literal parses without being evaluated', () => {
 test('inline data: event objects are harvested from a bundle — titled, dated, deduped', () => {
   const core = createCore();
   const objects = core.harvestBundleInlineEventObjects(INLINE_BUNDLE_JS);
-  assert.deepEqual(objects.map(o => o.title), ['Bears Are Animals', 'Dirty Alley', 'Brüt', 'Big Muscle']);
+  assert.deepEqual(objects.map(o => o.title), ['Tea Dance', 'Bears Are Animals', 'Dirty Alley', 'Brüt', 'Big Muscle']);
   assert.deepEqual(core.harvestBundleInlineEventObjects('var a={title:"Settings",name:"x"};'), []);
 });
 
@@ -21904,8 +21905,12 @@ test('SPA door: a shell with no endpoint that ships its events in its own bundle
   assert.notEqual(opened, shell);
   assert.equal(opened.dataDoor.inline, true);
   const rows = JSON.parse(opened.html).events;
-  assert.equal(rows.length, 4);
+  assert.equal(rows.length, 5);
   assert.equal(rows.find(r => r.title === 'Dirty Alley').region_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
+  assert.equal(rows.find(r => r.title === 'Bears Are Animals').region_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
+  const tea = rows.find(r => r.title === 'Tea Dance');
+  assert.equal(tea.ticket_url, undefined, 'a social profile is not a ticket page');
+  assert.equal(tea.website_url, 'https://www.instagram.com/boatslip/');
   assert.ok(display.logs.some(line => line.includes('inside its own bundle')));
   assert.ok(fetched.every(url => url.startsWith('https://aggregator.example/')), 'nothing off-site is fetched');
 

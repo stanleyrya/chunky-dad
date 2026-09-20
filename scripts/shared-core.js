@@ -14862,7 +14862,10 @@ class SharedCore {
         const image = text(obj.image) || text(obj.flyer) || text(obj.poster);
         if (/^https?:\/\//i.test(image)) row.image = image;
         const ticket = text(obj.ticketLink) || text(obj.ticketUrl) || text(obj.tickets) || text(obj.link) || text(obj.url);
-        if (/^https?:\/\//i.test(ticket)) row.ticket_url = ticket;
+        // A social profile sells nothing: it is where the party lives, not
+        // a ticket page (and never a page worth crawling).
+        if (/^https?:\/\/(?:www\.|m\.)?(?:instagram|facebook|fb|x|twitter|tiktok|threads)\.(?:com|net)\//i.test(ticket)) row.website_url = ticket;
+        else if (/^https?:\/\//i.test(ticket)) row.ticket_url = ticket;
         const price = text(obj.price) || text(obj.cover);
         if (price) row.price_text = price;
         if (text(obj.region)) row.region = text(obj.region);
@@ -14886,6 +14889,7 @@ class SharedCore {
         const scriptUrls = this.extractSpaScriptUrls(html, pageUrl);
         const rows = [];
         const labels = {};
+        let defaultLabel = '';
         for (const scriptUrl of scriptUrls) {
             let bundle = '';
             try {
@@ -14915,15 +14919,30 @@ class SharedCore {
             }
             // A short code the rows carry (region:"PT") is spelled out
             // somewhere in the same bundle (PT:"Provincetown Bear Week").
-            for (const code of new Set(rows.map(row => row.region).filter(Boolean))) {
+            const usedCodes = new Set(rows.map(row => row.region).filter(Boolean));
+            for (const code of usedCodes) {
                 if (labels[code] || !/^[A-Za-z0-9_-]{1,12}$/.test(code)) continue;
                 const label = new RegExp(`[{,]\\s*["']?${code}["']?\\s*:\\s*"([^"]{3,80})"`).exec(bundle);
                 if (label) labels[code] = label[1];
+            }
+            // The app's own menu lists its groups ({label:"NYC",page:"NYC"},
+            // {label:"Folsom Street Fair",page:"FL"} …). When the rows' codes
+            // name every entry but one, the rows that carry no code
+            // are that one's — the home list the other groups were split from.
+            if (!defaultLabel && usedCodes.size > 0) {
+                const menu = new Map();
+                for (const entry of bundle.matchAll(/\{label:"([^"]{2,60})"(?:,[A-Za-z]+:"[^"]{0,80}")*?,(?:page|region|tab|key|id|value):"([A-Za-z0-9_-]{1,12})"/g)) {
+                    if (!menu.has(entry[2])) menu.set(entry[2], entry[1]);
+                }
+                const named = [...menu.keys()].filter(code => usedCodes.has(code));
+                const unnamed = [...menu.keys()].filter(code => !usedCodes.has(code));
+                if (named.length >= 2 && unnamed.length === 1) defaultLabel = menu.get(unnamed[0]);
             }
         }
         if (rows.length < 3) return htmlData;
         for (const row of rows) {
             if (row.region && labels[row.region]) row.region_label = labels[row.region];
+            else if (!row.region && defaultLabel) row.region_label = defaultLabel;
         }
         await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} ships its events inside its own bundle — ${rows.length} inline event object(s) read (${rows.filter(row => row.rrule).length} repeating)`);
         return {
