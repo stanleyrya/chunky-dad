@@ -18717,6 +18717,15 @@ test('a calendar widget block is not a description; prose with an inline link is
     'PLAYERS in the back bar | 9 PM');
 });
 
+test('a feed-backed parser configured as a curated promoter prefixes its own brand; an aggregator\'s feed never does', () => {
+  const parser = createParser();
+  parser.core.getPromoterEntryByName = (name) => (/^lodge ny$/i.test(String(name).trim()) ? { name: 'Lodge NY', shortName: 'LODGE' } : null);
+  assert.deepEqual(parser.getFeedOwnerBrandNames({ name: 'Lodge NY' }), ['Lodge NY']);
+  assert.deepEqual(parser.getFeedOwnerBrandNames({ name: 'The Bear Calendar' }), [], 'named after itself, in no registry');
+  assert.equal(parser.buildBrandPrefixedTitle('The Bear Party', ['Lodge NY'], { html: '', url: 'https://calendar.google.com/x.ics' }, { name: 'Lodge NY' }), 'Lodge NY: The Bear Party');
+  assert.equal(parser.buildBrandPrefixedTitle('Lodge NY presents Squeeze', ['Lodge NY'], { html: '' }, { name: 'Lodge NY' }), '', 'already names the promoter');
+});
+
 test('a description block repeated across a feed’s rows is chrome', () => {
   const parser = createParser();
   const rows = [
@@ -18731,6 +18740,11 @@ test('a description block repeated across a feed’s rows is chrome', () => {
   const single = [{ title: 'A', description: 'Subscribe to our calendar', _descriptionChunks: ['Subscribe to our calendar'] }];
   assert.equal(parser.stripRepeatedFeedDescriptionChunks(single), 0);
   assert.equal(single[0].description, 'Subscribe to our calendar');
+  // The same party filed as several rows (a Wednesday, a Friday and a Sunday
+  // series) shares its own paragraph with itself — that is not chrome.
+  const sameParty = ['WE', 'FR', 'SU'].map(() => ({ title: 'The Bear Party', description: 'A party for all bears. See bearpartynyc.com', _descriptionChunks: ['A party for all bears.', 'See bearpartynyc.com'] }));
+  assert.equal(parser.stripRepeatedFeedDescriptionChunks(sameParty), 0);
+  assert.equal(sameParty[2].description, 'A party for all bears. See bearpartynyc.com');
 });
 
 // ---------------------------------------------------------------------------

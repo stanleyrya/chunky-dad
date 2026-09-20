@@ -1360,6 +1360,55 @@ class SharedCore {
     // address's house number followed by its street's next word goes — a
     // number that is part of the party's name ("Studio 54 Night") stays.
     // Returns the title unchanged when nothing is stripped.
+    // "🐻 BEAR HAPPY HOUR | NO COVER" is "🐻 BEAR HAPPY HOUR" with cover
+    // "Free"; "JOCKSTRAP WEDNESDAY | 🎧 DJ IPOK | $20 CASH COVER" loses only
+    // its last part; "JOCKSTRAP HAPPY HOUR 💰10 DONATION" ends at the money
+    // sign (eagle-ny.com, owner note 2026-09-20: "no cover in the title is
+    // janky"). A venue that types the door price into the event name has
+    // stated the cover, not named the party. Only a WHOLE part (between
+    // spaced separators, or a tail opened by a money emoji) that is nothing
+    // but a price statement goes, and never the last part standing.
+    // Returns { title, cover } — cover '' when nothing was stripped.
+    stripCoverPartsFromTitle(title) {
+        const text = String(title || '').trim();
+        if (!text) return { title: text, cover: '' };
+        const amount = '(?:[$€£]\\s?\\d+(?:[.,]\\d{2})?|\\d+(?:[.,]\\d{2})?\\s?(?:[$€£]|usd|eur|gbp|dollars?|bucks))';
+        const priceWord = '(?:cover|donation|door|entry|admission|suggested donation)';
+        const coverPart = new RegExp(`^(?:no cover(?: charge)?|free(?: entry| admission)?|never a cover|${amount}(?:\\s+cash)?(?:\\s+${priceWord})?(?:\\s+cash)?|\\d+(?:[.,]\\d{2})?(?:\\s+cash)?\\s+${priceWord}(?:\\s+cash)?|(?:cash\\s+)?${priceWord}:?\\s+${amount})$`, 'i');
+        const bare = (part) => part.replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, ' ').replace(/[!.*]+$/g, '').replace(/\s+/g, ' ').trim();
+        let cover = '';
+        const note = (part) => {
+            if (cover) return;
+            const words = bare(part);
+            if (/^(?:no cover|free|never a cover)/i.test(words)) { cover = 'Free'; return; }
+            // The amount, plus the two words that change what the visitor brings.
+            const money = /[$€£]\s?\d+(?:[.,]\d{2})?|\d+(?:[.,]\d{2})?/.exec(words);
+            cover = [money ? money[0].replace(/\s+/g, '') : '', /\bcash\b/i.test(words) ? 'cash' : '', /\bdonation\b/i.test(words) ? 'donation' : ''].filter(Boolean).join(' ');
+        };
+        // A tail opened by a money emoji ("… 💰 20 CASH COVER").
+        let working = text;
+        const moneyTail = /\s*(?:💰|💵|💲|🤑|🎟️?)\s*([^|•·]+)$/u.exec(working);
+        if (moneyTail && moneyTail.index > 0 && coverPart.test(bare(moneyTail[1]))) {
+            note(moneyTail[1]);
+            working = working.slice(0, moneyTail.index).trim();
+        }
+        const pieces = working.split(/(\s+[|•·–—]\s+|\s+-\s+)/);
+        if (pieces.length > 1) {
+            const kept = [];
+            for (let i = 0; i < pieces.length; i += 2) {
+                const part = pieces[i];
+                if (bare(part) && coverPart.test(bare(part))) { note(part); continue; }
+                if (kept.length > 0) kept.push(pieces[i - 1]);
+                kept.push(part);
+            }
+            if (kept.length > 0 && kept.join('').trim()) working = kept.join('').trim();
+            else cover = working === text ? '' : cover;
+        }
+        working = working.replace(/\s*[|•·–—-]\s*$/, '').trim();
+        if (!working || working === text) return { title: text, cover: '' };
+        return { title: working, cover };
+    }
+
     stripAddressTailFromTitle(title, address) {
         const text = String(title || '').trim();
         const streetLine = String(address || '').split(',')[0].trim();
@@ -3637,6 +3686,25 @@ class SharedCore {
         const [shorterLine, longerLine] = lineA.length <= lineB.length ? [lineA, lineB] : [lineB, lineA];
         if (!isPrefix(shorterLine, longerLine)) return false;
         return longerLine.slice(shorterLine.length).every(token => ADDRESS_STREET_TYPE_TOKENS.includes(token));
+    }
+
+    // Same house number and the same street line (tolerating only a trailing
+    // street-type word), with no two explicit ZIPs that disagree. What
+    // follows the first comma — a floor, cross streets, a city — is free to
+    // differ: it describes the same door. For identity only; the address
+    // MERGE rung keeps its stricter whole-address rule.
+    areSameStreetLine(addressA, addressB) {
+        const parsedA = this.parseAddressForComparison(addressA);
+        const parsedB = this.parseAddressForComparison(addressB);
+        if (!parsedA || !parsedB || parsedA.streetNumber !== parsedB.streetNumber) return false;
+        if (parsedA.zips.length > 0 && parsedB.zips.length > 0
+            && !parsedA.zips.some(zip => parsedB.zips.includes(zip))) return false;
+        const lineA = parsedA.streetLineTokens;
+        const lineB = parsedB.streetLineTokens;
+        if (lineA.length === 0 || lineB.length === 0) return false;
+        const [shorter, longer] = lineA.length <= lineB.length ? [lineA, lineB] : [lineB, lineA];
+        if (!shorter.every((token, index) => token === longer[index])) return false;
+        return longer.slice(shorter.length).every(token => ADDRESS_STREET_TYPE_TOKENS.includes(token));
     }
 
     // Completeness score for the same-address winner: comma-separated
@@ -14890,7 +14958,7 @@ class SharedCore {
         const title = text(obj.title) || text(obj.name) || text(obj.eventName);
         const repeatDays = Array.isArray(obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
         const date = SharedCore.parseInlineDateText(text(obj.date) || text(obj.startDate) || text(obj.start) || text(obj.when) || text(obj.day), now,
-            { anchorMs: options.anchorMs, weekdays: repeatDays });
+            { anchorMs: options.anchorMs, weekdays: Array.isArray(options.dateWeekdays) ? options.dateWeekdays : repeatDays });
         if (!title || !date) return null;
         const pad = (value) => String(value).padStart(2, '0');
         const dayIso = `${date.year}-${pad(date.month)}-${pad(date.day)}`;
@@ -14904,7 +14972,10 @@ class SharedCore {
         }
         if (!time.start) row.all_day = true;
         const venue = text(obj.venue) || text(obj.location) || text(obj.place);
-        if (venue && !/^(tba|tbd|various\b.*|location shared.*)$/i.test(venue)) row.venue = venue;
+        // A "venue" that is a street line ("232 W 37th St, 2nd Fl. b/w 7th &
+        // 8th Avenues") is the address of a place the list does not name.
+        if (venue && /^\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b/i.test(venue)) row.address = venue;
+        else if (venue && !/^(tba|tbd|various\b.*|location shared.*)$/i.test(venue)) row.venue = venue;
         const description = text(obj.about) || text(obj.description) || text(obj.details);
         if (description) row.description = description;
         const image = text(obj.image) || text(obj.flyer) || text(obj.poster);
@@ -14927,6 +14998,31 @@ class SharedCore {
             else if (!text(obj.recurringType) || text(obj.recurringType).toLowerCase() === 'weekly') row.rrule = `FREQ=WEEKLY;BYDAY=${weekdays.map(day => codes[day]).join(',')}`;
         }
         return row;
+    }
+
+    // One object → its rows. A repeat that keeps a different clock on
+    // different weekdays (recurringTimes: {0: "1:00 PM", 3: "6:00 PM"}) is
+    // one row per clock, each repeating on its own days — read as one row,
+    // every Sunday afternoon party was filed at the Wednesday evening hour.
+    static inlineEventObjectToFeedRows(obj, now = new Date(), options = {}) {
+        const times = obj && obj.recurringTimes && typeof obj.recurringTimes === 'object' ? obj.recurringTimes : null;
+        const days = Array.isArray(obj && obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
+        if (!times || days.length < 2) { const row = SharedCore.inlineEventObjectToFeedRow(obj, now, options); return row ? [row] : []; }
+        const groups = new Map();
+        for (const day of days) {
+            const clock = typeof times[day] === 'string' && times[day].trim() ? times[day].trim() : String(obj.time || '').trim();
+            if (!groups.has(clock)) groups.set(clock, []);
+            groups.get(clock).push(day);
+        }
+        if (groups.size < 2) { const row = SharedCore.inlineEventObjectToFeedRow(obj, now, options); return row ? [row] : []; }
+        const rows = [];
+        for (const [clock, groupDays] of groups) {
+            // The printed date is the day the WHOLE repeat began, whichever
+            // weekday that was — each clock's row starts from it.
+            const row = SharedCore.inlineEventObjectToFeedRow({ ...obj, time: clock, recurringDays: groupDays, recurringTimes: undefined }, now, { ...options, dateWeekdays: days });
+            if (row) rows.push(row);
+        }
+        return rows;
     }
 
     // The shell's bundles, read for inline event objects. Returns htmlData
@@ -14961,10 +15057,7 @@ class SharedCore {
             }
             sure.sort((a, b) => a - b);
             const anchorMs = sure.length >= 3 ? sure[Math.floor(sure.length / 2)] : undefined;
-            for (const obj of objects) {
-                const row = SharedCore.inlineEventObjectToFeedRow(obj, now, { anchorMs });
-                if (row) rows.push(row);
-            }
+            for (const obj of objects) rows.push(...SharedCore.inlineEventObjectToFeedRows(obj, now, { anchorMs }));
             // A short code the rows carry (region:"PT") is spelled out
             // somewhere in the same bundle (PT:"Provincetown Bear Week").
             const usedCodes = new Set(rows.map(row => row.region).filter(Boolean));
@@ -19108,6 +19201,16 @@ class SharedCore {
                     this.recordDeterministicFieldRewrite(analyzedEvent, 'title',
                         'venue tail dropped at final build — the tail names the event\'s own bar');
                 }
+                const coverFree = this.stripCoverPartsFromTitle(analyzedEvent.title);
+                if (coverFree.title !== analyzedEvent.title.trim()) {
+                    const fillsCover = coverFree.cover && !String(analyzedEvent.cover || '').trim();
+                    console.log(`✂️ TITLE: "${analyzedEvent.title}" → "${coverFree.title}" — the door price is the cover, not part of the name${fillsCover ? ` (cover: ${coverFree.cover})` : ''}`);
+                    analyzedEvent.title = coverFree.title;
+                    if (fillsCover) analyzedEvent.cover = coverFree.cover;
+                    notesNeedRebuild = true;
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'title',
+                        'door price dropped from the title at final build — it is the cover, not the name');
+                }
                 const bareOfAddress = this.stripAddressTailFromTitle(analyzedEvent.title, analyzedEvent.address);
                 if (bareOfAddress !== analyzedEvent.title.trim()) {
                     console.log(`✂️ TITLE: "${analyzedEvent.title}" → "${bareOfAddress}" — the tail is the event's own street address (${analyzedEvent.address})`);
@@ -20846,6 +20949,15 @@ class SharedCore {
         const addressB = this.normalizeIdentityText(shapeB.address);
         if (addressA.length >= 10 && addressB.length >= 10 &&
             (addressA === addressB || addressA.includes(addressB) || addressB.includes(addressA))) {
+            return true;
+        }
+        // Two spellings of one street line are one place: "232 W 37th St, 2nd
+        // Fl, New York, NY 10019" (the organizer's calendar) and "232 W 37th
+        // St, 2nd Fl. b/w 7th & 8th Avenues" (an aggregator's copy) share
+        // their house number and street — the same rule the address merge
+        // rung trusts, on the street line alone (areSameStreetLine: never
+        // fuzzy — differing numbers, streets or ZIPs are different places).
+        if (this.areSameStreetLine(shapeA.address, shapeB.address)) {
             return true;
         }
 

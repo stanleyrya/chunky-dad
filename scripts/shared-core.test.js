@@ -23942,6 +23942,46 @@ test('isHistoricalCalendarRecord: ended more than a month ago and no live rule',
   assert.equal(SharedCore.isHistoricalCalendarRecord({ start: null }, now), false);
 });
 
+test('identity: two spellings of one street line are one place — an aggregator\'s copy folds into the organizer\'s own event', () => {
+  const core = createCore();
+  const start = new Date('2030-09-23T22:00:00Z');
+  const organizer = { title: 'Lodge NY: The Bear Party', startDate: start, address: '232 W 37th St, 2nd Fl, New York, NY 10019, USA', city: 'nyc' };
+  const copy = { title: 'The Bear Party', startDate: start, address: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', city: 'nyc' };
+  assert.equal(core.getSameEventIdentitySignal(copy, organizer), 'place-time-name');
+  assert.equal(core.getSameEventIdentitySignal({ ...copy, address: '457 W 56th St, 2nd Fl b/w 9th and 10th Avenues' }, organizer), null, 'the organizer\'s other loft is another place');
+  assert.equal(core.areSameStreetLine('232 W 37th St', '232 West 37th Street, New York'), true);
+  assert.equal(core.areSameStreetLine('232 W 38th St', '232 W 37th St'), false);
+  assert.equal(core.areSameStreetLine('23 W 37th St', '232 W 37th St'), false);
+  assert.equal(core.areSameStreetLine('232 W 37th St, NY 10018', '232 W 37th St, NY 10019'), false, 'two explicit ZIPs that disagree');
+  assert.equal(core.areSameStreetLine('Rockbar', '232 W 37th St'), false);
+});
+
+test('inline data: a street line in the venue slot is the address; a repeat with a clock per weekday is one row per clock', () => {
+  const now = new Date('2026-09-20T12:00:00Z');
+  const rows = SharedCore.inlineEventObjectToFeedRows({ title: 'The Bear Party', venue: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', date: 'Jan 28', time: '6:00 PM',
+    recurringDays: [0, 3, 5], recurringTimes: { 0: '1:00 PM', 3: '6:00 PM', 5: '6:00 PM' } }, now);
+  assert.deepEqual(rows.map(row => [row.start, row.rrule]), [['2026-01-28T13:00:00', 'FREQ=WEEKLY;BYDAY=SU'], ['2026-01-28T18:00:00', 'FREQ=WEEKLY;BYDAY=WE,FR']]);
+  assert.equal(rows[0].address, '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+  assert.equal(rows[0].venue, undefined);
+  // One clock for every day stays one row; a named venue stays a venue.
+  const single = SharedCore.inlineEventObjectToFeedRows({ title: 'Fuzzy', venue: 'Nowhere', date: 'Sep 25', time: '10:00 PM', recurringDays: [5], recurringTimes: { 5: '10:00 PM' } }, now);
+  assert.equal(single.length, 1);
+  assert.equal(single[0].venue, 'Nowhere');
+});
+
+test('stripCoverPartsFromTitle: a door price typed into the event name is the cover, not the name', () => {
+  const core = createCore();
+  assert.deepEqual(core.stripCoverPartsFromTitle('🐻 BEAR HAPPY HOUR | NO COVER'), { title: '🐻 BEAR HAPPY HOUR', cover: 'Free' });
+  assert.deepEqual(core.stripCoverPartsFromTitle('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH COVER'), { title: '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO', cover: '$20 cash' });
+  assert.deepEqual(core.stripCoverPartsFromTitle('JOCKSTRAP HAPPY HOUR 💰10 DONATION'), { title: 'JOCKSTRAP HAPPY HOUR', cover: '10 donation' });
+  assert.deepEqual(core.stripCoverPartsFromTitle('🩲 JOCKSTRAP WEDNESDAY 🎧 IPOK 💰 20 CASH COVER'), { title: '🩲 JOCKSTRAP WEDNESDAY 🎧 IPOK', cover: '20 cash' });
+  assert.deepEqual(core.stripCoverPartsFromTitle('DILF - $10'), { title: 'DILF', cover: '$10' });
+  // Never the last part standing, never a part that merely mentions money or a number.
+  for (const kept of ['No Cover', 'FREE | NO COVER', 'Studio 54 Night', 'Bear Night - Free Pizza', 'Club 21 | 21+', 'Bears for $5 Beers | Friday']) {
+    assert.deepEqual(core.stripCoverPartsFromTitle(kept), { title: kept, cover: '' }, kept);
+  }
+});
+
 test('stripAddressTailFromTitle drops the event\'s own street address from its title', () => {
   const core = new SharedCore({}, { eventSchema: EventSchema });
   assert.equal(core.stripAddressTailFromTitle('The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', '232 W 37th St 2nd fl, New York, NY 10018, USA'), 'The Bear Party');

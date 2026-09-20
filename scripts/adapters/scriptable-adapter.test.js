@@ -11435,6 +11435,42 @@ test('executeReviewedSavedRun writes a re-analyzed merge back to the run file ev
   assert.equal(adapter.lastExecutionActionCounts.analyzed, 2);
 });
 
+test('executeReviewedSavedRun records an approved row the live calendar already matches as settled, and never re-analyzes it until a newer approval', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const settledParty = reviewedNew('Already There Party');
+  const newParty = reviewedNew('Brand New Party');
+  const core = instrumentReviewedRunAdapter(adapter, [settledParty, newParty], captured);
+  const ledger = { version: 1, entries: {} };
+  const recorded = [];
+  adapter.loadWrittenLedger = async () => ledger;
+  adapter.recordWrittenLedger = async (target, rows, executedAt) => { for (const row of rows) { target.entries[row.key] = { executedAt, action: row.action, title: row.title }; recorded.push(row); } return rows.length; };
+  core.prepareEventsForCalendar = async (events) => {
+    captured.analyzed = events;
+    return events.map((event) => event.title === 'Already There Party'
+      ? { ...event, _action: 'merge', _mergeNoOp: true, _changes: [], _existingEvent: { title: event.title }, _original: { scraper: {}, calendar: { title: event.title } } }
+      : { ...newParty, _savedRunSourceIndex: event._savedRunSourceIndex });
+  };
+  const decisions = [settledParty, newParty].map((event) => ({ key: core.getOwnerReviewKey(event), kind: 'new', verdict: 'approve', stampedAt: '2020-01-01T00:00:00.000Z', snapshot: {} }));
+  const saved = () => buildReviewedRunResults([{ ...settledParty, _action: 'new' }, { ...newParty, _action: 'new' }]);
+
+  const first = await adapter.executeReviewedSavedRun(saved(), decisions);
+  assert.equal(captured.analyzed.length, 2);
+  assert.equal(first.settled, 1);
+  assert.deepEqual(recorded.map((row) => [row.title, row.action]), [['Already There Party', 'settled'], ['Brand New Party', 'created']]);
+
+  // Next execute (a later run's file, same approvals): nothing left to analyze.
+  captured.analyzed = null;
+  const second = await adapter.executeReviewedSavedRun(saved(), decisions);
+  assert.equal(captured.analyzed, null, 'neither the settled row nor the written one is re-analyzed');
+  assert.equal(second.alreadyWritten, 2);
+
+  // A newer approval of the settled party brings it back.
+  const reapproved = decisions.map((decision, index) => (index === 0 ? { ...decision, stampedAt: '2999-01-01T00:00:00.000Z' } : decision));
+  await adapter.executeReviewedSavedRun(saved(), reapproved);
+  assert.deepEqual(captured.analyzed.map((event) => event.title), ['Already There Party']);
+});
+
 test('executeReviewedSavedRun selects a night covered by a SIBLING night\'s approval (series coverage), exactly as the deck shows it', async () => {
   const adapter = buildAdapter();
   const captured = { notices: [] };

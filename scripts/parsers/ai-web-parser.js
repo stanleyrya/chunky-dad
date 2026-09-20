@@ -1361,6 +1361,29 @@ class AiWebParser {
                     // event compared one day off and the strip refused).
                     event.title = this.stripRedundantTitleDate(event.title, [event._startDateRawText, event.startDate, event.start]);
                 });
+                // A FEED has no page to derive a brand from (a Google Calendar
+                // export, a JSON endpoint), yet the title doctrine is the same:
+                // on a curated promoter's own source the event name carries the
+                // promoter. There the brand is the registry's own entry for the
+                // parser's configured name — both curated signals at once, so
+                // an aggregator's feed (named after itself, in no registry)
+                // never prefixes anything. Lodge NY's calendar says only "The
+                // Bear Party" (owner note 2026-09-20: "not descriptive enough …
+                // prefix with Lodge").
+                const feedOwnerBrandNames = pageBrandNames.length === 0 && jsonApiPayload !== null
+                    ? this.getFeedOwnerBrandNames(parserConfig)
+                    : [];
+                if (feedOwnerBrandNames.length > 0) {
+                    structuredEvents.forEach(event => {
+                        if (!event || typeof event.title !== 'string') return;
+                        const brandTitle = this.buildBrandPrefixedTitle(event.title, feedOwnerBrandNames, effectiveHtmlData, parserConfig);
+                        if (!brandTitle) return;
+                        console.log(`🤖 AI Web: Title "${event.title}" does not name the feed's own promoter — prefixed brand → "${brandTitle}"`);
+                        event._organizer = feedOwnerBrandNames[0];
+                        event._titleBeforeBrandPrefix = event.title;
+                        event.title = brandTitle;
+                    });
+                }
                 if (pageBrandNames.length > 0) {
                     structuredEvents.forEach(event => {
                         event._organizer = pageBrandNames[0];
@@ -11693,6 +11716,11 @@ class AiWebParser {
     // prose (two parties never share a paragraph; a plugin's every row shares
     // its block). Needs >= 2 rows to say anything, so a single-row feed keeps
     // whatever survived the per-row filter.
+    // "More than one row" means more than one PARTY: the same party filed as
+    // several rows shares its own paragraph with itself (Lodge NY's calendar
+    // keeps The Bear Party as a Wednesday, a Friday and a Sunday series, each
+    // with the one description — all three lost it, owner note 2026-09-20:
+    // "any text we can add?"). Rows are told apart by their title.
     stripRepeatedFeedDescriptionChunks(events) {
         if (!Array.isArray(events) || events.length < 2) {
             for (const event of events || []) { if (event) delete event._descriptionChunks; }
@@ -11701,15 +11729,17 @@ class AiWebParser {
         const counts = new Map();
         for (const event of events) {
             const chunks = event && Array.isArray(event._descriptionChunks) ? event._descriptionChunks : [];
+            const titleKey = this.normalizeDescriptionChunkKey(event && event.title);
             for (const chunk of new Set(chunks.map(chunk => this.normalizeDescriptionChunkKey(chunk)))) {
-                counts.set(chunk, (counts.get(chunk) || 0) + 1);
+                if (!counts.has(chunk)) counts.set(chunk, new Set());
+                counts.get(chunk).add(titleKey);
             }
         }
         let strippedRows = 0;
         for (const event of events) {
             const chunks = event && Array.isArray(event._descriptionChunks) ? event._descriptionChunks : null;
             if (!chunks) continue;
-            const kept = chunks.filter(chunk => (counts.get(this.normalizeDescriptionChunkKey(chunk)) || 0) < 2);
+            const kept = chunks.filter(chunk => { const titles = counts.get(this.normalizeDescriptionChunkKey(chunk)); return !titles || titles.size < 2; });
             delete event._descriptionChunks;
             if (kept.length === chunks.length) continue;
             const rebuilt = kept.join(' ').trim();
@@ -27683,6 +27713,15 @@ TEXT:
         return ogSiteName && this.matchesPageBrandName(ogSiteName, pageBrandNames)
             ? ogSiteName
             : pageBrandNames[0];
+    }
+
+    // The curated promoter a feed-backed parser is configured as: the
+    // registry entry matching the parser's own name ([entry.name]), else [].
+    getFeedOwnerBrandNames(parserConfig) {
+        const configured = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name.trim() : '';
+        if (!configured || !this.core || typeof this.core.getPromoterEntryByName !== 'function') return [];
+        const entry = this.core.getPromoterEntryByName(configured);
+        return entry && typeof entry.name === 'string' && entry.name.trim() ? [entry.name.trim()] : [];
     }
 
     // The page's derived brand is corroborated as THIS parser's promoter when
