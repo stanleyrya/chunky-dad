@@ -18037,6 +18037,77 @@ test('data-door context fills the ticket link from the page and the address from
     'never a substring match');
 });
 
+// ── EventON calendars: the month arrives from the plugin's own AJAX call ──
+const EVENTON_SC = { calendar_type: 'fullcal', fixed_month: '9', fixed_year: '2026', focus_start_date_range: '1788246000', focus_end_date_range: '1790837999', hide_past: 'no' };
+const eventOnPage = (nonce) => `<html><body><h1>Calendar</h1>
+<script>var evo_general_params = {"ajaxurl":"https://venue.example/wp-admin/admin-ajax.php","evo_ajax_url":"/?evo-ajax=%%endpoint%%","n":"${nonce}","evo_v":"5.0.2"};</script>
+<div id='evcal_calendar_481' class='ajde_evcal_calendar sev cev ajax_loading_cal' data-cal=''><div class='evo_cal_data' data-sc="${JSON.stringify(EVENTON_SC).replace(/"/g, '&quot;')}"></div></div>
+<div id='evcal_calendar_77' class='list_cal ajde_evcal_calendar sev'><div class='evo_cal_data' data-sc='{"calendar_type":"list"}'></div></div>
+</body></html>`;
+const eventOnCard = (id, name, start, end) => `<div id="event_${id}_0" class="eventon_list_event"><script type="application/ld+json">{"@context": "http://schema.org","@type": "Event", "@id": "event_${id}_0", "name": "${name}", "url": "https://venue.example/9-20-26/${id}/", "startDate": "${start}", "endDate": "${end}", "image":"https://venue.example/${id}.jpg", "description":"<p>Party</p>"}</script></div>`;
+
+test('EventON: frames still waiting for AJAX are found with their settings; months step forward on the site\'s own clock', () => {
+  const parser = createParser();
+  const evo = parser.detectEventOnCalendars(eventOnPage('abc123'), 'https://venue.example/calendar/');
+  assert.equal(evo.nonce, 'abc123');
+  assert.equal(evo.endpoint, 'https://venue.example/?evo-ajax=eventon_init_load');
+  assert.deepEqual(evo.calendars.map(c => c.id), ['evcal_calendar_481'], 'a frame already painted server-side is not asked for again');
+  assert.equal(evo.calendars[0].sc.fixed_month, '9');
+  assert.equal(parser.detectEventOnCalendars('<html><body>no calendar</body></html>', 'https://venue.example/'), null);
+  // Older plugin: no endpoint template — admin-ajax with an action field.
+  const older = parser.detectEventOnCalendars(eventOnPage('abc123').replace('"evo_ajax_url":"/?evo-ajax=%%endpoint%%",', ''), 'https://venue.example/calendar/');
+  assert.equal(older.endpoint, 'https://venue.example/wp-admin/admin-ajax.php');
+  assert.equal(older.action, 'eventon_init_load');
+  // September opens at 07:00 UTC (Los Angeles midnight): October keeps that clock.
+  const october = parser.shiftEventOnShortcodeMonth(EVENTON_SC, 1);
+  assert.equal(october.fixed_month, '10');
+  assert.equal(october.focus_start_date_range, String(Date.UTC(2026, 9, 1, 7) / 1000));
+  assert.equal(october.focus_end_date_range, String(Date.UTC(2026, 10, 1, 7) / 1000 - 1));
+  assert.equal(parser.shiftEventOnShortcodeMonth({ ...EVENTON_SC, fixed_month: '12' }, 1).fixed_year, '2027');
+});
+
+test('EventON: card times keep the wall clock and lose the plugin\'s fixed offset; a CLOSED marker is not an event', () => {
+  const parser = createParser();
+  const out = parser.normalizeEventOnCalendarHtml(eventOnCard(1, 'Club Chub', '2026-9-20T15:00-8:00', '2026-9-20T21:00-8:00') + eventOnCard(2, 'CLOSED', '2026-9-21', '2026-9-21')
+    + `<meta itemprop='startDate' content="2026-9-29T21:00-8:00" />`);
+  assert.ok(out.includes('"startDate": "2026-09-20T15:00:00"'));
+  assert.ok(out.includes('"endDate": "2026-09-20T21:00:00"'));
+  assert.ok(out.includes('content="2026-09-29T21:00:00"'));
+  assert.ok(!/"name": "CLOSED"/.test(out));
+  const repeat = parser.normalizeEventOnCalendarHtml('<script type="application/ld+json">{"@type":"Event","name":"Tendie Tuesday","url": "https://venue.example/1-6-26/tendie-tuesday-3/var/ri-34.l-L1","startDate":"2026-9-1T18:00-8:00"}</script>');
+  assert.ok(repeat.includes('"url": "https://venue.example/1-6-26/tendie-tuesday-3/"'), 'a per-night address that only works inside the plugin becomes the event\'s page');
+});
+
+test('EventON: the page\'s own request is replayed, an expired token costs one fresh page read, and the cards become the site\'s own events', async () => {
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  const url = 'https://venue.example/calendar/';
+  const posts = [];
+  const fetches = [];
+  const answer = (cards) => JSON.stringify({ cals: { evcal_calendar_999: { sc: {}, json: [], html: cards } } });
+  const httpAdapter = {
+    postForm: async (endpoint, body, options) => {
+      posts.push({ endpoint, body, cacheUrl: options.cacheUrl });
+      if (!body.startsWith('nonce=fresh456')) return { ok: true, status: 200, text: '{"status":"bad","msg":"Nonce validation failed"}' };
+      assert.equal(options.isCacheableResponse({ text: '{"status":"bad"}' }), false, 'a refusal is never remembered');
+      return { ok: true, status: 200, text: answer(posts.filter(p => p.body.startsWith('nonce=fresh456')).length === 1
+        ? eventOnCard(1, 'Club Chub', '2026-9-20T15:00-8:00', '2026-9-20T21:00-8:00') + eventOnCard(2, 'Bearded Pig Disco', '2026-9-20T21:00-8:00', '2026-9-20T23:59-8:00')
+        : '') };
+    },
+    fetchData: async (requestUrl, options) => { fetches.push({ requestUrl, options }); return { html: eventOnPage('fresh456'), url: requestUrl }; }
+  };
+  const html = await parser.collectEventOnCalendarHtml({ url, html: eventOnPage('stale000') }, { name: 'Venue', calendarLookaheadMonths: 1 }, httpAdapter);
+  assert.deepEqual(fetches, [{ requestUrl: url, options: { fresh: true } }], 'one fresh read, only after the stored token was refused');
+  assert.equal(posts[0].endpoint, 'https://venue.example/?evo-ajax=eventon_init_load');
+  assert.ok(posts[1].body.includes(encodeURIComponent('cals[evcal_calendar_481][sc][fixed_month]') + '=9'));
+  assert.equal(posts[1].cacheUrl, 'https://venue.example/calendar/?eventon_month=2026-09');
+  assert.ok(posts[2].body.includes(encodeURIComponent('cals[evcal_calendar_481][sc][fixed_month]') + '=10'), 'then the next month');
+  assert.equal(posts.length, 3);
+  const events = parser.extractEventsFromJsonLd(html, url, cities);
+  assert.deepEqual(events.map(e => e.title), ['Club Chub', 'Bearded Pig Disco']);
+  assert.equal(events[0].ticketUrl, 'https://venue.example/9-20-26/1/', 'each card keeps its own page');
+});
+
 test('inline bundle rows: the page is an aggregator, never the ticket link; the group label names the city; "TBD" is no cover', () => {
   const parser = createParser();
   const cities = require('../scraper-cities');

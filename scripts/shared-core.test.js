@@ -21755,6 +21755,52 @@ function spaStubAdapter(overrides = {}) {
   };
 }
 
+// ── Confirmation gates ("Are you 21?") ──
+const AGE_GATE_HTML = '<html><head><title>Dallas Eagle</title><style>body{color:red}</style></head><body><main><p>Welcome</p><h1>Are you 21?</h1>'
+  + '<p>You must be 21 or older to enter.</p><form method="post"><input type="hidden" id="n" name="de_age_nonce" value="fc9d5e2293" />'
+  + '<div><button name="de_age_confirm" value="yes" type="submit">Yes</button><a href="https://www.minecraft.net/">No</a></div></form>'
+  + '<p>We&rsquo;ll remember your answer on this device for one year.</p></main></body></html>';
+const AGE_GATE_REAL_PAGE = '<html><body><h1>Events</h1><p>' + 'Bear night every Friday with DJs and a raffle. '.repeat(20) + '</p></body></html>';
+
+test('age gate: recognised by shape — a near-empty page asking about age with one affirmative POST button', () => {
+  const core = createCore();
+  const url = 'https://venue.example/events/';
+  assert.deepEqual(core.detectConfirmationGate(AGE_GATE_HTML, url), { action: url, fields: [['de_age_nonce', 'fc9d5e2293'], ['de_age_confirm', 'yes']] });
+  assert.equal(core.detectConfirmationGate(AGE_GATE_REAL_PAGE, url), null, 'a page with content is not a gate');
+  assert.equal(core.detectConfirmationGate(AGE_GATE_HTML.replace('<form method="post">', '<form method="post"><input type="password" name="pw">'), url), null, 'a box to type in is a login');
+  assert.equal(core.detectConfirmationGate(AGE_GATE_HTML.replace(/Are you 21\?|You must be 21 or older to enter\./g, 'Subscribe?'), url), null, 'no age question, no gate');
+  assert.equal(core.detectConfirmationGate(AGE_GATE_HTML.replace('<form method="post">', '<form method="post" action="https://elsewhere.example/in">'), url), null, 'never posts to another site');
+  assert.equal(core.detectConfirmationGate(AGE_GATE_HTML.replace('>Yes</button>', '>No thanks</button>').replace('value="yes"', 'value="no"'), url), null, 'only an affirmative button');
+});
+
+test('age gate: a fresh gate is confirmed once (form POST as the button sends it) and the page behind it is read, never cached', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const url = 'https://venue.example/events/';
+  const calls = [];
+  let confirmed = false;
+  const httpAdapter = { fetchData: async (requestUrl, options = {}) => {
+    calls.push({ url: requestUrl, ...options });
+    if (options.method === 'POST') { confirmed = options.body === 'de_age_nonce=FRESH&de_age_confirm=yes'; return { html: AGE_GATE_HTML, url: requestUrl, statusCode: 200, headers: {} }; }
+    return { html: confirmed ? AGE_GATE_REAL_PAGE : AGE_GATE_HTML.replace('fc9d5e2293', 'FRESH'), url: requestUrl, statusCode: 200, headers: {} };
+  } };
+  const cachedGate = { html: AGE_GATE_HTML, url, statusCode: 200, headers: {} };
+  const page = await core.resolveConfirmationGate(cachedGate, url, httpAdapter, display);
+  assert.equal(page.html, AGE_GATE_REAL_PAGE);
+  assert.deepEqual(calls.map(c => [c.method || 'GET', c.fresh === true, c.session === true]), [['GET', true, true], ['POST', false, true], ['GET', true, true]]);
+  assert.equal(calls[1].headers['Content-Type'], 'application/x-www-form-urlencoded');
+  assert.equal(calls[2].isCacheableResponse(), false, 'the stored copy stays the gate: every run confirms and holds the cookie');
+  assert.ok(display.logs.some(l => l.includes('🚪 AGE GATE') && l.includes('confirmed once')));
+
+  // A site that keeps asking is left as it was; a page with content costs nothing.
+  const stubborn = { fetchData: async (requestUrl) => ({ html: AGE_GATE_HTML, url: requestUrl, statusCode: 200, headers: {} }) };
+  assert.equal(await core.resolveConfirmationGate(cachedGate, url, stubborn, display), cachedGate);
+  const untouched = { html: AGE_GATE_REAL_PAGE, url };
+  let asked = 0;
+  assert.equal(await core.resolveConfirmationGate(untouched, url, { fetchData: async () => { asked++; return untouched; } }, display), untouched);
+  assert.equal(asked, 0);
+});
+
 test('SPA door: a JavaScript shell is recognised; pages with content are not', () => {
   const core = createCore();
   assert.equal(core.looksLikeSpaShell(SPA_SHELL_HTML), true, 'empty mount + script = shell');

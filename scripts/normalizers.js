@@ -1201,6 +1201,22 @@ class LocationNormalizer extends BaseNormalizer {
     // the parser config are the only inputs. A resolved city is never
     // overwritten, and provenance is stamped via the existing _citySource
     // convention.
+    // TRUE when the host of the event's website/url/source page is claimed
+    // by curated bars of exactly one city (the same lookup, same order, as
+    // backfillCityFromIdentitySignals' first rung).
+    siteIdentityNamesOneCity(event) {
+        if (!event || !this.core || typeof this.core.findCuratedCityByWebsiteHost !== 'function'
+            || typeof this.core.getWebsiteHostKey !== 'function') return false;
+        for (const candidate of [event.website, event.url, event._sourcePageUrl]) {
+            const hostKey = this.core.getWebsiteHostKey(candidate);
+            if (!hostKey) continue;
+            const match = this.core.findCuratedCityByWebsiteHost(hostKey);
+            if (!match) continue;
+            return !match.ambiguousCities && Boolean(match.city);
+        }
+        return false;
+    }
+
     backfillCityFromIdentitySignals(event, options = {}) {
         if (!event || !this.core) return event;
         const currentCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
@@ -1413,6 +1429,17 @@ class LocationNormalizer extends BaseNormalizer {
         if (hasVenueContext) {
             const title = String(event.title || event.name || '').trim();
             console.log(`🗺️ LocationNormalizer: No city from title/venue/address for "${title || 'untitled'}" — description text is not authoritative for routing, leaving city unknown`);
+            return 'unknown';
+        }
+
+        // The site the event came from is context too. A card on a curated
+        // venue's OWN site names no venue because it is the venue — and its
+        // blurb names other cities freely ("Coming off his set at Market Days
+        // Chicago…" on precinctdtla.com sent a Los Angeles night to the
+        // Chicago calendar, clock and all). When the site identity resolves
+        // to one city, the prose stays out of it and the identity backfill
+        // below fills city AND venue.
+        if (this.siteIdentityNamesOneCity(event)) {
             return 'unknown';
         }
 

@@ -2109,9 +2109,15 @@ class ScriptableAdapter {
     const response = await this.withNetworkResilience("form POST", url, () =>
       this.runPolitely(url, options, () => this.postFormOnce(url, body, options)),
     );
+    // options.isCacheableResponse: an answer the caller calls a refusal (a
+    // 200 that says "nonce expired") is returned but never remembered.
+    const worthKeeping =
+      typeof options.isCacheableResponse !== "function" ||
+      options.isCacheableResponse({ text: response && response.text, html: response && response.text }) !== false;
     if (
       response &&
       response.ok &&
+      worthKeeping &&
       typeof response.text === "string" &&
       response.text.length > 0
     ) {
@@ -2303,8 +2309,13 @@ class ScriptableAdapter {
 
   async fetchData(url, options = {}) {
     try {
+      // options.fresh: the caller needs what the site says NOW (a form nonce,
+      // a page behind a gate it just passed) — no memo, no disk cache on the
+      // way in; the answer still refreshes both. Cookies need nothing here:
+      // iOS keeps a site's cookies between this app's requests by itself.
+      const wantsFresh = options.fresh === true;
       const memoKey = this.getRunPageMemoKey(url, options);
-      const memoized = this.readRunPageMemo(memoKey);
+      const memoized = wantsFresh ? null : this.readRunPageMemo(memoKey);
       if (memoized) {
         console.log(`📱 Scriptable: Page already read this run — no re-read for ${url}`);
         return memoized;
@@ -2321,7 +2332,7 @@ class ScriptableAdapter {
       const isCacheableResponse = (responseData) =>
         typeof options.isCacheableResponse !== "function" ||
         options.isCacheableResponse(responseData) !== false;
-      if (canUseCache) {
+      if (canUseCache && !wantsFresh) {
         const cachedPage = await this.readCachedPage(url, pageCacheConfig);
         if (cachedPage && isCacheableResponse(cachedPage)) {
           this.logPageCacheHit(url, cachedPage, pageCacheConfig);

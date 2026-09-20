@@ -1008,6 +1008,42 @@ test('downscaleImageBufferForOcr falls back LOUDLY to the original buffer on und
 // One read per URL per run: the in-memory memo in front of fetchData.
 // ---------------------------------------------------------------------------
 
+test('fetchData: fresh skips the memo; a session exchange keeps the cookie a redirect sets and sends it on every later request to that host', async () => {
+  const adapter = new WebAdapter();
+  const calls = [];
+  const originalFetch = global.fetch;
+  const headersOf = (pairs, cookies = []) => ({ get: (name) => pairs[name.toLowerCase()] || null, getSetCookie: () => cookies, entries: () => Object.entries(pairs)[Symbol.iterator]() });
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), method: options.method, cookie: options.headers.Cookie || '', redirect: options.redirect || 'follow', hasBody: Boolean(options.body) });
+    if (options.method === 'POST' && options.body === 'a=1') {
+      return { ok: false, status: 302, statusText: 'Found', headers: headersOf({ location: '/events/' }, ['de_age=ok; Path=/; Max-Age=31536000; HttpOnly', 'theme=dark; Path=/']), text: async () => '' };
+    }
+    return { ok: true, status: 200, statusText: 'OK', headers: headersOf({}), text: async () => `<html><body>${options.headers.Cookie ? 'inside' : 'gate'}</body></html>` };
+  };
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const url = 'https://gated.example/events/';
+    assert.match((await adapter.fetchData(url)).html, /gate/);
+    assert.match((await adapter.fetchData(url)).html, /gate/);
+    assert.equal(calls.length, 1, 'the repeat came from memory');
+    await adapter.fetchData(url, { fresh: true, session: true });
+    assert.equal(calls.length, 2, 'fresh goes to the site');
+    const answered = await adapter.fetchData(url, { method: 'POST', body: 'a=1', session: true, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    assert.match(answered.html, /inside/, 'the redirect was followed by hand, with the cookie it set');
+    const hops = calls.slice(2);
+    assert.deepEqual(hops.map(c => [c.method, c.redirect, c.hasBody, c.cookie]), [['POST', 'manual', true, ''], ['GET', 'manual', false, 'de_age=ok; theme=dark']]);
+    // Every later request of the run to that host carries it; other hosts never do.
+    await adapter.fetchData('https://gated.example/wp-admin/admin-ajax.php', { method: 'POST', body: 'mec_month=10' });
+    assert.equal(calls[calls.length - 1].cookie, 'de_age=ok; theme=dark');
+    await adapter.fetchData('https://other.example/');
+    assert.equal(calls[calls.length - 1].cookie, '');
+  } finally {
+    global.fetch = originalFetch;
+    console.log = quiet;
+  }
+});
+
 test('fetchData reads a URL once per run and serves every repeat from memory', async () => {
   const adapter = new WebAdapter();
   const calls = [];

@@ -528,6 +528,28 @@ const scraperConfig = {
       metadata: { website: { value: "https://xlbears.org" } },
     },
     {
+      name: "Precinct DTLA",
+      // Venue parser (curated bar "Precinct LA"). The calendar page is an
+      // EventON frame: the month's events arrive from the plugin's own AJAX
+      // call, which the crawler replays (📅 EVENTON) — the page opens on two
+      // months and later months are walked to the usual horizon. Each card
+      // carries its own page, flyer and wall-clock times. Hosts Club Chub,
+      // Bearded Pig Disco and plenty that is not bear: the bear check decides.
+      urls: ["https://precinctdtla.com/calendar/"],
+      metadata: { website: { value: "https://precinctdtla.com" } },
+    },
+    {
+      name: "Woofs Atlanta",
+      // Venue parser (curated bar "Woofs Atlanta", Atlanta's gay sports bar).
+      // Same EventON calendar as Precinct DTLA, older plugin (its AJAX call
+      // goes through admin-ajax). A quiet calendar — about a card a month —
+      // so the crawl stays on the calendar and the cards' own pages instead
+      // of wandering the menu and ordering pages. The bear check decides.
+      urls: ["https://woofsatlanta.com/calendar/"],
+      urlDiscoveryDepth: 0,
+      metadata: { website: { value: "https://woofsatlanta.com" } },
+    },
+    {
       name: "Gathr",
       // Aggregator for bear-week crowds (Provincetown Bear Week, Fire Island
       // Bear Weekend, Dore Alley, Folsom, plus NYC regulars). A React app with

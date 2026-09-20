@@ -2917,6 +2917,26 @@ function createSiteIdentityNormalizer(bars) {
   return new LocationNormalizer(core);
 }
 
+test('city routing: on a curated venue\'s own site the venue decides before the blurb does — a visiting act\'s city never routes the night', () => {
+  const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  // No venue name and no address: the card IS on the venue's site. The blurb
+  // names another configured city (precinctdtla.com "Coach: After Dark":
+  // "Coming off his set at Market Days Chicago…" routed an LA night to Chicago).
+  const event = {
+    title: 'Coach: After Dark',
+    description: 'Coming off his killer opening set in Seattle, he is on the decks all night',
+    url: 'https://www.3dollarbillbk.com/calendar/',
+    startDate: '2026-10-02T21:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'nyc');
+  assert.equal(event._citySource, 'curated-website');
+  assert.equal(event.timezone, 'America/New_York');
+  // Off a venue site, the context-free fallback is unchanged.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', description: 'a monthly gathering in Seattle', url: 'https://promoter.example/' }), 'seattle');
+});
+
 test('site-identity city backfill: two curated bars sharing one site AGREE on the city — literal 3dollarbillbk repro', () => {
   const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
   const event = {

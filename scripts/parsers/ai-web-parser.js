@@ -1111,9 +1111,18 @@ class AiWebParser {
             }
             // Same object reference when no payload was detected — page-level
             // caches (pageSiteRole, brand names) are stamped onto this object.
-            const effectiveHtmlData = jsonApiPayload !== null
+            let effectiveHtmlData = jsonApiPayload !== null
                 ? { ...htmlData, html: this.linearizeJsonForPrompt(jsonApiPayload) }
                 : htmlData;
+            // An EventON calendar page is an empty frame: the month's events
+            // arrive from the plugin's own AJAX call. Replayed here, the
+            // answer (event cards, each with its own structured data) joins
+            // the page so every reader below sees what a visitor sees.
+            let eventOnHtml = '';
+            if (jsonApiPayload === null) {
+                eventOnHtml = await this.collectEventOnCalendarHtml(effectiveHtmlData, parserConfig, httpAdapter);
+                if (eventOnHtml) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${eventOnHtml}` };
+            }
             const html = effectiveHtmlData && effectiveHtmlData.html ? effectiveHtmlData.html : '';
             // Calendar month feeds: a MEC month-grid page gets its NEXT
             // month(s) fetched by replaying the page's own AJAX call, and the
@@ -1210,6 +1219,13 @@ class AiWebParser {
             // cost without adding trust, so use the structured data directly.
             const jsonLdEvents = this.extractEventsFromJsonLd(html, sourceUrl, cityConfig);
             const completeJsonLdEvents = jsonLdEvents.filter(event => event.bar || event.address);
+            // EventON cards mark up no place: the calendar IS the site's own,
+            // on the site's own page — so, like an Elfsight widget, its events
+            // skip the place gate and take bar/address from the site.
+            const eventOnEvents = eventOnHtml ? this.extractEventsFromJsonLd(eventOnHtml, sourceUrl, cityConfig) : [];
+            if (eventOnEvents.length > 0) {
+                console.log(`📅 EVENTON: built ${eventOnEvents.length} event(s) from the calendar's own cards for ${sourceUrl}`);
+            }
             // JSON-API structured events run through the SAME completeness gate
             // and the SAME enrichment/stamping as JSON-LD (structured data
             // enriches, never bypasses). JSON-LD wins when both exist — in
@@ -1268,6 +1284,8 @@ class AiWebParser {
             // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
+                : (eventOnEvents.length > 0 && eventOnEvents.length >= completeJsonLdEvents.length
+                    ? 'eventon'
                 : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
                     ? 'wix'
                 : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
@@ -1276,9 +1294,11 @@ class AiWebParser {
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
-                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))))));
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
+                : (structuredSource === 'eventon'
+                    ? eventOnEvents
                 : (structuredSource === 'wix'
                     ? wixEvents
                 : (structuredSource === 'mec'
@@ -1287,7 +1307,7 @@ class AiWebParser {
                         ? completeJsonLdEvents
                         : (structuredSource === 'json-api'
                             ? completeJsonApiEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))));
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1307,6 +1327,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Squarespace event collection — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'mec') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'eventon') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the EventON calendar — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'wix') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
@@ -7607,6 +7629,161 @@ class AiWebParser {
             event._coverFromJsonLdOffers = true;
         }
         return event;
+    }
+
+    // ── EventON (WordPress calendar plugin) ─────────────────────────────
+    // The page ships a frame per calendar (<div id="evcal_calendar_N" class=
+    // "ajde_evcal_calendar … ajax_loading_cal"> + data-sc='{shortcode}') and
+    // a nonce in evo_general_params; the plugin's script then POSTs
+    // eventon_init_load and paints the answer. { nonce, endpoint, action,
+    // calendars: [{ id, sc }] } or null.
+    detectEventOnCalendars(html, sourceUrl) {
+        const source = String(html || '');
+        if (!/evo_general_params/.test(source) || !/ajde_evcal_calendar/.test(source)) return null;
+        const paramsMatch = /evo_general_params\s*=\s*(\{[\s\S]*?\});/.exec(source);
+        let params = null;
+        try { params = paramsMatch ? JSON.parse(paramsMatch[1]) : null; } catch (_) { params = null; }
+        if (!params || typeof params.n !== 'string' || !params.n) return null;
+        const calendars = [];
+        const framePattern = /<div\s+id=['"](evcal_calendar_\d+)['"]\s+class=['"]([^'"]*)['"]/g;
+        let frame;
+        while ((frame = framePattern.exec(source)) !== null) {
+            if (!/\bajax_loading_cal\b/.test(frame[2])) continue; // already painted server-side
+            const tail = source.slice(frame.index, frame.index + 12000);
+            const scMatch = /data-sc=(?:'([^']*)'|"([^"]*)")/.exec(tail);
+            if (!scMatch) continue;
+            let sc = null;
+            try { sc = JSON.parse(this.decodeEntitiesFully(scMatch[1] !== undefined ? scMatch[1] : scMatch[2])); } catch (_) { sc = null; }
+            if (sc && typeof sc === 'object' && !calendars.some(entry => entry.id === frame[1])) calendars.push({ id: frame[1], sc });
+        }
+        if (calendars.length === 0) return null;
+        const template = typeof params.evo_ajax_url === 'string' && params.evo_ajax_url.includes('%%endpoint%%') ? params.evo_ajax_url : '';
+        const endpoint = template
+            ? this.normalizeUrl(template.replace('%%endpoint%%', 'eventon_init_load'), sourceUrl)
+            : (typeof params.ajaxurl === 'string' ? params.ajaxurl : '');
+        if (!endpoint) return null;
+        return { nonce: params.n, endpoint, action: template ? '' : 'eventon_init_load', calendars };
+    }
+
+    // The shortcode settings for a month N months after the one the page
+    // opened on: fixed_month / fixed_year plus the focus range, which the
+    // page states as that month's first and last second on the site's own
+    // clock (the first stays the same distance from UTC midnight).
+    shiftEventOnShortcodeMonth(sc, monthsAhead) {
+        const month = Number(sc.fixed_month);
+        const year = Number(sc.fixed_year);
+        const rangeStart = Number(sc.focus_start_date_range);
+        if (!Number.isInteger(month) || !Number.isInteger(year) || !Number.isFinite(rangeStart) || monthsAhead <= 0) return { ...sc };
+        const clockOffset = rangeStart - Date.UTC(year, month - 1, 1) / 1000;
+        const target = new Date(Date.UTC(year, month - 1 + monthsAhead, 1));
+        const nextStart = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), 1) / 1000 + clockOffset;
+        const nextEnd = Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 1) / 1000 + clockOffset - 1;
+        return { ...sc, fixed_month: String(target.getUTCMonth() + 1), fixed_year: String(target.getUTCFullYear()),
+            focus_start_date_range: String(nextStart), focus_end_date_range: String(nextEnd) };
+    }
+
+    // The answer's event cards, made readable by the ordinary structured-data
+    // path. EventON prints each card's times as the editor typed them with a
+    // FIXED offset that ignores daylight saving ("2026-9-20T15:00-8:00" in a
+    // Los Angeles summer; its unix fields disagree with each other row by
+    // row) — the wall clock is the statement, so the offset is dropped and
+    // the venue's own zone applies, and the unpadded date is padded. A
+    // "CLOSED" day marker is a notice, not an event.
+    normalizeEventOnCalendarHtml(calendarHtml) {
+        const pad = (value) => String(value).padStart(2, '0');
+        const fixDate = (text) => text.replace(/(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2})(?::\d{2})?)?(?:[+-]\d{1,2}:\d{2}|Z)?/,
+            (_, y, m, d, hh, mm) => `${y}-${pad(m)}-${pad(d)}${hh !== undefined ? `T${pad(hh)}:${mm}:00` : ''}`);
+        let out = String(calendarHtml || '').replace(/("(?:start|end)Date"\s*:\s*")([^"]+)(")/g, (_, open, value, close) => `${open}${fixDate(value)}${close}`);
+        out = out.replace(/(itemprop=['"](?:start|end)Date['"]\s+content=")([^"]+)(")/g, (_, open, value, close) => `${open}${fixDate(value)}${close}`);
+        // A repeating event's card links one night of it (".../tendie-tuesday-3/
+        // var/ri-34.l-L1"). That address only works inside the plugin's own
+        // page script — asked for directly it is a 404 — so the card keeps
+        // the event's page, which every night of it shares.
+        out = out.replace(/(https?:\/\/[^"'\s<>]+?)\/var\/ri-\d+(?:\.l-[A-Za-z0-9]+)?\/?(?=["'])/g, '$1/');
+        out = out.replace(/<script type="application\/ld\+json">(?:(?!<\/script>)[\s\S])*?"name"\s*:\s*"\s*closed\s*"(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+        return out;
+    }
+
+    async collectEventOnCalendarHtml(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl || !httpAdapter || typeof httpAdapter.postForm !== 'function') return '';
+        let evo = this.detectEventOnCalendars(html, sourceUrl);
+        if (!evo) return '';
+        const pageDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        if (!pageDomain || this.getRegistrableDomainFromUrl(evo.endpoint) !== pageDomain) return '';
+        // Step 0 is the page's own request: every frame it carries (a page
+        // may open on two months at once). Later steps walk the LAST frame
+        // forward a month at a time, until the horizon every month grid uses.
+        const monthIndex = (sc) => (Number(sc.fixed_year) || 0) * 12 + (Number(sc.fixed_month) || 0);
+        const framesOf = (detected) => detected.calendars.slice().sort((a, b) => monthIndex(a.sc) - monthIndex(b.sc));
+        const monthsCovered = new Set(evo.calendars.map(calendar => monthIndex(calendar.sc))).size;
+        const steps = 1 + Math.max(0, 1 + Math.max(0, this.resolveCalendarLookaheadMonths(parserConfig)) - monthsCovered);
+        const parts = [];
+        let refreshed = false;
+        for (let step = 0; step < steps; step++) {
+            const last = framesOf(evo)[evo.calendars.length - 1].sc;
+            const base = new Date(Date.UTC(Number(last.fixed_year) || 1970, (Number(last.fixed_month) || 1) - 1 + step, 1));
+            const label = step === 0
+                ? `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}${monthsCovered > 1 ? ` (+${monthsCovered - 1} earlier)` : ''}`
+                : `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}`;
+            const post = async () => {
+                const fields = [['nonce', evo.nonce]];
+                if (evo.action) fields.push(['action', evo.action]);
+                const frames = framesOf(evo);
+                for (const calendar of (step === 0 ? frames : frames.slice(-1))) {
+                    const sc = this.shiftEventOnShortcodeMonth(calendar.sc, step);
+                    for (const [key, value] of Object.entries(sc)) {
+                        if (value === null || typeof value === 'object') continue;
+                        fields.push([`cals[${calendar.id}][sc][${key}]`, String(value)]);
+                    }
+                }
+                const body = fields.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+                const response = await httpAdapter.postForm(evo.endpoint, body, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', Referer: sourceUrl },
+                    cacheUrl: `${sourceUrl}${sourceUrl.includes('?') ? '&' : '?'}eventon_month=${label.slice(0, 7)}`,
+                    // A refusal ("Nonce validation failed") is never remembered.
+                    isCacheableResponse: (stored) => !/"status"\s*:\s*"bad"/.test(String((stored && (stored.text || stored.html)) || ''))
+                });
+                if (!response || response.ok === false) throw new Error(`HTTP ${response && response.status !== undefined ? response.status : 'error'}`);
+                return JSON.parse(String(response.text || ''));
+            };
+            try {
+                let payload = await post();
+                // The nonce in a page read from the cache is up to days old
+                // and lives half a day: read the page again, once, and retry.
+                if (payload && payload.status === 'bad' && !refreshed && typeof httpAdapter.fetchData === 'function') {
+                    refreshed = true;
+                    const freshPage = await httpAdapter.fetchData(sourceUrl, { fresh: true });
+                    const freshEvo = this.detectEventOnCalendars(freshPage && freshPage.html, sourceUrl);
+                    if (freshEvo && freshEvo.nonce !== evo.nonce) {
+                        console.log(`📅 EVENTON: ${sourceUrl} — the stored page's token had expired; page read again for a current one`);
+                        evo = freshEvo;
+                        payload = await post();
+                    }
+                }
+                if (!payload || payload.status === 'bad') throw new Error((payload && payload.msg) || 'calendar refused the request');
+                let cards = 0;
+                let answered = 0;
+                // Frame ids are minted per page load (and a remembered answer
+                // carries the ids of the load that asked): read every
+                // calendar the answer holds, whatever it is called.
+                for (const answer of Object.values(payload.cals && typeof payload.cals === 'object' ? payload.cals : {})) {
+                    const calendarHtml = answer && typeof answer.html === 'string' ? answer.html : '';
+                    if (!calendarHtml) continue;
+                    answered += 1;
+                    // Counted by their structured data: a month with nothing in it
+                    // answers with one "No Events" card.
+                    cards += (calendarHtml.match(/application\/ld\+json/g) || []).length;
+                    parts.push(this.normalizeEventOnCalendarHtml(calendarHtml));
+                }
+                console.log(`📅 EVENTON: month ${label} loaded for ${sourceUrl} — ${cards} event card(s) from ${answered} calendar frame(s)`);
+            } catch (error) {
+                console.log(`📅 EVENTON: month ${label} failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing without it`);
+                if (step === 0) break; // the opening month refused: later months will too
+            }
+        }
+        return parts.join('\n');
     }
 
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
