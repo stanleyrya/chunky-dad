@@ -4,5 +4,12 @@
     "city": "toronto",
     "address": "105 Carlton Street, Toronto, Ontario",
     "coordinates": "43.6620695, -79.3773558"
+  },
+  {
+    "name": "Black Eagle Toronto",
+    "city": "toronto",
+    "address": "457 Church St, Toronto, ON M4Y 2C5",
+    "coordinates": "43.6641525, -79.3801656",
+    "website": "https://www.blackeagletoronto.com"
   }
 ]

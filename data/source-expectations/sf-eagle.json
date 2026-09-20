@@ -1,0 +1,1372 @@
+{
+  "schemaVersion": 1,
+  "source": "SF Eagle",
+  "slug": "sf-eagle",
+  "status": "complete",
+  "recheckAfter": "2026-12-05",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.sf-eagle.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.sf-eagle.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 60,
+        "truthFlag": "no completeness flag: 4 month blocks (SEPTEMBER 2026, OCTOBER 2026, NOVEMBER 2026, DECEMBER 2026), 60 <a class=\"card event-card\"> anchors, no pagination, no load-more, no rel-next; the only script on the page is the category-filter toggle",
+        "note": "Configured parser URL, read from the 2026-09-19 static fetch (85,673 bytes; saved as scratchpad/probe/bars/sfeagle-events.html). Astro front-end over a WordPress backend (posters and the ICS live on wp.sf-eagle.com). Each card: href=\"/events/<slug>/\", data-cat=\"<category>\", a poster <img>, then .ev-date (\"FRI · SEP 18\"), .ev-title, .ev-time (\"9 PM - 2 AM\"). No year on the card — it comes from the month heading. No description, cover, ticket link or address on any card; the only JSON-LD is the venue BarOrPub block (no Event JSON-LD). 60 rows = 60 distinct slugs, Sep 18 – Dec 5 2026; 1 row (Sep 18) is already past. Categories present: Clubbing, Contest, Event, Beer Bust, Karaoke, Leather, Happy Hour, Comedy, Pups, Filth, Live Music, Boots, Cigars, Young Hearts."
+      },
+      {
+        "url": "https://www.sf-eagle.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 16,
+        "truthFlag": "FOLSOM WEEKEND strip (7 dated rows Sep 24–27) + COMING UP strip (9 dated rows Sep 18–25, \"More events →\"); both are subsets of the listing",
+        "note": "Read from the 2026-09-19 static fetch (30,557 bytes; scratchpad/probe/bars/sf-eagle.html). Carries the BarOrPub JSON-LD (streetAddress \"398 12th Street\", San Francisco CA 94103, geo 37.7699 / -122.4132, sameAs instagram.com/sfeagle, facebook.com/sfeagle) and the \"FOUR RESIDENT PARTIES\" strip — the only place the site states a cadence: BEER BUST \"Sun · 3–7PM\", QUEER HAPPY HOUR \"1st Fri · Monthly\", FILTH \"1st Sat · Monthly\", YOUNG HEARTS \"3rd Sat · Monthly\". Not a configured URL; used only for the venue facts and the four recurrence statements."
+      },
+      {
+        "url": "webcal://wp.sf-eagle.com/events/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": null,
+        "truthFlag": null,
+        "note": "SEEN, NOT READ. The listing footer links \"Google Calendar\" (https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwp.sf-eagle.com%2Fevents%2F%3Fical%3D1) and \".ics\" (webcal://wp.sf-eagle.com/events/?ical=1) — a WordPress ?ical=1 export on the wp.sf-eagle.com backend. Not fetched on 2026-09-19 (no request budget); it is the door that would settle whether the 60-row listing is capped and whether the residents carry RRULEs."
+      }
+    ],
+    "notes": "Platform: Astro static site (data-astro-cid attributes, /_astro/ assets) rendering posts from a WordPress backend at wp.sf-eagle.com; the events listing is fully static HTML, so the static rung is the scraper's door and no JS rendering is needed. The listing itself states no repeat for any row — the lede says only \"Live music, parties, contests and our weekly residents\" — and the four cadences come from the home page's residents strip. Read on 2026-09-19: 60 rows, all at the bar (no other venue is named anywhere), 12 titles repeat. Only the four residents the site names with a cadence are folded into series; the other eight repeating titles (Karaoke with Dana ×11, Knotty Bird ×3, Adonis ×3, WOOF! ×3, ScripTease ×3, BLUFSF:HARD ×2, AshHole ×2, KPOC and FOUNDATIONS Social Mixer ×2) have no stated repeat and are documented as singles. Times are printed as \"9 PM - 2 AM\"; a row whose end is not after its start ends on the following day. The listing has exactly 60 rows and ends with a 3 PM row on Dec 5 while a first-Saturday resident (Filth) would fall that night — treated as a probable row cap and recorded in knownGaps rather than asserted either way."
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "bar": "SF Eagle",
+    "address": "398 12th St, San Francisco, CA 94103",
+    "location": "37.7699, -122.4132",
+    "website": "https://www.sf-eagle.com",
+    "instagram": "https://www.instagram.com/sfeagle/",
+    "facebook": "https://www.facebook.com/sfeagle/"
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "All counts come from the configured listing door (https://www.sf-eagle.com/events/), enumerated by script from the saved HTML: 60 event-card anchors, 60 distinct /events/<slug>/ hrefs, 60 distinct (date, title) pairs, month headings SEPTEMBER–DECEMBER 2026. 1 row is dated before the recon date (FRI · SEP 18 Midnights Taylor Swift Dance Party) and is counted as a past listing, not enumerated. The remaining 59 upcoming rows split into 18 rows belonging to the 4 residents whose cadence the home page states (Beer Bust ×10, Queer Leather Happy Hour ×3, Filth ×2, Young Hearts ×3) → 4 series, and 41 rows with no stated repeat → 41 singles. publishedEventCount = 4 + 41 = 45. Every series occurrence is a dated listing row (origin listed); no rule-derived dates are added beyond what the site lists. Second door: the home page's FOLSOM WEEKEND (7) and COMING UP (9) strips are exact subsets of the listing with identical dates and times — zero conflicts. Confidence is medium, not high, because the listing is exactly 60 rows with no completeness signal and the .ics export that would confirm the horizon was not read.",
+    "publishedEventCount": 45,
+    "documentedEventCount": 45,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "The ICS / Google Calendar export (webcal://wp.sf-eagle.com/events/?ical=1) was seen in the listing footer but not read; whether it carries RRULEs for the residents, more rows past Dec 5, or the same 60 rows is unknown.",
+      "The listing is exactly 60 rows and stops at a 3 PM row on Sat Dec 5 with no Filth (a stated 1st-Saturday resident) that night, which reads like a row cap. Nothing after Dec 5 is asserted: Filth Dec 5, Beer Bust Dec 6 / Dec 13, and any further one-offs are not in this file even though they fall inside the occurrence window.",
+      "No /events/<slug>/ event page was opened (60 pages, no request budget), so descriptions, cover charges, ticket links, and any per-page recurrence wording are not asserted; expect.extracted is judged on the listing alone."
+    ]
+  },
+  "events": [
+    {
+      "id": "sf-eagle-2027-leather-contest-day-2-2026-09-19",
+      "kind": "single",
+      "title": "SF Eagle 2027 Leather Contest, Day 2",
+      "startDate": "2026-09-19",
+      "startTime": "17:00",
+      "endDate": "2026-09-19",
+      "endTime": "20:00",
+      "website": "https://www.sf-eagle.com/events/sf-eagle-2027-leather-contest-day-2/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/SFEagle_2027_Leather_Contests.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · SEP 19 SF Eagle 2027 Leather Contest, Day 2 5 PM - 8 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Contest\". \"Day 2\" implies a Day 1 that is not on the listing (presumably Sep 18 or earlier, already past); only this row is published."
+    },
+    {
+      "id": "knotty-bird-2026-09-19",
+      "kind": "single",
+      "title": "Knotty Bird",
+      "startDate": "2026-09-19",
+      "startTime": "18:00",
+      "endDate": "2026-09-19",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/knotty-bird/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/06/knottybirdposterweb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · SEP 19 Knotty Bird 6 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Third Saturdays Sep 19, Oct 17, Nov 21, 6 PM - 9 PM, category \"Event\", same afternoon as Young Hearts; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "young-hearts",
+      "kind": "series",
+      "title": "Young Hearts",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/younghearts-7-3/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/04/YoungHearts_11x17.webp",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "YOUNG HEARTS Cross-generational, soul-strengthening disco rooted in art and togetherness. 3rd Sat · Monthly",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SAT · SEP 19 Young Hearts 9 PM - 2 AM"
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SAT · OCT 17 Young Hearts 9 PM - 2 AM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/younghearts-7/",
+            "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/01/YoungHeartsGeneric.jpg"
+          }
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SAT · NOV 21 Young Hearts 9 PM - 2 AM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/younghearts-7-10025074/",
+            "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/01/YoungHeartsGeneric.jpg"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/",
+        "quote": "YOUNG HEARTS Cross-generational, soul-strengthening disco rooted in art and togetherness. 3rd Sat · Monthly"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Home-page resident #4: \"3rd Sat · Monthly\"; the three listed rows (Sep 19, Oct 17, Nov 21) are third Saturdays, 9 PM - 2 AM (end is on the following calendar day). Category is \"Clubbing\" on the Sep 19 row and \"Young Hearts\" on the Oct 17 / Nov 21 rows. Dec 19 falls one day outside the occurrence window. Posters: YoungHearts_11x17.webp (Sep 19), YoungHeartsGeneric.jpg (Oct 17, Nov 21)."
+    },
+    {
+      "id": "beer-bust",
+      "kind": "series",
+      "title": "Beer Bust",
+      "startDate": "2026-09-20",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Weekly & monthly FOUR RESIDENT PARTIES The regulars that make the Eagle feel like home. The nights you can count on, week after week. THE RESIDENTS … BEER BUST Share a beer and a meal. Proceeds benefit rotating LGBTQ+ nonprofits. Sun · 3–7PM",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · SEP 20 Beer Bust 3 PM - 7 PM"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · OCT 04 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025303/"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · OCT 11 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025304/"
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · OCT 18 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025305/"
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · OCT 25 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025306/"
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · NOV 01 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025307/"
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · NOV 08 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025308/"
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · NOV 15 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025309/"
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · NOV 22 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025310/"
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SUN · NOV 29 Beer Bust 3 PM - 7 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025311/"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/",
+        "quote": "BEER BUST Share a beer and a meal. Proceeds benefit rotating LGBTQ+ nonprofits. Sun · 3–7PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Home-page resident #1: \"Sun · 3–7PM\" under the \"Weekly & monthly … week after week\" residents panel; every listed row is a Sunday 3 PM - 7 PM in category \"Beer Bust\" (data-cat=\"Beer Bust\"). Ten Sundays are listed Sep 20 – Nov 29. Sep 27 (Folsom Street Fair Sunday) has NO Beer Bust row — the site lists \"Party On The Plaza: Folsom Edition\" 12 PM - 7 PM in the same category instead (documented as its own single) — so Sep 27 is not asserted here. No row after Nov 29: the listing ends Dec 5, so Dec 6 / Dec 13 are not asserted (see knownGaps). Same poster on every row (Beer-Bust-Banner-copy-1.png). Slugs are WordPress clones of one post (beer-bust-3-34-2, -10025303 … -10025311)."
+    },
+    {
+      "id": "nuclear-winter-2026-09-20",
+      "kind": "single",
+      "title": "Nuclear Winter",
+      "startDate": "2026-09-20",
+      "startTime": "21:30",
+      "endDate": "2026-09-21",
+      "endTime": "01:30",
+      "website": "https://www.sf-eagle.com/events/nuclear-winter-2/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/09/NuclearWinter_Sept20.webp",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SUN · SEP 20 Nuclear Winter 9:30 PM - 1:30 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The listing prints \"9:30 PM - 1:30 PM\" — an end that is before the start. Read here as 1:30 AM the next day (the pattern of every other late row on the page); confidence ambiguous until the event page or ICS says otherwise (see openQuestions). Category \"Clubbing\"."
+    },
+    {
+      "id": "karaoke-with-dana-2026-09-21",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-09-21",
+      "startTime": "20:00",
+      "endDate": "2026-09-22",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · SEP 21 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "live-music-folsom-kickoff-party-2026-09-24",
+      "kind": "single",
+      "title": "Live Music : Folsom Kickoff Party",
+      "startDate": "2026-09-24",
+      "startTime": "20:30",
+      "endDate": "2026-09-25",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/live-music-folsom-kickoff-party/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/09/FolsomKickoff_Sept24.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "THU · SEP 24 Live Music : Folsom Kickoff Party 8:30 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom Street Fair weekend kickoff, category \"Leather\" (not \"Live Music\"); also on the home page's FOLSOM WEEKEND strip. Ends 2 AM the following day. Title spacing (\" : \") is verbatim."
+    },
+    {
+      "id": "sf-queer-leather-happy-hour-folsom-edition-2026-09-25",
+      "kind": "single",
+      "title": "SF Queer Leather Happy Hour: Folsom Edition",
+      "startDate": "2026-09-25",
+      "startTime": "18:00",
+      "endDate": "2026-09-25",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/sf-queer-leather-happy-hour-folsom-edition/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/09/SFQLHH_Folsom_Party_925.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · SEP 25 SF Queer Leather Happy Hour: Folsom Edition 6 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom-week edition on the 4th Friday, category \"Happy Hour\"; distinct title from the 1st-Friday \"Queer Leather Happy Hour\" resident. Also on the home page's FOLSOM WEEKEND strip."
+    },
+    {
+      "id": "folsom-friday-warm-up-boot-camp-2026-09-25",
+      "kind": "single",
+      "title": "Folsom Friday Warm-Up : Boot Camp",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/folsom-friday-warm-up-boot-camp/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/BootCamp_Sep25.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · SEP 25 Folsom Friday Warm-Up : Boot Camp 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom weekend, category \"Clubbing\"; ends 2 AM the following day; also on the home page's FOLSOM WEEKEND strip. Title spacing is verbatim."
+    },
+    {
+      "id": "daddy-day-care-folsom-saturday-2026-09-26",
+      "kind": "single",
+      "title": "Daddy Day Care Folsom Saturday",
+      "startDate": "2026-09-26",
+      "startTime": "15:00",
+      "endDate": "2026-09-26",
+      "endTime": "20:00",
+      "website": "https://www.sf-eagle.com/events/daddy-day-care-folsom-saturday/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/daddy-daycare.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · SEP 26 Daddy Day Care Folsom Saturday 3 PM - 8 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom weekend, category \"Event\"; also on the home page's FOLSOM WEEKEND strip."
+    },
+    {
+      "id": "folsom-saturday-cell-blok-2026-09-26",
+      "kind": "single",
+      "title": "Folsom Saturday: Cell Blok",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/cell-blok-2/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/06/1000046229.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · SEP 26 Folsom Saturday: Cell Blok 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom weekend, category \"Event\", slug cell-blok-2; ends 2 AM the following day; also on the home page's FOLSOM WEEKEND strip."
+    },
+    {
+      "id": "party-on-the-plaza-folsom-edition-2026-09-27",
+      "kind": "single",
+      "title": "Party On The Plaza: Folsom Edition",
+      "startDate": "2026-09-27",
+      "startTime": "12:00",
+      "endDate": "2026-09-27",
+      "endTime": "19:00",
+      "website": "https://www.sf-eagle.com/events/party-on-the-plaza-folsom-edition/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/POP_Folsom_927_11x17.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SUN · SEP 27 Party On The Plaza: Folsom Edition 12 PM - 7 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom Street Fair Sunday, 12 PM - 7 PM, category \"Beer Bust\" — it stands in the Sunday slot the weekly Beer Bust would otherwise occupy (no Beer Bust row on Sep 27). Also on the home page's FOLSOM WEEKEND strip."
+    },
+    {
+      "id": "disco-daddy-folsom-2026-09-27",
+      "kind": "single",
+      "title": "Disco Daddy Folsom",
+      "startDate": "2026-09-27",
+      "startTime": "19:00",
+      "endDate": "2026-09-28",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/disco-daddy-folsom/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/04/DDFOLSOM2026b.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SUN · SEP 27 Disco Daddy Folsom 7 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Folsom Street Fair Sunday night, 7 PM - 2 AM (end on the following day), category \"Event\"; also on the home page's FOLSOM WEEKEND strip."
+    },
+    {
+      "id": "karaoke-with-dana-2026-09-28",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-09-28",
+      "startTime": "20:00",
+      "endDate": "2026-09-29",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012763/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · SEP 28 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "hysteria-comedy-open-mic-for-women-and-queers-2026-09-30",
+      "kind": "single",
+      "title": "Hysteria: Comedy Open Mic for Women and Queers",
+      "startDate": "2026-09-30",
+      "startTime": "19:00",
+      "endDate": "2026-09-30",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/hysteria-comedy-open-mic-for-women-and-queers-4-2/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/01/482680463_674449501603178_3409234271033674776_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "WED · SEP 30 Hysteria: Comedy Open Mic for Women and Queers 7 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Comedy\", slug hysteria-comedy-open-mic-for-women-and-queers-4-2 (a WordPress clone suffix, but only one row is listed)."
+    },
+    {
+      "id": "queer-leather-happy-hour",
+      "kind": "series",
+      "title": "Queer Leather Happy Hour",
+      "startDate": "2026-10-02",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/queer-leather-happy-hour/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/04/Untitled-26.avif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "QUEER HAPPY HOUR Queer leather folks and those who love them. Cruise, connect, tip your bootblack. 1st Fri · Monthly",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "FRI · OCT 02 Queer Leather Happy Hour 6 PM - 9 PM"
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "FRI · NOV 06 Queer Leather Happy Hour 6 PM - 9 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/queer-leather-happy-hour-10001131/"
+          }
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "FRI · DEC 04 Queer Leather Happy Hour 6 PM - 9 PM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/queer-leather-happy-hour-10001132/"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/",
+        "quote": "QUEER HAPPY HOUR Queer leather folks and those who love them. Cruise, connect, tip your bootblack. 1st Fri · Monthly"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Home-page resident #2, named \"QUEER HAPPY HOUR\" there and \"Queer Leather Happy Hour\" on the listing; the three listed rows (Oct 2, Nov 6, Dec 4) are all first Fridays, 6 PM - 9 PM, category \"Event\", same poster (Untitled-26.avif). The Sep 25 \"SF Queer Leather Happy Hour: Folsom Edition\" (4th Friday, category \"Happy Hour\") is a differently-titled Folsom-week edition and is documented as its own single, not as an occurrence."
+    },
+    {
+      "id": "adonis-2026-10-02",
+      "kind": "single",
+      "title": "Adonis",
+      "startDate": "2026-10-02",
+      "startTime": "21:00",
+      "endDate": "2026-10-03",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/adonis/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/11/Facebook-Event-Banner.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · OCT 02 Adonis 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Fridays Oct 2, Nov 6, Dec 4, 9 PM - 2 AM (end on the following day), category \"Clubbing\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "woof-2026-10-03",
+      "kind": "single",
+      "title": "WOOF!",
+      "startDate": "2026-10-03",
+      "startTime": "15:00",
+      "endDate": "2026-10-03",
+      "endTime": "18:00",
+      "website": "https://www.sf-eagle.com/events/woof/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/486037794_1074438044710710_1435872564965282284_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · OCT 03 WOOF! 3 PM - 6 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Saturdays Oct 3, Nov 7, Dec 5, 3 PM - 6 PM, category \"Pups\"; no cadence stated on the pages read, so each row is a single. The Dec 5 row is the last row on the page."
+    },
+    {
+      "id": "filth",
+      "kind": "series",
+      "title": "Filth",
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/filth-2-3/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/12/FilthOct3x5.webp",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "FILTH Sweaty hunks, filthy sounds, hot messes. Old-school Eagle testosterone. 1st Sat · Monthly",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SAT · OCT 03 Filth 9 PM - 2 AM"
+          }
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.sf-eagle.com/events/",
+            "quote": "SAT · NOV 07 Filth 9 PM - 2 AM"
+          },
+          "overrides": {
+            "website": "https://www.sf-eagle.com/events/filth-2/",
+            "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/12/FILTHBANNER.avif"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/",
+        "quote": "FILTH Sweaty hunks, filthy sounds, hot messes. Old-school Eagle testosterone. 1st Sat · Monthly"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Home-page resident #3: \"1st Sat · Monthly\"; the two listed rows (Oct 3, Nov 7) are first Saturdays, 9 PM - 2 AM (end is on the following calendar day), category \"Filth\". Dec 5 is also a first Saturday but the listing's last row is WOOF! 3 PM - 6 PM on Dec 5 with no Filth row after it — the strongest sign the listing is cut at 60 rows (see knownGaps); Dec 5 is not asserted. Posters differ per row (FilthOct3x5.webp, FILTHBANNER.avif)."
+    },
+    {
+      "id": "karaoke-with-dana-2026-10-05",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-10-05",
+      "startTime": "20:00",
+      "endDate": "2026-10-06",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012764/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · OCT 05 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "scriptease-2026-10-07",
+      "kind": "single",
+      "title": "ScripTease",
+      "startDate": "2026-10-07",
+      "startTime": "19:00",
+      "endDate": "2026-10-07",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/scriptease/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/589812495_10163623033489350_3713328963030465368_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "WED · OCT 07 ScripTease 7 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Wednesdays Oct 7, Nov 4, Dec 2, 7 PM - 9 PM, category \"Event\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "live-music-bfk-run-your-pockets-man-the-gallows-televised-corruption-2026-10-08",
+      "kind": "single",
+      "title": "Live Music: BFK / Run Your Pockets / Man The Gallows / Televised Corruption",
+      "startDate": "2026-10-08",
+      "startTime": "20:00",
+      "endDate": "2026-10-09",
+      "endTime": "00:00",
+      "website": "https://www.sf-eagle.com/events/live-music-bfk-run-your-pockets-man-the-gallows-televised-corruption/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/1000046788.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "THU · OCT 08 Live Music: BFK / Run Your Pockets / Man The Gallows / Televised Corruption 8 PM - 12 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Category \"Live Music\", 8 PM - 12 AM (end 00:00 on the following day)."
+    },
+    {
+      "id": "blufsf-hard-2026-10-09",
+      "kind": "single",
+      "title": "BLUFSF:HARD",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/blufsfhard/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/05/BLUFSF_HARD_NoDate-Web-jpg.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · OCT 09 BLUFSF:HARD 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Fridays Oct 9, Nov 13, 9 PM - 2 AM (end on the following day), category \"Boots\", same night as AshHole; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "ashhole-2026-10-09",
+      "kind": "single",
+      "title": "AshHole",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/ashhole/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/11/Ashhole-base-nov.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · OCT 09 AshHole 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Fridays Oct 9, Nov 13, 9 PM - 2 AM (end on the following day), category \"Cigars\", same night as BLUFSF:HARD; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "kpoc-and-foundations-social-mixer-2026-10-10",
+      "kind": "single",
+      "title": "KPOC and FOUNDATIONS Social Mixer",
+      "startDate": "2026-10-10",
+      "startTime": "15:00",
+      "endDate": "2026-10-10",
+      "endTime": "17:00",
+      "website": "https://www.sf-eagle.com/events/kpoc-and-foundations-social-mixer/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/KPOC_Foundations_Mixer.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · OCT 10 KPOC and FOUNDATIONS Social Mixer 3 PM - 5 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Saturdays Oct 10, Nov 14, 3 PM - 5 PM, category \"Happy Hour\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "karaoke-with-dana-2026-10-12",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-10-12",
+      "startTime": "20:00",
+      "endDate": "2026-10-13",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012765/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · OCT 12 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "knotty-bird-2026-10-17",
+      "kind": "single",
+      "title": "Knotty Bird",
+      "startDate": "2026-10-17",
+      "startTime": "18:00",
+      "endDate": "2026-10-17",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/knotty-bird-10025634/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/06/knottybirdposterweb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · OCT 17 Knotty Bird 6 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Third Saturdays Sep 19, Oct 17, Nov 21, 6 PM - 9 PM, category \"Event\", same afternoon as Young Hearts; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "karaoke-with-dana-2026-10-19",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-10-19",
+      "startTime": "20:00",
+      "endDate": "2026-10-20",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012766/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · OCT 19 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "karaoke-with-dana-2026-10-26",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-10-26",
+      "startTime": "20:00",
+      "endDate": "2026-10-27",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012767/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · OCT 26 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "dead-dance-2026-10-30",
+      "kind": "single",
+      "title": "Dead Dance",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/dead-dance/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/09/DeadDance_Oct30.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · OCT 30 Dead Dance 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Halloween-eve Friday, category \"Clubbing\"; ends 2 AM the following day."
+    },
+    {
+      "id": "karaoke-with-dana-2026-11-02",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-11-02",
+      "startTime": "20:00",
+      "endDate": "2026-11-03",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012768/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · NOV 02 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "scriptease-2026-11-04",
+      "kind": "single",
+      "title": "ScripTease",
+      "startDate": "2026-11-04",
+      "startTime": "19:00",
+      "endDate": "2026-11-04",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/scriptease-10015760/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/589812495_10163623033489350_3713328963030465368_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "WED · NOV 04 ScripTease 7 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Wednesdays Oct 7, Nov 4, Dec 2, 7 PM - 9 PM, category \"Event\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "adonis-2026-11-06",
+      "kind": "single",
+      "title": "Adonis",
+      "startDate": "2026-11-06",
+      "startTime": "21:00",
+      "endDate": "2026-11-07",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/adonis-10000037/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/11/Facebook-Event-Banner.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · NOV 06 Adonis 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Fridays Oct 2, Nov 6, Dec 4, 9 PM - 2 AM (end on the following day), category \"Clubbing\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "woof-2026-11-07",
+      "kind": "single",
+      "title": "WOOF!",
+      "startDate": "2026-11-07",
+      "startTime": "15:00",
+      "endDate": "2026-11-07",
+      "endTime": "18:00",
+      "website": "https://www.sf-eagle.com/events/woof-10015820/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/486037794_1074438044710710_1435872564965282284_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · NOV 07 WOOF! 3 PM - 6 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Saturdays Oct 3, Nov 7, Dec 5, 3 PM - 6 PM, category \"Pups\"; no cadence stated on the pages read, so each row is a single. The Dec 5 row is the last row on the page."
+    },
+    {
+      "id": "karaoke-with-dana-2026-11-09",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-11-09",
+      "startTime": "20:00",
+      "endDate": "2026-11-10",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012769/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · NOV 09 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "blufsf-hard-2026-11-13",
+      "kind": "single",
+      "title": "BLUFSF:HARD",
+      "startDate": "2026-11-13",
+      "startTime": "21:00",
+      "endDate": "2026-11-14",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/blufsfhard-10002687/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/05/BLUFSF_HARD_NoDate-Web-jpg.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · NOV 13 BLUFSF:HARD 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Fridays Oct 9, Nov 13, 9 PM - 2 AM (end on the following day), category \"Boots\", same night as AshHole; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "ashhole-2026-11-13",
+      "kind": "single",
+      "title": "AshHole",
+      "startDate": "2026-11-13",
+      "startTime": "21:00",
+      "endDate": "2026-11-14",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/ashhole-10013692/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/11/Ashhole-base-nov.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · NOV 13 AshHole 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Fridays Oct 9, Nov 13, 9 PM - 2 AM (end on the following day), category \"Cigars\", same night as BLUFSF:HARD; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "kpoc-and-foundations-social-mixer-2026-11-14",
+      "kind": "single",
+      "title": "KPOC and FOUNDATIONS Social Mixer",
+      "startDate": "2026-11-14",
+      "startTime": "15:00",
+      "endDate": "2026-11-14",
+      "endTime": "17:00",
+      "website": "https://www.sf-eagle.com/events/kpoc-and-foundations-social-mixer-10025967/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/08/KPOC_Foundations_Mixer.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · NOV 14 KPOC and FOUNDATIONS Social Mixer 3 PM - 5 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Second Saturdays Oct 10, Nov 14, 3 PM - 5 PM, category \"Happy Hour\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "karaoke-with-dana-2026-11-16",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-11-16",
+      "startTime": "20:00",
+      "endDate": "2026-11-17",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012770/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · NOV 16 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "knotty-bird-2026-11-21",
+      "kind": "single",
+      "title": "Knotty Bird",
+      "startDate": "2026-11-21",
+      "startTime": "18:00",
+      "endDate": "2026-11-21",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/knotty-bird-10025635/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2026/06/knottybirdposterweb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · NOV 21 Knotty Bird 6 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Third Saturdays Sep 19, Oct 17, Nov 21, 6 PM - 9 PM, category \"Event\", same afternoon as Young Hearts; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "karaoke-with-dana-2026-11-23",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-11-23",
+      "startTime": "20:00",
+      "endDate": "2026-11-24",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012771/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · NOV 23 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "karaoke-with-dana-2026-11-30",
+      "kind": "single",
+      "title": "Karaoke with Dana",
+      "startDate": "2026-11-30",
+      "startTime": "20:00",
+      "endDate": "2026-12-01",
+      "endTime": "01:00",
+      "website": "https://www.sf-eagle.com/events/karaoke-with-dana-10012772/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/10/Karaoke.w.Dana_.JuneWeb.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "MON · NOV 30 Karaoke with Dana 8 PM - 1 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Eleven consecutive Mondays Sep 21 – Nov 30, 8 PM - 1 AM (end on the following day), category \"Karaoke\", same poster on every row. The site states NO cadence for it anywhere on the two pages read (the listing lede only says \"our weekly residents\", and the home-page residents strip lists four parties, none of them karaoke), so each dated row is documented as its own single. Slugs: karaoke-with-dana, then karaoke-with-dana-10012763 … -10012772."
+    },
+    {
+      "id": "scriptease-2026-12-02",
+      "kind": "single",
+      "title": "ScripTease",
+      "startDate": "2026-12-02",
+      "startTime": "19:00",
+      "endDate": "2026-12-02",
+      "endTime": "21:00",
+      "website": "https://www.sf-eagle.com/events/scriptease-10015761/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/589812495_10163623033489350_3713328963030465368_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "WED · DEC 02 ScripTease 7 PM - 9 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Wednesdays Oct 7, Nov 4, Dec 2, 7 PM - 9 PM, category \"Event\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "adonis-2026-12-04",
+      "kind": "single",
+      "title": "Adonis",
+      "startDate": "2026-12-04",
+      "startTime": "21:00",
+      "endDate": "2026-12-05",
+      "endTime": "02:00",
+      "website": "https://www.sf-eagle.com/events/adonis-10000038/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2024/11/Facebook-Event-Banner.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · DEC 04 Adonis 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Fridays Oct 2, Nov 6, Dec 4, 9 PM - 2 AM (end on the following day), category \"Clubbing\"; no cadence stated on the pages read, so each row is a single."
+    },
+    {
+      "id": "woof-2026-12-05",
+      "kind": "single",
+      "title": "WOOF!",
+      "startDate": "2026-12-05",
+      "startTime": "15:00",
+      "endDate": "2026-12-05",
+      "endTime": "18:00",
+      "website": "https://www.sf-eagle.com/events/woof-10015821/",
+      "image": "https://wp.sf-eagle.com/wp-content/uploads/2025/12/486037794_1074438044710710_1435872564965282284_n.avif",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "SAT · DEC 05 WOOF! 3 PM - 6 PM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "First Saturdays Oct 3, Nov 7, Dec 5, 3 PM - 6 PM, category \"Pups\"; no cadence stated on the pages read, so each row is a single. The Dec 5 row is the last row on the page."
+    }
+  ],
+  "traps": [
+    {
+      "id": "past-midnights-taylor-swift-2026-09-18",
+      "kind": "past-event",
+      "label": "FRI · SEP 18 Midnights Taylor Swift Dance Party 9 PM - 2 AM — the first card on the listing, dated the day before recon",
+      "why": "The listing keeps yesterday's row at the top of the September block (ended 2 AM on the recon date). The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "FRI · SEP 18 Midnights Taylor Swift Dance Party 9 PM - 2 AM"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null,
+      "note": "Post: https://www.sf-eagle.com/events/midnights-taylor-swift-dance-party-2/ (slug suffix -2, a WordPress clone of an earlier edition), category \"Clubbing\", poster midnights.webp. Also the first row of the home page's COMING UP strip."
+    },
+    {
+      "id": "category-filter-chips",
+      "kind": "navigation",
+      "label": "The 14 filter chips above the list: All, Beer Bust, Boots, Cigars, Clubbing, Comedy, Contest, Event, Filth, Happy Hour, Karaoke, Leather, Live Music, Pups, Young Hearts",
+      "why": "They are <button class=\"chip\" data-filter=\"…\"> controls that hide/show cards client-side, not events. Several chip labels are also real event titles (Beer Bust, Filth, Young Hearts), so a text-window extractor that reads the chip row could mint undated events named after the categories.",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/events/",
+        "quote": "<button class=\"chip\" data-filter=\"Beer Bust\" data-astro-cid-ro7pgs3h>Beer Bust</button><button class=\"chip\" data-filter=\"Boots\" data-astro-cid-ro7pgs3h>Boots</button>"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "home-residents-strip",
+      "kind": "recurring-blurb",
+      "label": "Home page \"FOUR RESIDENT PARTIES / THE RESIDENTS\": BEER BUST Sun · 3–7PM, QUEER HAPPY HOUR 1st Fri · Monthly, FILTH 1st Sat · Monthly, YOUNG HEARTS 3rd Sat · Monthly",
+      "why": "Four undated cadence blurbs on the home page (not a configured URL). They are the source of the recurrenceStatedAs quotes for the four series but are not events themselves: no date, no link, no poster. The dated instances live on the /events/ listing and are documented there.",
+      "evidence": {
+        "url": "https://www.sf-eagle.com/",
+        "quote": "THE RESIDENTS Full calendar → BEER BUST Share a beer and a meal. Proceeds benefit rotating LGBTQ+ nonprofits. Sun · 3–7PM"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Nuclear Winter (SUN · SEP 20) prints \"9:30 PM - 1:30 PM\" — is the end 1:30 AM (as documented, confidence ambiguous) or does the event page state something else?",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Is the /events/ listing capped at 60 rows (it ends mid-day Dec 5 with no Filth that night), and does the ?ical=1 export publish further rows or RRULEs for the residents?",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Karaoke with Dana (11 consecutive Mondays), Knotty Bird, Adonis, WOOF!, ScripTease, BLUFSF:HARD, AshHole and KPOC and FOUNDATIONS Social Mixer repeat on fixed weekdays but the site states no cadence on the pages read — should they be folded into series once their event pages or the ICS are read?",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

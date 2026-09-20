@@ -1,0 +1,1236 @@
+{
+  "schemaVersion": 1,
+  "source": "Eagle Portland",
+  "slug": "eagle-portland",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eagleportland.com/events"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eagleportland.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 92,
+        "truthFlag": "no paging and no \"load more\": one server-rendered grid of 92 dated cards spanning 2026-09-19..2026-12-18 (a ~90-day horizon), plus a collapsed \"▶ Archive (5 past events)\" toggle",
+        "note": "Fetched once with curl (Chrome UA) on 2026-09-19 (579 KB). Next.js app-router page, server-rendered: every card is an <article class=\"eagle-card\"> inside <a href=\"/events/<slug>?date=<ISO>\"> with a month/day box, an <h2> title, a weekday span, \"Doors <!-- -->9PM\", an optional price span, \"21+\", a truncated description <p>, an optional \"Lineup:\" span and \"Details →\". The same page embeds the full Sanity documents in the RSC payload (self.__next_f.push): 97 objects = the 92 card occurrences (14 distinct _id, each repeated once per occurrenceDate) + the 5 archived docs. Each document carries title, date (anchor), doorsTime, endTime, ticketPrice, ticketingUrl (null on all 19), dressCode, agePolicy, djLineup, isRecurring, recurrence {frequency, weekday, monthlyPosition}, recurringRule, occurrenceOverrides and the untruncated description. Two JSON-LD blocks, both @type BarOrPub (835 N Lombard St, telephone 5032839734) — no Event JSON-LD. No feed, no widget, no sitemap read."
+      },
+      {
+        "url": "https://www.eagleportland.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 4,
+        "truthFlag": "\"UPCOMING\" strip of the next 4 cards with an \"All Events →\" link to /events",
+        "note": "Fetched once with curl on 2026-09-19 (78 KB). Shows SEP 19 UNDERGEAR (Sat, Doors 9PM), SEP 20 SLUTTY BBQ COOKOUT (Sun, Doors 3PM), SEP 21 BRIEF ENCOUNTERS (Mon, Doors 8PM), SEP 21 Growth (Mon, Doors 5PM) — the first four cards of /events, same ?date= links. \"Find Us: 835 N Lombard St, Portland, OR 97217, 5032839734, Today's Hours 2pm -2am\", \"Door Policy: 21+ with valid ID\". Not in the parser's urls; read only as the second door confirming the listing's first rows and the address."
+      }
+    ],
+    "notes": "Platform: Next.js + Sanity CMS (image CDN cdn.sanity.io/images/5h0axiqb/production/…), server-rendered, so a static fetch sees the whole listing. Nothing on the site is a one-off right now: all 14 listed nights are isRecurring:true with a recurrence object (5 weekly, 9 monthly-by-ordinal-weekday), and the page materializes each into dated cards for roughly the next 90 days (weekly nights get 13 cards, monthly nights 3). The ?date= value on each card link is the occurrence date at the anchor document's time-of-day in UTC (e.g. undergear ?date=2026-09-19T14:46:00.000Z = 07:46 Pacific), NOT the door time — it shifts by one hour after the 2026-11-01 DST change (14:46Z → 15:46Z) and the calendar date in America/Los_Angeles is always the card's date. Door times are only in the \"Doors 9PM\" text / doorsTime field; end times only in the endTime field and description (\"MIDNIGHT\", \"12AM\", \"2AM\", \"11:59pm\"). ticketingUrl is null on every document, so no ticket links exist. Only the listing page was read; the 92 /events/<slug>?date= detail pages were not fetched."
+  },
+  "defaults": {
+    "city": "portland",
+    "timezone": "America/Los_Angeles",
+    "bar": "Eagle Portland",
+    "address": "835 N Lombard St, Portland, OR 97217",
+    "location": null,
+    "website": "https://www.eagleportland.com",
+    "instagram": "https://instagram.com/eagleportland",
+    "facebook": "https://www.facebook.com/theeagleportland"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "All counts come from the /events listing door (https://www.eagleportland.com/events, fetched 2026-09-19): 92 dated card links = 14 distinct event slugs, and the page's embedded Sanity documents give the same 14 _ids, every one isRecurring:true with a recurrence object, so published = 14 series (5 weekly: Slutty BBQ Cookout Sun, Brief Encounters Mon, Gaymenight Tue, Midweek Hump Karaoke Wed, Naked Pool Thu; 9 monthly: Undergear 3rd Sat, Growth 3rd Mon, The Locker Room last Fri, L.U.R.E 4th Sat, Leather Scotch & Cigar Social 1st Fri, Classic Cock 2nd Fri, Night Flight 2nd Sat, Sunday Showtunes 2nd Sun, AWOO! 3rd Fri; 5 x 13 cards + 9 x 3 cards = 92). Every one of the 92 card links is recorded as a listed occurrence; the listing horizon (2026-09-19..2026-12-18) is the occurrence window, so no rule-only occurrences were added. The collapsed \"Archive (5 past events)\" holds 5 past docs (Ruggercub 2026-09-05, Let Them Eat Cake 2026-08-04, Boots & Buzzcuts 2026-08-01, Wide Load 2026-08-01, L.U.R.E. — Leather, Uniform, Rubber, Etc. 2026-07-26) — counted here, enumerated only in the trap. Second door: the home page UPCOMING strip repeats the first four cards with identical dates and door times.",
+    "publishedEventCount": 14,
+    "documentedEventCount": 14,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "events": [
+    {
+      "id": "undergear",
+      "kind": "series",
+      "title": "UNDERGEAR",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "Every third Saturday, doors at 9PM, going till 2AM, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"third\",\"weekday\":\"sat\"}",
+      "website": "https://www.eagleportland.com/events/undergear",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/f0de8eb8d540fcc2ff5dff0386e1d6d02ec21b29-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": "Drop Your Pants = Free | Keep Them On = $5 | Coat Check $3",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/undergear?date=2026-09-19T14:46:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/undergear?date=2026-10-17T14:46:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/undergear?date=2026-11-21T15:46:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"undergear\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Saturday · Doors 9PM · Drop Your Pants = Free | Keep Them On = $5 | Coat Check $3 · 21+\", lineup \"DJ Haute Toddy's · Sponsored by UNDERU4MEN\". Sanity anchor date 2026-08-15 (a third Saturday). Home page UPCOMING strip also shows \"SEP 19 Sat, Sep 19 UNDERGEAR Doors 9PM\"."
+    },
+    {
+      "id": "slutty-patio-cookout",
+      "kind": "series",
+      "title": "SLUTTY BBQ COOKOUT",
+      "startDate": "2026-09-20",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Free with any drink. Every Sunday, 3PM–7PM, on the Eagle Portland patio. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"weekly\",\"weekday\":\"sun\"}",
+      "website": "https://www.eagleportland.com/events/slutty-patio-cookout",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/c6274f535fab38b339b0cd213886737499bab7f1-816x1472.png?rect=25,324,767,959&w=600&h=750",
+      "cover": "FREE W/ DRINK PURCHASE",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-09-20T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-09-27T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-10-04T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-10-11T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-10-18T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-10-25T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-11-01T13:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-11-08T14:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-11-15T14:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-11-22T14:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-11-29T14:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-12-06T14:27:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/slutty-patio-cookout?date=2026-12-13T14:27:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"slutty-patio-cookout\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Sunday · Doors 3PM · FREE W/ DRINK PURCHASE · 21+\", lineup \"Grill Master Ryan\" (time \"3PM - 7PM\"). Sanity anchor date 2026-07-26; recurringRule \"weekly-sun\"; four occurrenceOverrides (2026-07-19, 08-16, 08-30, 09-13) swap only the cover image, all in the past. Home page UPCOMING strip shows \"SEP 20 Sun, Sep 20 SLUTTY BBQ COOKOUT Doors 3PM\". Title on the site is SLUTTY BBQ COOKOUT although the slug says patio-cookout."
+    },
+    {
+      "id": "brief-encounters",
+      "kind": "series",
+      "title": "BRIEF ENCOUNTERS",
+      "startDate": "2026-09-21",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "Brief Encounters is the new Monday night — every week, 8PM to midnight. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"weekly\",\"weekday\":\"mon\"}",
+      "website": "https://www.eagleportland.com/events/brief-encounters",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/91ba4ce9a67c6903e145bb09df7e6cf2364f5a69-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-09-21T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-09-28T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-10-05T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-10-12T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-10-19T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-10-26T11:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-11-02T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-11-09T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-11-16T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-11-23T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-11-30T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-12-07T12:40:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/brief-encounters?date=2026-12-14T12:40:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"brief-encounters\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Monday · Doors 8PM · 21+\", no price, no lineup. endTime \"MIDNIGHT\" → 00:00 (the following calendar day). Sanity anchor date 2026-09-14. Home page UPCOMING strip shows \"SEP 21 Mon, Sep 21 BRIEF ENCOUNTERS Doors 8PM\"."
+    },
+    {
+      "id": "growth",
+      "kind": "series",
+      "title": "Growth",
+      "startDate": "2026-09-21",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3MO",
+      "recurrenceStatedAs": "Every third Monday, 5PM–9PM, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"third\",\"weekday\":\"mon\"}",
+      "website": "https://www.eagleportland.com/events/growth",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/4bfbd05dcf0454cbeb61c85f4950a114dc98e21c-1200x1500.png?w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/growth?date=2026-09-21T14:56:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/growth?date=2026-10-19T14:56:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/growth?date=2026-11-16T15:56:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"growth\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Monday · Doors 5PM · 21+\", lineup \"GRILLMASTER BRUCE\". Sanity anchor date 2026-08-17 (a third Monday). Home page UPCOMING strip shows \"SEP 21 Mon, Sep 21 Growth Doors 5PM\" — two events on 2026-09-21 (Growth 5–9PM, Brief Encounters 8PM–midnight); both are real, not duplicates."
+    },
+    {
+      "id": "gaymenight",
+      "kind": "series",
+      "title": "GAYMENIGHT",
+      "startDate": "2026-09-22",
+      "startTime": "19:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "Gayme Night is the Eagle's weekly excuse to put down your phone and pick up a pawn. […] Tuesdays, 7PM–Midnight. Portland Eagle, 835 N Lombard. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"weekly\",\"weekday\":\"tue\"}",
+      "website": "https://www.eagleportland.com/events/gaymenight",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/977358668d541f17d5e22a588511cdd63ad1066a-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-09-22T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-09-29T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-10-06T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-10-13T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-10-20T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-10-27T12:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-11-03T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-11-10T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-11-17T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-11-24T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-12-01T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-12-08T13:33:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/gaymenight?date=2026-12-15T13:33:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"gaymenight\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Tuesday · Doors 7PM · 21+\", no price, no lineup; poster alt \"GAME NIGHT POSTER\". Title is the site's own spelling GAYMENIGHT. endTime \"MIDNIGHT\" → 00:00 next day. Sanity anchor date 2026-09-15."
+    },
+    {
+      "id": "midweek-hump-karoake",
+      "kind": "series",
+      "title": "Midweek Hump - Karoake",
+      "startDate": "2026-09-23",
+      "startTime": "20:00",
+      "endTime": "23:59",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Every Wednesday, Eagle PDX opens the mic for Midweek Hump — our weekly karaoke night where the drinks are cold, the crowd is loud, and no one judges your key changes. Doors at 8PM. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"weekly\",\"weekday\":\"wed\"}",
+      "website": "https://www.eagleportland.com/events/midweek-hump-karoake",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/22b0a3dc8d0d2462812d80d97c5729fe5dab6784-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-09-23T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-09-30T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-10-07T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-10-14T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-10-21T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-10-28T13:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-11-04T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-11-11T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-11-18T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-11-25T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-12-02T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-12-09T14:29:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/midweek-hump-karoake?date=2026-12-16T14:29:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"midweek-hump-karoake\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Wednesday · Doors 8PM · 21+\". Title keeps the site's spelling \"Karoake\" (trailing space in the source trimmed). endTime \"11:59pm\" → 23:59. Sanity anchor date 2026-07-29; recurringRule \"weekly-wed\"; two past cover-image overrides (2026-08-19, 09-02)."
+    },
+    {
+      "id": "naked-pool-championsip",
+      "kind": "series",
+      "title": "Naked Pool",
+      "startDate": "2026-09-24",
+      "startTime": "14:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "Every Thursday the Eagle turns the back room into a stripped-down arena — literally. […] Thursdays · 9PM — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"weekly\",\"weekday\":\"thu\"}",
+      "website": "https://www.eagleportland.com/events/naked-pool-championsip",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/ef895b2560e17bf02a33462ef3b2442198ba26c1-360x504.jpg?rect=0,27,360,450&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-09-24T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-10-01T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-10-08T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-10-15T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-10-22T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-10-29T13:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-11-05T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-11-12T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-11-19T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-11-26T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-12-03T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-12-10T14:30:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/naked-pool-championsip?date=2026-12-17T14:30:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"naked-pool-championsip\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Thursday · Doors 2PM · 21+\". startTime 14:00 follows the rendered Doors value (doorsTime \"2PM\"); the description ends \"Thursdays · 9PM\" and the poster alt says \"Thursday 6PM pool tournament\" — three different times, see openQuestions. endTime \"12AM\" → 00:00 next day. Sanity anchor date 2026-07-30; recurringRule \"weekly-thu\"; four past cover-image overrides (Aug 6/13/20/27)."
+    },
+    {
+      "id": "the-locker-room",
+      "kind": "series",
+      "title": "THE LOCKER ROOM",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1FR",
+      "recurrenceStatedAs": "$5 cover. Last Fridays, 9PM–close, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"last\",\"weekday\":\"fri\"}",
+      "website": "https://www.eagleportland.com/events/the-locker-room",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/b9a71a47a39e11bf60413dbdb2c861b04112e99c-1122x1402.png?w=600&h=750",
+      "cover": "$5 cover.",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/the-locker-room?date=2026-09-25T15:10:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/the-locker-room?date=2026-10-30T15:10:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/the-locker-room?date=2026-11-27T16:10:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"the-locker-room\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Friday · Doors 9PM · $5 cover. · 21+\", lineup \"Hosted by Tucker Max · Presented by Yes Coach\". Listed 2026-09-25, 10-30, 11-27 are each the last Friday of their month (Oct 30 is a 5th Friday, which is why BYDAY=-1FR and not 4FR). endTime \"12AM\" → 00:00 next day. Sanity anchor date 2026-08-28 (a last Friday). ticketPrice is stored as \"$$5 cover.\" and rendered \"$5 cover.\"."
+    },
+    {
+      "id": "l-u-r-e",
+      "kind": "series",
+      "title": "L.U.R.E",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
+      "recurrenceStatedAs": "Only the page's embedded Sanity document states the repeat: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"fourth\",\"weekday\":\"sat\"}",
+      "website": "https://www.eagleportland.com/events/l-u-r-e",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/cbcbbe2208544a5b7163e4920ac1e218a742ae0c-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/l-u-r-e?date=2026-09-26T15:06:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/l-u-r-e?date=2026-10-24T15:06:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/l-u-r-e?date=2026-11-28T16:06:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"l-u-r-e\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Saturday · Doors 9PM · 21+\", lineup \"DETOUR · JOSEPH MATTACHINE · SPECIAL GUEST\"; poster alt still names \"DJs Orso and Haute Toddy\". The description carries a stale one-off date (\"Saturday, August 22, 9PM, at Eagle Portland.\") — see trap lure-stale-august-22-copy; the ONLY cadence statement is the payload's recurrence object. Listed 2026-09-26, 10-24, 11-28 are each the fourth Saturday (Oct 31 is a fifth Saturday and is not listed, confirming fourth rather than last). Sanity anchor date 2026-08-22 (a fourth Saturday). The archived doc l-u-r-e-leather-uniform-rubber-etc (2026-07-26) is this night's earlier one-off edition and shares the same poster asset."
+    },
+    {
+      "id": "leather-scotch-and-cigar-social",
+      "kind": "series",
+      "title": "Leather, Scotch, and Cigar Social",
+      "startDate": "2026-10-02",
+      "startTime": "20:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "Adorn your leather and grab your favorite cigar while enjoying discounted scotch until midnight, every first Friday at Eagle Portland. […] First Fridays, 8PM–12AM, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"first\",\"weekday\":\"fri\"}",
+      "website": "https://www.eagleportland.com/events/leather-scotch-and-cigar-social",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/860ab3ca83cd7753bcf31c5e6c5b89cbebc948fe-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": "FREE",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/leather-scotch-and-cigar-social?date=2026-10-02T14:24:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/leather-scotch-and-cigar-social?date=2026-11-06T15:24:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/leather-scotch-and-cigar-social?date=2026-12-04T15:24:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"leather-scotch-and-cigar-social\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Friday · Doors 8PM · FREE · 21+\", lineup \"RAY (HOST) · Bootblack Nick · DJs Sappho & Detour\"; poster alt \"First Fridays: Leather, Scotch & Cigars at Eagle Portland\". endTime \"12AM\" → 00:00 next day. Sanity anchor date 2026-08-07 (a first Friday). First listed instance is 2026-10-02 because 2026-09-04 has passed."
+    },
+    {
+      "id": "classic-cock-w-bro-hoe",
+      "kind": "series",
+      "title": "Classic Cock w/ Bro Hoe",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "Disco balls up, mustaches out. Every second Friday, Eagle Portland turns back the clock […] $5 cover. 9PM–2AM. Every second Friday at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"second\",\"weekday\":\"fri\"}",
+      "website": "https://www.eagleportland.com/events/classic-cock-w-bro-hoe",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/728affa60506f22c7544949417e1dfaa2533290d-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/classic-cock-w-bro-hoe?date=2026-10-09T14:42:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/classic-cock-w-bro-hoe?date=2026-11-13T15:42:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/classic-cock-w-bro-hoe?date=2026-12-11T15:42:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"classic-cock-w-bro-hoe\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Friday · Doors 9PM · 21+\", no price line (ticketPrice null) although the description says \"$5 cover.\" — cover left null to match the card. Sanity anchor date 2026-08-14 (a second Friday); one past cover-image override (2026-09-11). First listed instance 2026-10-09 because 2026-09-11 has passed."
+    },
+    {
+      "id": "night-flight",
+      "kind": "series",
+      "title": "Night Flight w/ VJ Deluxxe",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "Take off into the night. Every second Saturday, Eagle Portland transforms into an after-hours flight […] $5 entry. 21+. Every second Saturday, 9PM–close, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"second\",\"weekday\":\"sat\"}",
+      "website": "https://www.eagleportland.com/events/night-flight",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/045bcfd1ee9ae512d6b7341ff07a8d226e83a022-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": "$5 entry.",
+      "occurrences": [
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/night-flight?date=2026-10-10T14:31:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/night-flight?date=2026-11-14T15:31:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/night-flight?date=2026-12-12T15:31:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"night-flight\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Saturday · Doors 9PM · $5 entry. · 21+\", lineup \"VJ Deluxxe\" (time \"9PM - 2AM\"). Sanity anchor date 2026-08-08 (a second Saturday). First listed instance 2026-10-10 because 2026-09-12 has passed."
+    },
+    {
+      "id": "sunday-showtunes",
+      "kind": "series",
+      "title": "Sunday Showtunes",
+      "startDate": "2026-10-11",
+      "startTime": "18:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "Every second Sunday, 6PM–10PM, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"second\",\"weekday\":\"sun\"}",
+      "website": "https://www.eagleportland.com/events/sunday-showtunes",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/506ff9ca736290c05e1d33dcedc447a6782dfc61-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": "FREE",
+      "occurrences": [
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/sunday-showtunes?date=2026-10-11T14:36:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/sunday-showtunes?date=2026-11-08T15:36:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/sunday-showtunes?date=2026-12-13T15:36:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"sunday-showtunes\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Sunday · Doors 6PM · FREE · 21+\", lineup \"EMCEE & VJ Dieter Davis\" (time \"6PM - 10PM\"). Sanity anchor date 2026-08-09 (a second Sunday). First listed instance 2026-10-11 because 2026-09-13 has passed. 2026-12-13 is also a SLUTTY BBQ COOKOUT Sunday (3–7PM) — two events, not a duplicate."
+    },
+    {
+      "id": "awoo",
+      "kind": "series",
+      "title": "AWOO!",
+      "startDate": "2026-10-16",
+      "startTime": "21:00",
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=3FR",
+      "recurrenceStatedAs": "PDX PAH's monthly pet social […] Every third Friday, starting at 9PM, at Eagle Portland. — and, in the page's embedded Sanity document: \"isRecurring\":true,\"recurrence\":{\"frequency\":\"monthly\",\"monthlyPosition\":\"third\",\"weekday\":\"fri\"}",
+      "website": "https://www.eagleportland.com/events/awoo",
+      "ticketUrl": null,
+      "image": "https://cdn.sanity.io/images/5h0axiqb/production/85fa8057f91e9a13a2aafb8f88268fefb37b36b9-3300x5100.png?rect=0,488,3300,4125&w=600&h=750",
+      "cover": null,
+      "occurrences": [
+        {
+          "startDate": "2026-10-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/awoo?date=2026-10-16T15:00:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/awoo?date=2026-11-20T16:00:00.000Z\""
+          }
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.eagleportland.com/events",
+            "quote": "href=\"/events/awoo?date=2026-12-18T16:00:00.000Z\""
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "\"slug\":{\"_type\":\"slug\",\"current\":\"awoo\"}"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Card: \"Friday · Doors 9PM · 21+\", lineup \"DJs Detour Dan & Sappho · Bootblack: Colin\". endTime null: the doc's endTime is null and the description says only \"starting at 9PM\" — no end is published. Sanity anchor date 2026-08-21 (a third Friday). First listed instance 2026-10-16 because 2026-09-18 was yesterday."
+    }
+  ],
+  "traps": [
+    {
+      "id": "archive-5-past-events",
+      "kind": "past-event",
+      "label": "\"▶ Archive (5 past events)\" toggle at the foot of /events",
+      "why": "The five archived documents are present only in the page's RSC payload (the toggle renders no cards and no links in the static HTML): Ruggercub (2026-09-05, \"Saturday, September 5, 8PM\"), Let Them Eat Cake (with Oregon Leather Pride) (2026-08-04), Boots & Buzzcuts (2026-08-01, IML weekend kickoff), Wide Load (2026-08-01 in its date field although its description says \"Friday, August 31\") and L.U.R.E. — Leather, Uniform, Rubber, Etc. (2026-07-26, the earlier one-off edition of the live L.U.R.E series). All five are past; the parser does not set allowPastEvents. Ruggercub is additionally saved as isRecurring:true with recurrence {\"frequency\":\"monthly\",\"weekday\":\"sat\"} and no monthlyPosition, yet the site materializes no future card for it — a payload reader that trusts isRecurring would invent a monthly Ruggercub.",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "Archive (<!-- -->5<!-- --> past events)"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "The 5 docs have no dated card and no href on the listing; their only dates are the ISO \"date\" fields inside self.__next_f.push chunks. None of the five should appear in a run."
+    },
+    {
+      "id": "lure-stale-august-22-copy",
+      "kind": "past-event",
+      "label": "\"Saturday, August 22, 9PM, at Eagle Portland.\" inside the live L.U.R.E description",
+      "why": "The L.U.R.E series document (recurrence monthly / fourth / sat, cards on 2026-09-26, 10-24, 11-28) still carries its launch-night copy naming August 22. A reader that dates an event from description prose would emit a 2026-08-22 L.U.R.E — a past ghost that no card publishes. The card's own date box and ?date= link are the truth.",
+      "evidence": {
+        "url": "https://www.eagleportland.com/events",
+        "quote": "Saturday, August 22, 9PM, at Eagle Portland."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "The listing card shows only the truncated description (\"Come dressed in your finest leather,…\"); the full sentence is visible in the RSC payload and presumably on the detail page."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Naked Pool publishes three different start times: the card and doorsTime say \"Doors 2PM\", the description ends \"Thursdays · 9PM\", and the poster alt text says \"Thursday 6PM pool tournament\". This file uses 14:00 (the rendered Doors value); confirm which one the scraper should carry.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "The cadence of every night is machine-stated only in the embedded Sanity \"recurrence\" object; 13 of 14 also say it in visible description prose, but L.U.R.E does not (its prose names a stale August 22). If the scraper may only write a recurrence it can quote from visible text, L.U.R.E stays three dated singles (2026-09-26, 10-24, 11-28) rather than one FREQ=MONTHLY;BYDAY=4SA series.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Card links carry ?date=<ISO> at the anchor document's time-of-day (07:46 Pacific for Undergear), not the door time. A parser that reads that ISO as the start would be wrong by hours; the \"Doors 9PM\" text is the start. Worth a guard if the parser ever reads the link timestamp.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

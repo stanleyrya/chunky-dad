@@ -1,0 +1,2424 @@
+{
+  "schemaVersion": 1,
+  "source": "Lodge NY",
+  "slug": "lodge-ny",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics"
+    ],
+    "doors": [
+      {
+        "url": "https://lodgeny.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "A 4 KB Vite/React shell (<div id=\"root\">, Organization JSON-LD only). No events in the HTML."
+      },
+      {
+        "url": "https://lodgeny.com/assets/index-B-jhL1up.js",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The app bundle embeds a Google Calendar iframe (calendar.google.com/calendar/embed?…&src=aW5mb0Bsb2RnZW55LmNvbQ = info@lodgeny.com, mode=AGENDA) — the only calendar the site has — plus the party family sites (bearpartynyc.com, dadsnladsnyc.com, workmanslunch.com …)."
+      },
+      {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 229,
+        "truthFlag": "229 VEVENTs (the whole calendar since 2023), no paging; 175 had ended more than 30 days before recon",
+        "note": "The calendar's public iCalendar export (text/calendar). DTSTART;TZID=America/New_York wall clocks, weekly/monthly RRULEs (most with UNTIL), LOCATION street lines, DESCRIPTION with the party's own site, SUMMARY = party name + the venue street address. The scraper reads it as a machine door (🚪 MACHINE DOOR … is an iCalendar feed) and drops the archive."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-19. 229 VEVENTs; 175 archive records (ended > 30 days ago, or series whose UNTIL passed > 30 days ago); 29 live series, 2 upcoming singles, 0 recent past singles, 23 series that just ended."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the iCalendar export, read whole. Every record that is live on 2026-09-19 is documented: series (RRULE without UNTIL or with a future UNTIL) as ONE entry each with the rule's nights in the window, dated records as singles. 175 archive records and 0 recent past singles are counted as past listings, not enumerated. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
+    "publishedEventCount": 31,
+    "documentedEventCount": 31,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "nyc",
+    "timezone": "America/New_York",
+    "website": "https://lodgeny.com"
+  },
+  "events": [
+    {
+      "id": "manhole-in-park-slope-brooklyn-sign-up-at-manholenyc-com-for-address-2",
+      "kind": "series",
+      "title": "Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)",
+      "description": "Manhole is a fisting party for experienced players and novices alike. Sign up at manholenyc.com for more info.",
+      "address": "Park Slope, Brooklyn, NY, USA",
+      "startDate": "2023-03-19",
+      "startTime": "16:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=3SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 83cli97g90r3c24s0ljsghcmk9@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240616T180000 / SUMMARY:Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address) / RRULE:FREQ=MONTHLY;BYDAY=3SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "For guys who are down to fuck. Sign up at thefuckstop.com.",
+      "address": "Garment District, New York, NY, USA",
+      "startDate": "2024-06-01",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=1SA",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 16m94i3r6rnj3me3deja2qf6ve@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240601T130000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=MONTHLY;BYDAY=1SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "manhole-in-park-slope-brooklyn-sign-up-at-manholenyc-com-for-address",
+      "kind": "series",
+      "title": "Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)",
+      "description": "A fisting party for experienced players and novices alike. Sign up at manholenyc.com for more info.",
+      "address": "Park Slope, Brooklyn, NY, USA",
+      "startDate": "2024-07-06",
+      "startTime": "19:00",
+      "endTime": "00:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=1SA",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 4vjva5jljhp5m493diutuci0ltr20240706T230000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240706T190000 / SUMMARY:Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address) / RRULE:FREQ=MONTHLY;BYDAY=1SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "chub-chaser-party-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "description": "For chubs and chasers only. Sign up at chubchaserparty.com.",
+      "address": null,
+      "startDate": "2024-08-24",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=4SA",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 0n89pkstn30gf5ku8hl3igju05@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250628T130000 / SUMMARY:Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=MONTHLY;BYDAY=4SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-fuck-stop-232-w-37th-st-2nd-fl-between-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues",
+      "description": "A sex party for guys who need penetration. More info at thefuckstop.com.",
+      "address": "Garment District, New York, NY, USA",
+      "startDate": "2025-08-09",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=2SA",
+      "occurrences": [
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID ub1clvha0p0qv69v5g264j76ba@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250809T130000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues / RRULE:FREQ=MONTHLY;BYDAY=2SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fluids-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "series",
+      "title": "Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "For trans women and trans men, cross-dressers and guys into this crowd. See fluidspartynyc.com",
+      "address": "457 W 56th St, New York, NY 10019, USA",
+      "startDate": "2026-07-04",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SA",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 5r7ntk153hu8296jrheo932el8_R20260704T230000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260704T190000 / SUMMARY:Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "Workman's Lunch 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "description": "A party for the working crowd and guys who are off days. More info at workmanslunch.com.",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-18",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 1gll183bka253s1870a6p3m6j4r20250801T160000_R20260918T160000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260918T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues-2",
+      "kind": "series",
+      "title": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "description": "The Bear Party is a sex party for all bears, daddies, cubs, chubs, chasers and friends. See bearpartynyc.com for details.",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-18",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 4t0olgk52gmfvb851dlsgeiandr20240614T220000_R20260918T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260918T180000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-3",
+      "kind": "series",
+      "title": "Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "Blow-jobs only. See blowbuddiesnyc.com for more info. Thanks.",
+      "address": "457 W 56th St, 2nd Fl, New York, NY 10036, USA",
+      "startDate": "2026-09-18",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 6m3ng11rua52tn98tblmqf9kuf_R20260918T230000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260918T190000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nocturnal-ny-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Nocturnal NY 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "For the late crowd. See nocturnalnewyork.com for more info.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-19",
+      "startTime": "01:00",
+      "endTime": "07:00",
+      "recurrence": "FREQ=WEEKLY;WKST=SU;BYDAY=SA,SU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;WKST=SU;BYDAY=SA,SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 5bfosskn81vl1g0vgk5ced6194_R20260919T050000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260919T010000 / SUMMARY:Nocturnal NY 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;BYDAY=SA,SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "series",
+      "title": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "For guys who are down to fuck. Sign up at thefuckstop.com.",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-19",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "RRULE:FREQ=MONTHLY;BYDAY=3SA",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 0n059n8p5sr3gvgmkec3cke3rv_R20260919T170000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260919T130000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=MONTHLY;BYDAY=3SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "series",
+      "title": "Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "A blow-job only party. See blowbuddiesnyc.com. Thanks.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-19",
+      "startTime": "16:00",
+      "endTime": "19:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SA",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 582ahavhjfm4r0q7m2i2m73ot3r20250517T200000_R20260919T200000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260919T160000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stag-hk-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Stag HK 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "Sign up at nycstag.com.",
+      "address": "457 W 56th St, 2nd Fl, New York, NY 10036, USA",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SA",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 02tedcjj796dpif5mis3akk16q_R20260920T020000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260919T220000 / SUMMARY:Stag HK 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "series",
+      "title": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "description": "The Bear Party is a sex party for all bears, daddies, cubs, chubs, chasers and friends. See bearpartynyc.com for details.",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-20",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 0g6eg1sln8njpb1f6lk0um5tslr20240602T170000_R20260920T170000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260920T130000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Blow Buddies NYC 457 W 56th St, 2nd Fl. b/w 9th and 10th Avenues",
+      "description": "Blow-jobs only. Please add your email at blowbuddiesnyc.com. Thanks.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-20",
+      "startTime": "16:00",
+      "endTime": "19:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 3r00ae7skdosod0vok0564sh06_R20260920T200000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260920T160000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl. b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dads-n-lads-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "series",
+      "title": "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "description": "For daddies and younger guys. More info at dadsnladsnyc.com. Join with Google Meet: https://meet.google.com/myz-kxus-jag Learn more about Meet at: https://support.google.com/a/users/answer/9282720",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-20",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 0ci3d9lu2avsrl23vurve04fqcr20250727T220000_R20260920T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260920T180000 / SUMMARY:Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ny-uncut-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "NY Uncut 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "For uncut guys and admirers. nyuncut.com.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-20",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=SU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 34b6er7vk5nsvqvlthpdgconea_R20260920T230000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260920T190000 / SUMMARY:NY Uncut 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "workman-s-lunch-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "Sign up at workmanslunch.com.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-21",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "recurrence": "FREQ=WEEKLY;WKST=SU;UNTIL=20260923T035959Z;BYDAY=WE,MO",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260923T035959Z;BYDAY=WE,MO",
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID o0e6lvmpesdgboi82m01asb2kjr20250203T170000_R20260921T160000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260921T120000 / SUMMARY:Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260923T035959Z;BYDAY=WE,MO"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "blow-buddies-nyc-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "Blow Buddies NYC is a blowjob-only sex party. Sign up at blowbuddiesnyc.com for details.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY, USA",
+      "startDate": "2026-09-21",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=MO",
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 4vjkjd3tbina25gh53piip9obdr20240603T220000_R20260921T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260921T180000 / SUMMARY:Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=MO"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "series",
+      "title": "Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "description": "Workman's Lunch is a midday sex party for the working crowd and guys that are off days. Sign up at workmanslunch.com for more info.",
+      "address": "232 W 37th St 2nd fl, New York, NY 10018, USA",
+      "startDate": "2026-09-22",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 1tjj5mvqbna7nnddsrkc7ct5vjr20240604T160000_R20260922T160000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260922T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dads-n-lads-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "series",
+      "title": "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "description": "For daddies and guys that need one. Go to dadsnladsnyc.com.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY, USA",
+      "startDate": "2026-09-22",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 75djd1tini0dk6sbtuqmkv2euor20241119T230000_R20260922T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260922T180000 / SUMMARY:Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fluids-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "A party for trans, Cd, TV, TS, those who are gender fluid and guys that like this crowd. fluidspartynyc.com",
+      "address": "457 W 56th St, 2nd Fl, New York, NY 10036, USA",
+      "startDate": "2026-09-22",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TU",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 2urii5kuce6brnvdclafupl4q4_R20260922T230000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260922T190000 / SUMMARY:Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "workman-s-lunch-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "series",
+      "title": "Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "Sign up at workmanslunch.com.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-23",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "recurrence": "FREQ=WEEKLY;WKST=SU;BYDAY=WE,MO",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;WKST=SU;BYDAY=WE,MO",
+      "occurrences": [
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID o0e6lvmpesdgboi82m01asb2kjr20250203T170000_R20260923T160000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260923T120000 / SUMMARY:Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;BYDAY=WE,MO"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues-3",
+      "kind": "series",
+      "title": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "description": "A sex party for bears, daddies, cubs, chubs, chasers and friends. Sign up at bearpartynyc.com.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY 10019, USA",
+      "startDate": "2026-09-23",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=WE",
+      "occurrences": [
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 34cooft0j8k8e3meto4iav4qvsr20240605T220000_R20260923T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260923T180000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=WE"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "series",
+      "title": "Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "Workman's Lunch is a midday sex party for the working crowd and guys that are off days. Sign up at workmanslunch.com for more info.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY, USA",
+      "startDate": "2026-09-24",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TH",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 64hn8m7ejmg3vo8mj0fdttsrgfr20240606T160000_R20260924T160000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260924T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "blow-buddies-nyc-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "series",
+      "title": "Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "description": "Blow Buddies NYC is an oral-only sex party. Sign up at blowbuddiesnyc.com for details.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY 10019, USA",
+      "startDate": "2026-09-24",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TH",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 1o01ug423c6clokgnv9s9peqp7r20240606T220000_R20260924T220000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260924T180000 / SUMMARY:Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-4",
+      "kind": "series",
+      "title": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "A party for guys who are down to fuck. Sign up at thefuckstop.com. Free if you attend Blow Buddies NYC (blowbuddiesnyc.com) immediately prior.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY, USA",
+      "startDate": "2026-09-24",
+      "startTime": "20:30",
+      "endTime": "23:00",
+      "recurrence": "FREQ=WEEKLY;UNTIL=20261022T035959Z;BYDAY=TH",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;UNTIL=20261022T035959Z;BYDAY=TH",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID btaesd09vdjq8jpa7bjjle8o4ir20240712T003000_R20260925T003000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260924T203000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20261022T035959Z;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "squeeze-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "series",
+      "title": "Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "description": "A sex party with no theme which means everyone's welcome. Go to squeezeparty.com for more info.",
+      "address": "457 W 56th St 2nd fl, New York, NY 10019, USA",
+      "startDate": "2026-09-25",
+      "startTime": "22:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 0ddhoe2dnh11iouc0h4nbj480m_R20260926T020000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260925T220000 / SUMMARY:Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-3",
+      "kind": "series",
+      "title": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "description": "A party for guys who are down to fuck. Sign up at thefuckstop.com. Free if you attend Blow Buddies NYC (blowbuddiesnyc.com) immediately prior.",
+      "address": "232 W 37th St, 2nd Fl, New York, NY, USA",
+      "startDate": "2026-10-22",
+      "startTime": "20:30",
+      "endTime": "23:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "RRULE:FREQ=WEEKLY;BYDAY=TH",
+      "occurrences": [
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID btaesd09vdjq8jpa7bjjle8o4ir20240712T003000_R20261023T003000@google.com. The calendar puts the venue's street address inside SUMMARY; the address field carries it too (LOCATION). The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20261022T203000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "manhole-in-park-slope-brooklyn-sign-up-at-manholenyc-com-for-address-2026-11-22",
+      "kind": "single",
+      "title": "Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)",
+      "description": "Manhole is a fisting party for experienced players and novices alike. Sign up at manholenyc.com for more info.",
+      "address": "Park Slope, Brooklyn, NY, USA",
+      "startDate": "2026-11-22",
+      "startTime": "16:00",
+      "endDate": "2026-11-22",
+      "endTime": "21:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 83cli97g90r3c24s0ljsghcmk9@google.com.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240616T180000 / SUMMARY:Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "manhole-in-park-slope-brooklyn-sign-up-at-manholenyc-com-for-address-2027-08-22",
+      "kind": "single",
+      "title": "Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)",
+      "description": "Manhole is a fisting party for experienced players and novices alike. Sign up at manholenyc.com for more info.",
+      "address": "Park Slope, Brooklyn, NY, USA",
+      "startDate": "2027-08-22",
+      "startTime": "16:00",
+      "endDate": "2027-08-22",
+      "endTime": "21:00",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "VEVENT UID 83cli97g90r3c24s0ljsghcmk9@google.com.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240616T180000 / SUMMARY:Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [
+    {
+      "id": "ended-blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260919T035959Z;BYDAY=SA) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20251115T160000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260919T035959Z;BYDAY=SA"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "past-event",
+      "label": "Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240606T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-blow-buddies-nyc-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "past-event",
+      "label": "Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260921T035959Z;BYDAY=MO) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240603T180000 / SUMMARY:Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260921T035959Z;BYDAY=MO"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-workman-s-lunch-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;WKST=SU;UNTIL=20260916T035959Z;BYDAY=WE,MO) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260323T120000 / SUMMARY:Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260916T035959Z;BYDAY=WE,MO"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-stag-hk-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Stag HK 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260919T035959Z;BYDAY=SA) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250118T220000 / SUMMARY:Stag HK 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260919T035959Z;BYDAY=SA"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "past-event",
+      "label": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260227T180000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues-2",
+      "kind": "past-event",
+      "label": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240602T130000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-the-bear-party-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues-3",
+      "kind": "past-event",
+      "label": "The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260923T035959Z;BYDAY=WE) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240605T180000 / SUMMARY:The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260923T035959Z;BYDAY=WE"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-squeeze-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260925T035959Z;BYDAY=FR) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260918T220000 / SUMMARY:Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260925T035959Z;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "past-event",
+      "label": "Blow Buddies NYC 457 W 56th St, 2nd Fl. b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250824T160000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl. b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-blow-buddies-nyc-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-3",
+      "kind": "past-event",
+      "label": "Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20251121T190000 / SUMMARY:Blow Buddies NYC 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-fluids-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250923T190000 / SUMMARY:Fluids 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-dads-n-lads-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "past-event",
+      "label": "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20241119T180000 / SUMMARY:Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-blow-buddies-nyc-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "past-event",
+      "label": "Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240606T180000 / SUMMARY:Blow Buddies NYC 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues",
+      "kind": "past-event",
+      "label": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260702T203000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260924T035959Z;BYDAY=TH"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "past-event",
+      "label": "Workman's Lunch 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250801T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-dads-n-lads-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "past-event",
+      "label": "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250727T180000 / SUMMARY:Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-squeeze-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "past-event",
+      "label": "Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20251003T220000 / SUMMARY:Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260918T035959Z;BYDAY=FR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-ny-uncut-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "NY Uncut 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260621T190000 / SUMMARY:NY Uncut 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260920T035959Z;BYDAY=SU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-nocturnal-ny-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues",
+      "kind": "past-event",
+      "label": "Nocturnal NY 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;WKST=SU;UNTIL=20260919T035959Z;BYDAY=SA,SU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20250118T010000 / SUMMARY:Nocturnal NY 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260919T035959Z;BYDAY=SA,SU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-workman-s-lunch-457-w-56th-st-2nd-fl-b-w-9th-and-10th-avenues-2",
+      "kind": "past-event",
+      "label": "Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;WKST=SU;UNTIL=20260921T035959Z;BYDAY=WE,MO) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20260916T120000 / SUMMARY:Workman's Lunch 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues / RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260921T035959Z;BYDAY=WE,MO"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-workman-s-lunch-232-w-37th-st-2nd-fl-b-w-7th-8th-avenues",
+      "kind": "past-event",
+      "label": "Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "why": "Series whose RRULE (FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240604T120000 / SUMMARY:Workman's Lunch 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues / RRULE:FREQ=WEEKLY;UNTIL=20260922T035959Z;BYDAY=TU"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ended-the-fuck-stop-232-w-37th-st-2nd-fl-b-w-7th-and-8th-avenues-2",
+      "kind": "past-event",
+      "label": "The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues",
+      "why": "Series whose RRULE (FREQ=MONTHLY;UNTIL=20260919T035959Z;BYDAY=3SA) yields no night inside 2026-09-19 → 2026-12-18: it ended within the last month.",
+      "evidence": {
+        "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
+        "quote": "DTSTART;TZID=America/New_York:20240727T130000 / SUMMARY:The Fuck Stop 232 W 37th St, 2nd Fl. b/w 7th and 8th Avenues / RRULE:FREQ=MONTHLY;UNTIL=20260919T035959Z;BYDAY=3SA"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The calendar mixes the bear parties (The Bear Party, Dads 'n' Lads, Chub Chaser Party, Workman's Lunch, Blow Buddies) with parties for other crowds (Fluids, NY Uncut, Manhole, The Fuck Stop, Nocturnal NY, Squeeze, Stag HK). All are documented as published events; the bear pass decides which are ours.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

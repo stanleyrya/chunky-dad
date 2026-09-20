@@ -1,0 +1,1684 @@
+{
+  "schemaVersion": 1,
+  "source": "The SoFo Tap",
+  "slug": "the-sofo-tap",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0"
+    ],
+    "doors": [
+      {
+        "url": "https://thesofotap.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Squarespace page whose only calendar is the TicketSauce widget: <script src=\"https://www.sickening.events/js/events/widget.js\"> then TsEventWidget.fetchEvents({ pid: '60a71c30-a1e8-48e8-a5b0-1f640ad1e030', oid: '69c6fe24-2598-420b-a938-7cae0a1e635e', layout: 'calendar' }). No event text in the static HTML."
+      },
+      {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 65,
+        "truthFlag": "status: \"success\"; no paging — the widget's default arguments (start 0, end 0, incldateless true) request the organization's whole upcoming list in one response",
+        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs)."
+      }
+    ],
+    "notes": "The SoFo Tap (2Bears Tavern Group). Recon from one cached read of each door on 2026-09-19. 65 rows, 8 distinct titles, 2026-09-19 → 2026-12-11. The feed is upcoming-only; no past rows."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the TicketSauce events_by_organization JSON answered 65 rows (all future, 2026-09-19 → 2026-12-11); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: DOGGY DAYS | BEAR TRAP | SUNDAY FUNDAY - FREE HOT DOGS | BEARAOKE | MAKE MONDAYS SUCK LESS | NERD BEAR TRIVIA | GRRR - CHICAGO'S ORIGINAL BEAR NIGHT! | REWIND: After Dark.",
+    "publishedEventCount": 65,
+    "documentedEventCount": 65,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "chicago",
+    "timezone": "America/Chicago",
+    "bar": "The SoFo Tap",
+    "address": "4923 N Clark St, Chicago, IL 60640",
+    "website": "https://thesofotap.com"
+  },
+  "events": [
+    {
+      "id": "doggy-days-2026-09-19",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-19",
+      "startTime": "12:00",
+      "endDate": "2026-09-19",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fb37-6a4c-4ccf-892d-3ec30a1e62ca\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bear-trap-2026-09-19",
+      "kind": "single",
+      "title": "BEAR TRAP",
+      "description": "Bear Trap A night built for connection, chemistry, and that charged moment when the energy in the room shifts. Bear Trap brings together bears, cubs, otters, chasers, and admirers for a social, flirty night with music by Tracy McKenzie. Saturday, September 19th 9PM Music By Tracy McKenzie SoFo Tap. Come see where the night takes you.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "ticketUrl": "https://www.sickening.events/e/bear-trap-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788372236/saas/logos/image_1788372230236_v0fsjph6c.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a9864f5-39ec-4fee-8aeb-17390a1e6222\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-09-20",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-20",
+      "startTime": "12:00",
+      "endDate": "2026-09-20",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840114-219c-48df-9bfd-5b9c0a1e605c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-09-20",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-20",
+      "startTime": "21:00",
+      "endDate": "2026-09-21",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fe43-6cc0-4401-af60-049b0a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-09-21",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-21",
+      "startTime": "17:00",
+      "endDate": "2026-09-22",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949425/saas/logos/image_1780949419958_zya0shgro.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbdf47-2270-455a-b9ed-00390a1e624c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-09-23",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-23",
+      "startTime": "20:00",
+      "endDate": "2026-09-23",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbe127-e334-443d-a8ee-14900a1e63b3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-09-25",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbdffc-ea30-43cc-aaa8-13000a1e63d6\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-09-26",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-26",
+      "startTime": "12:00",
+      "endDate": "2026-09-26",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fc28-3918-4c03-acf6-7ad60a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "rewind-after-dark-2026-09-26",
+      "kind": "single",
+      "title": "REWIND: After Dark",
+      "description": "Rewind After Dark Flirting With the Past It's clever, nostalgic, a little sexy, and perfectly fits a social bar where people are there to connect, reminisce, and maybe meet someone new . REWIND: After Dark takes SoFo Tap back to the 90s for one night, moody alleyway energy and all. Expect wall to wall 90s anthems, that unmistakable after dark glow, and a room full of people ready to relive the decade that gave us grunge, boy bands, and the best one hit wonders ever made. Saturday, September 26th 9PM to 3AM No Cover 90s Anthems By Tracy McKenzie SoFo Tap. No cover, no excuses. Dust off your favorite throwback fit and come flirt with the past.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "03:00",
+      "ticketUrl": "https://www.sickening.events/e/rewind-after-dark",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788372887/saas/logos/image_1788372882313_x27kk23oh.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a986746-bd40-41ee-baa6-77ab0a1e62c8\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-09-27",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-27",
+      "startTime": "12:00",
+      "endDate": "2026-09-27",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83ffe7-c3cc-45c1-8e10-6e5a0a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-09-27",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-27",
+      "startTime": "21:00",
+      "endDate": "2026-09-28",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fd17-08c4-4d5b-adf3-4d5b0a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-09-28",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-28",
+      "startTime": "17:00",
+      "endDate": "2026-09-29",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbdfbf-107c-4d45-9c07-581e0a1e61ba\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-09-30",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-09-30",
+      "startTime": "20:00",
+      "endDate": "2026-09-30",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbe0eb-b364-45ca-ac57-08eb0a1e601a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-10-02",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-02",
+      "startTime": "21:00",
+      "endDate": "2026-10-03",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"69dbe038-a8d0-4325-9b64-00500a1e63b3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-10-03",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-03",
+      "startTime": "12:00",
+      "endDate": "2026-10-03",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fa83-90e0-45b5-9f89-00170a1e626c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-10-04",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-04",
+      "startTime": "12:00",
+      "endDate": "2026-10-04",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84009b-1c30-47c0-a601-24b90a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-10-04",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-04",
+      "startTime": "21:00",
+      "endDate": "2026-10-05",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fe07-7df8-425d-82ff-43270a1e612c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-10-05",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-05",
+      "startTime": "17:00",
+      "endDate": "2026-10-06",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8401c8-b130-45d5-ad02-35ae0a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-10-07",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-07",
+      "startTime": "20:00",
+      "endDate": "2026-10-07",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84054b-b544-44b2-a47d-10350a1e6229\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-10-09",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8406ef-3a9c-439d-84c9-4f640a1e626c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-10-10",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-10",
+      "startTime": "12:00",
+      "endDate": "2026-10-10",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fafc-9468-427f-b23a-00fd0a1e60b3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-10-11",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-11",
+      "startTime": "12:00",
+      "endDate": "2026-10-11",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83ff33-c2f4-4c84-a9fd-2f360a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-10-11",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-11",
+      "startTime": "21:00",
+      "endDate": "2026-10-12",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fcdc-30e0-49a8-901c-3e7a0a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-10-12",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-12",
+      "startTime": "17:00",
+      "endDate": "2026-10-13",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84032f-5f90-4afe-8ad6-3e790a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-10-14",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-14",
+      "startTime": "20:00",
+      "endDate": "2026-10-14",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840498-4c1c-4ea2-ae77-77ab0a1e619b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-10-16",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-16",
+      "startTime": "21:00",
+      "endDate": "2026-10-17",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84081c-d758-4735-8933-21060a1e605c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-10-17",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-17",
+      "startTime": "12:00",
+      "endDate": "2026-10-17",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fbaf-46c4-488f-aefb-0b8d0a1e626c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-10-18",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-18",
+      "startTime": "12:00",
+      "endDate": "2026-10-18",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840023-7064-4301-b2d0-3f750a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-10-18",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-18",
+      "startTime": "21:00",
+      "endDate": "2026-10-19",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fdcc-abe8-41d7-a727-3e790a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-10-19",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-19",
+      "startTime": "17:00",
+      "endDate": "2026-10-20",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84023f-5020-4bd4-b27e-00180a1e60b3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-10-21",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-21",
+      "startTime": "20:00",
+      "endDate": "2026-10-21",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840420-9f10-4f71-b826-2f360a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-10-23",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "endDate": "2026-10-24",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840857-b974-4f49-91ec-3eb00a1e6259\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-10-24",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-24",
+      "startTime": "12:00",
+      "endDate": "2026-10-24",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fca0-1ce0-46cf-9f19-3e780a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-10-25",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-25",
+      "startTime": "12:00",
+      "endDate": "2026-10-25",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8400d7-6e28-45c1-88a2-40480a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-10-25",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-25",
+      "startTime": "21:00",
+      "endDate": "2026-10-26",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fef8-d1f4-4dd7-b73d-00150a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-10-26",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-26",
+      "startTime": "17:00",
+      "endDate": "2026-10-27",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8402f4-3d08-4292-8110-3e540a1e608c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-10-28",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-28",
+      "startTime": "20:00",
+      "endDate": "2026-10-28",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840587-8bac-41db-8956-00140a1e608c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-10-30",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8407df-6ed0-4208-97e0-21060a1e605c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-10-31",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-10-31",
+      "startTime": "12:00",
+      "endDate": "2026-10-31",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fabf-bbf8-4616-934b-143b0a1e612c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-11-01",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-01",
+      "startTime": "12:00",
+      "endDate": "2026-11-01",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83ffac-fa48-4db2-8d3b-76c40a1e612c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-11-01",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-01",
+      "startTime": "21:00",
+      "endDate": "2026-11-02",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fd8f-443c-4573-9df2-02000a1e619b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-11-02",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-02",
+      "startTime": "17:00",
+      "endDate": "2026-11-03",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84018c-5020-43a7-9ea9-2f760a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-11-04",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-04",
+      "startTime": "20:00",
+      "endDate": "2026-11-04",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8403e4-f678-46dd-a2b4-7ad60a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-11-06",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-06",
+      "startTime": "21:00",
+      "endDate": "2026-11-07",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8407a3-dce4-4a54-a62c-37df0a1e619b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-11-07",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-07",
+      "startTime": "12:00",
+      "endDate": "2026-11-07",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fb73-b120-4c90-9ca8-00390a1e6259\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-11-08",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-08",
+      "startTime": "12:00",
+      "endDate": "2026-11-08",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840060-5310-42e2-9339-04e40a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-11-08",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-08",
+      "startTime": "21:00",
+      "endDate": "2026-11-09",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83febc-e3dc-490f-be82-2f480a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-11-09",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-09",
+      "startTime": "17:00",
+      "endDate": "2026-11-10",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84027b-b978-4b27-b804-7ba40a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-11-11",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-11",
+      "startTime": "20:00",
+      "endDate": "2026-11-11",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8404d3-fd58-4bdb-9b9a-51190a1e61a9\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-11-13",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-13",
+      "startTime": "21:00",
+      "endDate": "2026-11-14",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840767-5634-4e6d-b661-6e5a0a1e636c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "doggy-days-2026-11-14",
+      "kind": "single",
+      "title": "DOGGY DAYS",
+      "description": "Doggy Days Saturdays • 12PM – 3PM SoFo Tap Bring your pup and hang out at Doggy Days —SoFo Tap's weekly dog-friendly party built for easy Saturdays, good drinks, and even better company.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-14",
+      "startTime": "12:00",
+      "endDate": "2026-11-14",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/doggy-days-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877449/saas/logos/image_1778877444903_2wim11l62.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fbec-1134-40d2-94bf-3f730a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-funday-free-hot-dogs-2026-11-15",
+      "kind": "single",
+      "title": "SUNDAY FUNDAY - FREE HOT DOGS",
+      "description": "Sunday Funday Free Hot Dogs • 12PM – 3PM SoFo Tap Keep it simple. Free hot dogs, cold drinks, and an easy Sunday hang. Stop by, grab a bite, and settle in for the afternoon.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-15",
+      "startTime": "12:00",
+      "endDate": "2026-11-15",
+      "endTime": "15:00",
+      "ticketUrl": "https://www.sickening.events/e/sunday-funday-free-hot-dogs-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778877823/saas/logos/image_1778877818305_ssuvowp57.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84014f-da9c-411a-a017-00160a1e6195\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearaoke-2026-11-15",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "description": "BEARAOKE Hosted by Rhett Butlah Sundays • 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that's here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-15",
+      "startTime": "21:00",
+      "endDate": "2026-11-16",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a83fd53-a6b0-4697-a79d-55be0a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-11-16",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-16",
+      "startTime": "17:00",
+      "endDate": "2026-11-17",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84036c-ea94-442d-9698-4f620a1e626c\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-11-18",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-18",
+      "startTime": "20:00",
+      "endDate": "2026-11-18",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8405ff-0f5c-4f9b-a41f-003d0a1e61a9\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-11-20",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-20",
+      "startTime": "21:00",
+      "endDate": "2026-11-21",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84072c-a74c-4e80-a31c-002d0a1e6259\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-11-23",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-23",
+      "startTime": "17:00",
+      "endDate": "2026-11-24",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840203-ecd4-4de4-9dbf-00130a1e6399\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-11-25",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-25",
+      "startTime": "20:00",
+      "endDate": "2026-11-25",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84045b-cc30-488a-95f2-50ab0a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-11-27",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-27",
+      "startTime": "21:00",
+      "endDate": "2026-11-28",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840677-cd68-47ab-a86f-00140a1e6195\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-11-30",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-11-30",
+      "startTime": "17:00",
+      "endDate": "2026-12-01",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8402b7-1784-4d7b-8318-00150a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-12-02",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-12-02",
+      "startTime": "20:00",
+      "endDate": "2026-12-02",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a840510-fa90-4234-ba7d-37df0a1e619b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-12-04",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-12-04",
+      "startTime": "21:00",
+      "endDate": "2026-12-05",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8406b4-2d30-4561-8a18-002e0a1e6195\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "make-mondays-suck-less-2026-12-07",
+      "kind": "single",
+      "title": "MAKE MONDAYS SUCK LESS",
+      "description": "Make Mondays Suck Less Every Monday • 5PM – 2AM SoFo Tap It looks like it's been a long day… Would you like $5 You Call It drinks? Mondays don't have to feel like Mondays. Log off, shake it off, and reset your week at SoFo Tap with a night built for comfort, nostalgia, and easy vibes. Enjoy $5 You Call It drinks while we play the best 90s & 2000s music videos all night long.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-12-07",
+      "startTime": "17:00",
+      "endDate": "2026-12-08",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/make-mondays-suck-less-2-11-11-4-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780949457/saas/logos/image_1780949451457_acfojz1ua.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8403a7-73d8-46da-9454-00150a1e6056\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nerd-bear-trivia-2026-12-09",
+      "kind": "single",
+      "title": "NERD BEAR TRIVIA",
+      "description": "Nerd Bear Trivia Wednesdays • 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-12-09",
+      "startTime": "20:00",
+      "endDate": "2026-12-09",
+      "endTime": "22:00",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a8405c4-9178-4604-bb69-40480a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grrr-chicago-s-original-bear-night-2026-12-11",
+      "kind": "single",
+      "title": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "description": "GRRR Chicago's Weekly Bear Night Fridays • 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago's weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER • NO ATTITUDE • ALL GRRR",
+      "bar": "The SoFo Tap",
+      "address": "4923 North Clark Street, Chicago, IL 60640",
+      "location": "41.972435, -87.667679",
+      "startDate": "2026-12-11",
+      "startTime": "21:00",
+      "endDate": "2026-12-12",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6a84063c-12cc-4393-a06d-4d5b0a1e62b4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

@@ -1,0 +1,1696 @@
+{
+  "schemaVersion": 1,
+  "source": "Black Eagle Toronto",
+  "slug": "black-eagle-toronto",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.blackeagletoronto.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.blackeagletoronto.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Configured page. Static HTML holds no events — the calendar is an Elfsight widget (<div class=\"elfsight-app-e5a158fb-806e-4349-9a16-7546cf9cd113\">, platform.js), read by collectElfsightCalendarEvents."
+      },
+      {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 255,
+        "truthFlag": "the boot payload carries the widget's entire event list: 255 entries, past and future, no paging",
+        "note": "Elfsight event-calendar app. Entries: name, start/end { date, time }, timeZone per entry, repeatPeriod (noRepeat 220, nthDayInMonth 21, custom 13, lastDayInMonth 1), repeat* fields, description, coverImage, actions (link buttons), isAllDay. No venue field: the widget is the bar's own calendar."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-19. 255 widget entries: 37 future singles, 22 repeating entries with a window occurrence, 194 entries already over (counted, not enumerated), 0 repeating entries with nothing in the window."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (255). Documented: every entry that is upcoming (37 singles) or repeats into the window (22 series, occurrences by rule). 194 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this.",
+    "publishedEventCount": 59,
+    "documentedEventCount": 59,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "toronto",
+    "timezone": "America/Toronto",
+    "bar": "Black Eagle Toronto",
+    "address": "457 Church St, Toronto, ON M4Y 2C5"
+  },
+  "events": [
+    {
+      "id": "pup-romp-puppy-play-event",
+      "kind": "series",
+      "title": "PUP ROMP - Puppy Play Event",
+      "description": "PUPPY PLAY EVENT HOSTED BY T.K.K. 3PM - 7PM / NO COVER",
+      "startDate": "2024-07-20",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/bbbc0ac5-88c7-43a2-826c-c0b661871288/Black-Eagle-round-logo-transparent-1200-square.png",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2024-07-20\",\"time\":\"15:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-gear-night",
+      "kind": "series",
+      "title": "GAYSTATION * Gear Night",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2024-10-01",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/48a3e5ed-7de8-4054-bbf6-ce1ae504a89b/GayStation-Gear-Night-Black-Eagle-Website.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1TU",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2024-10-01\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[24]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "g-l-u-e",
+      "kind": "series",
+      "title": "G.L.U.E .",
+      "description": "An evening of SOCIAL, PLAY AND GEAR NIGHT 7PM SOCIAL / 8PM PLAY / NO COVER",
+      "startDate": "2025-06-12",
+      "startTime": "19:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/bfc616f2-278f-40ba-b4cb-dc409fdb30f6/G-L-U-E-every-2nd-thurs-900px-square.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2TH",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2025-06-12\",\"time\":\"19:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (19:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[26]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "erotic-life-drawing",
+      "kind": "series",
+      "title": "EROTIC LIFE DRAWING",
+      "description": null,
+      "startDate": "2025-07-12",
+      "startTime": "16:00",
+      "endTime": "19:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/60416d52-bb1e-4192-8098-34e691ad1f9e/Black-Eagle-round-logo-transparent-1200-square.png",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2025-07-12\",\"time\":\"16:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[28]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "spearhead-game-social",
+      "kind": "series",
+      "title": "SPEARHEAD GAME SOCIAL",
+      "description": null,
+      "startDate": "2026-01-19",
+      "startTime": "19:00",
+      "endTime": null,
+      "ticketUrl": "https://spearheadtoronto.com",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/e2999581-1115-4282-adcd-8230f158dd3d/2026-01-Spearhead-Social-sq.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3MO",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2026-01-19\",\"time\":\"19:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (19:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "wanker",
+      "kind": "series",
+      "title": "WANKER",
+      "description": null,
+      "startDate": "2026-04-22",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/c022a559-cd0e-4796-8a96-cfc5900c791d/Wanker-Marketing-logo-2025.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4WE",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"we\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2026-04-22\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[10]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bad-dog",
+      "kind": "series",
+      "title": "BAD DOG",
+      "description": "A NIGHT OF PUPPY PLAY HOSTED BY t.k.k. 9PM / NO COVER",
+      "startDate": "2026-04-23",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9dabc29d-974b-454c-b224-ed9094840999/Black-Eagle-round-logo-transparent-1200-square.png",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4TH",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"th\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2026-04-23\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[11]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "kink-101",
+      "kind": "series",
+      "title": "KINK 101",
+      "description": "INTRO TO BDSM AND KINK FOR BEGINNERS HOSTED BY JEREMY FEIST 9PM / NO COVER",
+      "startDate": "2026-05-07",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/4c8de8cb-81e7-4cf9-a3c6-65deb19d1239/BLACK-EAGLE-VideoTo_GIF.gif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1TH",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2026-05-07\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[19]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-nintendo-switch-night",
+      "kind": "series",
+      "title": "GAYSTATION * Nintendo Switch Night",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2026-05-19",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9d32921d-6515-4288-8348-7edfd8e6031c/Gaystation-generic-square-image-crop.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TU",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"date\":\"2026-05-19\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[33]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "patio-barbeque",
+      "kind": "series",
+      "title": "PATIO BARBEQUE",
+      "description": null,
+      "startDate": "2026-05-24",
+      "startTime": "17:09",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/cf4038b4-cb93-46b6-87a5-611fb458c900/bbq-2026-2.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SU",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"su\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-05-24\",\"time\":\"17:09\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (17:09); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[15]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sos-society-of-spankers",
+      "kind": "series",
+      "title": "SOS - SOCIETY OF SPANKERS",
+      "description": null,
+      "startDate": "2026-06-06",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d0a43b04-cf81-422e-bbbe-652235e41430/SOS-spanking-Generic-square-2025.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"sa\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"sameDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-06-06\",\"time\":\"15:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[20]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "wanker-2",
+      "kind": "series",
+      "title": "WANKER",
+      "description": null,
+      "startDate": "2026-07-01",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/26b548d5-e01b-4f64-acdd-4365d6a340bf/ezgif-com-video-to-gif-converter.gif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"we\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-07-01\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[25]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "naked-night",
+      "kind": "series",
+      "title": "NAKED NIGHT",
+      "description": "NUDITY MANDATORY ON MAIN FLOOR 9PM / NO COVER CLOTHES-CHECK: $6 Area restrictions apply on certain events",
+      "startDate": "2026-07-16",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/775ebe4c-6fce-4345-97af-c0704af5cf9b/Naked-Night-generic-900-sq.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-07-16\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dirty-queer-poetry-night",
+      "kind": "series",
+      "title": "DIRTY QUEER POETRY NIGHT",
+      "description": "HOSTED BY PATRICIA WILSON & DAVID BATEMAN 8PM / NO COVER OPEN MIC SIGN-UP AT 7:45PM",
+      "startDate": "2026-08-12",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/30f7c2e8-323a-42b9-9ab7-5e209faf5f27/dirty-poetry-night-2024-11.gif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2WE",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"we\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-08-12\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[31]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "grapefruit",
+      "kind": "series",
+      "title": "GRAPEFRUIT",
+      "description": "POP, RETRO & CLASSIC CUTS WITH DJS SHANE P & AURAL 9PM $10 BEFORE 10:30PM $15 AFTER 10:30PM",
+      "startDate": "2026-08-15",
+      "startTime": "21:00",
+      "endTime": null,
+      "ticketUrl": "http://grapefruit.party",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/67f6bc12-c959-4037-a65f-f777a0a5025a/grapefruit-square-2024-07.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-08-15\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "northern-bear-bash",
+      "kind": "series",
+      "title": "NORTHERN BEAR BASH",
+      "description": "an evening for bears and their admirers With DJ's to be announced. 9PM / $10",
+      "startDate": "2026-08-29",
+      "startTime": "21:00",
+      "endTime": "23:45",
+      "ticketUrl": "https://www.instagram.com/northernbearbash/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"lastDayInMonth\",\"repeatWeeklyOnDays\":[\"sa\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-08-29\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[14]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-ps5-games-night",
+      "kind": "series",
+      "title": "GAYSTATION * PS5 GAMES NIGHT",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2026-09-08",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/895e355a-e55f-4276-a4d6-e9412813524f/gaystation-2-focus-2024-11-.gif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2TU",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"tu\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-09-08\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[30]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "torn-toronto-s-rubber-kink-social-2026-09-20",
+      "kind": "single",
+      "title": "TORN - TORONTO'S RUBBER KINK SOCIAL",
+      "description": null,
+      "startDate": "2026-09-20",
+      "startTime": "17:00",
+      "endDate": "2026-09-20",
+      "endTime": "21:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a6171d36-10ea-4ffc-9e76-a78661eaa7b0/Torn-Generic-2026-850sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[6]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "studio-457-retro-dance-party-2026-09-20",
+      "kind": "single",
+      "title": "STUDIO 457 • RETRO DANCE PARTY",
+      "description": "A weekly Retro Dance Party with resident DJ MARK FALCO",
+      "startDate": "2026-09-20",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "23:45",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b965a54f-325c-44c0-9aac-fde330518b99/black_eagle_retro_dance_party-538x538-.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[7]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-just-dance-night",
+      "kind": "series",
+      "title": "GAYSTATION * Just Dance Night",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2026-09-22",
+      "startTime": "20:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/4c7d400f-6699-4eda-8991-d0ba1d2b2a85/GayStation-Just-Dance-Eagle-Website-2024-11-28.gif",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4TU",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"tu\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-09-22\",\"time\":\"20:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[9]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "romeo-2026-09-25",
+      "kind": "single",
+      "title": "ROMEO",
+      "description": null,
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": "2026-09-25",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/937211fe-8ca3-48e3-a219-e0aceb36ebf8/Romeo-Sept26-sqjpg.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (18:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[12]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bluf-toronto-2026-09-26",
+      "kind": "single",
+      "title": "BLUF TORONTO",
+      "description": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": "2026-09-26",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (18:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[13]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "art-throb-2026-09-27",
+      "kind": "single",
+      "title": "ART♡THROB",
+      "description": "Featuring: Jordan Pedde Jordan Madruga Grace Brooks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison",
+      "startDate": "2026-09-27",
+      "startTime": "16:00",
+      "endDate": "2026-09-27",
+      "endTime": "20:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[16]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-fallen-city-brawl-2026-09-29",
+      "kind": "single",
+      "title": "GAYSTATION - Fallen City Brawl",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2026-09-29",
+      "startTime": null,
+      "endDate": "2026-09-29",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6a3b598f-b92e-446a-8d2d-dd7bf8ec3188/IMG_0527.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[18]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "power-house-2026-10-02",
+      "kind": "single",
+      "title": "POWER HOUSE",
+      "description": null,
+      "startDate": "2026-10-02",
+      "startTime": null,
+      "endDate": "2026-10-02",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b2899a76-47e5-443c-a6d7-79cd69a44f9b/PowerHouse-3-Oct-2-26SQUARE.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jockstrap-2026-10-03",
+      "kind": "single",
+      "title": "JOCKSTRAP",
+      "description": "Monthly JOCKSTRAP PARTY takes place on the 1st Saturday of each month with resident DJ Cajjmere Wray. Mandatory Jockstraps/underwear in the upstairs play area and back room. Area restrictions apply on certain events.",
+      "timezone": "America/Miquelon",
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endDate": "2026-10-03",
+      "endTime": "23:45",
+      "ticketUrl": "https://www.instagram.com/jockstrappartyto/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6663fb45-10cf-4b30-b5f5-b0978ebea29d/IMG_8485.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[21]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "last-barbeque-of-the-season-2026-10-04",
+      "kind": "single",
+      "title": "LAST BARBEQUE OF THE SEASON",
+      "description": null,
+      "startDate": "2026-10-04",
+      "startTime": "16:00",
+      "endDate": "2026-10-04",
+      "endTime": "20:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/cf0d1aa0-3306-436c-8d2f-42cd13289cfb/bbq-2026-4.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[22]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "monday-night-movies-2026-10-05",
+      "kind": "single",
+      "title": "MONDAY NIGHT MOVIES",
+      "description": "October 5 Spookies - 8:30 pm Terrified - 10:05 pm",
+      "startDate": "2026-10-05",
+      "startTime": null,
+      "endDate": "2026-10-05",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a1761e68-7717-4f24-b5df-b173a754362a/VideoToGif_GIF-4.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:30); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[23]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "service",
+      "kind": "series",
+      "title": "SERVICE",
+      "description": "HOSTED BY PUP KUDDLES WITH DJS AND PERFORMERS TBA $10 BEFORE 10:30PM $15 AFTER 10:30PM",
+      "startDate": "2026-10-09",
+      "startTime": "22:30",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b84041e6-c265-466c-b994-a26ce57f77ac/Service-generic.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[\"fr\"],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-10-09\",\"time\":\"22:30\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (22:30); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[27]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "daddy-next-door-2026-10-10",
+      "kind": "single",
+      "title": "DADDY NEXT DOOR",
+      "description": "A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OPENING SET: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.",
+      "timezone": "America/Miquelon",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": "23:45",
+      "ticketUrl": "https://www.daddynextdoor.ca",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[29]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "d-f-m-o-dance-floor-makeout",
+      "kind": "series",
+      "title": "D.F.M.O. (DANCE FLOOR MAKEOUT)",
+      "description": "HOSTED BY DAVID KRAFT EVERY 3RD FRIDAY OF THE MONTH WITH DJ JOHN CAFFERY AND SPECIAL GUESTS • 9PM / $10",
+      "startDate": "2026-10-16",
+      "startTime": "21:00",
+      "endTime": null,
+      "ticketUrl": "https://www.instagram.com/dfmo_toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/711baa92-9904-4d9d-b9ea-0cd69c172406/DFMO-Generic-2026-05-800sq.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3FR",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-10-16\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[32]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "l-o-c-k-lovers-of-chastity-kink-2026-10-21",
+      "kind": "single",
+      "title": "L.O.C.K. (Lovers of Chastity & Kink)",
+      "description": "LOCKED FOLKS, KEYHOLDERS AND NEWCOMERS WELCOME 8PM / NO COVER",
+      "startDate": "2026-10-21",
+      "startTime": null,
+      "endDate": "2026-10-21",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/82b2e573-65ee-4459-9526-660a1023b538/LOCK_2026Oct21_-800.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[34]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stache-2026-10-23",
+      "kind": "single",
+      "title": "STACHE",
+      "description": null,
+      "startDate": "2026-10-23",
+      "startTime": null,
+      "endDate": "2026-10-23",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9e701781-8003-44b6-931b-c04c2e7f686f/STACHE-generic-sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:31); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[35]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "red-light-2026-10-24",
+      "kind": "single",
+      "title": "RED LIGHT",
+      "description": null,
+      "startDate": "2026-10-24",
+      "startTime": null,
+      "endDate": "2026-10-24",
+      "endTime": null,
+      "ticketUrl": "https://www.instagram.com/macho_toronto/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/8133c7e7-e39b-4034-8b24-7e64d286d38a/RED-LIGHT-animated-generic.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (11:16); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[36]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "torn-toronto-s-rubber-kink-social-2026-10-25",
+      "kind": "single",
+      "title": "TORN - TORONTO'S RUBBER KINK SOCIAL",
+      "description": null,
+      "startDate": "2026-10-25",
+      "startTime": "17:00",
+      "endDate": "2026-10-25",
+      "endTime": "21:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a6171d36-10ea-4ffc-9e76-a78661eaa7b0/Torn-Generic-2026-850sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[37]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "monday-night-movies-2026-11-02",
+      "kind": "single",
+      "title": "MONDAY NIGHT MOVIES",
+      "description": "November 2 Crank - 8:30 pm Crank 2 - 10:10 pm",
+      "startDate": "2026-11-02",
+      "startTime": null,
+      "endDate": "2026-11-02",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/18b981e2-9167-4a72-a0aa-27fd51cca4c3/VideoToGif_GIF-3.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:30); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[38]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stockyard-2026-11-06",
+      "kind": "single",
+      "title": "STOCKYARD",
+      "description": null,
+      "startDate": "2026-11-06",
+      "startTime": null,
+      "endDate": "2026-11-06",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a95205a4-d73b-4dfa-b1ec-46d1db6ea754/Stock-Yard-generic-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[39]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jockstrap",
+      "kind": "series",
+      "title": "JOCKSTRAP",
+      "description": "Monthly JOCKSTRAP PARTY takes place on the 1st Saturday of each month with resident DJ Cajjmere Wray. Mandatory Jockstraps/underwear in the upstairs play area and back room. Area restrictions apply on certain events.",
+      "startDate": "2026-11-07",
+      "startTime": "21:00",
+      "endTime": "23:45",
+      "ticketUrl": "https://www.instagram.com/jockstrappartyto/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/ee0b94ec-7674-4743-aeac-1739845e3de9/Jockstrap-generic-800sq.jpg",
+      "timezone": "America/Miquelon",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-11-07\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[40]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "balls-deep-disco-2026-11-14",
+      "kind": "single",
+      "title": "BALLS DEEP DISCO",
+      "description": "CLASSIC DISCO, NEW DISCO AND DISCO HOUSE",
+      "timezone": "America/Miquelon",
+      "startDate": "2026-11-14",
+      "startTime": "21:00",
+      "endDate": "2026-11-14",
+      "endTime": "23:45",
+      "ticketUrl": "https://www.instagram.com/ballsdeepdisko",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/c1efb1e4-fb97-4b16-a134-0270cafc8214/BallsDeepDisco-generic-483sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[41]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "l-o-c-k-lovers-of-chastity-kink",
+      "kind": "series",
+      "title": "L.O.C.K. (Lovers of Chastity & Kink)",
+      "description": "LOCKED FOLKS, KEYHOLDERS AND NEWCOMERS WELCOME 8PM / NO COVER",
+      "startDate": "2026-11-18",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/69c3b572-297f-41bd-a4d8-4e5667ace2b2/LOCK_2026_800sq.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3WE",
+      "recurrenceStatedAs": "{\"repeatPeriod\":\"nthDayInMonth\",\"repeatWeeklyOnDays\":[],\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatEndsOccurrences\":1,\"repeatMonthlyOnDay\":\"nthDay\",\"repeatFrequency\":\"daily\",\"start\":{\"type\":\"datetime\",\"date\":\"2026-11-18\",\"time\":\"21:00\"}}",
+      "occurrences": [
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published. Elfsight repeat entry; the RRULE is the reader's mapping of the widget's repeat fields (quoted in recurrenceStatedAs). Occurrences are the rule's dates in the window.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[42]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "torn-toronto-s-rubber-kink-social-2026-11-22",
+      "kind": "single",
+      "title": "TORN - TORONTO'S RUBBER KINK SOCIAL",
+      "description": null,
+      "startDate": "2026-11-22",
+      "startTime": "17:00",
+      "endDate": "2026-11-22",
+      "endTime": "21:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a6171d36-10ea-4ffc-9e76-a78661eaa7b0/Torn-Generic-2026-850sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[43]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-2026-11-27",
+      "kind": "single",
+      "title": "STUD 54",
+      "description": null,
+      "startDate": "2026-11-27",
+      "startTime": null,
+      "endDate": "2026-11-27",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1288bd9f-d9eb-43a7-8474-4d46ee58ccca/STUD-54-generic-square-800.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:32); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[44]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "art-throb-2026-12-06",
+      "kind": "single",
+      "title": "ART♡THROB",
+      "description": "Featuring: Jordan Pedde Jordan Madruga Grace Brooks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison",
+      "startDate": "2026-12-06",
+      "startTime": "16:00",
+      "endDate": "2026-12-06",
+      "endTime": "20:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[45]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "monday-night-movies-2026-12-07",
+      "kind": "single",
+      "title": "MONDAY NIGHT MOVIES",
+      "description": "December 7 Santa Claus Conquers the Martians - 8:30 pm Deadly Games - 10 pm",
+      "startDate": "2026-12-07",
+      "startTime": null,
+      "endDate": "2026-12-07",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/be193e88-c3af-4bab-9553-a53cc6537374/VideoToGif_GIF-2.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:30); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[46]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "spearhead-christmas-party-2026-12-13",
+      "kind": "single",
+      "title": "SPEARHEAD CHRISTMAS PARTY",
+      "description": null,
+      "startDate": "2026-12-13",
+      "startTime": null,
+      "endDate": "2026-12-13",
+      "endTime": null,
+      "ticketUrl": "https://spearheadtoronto.com",
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (19:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[47]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gaystation-2026-12-29",
+      "kind": "single",
+      "title": "GAYSTATION",
+      "description": "VIDEO GAMES NIGHT HOSTED BY BRENDAN MCGOVERN 8PM / NO COVER",
+      "startDate": "2026-12-29",
+      "startTime": null,
+      "endDate": "2026-12-29",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9d32921d-6515-4288-8348-7edfd8e6031c/Gaystation-generic-square-image-crop.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[48]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fishtank-2027-01-22",
+      "kind": "single",
+      "title": "FISHTANK",
+      "description": null,
+      "startDate": "2027-01-22",
+      "startTime": null,
+      "endDate": "2027-01-22",
+      "endTime": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (16:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[49]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bluf-toronto-2027-01-30",
+      "kind": "single",
+      "title": "BLUF TORONTO",
+      "description": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "startDate": "2027-01-30",
+      "startTime": null,
+      "endDate": "2027-01-30",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (18:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[50]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-2027-02-05",
+      "kind": "single",
+      "title": "STUD 54",
+      "description": null,
+      "startDate": "2027-02-05",
+      "startTime": null,
+      "endDate": "2027-02-05",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/8c173705-3013-4177-a554-999063d9f8a3/STUD-54-generic-square-800.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:32); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[51]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stockyard-2027-02-26",
+      "kind": "single",
+      "title": "STOCKYARD",
+      "description": null,
+      "startDate": "2027-02-26",
+      "startTime": null,
+      "endDate": "2027-02-26",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a95205a4-d73b-4dfa-b1ec-46d1db6ea754/Stock-Yard-generic-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[52]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "wanker-2027-03-08",
+      "kind": "single",
+      "title": "WANKER",
+      "description": null,
+      "startDate": "2027-03-08",
+      "startTime": null,
+      "endDate": "2027-03-08",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/26b548d5-e01b-4f64-acdd-4365d6a340bf/ezgif-com-video-to-gif-converter.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (20:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[53]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-2027-04-30",
+      "kind": "single",
+      "title": "STUD 54",
+      "description": null,
+      "startDate": "2027-04-30",
+      "startTime": null,
+      "endDate": "2027-04-30",
+      "endTime": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:32); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[54]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stockyard-2027-05-21",
+      "kind": "single",
+      "title": "STOCKYARD",
+      "description": null,
+      "startDate": "2027-05-21",
+      "startTime": null,
+      "endDate": "2027-05-21",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a95205a4-d73b-4dfa-b1ec-46d1db6ea754/Stock-Yard-generic-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[55]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bluf-toronto-2027-05-29",
+      "kind": "single",
+      "title": "BLUF TORONTO",
+      "description": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "startDate": "2027-05-29",
+      "startTime": null,
+      "endDate": "2027-05-29",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (18:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[56]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-2027-08-06",
+      "kind": "single",
+      "title": "STUD 54",
+      "description": null,
+      "startDate": "2027-08-06",
+      "startTime": null,
+      "endDate": "2027-08-06",
+      "endTime": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:32); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[57]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stockyard-2027-08-27",
+      "kind": "single",
+      "title": "STOCKYARD",
+      "description": null,
+      "startDate": "2027-08-27",
+      "startTime": null,
+      "endDate": "2027-08-27",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a95205a4-d73b-4dfa-b1ec-46d1db6ea754/Stock-Yard-generic-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[58]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-2027-10-29",
+      "kind": "single",
+      "title": "STUD 54",
+      "description": null,
+      "startDate": "2027-10-29",
+      "startTime": null,
+      "endDate": "2027-10-29",
+      "endTime": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (15:32); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[59]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bluf-toronto-2027-10-30",
+      "kind": "single",
+      "title": "BLUF TORONTO",
+      "description": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "startDate": "2027-10-30",
+      "startTime": null,
+      "endDate": "2027-10-30",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (18:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[60]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stockyard-2027-11-26",
+      "kind": "single",
+      "title": "STOCKYARD",
+      "description": null,
+      "startDate": "2027-11-26",
+      "startTime": null,
+      "endDate": "2027-11-26",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a95205a4-d73b-4dfa-b1ec-46d1db6ea754/Stock-Yard-generic-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (21:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[61]"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

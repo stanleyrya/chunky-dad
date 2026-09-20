@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "source": "The Cuff Complex",
+  "slug": "the-cuff-complex",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://cuffcomplex.com/events"
+    ],
+    "doors": [
+      {
+        "url": "https://cuffcomplex.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 41,
+        "truthFlag": null,
+        "note": "Squarespace events collection, static: one card per event with date, title, start/end, venue line, Google Calendar / ICS links, and a link to its own /…/<yyyy>/<m>/<d>/<slug> page. Upcoming and past cards are both rendered."
+      },
+      {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 11,
+        "truthFlag": "upcoming: 11; past: 30 (the past list is the collection's most recent 30 — a cap, not the archive size); website.timeZone: America/Los_Angeles",
+        "note": "The collection's ?format=json twin: $.upcoming[] and $.past[] items with title, startDate/endDate (epoch ms), location { addressTitle, addressLine1, addressLine2, markerLat/markerLng }, fullUrl (the event page), assetUrl (the flyer), excerpt/body (HTML). No recurrence fields — a weekly night is a separate item per date."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-19. 11 upcoming items (2026-09-19 → 2026-11-14) and 30 past items in the feed's past list."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the collection JSON's $.upcoming[] (11 items) is every future card the listing renders; each is a single (the site states no rule). The 30 past items are counted as past listings, not enumerated.",
+    "publishedEventCount": 11,
+    "documentedEventCount": 11,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "seattle",
+    "timezone": "America/Los_Angeles",
+    "bar": "The Cuff Complex",
+    "address": "1533 13th Ave, Seattle, WA 98122",
+    "website": "https://cuffcomplex.com"
+  },
+  "events": [
+    {
+      "id": "cuff-presents-deanne-2026-09-19",
+      "kind": "single",
+      "title": "Cuff Presents: Deanne",
+      "description": "Tampa-based powerhouse and #1 Billboard Remixer Deanne brings her signature blend of tech, house, and afro-melodic beats to The Cuff Complex on Saturday, September 19th!",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endDate": "2026-09-19",
+      "endTime": "23:30",
+      "website": "https://cuffcomplex.com/events/cuff-presents-deanne",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1788732743328-3ABMSQ1B2236EQOE3Y0A/cc+featured+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-tea-dance-shortstack-2026-09-20",
+      "kind": "single",
+      "title": "Sunday Tea Dance: shortSTACK",
+      "description": "Let ShortSTACK provide the soundtrack to your evening! Kick back on the Cuff patio on Sunday, September 20, for five hours of great music, cold drinks, and prime open-air lounging. 6 PM to 11 PM, completely free.",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-20",
+      "startTime": "18:00",
+      "endDate": "2026-09-20",
+      "endTime": "19:30",
+      "website": "https://cuffcomplex.com/events/sunday-tea-dance-shortstack",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1788732467150-0HOD4ZYVSM30NIBHNDTL/cuff+-+sunday+tea+dance+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fluffy-cuff-karaoke-2026-09-20",
+      "kind": "single",
+      "title": "Fluffy Cuff Karaoke",
+      "description": "Join Goo at the Main Bar every Sunday at 9 PM for Fluffy Cuff Karaoke—bring your crew, pick your anthem, and own the stage!",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-20",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "22:00",
+      "website": "https://cuffcomplex.com/events/x5w4bn72hlhmhn8g3fkjadxyz88bgb-82735-5rz9m-t9kma-j5bpr-4mgh7-kt2wb-fk58h",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1786467188451-DRL5EQIQ4GUQG6KLOIMI/fluffy+cuff+karaoke+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[2]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pride-sports-seattle-corn-hole-2026-09-23",
+      "kind": "single",
+      "title": "Pride Sports Seattle: Corn Hole",
+      "description": "Join Pride Sports USA for Wednesday Night Cornhole at The Cuff! Season kicks off with free Open Play on August 26, followed by a 6-week league running September 9 through October 14. All skill levels are welcome.",
+      "bar": "Cuff Complex",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-23",
+      "startTime": "19:00",
+      "endDate": "2026-09-23",
+      "endTime": "20:00",
+      "website": "https://cuffcomplex.com/events/pride-sports-seattle-corn-hole-d7arj-8lkty",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1787254895847-6LYETW02XQ4KNXT3SCH1/corn+hole+2026+-+cuff+square.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "roar-presents-texture-2026-09-26",
+      "kind": "single",
+      "title": "Roar Presents: teXture",
+      "description": "teXture heads to The Cuff Complex. Join the movement on Saturday, September 26 for an intentional night of house, liquid, and trance. No headliner worship, no phones, just the floor. Dress to sweat.",
+      "bar": "Cuff Complex",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "22:30",
+      "website": "https://cuffcomplex.com/events/roar-presents-texture",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1786653118616-YLKQ28IXFGW12W0CC57L/1080x1080_texture-x-roar-seattle-sept-26.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sunday-tea-dance-finale-alfonso-tan-2026-09-27",
+      "kind": "single",
+      "title": "Sunday Tea Dance Finale: Alfonso Tan",
+      "description": "Cheers to the final round! Join us on the Cuff patio on Sunday, September 27, for our Sunday Tea Dance Finale featuring music by Alfonso Tan . Settle in outside from 6 PM to 11 PM for an evening of great tunes, sunset cocktails, and zero cover charge.",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-27",
+      "startTime": "18:00",
+      "endDate": "2026-09-27",
+      "endTime": "19:30",
+      "website": "https://cuffcomplex.com/events/sqww7d2btcekci5va4xmiwbsp2yj1y",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1788732209103-JGHBZWBQZ6EMLN0ZAYWQ/cuff+-+sunday+tea+dance+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[5]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fluffy-cuff-karaoke-2026-09-27",
+      "kind": "single",
+      "title": "Fluffy Cuff Karaoke",
+      "description": "Join Goo at the Main Bar every Sunday at 9 PM for Fluffy Cuff Karaoke—bring your crew, pick your anthem, and own the stage!",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-27",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "22:00",
+      "website": "https://cuffcomplex.com/events/x5w4bn72hlhmhn8g3fkjadxyz88bgb-82735-5rz9m-t9kma-j5bpr-4mgh7-kt2wb-fk58h-xxd7h",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1786467188451-DRL5EQIQ4GUQG6KLOIMI/fluffy+cuff+karaoke+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[6]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pride-sports-seattle-corn-hole-2026-09-30",
+      "kind": "single",
+      "title": "Pride Sports Seattle: Corn Hole",
+      "description": "Join Pride Sports USA for Wednesday Night Cornhole at The Cuff! Season kicks off with free Open Play on August 26, followed by a 6-week league running September 9 through October 14. All skill levels are welcome.",
+      "bar": "Cuff Complex",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-09-30",
+      "startTime": "19:00",
+      "endDate": "2026-09-30",
+      "endTime": "20:00",
+      "website": "https://cuffcomplex.com/events/pride-sports-seattle-corn-hole-d7arj-8lkty-p8p5y",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1787254895847-6LYETW02XQ4KNXT3SCH1/corn+hole+2026+-+cuff+square.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[7]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pride-sports-seattle-corn-hole-2026-10-07",
+      "kind": "single",
+      "title": "Pride Sports Seattle: Corn Hole",
+      "description": "Join Pride Sports USA for Wednesday Night Cornhole at The Cuff! Season kicks off with free Open Play on August 26, followed by a 6-week league running September 9 through October 14. All skill levels are welcome.",
+      "bar": "Cuff Complex",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-10-07",
+      "startTime": "19:00",
+      "endDate": "2026-10-07",
+      "endTime": "20:00",
+      "website": "https://cuffcomplex.com/events/pride-sports-seattle-corn-hole-d7arj-8lkty-p8p5y-ws5nx",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1787254895847-6LYETW02XQ4KNXT3SCH1/corn+hole+2026+-+cuff+square.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pride-sports-seattle-corn-hole-2026-10-14",
+      "kind": "single",
+      "title": "Pride Sports Seattle: Corn Hole",
+      "description": "Join Pride Sports USA for Wednesday Night Cornhole at The Cuff! Season kicks off with free Open Play on August 26, followed by a 6-week league running September 9 through October 14. All skill levels are welcome.",
+      "bar": "Cuff Complex",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-10-14",
+      "startTime": "19:00",
+      "endDate": "2026-10-14",
+      "endTime": "20:00",
+      "website": "https://cuffcomplex.com/events/pride-sports-seattle-corn-hole-d7arj-8lkty-p8p5y-ws5nx-jdenp",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1787254895847-6LYETW02XQ4KNXT3SCH1/corn+hole+2026+-+cuff+square.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[9]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "candikim-presents-dragon-s-den-2026-11-14",
+      "kind": "single",
+      "title": "Candikim Presents: Dragon's Den",
+      "description": "Think you can handle the heat? Lose yourself in the sound and see where the music takes you. Step into a world of Asian fire and dark energy, where deep melodic techno, haunting melodies, and pulsating basslines blur the edges of reality. Candikim Presents: Dragon’s Den.",
+      "address": "1533 13th Avenue, Seattle, WA, 98122",
+      "location": "47.6150949, -122.31584559999999",
+      "startDate": "2026-11-14",
+      "startTime": "22:00",
+      "endDate": "2026-11-14",
+      "endTime": "23:00",
+      "website": "https://cuffcomplex.com/events/candikim-presents-dragons-den",
+      "image": "https://images.squarespace-cdn.com/content/v1/5e20e2d664c7bd7ddc4c2fb2/1789022073346-GPKP2XZCG7I5RE0FH3BP/dragons+den+2026+-+main+-+square.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://cuffcomplex.com/events?format=json",
+        "jsonPath": "$.upcoming[10]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

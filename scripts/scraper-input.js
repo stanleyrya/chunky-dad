@@ -329,6 +329,179 @@ const scraperConfig = {
       siteRole: "venue",
       metadata: { website: { value: "https://www.eaglemanchester.com" } },
     },
+    // ── Sources added 2026-09-19 (one cached probe per site, see the
+    // data/source-expectations stubs for the doors found) ──
+    {
+      name: "Eagle Portland",
+      // 835 N Lombard, Portland. Next.js + Sanity CMS, rendered server-side:
+      // the /events listing is static HTML carrying every dated occurrence
+      // (14 recurring nights, ~90 dated links a quarter, each linking its own
+      // /events/<slug>?date= page). No widget, no feed.
+      urls: ["https://www.eagleportland.com/events"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.eagleportland.com" } },
+    },
+    {
+      name: "Jackhammer",
+      // Rogers Park leather/bear bar (2Bears Tavern Group). The Squarespace
+      // /events page only mounts the TicketSauce widget
+      // (sickening.events/js/events/widget.js — TsEventWidget.fetchEvents with
+      // the site's pid/oid); the widget's own JSON door, replayed with its
+      // default arguments, lists every upcoming event with local times, IANA
+      // timezone, address, coordinates, artwork and the sickening.events page.
+      // Rows are an id-keyed map of { Event, Logo, Organization } envelopes —
+      // the JSON-API reader unwraps both shapes generically. The feed is the
+      // complete statement, so the event pages are not crawled.
+      urls: ["https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0"],
+      alwaysBear: false,
+      siteRole: "venue",
+      urlDiscoveryDepth: 0,
+      metadata: { website: { value: "https://jackhammerchicago.com" } },
+    },
+    {
+      name: "The SoFo Tap",
+      // Andersonville's bear bar (2Bears Tavern Group): Bearaoke, Nerd Bear
+      // Trivia, GRRR, Doggy Days. Same TicketSauce widget door as Jackhammer,
+      // this organization's oid.
+      urls: ["https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe24-2598-420b-a938-7cae0a1e635e/0/0/0/false/false/true/true/0"],
+      alwaysBear: false,
+      siteRole: "venue",
+      urlDiscoveryDepth: 0,
+      metadata: { website: { value: "https://thesofotap.com" } },
+    },
+    {
+      name: "Meeting House Tavern",
+      // Andersonville LGBTQIA+ tavern (2Bears Tavern Group): free weekly
+      // socials, karaoke, bingo. Same TicketSauce widget door, this
+      // organization's oid — the bear check decides what is ours.
+      urls: ["https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0"],
+      alwaysBear: false,
+      siteRole: "venue",
+      urlDiscoveryDepth: 0,
+      metadata: { website: { value: "https://meetinghousetavern.com" } },
+    },
+    {
+      name: "GRUNT",
+      // "BIG Beats. BIG GUYS. BIG Sleaze." — SF (The Stud) and Brooklyn
+      // parties. Squarespace, static: the home page states the next Folsom
+      // date, venue and ticket link; /brooklyn the New York edition.
+      urls: ["https://gruntparty.monster/", "https://gruntparty.monster/brooklyn"],
+    },
+    {
+      name: "CCBC Resort Hotel",
+      // Cathedral City men's resort (68300 Gay Resort Dr): pool parties and
+      // the Palm Springs editions of touring parties, all ticketed through
+      // its Eventbrite organizer page (the same __NEXT_DATA__ door the other
+      // Eventbrite organizers use). Club Chub's own site stays the Club
+      // Chub source; a night listed on both dedups by ticket identity.
+      urls: ["https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776"],
+      alwaysBear: false,
+      siteRole: "venue",
+    },
+    {
+      name: "Lodge NY",
+      // NYC sex parties for bears, cubs, daddies and friends (The Bear
+      // Party, Dads 'n' Lads, Workman's Lunch, Blow Buddies …). lodgeny.com
+      // is a JavaScript shell whose only calendar is an embedded public
+      // Google Calendar (src=info@lodgeny.com); its iCalendar export is the
+      // door — read as a feed (weekly RRULEs expand into dated nights, the
+      // archive of ended series is dropped). Titles carry the venue's
+      // street address; the address-tail rule strips it at final build.
+      // Not every party on the calendar is a bear party — bear check decides.
+      urls: ["https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics"],
+      alwaysBear: false,
+      metadata: { website: { value: "https://lodgeny.com" } },
+    },
+    {
+      name: "Eagle NYC",
+      // 554 W 28th St. WordPress + The Events Calendar: the listing page links
+      // its Tribe REST route (wp-json/tribe/events/v1/events), which the crawler
+      // adopts itself (🚪 MACHINE DOOR) — 453 upcoming rows on 2026-09-19, the
+      // bar posts every DJ night. Read to the feed horizon.
+      urls: ["https://eagle-ny.com/calendarofevents/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://eagle-ny.com" } },
+    },
+    {
+      name: "SF Eagle",
+      // 398 12th St. WordPress, static: /events/ lists every dated night with
+      // times and a /events/<slug>/ page each (60 on 2026-09-19), plus a Google
+      // Calendar / .ics link the crawler can adopt.
+      urls: ["https://www.sf-eagle.com/events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.sf-eagle.com" } },
+    },
+    {
+      name: "Lone Star Saloon",
+      // 1354 Harrison St — the SF bear bar. Squarespace events collection
+      // (/new-events-1/<yyyy>/<m>/<d>/<slug>, 44 dated pages on 2026-09-19,
+      // each with Google Calendar / ICS links); the collection's ?format=json
+      // twin is the structured door.
+      urls: ["https://www.lonestarsf.com/new-events-1"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.lonestarsf.com" } },
+    },
+    {
+      name: "The Cuff Complex",
+      // 1533 13th Ave, Seattle. Squarespace events collection (/events/<slug>,
+      // 42 dated pages on 2026-09-19) — same door shape as Lone Star.
+      urls: ["https://cuffcomplex.com/events"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://cuffcomplex.com" } },
+    },
+    {
+      name: "Akbar",
+      // 4356 Sunset Blvd, Silver Lake. WordPress: /upcoming-events/ lists the
+      // month's parties with an /event/<slug>/ page each (18 on 2026-09-19,
+      // Bears in Space's lot parties among them).
+      urls: ["https://akbarsilverlake.com/upcoming-events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://akbarsilverlake.com" } },
+    },
+    {
+      name: "Atlanta Eagle",
+      // 1492 Piedmont Ave NE. WordPress: /events/ lists dated nights with full
+      // start/end times and an /event/<slug>/ page each (16 on 2026-09-19).
+      urls: ["https://atlantaeagle.com/events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://atlantaeagle.com" } },
+    },
+    {
+      name: "The Heretic",
+      // 2069 Cheshire Bridge Rd NE, Atlanta. WordPress, static: /events/ is a
+      // weekly schedule (Pup Night, Thursday Country …) plus the month's dated
+      // specials with ticket links.
+      urls: ["https://hereticatlanta.com/events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://hereticatlanta.com" } },
+    },
+    {
+      name: "Black Eagle Toronto",
+      // 457 Church St. Squarespace one-pager whose EVENTS section is an
+      // Elfsight calendar widget (elfsight-app-e5a158fb-…), read by
+      // collectElfsightCalendarEvents like Rockbar's.
+      urls: ["https://www.blackeagletoronto.com/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.blackeagletoronto.com" } },
+    },
+    {
+      name: "Camp Out Poconos",
+      // LGBTQ+ campground, East Stroudsburg PA: theme weekends on an Elfsight
+      // calendar widget at /calendar/.
+      urls: ["https://campoutpoconos.com/calendar/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://campoutpoconos.com" } },
+    },
     {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,

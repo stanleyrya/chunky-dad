@@ -23713,3 +23713,88 @@ test('canonicalizeIdentityLinks: a listing page on the promoter\'s own site yiel
   core.canonicalizeIdentityLinks([own]);
   assert.equal(own.website, 'https://bearracuda.com/events/ttoct/', 'an event page on the promoter\'s own site is this event\'s page and stays');
 });
+
+// ── Feeds as configured roots: id-keyed maps, envelopes, iCalendar roots ────
+test('countJsonApiEventObjects counts rows in an id-keyed map and reads event envelopes', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const envelope = (name, start) => ({ Event: { name, start, location: 'Jackhammer' }, Logo: { url: 'https://cdn.example/x.webp' } });
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({ data: { a: envelope('A', '2026-10-01 21:00:00'), b: envelope('B', '2026-10-02 21:00:00') } })), 2);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({ data: { a: { Logo: { url: 'x' } } } })), 0, 'a map of non-events counts nothing');
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({ data: [envelope('A', '2026-10-01 21:00:00')] })), 1);
+});
+
+test('resolveMachineDoor reads a configured iCalendar root as the feed, dropping the calendar\'s archive', async () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const year = new Date().getUTCFullYear() + 1;
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0',
+    // Upcoming single
+    'BEGIN:VEVENT', 'UID:one@example', `DTSTART;TZID=America/New_York:${year}0110T180000`, `DTEND;TZID=America/New_York:${year}0110T210000`, 'SUMMARY:The Bear Party 232 W 37th St', 'LOCATION:232 W 37th St 2nd fl\\, New York\\, NY 10018\\, USA', 'END:VEVENT',
+    // Still-running weekly series that started long ago
+    'BEGIN:VEVENT', 'UID:two@example', 'DTSTART;TZID=America/New_York:20230201T180000', 'DTEND;TZID=America/New_York:20230201T210000', 'RRULE:FREQ=WEEKLY;BYDAY=WE', 'SUMMARY:Workman\'s Lunch', 'LOCATION:457 W 56th St\\, New York\\, NY', 'END:VEVENT',
+    // Series that ended in 2023
+    'BEGIN:VEVENT', 'UID:three@example', 'DTSTART;TZID=America/New_York:20230129T130000', 'DTEND;TZID=America/New_York:20230129T160000', 'RRULE:FREQ=WEEKLY;UNTIL=20230219T045959Z;BYDAY=SU', 'SUMMARY:Bear Party (old)', 'END:VEVENT',
+    // Old single
+    'BEGIN:VEVENT', 'UID:four@example', 'DTSTART:20240225T020000Z', 'DTEND:20240225T060000Z', 'SUMMARY:Kink Brotherhood', 'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const url = 'https://calendar.google.com/calendar/ical/info%40example.com/public/basic.ics';
+  const logs = [];
+  const fetches = [];
+  const result = await core.resolveMachineDoor({ url, html: ics, statusCode: 200 }, url, { fetchData: async (u) => { fetches.push(u); throw new Error('no'); } }, { logInfo: async (m) => logs.push(m) });
+  assert.deepEqual(fetches, [], 'a feed root probes nothing');
+  assert.equal(result.machineDoor.kind, 'ics');
+  assert.equal(result.machineDoor.count, 2, 'the upcoming single and the running series; the ended series and the old single are archive');
+  const rows = JSON.parse(result.html).events;
+  assert.deepEqual(rows.map(row => row.title), ['The Bear Party 232 W 37th St', 'Workman\'s Lunch']);
+  assert.equal(rows[0].timezone, 'America/New_York');
+  assert.equal(rows[1].rrule, 'FREQ=WEEKLY;BYDAY=WE');
+  assert.ok(logs.some(line => line.includes('is an iCalendar feed — 2 event record(s)')), logs.join('\n'));
+  // A page root is untouched by this branch (no feed head → the probe path, which finds no candidates here)
+  const page = await core.resolveMachineDoor({ url: 'https://example.com/events', html: '<html><body>hi</body></html>' }, 'https://example.com/events', { fetchData: async () => { throw new Error('no'); } }, { logInfo: async () => {} });
+  assert.equal(page.machineDoor, undefined);
+});
+
+test('isHistoricalCalendarRecord: ended more than a month ago and no live rule', () => {
+  const now = Date.UTC(2026, 8, 19);
+  const rec = (start, end, rrule = '') => ({ start: { date: new Date(start) }, end: end ? { date: new Date(end) } : null, rrule });
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2024-01-01T00:00Z', '2024-01-01T03:00Z'), now), true);
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2026-09-01T00:00Z', '2026-09-01T03:00Z'), now), false, 'within the month');
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2024-01-01T00:00Z', null, 'FREQ=WEEKLY;BYDAY=FR'), now), false, 'no UNTIL = still running');
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2024-01-01T00:00Z', null, 'FREQ=WEEKLY;COUNT=10;BYDAY=FR'), now), false, 'COUNT is not computed = kept');
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2024-01-01T00:00Z', null, 'FREQ=WEEKLY;UNTIL=20240301T045959Z;BYDAY=FR'), now), true);
+  assert.equal(SharedCore.isHistoricalCalendarRecord(rec('2024-01-01T00:00Z', null, 'FREQ=WEEKLY;UNTIL=20260910T035959Z;BYDAY=FR'), now), false, 'UNTIL inside the month');
+  assert.equal(SharedCore.isHistoricalCalendarRecord({ start: null }, now), false);
+});
+
+test('stripAddressTailFromTitle drops the event\'s own street address from its title', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  assert.equal(core.stripAddressTailFromTitle('The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', '232 W 37th St 2nd fl, New York, NY 10018, USA'), 'The Bear Party');
+  assert.equal(core.stripAddressTailFromTitle("Workman's Lunch at 108 Greenwich St, 6th Fl in Tribeca", '108 Greenwich St, New York, NY'), "Workman's Lunch");
+  assert.equal(core.stripAddressTailFromTitle('Bears @ 1354 Harrison', '1354 Harrison St, San Francisco, CA'), 'Bears');
+  assert.equal(core.stripAddressTailFromTitle('Studio 54 Night', '54 W 54th St, New York'), 'Studio 54 Night', 'a number inside the name with a different street word stays');
+  assert.equal(core.stripAddressTailFromTitle('232 W 37th St party', '232 W 37th St'), '232 W 37th St party', 'a title that IS the address is not emptied');
+  assert.equal(core.stripAddressTailFromTitle('Manhole in Park Slope, Brooklyn', 'Park Slope, Brooklyn, NY, USA'), 'Manhole in Park Slope, Brooklyn', 'no house number, no tail');
+  assert.equal(core.stripAddressTailFromTitle('Fuzzy', ''), 'Fuzzy');
+  assert.equal(core.stripAddressTailFromTitle('Fuzzy 232 W 37th', '457 W 56th St, New York'), 'Fuzzy 232 W 37th', 'another address is not this event\'s');
+});
+
+test('resolveMachineDoor adopts a paged feed whose declared total exceeds the page\'s own structured data', async () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const row = (i) => ({ id: i, title: `Night ${i}`, start_date: `2026-10-${String(10 + (i % 15)).padStart(2, '0')} 22:00:00`, venue: { venue: 'The Eagle NYC' }, url: `https://eagle.example/e/${i}` });
+  const page1 = { events: Array.from({ length: 50 }, (_, i) => row(i)), total: 453, total_pages: 10, next_rest_url: 'https://eagle.example/wp-json/tribe/events/v1/events?per_page=50&page=2' };
+  // The listing's own JSON-LD marks up 63 nodes — more than one feed page.
+  const jsonLd = Array.from({ length: 63 }, (_, i) => ({ '@context': 'https://schema.org', '@type': 'Event', name: `Night ${i}`, startDate: '2026-10-10T22:00:00-04:00', location: { '@type': 'Place', name: 'The Eagle NYC' } }));
+  const html = `<html><head><link rel="alternate" type="application/json" href="/wp-json/tribe/events/v1/events?per_page=50"><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head><body><div class="wp-content">list</div></body></html>`;
+  const fetched = [];
+  const logs = [];
+  const result = await core.resolveMachineDoor({ url: 'https://eagle.example/calendarofevents/', html }, 'https://eagle.example/calendarofevents/', {
+    fetchData: async (url) => { fetched.push(url); if (url.includes('tribe/events/v1/events')) return { html: JSON.stringify(page1), statusCode: 200 }; throw new Error('HTTP 404'); }
+  }, { logInfo: async (m) => logs.push(m) });
+  assert.ok(result.machineDoor, logs.join('\n'));
+  assert.equal(result.machineDoor.kind, 'json');
+  assert.equal(result.machineDoor.count, 50, 'the page it answered with');
+  assert.ok(logs.some(line => line.includes('of 453 declared')), logs.join('\n'));
+  const door = core.readMachineDoorBody(JSON.stringify({ events: [row(1), row(2)], total: 2 }), 'https://x/feed');
+  assert.equal(door.declaredTotal, undefined, 'a total equal to the page is not a claim of more');
+});

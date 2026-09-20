@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "source": "CCBC Resort Hotel",
+  "slug": "ccbc-resort-hotel",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776",
+        "kind": "eventbrite-organizer-next-data",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "hasMoreUpcoming: false; upcomingEventsTotal: 1; upcomingEventsFailed: false; organizer.metrics.totalEvents: 37 (lifetime)",
+        "note": "Static curl with a Chrome UA, HTTP 200 (the numeric /o/30560403776 URL serves the canonical organizer page). Payload is <script id=\"__NEXT_DATA__\"> → props.pageProps.upcomingEvents[]: name, url, start_date/start_time, end_date/end_time, timezone, primary_venue { name, address { … latitude, longitude, localized_address_display } }, image.url, summary, series_id, additionalSessionsCount. The Past tab is client-loaded and not read."
+      }
+    ],
+    "notes": "Recon from one cached read on 2026-09-19. Organizer \"CCBC Resort Hotel\" (id 30560403776). 1 upcoming event(s); the organizer also publishes Club Chub's Palm Springs nights when they are on sale (none on the recon day — see the Club Chub parser comment in scraper-input.js)."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the organizer page's __NEXT_DATA__ upcomingEvents (1, hasMoreUpcoming false, upcomingEventsTotal 1). Every upcoming row is a single. Past events are counted via the lifetime metric only.",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "palm-springs",
+    "timezone": "America/Los_Angeles",
+    "bar": "CCBC Resort Hotel",
+    "address": "68300 Gay Resort Dr, Cathedral City, CA 92234"
+  },
+  "events": [
+    {
+      "id": "ps-pride-weekend-rainbow-splash-pool-party-2026-2026-11-07",
+      "kind": "single",
+      "title": "PS Pride Weekend Rainbow Splash Pool Party 2026",
+      "description": null,
+      "address": "68300 Gay Resort Drive, Cathedral City, CA 92234",
+      "location": "33.77971650000001, -116.4693659",
+      "startDate": "2026-11-07",
+      "startTime": "12:00",
+      "endDate": "2026-11-07",
+      "endTime": null,
+      "ticketUrl": "https://www.eventbrite.com/e/ps-pride-weekend-rainbow-splash-pool-party-2026-tickets-1996655592626",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191451574%2F455155557312%2F1%2Foriginal.20260819-185349?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.536&fp-y=0.399&s=b69b149e7d30ac17a1038ecba4ec97bc",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Feed quirk shared with the other Eventbrite organizer feeds: end_date/end_time equal start_date/start_time on the listing row; the real end lives in the event page's JSON-LD.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776",
+        "jsonPath": "$.props.pageProps.upcomingEvents[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

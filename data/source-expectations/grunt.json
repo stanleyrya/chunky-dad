@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "source": "GRUNT",
+  "slug": "grunt",
+  "status": "complete",
+  "recheckAfter": "2026-09-27",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://gruntparty.monster/",
+      "https://gruntparty.monster/brooklyn"
+    ],
+    "doors": [
+      {
+        "url": "https://gruntparty.monster/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "no listing structure: one hand-written Squarespace text block announcing the next Folsom party, nothing paged and nothing counted",
+        "note": "Fetched once with curl on 2026-09-19 (177 KB). Squarespace 7.1 site, <title>GRUNT PARTY SF</title>, JSON-LD is a WebSite object only (name \"GRUNT\", no Event). The page body is scaled-text blocks: \"FOLSOM SATURDAY, SEPT 26\" / \"MOZHGAN\" / \"& DEL\" / \"At THE STUD\" / \"(1123 FOLSOM STREET, SF, CA)\" / \"TICKETS AVAILABLE\" (an <a href=\"https://ra.co/events/2447663\">), then the blurb \"We like em BIG. BIG Beats. BIG GUYS. BIG Sleaze. BIG Vibes.\", a suggested-dress paragraph, \"FREE Clothing/Coat Check\", a mailing-list form and \"Illustration by: Jugo De Papaya\". One image block, the Folsom flyer (Folsom+Digi+Front+final-01.jpg, 1044x1063), also linking to the ra.co event. No year, no door time, no price appears anywhere on the page. Header nav: FOLSOM (/) and BROOKLYN (/brooklyn)."
+      },
+      {
+        "url": "https://gruntparty.monster/brooklyn",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "no listing structure: one hand-written Squarespace text block announcing the next Brooklyn party, nothing paged and nothing counted",
+        "note": "Fetched once with curl on 2026-09-19 (133 KB). Same Squarespace template as the home page; <title>BROOKLYN-SEPT-19 &mdash; GRUNT</title>, og:title the same, no Event JSON-LD. Scaled-text blocks in order: \"TICKETS HERE\" (an <a href=\"https://link.dice.fm/j1e6d0b77886\">) / \"SATURDAY SEPTEMBER 19\" / \"With DJS Will Jack (TOSSD) and Del (Bay Area)\" / \"Hosts Quinn and Cor\" / \"GoGos Archie, Damiano and Bru\" / \"At C’MON EVERYBODY\" / \"325 Franklin, Brooklyn NY\", then the same BIG blurb, dress list, coat-check line and mailing-list form; \"Illustration by: Crybaby Dionisi\". One image block, the Brooklyn flyer (Gruntnyseptdigi-01.jpg). No year, no door time, no price."
+      }
+    ],
+    "notes": "Squarespace, static: each of the parser's two urls IS one listing — a single announcement block rewritten per party (the home page for the San Francisco edition, /brooklyn for the New York edition). Neither page prints a year: \"SATURDAY, SEPT 26\" matches 2026-09-26 (a Saturday, the eve of Folsom Street Fair 2026 — what \"FOLSOM\" refers to) and \"SATURDAY SEPTEMBER 19\" matches 2026-09-19 (a Saturday, the recon date itself, so the Brooklyn party is the night of the read). The ra.co and DICE ticket pages would settle year, door time and price but were not opened (no network on the recon date). Neither page states a recurrence for the party itself."
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "location": null,
+    "website": "https://gruntparty.monster/"
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "One event per door. Home-page door (https://gruntparty.monster/, fetched 2026-09-19): exactly one announced party, Folsom Saturday Sept 26 at The Stud with one ra.co ticket link. Brooklyn door (https://gruntparty.monster/brooklyn, fetched 2026-09-19): exactly one announced party, Saturday September 19 at C'mon Everybody with one DICE ticket link. Published = 2 singles; both pages are overwritten per party, so no past listings exist. Confidence is medium rather than high because neither page prints a year and the ticket pages that would confirm it were not opened.",
+    "publishedEventCount": 2,
+    "documentedEventCount": 2,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "events": [
+    {
+      "id": "grunt-folsom-2026-09-26",
+      "kind": "single",
+      "title": "GRUNT FOLSOM",
+      "shortName": "GRUNT",
+      "description": "MOZHGAN & DEL at The Stud. We like em BIG. BIG Beats. BIG GUYS. BIG Sleaze. BIG Vibes.",
+      "bar": "The Stud",
+      "address": "1123 Folsom Street, San Francisco, CA",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-26",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "ticketUrl": "https://ra.co/events/2447663",
+      "image": "https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/ededd577-39f3-40da-90be-8eeb8efd3829/Folsom+Digi+Front+final-01.jpg",
+      "cover": null,
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://gruntparty.monster/",
+        "quote": "FOLSOM SATURDAY, SEPT 26",
+        "imageUrl": "https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/ededd577-39f3-40da-90be-8eeb8efd3829/Folsom+Digi+Front+final-01.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Page text in order: \"FOLSOM SATURDAY, SEPT 26\" / \"MOZHGAN\" / \"& DEL\" / \"At THE STUD\" / \"(1123 FOLSOM STREET, SF, CA)\" / \"TICKETS AVAILABLE\" → https://ra.co/events/2447663. Confidence is ambiguous because no year is printed: 2026-09-26 is the Saturday that matches Sept 26 and is Folsom Street Fair eve 2026. No start time, end time or price is published, so those stay null. The title is composed from the site name (og:site_name \"GRUNT\") and the page's own label for this edition (\"FOLSOM\"); the site prints no other event name. DJs Mozhgan and Del are the lineup, not the title."
+    },
+    {
+      "id": "grunt-brooklyn-2026-09-19",
+      "kind": "single",
+      "title": "GRUNT BROOKLYN",
+      "shortName": "GRUNT",
+      "description": "With DJS Will Jack (TOSSD) and Del (Bay Area). Hosts Quinn and Cor. GoGos Archie, Damiano and Bru. At C'mon Everybody. We like em BIG. BIG Beats. BIG GUYS. BIG Sleaze. BIG Vibes.",
+      "bar": "C'mon Everybody",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238",
+      "city": "nyc",
+      "timezone": "America/New_York",
+      "startDate": "2026-09-19",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "ticketUrl": "https://link.dice.fm/j1e6d0b77886",
+      "image": "https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/1500d1a4-d398-42a0-bbd2-fa6fc5d9e669/Gruntnyseptdigi-01.jpg",
+      "cover": null,
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://gruntparty.monster/brooklyn",
+        "quote": "SATURDAY SEPTEMBER 19",
+        "imageUrl": "https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/1500d1a4-d398-42a0-bbd2-fa6fc5d9e669/Gruntnyseptdigi-01.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Page text in order: \"TICKETS HERE\" → https://link.dice.fm/j1e6d0b77886 / \"SATURDAY SEPTEMBER 19\" / \"With DJS Will Jack (TOSSD) and Del (Bay Area)\" / \"Hosts Quinn and Cor\" / \"GoGos Archie, Damiano and Bru\" / \"At C’MON EVERYBODY\" / \"325 Franklin, Brooklyn NY\"; page title \"BROOKLYN-SEPT-19 — GRUNT\". Confidence is ambiguous because no year is printed: 2026-09-19 is the Saturday that matches September 19 — the recon date itself, so this party is the night the page was read and will be past by the next run (the page will then be overwritten with the next Brooklyn date). Address is the page's \"325 Franklin, Brooklyn NY\" completed to the venue's street address. No start time, end time or price is published. Title composed the same way as the Folsom edition: site name + the page's edition label (\"BROOKLYN\")."
+    }
+  ],
+  "traps": [
+    {
+      "id": "brooklyn-nav-link",
+      "kind": "navigation",
+      "label": "\"BROOKLYN\" in the header nav (href=\"/brooklyn\") on the home page, and \"FOLSOM\" (href=\"/\") on /brooklyn",
+      "why": "Each page's header nav links to the other edition's page; the nav item carries no date, venue or ticket link, so it is not an event on the page it appears on. Each party is documented from its own page only — the Brooklyn night from /brooklyn, the Folsom night from / — never from the cross-link.",
+      "evidence": {
+        "url": "https://gruntparty.monster/",
+        "quote": "<a href=\"/brooklyn\" data-animation-role=\"header-element\" > BROOKLYN </a>"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "The nav is rendered three times in each page's source (desktop, mobile, and the mobile overlay), so a text-window reader sees \"FOLSOM | BROOKLYN\" three times before the announcement. Since both urls are in the parser's config, a run should yield exactly one record per page, not a Folsom ghost from /brooklyn or vice versa."
+    },
+    {
+      "id": "monthly-mailing-list-blurb",
+      "kind": "recurring-blurb",
+      "label": "\"SIGN UP TO OUR EMAIL LIST FOR MONTHLY DEEPLY DISCOUNTED TICKETS, UPDATES and MERCH EARLY RELEASE\" (on both pages)",
+      "why": "\"MONTHLY\" here describes the mailing-list discount cadence, not the party. Neither page states a recurrence for GRUNT itself, so no RRULE may be written from this line; both nights are dated singles.",
+      "evidence": {
+        "url": "https://gruntparty.monster/",
+        "quote": "SIGN UP TO OUR EMAIL LIST FOR MONTHLY DEEPLY DISCOUNTED TICKETS, UPDATES and MERCH EARLY RELEASE"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "The identical line appears on /brooklyn. The only other recurrence-flavoured word on either page is in the dress-code list; neither is a cadence statement."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Neither page prints a year. 2026 is inferred from the weekday match (Sept 26 and September 19 are both Saturdays in 2026) and from the Folsom Street Fair context; the ra.co (2447663) and DICE (j1e6d0b77886) ticket pages were not opened and would confirm year, door time and price.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Should the event titles be \"GRUNT FOLSOM\" / \"GRUNT BROOKLYN\" (site name + the page's edition label) or just \"GRUNT\"? The pages print no event name beyond those words; the ticket listings' titles (unread) may settle it.",
+      "raisedOn": "2026-09-19",
+      "blocking": false
+    }
+  ]
+}

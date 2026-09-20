@@ -216,6 +216,9 @@ const JSON_API_FEED_MAX_PAGES = 6;
 // feeds above, and the same 90-day horizon.
 const WIX_EVENTS_MAX_PAGES = 6;
 const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// An Elfsight calendar entry that ended more than this many days ago is the
+// widget's archive, not an event (see collectElfsightCalendarEvents).
+const ELFSIGHT_ARCHIVE_DAYS = 30;
 // Distinct MEC event pages read per grid for their wall-clock times.
 const MEC_EVENT_PAGE_ENRICH_CAP = 60;
 
@@ -6722,12 +6725,33 @@ class AiWebParser {
                 console.warn(`🤖 AI Web: Elfsight widget ${widgetId} could not be read (${error.message}) — page left unchanged`);
                 continue;
             }
-            const rows = this.readElfsightWidgetEvents(payload, widgetId);
+            const published = this.readElfsightWidgetEvents(payload, widgetId);
+            if (published.length === 0) continue;
+            // The boot payload is the widget's whole history (Black Eagle
+            // Toronto: 253 entries, 213 of them over — 408 bear checks for
+            // nights nobody can attend). A one-off that ended more than a
+            // month ago is the calendar's archive, read the way an iCalendar
+            // export's archive is; a repeating entry stays, its rule decides.
+            const rows = published.filter(row => !this.isArchivedElfsightRow(row));
+            console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${published.length} event(s)${rows.length < published.length ? ` — ${published.length - rows.length} ended more than ${ELFSIGHT_ARCHIVE_DAYS} days ago (the calendar's archive), ${rows.length} read` : ''}`);
             if (rows.length === 0) continue;
-            console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${rows.length} event(s)`);
             events.push(...rows);
         }
         return events;
+    }
+
+    // A widget entry with no repeat whose last day (end, else start) is more
+    // than ELFSIGHT_ARCHIVE_DAYS days ago. Dates are the entry's own wall
+    // dates (YYYY-MM-DD), so no zone is needed to tell a month-old night.
+    isArchivedElfsightRow(row, now = new Date()) {
+        if (!row || typeof row !== 'object') return false;
+        const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod : '';
+        if (period && period !== 'noRepeat' && period !== 'none') return false;
+        const day = (entry) => (entry && typeof entry === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String(entry.date || '')) ? String(entry.date) : '');
+        const last = day(row.end) || day(row.start);
+        if (!last) return false;
+        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        return last < cutoff;
     }
 
     // Is this URL one the parser was configured to fetch? Compared on the
@@ -7061,7 +7085,16 @@ class AiWebParser {
             source: 'squarespace',
             _titleFromListing: true
         };
-        if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) event.bar = '';
+        // An address title that is itself the street line ("1354 Harrison
+        // St" with only "San Francisco CA 94103" beneath it — lonestarsf.com)
+        // is the address's first line, not a venue name: keep it as the
+        // address so the place survives, and leave the venue to the site.
+        if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) {
+            if (!this.addressAlreadyContainsPart(event.address, event.bar)) {
+                event.address = [event.bar, event.address].filter(Boolean).join(', ');
+            }
+            event.bar = '';
+        }
         // The map pin (mapLat/mapLng) is where the venue IS; markerLat/Lng is
         // the template's default marker (massbearsandcubs: every event carried
         // the New York default marker beside a Boston map pin, audit 2026-09-13).
@@ -10313,10 +10346,35 @@ class AiWebParser {
         if (!text || (text[0] !== '{' && text[0] !== '[')) return null;
         try {
             const parsed = JSON.parse(text);
-            return parsed && typeof parsed === 'object' ? parsed : null;
+            return parsed && typeof parsed === 'object' ? this.normalizeJsonApiRowMap(parsed) : null;
         } catch (_) {
             return null;
         }
+    }
+
+    // A feed whose rows sit in an id-keyed MAP rather than an array
+    // (events.ticketsauce.com's events_by_organization: { data: { "<uuid>":
+    // { Event: {…} }, … } }) publishes the same rows — the keys are the
+    // ids. Rewritten once, at detection, into the array shape every
+    // downstream reader (candidates, horizon, paging, counts) already
+    // understands. Only the wrapper keys the readers look under are
+    // touched, only when EVERY value is an object, and never when the
+    // wrapper is itself one event-shaped record (a detail envelope).
+    normalizeJsonApiRowMap(parsed) {
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed;
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        let rewritten = null;
+        for (const key of Object.keys(parsed)) {
+            if (!/^(data|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
+            const value = parsed[key];
+            if (!isPlainObject(value)) continue;
+            const values = Object.values(value);
+            if (values.length === 0 || !values.every(isPlainObject)) continue;
+            if (this.jsonApiObjectLooksEventLike(value)) continue;
+            if (!rewritten) rewritten = { ...parsed };
+            rewritten[key] = values;
+        }
+        return rewritten || parsed;
     }
 
     // camelCase → snake_case, lowercased ('startDate' → 'start_date';
@@ -10349,7 +10407,34 @@ class AiWebParser {
                 return { ...obj, ...wrapped };
             }
         }
+        // A row that is an ENVELOPE around its event: no title of its own,
+        // and exactly one member object that carries a title and a start
+        // (TicketSauce: { Event: {…}, EventTopic, Logo, Masthead,
+        // Organization }). The event's fields come up one level; the
+        // envelope's other members (an image record, the organization)
+        // stay beneath them as siblings, as a detail envelope's do.
+        const envelope = this.findJsonApiEnvelopeEvent(obj);
+        if (envelope) return { ...obj, ...envelope };
         return obj;
+    }
+
+    // The single member object of `obj` that reads as an event (a title key
+    // with text plus a start-ish dated key) when `obj` itself states no
+    // title; null otherwise — two such members would be two events, not
+    // one envelope.
+    findJsonApiEnvelopeEvent(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+        const hasTitle = (view) => Object.keys(view).some(key => /^(name|title|summary)$/.test(this.normalizeJsonApiKey(key))
+            && this.jsonApiTextValue(view[key]).trim() !== '');
+        if (hasTitle(obj)) return null;
+        const found = [];
+        for (const value of Object.values(obj)) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+            if (!hasTitle(value)) continue;
+            if (!Object.keys(value).some(key => this.jsonApiStartDateFromEntry(key, value[key]) !== null)) continue;
+            found.push(value);
+        }
+        return found.length === 1 ? found[0] : null;
     }
 
     // THE FEED'S OWN ROW IDENTITY, or '' when the payload publishes none.
@@ -11195,6 +11280,20 @@ class AiWebParser {
             .filter(date => date && !Number.isNaN(date.getTime()))
             .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
         if (starts.length === 0) {
+            // A rule whose UNTIL has passed is a series that has ENDED: its
+            // first night (the row's own start, months or years back) is not
+            // an event anyone can attend, and a calendar export lists every
+            // series it ever ran (Lodge NY's Google Calendar: 2023 weekly
+            // parties, each with its UNTIL). A rule with no UNTIL, or a
+            // COUNT, has simply no night in the window — the row stays dated.
+            // (An UNTIL still inside the window with no night before it —
+            // Lodge NY's "Workman's Lunch … UNTIL=20260916" read on the 19th
+            // — is the same finished series.)
+            const until = rrule.match(/(?:^|;)UNTIL=(\d{4})(\d{2})(\d{2})/i);
+            if (until && Date.UTC(Number(until[1]), Number(until[2]) - 1, Number(until[3]), 23, 59, 59) < windowEnd.getTime()) {
+                console.log(`🔁 SERIES: "${event.title}" (${rrule}) ended ${until[1]}-${until[2]}-${until[3]} — a finished series, not an event`);
+                return [];
+            }
             console.log(`🔁 SERIES: "${event.title}" (${rrule}) has no occurrence in the next ${JSON_API_FEED_HORIZON_DAYS} days — row kept as dated`);
             return [event];
         }
@@ -11968,8 +12067,17 @@ class AiWebParser {
             console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
             bar = '';
         }
+        // A scalar `location` is usually the place as free text, which is
+        // why it is not a venue key above. When the row ALSO states a street
+        // address under its own key, a `location` that is not itself an
+        // address is the venue's name (TicketSauce: location "Jackhammer",
+        // address "6406 North Clark Street").
+        if (!bar && addressParts[0]) {
+            const locationName = clean(firstValue(/^location$/, isNonEmptyString));
+            if (locationName && !this.venueNameLooksLikeStreetAddress(locationName, address)) bar = locationName;
+        }
 
-        const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
+        const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster|thumb)/;
         // Objects, sets and nested rendition lists all read the same way (see
         // collectJsonApiImageCandidates); the best rendition is the image and
         // the rest ride along as crop fallbacks.
@@ -18237,6 +18345,15 @@ TEXT:
         if (paddedDay !== String(day)) {
             variants.add(`${monthNames[monthIndex]} ${paddedDay}`);
             variants.add(`${monthShortNames[monthIndex]} ${paddedDay}`);
+        }
+        // September's other abbreviation: "SEPT 26" contains neither "sep 26"
+        // nor "september 26", so a page dating its party "SATURDAY, SEPT 26"
+        // corroborated nothing and the date was dropped as unsupported
+        // (gruntparty.monster, run 2026-09-19 — the Folsom night vanished).
+        if (monthIndex === 8) {
+            variants.add(`sept ${day}`);
+            if (paddedDay !== String(day)) variants.add(`sept ${paddedDay}`);
+            if (Number.isFinite(year) && year > 0) variants.add(`sept ${day}, ${year}`);
         }
         if (Number.isFinite(year) && year > 0) {
             variants.add(`${monthNames[monthIndex]} ${day}, ${year}`);
@@ -25757,16 +25874,23 @@ TEXT:
             let identityAppliedCount = 0;
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
                 if (!identity.hostLevel) {
                     // POI promotion: without an address consensus, identity
                     // applies only to events whose accepted pin's map POI IS
-                    // this venue.
+                    // this venue — or whose own stated address IS the curated
+                    // bar's (a Squarespace collection prints "1354 Harrison
+                    // St" on every card and geocodes no POI; lonestarsf.com
+                    // 2026-09-19 left 43 events with no bar).
                     const poiName = typeof event._geoPoiName === 'string' ? event._geoPoiName.trim() : '';
-                    if (!poiName || this.core.normalizeBarNameKey(poiName) !== identityKey) continue;
+                    const poiMatches = Boolean(poiName) && this.core.normalizeBarNameKey(poiName) === identityKey;
+                    const addressMatches = Boolean(existingAddress)
+                        && typeof curatedBar.address === 'string' && curatedBar.address.trim() !== ''
+                        && this.venueSiteIdentityAddressesAgree(existingAddress, curatedBar.address);
+                    if (!poiMatches && !addressMatches) continue;
                 }
                 // Multi-venue skip: a party at ANOTHER street address
                 // announced on this site keeps its own bar untouched.
-                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
                 if (existingAddress
                     && this.normalizeVenueSiteAddressKey(existingAddress) !== entry.consensusKey
                     && !this.venueSiteIdentityAddressesAgree(existingAddress, curatedBar.address)) {

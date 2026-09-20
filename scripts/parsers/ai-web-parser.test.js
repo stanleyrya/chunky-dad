@@ -18995,3 +18995,186 @@ test('coverage audit: a window whose timed date line already belongs to a struct
   });
   assert.ok(logs.some(line => line.includes('is the tail of a structured card')), JSON.stringify(logs));
 });
+
+// ============================================================================
+// JSON-API: id-keyed row maps and event envelopes (TicketSauce widget feed)
+// ============================================================================
+// Abridged REAL shape from events.ticketsauce.com/events/events_by_organization
+// (the door behind sickening.events' TsEventWidget on jackhammerchicago.com,
+// thesofotap.com, meetinghousetavern.com — 2026-09-19): rows are a map keyed
+// by event id, and each row is an envelope whose event lives under `Event`.
+const TICKETSAUCE_PAYLOAD = {
+  status: 'success',
+  pid: '60a71c30-a1e8-48e8-a5b0-1f640ad1e030',
+  oid: '69c6fe8a-a974-4c8f-b95a-61830a1e61fc',
+  html: '',
+  data: {
+    '6a39c3b9-40ac-48fe-a235-19eb0a1e60d0': {
+      Event: {
+        id: '6a39c3b9-40ac-48fe-a235-19eb0a1e60d0',
+        name: 'GOLDILOXX Chicago',
+        summary: '<p>NYC\'s interactive nightlife phenomenon arrives in Chicago.</p>',
+        slug: 'goldiloxx-chicago',
+        start: '2026-09-19 21:00:00',
+        start_utc: '2026-09-20 02:00:00',
+        end: '2026-09-20 05:00:00',
+        end_utc: '2026-09-20 10:00:00',
+        location: 'Jackhammer',
+        city: 'Chicago',
+        state: 'IL',
+        timezone: 'America/Chicago',
+        address: '6406 North Clark Street',
+        postal_code: '60626',
+        country: 'United States',
+        longitude: '-87.669754',
+        latitude: '41.998352',
+        website: '',
+        tickets_url: '',
+        is_dateless: false,
+        thumb_url: 'https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp',
+        url: 'https://www.sickening.events/e/goldiloxx-chicago'
+      },
+      EventTopic: { name: 'Nightlife', id: '831a3720-c029-4ff5-964b-ca1c8446444b', slug: 'nightlife' },
+      Logo: { id: 'l1', url: 'https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp' },
+      Organization: { id: '69c6fe8a-a974-4c8f-b95a-61830a1e61fc', name: 'Jackhammer', city: 'Chicago' }
+    },
+    '7b1c0d2e-1111-4222-8333-000000000002': {
+      Event: {
+        id: '7b1c0d2e-1111-4222-8333-000000000002',
+        name: 'BEAR HAPPY HOUR',
+        summary: '',
+        slug: 'bear-happy-hour-3-4',
+        start: '2026-09-24 18:00:00',
+        end: '2026-09-24 22:00:00',
+        location: 'Jackhammer',
+        city: 'Chicago',
+        state: 'IL',
+        timezone: 'America/Chicago',
+        address: '6406 North Clark Street',
+        postal_code: '60626',
+        country: 'United States',
+        thumb_url: 'https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1/saas/logos/bhh.webp',
+        url: 'https://www.sickening.events/e/bear-happy-hour-3-4'
+      },
+      Organization: { id: '69c6fe8a-a974-4c8f-b95a-61830a1e61fc', name: 'Jackhammer', city: 'Chicago' }
+    }
+  },
+  promoter: null
+};
+const TICKETSAUCE_SOURCE_URL = 'https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0';
+
+test('detectJsonApiPayload rewrites an id-keyed row map into rows, and never a detail envelope', () => {
+  const parser = createParser();
+  const payload = parser.detectJsonApiPayload(JSON.stringify(TICKETSAUCE_PAYLOAD));
+  assert.ok(Array.isArray(payload.data), 'data map → array of rows');
+  assert.equal(payload.data.length, 2);
+  assert.equal(payload.status, 'success', 'the rest of the payload is untouched');
+  const detail = parser.detectJsonApiPayload(JSON.stringify({ event: { name: 'X', start_date: '2026-10-01T20:00:00Z', venue: { name: 'Y' } } }));
+  assert.ok(!Array.isArray(detail.event), 'a single event-shaped record under a wrapper key stays a record');
+  const empty = parser.detectJsonApiPayload(JSON.stringify({ data: {} }));
+  assert.deepEqual(empty, { data: {} }, 'an empty map is left alone');
+});
+
+test('unwrapJsonApiCandidate lifts a single event-shaped member of an envelope row, keeping its siblings', () => {
+  const parser = createParser();
+  const row = TICKETSAUCE_PAYLOAD.data['6a39c3b9-40ac-48fe-a235-19eb0a1e60d0'];
+  const view = parser.unwrapJsonApiCandidate(row);
+  assert.equal(view.name, 'GOLDILOXX Chicago');
+  assert.equal(view.start, '2026-09-19 21:00:00');
+  assert.ok(view.Organization, 'envelope siblings ride along');
+  assert.ok(parser.jsonApiObjectLooksEventLike(row), 'the envelope reads as an event');
+  // Two event-shaped members = two events, not an envelope; a row with a
+  // title of its own is never unwrapped this way.
+  assert.equal(parser.findJsonApiEnvelopeEvent({ A: { name: 'a', start: '2026-10-01T20:00:00Z' }, B: { name: 'b', start: '2026-10-02T20:00:00Z' } }), null);
+  assert.equal(parser.findJsonApiEnvelopeEvent({ name: 'outer', Event: { name: 'a', start: '2026-10-01T20:00:00Z' } }), null);
+});
+
+test('parseEvents reads the TicketSauce widget feed structurally: venue from location, image from thumb_url, zone from timezone', async () => {
+  const parser = createParser();
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async () => { aiCalls += 1; return null; };
+  parser.extractOcrFromAllImages = async () => [];
+  const cityConfig = { chicago: { timezone: 'America/Chicago', patterns: ['chicago'] } };
+  let result;
+  const logs = await captureLogsAsync(async () => {
+    result = await parser.parseEvents({ url: TICKETSAUCE_SOURCE_URL, html: JSON.stringify(TICKETSAUCE_PAYLOAD) }, { siteRole: 'venue' }, cityConfig, 'event-page', null);
+  });
+  assert.equal(aiCalls, 0);
+  assert.ok(logs.includes('🤖 AI Web: JSON API response detected (2 candidate event object(s))'), logs.filter(line => line.includes('JSON API')).join('\n'));
+  assert.equal(result.events.length, 2);
+  const [goldiloxx, happyHour] = result.events;
+  assert.equal(goldiloxx.title, 'GOLDILOXX Chicago');
+  assert.equal(goldiloxx.bar, 'Jackhammer', 'a scalar `location` beside a street address is the venue name');
+  assert.equal(goldiloxx.address, '6406 North Clark Street, Chicago, IL, 60626');
+  assert.equal(goldiloxx.city, 'chicago');
+  assert.equal(goldiloxx.timezone, 'America/Chicago');
+  assert.equal(goldiloxx.image, 'https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp', 'thumb_url is an image key');
+  assert.equal(goldiloxx.ticketUrl, 'https://www.sickening.events/e/goldiloxx-chicago', 'the off-host event page is the ticket link');
+  assert.equal(happyHour.title, 'BEAR HAPPY HOUR');
+  assert.equal(happyHour.bar, 'Jackhammer');
+});
+
+test('expandJsonApiSeriesRow drops a series whose UNTIL has passed instead of keeping its first night', () => {
+  const parser = createParser();
+  const ended = { title: 'The Bear Party', startDate: new Date('2024-06-07T22:00:00Z'), endDate: new Date('2024-06-08T01:00:00Z'), _jsonApiRrule: 'FREQ=WEEKLY;UNTIL=20240906T035959Z;BYDAY=FR' };
+  assert.deepEqual(parser.expandJsonApiSeriesRow(ended), [], 'a finished series is not an event');
+  const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  const justEnding = { title: "Workman's Lunch", startDate: new Date('2024-06-05T16:00:00Z'), endDate: null, _jsonApiRrule: `FREQ=WEEKLY;UNTIL=${soon}T035959Z;BYDAY=${['SU','MO','TU','WE','TH','FR','SA'][(new Date().getUTCDay() + 4) % 7]}` };
+  assert.deepEqual(parser.expandJsonApiSeriesRow(justEnding), [], 'an UNTIL inside the window with no night left is finished too — its first night is never resurrected');
+  const dormant = { title: 'Yearly Ball', startDate: new Date('2024-06-07T22:00:00Z'), endDate: null, _jsonApiRrule: 'FREQ=YEARLY;COUNT=3;BYMONTH=6' };
+  const kept = parser.expandJsonApiSeriesRow(dormant);
+  assert.equal(kept.length, 1, 'a rule without an UNTIL keeps the row when no night falls in the window');
+  assert.equal(kept[0].title, 'Yearly Ball');
+});
+
+test('buildEventFromSquarespaceItem keeps an address title that is the street line as the address, not a venue name', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromSquarespaceItem({
+    title: 'LEWD', startDate: 1789876800083, endDate: 1789894800083, fullUrl: '/new-events-1/2026/9/19/lewd',
+    location: { addressTitle: '1354 Harrison St', addressLine1: '', addressLine2: 'San Francisco CA 94103', markerLat: 37.7727, markerLng: -122.4106 }
+  }, 'https://www.lonestarsf.com/new-events-1');
+  assert.equal(event.bar, '', 'a street line is not a venue name');
+  assert.equal(event.address, '1354 Harrison St, San Francisco CA 94103', 'the street line leads the address');
+  const named = parser.buildEventFromSquarespaceItem({
+    title: 'Cuff Presents: Deanne', startDate: 1789880400590, endDate: 1789885800590, fullUrl: '/events/x',
+    location: { addressTitle: 'The Cuff Complex', addressLine1: '1533 13th Avenue', addressLine2: 'Seattle, WA, 98122' }
+  }, 'https://cuffcomplex.com/events');
+  assert.equal(named.bar, 'The Cuff Complex');
+  assert.equal(named.address, '1533 13th Avenue, Seattle, WA, 98122');
+});
+
+test('isArchivedElfsightRow: a one-off that ended more than a month ago is archive; repeats and recent nights are not', () => {
+  const parser = createParser();
+  const now = new Date('2026-09-19T12:00:00Z');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'PUP ROMP', start: { date: '2024-07-20', time: '15:00' }, end: { date: '2024-07-20', time: '19:00' }, repeatPeriod: 'noRepeat' }, now), true);
+  assert.equal(parser.isArchivedElfsightRow({ name: 'NAKED NIGHT', start: { date: '2026-07-16', time: '21:00' }, end: { date: '2026-07-16', time: '21:00' }, repeatPeriod: 'nthDayInMonth' }, now), false, 'a repeating entry is judged by its rule');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'TORN', start: { date: '2026-09-01', time: '17:00' }, end: { date: '2026-09-01', time: '21:00' }, repeatPeriod: 'noRepeat' }, now), false, 'within the month');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'Weekend', start: { date: '2026-07-01', time: '10:00' }, end: { date: '2026-09-10', time: '10:00' }, repeatPeriod: 'noRepeat' }, now), false, 'a span that ended recently');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'Undated', start: {}, end: {}, repeatPeriod: 'noRepeat' }, now), false);
+});
+
+test('hasDateEvidence accepts "Sept" as September, with or without a year', () => {
+  const parser = createParser();
+  const ctx = (text) => parser.buildAiEvidenceContextFromText(text);
+  assert.equal(parser.hasDateEvidence(ctx('FOLSOM SATURDAY, SEPT 26 MOZHGAN & DEL At THE STUD'), '2026-09-26'), true);
+  assert.equal(parser.hasDateEvidence(ctx('Sept 5, 2026 doors 9pm'), '2026-09-05'), true);
+  assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEP 26'), '2026-09-26'), true, 'the three-letter form still works');
+  assert.equal(parser.hasDateEvidence(ctx('SATURDAY, SEPT 26'), '2026-09-19'), false, 'a different day is still unsupported');
+});
+
+test('venue-site identity without an address consensus fills the bar when the event states the curated address', () => {
+  const parser = createIdentityParser();
+  parser.lastVenueSiteConsensus = {
+    'cuffcomplex.example': { consensusKey: '', consensusAddress: '', blocked: false, venueRoleSeen: true, venueName: 'The Cuff Complex' }
+  };
+  const events = [
+    { title: 'Cuff Presents: Deanne', bar: '', city: 'seattle', address: '1533 13th Avenue, Seattle, WA, 98122', _venueSitePageHost: 'cuffcomplex.example' },
+    { title: 'Offsite', bar: '', city: 'seattle', address: '4216 University Way NE, Seattle, WA', _venueSitePageHost: 'cuffcomplex.example' },
+    { title: 'Unplaced', bar: '', city: 'seattle', address: '', _venueSitePageHost: 'cuffcomplex.example' }
+  ];
+  parser.applyVenueSiteIdentityCorrections(events, null);
+  assert.equal(events[0].bar, 'The Cuff Complex', 'the stated address is the curated bar\'s');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.equal(events[1].bar, '', 'another street address stays untouched');
+  assert.equal(events[2].bar, '', 'no address and no POI: nothing to go on');
+});

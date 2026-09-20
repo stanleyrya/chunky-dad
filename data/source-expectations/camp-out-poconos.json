@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "source": "Camp Out Poconos",
+  "slug": "camp-out-poconos",
+  "status": "complete",
+  "recheckAfter": "2026-10-19",
+  "recon": {
+    "date": "2026-09-19",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://campoutpoconos.com/calendar/"
+    ],
+    "doors": [
+      {
+        "url": "https://campoutpoconos.com/calendar/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Configured page. Static HTML holds no events — the calendar is an Elfsight widget (<div class=\"elfsight-app-0b55cd6c-7fb9-4d18-ae23-10a65951a07e\">, platform.js), read by collectElfsightCalendarEvents."
+      },
+      {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 112,
+        "truthFlag": "the boot payload carries the widget's entire event list: 112 entries, past and future, no paging",
+        "note": "Elfsight event-calendar app. Entries: name, start/end { date, time }, timeZone per entry, repeatPeriod (noRepeat 112), repeat* fields, description, coverImage, actions (link buttons), isAllDay. No venue field: the widget is the bar's own calendar."
+      }
+    ],
+    "notes": "Recon from one cached read of each door on 2026-09-19. 112 widget entries: 6 future singles, 0 repeating entries with a window occurrence, 105 entries already over (counted, not enumerated), 0 repeating entries with nothing in the window."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (112). Documented: every entry that is upcoming (6 singles) or repeats into the window (0 series, occurrences by rule). 105 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this.",
+    "publishedEventCount": 6,
+    "documentedEventCount": 6,
+    "occurrenceWindow": {
+      "start": "2026-09-19",
+      "end": "2026-12-18"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "poconos",
+    "timezone": "America/New_York",
+    "bar": "Camp Out",
+    "address": "446 Mt Nebo Rd, East Stroudsburg, PA 18301"
+  },
+  "events": [
+    {
+      "id": "fall-fetish-wrestlefest-2026-09-18",
+      "kind": "single",
+      "title": "FALL FETISH + WRESTLEFEST",
+      "description": "Fall Fetish & Wrestlefest September 18 – 20, 2026 WHAT’S THE VIBE High-tension gear, athletic friction, and raw fetish expression. We’re combining the heavy-duty energy of Wrestlefest NYC with a full-spectrum kink weekend. From poolside matches and wrestling ring introductions to singlets, rubber, and uninhibited Saturday night chaos, step into your gear and report for duty. WHAT’S HAPPENING VIEW ITINERARY WHAT TO PACK Wrestling singlets, spandex, rubber, and compression gear for Snap & Stretch Full fetish gear, leather, harnesses, and pup hoods and more for Unbound Tactical gear, trunks, or athletic gear for poolside matches Gear Swap: cleaned & sanitized leather, latex, PVC, footwear, impact toys, restraints, accessories, and other gear • Camp chair for campfire hangs • Yoga-friendly clothes • Your usual camp essentials CHECK OUT OUR VENDORS Knucks Nasty Pig Slick It Up Sadistic Steel and Leather Vendors Sign Up Here AROUND CAMP Theater: REBEL Stages: In The Heights Purchase Tickets Here Monroe County Farm Market Every Saturday, Courthouse Square in Downtown Stroudsburg till Noon. Music: Deer Head Inn : The oldest continuously running jazz club in the country Events subject to change or cancellation. Camp OUT is a 21+ membership-required LGBTQ+ camping resort. BYOB.",
+      "startDate": "2026-09-18",
+      "startTime": null,
+      "endDate": "2026-09-20",
+      "endTime": null,
+      "ticketUrl": "https://campoutpoconos.com/itinerary/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b8627469-4c16-45ce-9ce4-00ea59956748/Camp-Out-September-18-Fetish.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (07:52); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "autumn-rhythm-2026-09-25",
+      "kind": "single",
+      "title": "AUTUMN RHYTHM",
+      "description": "Autumn Rhythm September 25 – 27, 2026 Full Moon Saturday - Harvest Moon (Midnight Sun) WHAT’S THE VIBE Rooted in art, music, movement, and nature. Fall foliage should be in peak season for all you peepers, blended with our lineup of live music, a Thrift-Shop Throw-Down, and DJs who know how to keep you moving. Come cozy up by our fire pit. BOOK HERE WHAT’S HAPPENING ITINERARY LINK WHAT TO PACK MIDNIGHT SUN - Boutique Style Showdown: Thrifted finds, boutique gems, and gender-defying looks that subvert expectations and tell your story. Bathrobe for the shower Yoga-friendly clothes Camp Light, Eyemaskes, Earbuds, etc. CHECK OUT OUR VENDORS Wick-It-Candles How Bazaar - Pop Up Thrift Shop Sign Up to be a vendor AROUND CAMP Theater REBEL Stages: In The Heights Purchase Tickets Here The Shawnee Playhouse : Last of the Red Hot Lovers (Comedy) Music Deer Head Inn : The oldest continuously running Jazz Club in America Events subject to change or cancellation. Camp OUT is a 21+ membership-required LGBTQ+ camping resort. BYOB.",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endDate": "2026-09-27",
+      "endTime": null,
+      "ticketUrl": "https://54b36bcea7a7422d9be5b8a8ce070157.elf.site/",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/2c47626b-e5ff-4681-904a-64694689cc64/AUTUMN-UPDATE.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (07:55); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "out-motorsports-2026-10-02",
+      "kind": "single",
+      "title": "OUT MOTORSPORTS",
+      "description": "OUT Motorsports Weekend brings the engines, the adrenaline, and a crew that knows how to make camp roar. The annual Road Rally winds through the Pocono Mountains with pure speed and scenic chaos, then returns to camp for parties, socials, and a community that goes just as hard off the road as on it. OUT Motorsports Pumpkin Spice Road Rally Information BOOK HERE VIEW ITINERARY Self-Guided OUT'ing: Easton Garlic Fest (Directions: Easton, PA) AROUND CAMP Theater The Shawnee Playhouse : Last of the Red Hot Lovers (Comedy) Music Deer Head Inn : The oldest continuously running jazz club in the country",
+      "startDate": "2026-10-02",
+      "startTime": null,
+      "endDate": "2026-10-04",
+      "endTime": null,
+      "ticketUrl": "https://cfc505c99f154afb9d053eaf0523ccca.elf.site",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/076c53f6-3946-4389-9143-e07be8c59e0e/Camp-Out-Oct-2-Out-Motorsports-copy.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (07:54); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[2]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "leather-bears-2026-10-09",
+      "kind": "single",
+      "title": "LEATHER BEARS",
+      "description": "Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp. Days stay charged with cigar socials, gear meetups, pup play, and sweaty outdoor hangs that turn flirty fast. Nights crank the dial with harnesses, jocks, cruising energy, and dance floors thick with swagger and leather. It’s a full-force, full-freedom weekend built for anyone ready to show OUT, come OUT, and lean into the wildest side of fall. BOOK HERE",
+      "startDate": "2026-10-09",
+      "startTime": "07:57",
+      "endDate": "2026-10-12",
+      "endTime": "07:57",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Multi-day entry whose start and end carry the same clock time (07:57) — the widget's entry stamp, not a stated door time; the page presents it as a weekend.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "campcon-geeks-gaymers-2026-10-16",
+      "kind": "single",
+      "title": "CampCon GEEKS & GAYMERS",
+      "description": "CampCon - Geeks & Gaymers dives deep into the nerdverse and turns it all the way up. Days are stacked with video game sessions, tabletop tournaments, D&D campaigns, Pokémon battles, and enough chaotic quests to keep every Gaymer busy — and a little flirty. Cosplay gets bold, creativity gets spicy, and the whole camp becomes a playground for fantasy, fandom, and queer connection. Nights bring the glow-up: themed parties, character crushes, and Gaymers who definitely didn’t come just to “roll dice.” BOOK HERE CHECK OUT OUR VENDORS ▪️ Vendors Sign Up Here",
+      "startDate": "2026-10-16",
+      "startTime": null,
+      "endDate": "2026-10-18",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/f2b23080-56d7-441f-84a9-2475a1111487/Camp-Out-October-16-Geeks.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (07:58); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "halloween-weekend-2026-10-23",
+      "kind": "single",
+      "title": "HALLOWEEN WEEKEND",
+      "description": "Halloween Weekend closes the season with pure queer chaos — the spooky, sexy kind. Costumes get wild, creatures crawl out after dark, and the whole camp turns into a horror-fantasy playground built for flirting, dancing, and stirring up trouble. Days bring pumpkin mischief, eerie socials, and costume crafting; nights explode into blowout parties, dark corners, and bodies moving like the season’s final spell. It’s the last weekend to haunt, tease, and go feral before the gates close. BOOK HERE",
+      "startDate": "2026-10-23",
+      "startTime": null,
+      "endDate": "2026-10-25",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d0431148-bc68-47c5-88f7-595e2a0e9e06/Camp-Out-October-23-Halloween-copy.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The entry is flagged isAllDay while stating a clock time (08:00); the time is documented as published.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[5]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}
