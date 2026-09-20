@@ -35,7 +35,9 @@ class WebAdapter {
     constructor(config = {}) {
         this.config = {
             timeout: config.timeout || 30000,
-            userAgent: config.userAgent || 'chunky-dad-scraper/1.0',
+            // Honest and reachable: a site owner who dislikes the traffic can
+            // find out who we are instead of blocking an anonymous client.
+            userAgent: config.userAgent || 'chunky-dad-scraper/1.0 (+https://chunky.dad)',
             ...config
         };
         
@@ -1030,6 +1032,65 @@ class WebAdapter {
         this._runPageMemo.set(key, { ...responseData });
     }
 
+    // The one gate every live page request passes through (per-host pacing,
+    // 429/403 parking, per-run budget, robots.txt) — see
+    // SharedCore.FetchPoliteness. Null when SharedCore is unavailable or the
+    // config switches it off; callers then fetch exactly as before.
+    getFetchPoliteness() {
+        if (this._fetchPoliteness !== undefined) return this._fetchPoliteness;
+        this._fetchPoliteness = null;
+        // The orchestrator always hands a politeness object to a run's adapter
+        // ({} = defaults). No key at all = an adapter built outside a run.
+        const settings = this.config && this.config.politeness && typeof this.config.politeness === 'object' ? this.config.politeness : null;
+        if (!settings || settings.enabled === false) return null;
+        const core = this.getSharedCoreRef();
+        if (!core || typeof core.FetchPoliteness !== 'function') return null;
+        this._fetchPoliteness = new core.FetchPoliteness({
+            minHostGapMs: settings.minHostGapMs,
+            maxCrawlDelayMs: settings.maxCrawlDelayMs,
+            maxRequestsPerHost: settings.maxRequestsPerHost,
+            robots: settings.robots,
+            exemptHosts: Array.isArray(settings.exemptHosts) ? [...core.FetchPoliteness.DEFAULT_EXEMPT_HOSTS, ...settings.exemptHosts] : undefined,
+            userAgentToken: String(this.config.userAgent || '').split('/')[0],
+            sleep: (delayMs) => new Promise(resolve => setTimeout(resolve, delayMs)),
+            now: () => Date.now(),
+            log: (message) => console.log(message),
+            fetchRobotsText: (robotsUrl) => this.fetchRobotsText(robotsUrl)
+        });
+        return this._fetchPoliteness;
+    }
+
+    // robots.txt through the page cache, so a host is asked once per cache
+    // lifetime, not once per run. A missing file (404/410) is remembered the
+    // same way — as an empty rule set — instead of being re-requested.
+    async fetchRobotsText(robotsUrl) {
+        try {
+            const response = await this.fetchData(robotsUrl, { politenessBypass: true, headers: { Accept: 'text/plain,*/*;q=0.5' } });
+            return response && typeof response.html === 'string' ? response.html : '';
+        } catch (error) {
+            const statusCode = this.extractHttpStatusCodeFromError(error);
+            if (statusCode === 404 || statusCode === 410) {
+                const pageCacheConfig = this.getPageCacheConfig();
+                if (pageCacheConfig.enabled) {
+                    await this.writeCachedPage(robotsUrl, { html: `# no robots.txt (HTTP ${statusCode})\n`, url: robotsUrl, statusCode: 200, headers: {} }, pageCacheConfig);
+                }
+            }
+            return '';
+        }
+    }
+
+    // Run a live round trip through the politeness gate (or straight through
+    // when the gate is off / bypassed for the gate's own robots read).
+    async runPolitely(url, options, perform, kind = 'page') {
+        const gate = options && options.politenessBypass ? null : this.getFetchPoliteness();
+        return gate ? gate.run(url, perform, { kind: options && options.apiCall ? 'api' : kind }) : perform();
+    }
+
+    getFetchPolitenessSummary() {
+        const gate = this._fetchPoliteness;
+        return gate ? { text: gate.describeSummary(), ...gate.summary() } : null;
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -1074,13 +1135,16 @@ class WebAdapter {
                 fetchOptions.body = options.body;
             }
             
-            const response = await fetch(fetchUrl, fetchOptions);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const html = await response.text();
+            const { response, html } = await this.runPolitely(url, options, async () => {
+                const liveResponse = await fetch(fetchUrl, fetchOptions);
+                if (!liveResponse.ok) {
+                    const failure = new Error(`HTTP ${liveResponse.status}: ${liveResponse.statusText}`);
+                    failure.statusCode = liveResponse.status;
+                    failure.retryAfter = liveResponse.headers.get('retry-after') || '';
+                    throw failure;
+                }
+                return { response: liveResponse, html: await liveResponse.text() };
+            });
             
             if (html && html.length > 0) {
                 const responseData = {
@@ -1105,10 +1169,28 @@ class WebAdapter {
             if (error?.cachedFailure) {
                 throw error;
             }
-            const errorMessage = `🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`;
-            console.log(errorMessage);
-            throw new Error(`HTTP request failed for ${url}: ${error.message}`);
+            // A refusal by the politeness gate (parked host, budget, robots)
+            // never left the machine: it is a skip, reported as one, and it
+            // keeps its non-retryable stamp through the rewrap below.
+            if (error && error.politeness) {
+                console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
+            } else {
+                console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
+            }
+            const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
+            if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;
+            if (error && error.politeness) wrapped.politeness = error.politeness;
+            if (error && Number.isFinite(error.statusCode)) wrapped.statusCode = error.statusCode;
+            throw wrapped;
         }
+    }
+
+    // Would the politeness gate refuse this URL outright (its host is parked
+    // or out of budget)? Lets the crawl loop skip it quietly instead of
+    // collecting one error per URL of a host that already said no.
+    getFetchRefusalReason(url) {
+        const gate = this._fetchPoliteness;
+        return gate && typeof gate.refusalReasonFor === 'function' ? gate.refusalReasonFor(url) : '';
     }
 
     extractHttpStatusCodeFromError(error) {
@@ -1363,22 +1445,34 @@ class WebAdapter {
         const timeout = options.timeoutSeconds ? options.timeoutSeconds * 1000 : this.config.timeout;
         let result;
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'User-Agent': this.config.userAgent,
-                    ...options.headers
-                },
-                body: String(body == null ? '' : body),
-                signal: AbortSignal.timeout(timeout)
+            // A form POST replays a site's own AJAX call against the site —
+            // it is paced, budgeted and parked like any page request.
+            result = await this.runPolitely(url, options, async () => {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'User-Agent': this.config.userAgent,
+                        ...options.headers
+                    },
+                    body: String(body == null ? '' : body),
+                    signal: AbortSignal.timeout(timeout)
+                });
+                if (response.status === 429 || response.status === 403) {
+                    const failure = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    failure.statusCode = response.status;
+                    failure.retryAfter = response.headers.get('retry-after') || '';
+                    throw failure;
+                }
+                return { ok: response.ok, status: response.status, text: await response.text() };
             });
-            result = {
-                ok: response.ok,
-                status: response.status,
-                text: await response.text()
-            };
         } catch (error) {
+            if (error && error.politeness) throw error;
+            if (error && (error.statusCode === 429 || error.statusCode === 403)) {
+                // Parked by the gate: report the refusal in the shape callers
+                // branch on, never the retryable throw below.
+                return { ok: false, status: error.statusCode, text: '' };
+            }
             throw new Error(`Form POST request failed: ${error.message}`);
         }
         // Same transient-status contract as postJson: 5xx/429 throw with the

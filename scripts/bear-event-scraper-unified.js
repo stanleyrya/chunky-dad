@@ -246,6 +246,12 @@ class BearEventScraperOrchestrator {
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
                     pageCache: config.config?.pageCache || null,
+                    // How the scraper behaves on other people's sites (per-host
+                    // pacing, 429 parking, request budget, robots.txt mode)
+                    // ON for every real run, with defaults when the config
+                    // has no block; an adapter built without the key (unit
+                    // tests, one-off tools) fetches ungated.
+                    politeness: (config.config && typeof config.config.politeness === 'object' && config.config.politeness) || {},
                     // Global OCR block, for the end-of-run cache-retention prune
                     ocr: config.config?.ocr || null,
                     // Carry the resolved run context (automation overrides) into the
