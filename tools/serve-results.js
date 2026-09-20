@@ -1063,6 +1063,16 @@ a { color:var(--accent); }
 .series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
 .series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .series .nights .chip { font-size:12px; padding:2px 8px; }
+.series-note { margin-top:4px; color:var(--muted); font-size:12px; }
+.series .nights a.chip { text-decoration:none; color:inherit; }
+.night-compare { margin-top:6px; font-size:12px; }
+.night-compare summary { cursor:pointer; color:var(--muted); }
+.night-table { overflow-x:auto; margin-top:4px; }
+.night-table table { border-collapse:collapse; width:100%; }
+.night-table th, .night-table td { text-align:left; vertical-align:top; padding:3px 8px 3px 0; border-top:1px solid var(--line); white-space:nowrap; }
+.night-table th { color:var(--muted); font-weight:500; border-top:none; }
+.night-table td a { color:inherit; }
+.night-thumb { width:36px; height:36px; object-fit:cover; border-radius:4px; display:block; }
 .series-split { font:inherit; font-size:12px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:2px 8px; cursor:pointer; }
 .prior { margin:0 0 8px; padding:6px 10px; border:1px dashed var(--no); border-radius:10px; font-size:13px; }
 .bear-stored { font-weight:600; }
@@ -1199,10 +1209,61 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     for (var i = 0; i < nights.length; i++) if (nights[i].key === c.key) return nights[i].label || nights[i].day;
     return c.key.split('|')[3] || '';
   }
+  // The night-by-night values the server compared (series.nights[].values)
+  // and which of them differ (series.differs). Every night is saved as its
+  // own event with its own values — the strip says so, names what differs,
+  // and "compare" lays the nights side by side.
+  var NIGHT_FIELDS = ${JSON.stringify(reviewQueue.NIGHT_COMPARE_FIELDS)};
+  function nightOf(c) {
+    var nights = c.series && c.series.nights ? c.series.nights : [];
+    for (var i = 0; i < nights.length; i++) if (nights[i].key === c.key) return nights[i];
+    return null;
+  }
+  function shortLink(url) {
+    var text = String(url || '').replace(/^https?:[/][/](www[.])?/, '');
+    return text.length > 46 ? text.slice(0, 22) + '…' + text.slice(-22) : text;
+  }
+  function nightCell(field, value) {
+    if (!value) return '<span class="muted">—</span>';
+    if (field === 'image') return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener"><img class="night-thumb" src="' + escapeHtml(value) + '" alt="" loading="lazy"></a>';
+    if (field === 'url' || field === 'ticketUrl') return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener">' + escapeHtml(shortLink(value)) + '</a>';
+    return escapeHtml(value);
+  }
+  function nightChip(c, differs) {
+    var night = nightOf(c);
+    var values = night && night.values ? night.values : {};
+    var own = differs.indexOf('ticketUrl') !== -1 ? values.ticketUrl : (differs.indexOf('url') !== -1 ? values.url : '');
+    var label = escapeHtml(nightLabel(c));
+    return own
+      ? '<a class="chip" href="' + escapeHtml(own) + '" target="_blank" rel="noopener" title="the page of this night">' + label + ' ↗</a>'
+      : '<span class="chip">' + label + '</span>';
+  }
+  function seriesCompare(item, differs) {
+    if (differs.length === 0) return '';
+    var fields = NIGHT_FIELDS.filter(function (f) { return differs.indexOf(f.key) !== -1; });
+    var head = '<tr><th>night</th>' + fields.map(function (f) { return '<th>' + escapeHtml(f.label) + '</th>'; }).join('') + '</tr>';
+    var rows = item.cards.map(function (c) {
+      var night = nightOf(c);
+      var values = night && night.values ? night.values : {};
+      return '<tr><td>' + escapeHtml(nightLabel(c)) + '</td>' + fields.map(function (f) { return '<td>' + nightCell(f.key, values[f.key]) + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    return '<details class="night-compare"><summary>compare the ' + item.cards.length + ' nights</summary><div class="night-table"><table>' + head + rows + '</table></div></details>';
+  }
   function seriesStrip(item) {
     if (!item.series || item.cards.length < 2) return '';
-    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button><div class="nights">'
-      + item.cards.map(function (c) { return '<span class="chip">' + escapeHtml(nightLabel(c)) + '</span>'; }).join('') + '</div></div>';
+    var differs = (item.series.differs || []).filter(function (key) {
+      // Judged on the nights still on this card, not the whole party.
+      var seen = {}, count = 0;
+      item.cards.forEach(function (c) { var n = nightOf(c); var v = n && n.values ? n.values[key] : ''; if (!seen['v' + v]) { seen['v' + v] = true; count++; } });
+      return count > 1;
+    });
+    var labels = NIGHT_FIELDS.filter(function (f) { return differs.indexOf(f.key) !== -1; }).map(function (f) { return f.label; });
+    var note = labels.length
+      ? 'Each night is saved as its own event. Per night: <b>' + escapeHtml(labels.join(', ')) + '</b> — the card below shows the first night.'
+      : 'Each night is saved as its own event. The nights are identical apart from the date.';
+    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
+      + '<div class="series-note">' + note + '</div><div class="nights">'
+      + item.cards.map(function (c) { return nightChip(c, differs); }).join('') + '</div>' + seriesCompare(item, differs) + '</div>';
   }
   function bindSplit(el, item) {
     var split = el.querySelector('.series-split');
