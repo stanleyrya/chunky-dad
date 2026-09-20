@@ -280,6 +280,34 @@ test('bear verdict store: upsert by party identity (last verdict wins), clear, a
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('buildDeck: a not-bear card carries the event\'s own review key, so "bear, but needs a fix" parks its note where the next run\'s kept card looks', () => {
+  const event = { title: 'Dolly Parton Tribute', startDate: iso(FUTURE), endDate: iso(FUTURE), bar: '3 Dollar Bill', address: '260 Meserole St', city: 'nyc', timezone: 'America/New_York', source: 'ai-web', image: 'https://x/y.jpg' };
+  const payload = runPayload({ analyzedEvents: [], bearDroppedEvents: [{ title: event.title, startDate: event.startDate, venue: event.bar, reason: 'ai: no bear language', host: 'x', event }] });
+  const card = deckOf(payload).cards.find((entry) => entry.kind === 'dropped');
+  assert.ok(card.fixTarget.key.startsWith('event|dolly parton tribute|'), card.fixTarget.key);
+  assert.equal(card.fixTarget.kind, 'new');
+  assert.equal(card.fixTarget.image, 'https://x/y.jpg', 'the snapshot is the card as it stands today');
+
+  // The owner answers "bear, but needs a fix": a bear verdict + a fix note under the event key.
+  const note = rq.buildDecision({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', snapshot: card.fixTarget, reason: { mode: 'fix', tags: ['bad image'], text: 'wrong flyer' } });
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), note);
+  const verdicts = [{ verdict: 'bear', stampedAt: '2030-01-01T00:00:00.000Z', title: event.title, venue: event.bar, address: '', location: '', city: 'nyc' }];
+  const sameRun = deckOf(payload, store, { bearVerdicts: verdicts });
+  const decided = sameRun.decided.find((entry) => entry.kind === 'dropped');
+  assert.equal(decided.noteKey, card.fixTarget.key, 'an undo clears the note with the verdict');
+  assert.equal(decided.rejectionMode, 'fix');
+  assert.equal(decided.decision.reason.text, 'wrong flyer');
+  assert.deepEqual(sameRun.waitingGone, [], 'the event is in this run (dropped) — its note is not orphaned');
+
+  // Next run keeps the party: the same card waits; a changed card comes back.
+  const kept = (image) => runPayload({ analyzedEvents: [{ ...event, image, _action: 'new', _parserConfig: { name: 'ai-web', parser: 'ai-web', dryRun: false } }] });
+  const waiting = deckOf(kept('https://x/y.jpg'), store, { bearVerdicts: verdicts });
+  assert.equal(waiting.cards.filter((entry) => entry.kind === 'new').length, 0, 'unchanged: still waiting on the fix');
+  assert.equal(waiting.counts.waiting, 1);
+  const fixed = deckOf(kept('https://x/fixed.jpg'), store, { bearVerdicts: verdicts });
+  assert.equal(fixed.cards.filter((entry) => entry.kind === 'new').length, 1, 'changed: back on the stack');
+});
+
 test('buildDeck: dropped-as-not-bear events become one card per party (future only), decided once a verdict is stored', () => {
   const dropped = (title, start, reason = 'ai: no bear language') => ({
     title, startDate: start, venue: '3 Dollar Bill', reason, host: 'www.3dollarbillbk.com',

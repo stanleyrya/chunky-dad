@@ -928,6 +928,7 @@ function renderReviewPage(deck, options = {}) {
         sourceIndex: entry.sourceIndex,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
+        fixTarget: entry.fixTarget || null,
         series: entry.series || null,
         html: renderReviewCard(entry, ctx)
     }));
@@ -945,6 +946,8 @@ function renderReviewPage(deck, options = {}) {
         title: entry.kind === 'bar' ? entry.proposal.name : entry.proposal.title,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
+        fixTarget: entry.fixTarget || null,
+        noteKey: entry.noteKey || '',
         html: renderReviewCard(entry, ctx)
     }));
     const payload = {
@@ -1470,12 +1473,21 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   // so the next run drops the party without asking again.
   function saveOne(card, verdict, reason) {
     var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
-    var request = card.kind === 'dropped'
+    // A not-bear card sent back with a note. "Needs a fix" says the party
+    // IS bear (the next run keeps it) and parks the note under the event's
+    // own key, so the kept card waits there until it changes. "Not an
+    // event" confirms the drop and keeps the note for the fix queue.
+    var droppedNote = card.kind === 'dropped' && verdict === 'reject' && reason && (reason.mode === 'fix' || reason.mode === 'never') && card.fixTarget ? reason.mode : '';
+    var request = droppedNote
+      ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(function () {
+          return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason });
+        })
+      : card.kind === 'dropped'
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
       : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
     return request.then(function () {
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
+      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -1500,7 +1512,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     chain.then(function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
-      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' nights back on the stack)' : ''));
@@ -1512,7 +1524,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
   function rejectTop() {
     var c = topItem(); if (!c) return;
-    if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    // A not-bear card gets the same three answers: some of them ARE bear
+    // and need a fix, which a bare "confirmed" could never say.
     pending = c; openSheet(c);
   }
   function skipTop() {
@@ -1524,7 +1537,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   function requeue(record) {
     decided = decided.filter(function (d) { return d.key !== record.key; });
-    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, html: record.html, series: record.series || null });
+    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, fixTarget: record.fixTarget || null, html: record.html, series: record.series || null });
     history.forEach(function (h) { h.records = h.records.filter(function (r) { return r.key !== record.key; }); });
     history = history.filter(function (h) { return h.records.length > 0; });
   }
@@ -1533,7 +1546,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     // the card comes back to be decided alone (that decision then wins).
     if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
     var request = record.kind === 'dropped'
-      ? postBear(record, 'clear')
+      ? postBear(record, 'clear').then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear' }) : result; })
       : post({ key: record.key, verdict: 'clear' })
           .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear').then(function () { return result; }) : result; });
     return request.then(function () {
@@ -1554,6 +1567,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var sheetTags = document.getElementById('sheet-tags');
   function openSheet(item) {
     var card = item.cards[0];
+    var isDropped = card.kind === 'dropped';
+    document.getElementById('sheet-fix').querySelector('b').textContent = isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isDropped
+      ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
+      : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
+    document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
     document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '');
     sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
@@ -1572,6 +1591,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
+    // On a not-bear card, "not bear" is the plain confirmation it always was.
+    if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
     toast(mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
