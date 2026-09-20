@@ -19221,3 +19221,78 @@ test('isCalendarExportUrl names subscribe/export links, and a segment never take
     'https://site.example/events/', [], [], null);
   assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_LINK_URL')), ['SEGMENT_LINK_URL: https://site.example/events/woof-3/']);
 });
+
+// ---------------------------------------------------------------------------
+// Elfsight: repeating entries become dated nights; typed clocks beat the
+// all-day flag.
+// ---------------------------------------------------------------------------
+test('expandElfsightSeriesEvent turns a repeating widget entry into dated nights with cadence, honouring skips and the repeat\'s end', () => {
+  const parser = createParser();
+  const now = Date.UTC(2026, 8, 20, 12); // Sun 20 Sep 2026
+  const row = { name: 'NAKED NIGHT', start: { date: '2026-07-16', time: '21:00' }, end: { date: '2026-07-16', time: '23:45' }, timeZone: 'America/Toronto', repeatPeriod: 'nthDayInMonth', repeatMonthlyOnDay: 'nthDay', repeatEnds: 'never', exceptions: [{ type: 'skip', originalDate: Date.UTC(2026, 10, 20, 2) }] };
+  const built = parser.buildEventFromElfsightRow(row, 'https://bar.example/');
+  assert.equal(built.recurrenceRule, 'FREQ=MONTHLY;BYDAY=3TH');
+  const nights = parser.expandElfsightSeriesEvent(built, row, now);
+  const local = (date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', dateStyle: 'short', timeStyle: 'short', hour12: false }).format(date);
+  assert.deepEqual(nights.map(night => local(night.startDate)), ['2026-10-15, 21:00', '2026-12-17, 21:00'], 'third Thursdays in Toronto time; the skipped November night is left out');
+  assert.ok(nights.every(night => night.cadence === 'FREQ=MONTHLY;BYDAY=3TH' && night.recurrenceRule === undefined), 'a dated night carries cadence, never a rule');
+  assert.equal(nights[0].endDate.getTime() - nights[0].startDate.getTime(), 165 * 60 * 1000, 'the entry\'s duration travels');
+
+  const ended = { ...row, exceptions: [], repeatEnds: 'onDate', repeatEndsDate: { date: '2026-08-31', time: '21:00' } };
+  const endedBuilt = parser.buildEventFromElfsightRow(ended, 'https://bar.example/');
+  assert.equal(endedBuilt.recurrenceRule, 'FREQ=MONTHLY;BYDAY=3TH;UNTIL=20260831T235959Z');
+  assert.deepEqual(parser.expandElfsightSeriesEvent(endedBuilt, ended, now), [], 'a repeat that has run out is not an event');
+
+  const single = parser.buildEventFromElfsightRow({ name: 'TORN', start: { date: '2026-09-27', time: '17:00' }, end: { date: '2026-09-27', time: '21:00' }, timeZone: 'America/Toronto', repeatPeriod: 'noRepeat' }, 'https://bar.example/');
+  assert.deepEqual(parser.expandElfsightSeriesEvent(single, {}, now), [single], 'a one-off passes through untouched');
+});
+
+test('an all-day flag yields to a clock the entry\'s own text states — same-day entries only', () => {
+  const parser = createParser();
+  const typed = { name: 'POWER HOUSE', isAllDay: true, start: { date: '2026-10-02', time: '21:00' }, end: { date: '2026-10-02', time: '23:45' }, timeZone: 'America/Toronto', tags: [{ tagName: '9PM / $10 BEFORE 10:30PM / $15 AFTER' }] };
+  assert.equal(parser.elfsightTextStatesClock(typed, '21:00'), true);
+  assert.equal(parser.buildEventFromElfsightRow(typed, 'https://bar.example/').startDate.toISOString(), '2026-10-03T01:00:00.000Z', '9 PM in Toronto');
+  const stamp = { name: 'CLOSED FOR A PRIVATE EVENT', isAllDay: true, start: { date: '2026-10-02', time: '23:33' }, end: { date: '2026-10-02', time: '23:33' }, timeZone: 'America/New_York', description: 'Back tomorrow at 5PM' };
+  assert.equal(parser.elfsightTextStatesClock(stamp, '23:33'), false);
+  assert.equal(parser.buildEventFromElfsightRow(stamp, 'https://bar.example/').startDate.toISOString(), '2026-10-02T04:00:00.000Z', 'the creation stamp is not a clock: the day, from midnight');
+  const weekend = { name: 'LEATHER BEARS', isAllDay: true, start: { date: '2026-10-09', time: '21:00' }, end: { date: '2026-10-12', time: '21:00' }, timeZone: 'America/New_York', description: 'Dance party Saturday 9PM' };
+  assert.equal(parser.buildEventFromElfsightRow(weekend, 'https://camp.example/').startDate.toISOString(), '2026-10-09T04:00:00.000Z', 'a weekend that mentions 9PM still starts with the day');
+  for (const [text, time, expected] of [['Doors 8:30 PM', '20:30', true], ['Doors 8PM', '20:30', false], ['21h', '21:00', true], ['20h30', '20:30', true], ['$21 cover', '21:00', false], ['19:00 start', '19:00', true]]) {
+    assert.equal(parser.elfsightTextStatesClock({ description: text }, time), expected, `${text} / ${time}`);
+  }
+});
+
+test('the last card of an anchor-card listing ends at its own close, and its own relative link beats absolute links after it', () => {
+  const parser = createParser();
+  const card = (slug, date, title) => `<a href="/events/${slug}/" class="card event-card"><div class="ev-poster"><img src="https://cdn.example/${slug}.avif" alt="${title} poster"></div><div class="ev-body"><div class="ev-date">${date}</div><div class="ev-title">${title}</div><span class="ev-time">9 PM - 2 AM</span></div></a>`;
+  const html = `<html><body><main><h1>Events</h1><div class="grid">${card('adonis', 'FRI · DEC 04', 'Adonis')}${card('knotty', 'SAT · DEC 05', 'Knotty Bird')}${card('woof-3', 'SAT · DEC 12', 'WOOF!')}</div><p>Nothing in that category right now.</p><section class="sync"><h2>Never miss a Beer Bust.</h2><a href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fsite.example%2F%3Fical%3D1">Google Calendar</a></section></main><footer><a href="https://www.instagram.com/thebar/">Instagram</a></footer></body></html>`;
+  const segments = parser.buildMultiEventSegments(html, 'https://site.example/events/', []);
+  const last = segments.find(segment => segment.lines.includes('WOOF!'));
+  assert.ok(last, JSON.stringify(segments.map(segment => segment.lines)));
+  assert.deepEqual(last.lines, ['SAT · DEC 12', 'WOOF!', '9 PM - 2 AM'], 'no footer, no empty-state line, no calendar strip');
+  assert.ok(last.html.trim().endsWith('</a>'));
+  // Document order: a relative card link first, an absolute link later in the same window.
+  const lines = parser.extractMultiEventSegmentResourceLines(
+    '<a href="/events/woof-3/" class="card"><h3>WOOF!</h3></a><a href="https://www.instagram.com/thebar/">Instagram</a>',
+    'https://site.example/events/', [], [], null);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_LINK_URL')), ['SEGMENT_LINK_URL: https://site.example/events/woof-3/']);
+});
+
+test('coverage audit: a "sync this calendar" strip under the last card\'s date is furniture; a second card on that date is not', () => {
+  const parser = createParser();
+  const card = { lines: ['SAT · DEC 05', 'WOOF!', '3 PM - 6 PM'], html: '<a href="/events/woof-3/">…</a>' };
+  const other = { lines: ['FRI · DEC 04', 'Adonis', '9 PM - 2 AM'], html: '' };
+  const strip = { lines: ['SAT · DEC 05', 'Nothing in that category right now. Check back soon.', 'Never miss a Beer Bust. Sync the Eagle to your calendar.', 'Google Calendar iCal / .ics'], html: '<p>Nothing in that category right now.</p><a href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fsite.example%2F%3Fical%3D1">Google Calendar</a><a href="webcal://site.example/?ical=1">iCal / .ics</a>' };
+  const sameNight = { lines: ['SAT · DEC 05', 'Knotty Bird', 'Patio social'], html: '' };
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    parser.buildFlatTextMultiEventSegments = () => [other, card, strip, sameNight];
+    const covered = parser.coverUnclaimedDatedWindows('<html></html>', [other, card]);
+    assert.deepEqual(covered.map(segment => segment.lines[1]).sort(), ['Adonis', 'Knotty Bird', 'WOOF!']);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.some(line => line.includes('links only a calendar subscription')), logs.join('\n'));
+});

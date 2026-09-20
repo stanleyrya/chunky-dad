@@ -1125,12 +1125,21 @@ class AiWebParser {
             // a page that would otherwise look empty is not handed to the AI
             // as an empty page. Sites without the widget no-op here.
             const elfsightRows = await this.collectElfsightCalendarEvents(effectiveHtmlData, parserConfig, httpAdapter);
-            const elfsightEvents = elfsightRows
-                .map(row => this.buildEventFromElfsightRow(row, sourceUrl))
-                .filter(Boolean);
+            // A repeating widget entry dates its SERIES (start = the first
+            // night, often years back); the scraper never writes a series, it
+            // writes the dated nights the rule yields from now to the feed
+            // horizon — the same reading a JSON or iCalendar feed's rrule rows
+            // get (see expandElfsightSeriesEvent).
+            let elfsightRepeating = 0;
+            const elfsightEvents = [];
+            for (const row of elfsightRows) {
+                const built = this.buildEventFromElfsightRow(row, sourceUrl);
+                if (!built) continue;
+                if (built.recurrenceRule) elfsightRepeating++;
+                elfsightEvents.push(...this.expandElfsightSeriesEvent(built, row));
+            }
             if (elfsightRows.length > 0) {
-                const recurring = elfsightEvents.filter(event => event.recurrenceRule).length;
-                console.log(`🗓️ ELFSIGHT: built ${elfsightEvents.length} event(s) from ${elfsightRows.length} widget row(s) for ${sourceUrl} (${recurring} recurring → ICS export, never a calendar series)`);
+                console.log(`🗓️ ELFSIGHT: built ${elfsightEvents.length} event(s) from ${elfsightRows.length} widget row(s) for ${sourceUrl} (${elfsightRepeating} repeating entr${elfsightRepeating === 1 ? 'y' : 'ies'} read as dated nights, never a calendar series)`);
             }
             // DICE event-list widgets, the same way (see collectDiceWidgetEvents).
             const diceRows = await this.collectDiceWidgetEvents(effectiveHtmlData, parserConfig, httpAdapter);
@@ -3199,6 +3208,40 @@ class AiWebParser {
             if (this.countMultiEventDateSignals(lines) > 2) continue;
             // Compact-only windows are handled from the corpus below.
             if (lines.every(line => this.isCompactEventLine(line))) continue;
+            // A window whose only date is a line a structured card already
+            // owns has borrowed that card's date. Two cards can share a
+            // night, so that alone proves nothing — but a window that ALSO
+            // links nothing except a calendar subscribe/export link, and
+            // states no clock time, is the "sync this calendar" strip that
+            // follows the last card, not a party: sf-eagle.com/events/ ends with
+            // "Nothing in that category right now. / Never miss a Beer Bust.
+            // Sync the Eagle to your calendar. / Google Calendar iCal / .ics"
+            // under the final card's "SAT · DEC 05".
+            const dateKeys = lines.filter(line => this.hasMultiEventDateSignal(line)).map(lineKey).filter(Boolean);
+            const borrowsItsDate = dateKeys.length > 0
+                && dateKeys.every(key => structuredKeySets.some(keySet => keySet.has(key)));
+            if (borrowsItsDate) {
+                const otherLines = lines.filter(line => !this.hasMultiEventDateSignal(line));
+                const statesTime = otherLines.some(line => /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}:\d{2}\b/i.test(line));
+                // A text-tier window's `html` is often its text again; the
+                // links live in the page markup those lines came from.
+                const windowHtml = typeof window.html === 'string' && /<a\b/i.test(window.html)
+                    ? window.html
+                    : (this.extractRawHtmlForMultiEventSegment(html, otherLines) || '');
+                const hrefs = Array.from(windowHtml.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"'#][^"']*)["']/gi))
+                    .map(match => match[1]).filter(href => !/^(?:mailto|tel|javascript):/i.test(href));
+                const calendarLinks = hrefs.filter(href => this.isCalendarExportUrl(href)).length;
+                const carriesEventLink = hrefs.length > calendarLinks;
+                // The text tier hands over text, not markup, so the strip is
+                // also known by its words: a line that offers the calendar
+                // itself ("Google Calendar", "iCal / .ics", "Add to calendar",
+                // "Sync … to your calendar", "Subscribe to our calendar").
+                const offersCalendar = otherLines.some(line => /\bical\b|\.ics\b|\bgoogle calendar\b|\badd to (?:your |my )?calendar\b|\bsync\b[^.]{0,40}\bcalendar\b|\bsubscribe to (?:the |our |this )?calendar\b/i.test(line));
+                if ((calendarLinks > 0 || offersCalendar) && !statesTime && !carriesEventLink) {
+                    console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" borrows a structured card's date and links only a calendar subscription — page furniture, not a listing`);
+                    continue;
+                }
+            }
             unclaimed.push(window);
         }
         // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
@@ -4410,6 +4453,38 @@ class AiWebParser {
         return html;
     }
 
+    // End offset of the element that opens at `lastStart`, but only when the
+    // PREVIOUS window (previousStart → lastStart) is itself exactly one such
+    // element plus whitespace. Null otherwise — a window that is not an
+    // element keeps its old extent.
+    findOwnElementEndForLastWindow(source, lastStart, previousStart) {
+        const open = String(source || '').slice(lastStart, lastStart + 400).match(/^<([a-z][a-z0-9]*)\b/i);
+        if (!open) return null;
+        const tagName = open[1].toLowerCase();
+        if (['img', 'br', 'hr', 'input', 'source', 'meta', 'link'].includes(tagName)) return null;
+        const elementEndFrom = (start) => {
+            const pattern = new RegExp(`<(/?)${tagName}\\b[^>]*>`, 'gi');
+            pattern.lastIndex = start;
+            let depth = 0;
+            let match;
+            while ((match = pattern.exec(source)) !== null) {
+                if (match[1]) {
+                    depth--;
+                    if (depth === 0) return match.index + match[0].length;
+                    if (depth < 0) return null;
+                } else if (!/\/\s*>$/.test(match[0])) {
+                    depth++;
+                }
+            }
+            return null;
+        };
+        if (!source.slice(previousStart, previousStart + 400).toLowerCase().startsWith(`<${tagName}`)) return null;
+        const previousEnd = elementEndFrom(previousStart);
+        if (previousEnd === null || previousEnd > lastStart) return null;
+        if (source.slice(previousEnd, lastStart).trim() !== '') return null;
+        return elementEndFrom(lastStart);
+    }
+
     extractRepeatedMultiEventResourceGroups(html) {
         const source = String(html || '');
         const anchors = [];
@@ -4445,9 +4520,21 @@ class AiWebParser {
             if (groupAnchors.length < 2) continue;
             const entries = groupAnchors.map((anchor, index) => {
                 const nextAnchor = groupAnchors[index + 1];
-                const end = nextAnchor
+                let end = nextAnchor
                     ? nextAnchor.start
                     : Math.min(source.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                // The LAST window has no next anchor to stop it, so it ran on
+                // through whatever follows the list — sf-eagle.com/events/: the
+                // final card (<a class="card event-card">) took the empty-state
+                // line, the "sync to your calendar" strip and the footer's
+                // social links with it. When the window before it is exactly
+                // one element (it ends on the close tag of the tag it opens
+                // with), the cards ARE elements: the last one ends at its own
+                // balanced close too.
+                if (!nextAnchor && index > 0) {
+                    const ownEnd = this.findOwnElementEndForLastWindow(source, anchor.start, groupAnchors[index - 1].start);
+                    if (ownEnd !== null && ownEnd < end) end = ownEnd;
+                }
                 const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(source.slice(anchor.start, end));
                 return {
                     html: entryHtml,
@@ -4530,9 +4617,16 @@ class AiWebParser {
             if (groupAnchors.length < 2) continue;
             const entries = groupAnchors.map((anchor, index) => {
                 const nextAnchor = groupAnchors[index + 1];
-                const end = nextAnchor
+                let end = nextAnchor
                     ? nextAnchor.start
                     : Math.min(text.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                // Same last-window rule as the resource groups: when the
+                // window before it is exactly one element, the last card ends
+                // at its own close instead of running into the page footer.
+                if (!nextAnchor && index > 0) {
+                    const ownEnd = this.findOwnElementEndForLastWindow(text, anchor.start, groupAnchors[index - 1].start);
+                    if (ownEnd !== null && ownEnd < end) end = ownEnd;
+                }
                 const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(text.slice(anchor.start, end));
                 return {
                     html: entryHtml,
@@ -5481,7 +5575,19 @@ class AiWebParser {
         // dutifully shipped it as UNDERBEAR's ticketUrl). Image-wrapping
         // anchors (<a><img></a>) contain markup, not whitespace, so they
         // still count.
-        const candidates = this.extractUrlCandidatesFromRawHtml(this.stripInvisibleAnchors(source));
+        // DOCUMENT order: the candidate extractor lists absolute URLs before
+        // relative ones, so a card whose own link is relative
+        // ("/events/woof-10015821/") lost to any absolute link further down
+        // its window. The card's link is the first one the reader meets.
+        const visibleSource = this.stripInvisibleAnchors(source);
+        const position = (candidate) => {
+            const index = visibleSource.indexOf(candidate);
+            return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+        };
+        const candidates = this.extractUrlCandidatesFromRawHtml(visibleSource)
+            .map((candidate, order) => ({ candidate, order, at: position(candidate) }))
+            .sort((a, b) => (a.at - b.at) || (a.order - b.order))
+            .map(entry => entry.candidate);
         for (const candidate of candidates) {
             if (lines.length >= 10 || linkCount >= 1) break;
             const normalized = this.normalizeUrl(candidate, sourceUrl);
@@ -6869,7 +6975,19 @@ class AiWebParser {
         // An all-day row's start.time is the moment the row was created
         // (rockbarnyc.com: CLOSED FOR A PRIVATE EVENT at 23:33) — not a
         // clock. All-day means the day, from midnight.
-        const isAllDay = row.isAllDay === true || row.allDay === true;
+        // …unless the entry's own words state that clock. Black Eagle Toronto
+        // ticks "all day" on 172 of 255 entries while typing the real door
+        // time ("21:00", with "9PM / $10 BEFORE 10:30PM" in its tags): those
+        // nights were landing at midnight. A time the entry's description or
+        // tags repeat is a typed time, not a creation stamp.
+        const flaggedAllDay = row.isAllDay === true || row.allDay === true;
+        // Same-day entries only: a multi-day weekend that mentions "9PM" is
+        // naming one party inside it, not the weekend's own start.
+        const spansDays = Boolean(end.date) && end.date !== start.date;
+        const isAllDay = flaggedAllDay && (spansDays || !this.elfsightTextStatesClock(row, start.time));
+        if (flaggedAllDay && !isAllDay) {
+            console.log(`🗓️ ELFSIGHT: "${String(row.name || '').trim()}" is flagged all-day but its own text states ${start.time} — read as a timed night`);
+        }
         if (isAllDay) {
             start.time = '00:00';
             if (end && typeof end === 'object') end.time = '';
@@ -6904,6 +7022,85 @@ class AiWebParser {
         return event;
     }
 
+    // A repeating widget entry → its dated nights from now to the feed
+    // horizon (at most JSON_API_SERIES_MAX_OCCURRENCES), each a copy with the
+    // night's own start (end shifted by the entry's duration) and the rule
+    // kept as `cadence` — the site's repeat badge reads it; nothing treats
+    // it as a series. Nights the owner of the widget skipped (exceptions of
+    // type "skip") are left out. An entry whose rule has run out yields
+    // nothing; a rule the expander does not support leaves the entry as the
+    // single dated row it was.
+    expandElfsightSeriesEvent(event, row, now = Date.now()) {
+        const rrule = event && typeof event.recurrenceRule === 'string' ? event.recurrenceRule : '';
+        if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
+        const Core = this.core && this.core.constructor;
+        if (!Core || typeof Core.expandRruleOccurrencesInWindow !== 'function') return [event];
+        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+        // The rule names LOCAL weekdays ("3rd Saturday" of Toronto, not of
+        // UTC) — anchor the expansion on the entry's own wall clock.
+        const anchor = event.timezone && typeof Core.instantToZonedWallClockRecord === 'function'
+            ? (Core.instantToZonedWallClockRecord(event.startDate, event.timezone) || event.startDate)
+            : event.startDate;
+        let occurrences = null;
+        try {
+            occurrences = Core.expandRruleOccurrencesInWindow(rrule, anchor, windowStart, windowEnd);
+        } catch (_) {
+            occurrences = null;
+        }
+        if (!Array.isArray(occurrences)) return [event];
+        const dayKey = (date) => {
+            const record = event.timezone && typeof Core.instantToZonedWallClockRecord === 'function'
+                ? Core.instantToZonedWallClockRecord(date, event.timezone)
+                : null;
+            const wall = record && record.wall ? record.wall : { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+            return `${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')}`;
+        };
+        const skipped = new Set((Array.isArray(row && row.exceptions) ? row.exceptions : [])
+            .filter(entry => entry && String(entry.type || '').toLowerCase() === 'skip' && Number.isFinite(Number(entry.originalDate)))
+            .map(entry => dayKey(new Date(Number(entry.originalDate)))));
+        const starts = occurrences
+            .map(entry => (entry instanceof Date ? entry : (entry && entry.date instanceof Date ? entry.date : (entry && entry.start instanceof Date ? entry.start : null))))
+            .filter(date => date && !Number.isNaN(date.getTime()) && !skipped.has(dayKey(date)))
+            .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
+        if (starts.length === 0) {
+            console.log(`🔁 SERIES: "${event.title}" (${rrule}) has no night in the next ${JSON_API_FEED_HORIZON_DAYS} days — a widget entry that has run out, not an event`);
+            return [];
+        }
+        const durationMs = event.endDate instanceof Date && !Number.isNaN(event.endDate.getTime())
+            ? event.endDate.getTime() - event.startDate.getTime()
+            : 0;
+        console.log(`🔁 SERIES: "${event.title}" (${rrule}) → ${starts.length} dated night(s) from ${dayKey(starts[0])}${skipped.size ? ` (${skipped.size} skipped date(s) honoured)` : ''}; the series entry itself (${dayKey(event.startDate)}) is not an event`);
+        return starts.map(start => {
+            const copy = { ...event, startDate: start, endDate: durationMs > 0 ? new Date(start.getTime() + durationMs) : null, cadence: rrule };
+            delete copy.recurrenceRule;
+            return copy;
+        });
+    }
+
+    // Does the entry's own text (description, tag labels, button captions)
+    // state this HH:MM clock? "21:00" is stated by "9PM", "9 pm", "9:00pm",
+    // "21:00", "21h"; "20:30" by "8:30PM" / "20:30" / "20h30". Minutes must
+    // match — "9PM" does not state 21:33.
+    elfsightTextStatesClock(row, time) {
+        const match = String(time || '').match(/^(\d{1,2}):(\d{2})$/);
+        if (!match || !row || typeof row !== 'object') return false;
+        const hour24 = Number(match[1]);
+        const minute = match[2];
+        const tags = Array.isArray(row.tags) ? row.tags.map(tag => (tag && typeof tag === 'object' ? tag.tagName : tag)) : [];
+        const text = this.normalizeWhitespace(this.stripTags([row.description, row.actionsCaption, ...tags].filter(value => typeof value === 'string').join(' \n '))).toLowerCase();
+        if (!text) return false;
+        const hour12 = hour24 % 12 || 12;
+        const meridiem = hour24 >= 12 ? 'p' : 'a';
+        const minutes12 = minute === '00' ? '(?::00)?' : `:${minute}`;
+        const patterns = [
+            new RegExp(`(^|[^\\d:])${hour12}${minutes12}\\s*${meridiem}\\.?\\s*m\\b`),
+            new RegExp(`(^|[^\\d:])0?${hour24}:${minute}(?!\\d)`),
+            new RegExp(`(^|[^\\d:])0?${hour24}\\s*h\\s*${minute === '00' ? '(?:00)?' : minute}(?![\\da-z])`)
+        ];
+        return patterns.some(pattern => pattern.test(text));
+    }
+
     pickElfsightImage(row) {
         const candidates = [row.coverImage, Array.isArray(row.images) ? row.images[0] : null];
         for (const candidate of candidates) {
@@ -6920,6 +7117,20 @@ class AiWebParser {
     // translated; `custom` and anything unrecognized return null so the row
     // ships as a single dated event instead of a fabricated series.
     buildElfsightRecurrenceRule(row, startDate, timezone) {
+        const base = this.buildElfsightRecurrenceBase(row, startDate, timezone);
+        if (!base) return null;
+        // The widget's own end of the repeat: a date, or a number of nights.
+        const ends = String(row.repeatEnds || '').trim();
+        if (ends === 'onDate' && row.repeatEndsDate && /^\d{4}-\d{2}-\d{2}$/.test(String(row.repeatEndsDate.date || ''))) {
+            return `${base};UNTIL=${String(row.repeatEndsDate.date).replace(/-/g, '')}T235959Z`;
+        }
+        if (ends === 'afterOccurrences' && Number.isFinite(Number(row.repeatEndsOccurrences)) && Number(row.repeatEndsOccurrences) >= 1) {
+            return `${base};COUNT=${Math.floor(Number(row.repeatEndsOccurrences))}`;
+        }
+        return base;
+    }
+
+    buildElfsightRecurrenceBase(row, startDate, timezone) {
         const period = String(row.repeatPeriod || '').trim();
         const dayCodes = { su: 'SU', mo: 'MO', tu: 'TU', we: 'WE', th: 'TH', fr: 'FR', sa: 'SA' };
         const localWeekday = () => {
