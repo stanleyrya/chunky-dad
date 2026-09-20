@@ -1094,8 +1094,12 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            // options.fresh: the caller needs what the site says NOW (a form
+            // nonce, a page behind a gate it just passed) — no memo, no disk
+            // cache on the way in; the answer still refreshes both.
+            const wantsFresh = options.fresh === true;
             const memoKey = this.getRunPageMemoKey(url, options);
-            const memoized = this.readRunPageMemo(memoKey);
+            const memoized = wantsFresh ? null : this.readRunPageMemo(memoKey);
             if (memoized) {
                 console.log(`🟢 Node.js: Page already read this run — no re-read for ${url}`);
                 return memoized;
@@ -1108,7 +1112,7 @@ class WebAdapter {
             // venue for the whole TTL. Callers that don't pass it are unaffected.
             const isCacheableResponse = (responseData) =>
                 typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse(responseData) !== false;
-            if (canUseCache) {
+            if (canUseCache && !wantsFresh) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
                 if (cachedPage && isCacheableResponse(cachedPage)) {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
@@ -1134,10 +1138,22 @@ class WebAdapter {
             if (options.body) {
                 fetchOptions.body = options.body;
             }
+            // A host that set a cookie in a session exchange (an age-gate
+            // confirmation) gets it back on every later request of the run.
+            const sessionCookie = this.getRunSessionCookieHeader(url);
+            if (sessionCookie && !fetchOptions.headers.Cookie && !fetchOptions.headers.cookie) fetchOptions.headers.Cookie = sessionCookie;
             
             const { response, html } = await this.runPolitely(url, options, async () => {
-                const liveResponse = await fetch(fetchUrl, fetchOptions);
+                const liveResponse = options.session === true
+                    ? await this.fetchWithRunSession(fetchUrl, fetchOptions)
+                    : await fetch(fetchUrl, fetchOptions);
                 if (!liveResponse.ok) {
+                    // A refused response still has a body on the wire. Left
+                    // unread it stays open, and when the server later closes
+                    // the connection the stream errors with nobody listening —
+                    // which ends the whole run (precinctdtla.com, a dozen
+                    // 404s on one HTTP/2 connection: "other side closed").
+                    this.discardResponseBody(liveResponse);
                     const failure = new Error(`HTTP ${liveResponse.status}: ${liveResponse.statusText}`);
                     failure.statusCode = liveResponse.status;
                     failure.retryAfter = liveResponse.headers.get('retry-after') || '';
@@ -1183,6 +1199,67 @@ class WebAdapter {
             if (error && Number.isFinite(error.statusCode)) wrapped.statusCode = error.statusCode;
             throw wrapped;
         }
+    }
+
+    discardResponseBody(response) {
+        try {
+            const body = response && response.body;
+            if (body && typeof body.cancel === 'function') Promise.resolve(body.cancel()).catch(() => {});
+        } catch (_) { /* nothing to discard */ }
+    }
+
+    // ── Run cookie session ──────────────────────────────────────────────
+    // Only hosts that answered a session exchange (options.session) ever get
+    // a jar; it lives for one run, in memory, and holds name=value pairs only.
+    getRunSessionCookieHeader(url) {
+        const jar = this._runSessionCookies;
+        if (!(jar instanceof Map) || jar.size === 0) return '';
+        let host = '';
+        try { host = new URL(url).hostname.toLowerCase(); } catch (_) { return ''; }
+        const cookies = jar.get(host);
+        return cookies && cookies.size > 0 ? [...cookies].map(([name, value]) => `${name}=${value}`).join('; ') : '';
+    }
+
+    noteRunSessionCookies(url, response) {
+        const lines = response && response.headers && typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [];
+        if (!lines || lines.length === 0) return;
+        let host = '';
+        try { host = new URL(url).hostname.toLowerCase(); } catch (_) { return; }
+        if (!(this._runSessionCookies instanceof Map)) this._runSessionCookies = new Map();
+        const cookies = this._runSessionCookies.get(host) || new Map();
+        for (const line of lines) {
+            const pair = /^\s*([^=;\s]+)=([^;]*)/.exec(String(line || ''));
+            if (pair) cookies.set(pair[1], pair[2]);
+        }
+        this._runSessionCookies.set(host, cookies);
+    }
+
+    // fetch() drops the Set-Cookie of a redirect it follows by itself — and a
+    // form answer is exactly "302 + Set-Cookie". Redirects are walked by hand
+    // (same site only, five hops), every hop's cookies kept, and a POST
+    // becomes a GET after 301/302/303 as a browser would.
+    async fetchWithRunSession(fetchUrl, fetchOptions) {
+        let currentUrl = fetchUrl;
+        let options = { ...fetchOptions, redirect: 'manual' };
+        for (let hop = 0; hop < 6; hop++) {
+            const cookie = this.getRunSessionCookieHeader(currentUrl);
+            const headers = { ...options.headers };
+            if (cookie) headers.Cookie = cookie;
+            const response = await fetch(currentUrl, { ...options, headers });
+            this.noteRunSessionCookies(currentUrl, response);
+            const location = response.status >= 300 && response.status < 400 ? response.headers.get('location') : '';
+            if (!location) return response;
+            this.discardResponseBody(response);
+            const nextUrl = new URL(location, currentUrl);
+            if (nextUrl.hostname.replace(/^www\./, '') !== new URL(currentUrl).hostname.replace(/^www\./, '')) return response;
+            currentUrl = nextUrl.toString();
+            if (response.status !== 307 && response.status !== 308) {
+                const { body, ...rest } = options;
+                const { 'Content-Type': _contentType, ...plainHeaders } = rest.headers || {};
+                options = { ...rest, method: 'GET', headers: plainHeaders };
+            }
+        }
+        throw new Error('too many redirects in a session exchange');
     }
 
     // Would the politeness gate refuse this URL outright (its host is parked
@@ -1453,6 +1530,9 @@ class WebAdapter {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                         'User-Agent': this.config.userAgent,
+                        // The run's cookie session (an age gate confirmed earlier)
+                        // covers the site's AJAX feeds too.
+                        ...(this.getRunSessionCookieHeader(url) ? { Cookie: this.getRunSessionCookieHeader(url) } : {}),
                         ...options.headers
                     },
                     body: String(body == null ? '' : body),
@@ -1478,7 +1558,10 @@ class WebAdapter {
         // Same transient-status contract as postJson: 5xx/429 throw with the
         // status stamped, everything else keeps the {ok:false} shape.
         this.throwIfRetryableHttpStatus('Form POST request', url, result.status, result.text);
-        if (result.ok && typeof result.text === 'string' && result.text.length > 0) {
+        // options.isCacheableResponse: an answer the caller calls a refusal (a
+        // 200 that says "nonce expired") is returned but never remembered.
+        const worthKeeping = typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse({ text: result.text, html: result.text }) !== false;
+        if (result.ok && worthKeeping && typeof result.text === 'string' && result.text.length > 0) {
             if (canUseCache) {
                 await this.writeCachedPage(
                     cacheUrl,

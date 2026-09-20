@@ -356,6 +356,7 @@ const scraperBars = {
       "city": "la",
       "address": "357 South Broadway, Los Angeles, California, 90013",
       "coordinates": "34.0498149, -118.2493321",
+      "website": "https://precinctdtla.com",
       "instagram": "https://www.instagram.com/precinctdtla",
       "facebook": "https://www.facebook.com/precinctdtla",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI",
@@ -774,7 +775,9 @@ const scraperBars = {
       "city": "portland",
       "address": "835 N Lombard St, Portland, OR 97217",
       "coordinates": "45.5773587, -122.6755256",
-      "website": "https://www.eagleportland.com"
+      "website": "https://www.eagleportland.com",
+      "faviconBg": "#020202",
+      "faviconFg": "#ededed"
     }
   ],
   "ptown": [
@@ -1078,7 +1081,9 @@ const scraperBars = {
       "city": "toronto",
       "address": "457 Church St, Toronto, ON M4Y 2C5",
       "coordinates": "43.6641525, -79.3801656",
-      "website": "https://www.blackeagletoronto.com"
+      "website": "https://www.blackeagletoronto.com",
+      "faviconBg": "#f4f4f4",
+      "faviconFg": "#252525"
     }
   ],
   "torremolinos": [

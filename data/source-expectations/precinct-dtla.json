@@ -1,0 +1,2480 @@
+{
+  "schemaVersion": 1,
+  "source": "Precinct DTLA",
+  "slug": "precinct-dtla",
+  "status": "complete",
+  "recheckAfter": "2026-10-20",
+  "recon": {
+    "date": "2026-09-20",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://precinctdtla.com/calendar/"
+    ],
+    "doors": [
+      {
+        "url": "https://precinctdtla.com/calendar/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "EventON calendar page (WordPress). The HTML carries only empty calendar frames (class ajax_loading_cal) with their shortcode settings in data-sc, and a short-lived nonce in evo_general_params; no event text."
+      },
+      {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 153,
+        "truthFlag": "2026-10: 120 cards; 2026-11: 15 cards; 2026-12: 18 cards",
+        "note": "The plugin's own eventon_init_load call, replayed as a form POST (nonce + cals[<frame>][sc][…]) once for the page's own frames and once per later month (fixed_month / fixed_year / focus range stepped). The answer holds each calendar's rendered cards; every card carries a schema.org Event block with name, url, image, description and wall-clock start/end. The printed UTC offset is fixed and ignores daylight saving, so the wall clock is what is documented. The nonce lives about half a day: a stored page needs one fresh read first."
+      }
+    ],
+    "notes": "Recon from the scraper's own cached answers on 2026-09-20 (one page read, 3 POSTs). 153 cards across 2026-10, 2026-11, 2026-12: 109 on or after 2026-09-20 inside the window, 38 earlier this month, 6 past the window, 8 \"CLOSED\" day markers (notices, not events)."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: every card the calendar answers with, for each month to the scraper's horizon. Each night is its own card (the plugin pre-expands repeats), so every entry is a single. \"CLOSED\" markers are excluded as notices.",
+    "publishedEventCount": 109,
+    "documentedEventCount": 109,
+    "occurrenceWindow": {
+      "start": "2026-09-20",
+      "end": "2026-12-19"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "la",
+    "timezone": "America/Los_Angeles",
+    "website": "https://precinctdtla.com"
+  },
+  "events": [
+    {
+      "id": "club-chub-2026-09-20",
+      "kind": "single",
+      "title": "Club Chub",
+      "description": "A party for the big boys and the men that love them!",
+      "startDate": "2026-09-20",
+      "startTime": "15:00",
+      "endDate": "2026-09-20",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/9-20-26/club-chub-22/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/Club-Chub-Sept-1920-x-1080-px.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Club Chub\", \"startDate\": \"2026-09-20T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-09-20",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Sep 6 &#8211; Skud + DJ Dean Buckley Sep 13 &#8211; DVVSK + DJ Ray.Only Sep 20 &#8211; Pinche + DJ Dean Buckley Sep 27 &#8211; Nerdito + DJ Brian McB",
+      "startDate": "2026-09-20",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-6-26/bearded-pig-disco-16/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/BPD-SEPT-WIDE.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-09-20T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-09-22",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-09-22",
+      "startTime": "18:00",
+      "endDate": "2026-09-22",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-09-22T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "rocky-horror-picture-show-screening-2026-09-22",
+      "kind": "single",
+      "title": "Rocky Horror Picture Show Screening",
+      "description": "Overview Join us for a wild, cult classic Rocky Horror Picture Show movie night—costumes and fun encouraged! Rocky Horror Picture Show Movie Night Get ready for a wild and wacky evening with the Rocky Horror Picture Show! In tribute to the late Tim Curry, Precinct is hosting a special screening of The Rocky Horror Picture Show . 🚪 Doors open at 6 pm 🎬 Movie starts promptly at 8 pm Audience participation and callbacks are highly encouraged—so don’t just sit there! Get here early for Chicken Tendie Tuesday 🍗🐓 and happy-hour discounts from 6–9 pm. General admission and entrance is free to all. You can reserve prime seating and tables as well. Reserved tables each come with a participation prop gift bag. APPROVED PARTICIPATION PROPS 📰 Newspaper — hold over your head during the rain scene 🧻 Toilet paper — toss during the “Great Scott!” moment 🎉 Small paper confetti — limited amounts only 🃏 Playing cards — throw/toss during “Cards for sorrow, cards for pain” 🥳 Party hats — for the dinner/birthday scene 🧤 Rubber gloves — snap along with Frank during the creation scene 🔔 Small bells / handheld noisemakers — used briefly at appropriate moments 💡 Glow sticks/phone flashlights — instead of candles or open flame 👄 Callbacks, singing, dancing & yelling at the screen — obviously highly encouraged NOT APPROVED 🚫 Rice 🚫 Water, squirt guns, spray bottles or anything wet 🚫 Candles 🚫 Lighters or any open flame 🚫 Toast or other food being thrown 🚫 Eggs 🚫 Flour, powder or glitter 🚫 Large/confetti cannons or anything difficult to clean 🚫 Anything thrown directly at the screen, staff, performers or other guests 🚫 Sharp, breakable or potentially dangerous props Please only use approved props provided or listed by Precinct. “I see you shiver with antici…pation.” Then stay after the Movie and hit the dance floor for an after party with a DJ set by SKUD 👄",
+      "startDate": "2026-09-22",
+      "startTime": "18:00",
+      "endDate": "2026-09-22",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-22-26/rocky-horror-picture-show-screening/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/RockyWide.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Rocky Horror Picture Show Screening\", \"startDate\": \"2026-09-22T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "playhouse-skud-2026-09-22",
+      "kind": "single",
+      "title": "Playhouse SKUD",
+      "description": "TUESDAY SEP 22 10PM &#8211; LATE with music by DJ SKUD",
+      "startDate": "2026-09-22",
+      "startTime": "22:00",
+      "endDate": "2026-09-22",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-22-26/skud-featured-dj-set-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/playShouseSKUD_widebanner.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Playhouse SKUD\", \"startDate\": \"2026-09-22T22:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-09-23",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-09-23",
+      "startTime": "18:00",
+      "endDate": "2026-09-23",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-09-23T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-09-23",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "We not only want to hear your body talk, we wanna hear that mouth scream BINGO! September is stacked, with an incredible cast of guest hosts for Gay Ass Bingo! So get those leotards on and lets break a sweat! 🤸Wednesdays from 7p &#8211; 9p🤸 Play for FREE and win prizes from Precinct’s many vendors, gift cards, adult toys, drinks, art, merch, and more! 💰🎨🍻🎁🧢 Every purchase of one of our signature cocktails or our Bingo Burger specials gets you additional bingo sheets to increase your chances of winning! 🍸🍹🧉🍔🍟 September’s Hosts: 🥦9/2: Jackie Beat 🏋️9/9: Voga D’Vil 🛼9/16: Alexis P. Bevels 🏃🏻‍♀️9/23: Jerrica 🧘🏾9/23: Amber Crane Cheap and Easy Happy Hour Specials 🍺 $5 Drafts 🫧 $6 Seltzers 🍹 $8 Wells 🍷 $9 Wine 🍸 $12 Signature Cocktails",
+      "startDate": "2026-09-23",
+      "startTime": "19:00",
+      "endDate": "2026-09-23",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/9-2-26/gay-ass-bingo-27/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/GAB-SEP-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-09-23T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "diamonds-after-dark-2026-09-23",
+      "kind": "single",
+      "title": "Diamonds After Dark",
+      "description": "💎🌙 DIAMONDS AFTER DARK: NOCHE DE DIAMANTES 🌙💎 We’re celebrating Latine Heritage Month the only way we know how — con música, cultura, comunidad, and a whole lotta DIAMANTES 💎 Hosted by the fab @chichi_charlas 💋 with a special performance by @melissabefierce_ 🔥 Come celebrate our Latinidad, turn up with the community and make it rain on our Diamond Dancers! 🥵 🇲🇽🇵🇷🇨🇺🇨🇱🇸🇻🇳🇮🇧🇴🇪🇨🇬🇹🇨🇴🇧🇷🇵🇾🇵🇪🇺🇾🇻🇪🇧🇿🇨🇷🇭🇳🇵🇦🇩🇴🇭🇹🇦🇷 @gabe_thababe @n.1angel @el_santo_1225 @vhexgirl @lolitobabyy @therealzariahaura @rioblanco0 🎶 Sounds by @whatsupash 🎶 🪎Vendors @ethicalpunk_ @huckandpuckbooks 📍 @precinctdtla 9pm-2a 🎟️ $10 cover",
+      "startDate": "2026-09-23",
+      "startTime": "21:00",
+      "endDate": "2026-09-23",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-23-26/diamonds-after-dark-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/image0-1.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Diamonds After Dark\", \"startDate\": \"2026-09-23T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-09-24",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-09-24",
+      "startTime": "18:00",
+      "endDate": "2026-09-24",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-09-24T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-trivia-2026-09-24",
+      "kind": "single",
+      "title": "Gay Ass Trivia",
+      "description": "Do you have what it takes to come out on top? Join us Thursday night at 7pm for Gay Ass Trivia, celebrating 4 Years of trivia fun with our resident belting bad girl Queen Sheba! Happy Hour specials from 6-9pm! Taco Thursday Specials! Invite your friends for a chance to win gift cards, merchandise, and much more!",
+      "startDate": "2026-09-24",
+      "startTime": "19:00",
+      "endDate": "2026-09-24",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-3-26/gay-ass-trivia-36/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/04/Gay-Ass-Trivia-wide-2026-v3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Trivia\", \"startDate\": \"2026-09-24T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-09-24",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 9/03 &#8211; DJ Honey Davenport 9/10 &#8211; DJ Kidd 9/17- DJ Josh Peace 9/24 &#8211; DJ Omar Di Jou",
+      "startDate": "2026-09-24",
+      "startTime": "21:00",
+      "endDate": "2026-09-24",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-3-26/vpl-38/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/VPL-Monthly-wide-SEP.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-09-24T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "9-to-5-screening-2026-09-25",
+      "kind": "single",
+      "title": "9 to 5 Screening",
+      "description": "Celebrate Dolly Parton Appreciation Day at Precinct with a special screening of the iconic comedy 9 to 5, plus Dolly-inspired drinks! Pour yourself a cup of ambition and join us at Precinct for Dolly Parton Appreciation Day: 9 to 5 Movie Night ! We’re celebrating the music, humor, heart, and larger-than-life spirit of Dolly Parton with a special screening of the 1980 classic starring Dolly Parton, Jane Fonda, and Lily Tomlin. Doors open at 6 PM, with happy-hour cocktails available from 6–9 PM. Come early, grab a drink and some food, and find your seat; the movie starts at 6:45 PM sharp! Dolly looks and big-hair office glamour are highly encouraged—but not required. Just bring your love for Dolly and a willingness to overthrow the patriarchy one terrible boss at a time. 🚪 Doors open : 6 PM 🎬 Showtime : 6:45 PM sharp 🍸 Happy-hour cocktails : 6–9 PM",
+      "startDate": "2026-09-25",
+      "startTime": "18:00",
+      "endDate": "2026-09-25",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-25-26/9-to-5-screening/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/DollyWide.png.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"9 to 5 Screening\", \"startDate\": \"2026-09-25T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bad-party-2026-09-25",
+      "kind": "single",
+      "title": "BAD Party",
+      "description": "WE ARE LOADED and READY TO CUM on FRIDAY, September 25th at @precinctdtla DTLA! 💦💥 We are bringing you a massive night headlined by @itsravenhunty_ in her @precinctdtla DEBUT. joined by her sisters from RuPaul’s Drag race @callmespice and @thejoelladynasty ! 👑✨ Here is the full stacked lineup: SOUNDTRACK BY: 🎧 @djjoshpeace 🎧 @mascfish PERFORMANCES: 🔥 @itsravenhunty_ 🔥 @theallystarr | @callmespice | @thejoelladynasty @anniebiotixx 🔥 BADDIES: @stayservinglooks | @badkidtv99 @ronderickgogo | @urfallenangel69 LIFE OF THE PARTY: 💥 @flabbergast4eva | @aianashaw 🔥 🔥 Get there early—doors open at 9 PM. $10 cover at the door. Let’s dance. TICKETS AVAILIBLE ON RA LINK IN BIO brought to you by @heymistr",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-25",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-25-26/bad-party-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/BAD1920x1080.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"BAD Party\", \"startDate\": \"2026-09-25T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "toxic-thots-comedy-show-2026-09-26",
+      "kind": "single",
+      "title": "Toxic Thots: Comedy Show",
+      "description": "A queer comedy show at Precinct DTLA an evil standup comedy show at LA’s best drag bar with performers you’ve seen on TV and maybe the TV on the internet cuz that counts too hosted by HAY BEACON with Joel Kim Booster Christine Medrano Michael Benjamin and more to be announced! Doors open at 6 so get there before 7, for real! This ain’t a drag show, honey. This is a comedy, and we have a HARD STOP before we have to help the DJ move tables off the dance floor!! See you then!",
+      "startDate": "2026-09-26",
+      "startTime": "18:00",
+      "endDate": "2026-09-26",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/9-26-26/toxic-thots-comedy-show-14/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/TT-SEP-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Toxic Thots: Comedy Show\", \"startDate\": \"2026-09-26T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mbk-madonna-beyonce-kylie-2026-09-26",
+      "kind": "single",
+      "title": "MBK - Madonna | Beyonce | Kylie",
+      "description": "'MBK - Madonna | Beyonce | Kylie'",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-26-26/mbk-madonna-beyonce-kylie/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/MBK-WIDE-FINAL.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"MBK - Madonna | Beyonce | Kylie\", \"startDate\": \"2026-09-26T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "machete-2026-09-27",
+      "kind": "single",
+      "title": "Machete",
+      "description": "'Machete'",
+      "startDate": "2026-09-27",
+      "startTime": "15:00",
+      "endDate": "2026-09-27",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/9-27-26/machete-8/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/Precinct-Loops.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Machete\", \"startDate\": \"2026-09-27T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-09-27",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Sep 6 &#8211; Skud + DJ Dean Buckley Sep 13 &#8211; DVVSK + DJ Ray.Only Sep 20 &#8211; Pinche + DJ Dean Buckley Sep 27 &#8211; Nerdito + DJ Brian McB",
+      "startDate": "2026-09-27",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-6-26/bearded-pig-disco-16/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/BPD-SEPT-WIDE.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-09-27T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-09-29",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-09-29",
+      "startTime": "18:00",
+      "endDate": "2026-09-29",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-09-29T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ahs-drag-night-2026-09-29",
+      "kind": "single",
+      "title": "AHS Drag Night",
+      "description": "“Oh honey, goddesses don’t speak in whispers…they scream…” Hennies!!!!!! To celebrate the final season of AMERICAN HORROR STORY, we are bringing you AMERICAN DRAG HORROR STORY! We’ve called some members of the Henny Coven as we bring to life our versions of your fave characters! Hosted by Isadora Spreads Coming to you as The Countess, Elsa Mars and Constance Langdon @marykatelohan as Myrtle Snow @spookydarlingdear as Madison Montgomery @ccxdream_ as Sally @thatqueensheba as Marie Laveux @ennovipuffs as Liz Taylor @witchesanddevils as Cordelia Goode @viscera_dvil as Fiona Goode @clitterclue as Sister Jude @hexdemonia Sister Mary Eunice @zade.black as Tate @its_miss_elaine as Ethel Darling We have three showtimes 10:30, 11:30 and 12:15! There will be photo ops with your fave characters with photography by @chrvstineanne Come check out spooky vendors, drinks specials and sexy Gogos!!!! AHS ATTIRE encouraged DJ Set by @suicide_skud READY TO ENTER? #AHS #americanhorrorstory",
+      "startDate": "2026-09-29",
+      "startTime": "21:00",
+      "endDate": "2026-09-29",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-29-26/ahs-drag-night/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/AHS-929-landscape-TV.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"AHS Drag Night\", \"startDate\": \"2026-09-29T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-09-30",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-09-30",
+      "startTime": "18:00",
+      "endDate": "2026-09-30",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-09-30T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-09-30",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "We not only want to hear your body talk, we wanna hear that mouth scream BINGO! September is stacked, with an incredible cast of guest hosts for Gay Ass Bingo! So get those leotards on and lets break a sweat! 🤸Wednesdays from 7p &#8211; 9p🤸 Play for FREE and win prizes from Precinct’s many vendors, gift cards, adult toys, drinks, art, merch, and more! 💰🎨🍻🎁🧢 Every purchase of one of our signature cocktails or our Bingo Burger specials gets you additional bingo sheets to increase your chances of winning! 🍸🍹🧉🍔🍟 September’s Hosts: 🥦9/2: Jackie Beat 🏋️9/9: Voga D’Vil 🛼9/16: Alexis P. Bevels 🏃🏻‍♀️9/23: Jerrica 🧘🏾9/23: Amber Crane Cheap and Easy Happy Hour Specials 🍺 $5 Drafts 🫧 $6 Seltzers 🍹 $8 Wells 🍷 $9 Wine 🍸 $12 Signature Cocktails",
+      "startDate": "2026-09-30",
+      "startTime": "19:00",
+      "endDate": "2026-09-30",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/9-2-26/gay-ass-bingo-27/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/GAB-SEP-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-09-30T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sissy-2026-09-30",
+      "kind": "single",
+      "title": "SISSY",
+      "description": "SISSIES!!!! Next three months we’re taking over hump day once a month!!!!!! we’re back WEDNESDAY SEPTEMBER 30th! Party starts at 9 with beats by @djfrench_la Come in your best #SISSY attire!!!! We will be having free clothes check, drink specials, sissy Gogos all night, burlesque performance by @clitterclue and pole performances by @alisha_veneno and @urfallenangel69 and some pop up performances by me, come play with me and your sissies @rioblanco0 @ramejuman @princealexm @serxph.him @justinnporter don’t have anything to wear? Lets us help 🫦🫦🫦🫦 where is my daddy? 💅🏽💅🏽💅🏽",
+      "startDate": "2026-09-30",
+      "startTime": "21:00",
+      "endDate": "2026-09-30",
+      "endTime": null,
+      "website": "https://precinctdtla.com/9-30-26/sissy-4/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/Sissy-930-TV.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"SISSY\", \"startDate\": \"2026-09-30T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-10-01",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-10-01",
+      "startTime": "18:00",
+      "endDate": "2026-10-01",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-10-01T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-trivia-2026-10-01",
+      "kind": "single",
+      "title": "Gay Ass Trivia",
+      "description": "Do you have what it takes to come out on top? Join us Thursday night at 7pm for Gay Ass Trivia, celebrating 4 Years of trivia fun with our resident belting bad girl Queen Sheba! Happy Hour specials from 6-9pm! Taco Thursday Specials! Invite your friends for a chance to win gift cards, merchandise, and much more!",
+      "startDate": "2026-10-01",
+      "startTime": "19:00",
+      "endDate": "2026-10-01",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/gay-ass-trivia-37/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/04/Gay-Ass-Trivia-wide-2026-v3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Trivia\", \"startDate\": \"2026-10-01T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-10-01",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 10/01 &#8211; DJ Thiccboi 10/08 &#8211; DJ Brian McB 10/15 &#8211; DJ Josh Peace 10/22 &#8211; DJ Honey Davenport 10/29 &#8211; DJ Kidd",
+      "startDate": "2026-10-01",
+      "startTime": "21:00",
+      "endDate": "2026-10-01",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/vpl-39/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/VPL-Monthly-wide-OCT.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-10-01T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "coach-after-dark-2026-10-02",
+      "kind": "single",
+      "title": "Coach: After Dark",
+      "description": "Hey LA, we’re back! Coach After Dark returns to @precinctdtla for a night of singlets, jockstraps and disco excess! And it’s our 3 YEAR ANNIVERSARY! 😱 Coming off his killer opening set at Coach: Market Days Chicago’s @knocktopuss is on the decks spinning a high energy disco groove while our hot jock gogos stomp the box. Report to practice Friday October 2, 9PM-2AM. Clothing check is available. $10 at the door!",
+      "startDate": "2026-10-02",
+      "startTime": "21:00",
+      "endDate": "2026-10-02",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-2-26/coach-after-dark-4/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/TVScreen-Coach102.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Coach: After Dark\", \"startDate\": \"2026-10-02T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "hogtied-2026-10-03",
+      "kind": "single",
+      "title": "Hogtied",
+      "description": "Saddle up, cowpokes. HOGTIED is Precinct’s down-and-dirty country-western party for queers who two-step, line dance, and ride hard. DJ Rick Dominguez spins boot-stompin’ heat: couples dancing 5–6pm, open line dancing 6–9pm. Break in your boots and kick up some dust. Show up and show out with Happy Hour cocktails and $5 drafts.",
+      "startDate": "2026-10-03",
+      "startTime": "17:00",
+      "endDate": "2026-10-03",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-3-26/hogtied-22/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/07/Generic-Hogtied.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Hogtied\", \"startDate\": \"2026-10-03T17:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-devil-wears-gaga-2026-10-03",
+      "kind": "single",
+      "title": "The Devil Wears Gaga",
+      "description": "The legendary Lady Gaga dance party + drag spectacular The mayhem returns: ShyBoy® presents THE DEVIL WEARS GAGA : The legendary Lady Gaga dance party + drag spectacular @ Precinct DTLA on Saturday, Oct 3 at 9 PM ! 🎶 Sounds by: ShyBoy® 💃 Drag performances by Judas Joe Manson , Bionka Simone , Godoy , Virgo Please! 🔥 Dance Crew: R.A.I.D. 👑 Floor Host: Nubar ✨ Video visuals • Poster gallery • Drink specials 📍 Precinct • 357 S. Broadway, DTLA • 21+",
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endDate": "2026-10-03",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-3-26/the-devil-wears-gaga-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/The-Devil-Wears-Gaga-Precinct-Oct-2026-WIDE.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"The Devil Wears Gaga\", \"startDate\": \"2026-10-03T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "howl-oween-iv-2026-10-04",
+      "kind": "single",
+      "title": "Howl-Oween IV",
+      "description": "Sharpen your fangs, pups. 🐺 HOWL-OWEEN IV Sunday October 4 3pm-9pm at @precinctdtla Join us for a terrifying drag show, costume contest, and pup party that would make the Hounds of Dracula shiver. Starring @felonydodger @specimenscythe @dvvsk_ Gogos @its.jlf @pup_tiago Beats by @pup.rokas With magic fortunes by @its_miss_elaine Hosted by @ghostpupleather @cybersexpuppy",
+      "startDate": "2026-10-04",
+      "startTime": "15:00",
+      "endDate": "2026-10-04",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-4-26/howl-oween-iv/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/HOWLoweenIV-TV.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Howl-Oween IV\", \"startDate\": \"2026-10-04T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-10-04",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Oct 4 &#8211; TBA + DJ Dean Buckley Oct 11 &#8211; TBA + DJ Ray.Only Oct 18 &#8211; TBA + DJ Dean Buckley Oct 25 &#8211; TBA + DJ Ray.Only",
+      "startDate": "2026-10-04",
+      "startTime": "21:00",
+      "endDate": "2026-10-04",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-4-26/bearded-pig-disco-17/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-10-04T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-10-06",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-10-06",
+      "startTime": "18:00",
+      "endDate": "2026-10-06",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-10-06T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "first-tuesdays-2026-10-06",
+      "kind": "single",
+      "title": "First Tuesdays",
+      "description": "Yoo-hoooooooo!!!! 🧑🏾‍🎤 The function is BACK and louder than ever. Aunt Jackie x Ty Santana present August’s FIRST TUESDAYS: The Ultimate Kickback Hosted by Aunt Jackie! 📍Precinct DTLA 📅 Tuesday, October 6th ⏰ 9PM &#8211; 2AM 🎟️ RSVP NOW using the link in our bio!!!!",
+      "startDate": "2026-10-06",
+      "startTime": "21:00",
+      "endDate": "2026-10-06",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-6-26/first-tuesdays-6/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/FIRST-TUESDAYS-1920x1080-7.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"First Tuesdays\", \"startDate\": \"2026-10-06T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-10-07",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-10-07",
+      "startTime": "18:00",
+      "endDate": "2026-10-07",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-10-07T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-10-07",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "'Gay Ass Bingo'",
+      "startDate": "2026-10-07",
+      "startTime": "19:00",
+      "endDate": "2026-10-07",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-7-26/gay-ass-bingo-28/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-10-07T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "legendary-2026-10-07",
+      "kind": "single",
+      "title": "Legendary",
+      "description": "🎃 WHO’S READY FOR NEXT MONTH’S LEGENDARY BALL?! 👻🔥 📅 WEDNESDAY, OCTOBER 7TH 📍 @precinctdtla | DTLA LSS 11:00PM SHARP! BALL STARTS @ MIDNIGHT Brought to you by: @yeah_thas_me @gigietoile Hosted by: @houseoffubu @_packrat_ 👻 ALL CATEGORIES: Spooky Costume/EffecT ✨ Virgin/Beginner Runway & Performance will have their OWN categories! ⏰ WE’RE STAYING ON TIME — WITH OR WITHOUT YOU! We’re not finishing the ball outside again 😂 DON’T JUST BE THERE… BE LEGENDARY!",
+      "startDate": "2026-10-07",
+      "startTime": "21:00",
+      "endDate": "2026-10-07",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-7-26/legendary-10/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/Legendary_Fright_Fest_Wide_1920x1080.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Legendary\", \"startDate\": \"2026-10-07T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-10-08",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-10-08",
+      "startTime": "18:00",
+      "endDate": "2026-10-08",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-10-08T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-trivia-2026-10-08",
+      "kind": "single",
+      "title": "Gay Ass Trivia",
+      "description": "Do you have what it takes to come out on top? Join us Thursday night at 7pm for Gay Ass Trivia, celebrating 4 Years of trivia fun with our resident belting bad girl Queen Sheba! Happy Hour specials from 6-9pm! Taco Thursday Specials! Invite your friends for a chance to win gift cards, merchandise, and much more!",
+      "startDate": "2026-10-08",
+      "startTime": "19:00",
+      "endDate": "2026-10-08",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/gay-ass-trivia-37/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/04/Gay-Ass-Trivia-wide-2026-v3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Trivia\", \"startDate\": \"2026-10-08T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-10-08",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 10/01 &#8211; DJ Thiccboi 10/08 &#8211; DJ Brian McB 10/15 &#8211; DJ Josh Peace 10/22 &#8211; DJ Honey Davenport 10/29 &#8211; DJ Kidd",
+      "startDate": "2026-10-08",
+      "startTime": "21:00",
+      "endDate": "2026-10-08",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/vpl-39/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/VPL-Monthly-wide-OCT.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-10-08T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "charmed-2026-10-09",
+      "kind": "single",
+      "title": "Charmed",
+      "description": "'Charmed'",
+      "startDate": "2026-10-09",
+      "startTime": "21:00",
+      "endDate": "2026-10-09",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-9-26/charmed/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Charmed\", \"startDate\": \"2026-10-09T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-book-club-2026-10-10",
+      "kind": "single",
+      "title": "Queer Book Club",
+      "description": "'Queer Book Club'",
+      "startDate": "2026-10-10",
+      "startTime": "17:00",
+      "endDate": "2026-10-10",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-10-26/queer-book-club/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Queer Book Club\", \"startDate\": \"2026-10-10T17:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "deep-inside-2026-10-10",
+      "kind": "single",
+      "title": "Deep Inside",
+      "description": "Get ready for another House Music Time Travel ⏳🎶 where the roots, the soul, and the REAL sound take over. Saturday, Oct 10th 📍 Precinct DTLA 🎧 Music by residents: GLOVIBES + JOSH PEACE If you’re a REAL HOUSE MUSIC LOVER — this is for you. ❌ No remixes ❌ No edits ❌ No covers ✅ Just pure, original house music For the dancers 💃 For the heads 🧠 For the ones who know 😈 Precinct DTLA 357 S Broadway, Los Angeles, CA 90013",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-10",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-10-26/deep-inside-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Deep Inside\", \"startDate\": \"2026-10-10T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bulkgoods-la-2026-10-11",
+      "kind": "single",
+      "title": "BulkGoods: LA",
+      "description": "We’re back Sunday Oct 11 @precinctdtla for the ULTIMATE SUNDAY FUNDAY! That’s right if it’s BIG DADS, FREE SAMPLES, and LOW PRICES it must be BULK GOODS! Enjoy $4 drafts and food from precinct’s kitchen! DJ @matteffect will be on the decks spinning a tea dance set while big dads shake it on the box! Free sample delivery by snack boys If it’s the 2nd Sunday in LA it’s BulkGoods!",
+      "startDate": "2026-10-11",
+      "startTime": "15:00",
+      "endDate": "2026-10-11",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-11-26/bulkgoods-la-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"BulkGoods: LA\", \"startDate\": \"2026-10-11T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-10-11",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Oct 4 &#8211; TBA + DJ Dean Buckley Oct 11 &#8211; TBA + DJ Ray.Only Oct 18 &#8211; TBA + DJ Dean Buckley Oct 25 &#8211; TBA + DJ Ray.Only",
+      "startDate": "2026-10-11",
+      "startTime": "21:00",
+      "endDate": "2026-10-11",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-4-26/bearded-pig-disco-17/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-10-11T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-10-13",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-10-13",
+      "startTime": "18:00",
+      "endDate": "2026-10-13",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-10-13T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "f-g-d-ke-open-comedy-mic-night-2026-10-13",
+      "kind": "single",
+      "title": "f@g & d¥ke Open Comedy Mic Night",
+      "description": "“i could totally do comedy.” “i’m funnier than that comedian.” “i’m the funniest gay in this friend group.” have you or a gay you know ever said this… PROVE IT. EVERY 2nd TUESDAY 📍 @precinctdtla 🕡 6:30pm sign-ups 🍔 full food + drink menu",
+      "startDate": "2026-10-13",
+      "startTime": "18:00",
+      "endDate": "2026-10-13",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-13-26/fg-d%c2%a5ke-open-comedy-mic-night-10/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"f@g &amp; d¥ke Open Comedy Mic Night\", \"startDate\": \"2026-10-13T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-henny-games-dua-lipa-night-2026-10-13",
+      "kind": "single",
+      "title": "The Henny Games: Dua Lipa Night",
+      "description": "Isadora Spreads Presents a monthly drag competition honoring a different diva every month; where 12 queens enter but only one can be the final victor! Every 2nd Tuesday 9pm-2am",
+      "startDate": "2026-10-13",
+      "startTime": "21:00",
+      "endDate": "2026-10-13",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-13-26/the-henny-games-dua-lipa-night/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"The Henny Games: Dua Lipa Night\", \"startDate\": \"2026-10-13T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-10-14",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-10-14",
+      "startTime": "18:00",
+      "endDate": "2026-10-14",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-10-14T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-10-14",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "'Gay Ass Bingo'",
+      "startDate": "2026-10-14",
+      "startTime": "19:00",
+      "endDate": "2026-10-14",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-7-26/gay-ass-bingo-28/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-10-14T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "teaze-2026-10-14",
+      "kind": "single",
+      "title": "Teaze",
+      "description": "10.14 TEAZE is back and now on the SECOND WED of the month! Hosted by @vhexgirl Beats by @eva.myra.may Dinner and Drinks served all night. Come dip into the Trantasy. Doors at 9PM Showtime 10pm till LATE",
+      "startDate": "2026-10-14",
+      "startTime": "21:00",
+      "endDate": "2026-10-14",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-14-26/teaze-20/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Teaze\", \"startDate\": \"2026-10-14T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-10-15",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-10-15",
+      "startTime": "18:00",
+      "endDate": "2026-10-15",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-10-15T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-trivia-2026-10-15",
+      "kind": "single",
+      "title": "Gay Ass Trivia",
+      "description": "Do you have what it takes to come out on top? Join us Thursday night at 7pm for Gay Ass Trivia, celebrating 4 Years of trivia fun with our resident belting bad girl Queen Sheba! Happy Hour specials from 6-9pm! Taco Thursday Specials! Invite your friends for a chance to win gift cards, merchandise, and much more!",
+      "startDate": "2026-10-15",
+      "startTime": "19:00",
+      "endDate": "2026-10-15",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/gay-ass-trivia-37/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/04/Gay-Ass-Trivia-wide-2026-v3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Trivia\", \"startDate\": \"2026-10-15T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-10-15",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 10/01 &#8211; DJ Thiccboi 10/08 &#8211; DJ Brian McB 10/15 &#8211; DJ Josh Peace 10/22 &#8211; DJ Honey Davenport 10/29 &#8211; DJ Kidd",
+      "startDate": "2026-10-15",
+      "startTime": "21:00",
+      "endDate": "2026-10-15",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/vpl-39/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/VPL-Monthly-wide-OCT.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-10-15T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fat-slut-2026-10-16",
+      "kind": "single",
+      "title": "Fat Slut",
+      "description": "Meatball presents FAT SLUT 🍗💦 A wild night of drag & debauchery, SPECIAL DATE: 5/22! Doors at 9pm Drag Shows at 10:30PM & 11:30PM Sexy Food Eating Contest at 12:30AM with the winner receiving $200 Cash!",
+      "startDate": "2026-10-16",
+      "startTime": "21:00",
+      "endDate": "2026-10-16",
+      "endTime": null,
+      "website": "https://precinctdtla.com/5-22-26/fat-slut-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/07/fat-slut-generic-wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Fat Slut\", \"startDate\": \"2026-10-16T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queerchata-2026-10-17",
+      "kind": "single",
+      "title": "Queerchata",
+      "description": "This is a space for dancing, meeting new friends, and spending time in community. Things to look forward to: 🌈 a beginner-friendly bachata class 🌈 bachata & salsa dancing 🌈 performances by amazing artists 🌈 and a really great queer time!",
+      "startDate": "2026-10-17",
+      "startTime": "17:00",
+      "endDate": "2026-10-17",
+      "endTime": "20:30",
+      "website": "https://precinctdtla.com/1-17-26/queerchata-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2025/02/Queerchata-March25.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Queerchata\", \"startDate\": \"2026-10-17T17:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "puteria-2026-10-17",
+      "kind": "single",
+      "title": "Puteria",
+      "description": "Puteria, replicated never duplicated… Nos vemos chico(a)(x)s — Todos a bailar Every 3rd Saturday of the month.",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-17",
+      "endTime": null,
+      "website": "https://precinctdtla.com/1-17-26/puteria-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/08/puteria-wide-monthly-precinct-dtla.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Puteria\", \"startDate\": \"2026-10-17T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "club-chub-2026-10-18",
+      "kind": "single",
+      "title": "Club Chub",
+      "description": "A party for the big boys and the men that love them!",
+      "startDate": "2026-10-18",
+      "startTime": "15:00",
+      "endDate": "2026-10-18",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-18-26/club-chub-23/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Club Chub\", \"startDate\": \"2026-10-18T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-10-18",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Oct 4 &#8211; TBA + DJ Dean Buckley Oct 11 &#8211; TBA + DJ Ray.Only Oct 18 &#8211; TBA + DJ Dean Buckley Oct 25 &#8211; TBA + DJ Ray.Only",
+      "startDate": "2026-10-18",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-4-26/bearded-pig-disco-17/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-10-18T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "magic-the-gaythering-2026-10-20",
+      "kind": "single",
+      "title": "Magic the GAYthering",
+      "description": "Welcome to Magic The GAYthering, our new Monthly TCG night at Precinct DTLA! Welcome TCG fans new and old to a night of card games and camaraderie. NO COVER! -ALL TCG NIGHT: All TCG games welcome! Magic, Pokemon, Lorcana, Riftbound! Our inaugural event features them all! -MAGIC BEGINNERS TABLE: Learn all the ways of Magic The Gathering at our beginners table! We will even have decks on loan so you can start playing right away! -COMMANDER TABLES: For our advanced players, get ready for some tough battles with your fellow LAGS members! -DONATIONS WELCOME: Donate money or any extra or unused Magic items to the Los Angeles Gayming Society nonprofit and receive a tax deductible receipt upon request! -TENDIE TUESDAYS: All Tuesday night get $6 off Precinct famous Chicken Tenders, Friend Event is 21+ , ID required at door.",
+      "startDate": "2026-10-20",
+      "startTime": "18:00",
+      "endDate": "2026-10-20",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-20-26/magic-the-gaythering-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Magic the GAYthering\", \"startDate\": \"2026-10-20T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-10-20",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-10-20",
+      "startTime": "18:00",
+      "endDate": "2026-10-20",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-10-20T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "miss-cali-comedy-queen-pageant-prelim-2026-10-20",
+      "kind": "single",
+      "title": "Miss Cali Comedy Queen Pageant Prelim",
+      "description": "Calling all Comedy Queens!! A new preliminary for the Miss National Comedy Queen Pageant is hitting the West Coast! Mark your calendars for TUESDAY, NOVEMBER 17th at Precinct Bar in downtown Los Angeles when 10 of the best comedic divas will compete for the title of the very FIRST Miss California Comedy Queen! The Winner and 1st Alternate will represent California at Nationals in Orlando, FL in April 2027. Queens will compete in the following categories… Interview Presentation Comedic Talent Outrageous Evening Gown 60 second Spokeswoman Qualifying Rounds*: Tuesday, August 18 &#8211; free registration Tuesday, September 15 &#8211; $100 registration fee Tuesday, October 20 &#8211; $100 registration fee Official Prelim: Tuesday, November 17th *must compete in one qualifying round to move on to November. Prize Package Includes… Title of Miss California Comedy Queen Crown and custom sash $500 cash for Winner $350 cash for 1st Alternate Paid registration for winner & 1st Alternate to Nationals ($500 value) Paid registration for winner & 1st Alternate to Nov. Prelim ($200 value) 2 tickets to Disney World Travel/Lodging Stipend for Orlando Headline a show at Precinct Photo shoot with @talonreedcooper Other paid bookings TBA Custom wig from @outfitterswig Custom ponytail from @mialikeyig Custom Nails from @hunniebunnz Smoothie from @erewhon ! More prizes to be announced! Produced & Hosted by… @anniebiotixx Head Judge… @gisforgodoy from Netflix’s Next in Fashion Honoring the 2026 National Miss Comedy Queen… @gcdrag Music by… @trustfvck Support from… @theonebabu Graphics by… @johnie_supreme Registration is open now! Email CaliforniaComedyQueen@gmail.com or dm @anniebiotxx to ask questions or to register.",
+      "startDate": "2026-10-20",
+      "startTime": "21:00",
+      "endDate": "2026-10-20",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-20-26/miss-cali-comedy-queen-pageant-prelim-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/07/Comedy-Queen-WIDE.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Miss Cali Comedy Queen Pageant Prelim\", \"startDate\": \"2026-10-20T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-10-21",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-10-21",
+      "startTime": "18:00",
+      "endDate": "2026-10-21",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-10-21T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-10-21",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "'Gay Ass Bingo'",
+      "startDate": "2026-10-21",
+      "startTime": "19:00",
+      "endDate": "2026-10-21",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-7-26/gay-ass-bingo-28/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-10-21T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sissy-2026-10-21",
+      "kind": "single",
+      "title": "SISSY",
+      "description": "SISSIES!!!! Next three months we’re taking over hump day once a month!!!!!! we’re back WEDNESDAY Oct 21st! Party starts at 9 with beats by @djfrench_la Come in your best #SISSY attire!!!! We will be having free clothes check, drink specials, sissy Gogos all night, burlesque performance by @clitterclue and pole performances by @alisha_veneno and @urfallenangel69 and some pop up performances by me, come play with me and your sissies @rioblanco0 @ramejuman @princealexm @serxph.him @justinnporter don’t have anything to wear? Lets us help 🫦🫦🫦🫦 where is my daddy? 💅🏽💅🏽💅🏽",
+      "startDate": "2026-10-21",
+      "startTime": "21:00",
+      "endDate": "2026-10-21",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-21-26/sissy-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"SISSY\", \"startDate\": \"2026-10-21T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-10-22",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-10-22",
+      "startTime": "18:00",
+      "endDate": "2026-10-22",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-10-22T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-trivia-2026-10-22",
+      "kind": "single",
+      "title": "Gay Ass Trivia",
+      "description": "Do you have what it takes to come out on top? Join us Thursday night at 7pm for Gay Ass Trivia, celebrating 4 Years of trivia fun with our resident belting bad girl Queen Sheba! Happy Hour specials from 6-9pm! Taco Thursday Specials! Invite your friends for a chance to win gift cards, merchandise, and much more!",
+      "startDate": "2026-10-22",
+      "startTime": "19:00",
+      "endDate": "2026-10-22",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/gay-ass-trivia-37/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/04/Gay-Ass-Trivia-wide-2026-v3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Trivia\", \"startDate\": \"2026-10-22T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-10-22",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 10/01 &#8211; DJ Thiccboi 10/08 &#8211; DJ Brian McB 10/15 &#8211; DJ Josh Peace 10/22 &#8211; DJ Honey Davenport 10/29 &#8211; DJ Kidd",
+      "startDate": "2026-10-22",
+      "startTime": "21:00",
+      "endDate": "2026-10-22",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/vpl-39/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/VPL-Monthly-wide-OCT.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-10-22T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "haunted-house-2026-10-23",
+      "kind": "single",
+      "title": "Haunted House",
+      "description": "'Haunted House'",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "endDate": "2026-10-23",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-23-26/haunted-house/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Haunted House\", \"startDate\": \"2026-10-23T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "toxic-thots-comedy-show-2026-10-24",
+      "kind": "single",
+      "title": "Toxic Thots: Comedy Show",
+      "description": "A queer comedy show at Precinct DTLA an evil standup comedy show at LA’s best drag bar with performers you’ve seen on TV and maybe the TV on the internet cuz that counts too hosted by HAY BEACON with To be announced! Doors open at 6 so get there before 7, for real! This ain’t a drag show, honey. This is a comedy, and we have a HARD STOP before we have to help the DJ move tables off the dance floor!! See you then!",
+      "startDate": "2026-10-24",
+      "startTime": "18:00",
+      "endDate": "2026-10-24",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-24-26/toxic-thots-comedy-show-15/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2024/12/toxic-thots-fb-general.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Toxic Thots: Comedy Show\", \"startDate\": \"2026-10-24T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "megan-thee-vampire-slayer-2026-10-24",
+      "kind": "single",
+      "title": "Megan Thee Vampire Slayer",
+      "description": "'Megan Thee Vampire Slayer'",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endDate": "2026-10-24",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-24-26/megan-thee-vampire-slayer/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Megan Thee Vampire Slayer\", \"startDate\": \"2026-10-24T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "machete-2026-10-25",
+      "kind": "single",
+      "title": "Machete",
+      "description": "'Machete'",
+      "startDate": "2026-10-25",
+      "startTime": "15:00",
+      "endDate": "2026-10-25",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-25-26/machete-9/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/Precinct-Loops.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Machete\", \"startDate\": \"2026-10-25T15:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bearded-pig-disco-2026-10-25",
+      "kind": "single",
+      "title": "Bearded Pig Disco",
+      "description": "Weekly Sunday Night Disco with DJ Dean Buckley and DJ Ray.Only Oct 4 &#8211; TBA + DJ Dean Buckley Oct 11 &#8211; TBA + DJ Ray.Only Oct 18 &#8211; TBA + DJ Dean Buckley Oct 25 &#8211; TBA + DJ Ray.Only",
+      "startDate": "2026-10-25",
+      "startTime": "21:00",
+      "endDate": "2026-10-25",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-4-26/bearded-pig-disco-17/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bearded Pig Disco\", \"startDate\": \"2026-10-25T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-10-27",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-10-27",
+      "startTime": "18:00",
+      "endDate": "2026-10-27",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-10-27T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "weird-sister-039-s-cinema-club-presents-tba-2026-10-27",
+      "kind": "single",
+      "title": "Weird Sister&#039;s Cinema Club Presents: TBA",
+      "description": "'Weird Sister's Cinema Club Presents: TBA'",
+      "startDate": "2026-10-27",
+      "startTime": "19:00",
+      "endDate": "2026-10-27",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-27-26/weird-sisters-cinema-club-presents-tba-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Weird Sister&#039;s Cinema Club Presents: TBA\", \"startDate\": \"2026-10-27T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "playhouse-skud-2026-10-27",
+      "kind": "single",
+      "title": "Playhouse SKUD",
+      "description": "TUESDAY OCT 27 10PM &#8211; LATE with music by DJ SKUD",
+      "startDate": "2026-10-27",
+      "startTime": "22:00",
+      "endDate": "2026-10-27",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-27-26/playhouse-skud/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Playhouse SKUD\", \"startDate\": \"2026-10-27T22:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-10-28",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-10-28",
+      "startTime": "18:00",
+      "endDate": "2026-10-28",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-10-28T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-ass-bingo-2026-10-28",
+      "kind": "single",
+      "title": "Gay Ass Bingo",
+      "description": "'Gay Ass Bingo'",
+      "startDate": "2026-10-28",
+      "startTime": "19:00",
+      "endDate": "2026-10-28",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/10-7-26/gay-ass-bingo-28/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Gay Ass Bingo\", \"startDate\": \"2026-10-28T19:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "diamonds-after-dark-2026-10-28",
+      "kind": "single",
+      "title": "Diamonds After Dark",
+      "description": "'Diamonds After Dark'",
+      "startDate": "2026-10-28",
+      "startTime": "21:00",
+      "endDate": "2026-10-28",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-28-26/diamonds-after-dark-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Diamonds After Dark\", \"startDate\": \"2026-10-28T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-10-29",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-10-29",
+      "startTime": "18:00",
+      "endDate": "2026-10-29",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-10-29T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bear-happy-hour-2026-10-29",
+      "kind": "single",
+      "title": "Bear Happy Hour",
+      "description": "CALLING ALL BEARS! It’s the 5th Thursday of the month so you know what that means, Coach Daddy Drew is stopping through for Bear Happy Hour LA! Cheap & Easy Happy Hour from 6-9PM $5 Drafts $6 Hard Seltzers $8 Well Cocktails $9 Wine $12 Signature Cocktails",
+      "startDate": "2026-10-29",
+      "startTime": "18:00",
+      "endDate": "2026-10-29",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-29-26/bear-happy-hour-7/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2025/01/Screenshot-2025-01-23-at-3.57.51 PM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bear Happy Hour\", \"startDate\": \"2026-10-29T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "vpl-2026-10-29",
+      "kind": "single",
+      "title": "VPL",
+      "description": "Thursday night underwear party presented by Just For Fans and hosted by Joshua Flores and Jeremy Lucido. With clothing check, gogo boys, and giveaways from our sponsor Cellblock13. Drink specials for anyone in a jock strap! 10/01 &#8211; DJ Thiccboi 10/08 &#8211; DJ Brian McB 10/15 &#8211; DJ Josh Peace 10/22 &#8211; DJ Honey Davenport 10/29 &#8211; DJ Kidd",
+      "startDate": "2026-10-29",
+      "startTime": "21:00",
+      "endDate": "2026-10-29",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-1-26/vpl-39/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/09/VPL-Monthly-wide-OCT.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"VPL\", \"startDate\": \"2026-10-29T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "lags-resident-evil-night-2026-10-30",
+      "kind": "single",
+      "title": "LAGs: Resident Evil Night",
+      "description": "'LAGs: Resident Evil Night'",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-30",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-30-26/lags-resident-evil-night/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"LAGs: Resident Evil Night\", \"startDate\": \"2026-10-30T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sexy-halloween-2026-10-31",
+      "kind": "single",
+      "title": "Sexy Halloween",
+      "description": "Still trying to figure out what to wear this Halloween? We know ya’ll just wanna be hot, so pull out your leather and stilettos and come out to Precinct’s Sexy Halloween 🎃🔥FRIDAY 10/31 at 9pm 😍 No shame in this costume game &#8211; let’s see your Hot Hamburglar, Folsom-ready Charlie Brown, and the always reliable Sexy Mouse 💦 with a Midnight Costume Contest!",
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": null,
+      "website": "https://precinctdtla.com/10-31-26/sexy-halloween-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Sexy Halloween\", \"startDate\": \"2026-10-31T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-11-03",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-11-03",
+      "startTime": "18:00",
+      "endDate": "2026-11-03",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-11-03T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-11-04",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-11-04",
+      "startTime": "18:00",
+      "endDate": "2026-11-04",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-11-04T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-11-05",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-11-05",
+      "startTime": "18:00",
+      "endDate": "2026-11-05",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-11-05T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-11-10",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-11-10",
+      "startTime": "18:00",
+      "endDate": "2026-11-10",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-11-10T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-11-11",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-11-11",
+      "startTime": "18:00",
+      "endDate": "2026-11-11",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-11-11T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-11-12",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-11-12",
+      "startTime": "18:00",
+      "endDate": "2026-11-12",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-11-12T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-11-17",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-11-17",
+      "startTime": "18:00",
+      "endDate": "2026-11-17",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-11-17T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-11-18",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-11-18",
+      "startTime": "18:00",
+      "endDate": "2026-11-18",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-11-18T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-11-19",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-11-19",
+      "startTime": "18:00",
+      "endDate": "2026-11-19",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-11-19T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fat-slut-2026-11-20",
+      "kind": "single",
+      "title": "Fat Slut",
+      "description": "Meatball presents FAT SLUT 🍗💦 A wild night of drag & debauchery, SPECIAL DATE: 5/22! Doors at 9pm Drag Shows at 10:30PM & 11:30PM Sexy Food Eating Contest at 12:30AM with the winner receiving $200 Cash!",
+      "startDate": "2026-11-20",
+      "startTime": "21:00",
+      "endDate": "2026-11-20",
+      "endTime": null,
+      "website": "https://precinctdtla.com/5-22-26/fat-slut-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/07/fat-slut-generic-wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Fat Slut\", \"startDate\": \"2026-11-20T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queerchata-2026-11-21",
+      "kind": "single",
+      "title": "Queerchata",
+      "description": "This is a space for dancing, meeting new friends, and spending time in community. Things to look forward to: 🌈 a beginner-friendly bachata class 🌈 bachata & salsa dancing 🌈 performances by amazing artists 🌈 and a really great queer time!",
+      "startDate": "2026-11-21",
+      "startTime": "17:00",
+      "endDate": "2026-11-21",
+      "endTime": "20:30",
+      "website": "https://precinctdtla.com/1-17-26/queerchata-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2025/02/Queerchata-March25.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Queerchata\", \"startDate\": \"2026-11-21T17:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "puteria-2026-11-21",
+      "kind": "single",
+      "title": "Puteria",
+      "description": "Puteria, replicated never duplicated… Nos vemos chico(a)(x)s — Todos a bailar Every 3rd Saturday of the month.",
+      "startDate": "2026-11-21",
+      "startTime": "21:00",
+      "endDate": "2026-11-21",
+      "endTime": null,
+      "website": "https://precinctdtla.com/1-17-26/puteria-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/08/puteria-wide-monthly-precinct-dtla.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Puteria\", \"startDate\": \"2026-11-21T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-11-24",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-11-24",
+      "startTime": "18:00",
+      "endDate": "2026-11-24",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-11-24T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-11-25",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-11-25",
+      "startTime": "18:00",
+      "endDate": "2026-11-25",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-11-25T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-11-26",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-11-26",
+      "startTime": "18:00",
+      "endDate": "2026-11-26",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-11-26T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-12-01",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-12-01",
+      "startTime": "18:00",
+      "endDate": "2026-12-01",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-12-01T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-12-02",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-12-02",
+      "startTime": "18:00",
+      "endDate": "2026-12-02",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-12-02T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-12-03",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-12-03",
+      "startTime": "18:00",
+      "endDate": "2026-12-03",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-12-03T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-12-08",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-12-08",
+      "startTime": "18:00",
+      "endDate": "2026-12-08",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-12-08T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-12-09",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-12-09",
+      "startTime": "18:00",
+      "endDate": "2026-12-09",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-12-09T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-12-10",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-12-10",
+      "startTime": "18:00",
+      "endDate": "2026-12-10",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-12-10T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "tendie-tuesday-2026-12-15",
+      "kind": "single",
+      "title": "Tendie Tuesday",
+      "description": "Cheap and Easy Happy Hour, including $6 off our Famous Chicken Tenders & ALL Chicken Sandwiches!",
+      "startDate": "2026-12-15",
+      "startTime": "18:00",
+      "endDate": "2026-12-15",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-6-26/tendie-tuesday-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Chicken-Tendie-Tues-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Tendie Tuesday\", \"startDate\": \"2026-12-15T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bingo-burger-wednesday-2026-12-16",
+      "kind": "single",
+      "title": "Bingo Burger Wednesday",
+      "description": "Every Wednesday during Gay Ass Bingo! Now $6 off any burger!",
+      "startDate": "2026-12-16",
+      "startTime": "18:00",
+      "endDate": "2026-12-16",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-7-26/happy-hour-burgers/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Bingo-Burger-Wednesday-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Bingo Burger Wednesday\", \"startDate\": \"2026-12-16T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "taco-thursday-2026-12-17",
+      "kind": "single",
+      "title": "Taco Thursday",
+      "description": "Cheap and Easy Happy Hour Prices and Thursday Food Specials including: $4 Tacos $10 Loaded Sheet Pan Nachos $10 Carne Asada Fries $13 Quesadillas",
+      "startDate": "2026-12-17",
+      "startTime": "18:00",
+      "endDate": "2026-12-17",
+      "endTime": "21:00",
+      "website": "https://precinctdtla.com/1-8-26/taco-thursday-2/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2026/08/POST-ME-Taco-Thurs-Wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Taco Thursday\", \"startDate\": \"2026-12-17T18:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fat-slut-2026-12-18",
+      "kind": "single",
+      "title": "Fat Slut",
+      "description": "Meatball presents FAT SLUT 🍗💦 A wild night of drag & debauchery, SPECIAL DATE: 5/22! Doors at 9pm Drag Shows at 10:30PM & 11:30PM Sexy Food Eating Contest at 12:30AM with the winner receiving $200 Cash!",
+      "startDate": "2026-12-18",
+      "startTime": "21:00",
+      "endDate": "2026-12-18",
+      "endTime": null,
+      "website": "https://precinctdtla.com/5-22-26/fat-slut-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/07/fat-slut-generic-wide.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Fat Slut\", \"startDate\": \"2026-12-18T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queerchata-2026-12-19",
+      "kind": "single",
+      "title": "Queerchata",
+      "description": "This is a space for dancing, meeting new friends, and spending time in community. Things to look forward to: 🌈 a beginner-friendly bachata class 🌈 bachata & salsa dancing 🌈 performances by amazing artists 🌈 and a really great queer time!",
+      "startDate": "2026-12-19",
+      "startTime": "17:00",
+      "endDate": "2026-12-19",
+      "endTime": "20:30",
+      "website": "https://precinctdtla.com/1-17-26/queerchata-13/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2025/02/Queerchata-March25.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Queerchata\", \"startDate\": \"2026-12-19T17:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "puteria-2026-12-19",
+      "kind": "single",
+      "title": "Puteria",
+      "description": "Puteria, replicated never duplicated… Nos vemos chico(a)(x)s — Todos a bailar Every 3rd Saturday of the month.",
+      "startDate": "2026-12-19",
+      "startTime": "21:00",
+      "endDate": "2026-12-19",
+      "endTime": null,
+      "website": "https://precinctdtla.com/1-17-26/puteria-3/",
+      "image": "https://precinctdtla.com/wp-content/uploads/2023/08/puteria-wide-monthly-precinct-dtla.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The card prints 11:59pm as its end: the plugin's \"no end time\" filler, not a stated end.",
+      "evidence": {
+        "url": "https://precinctdtla.com/?evo-ajax=eventon_init_load",
+        "quote": "\"name\": \"Puteria\", \"startDate\": \"2026-12-19T21:00:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

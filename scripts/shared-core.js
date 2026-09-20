@@ -8489,9 +8489,14 @@ class SharedCore {
                 // A JavaScript shell has its content behind the API its own
                 // bundle calls — find that door and read through it, or fall
                 // through with the shell untouched (see resolveSpaDataDoor).
-                const spaResolvedHtmlData = shouldUseInlineInput
+                // A site that answers every page with "Are you 21?" has its
+                // content one confirmation away (see resolveConfirmationGate).
+                const ungatedHtmlData = shouldUseInlineInput
                     ? fetchedHtmlData
-                    : await this.resolveSpaDataDoor(fetchedHtmlData, url, httpAdapter, displayAdapter);
+                    : await this.resolveConfirmationGate(fetchedHtmlData, url, httpAdapter, displayAdapter);
+                const spaResolvedHtmlData = shouldUseInlineInput
+                    ? ungatedHtmlData
+                    : await this.resolveSpaDataDoor(ungatedHtmlData, url, httpAdapter, displayAdapter);
                 // A configured root that advertises or serves a machine
                 // door (a JSON or iCalendar feed) is read through it — the
                 // feed is the site's own complete statement of its events
@@ -14993,6 +14998,108 @@ class SharedCore {
             html: JSON.stringify({ events: rows }),
             dataDoor: { apiUrl: '', template: '', pageUrl, venueDirectory: [], inline: true }
         };
+    }
+
+    // ── Confirmation gates ──────────────────────────────────────────────
+    // An adults-only venue may answer EVERY page with a server-side "Are you
+    // 21?" form until the visitor confirms (thedallaseagle.com from
+    // 2026-09-18: 74 upcoming events behind it, the source read 0). The gate
+    // is a plain form: hidden fields (a nonce), one "Yes" button, a POST to
+    // itself, a cookie in the answer. Recognised by shape, never by site:
+    //   · next to no visible text, and that text asks about age;
+    //   · exactly one POST form whose only visible control is an affirmative
+    //     submit button (every other input is hidden).
+    // Returns { action, fields } or null.
+    detectConfirmationGate(html, pageUrl) {
+        const source = String(html || '');
+        if (!source || source.length > 60000 || !/<form\b/i.test(source)) return null;
+        const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+        const body = bodyMatch ? bodyMatch[1] : source;
+        const visible = this.decodeBasicHtmlEntities(body
+            .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+        if (visible.length > 400) return null;
+        if (!/\bare you (?:over |at least )?(?:1[89]|21)\b|\b(?:1[89]|21)\s*(?:\+|or older|or over|and over|and older|years)|\bof legal (?:drinking )?age\b|\badults? only\b|\bverify your age\b/i.test(visible)) return null;
+        const forms = [...body.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form>/gi)];
+        if (forms.length !== 1) return null;
+        const attr = (tag, name) => {
+            const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);
+            return match ? this.decodeBasicHtmlEntities(match[1] !== undefined ? match[1] : match[2] !== undefined ? match[2] : match[3]) : '';
+        };
+        const [, formAttrs, formBody] = forms[0];
+        if (attr(formAttrs, 'method').toLowerCase() !== 'post') return null;
+        const fields = [];
+        let confirm = null;
+        const affirmative = /^(?:yes\b|enter\b|i am\b|i'm\b|i agree\b|agree\b|confirm\b|continue\b)/i;
+        for (const control of formBody.matchAll(/<(input)\b([^>]*)>()|<(button)\b([^>]*)>([\s\S]*?)<\/button>/gi)) {
+            if (control[4]) { control[1] = control[4]; control[2] = control[5]; control[3] = control[6]; }
+            const tag = control[2];
+            const type = (attr(tag, 'type') || (control[1].toLowerCase() === 'button' ? 'submit' : 'text')).toLowerCase();
+            const name = attr(tag, 'name');
+            const value = attr(tag, 'value');
+            if (type === 'hidden') {
+                if (name) fields.push([name, value]);
+                continue;
+            }
+            if (type !== 'submit') return null; // a box to type in is a login, not a gate
+            const label = String(control[3] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || value;
+            if (!name || !affirmative.test(label) && !affirmative.test(value)) continue;
+            if (confirm) return null;
+            confirm = [name, value];
+        }
+        if (/<(?:select|textarea)\b/i.test(formBody) || !confirm) return null;
+        fields.push(confirm);
+        const action = attr(formAttrs, 'action');
+        const resolved = action ? this.normalizeUrl(action, pageUrl) : pageUrl;
+        if (!resolved || !this.areUrlHostsSameSite(this.getHostFromUrl(resolved), this.getHostFromUrl(pageUrl))) return null;
+        return { action: resolved, fields };
+    }
+
+    // Reads through a confirmation gate: a FRESH copy of the gate (its nonce
+    // expires within a day — a cached copy answers "expired"), one POST of
+    // the form as the site's own button would send it, then the page again
+    // with the cookie the answer set. Three requests, once per run and host:
+    // the adapter's cookie session carries the answer to every later page.
+    // Returns the real page, or the same htmlData when anything is off.
+    async resolveConfirmationGate(htmlData, pageUrl, httpAdapter, displayAdapter) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return htmlData;
+        if (!this.detectConfirmationGate(html, pageUrl)) return htmlData;
+        const log = displayAdapter && typeof displayAdapter.logInfo === 'function'
+            ? (message) => displayAdapter.logInfo(message)
+            : async () => {};
+        try {
+            const freshGate = await httpAdapter.fetchData(pageUrl, { fresh: true, session: true });
+            const gate = this.detectConfirmationGate(freshGate && freshGate.html, pageUrl);
+            if (!gate) {
+                await log(`SYSTEM: 🚪 AGE GATE: ${pageUrl} — a fresh read is already past the gate`);
+                return freshGate && freshGate.html ? freshGate : htmlData;
+            }
+            const body = gate.fields.map(([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`).join('&');
+            const answered = await httpAdapter.fetchData(gate.action, {
+                method: 'POST',
+                body,
+                session: true,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: pageUrl }
+            });
+            let page = answered;
+            if (!page || !page.html || this.detectConfirmationGate(page.html, pageUrl)) {
+                // Never cached: the stored copy of this URL stays the gate, so
+                // every run confirms once and holds the cookie its later
+                // requests (month feeds, event pages) need.
+                page = await httpAdapter.fetchData(pageUrl, { fresh: true, session: true, isCacheableResponse: () => false });
+            }
+            if (!page || !page.html || this.detectConfirmationGate(page.html, pageUrl)) {
+                await log(`SYSTEM: 🚪 AGE GATE: ${pageUrl} still shows its age question after confirming — left as is`);
+                return htmlData;
+            }
+            await log(`SYSTEM: 🚪 AGE GATE: ${pageUrl} answered its age question ("${gate.fields[gate.fields.length - 1][1] || 'yes'}") — confirmed once, reading the page behind it`);
+            return { ...page, url: pageUrl };
+        } catch (error) {
+            await log(`SYSTEM: 🚪 AGE GATE: ${pageUrl} could not be confirmed (${error && error.message ? error.message : error}) — left as is`);
+            return htmlData;
+        }
     }
 
     // Returns htmlData with the door's JSON as its html (plus a dataDoor
