@@ -7401,7 +7401,7 @@ class AiWebParser {
     // whose text is a ticket call-to-action. Same-site links, social
     // profiles and anything ambiguous (two different outbound links, no
     // CTA) yield nothing — a ticket link is never guessed.
-    pickTicketLinkFromBodyHtml(bodyHtml, origin) {
+    pickTicketLinkFromBodyHtml(bodyHtml, origin, options = {}) {
         const source = String(bodyHtml || '');
         if (!source) return '';
         const originHost = (String(origin || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
@@ -7422,7 +7422,17 @@ class AiWebParser {
             candidates.push({ href, platform: isPlatformHost(host), isCta });
         }
         const platform = candidates.find(candidate => candidate.platform);
-        if (platform) return platform.href;
+        if (platform) {
+            // A whole PAGE (not one card's body copy) can link several
+            // platform pages — last month's party, a sister city's. There the
+            // link is taken only when it is the one platform link, or the one
+            // that is also labelled as tickets.
+            if (!options.requireUnique) return platform.href;
+            const platformLinks = new Set(candidates.filter(candidate => candidate.platform).map(candidate => candidate.href));
+            if (platformLinks.size === 1) return platform.href;
+            const labelled = new Set(candidates.filter(candidate => candidate.platform && candidate.isCta).map(candidate => candidate.href));
+            return labelled.size === 1 ? Array.from(labelled)[0] : '';
+        }
         const cta = candidates.filter(candidate => candidate.isCta);
         const distinct = new Set(cta.map(candidate => candidate.href));
         return distinct.size === 1 ? cta[0].href : '';
@@ -22026,6 +22036,8 @@ TEXT:
         // image adopts the page's own og:image artwork.
         if (!dataFlags.segment) {
             this.fillImageFromPageMetaArtwork(event, htmlData);
+            this.fillImageFromSoleBodyArtwork(event, htmlData);
+            this.fillTicketUrlFromPageCta(event, htmlData);
         }
 
         // Provenance stamp for the FINAL image value (after any parser-config
@@ -23617,6 +23629,89 @@ TEXT:
         return event;
     }
 
+    // The page minus its chrome: <header>, <nav> and <footer> hold the site's
+    // logo, menus and social links on every page; what is left is the page's
+    // own content. Returns { body, chrome } (both strings).
+    splitPageChrome(html) {
+        const source = String(html || '');
+        const chromeParts = [];
+        const body = source.replace(/<(header|nav|footer)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, (block) => {
+            chromeParts.push(block);
+            return ' ';
+        });
+        return { body, chrome: chromeParts.join('\n') };
+    }
+
+    // The ONE large picture in the page's own content: not in the header,
+    // nav or footer, not repeated there, at least 500px on its short side
+    // by measurement. A page with two such pictures has no "the" artwork,
+    // and an unmeasured picture is never assumed large. '' when there is
+    // no such picture.
+    // Renditions of one picture (?format=300w, -300x200.jpg) are one picture.
+    getPictureIdentityKey(url) {
+        return String(this.canonicalizeImageUrlForComparison(url) || url || '')
+            .replace(/[?#].*$/, '').replace(/-\d{2,4}x\d{2,4}(?=\.[a-z0-9]{3,5}$)/i, '');
+    }
+
+    getSoleBodyArtworkUrl(htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !/<img\b/i.test(html)) return '';
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const { body, chrome } = this.splitPageChrome(html);
+        const pictureKey = (url) => this.getPictureIdentityKey(url);
+        const chromeUrls = this.extractOrderedImageUrlsFromHtml(chrome, pageUrl, 40);
+        const chromeKeys = new Set(chromeUrls.map(pictureKey));
+        // A CMS serves one upload from several hosts/paths (Squarespace:
+        // static1.squarespace.com/…/GRUNTSTICKER-01.png in the header,
+        // images.squarespace-cdn.com/…/GRUNTSTICKER-01.png in the content),
+        // so the header's logo is also known by its file name.
+        const fileName = (url) => (pictureKey(url).match(/\/([^/]+\.[a-z0-9]{3,5})$/i) || ['', ''])[1].toLowerCase();
+        const chromeFileNames = new Set(chromeUrls.map(fileName).filter(Boolean));
+        const pictures = new Map();
+        for (const url of this.extractOrderedImageUrlsFromHtml(body, pageUrl, 40)) {
+            const key = pictureKey(url);
+            if (!key || chromeKeys.has(key) || this.isLikelyUninterestingImageUrl(url)) continue;
+            if (fileName(url) && chromeFileNames.has(fileName(url))) continue;
+            const size = this.getMeasuredImageDimensions(url);
+            if (!size || Math.min(size.width, size.height) < 500) continue;
+            const best = pictures.get(key);
+            if (!best || size.width * size.height > best.area) pictures.set(key, { url, area: size.width * size.height });
+        }
+        return pictures.size === 1 ? Array.from(pictures.values())[0].url : '';
+    }
+
+    // A single-event page with no image yet takes its body's sole large
+    // picture. gruntparty.monster: the page's og:image is the site's sticker
+    // logo (rightly refused), and the party's poster — the only picture in
+    // the page's content — was never offered.
+    fillImageFromSoleBodyArtwork(event, htmlData) {
+        if (!event || typeof event !== 'object') return event;
+        if (typeof event.image === 'string' && event.image.trim()) return event;
+        const url = this.getSoleBodyArtworkUrl(htmlData);
+        if (!url || this.getNonEventImageOcrReason(url, htmlData)) return event;
+        event.image = url;
+        event.imageSource = 'page';
+        console.log(`🤖 AI Web: Filled image for "${event.title || ''}" from the page's sole large content picture ${url}`);
+        return event;
+    }
+
+    // A single-event page whose extraction returned no ticket link takes the
+    // page content's one labelled ticket link ("TICKETS AVAILABLE" → ra.co).
+    // The model sees link TEXT far more reliably than hrefs; the anchor
+    // carries both. Never the chrome's links, never a guess between two.
+    fillTicketUrlFromPageCta(event, htmlData) {
+        if (!event || typeof event !== 'object') return event;
+        if (typeof event.ticketUrl === 'string' && event.ticketUrl.trim()) return event;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (!html || !pageUrl) return event;
+        const link = this.pickTicketLinkFromBodyHtml(this.splitPageChrome(html).body, pageUrl, { requireUnique: true });
+        if (!link || this.isCalendarExportUrl(link)) return event;
+        event.ticketUrl = link;
+        console.log(`🔗 LINKS: "${event.title || 'event'}" takes the page's one labelled ticket link ${link} — the model returned none`);
+        return event;
+    }
+
     stampImageProvenance(event, htmlData) {
         if (!event || typeof event !== 'object') return event;
         if (event.imageSource) return event;
@@ -24400,6 +24495,14 @@ TEXT:
             // fail-open behavior unchanged.
             if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
             if (!htmlData || !this.isOcrTextExplainedByPageBrand(verdict.text, htmlData)) return '';
+            // A promoter's poster often says nothing but the party's name —
+            // which IS the brand. Where the picture sits tells the two apart:
+            // the wordmark lives in the header/nav/footer (or is repeated
+            // there), the poster is the one large picture in the page's own
+            // content (gruntparty.monster/brooklyn: "GRUNT" on an 1131px
+            // poster, refused as a logo).
+            const soleArtwork = this.getSoleBodyArtworkUrl(htmlData);
+            if (soleArtwork && this.getPictureIdentityKey(soleArtwork) === this.getPictureIdentityKey(url)) return '';
             return `the vision pass classified it as ${verdict.classification} and its only readable text is the page's own brand/venue name`;
         }
         if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
