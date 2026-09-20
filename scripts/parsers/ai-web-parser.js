@@ -7772,7 +7772,9 @@ class AiWebParser {
                     const calendarHtml = answer && typeof answer.html === 'string' ? answer.html : '';
                     if (!calendarHtml) continue;
                     answered += 1;
-                    cards += (calendarHtml.match(/eventon_list_event/g) || []).length;
+                    // Counted by their structured data: a month with nothing in it
+                    // answers with one "No Events" card.
+                    cards += (calendarHtml.match(/application\/ld\+json/g) || []).length;
                     parts.push(this.normalizeEventOnCalendarHtml(calendarHtml));
                 }
                 console.log(`📅 EVENTON: month ${label} loaded for ${sourceUrl} — ${cards} event card(s) from ${answered} calendar frame(s)`);

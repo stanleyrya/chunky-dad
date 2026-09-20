@@ -539,6 +539,17 @@ const scraperConfig = {
       metadata: { website: { value: "https://precinctdtla.com" } },
     },
     {
+      name: "Woofs Atlanta",
+      // Venue parser (curated bar "Woofs Atlanta", Atlanta's gay sports bar).
+      // Same EventON calendar as Precinct DTLA, older plugin (its AJAX call
+      // goes through admin-ajax). A quiet calendar — about a card a month —
+      // so the crawl stays on the calendar and the cards' own pages instead
+      // of wandering the menu and ordering pages. The bear check decides.
+      urls: ["https://woofsatlanta.com/calendar/"],
+      urlDiscoveryDepth: 0,
+      metadata: { website: { value: "https://woofsatlanta.com" } },
+    },
+    {
       name: "Gathr",
       // Aggregator for bear-week crowds (Provincetown Bear Week, Fire Island
       // Bear Weekend, Dore Alley, Folsom, plus NYC regulars). A React app with

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "source": "Woofs Atlanta",
+  "slug": "woofs-atlanta",
+  "status": "complete",
+  "recheckAfter": "2026-10-20",
+  "recon": {
+    "date": "2026-09-20",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://woofsatlanta.com/calendar/"
+    ],
+    "doors": [
+      {
+        "url": "https://woofsatlanta.com/calendar/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "EventON calendar page (WordPress). The HTML carries only empty calendar frames (class ajax_loading_cal) with their shortcode settings in data-sc, and a short-lived nonce in evo_general_params; no event text."
+      },
+      {
+        "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 2,
+        "truthFlag": "2026-09: 0 cards; 2026-10: 1 cards; 2026-11: 1 cards; 2026-12: 0 cards",
+        "note": "The plugin's own eventon_init_load call, replayed as a form POST (nonce + cals[<frame>][sc][…]) once for the page's own frames and once per later month (fixed_month / fixed_year / focus range stepped). The answer holds each calendar's rendered cards; every card carries a schema.org Event block with name, url, image, description and wall-clock start/end. The printed UTC offset is fixed and ignores daylight saving, so the wall clock is what is documented. The nonce lives about half a day: a stored page needs one fresh read first."
+      }
+    ],
+    "notes": "Recon from the scraper's own cached answers on 2026-09-20 (one page read, 4 POSTs). 2 cards across 2026-09, 2026-10, 2026-11, 2026-12: 2 on or after 2026-09-20 inside the window, 0 earlier this month, 0 past the window, 0 \"CLOSED\" day markers (notices, not events)."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: every card the calendar answers with, for each month to the scraper's horizon. Each night is its own card (the plugin pre-expands repeats), so every entry is a single. \"CLOSED\" markers are excluded as notices.",
+    "publishedEventCount": 2,
+    "documentedEventCount": 2,
+    "occurrenceWindow": {
+      "start": "2026-09-20",
+      "end": "2026-12-19"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "atlanta",
+    "timezone": "America/New_York",
+    "website": "https://woofsatlanta.com"
+  },
+  "events": [
+    {
+      "id": "fafo-fridays-2026-10-09",
+      "kind": "single",
+      "title": "FAFO Fridays",
+      "description": null,
+      "startDate": "2026-10-09",
+      "startTime": "21:30",
+      "endDate": "2026-10-10",
+      "endTime": "00:00",
+      "website": "https://woofsatlanta.com/events/fafo-fridays/",
+      "image": "https://woofsatlanta.com/wp-content/uploads/IMG_3240.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
+        "quote": "\"name\": \"FAFO Fridays\", \"startDate\": \"2026-10-09T21:30:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "fafo-fridays-2026-11-13",
+      "kind": "single",
+      "title": "FAFO Fridays",
+      "description": null,
+      "startDate": "2026-11-13",
+      "startTime": "21:30",
+      "endDate": "2026-11-14",
+      "endTime": "00:00",
+      "website": "https://woofsatlanta.com/events/fafo-fridays/",
+      "image": "https://woofsatlanta.com/wp-content/uploads/IMG_3240.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
+        "quote": "\"name\": \"FAFO Fridays\", \"startDate\": \"2026-11-13T21:30:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

@@ -24,6 +24,15 @@
       "city": "atlanta",
       "address": "1492 Piedmont Avenue Northeast, Atlanta",
       "coordinates": "33.7961866, -84.3711336"
+    },
+    {
+      "name": "Woofs Atlanta",
+      "city": "atlanta",
+      "address": "494 Plasters Ave NE, Suite 200, Atlanta, GA 30324",
+      "coordinates": "33.8116248, -84.3726225",
+      "website": "https://woofsatlanta.com",
+      "instagram": "https://www.instagram.com/woofsatlanta",
+      "facebook": "https://www.facebook.com/WoofsAtlanta"
     }
   ],
   "bangkok": [
