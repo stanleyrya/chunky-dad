@@ -23939,3 +23939,16 @@ test('FetchPoliteness: an API call (a geocoder) is paced and parked like a page 
   assert.deepEqual(sleeps, [1000], 'still one second apart');
   assert.equal(logs.filter(line => line.includes('ROBOTS')).length, 0);
 });
+
+test('static website metadata: the event page in `url` beats the front door the extraction put in `website`', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const metadata = { website: { value: 'https://www.sf-eagle.example' } };
+  const event = { title: 'WOOF!', url: 'https://www.sf-eagle.example/events/woof/', website: 'https://www.sf-eagle.example', _sourcePageUrl: 'https://www.sf-eagle.example/events/', _pageClassification: 'multi-event-page' };
+  core.applyStaticMetadataBlock(event, metadata, {});
+  assert.equal(event.website, 'https://www.sf-eagle.example/events/woof/', 'one field: the event page survives');
+  assert.equal(event.url, 'https://www.sf-eagle.example/events/woof/');
+  // The listing the record was scraped off is still not an event page.
+  const listed = { title: 'WOOF!', url: 'https://www.sf-eagle.example/events/', website: 'https://www.sf-eagle.example', _sourcePageUrl: 'https://www.sf-eagle.example/events/', _pageClassification: 'multi-event-page' };
+  core.applyStaticMetadataBlock(listed, metadata, {});
+  assert.equal(listed.website, 'https://www.sf-eagle.example');
+});
