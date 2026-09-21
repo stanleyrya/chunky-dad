@@ -19255,6 +19255,24 @@ test('unwrapJsonApiCandidate lifts a single event-shaped member of an envelope r
   assert.equal(parser.findJsonApiEnvelopeEvent({ name: 'outer', Event: { name: 'a', start: '2026-10-01T20:00:00Z' } }), null);
 });
 
+test('parseEvents drops a feed row\'s own street address from its title at parse time — before duplicates are folded, not only at the final build', async () => {
+  const parser = createParser();
+  parser.core.callAiGenerate = async () => null;
+  parser.extractOcrFromAllImages = async () => [];
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const start = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+  const payload = { events: [
+    { title: 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', start: `${start}T18:00:00`, address: '232 W 37th St 2nd fl, New York, NY 10018, USA' },
+    { title: 'Studio 54 Night', start: `${start}T21:00:00`, address: '254 W 54th St, New York, NY 10019' }
+  ] };
+  let result;
+  const logs = await captureLogsAsync(async () => {
+    result = await parser.parseEvents({ url: 'https://feeds.example/calendar.json', html: JSON.stringify(payload) }, { name: 'Organizer' }, cityConfig, 'multi-event-page', null);
+  });
+  assert.deepEqual(result.events.map(event => event.title).sort(), ['Studio 54 Night', 'The Bear Party'], logs.filter(line => line.includes('TITLE')).join('\n'));
+  assert.ok(logs.some(line => line.includes('the tail is the event\'s own street address')));
+});
+
 test('parseEvents reads the TicketSauce widget feed structurally: venue from location, image from thumb_url, zone from timezone', async () => {
   const parser = createParser();
   let aiCalls = 0;
