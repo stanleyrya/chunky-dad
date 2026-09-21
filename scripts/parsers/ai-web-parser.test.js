@@ -18726,6 +18726,32 @@ test('a feed-backed parser configured as a curated promoter prefixes its own bra
   assert.equal(parser.buildBrandPrefixedTitle('Lodge NY presents Squeeze', ['Lodge NY'], { html: '' }, { name: 'Lodge NY' }), '', 'already names the promoter');
 });
 
+test('MEC full calendar on its list skin: the monthly skin is asked for once and read as the month grid', async () => {
+  const parser = createParser();
+  const url = 'https://venue.example/events/';
+  const atts = 'atts%5Bskin%5D=full_calendar&atts%5Bcategory%5D=104';
+  const page = `<html><body><div class="mec-totalcal-view"><span class="mec-totalcal-monthlyview" data-skin="monthly">Monthly</span><span class="mec-totalcal-listview mec-totalcalview-selected" data-skin="list">List</span></div>
+<script>jQuery("#mec_skin_mec3").mecFullCalendar({ id: "mec3", atts: "${atts}", ajax_url: "https://venue.example/wp-admin/admin-ajax.php", sed_method: "0", skin: "list", });</script></body></html>`;
+  const monthly = `<div class="mec-calendar"><dt class="mec-calendar-day" data-mec-cell="20300920">20</dt></div>
+<script>jQuery("#m").mecMonthlyView({ id: "mec3", today: "20300920", month_id: "203009", active_month: {year: "2030", month: "09"}, next_month: {year: "2030", month: "10"}, atts: "${atts}", });</script>`;
+  const posts = [];
+  const httpAdapter = { postForm: async (endpoint, body, options) => { posts.push({ endpoint, body, options }); return { ok: true, status: 200, text: monthly }; } };
+  const skin = await parser.collectMecFullCalendarMonthlySkin({ url, html: page }, httpAdapter);
+  assert.equal(skin, monthly);
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].endpoint, 'https://venue.example/wp-admin/admin-ajax.php');
+  assert.equal(posts[0].body, `action=mec_full_calendar_switch_skin&skin=monthly&${atts}&apply_sf_date=1&sed=0`);
+  assert.equal(posts[0].options.isCacheableResponse({ text: '<p>nope</p>' }), false, 'an answer without a grid is never remembered');
+  // Page + answer together are what the existing month reader needs: the
+  // page states the endpoint (bare key), the answer states the month.
+  assert.deepEqual(parser.detectMecMonthlyView(`${page}\n${skin}`), { ajaxUrl: 'https://venue.example/wp-admin/admin-ajax.php', attsQuery: atts, year: 2030, month: 9 });
+  // No widget, already a grid, an off-site endpoint, or a gridless answer: nothing.
+  assert.equal(await parser.collectMecFullCalendarMonthlySkin({ url, html: '<html><body>plain</body></html>' }, httpAdapter), '');
+  assert.equal(await parser.collectMecFullCalendarMonthlySkin({ url, html: page.replace('https://venue.example/wp-admin', 'https://elsewhere.example/wp-admin') }, httpAdapter), '');
+  assert.equal(await parser.collectMecFullCalendarMonthlySkin({ url, html: page }, { postForm: async () => ({ ok: true, status: 200, text: '<p>0</p>' }) }), '');
+  assert.equal(posts.length, 1);
+});
+
 test('a description block repeated across a feed’s rows is chrome', () => {
   const parser = createParser();
   const rows = [
