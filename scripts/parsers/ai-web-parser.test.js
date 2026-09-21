@@ -14465,6 +14465,22 @@ test('an image offered by 3+ distinct segments is page chrome — withheld from 
   assert.equal(parser.getRepeatedSegmentChromeReason(icon, 'https://other.example/events/'), '');
 });
 
+test('a repeating party\'s one poster on every one of its cards is its artwork, not page chrome', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const poster = 'https://wp.venue.example/uploads/2025/12/woof-poster.avif';
+  const icon = 'https://venue.example/uploads/social-badge.png';
+  const card = (date, title, image) => ({ lines: [date, title, '3 PM - 6 PM'], html: `<a href="/events/x/" class="card"><img src="${image}" alt="${title} poster"><img src="${icon}"><div>${date}</div><div>${title}</div></a>`, imageHintUrls: [] });
+  const segments = [card('SAT · OCT 03', 'WOOF!', poster), card('SAT · NOV 07', 'WOOF!', poster), card('SAT · DEC 05', 'WOOF!', poster),
+    card('SAT · OCT 03', 'Filth', 'https://wp.venue.example/uploads/filth.webp'), card('SUN · OCT 04', 'Beer Bust', 'https://wp.venue.example/uploads/beerbust.png')];
+  const logs = captureLogs(() => { parser.applyRepeatedSegmentImageChromeGate(segments, sourceUrl); });
+  assert.equal(parser.getRepeatedSegmentChromeReason(poster, sourceUrl), '', logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('a repeating party\'s own poster, not page chrome')));
+  assert.ok(parser.extractMultiEventSegmentResourceLines(segments[0].html, sourceUrl).some(line => line === `SEGMENT_IMAGE_URL: ${poster}`));
+  // The badge sits on cards of three different parties: still chrome.
+  assert.notEqual(parser.getRepeatedSegmentChromeReason(icon, sourceUrl), '');
+});
+
 test('an icon-scale -WxH rendition (both dims <= 200) is never offered or harvested; -300x300 posters are untouched', () => {
   const parser = createParser();
   const sourceUrl = 'https://venue.example/events/';
