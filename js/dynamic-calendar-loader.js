@@ -2731,12 +2731,31 @@ class DynamicCalendarLoader extends CalendarCore {
     // Every candidate is passed through normalizeFlyerUrl, so a data: /
     // page-relative / blank value drops out of the chain instead of becoming a
     // broken <img> — including out of the data-flyer-fallbacks queue.
-    getFlyerCandidates(event, want = 'landscape') {
+    //
+    // NO PREFERENCE (the default, and what the cards ask for): the PRIMARY
+    // image leads. The card shows any shape whole, so shape no longer needs
+    // to decide — and the landscape slot is routinely a venue's wide banner
+    // CROPPED from the artwork (3dollarbillbk.com's "BEAR TEA OUTSIDE!" strip
+    // beside Goldiloxx's full Oct 3 poster; owner note 2026-09-21: "we more
+    // care about showing full images"). The slots stay what they are on the
+    // event pages: alternates, for when there is no primary or it fails.
+    getFlyerCandidates(event, want = '') {
         if (!event) return [];
         const readSlot = value => this.normalizeFlyerUrl(value);
         const vertical = readSlot(event.imageVertical);
         const horizontal = readSlot(event.imageHorizontal);
         const primary = readSlot(event.image);
+        if (want !== 'portrait' && want !== 'landscape') {
+            const whole = [];
+            const seenWhole = new Set();
+            [[primary, primary && primary === vertical ? 'portrait' : primary && primary === horizontal ? 'landscape' : ''],
+                [vertical, 'portrait'], [horizontal, 'landscape']].forEach(([url, orientation]) => {
+                if (!url || seenWhole.has(url)) return;
+                seenWhole.add(url);
+                whole.push({ u: url, o: orientation });
+            });
+            return whole;
+        }
         const wantedSlot = want === 'portrait' ? vertical : horizontal;
         const otherSlot = want === 'portrait' ? horizontal : vertical;
 
@@ -3338,7 +3357,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // advanceFlyerImage(). The known orientation rides along on the
         // container so CSS can cap portrait and landscape differently BEFORE
         // the image loads (no layout shift).
-        const flyerCandidates = this.getFlyerCandidates(event, 'landscape');
+        const flyerCandidates = this.getFlyerCandidates(event);
         const flyerPick = flyerCandidates[0] || null;
         const flyerUrl = flyerPick ? this.safeCardUrl(flyerPick.u) : '';
         const flyerOrientationAttr = flyerPick && flyerPick.o

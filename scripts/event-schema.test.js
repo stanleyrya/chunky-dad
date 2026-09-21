@@ -292,6 +292,22 @@ test('getFlyerCandidates: an imgix crop of the primary never leads the flyer cha
   assert.equal(portrait[0].u, DICE_SQUARE);
 });
 
+test('getFlyerCandidates: with no preference (the cards) the full primary image leads; the slots are alternates', () => {
+  const loader = flyerLoader();
+  // Goldiloxx: Bear Tea, Oct 3 — full portrait poster as primary (and vertical), a venue's cropped banner as horizontal.
+  const poster = 'https://d3flpus5evl89n.cloudfront.net/x/scaled_896.jpg';
+  const banner = 'https://images.squarespace-cdn.com/content/v1/x/BEARTEA%2BSEP12.png';
+  const card = loader.getFlyerCandidates({ image: poster, imageVertical: poster, imageHorizontal: banner });
+  const flat = (list) => Array.from(list, c => c.u + ' ' + c.o).join(' | ');
+  assert.equal(flat(card), poster + ' portrait | ' + banner + ' landscape');
+  // No primary: the slots still show, portrait first; nothing at all → nothing.
+  assert.equal(flat(loader.getFlyerCandidates({ imageHorizontal: banner, imageVertical: poster })), poster + ' portrait | ' + banner + ' landscape');
+  assert.equal(flat(loader.getFlyerCandidates({ imageHorizontal: banner })), banner + ' landscape');
+  assert.equal(loader.getFlyerCandidates({}).length, 0);
+  // A caller that asks for a shape still gets it.
+  assert.equal(loader.getFlyerCandidates({ image: poster, imageHorizontal: banner }, 'landscape')[0].u, banner);
+});
+
 test('getFlyerCandidates: a separate wide image still wins, and a lone slot is still shown', () => {
   const loader = flyerLoader();
 

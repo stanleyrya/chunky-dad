@@ -1,6 +1,17 @@
 {
   "originalUrl": "https://precinctdtla.com/wp-content/uploads/2025/01/Screenshot-2025-01-23-at-3.57.51%E2%80%AFPM.png",
-  "error": "HTTP 415: Unsupported Media Type",
+  "adjustedUrl": "https://precinctdtla.com/wp-content/uploads/2025/01/Screenshot-2025-01-23-at-3.57.51%E2%80%AFPM.png",
   "type": "event",
-  "failureCount": 2
+  "filename": "2026-10-29_bear-happy-hour_117133b6.png",
+  "contentType": "image/png",
+  "contentLength": "222275",
+  "eventInfo": {
+    "name": "Bear Happy Hour",
+    "startDate": "2026-10-29T18:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-21T03:37:18.707Z",
+  "etag": "\"1181ac8-36443-62ccacea4e8c8\"",
+  "lastModified": "Tue, 28 Jan 2025 21:23:42 GMT",
+  "flyerOptimized": 1
 }
