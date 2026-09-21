@@ -1,6 +1,17 @@
 {
   "originalUrl": "https://precinctdtla.com/wp-content/uploads/2026/09/TVScreen-Coach102.png",
-  "error": "HTTP 415: Unsupported Media Type",
+  "adjustedUrl": "https://precinctdtla.com/wp-content/uploads/2026/09/TVScreen-Coach102.png",
   "type": "event",
-  "failureCount": 2
+  "filename": "2026-10-02_coach-after-dark_b74e29b.png",
+  "contentType": "image/png",
+  "contentLength": "410018",
+  "eventInfo": {
+    "name": "Coach: After Dark",
+    "startDate": "2026-10-02T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-21T03:37:18.001Z",
+  "etag": "\"11c26c2-641a2-65bb4a5054ea8\"",
+  "lastModified": "Thu, 17 Sep 2026 21:41:21 GMT",
+  "flyerOptimized": 1
 }
