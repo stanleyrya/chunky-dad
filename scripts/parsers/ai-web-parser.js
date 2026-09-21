@@ -1118,6 +1118,14 @@ class AiWebParser {
             // arrive from the plugin's own AJAX call. Replayed here, the
             // answer (event cards, each with its own structured data) joins
             // the page so every reader below sees what a visitor sees.
+            // A MEC "full calendar" opened on its LIST skin shows a couple of
+            // weeks and a Load-more button; the same widget's MONTHLY skin is
+            // one request away and is the month grid every reader below
+            // already understands (see collectMecFullCalendarMonthlySkin).
+            if (jsonApiPayload === null) {
+                const monthlySkinHtml = await this.collectMecFullCalendarMonthlySkin(effectiveHtmlData, httpAdapter);
+                if (monthlySkinHtml) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${monthlySkinHtml}` };
+            }
             let eventOnHtml = '';
             if (jsonApiPayload === null) {
                 eventOnHtml = await this.collectEventOnCalendarHtml(effectiveHtmlData, parserConfig, httpAdapter);
@@ -6835,7 +6843,9 @@ class AiWebParser {
     detectMecMonthlyView(html) {
         const text = String(html || '');
         if (!/data-mec-cell=|mec-load-month/.test(text)) return null;
-        const ajaxMatch = text.match(/["']ajax_url["']\s*:\s*["'](https?:[^"']*admin-ajax\.php[^"']*)["']/i);
+        // The key is quoted in MEC's localized settings and bare in its inline
+        // init calls (mecFullCalendar({ ajax_url: "…" })) — same value.
+        const ajaxMatch = text.match(/["']?ajax_url["']?\s*:\s*["'](https?:[^"']*admin-ajax\.php[^"']*)["']/i);
         const ajaxUrl = ajaxMatch ? ajaxMatch[1].replace(/\\\//g, '/') : '';
         if (!ajaxUrl) return null;
         const attsMatch = text.match(/atts:\s*["']((?:atts%5B|atts\[)[^"']+)["']/);
@@ -7807,6 +7817,52 @@ class AiWebParser {
             }
         }
         return parts.join('\n');
+    }
+
+    // Modern Events Calendar's "full calendar" widget renders ONE skin and
+    // switches to the others by AJAX (its Monthly / List tabs). Opened on
+    // the list skin it prints the next ~20 events and pages the rest behind
+    // a Load-more button — thedallaseagle.com after its 2026-09 redesign: 19
+    // cards to Oct 2, a season to Dec 17 unseen. The monthly skin is the
+    // same month grid a plain MEC calendar page serves, and its answer
+    // carries the mecMonthlyView settings the month-feed replay needs — so
+    // the page's own tab click is replayed once and everything downstream
+    // (grid occurrences, month feeds, cadence evidence) applies unchanged.
+    // Returns the monthly skin's HTML, or '' (no such widget, already on the
+    // monthly skin, no postForm, off-site endpoint, or a refusal).
+    async collectMecFullCalendarMonthlySkin(htmlData, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl || !httpAdapter || typeof httpAdapter.postForm !== 'function') return '';
+        if (!/mecFullCalendar\s*\(/.test(html) || !/mec-totalcal-monthlyview/.test(html)) return '';
+        if (this.detectMecMonthlyView(html)) return ''; // the grid is already on the page
+        const init = /mecFullCalendar\s*\(\s*\{([\s\S]*?)\}\s*\)/.exec(html);
+        if (!init) return '';
+        const attsMatch = /atts:\s*["']((?:atts%5B|atts\[)[^"']+)["']/.exec(init[1]);
+        const ajaxMatch = /ajax_url:\s*["'](https?:[^"']*admin-ajax\.php[^"']*)["']/i.exec(init[1]);
+        const sedMatch = /sed_method:\s*["']([^"']*)["']/.exec(init[1]);
+        if (!attsMatch || !ajaxMatch) return '';
+        const ajaxUrl = ajaxMatch[1].replace(/\\\//g, '/');
+        const pageDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        if (!pageDomain || this.getRegistrableDomainFromUrl(ajaxUrl) !== pageDomain) return '';
+        const body = `action=mec_full_calendar_switch_skin&skin=monthly&${attsMatch[1]}&apply_sf_date=1&sed=${encodeURIComponent(sedMatch ? sedMatch[1] : '0')}`;
+        try {
+            const response = await httpAdapter.postForm(ajaxUrl, body, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', Referer: sourceUrl },
+                cacheUrl: `${ajaxUrl}${ajaxUrl.includes('?') ? '&' : '?'}mec_skin=monthly&page=${encodeURIComponent(sourceUrl)}`,
+                isCacheableResponse: (stored) => /mecMonthlyView/.test(String((stored && (stored.text || stored.html)) || ''))
+            });
+            const skinHtml = response && response.ok !== false ? String(response.text || '') : '';
+            if (!/mecMonthlyView/.test(skinHtml) || !/data-mec-cell=|mec-calendar-day/.test(skinHtml)) {
+                console.log(`🤖 AI Web: MEC full calendar on ${sourceUrl} did not answer with a month grid — reading its list skin only`);
+                return '';
+            }
+            console.log(`🤖 AI Web: MEC full calendar on ${sourceUrl} is on its list skin — monthly skin loaded (${skinHtml.length} chars), read as a month grid`);
+            return skinHtml;
+        } catch (error) {
+            console.log(`🤖 AI Web: MEC monthly skin failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing with the list skin`);
+            return '';
+        }
     }
 
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
