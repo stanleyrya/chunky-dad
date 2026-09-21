@@ -3699,8 +3699,18 @@ class SharedCore {
         if (!parsedA || !parsedB || parsedA.streetNumber !== parsedB.streetNumber) return false;
         if (parsedA.zips.length > 0 && parsedB.zips.length > 0
             && !parsedA.zips.some(zip => parsedB.zips.includes(zip))) return false;
-        const lineA = parsedA.streetLineTokens;
-        const lineB = parsedB.streetLineTokens;
+        // A floor or suite typed straight after the street with no comma
+        // ("232 W 37th St 2nd fl, New York…", Lodge NY's calendar) is part of
+        // the door, not of the street: the line ends where the unit begins.
+        const unitWord = /^(?:fl|floor|suite|ste|unit|apt|apartment|rm|room|level|lvl)$/;
+        const streetOnly = (tokens) => {
+            const at = tokens.findIndex(token => unitWord.test(token));
+            if (at < 0) return tokens;
+            const numbered = at > 0 && /^\d+(?:st|nd|rd|th)?$/.test(tokens[at - 1]);
+            return tokens.slice(0, numbered ? at - 1 : at);
+        };
+        const lineA = streetOnly(parsedA.streetLineTokens);
+        const lineB = streetOnly(parsedB.streetLineTokens);
         if (lineA.length === 0 || lineB.length === 0) return false;
         const [shorter, longer] = lineA.length <= lineB.length ? [lineA, lineB] : [lineB, lineA];
         if (!shorter.every((token, index) => token === longer[index])) return false;
@@ -22087,8 +22097,23 @@ class SharedCore {
             String((eventA && eventA._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
             String((eventB && eventB._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
         ].filter(Boolean);
-        const tokensA = this.getCrossSourceTitleTokens((eventA && (eventA.title || eventA.name)) || '', venueKeys);
-        const tokensB = this.getCrossSourceTitleTokens((eventB && (eventB.title || eventB.name)) || '', venueKeys);
+        // A brand prefix WE added ("Lodge NY: The Bear Party") is not part of
+        // what the source called the party: judged on the pre-prefix name
+        // (_titleBeforeBrandPrefix), or an aggregator's unprefixed copy of the
+        // very same title reads as "named differently" and never folds in
+        // (run 20260920-211133: Gathr's 12 Bear Party nights beside Lodge's).
+        // The stamp proves a prefix was added; the CURRENT title minus that
+        // prefix is the name (later cleanups — an address tail — apply to
+        // it, not to the stamped original).
+        const ownName = (event) => {
+            const title = String((event && (event.title || event.name)) || '');
+            const stamped = String((event && event._titleBeforeBrandPrefix) || '');
+            const cut = title.indexOf(': ');
+            if (!stamped || cut <= 0 || stamped.toLowerCase().startsWith(title.slice(0, cut + 2).toLowerCase())) return title;
+            return title.slice(cut + 2);
+        };
+        const tokensA = this.getCrossSourceTitleTokens(ownName(eventA), venueKeys);
+        const tokensB = this.getCrossSourceTitleTokens(ownName(eventB), venueKeys);
         if (tokensA.length === 0 || tokensB.length === 0) return false;
         if (tokensA.length === tokensB.length && tokensA.every(token => tokensB.includes(token))) return false;
         const setB = new Set(tokensB);

@@ -1073,6 +1073,8 @@ a { color:var(--accent); }
 .sheet-modes .mode b { font-size:16px; }
 .sheet-modes .mode span { font-size:12px; color:var(--muted); }
 .sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
+.sheet.fix-first .sheet-modes .mode:not(.mode-fix) { opacity:.45; }
+.sheet.fix-first .sheet-modes .mode-fix { border-width:2px; }
 .sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
 .waiting li .status { font-size:12px; color:var(--muted); }
 .series-note { margin-top:4px; color:var(--muted); font-size:12px; }
@@ -1150,7 +1152,7 @@ ${missingCalendarNotice}
   <button class="btn-skip" id="btn-skip" type="button">↷ Skip</button>
   <button class="btn-ok" id="btn-approve" type="button">✓ Approve</button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · n not bear · → approve · ␣ skip</div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · → approve · ␣ skip · n not bear</div>
 <div class="execute" id="execute"></div>
 <details class="decided waiting" id="waiting-wrap" hidden>
   <summary>🔧 Waiting on a fix <span id="waiting-count"></span></summary>
@@ -1324,7 +1326,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (!el) {
         el = document.createElement('div');
         el.setAttribute('data-key', item.key);
-        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">REJECT</div>';
+        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div>';
         el.className = 'card behind2';
         stage.appendChild(el);
         bindSplit(el, item);
@@ -1522,8 +1524,10 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     });
   }
   function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
-  function rejectTop() {
+  function rejectTop(fixFirst) {
     var c = topItem(); if (!c) return;
+    // Reached by a down-left swipe: the sheet opens on "needs a fix".
+    sheet.classList.toggle('fix-first', fixFirst === true);
     // A not-bear card gets the same three answers: some of them ARE bear
     // and need a fix, which a bare "confirmed" could never say.
     pending = c; openSheet(c);
@@ -1580,7 +1584,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     sheet.classList.add('open');
     setTimeout(function () { document.getElementById('sheet-text').focus(); }, 50);
   }
-  function closeSheet() { sheet.classList.remove('open'); pending = null; render(); }
+  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); pending = null; render(); }
   document.getElementById('sheet-cancel').onclick = closeSheet;
   function answerSheet(mode) {
     if (!pending) return closeSheet();
@@ -1618,11 +1622,29 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var startX = 0, startY = 0, dx = 0, dy = 0, active = false, moved = false, lockedH = false, lockedV = false;
     var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no');
     var frame = null;
+    // A left swipe has three directions: UP-left = not bear (done, no
+    // sheet), DOWN-left = needs a fix (the sheet opens on that answer), and
+    // level = the sheet as before. The angle has to be deliberate — a level
+    // swipe always wobbles a little — and the stamp names the answer while
+    // the finger is still down, so nothing is a surprise on release.
+    function leftZone() {
+      if (dx >= 0) return '';
+      var reach = Math.abs(dx);
+      if (dy < -50 && -dy > reach * 0.35) return 'notbear';
+      if (dy > 30 && dy > reach * 0.2) return 'fix';
+      return 'ask';
+    }
     function paint() {
       frame = null;
-      el.style.transform = 'translate3d(' + dx + 'px,' + (dy * 0.3) + 'px,0) rotate(' + (dx / 18) + 'deg)';
+      // Leftwards the card follows the finger's height, so the diagonal reads.
+      el.style.transform = 'translate3d(' + dx + 'px,' + (dy * (dx < 0 ? 0.7 : 0.3)) + 'px,0) rotate(' + (dx / 18) + 'deg)';
       if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
-      if (noStamp) noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+      if (noStamp) {
+        noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+        var zone = leftZone();
+        var label = zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
+        if (noStamp.textContent !== label) noStamp.textContent = label;
+      }
     }
     function reset() {
       if (frame) { cancelAnimationFrame(frame); frame = null; }
@@ -1661,7 +1683,11 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       active = false;
       if (frame) { cancelAnimationFrame(frame); frame = null; paint(); }
       if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
-      if (!cancelled && lockedH && dx < -110) { el.classList.remove('dragging'); reset(); rejectTop(); return; }
+      if (!cancelled && lockedH && dx < -110) {
+        var zone = leftZone();
+        if (zone === 'notbear') { notBearTop(); return; }
+        el.classList.remove('dragging'); reset(); rejectTop(zone === 'fix'); return;
+      }
       el.classList.remove('dragging');
       reset();
       if (!cancelled && !moved && !lockedV) tap(target);
@@ -1691,7 +1717,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
 
   document.getElementById('btn-approve').onclick = approveTop;
-  document.getElementById('btn-reject').onclick = rejectTop;
+  document.getElementById('btn-reject').onclick = function () { rejectTop(false); };
   document.getElementById('btn-skip').onclick = skipTop;
   document.getElementById('btn-undo').onclick = undoLast;
   document.addEventListener('keydown', function (e) {
@@ -1700,7 +1726,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (sheet.classList.contains('open')) { if (e.key === 'Escape') closeSheet(); return; }
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); approveTop(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(false); }
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
     else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); notBearTop(); }
     else if (e.key === 'z' || e.key === 'Z') { undoLast(); }

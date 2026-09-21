@@ -1169,6 +1169,8 @@ test('the review page offers the three left-swipe answers, a one-tap Not bear, a
   const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
   for (const id of ['sheet-fix', 'sheet-notbear', 'sheet-never', 'btn-notbear', 'waiting-wrap']) assert.ok(html.includes(`id="${id}"`), id);
   assert.ok(html.includes('Bear, but needs a fix'), 'a not-bear card gets the same three answers');
+  // Diagonal left swipes: up-left = not bear at once, down-left = the sheet opened on 'needs a fix'.
+  for (const piece of ['function leftZone()', "if (zone === 'notbear') { notBearTop(); return; }", "rejectTop(zone === 'fix')", 'NEEDS FIX', '↖ not bear · ↙ needs a fix', '.sheet.fix-first']) assert.ok(html.includes(piece), piece);
   assert.ok(!html.includes("if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }\n    pending = c; openSheet(c);"), 'a left swipe on a not-bear card opens the sheet');
   assert.ok(html.includes('"waitingGone":[{"key":"event|gone|bar|2030-01-05"'), 'orphaned notes ride into the client');
   assert.ok(!html.includes('id="sheet-reject"'), 'the single Reject button is gone');

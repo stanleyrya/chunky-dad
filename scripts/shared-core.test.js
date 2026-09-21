@@ -23997,7 +23997,16 @@ test('identity: two spellings of one street line are one place — an aggregator
   const copy = { title: 'The Bear Party', startDate: start, address: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', city: 'nyc' };
   assert.equal(core.getSameEventIdentitySignal(copy, organizer), 'place-time-name');
   assert.equal(core.getSameEventIdentitySignal({ ...copy, address: '457 W 56th St, 2nd Fl b/w 9th and 10th Avenues' }, organizer), null, 'the organizer\'s other loft is another place');
+  // The brand prefix is OURS: with the stamp it leaves (and the address tail the
+  // stamped original still carried), the copy's identical own name still matches.
+  const stamped = { ...organizer, address: '232 W 37th St 2nd fl, New York, NY 10018, USA', _titleBeforeBrandPrefix: 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues' };
+  assert.equal(core.getSameEventIdentitySignal(copy, stamped), 'place-time-name');
+  assert.equal(core.getSameEventIdentitySignal({ ...copy, title: "Dads 'n' Lads" }, stamped), null, 'another party in the same loft is another party');
   assert.equal(core.areSameStreetLine('232 W 37th St', '232 West 37th Street, New York'), true);
+  // Run 20260920-211133: Lodge's other spelling has no comma before the floor.
+  assert.equal(core.areSameStreetLine('232 W 37th St 2nd fl, New York, NY 10018, USA', '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues'), true);
+  assert.equal(core.areSameStreetLine('494 Plasters Ave NE Suite 200', '494 Plasters Avenue Northeast, Atlanta'), true);
+  assert.equal(core.areSameStreetLine('232 W 37th St 2nd fl', '232 W 38th St 2nd fl'), false);
   assert.equal(core.areSameStreetLine('232 W 38th St', '232 W 37th St'), false);
   assert.equal(core.areSameStreetLine('23 W 37th St', '232 W 37th St'), false);
   assert.equal(core.areSameStreetLine('232 W 37th St, NY 10018', '232 W 37th St, NY 10019'), false, 'two explicit ZIPs that disagree');
