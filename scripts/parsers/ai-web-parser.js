@@ -2959,6 +2959,10 @@ class AiWebParser {
             ocrResults: segmentOcrResults,
             segmentListingTitle: this.deriveSegmentListingTitle(segment),
             segmentDateContext: segmentDateContextLine,
+            // The card's own lines and the page's date anchor, for the
+            // printed-date fallback (see readCardPrintedDate).
+            segmentCardLines: segment && Array.isArray(segment.lines) ? segment.lines : [],
+            segmentPageDateContext: pageDateContext,
             // Multi-activity day-programme flag: steers the extraction prompt
             // (additive rule line) to name the day's most significant
             // activity rather than echoing the weekday heading. false for
@@ -21123,6 +21127,72 @@ TEXT:
         return dates;
     }
 
+    // A listing card's printed date, read without the model: { date:
+    // 'YYYY-MM-DD', line, startTime, endTime } or null.
+    //
+    // sf-eagle.com prints "FRI · OCT 02 / Queer Leather Happy Hour / 6 PM -
+    // 9 PM"; hereticatlanta.com prints "SATURDAY, OCT. 10 / 2pm-8pm / Queen
+    // Butch presents Bootea …". Both cards came back with a title and NO
+    // date (the model's date evidence failed the verbatim gate) and were
+    // discarded — silently, since a record with no date never becomes a
+    // card on the review deck either.
+    //
+    // Fails closed at every step:
+    //   • a DATE-ONLY line — weekday, separators, month, day, optional year
+    //     and nothing else. "on 20th September" inside a sentence is prose
+    //     (Eagle Manchester's description fragments), not the card's date;
+    //   • the whole card states exactly ONE month-and-day;
+    //   • the year is the card's own, else the page's month-matching year
+    //     anchor, else the nearest occurrence not more than a month past —
+    //     unpinned, so the usual year repair still applies downstream.
+    readCardPrintedDate(lines, pageDateContext = null, now = new Date()) {
+        const cardLines = (Array.isArray(lines) ? lines : []).map(line => this.normalizeWhitespace(String(line || ''))).filter(Boolean);
+        if (cardLines.length === 0 || cardLines.length > 12) return null;
+        const stated = this.collectCardStatedDates(cardLines);
+        if (stated.length === 0 || new Set(stated.map(date => `${date.month}-${date.day}`)).size !== 1) return null;
+        const vocab = this.getCardDateVocabulary();
+        const leftoverWords = new RegExp(`\\b(?:${vocab.monthAlternation}|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|st|nd|rd|th|of|de)\\b`, 'gi');
+        let dateLine = '';
+        for (const line of cardLines) {
+            if (this.collectCardStatedDates([line]).length === 0) continue;
+            const leftover = this.foldDiacritics(line).replace(leftoverWords, ' ').replace(/\b\d{1,4}\b/g, ' ').replace(/[^a-z]+/gi, '');
+            if (leftover === '') { dateLine = line; break; }
+        }
+        if (!dateLine) return null;
+        const card = stated.find(date => Number.isFinite(date.year)) || stated[0];
+        let year = Number.isFinite(card.year) ? card.year
+            : (pageDateContext && pageDateContext.month === card.month && Number.isFinite(pageDateContext.year) ? pageDateContext.year : null);
+        // A weekday printed on the date line is a check on the year: "FRI ·
+        // OCT 02" must BE a Friday. With no stated year, the candidate years
+        // are tried nearest-first and the first that agrees wins; a stated
+        // year that disagrees, or no agreeing year at all, reads nothing.
+        const weekdayMatch = /\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/i.exec(this.foldDiacritics(dateLine));
+        const weekdayIndex = weekdayMatch ? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(weekdayMatch[1].toLowerCase()) : -1;
+        const agrees = (candidate) => new Date(Date.UTC(candidate, card.month - 1, card.day)).getUTCDate() === card.day
+            && (weekdayIndex < 0 || new Date(Date.UTC(candidate, card.month - 1, card.day)).getUTCDay() === weekdayIndex);
+        if (Number.isFinite(year)) {
+            if (!agrees(year)) return null;
+        } else {
+            let first = now.getUTCFullYear();
+            if (Date.UTC(first, card.month - 1, card.day) < now.getTime() - 31 * 24 * 60 * 60 * 1000) first += 1;
+            year = [first, first + 1, first - 1].find(agrees);
+            if (!Number.isFinite(year)) return null;
+        }
+        const pad = (value) => String(value).padStart(2, '0');
+        // A line that is nothing but a clock range: "6 PM - 9 PM", "2pm-8pm".
+        let startTime = '';
+        let endTime = '';
+        const clock = (hour, minute, meridiem) => { let h = Number(hour) % 12; if (/p/i.test(meridiem)) h += 12; return `${pad(h)}:${minute || '00'}`; };
+        for (const line of cardLines) {
+            const range = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?\s*(?:-|–|—|to)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i.exec(line);
+            if (!range) continue;
+            startTime = clock(range[1], range[2], range[3]);
+            endTime = clock(range[4], range[5], range[6]);
+            break;
+        }
+        return { date: `${year}-${pad(card.month)}-${pad(card.day)}`, line: dateLine, startTime, endTime };
+    }
+
     // A page that prints a date for its card has said when the event is. The
     // flyer beside it is artwork, and artwork is routinely LAST YEAR's:
     // beefdip.com/planned-events runs its 2027 programme under 21 flyers
@@ -21763,6 +21833,22 @@ TEXT:
             ))
             : '';
 
+        // THE CARD PRINTS ITS DATE. When the model's date did not survive
+        // (dropped by the evidence gate, or never returned) and this is a
+        // listing card with a line that is nothing but a date, that line is
+        // the date — see readCardPrintedDate. Never overrides a date the
+        // model did return.
+        if (!this.firstNonEmpty(aiEvent.startDate, aiEvent.start, '') && htmlData && Array.isArray(htmlData.segmentCardLines)) {
+            const printed = this.readCardPrintedDate(htmlData.segmentCardLines, htmlData.segmentPageDateContext);
+            if (printed) {
+                aiEvent.startDate = printed.date;
+                if (!this.firstNonEmpty(aiEvent.startTime, '') && printed.startTime) {
+                    aiEvent.startTime = printed.startTime;
+                    if (!this.firstNonEmpty(aiEvent.endTime, aiEvent.end, '') && printed.endTime) aiEvent.endTime = printed.endTime;
+                }
+                console.log(`📅 AI Web: "${title || 'Unknown'}" — the model's date did not survive; the card itself prints "${printed.line}" → ${printed.date}${printed.startTime && aiEvent.startTime === printed.startTime ? ` ${printed.startTime}` : ''}`);
+            }
+        }
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
         let startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
