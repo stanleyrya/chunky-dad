@@ -367,6 +367,24 @@
     "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0"
   },
   {
+    "slug": "cake-sunday-tea-1bcaccc6",
+    "paletteSource": "flyer",
+    "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
+    "accent": "#c05742"
+  },
+  {
+    "slug": "cake-sunday-tea-21b268bd",
+    "paletteSource": "flyer",
+    "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
+    "accent": "#c05742"
+  },
+  {
+    "slug": "cake-sunday-tea-6a45268d",
+    "paletteSource": "flyer",
+    "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
+    "accent": "#c05742"
+  },
+  {
     "slug": "chunk-brooklyn-31b4fb03",
     "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
     "faviconBg": "#f6f4f5",
@@ -545,18 +563,30 @@
   },
   {
     "slug": "gorditos-0f31acb7",
+    "url": "https://www.rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
     "accent": "#d5ad8c"
   },
   {
     "slug": "gorditos-28f1826f",
+    "url": "https://www.rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
     "accent": "#d5ad8c"
   },
   {
     "slug": "gorditos-2dd5a849",
+    "url": "https://www.rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
     "accent": "#d5ad8c"
@@ -829,6 +859,16 @@
   },
   {
     "slug": "urban-bear-mega-bear-blast-at-rockbar-435aeee7",
+    "url": "https://www.theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1a1614:69:1 #624214:8:7 #ffffff:7:0 #ef8811:5:17 #f6cf05:5:18",
+    "accent": "#f6cf05"
+  },
+  {
+    "slug": "urban-bear-mega-bear-blast-closing-night-party-435aeee7",
     "url": "https://www.theurbanbear.com",
     "faviconBg": "#141414",
     "faviconFg": "#dcdcdc",

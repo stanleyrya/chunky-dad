@@ -25,6 +25,12 @@
     "coordinates": "33.8116248, -84.3726225",
     "website": "https://woofsatlanta.com",
     "instagram": "https://www.instagram.com/woofsatlanta",
-    "facebook": "https://www.facebook.com/WoofsAtlanta"
+    "facebook": "https://www.facebook.com/WoofsAtlanta",
+    "faviconBg": "#461b22",
+    "faviconFg": "#f1f1f1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:61:0 #040304:19:0 #d91f3c:6:21 #982436:3:15",
+    "accent": "#d91f3c"
   }
 ]

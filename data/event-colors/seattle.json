@@ -50,6 +50,46 @@
     "accent": "#d26c43"
   },
   {
+    "slug": "game-night-04c4d493",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
+    "slug": "game-night-4d232090",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
+    "slug": "game-night-56c4b379",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
+    "slug": "game-night-6f4582b4",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
     "slug": "leather-night-51e2ca8d",
     "url": "https://dieselseattle.com/DIESEL.html",
     "faviconBg": "#efeeed",

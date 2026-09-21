@@ -172,6 +172,33 @@
     "accent": "#3b3386"
   },
   {
+    "slug": "growth-0e8484a3",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+  },
+  {
+    "slug": "growth-2a3e92d3",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+  },
+  {
+    "slug": "growth-6d76c12c",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+  },
+  {
     "slug": "hot-take-portland-46ec04ba",
     "url": "https://bearracuda.com/events/hottakepdx/",
     "faviconBg": "#ff1901",

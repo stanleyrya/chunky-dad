@@ -18,5 +18,15 @@
     "paletteSource": "flyer",
     "palette": "#000b3d:69:10 #eed99a:25:8 #545365:3:3 #333654:2:5",
     "accent": "#000b3d"
+  },
+  {
+    "slug": "leather-bears-0fb7b9c8",
+    "url": "https://campoutpoconos.com",
+    "faviconBg": "#f4f3ef",
+    "faviconFg": "#60514d",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#130a04:25:2 #c5894c:21:11 #efab40:15:14 #9d6b3c:13:9 #744425:11:8",
+    "accent": "#efab40"
   }
 ]

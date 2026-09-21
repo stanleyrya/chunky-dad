@@ -217,6 +217,26 @@
     "accent": "#e81c33"
   },
   {
+    "slug": "daddy-day-care-folsom-saturday-3c8e8424",
+    "url": "https://www.sf-eagle.com/events/daddy-day-care-folsom-saturday/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b41b4b:29:19 #bb2c9c:21:21 #644883:12:10 #de71bb:9:16 #8c83aa:7:6",
+    "accent": "#bb2c9c"
+  },
+  {
+    "slug": "disco-daddy-folsom-54c64957",
+    "url": "https://www.sf-eagle.com/events/disco-daddy-folsom/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fffffd:56:0 #ed1b24:15:23 #010100:12:1 #cd9195:5:7",
+    "accent": "#ed1b24"
+  },
+  {
     "slug": "father-figure-22ce3590",
     "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
     "faviconBg": "#f6f4f5",
@@ -236,6 +256,16 @@
     "palette": "#000000:66:0 #ffffff:27:0 #a3a3a3:3:0"
   },
   {
+    "slug": "grunt-party-sf-6e1e3ec8",
+    "url": "https://gruntparty.monster/",
+    "faviconBg": "#d02a2a",
+    "faviconFg": "#200d0e",
+    "faviconPlate": "#e32323",
+    "paletteSource": "flyer",
+    "palette": "#050608:37:1 #f3e5cc:17:4 #e4acae:12:7 #e55b5b:9:17 #a27a7c:8:5",
+    "accent": "#e55b5b"
+  },
+  {
     "slug": "hot-gogo-bears-227d733c",
     "url": "https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th",
     "faviconBg": "#f6f4f5",
@@ -244,6 +274,16 @@
     "paletteSource": "flyer",
     "palette": "#a74044:16:14 #51392d:16:4 #ea6d4c:13:16 #e3c98e:11:8 #463a76:8:10",
     "accent": "#ea6d4c"
+  },
+  {
+    "slug": "leather-and-gear-happy-hour-0e4b1086",
+    "url": "https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-gear-happy-hour",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#c38c83:17:7 #936c6c:15:5 #6a4543:15:5 #c4453f:5:16",
+    "accent": "#c4453f"
   },
   {
     "slug": "megawoof-170d257e",

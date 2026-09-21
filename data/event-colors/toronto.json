@@ -36,6 +36,46 @@
     "accent": "#332a85"
   },
   {
+    "slug": "daddy-next-door-3671dd4c",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3d242b:55:4 #a69aa6:10:2 #6b8395:10:4 #cc2f38:4:19",
+    "accent": "#cc2f38"
+  },
+  {
+    "slug": "northern-bear-bash-1bafd517",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cccccc:32:0 #f6f5f9:19:1 #a4a4a4:17:0 #eb0b85:13:25 #f3a42c:4:15",
+    "accent": "#eb0b85"
+  },
+  {
+    "slug": "northern-bear-bash-30ce7df4",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cccccc:32:0 #f6f5f9:19:1 #a4a4a4:17:0 #eb0b85:13:25 #f3a42c:4:15",
+    "accent": "#eb0b85"
+  },
+  {
+    "slug": "northern-bear-bash-56388629",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cccccc:32:0 #f6f5f9:19:1 #a4a4a4:17:0 #eb0b85:13:25 #f3a42c:4:15",
+    "accent": "#eb0b85"
+  },
+  {
     "slug": "playground-toronto-2a1597db",
     "url": "https://www.bearitmtl.com/event/playground-toronto/",
     "faviconBg": "#1a1a1a",

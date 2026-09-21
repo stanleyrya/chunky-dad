@@ -1,5 +1,25 @@
 [
   {
+    "slug": "bear-happy-hour-11795126",
+    "url": "https://jackhammerchicago.com",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cc6512:35:15 #e5e1de:28:1 #1b1513:11:1 #c69275:6:7 #9e654b:4:8",
+    "accent": "#cc6512"
+  },
+  {
+    "slug": "bear-happy-hour-1e5d33be",
+    "url": "https://jackhammerchicago.com",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#11100e:39:0 #e5e1de:28:1 #ad7b64:7:7 #7c4c38:6:7 #e5ad1c:6:15",
+    "accent": "#e5ad1c"
+  },
+  {
     "slug": "bear-happy-hour-50e80e42",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
@@ -8,6 +28,96 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
     "accent": "#f2592a"
+  },
+  {
+    "slug": "bearaoke-00e30733",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-0801096a",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-14f03088",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-20a730d9",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-2ed6be69",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-30c5d766",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-3349066d",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-773ce50c",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
+  },
+  {
+    "slug": "bearaoke-77e8361a",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#312d2b:20:1 #f8f6f2:16:1 #5a4c3a:14:3 #8c6c5a:11:5 #9c1b0a:3:17",
+    "accent": "#9c1b0a"
   },
   {
     "slug": "bearracuda-chicago-jockstrap-party-tix-at-the-door-17cea9ba",
@@ -159,6 +269,126 @@
     "accent": "#d54721"
   },
   {
+    "slug": "grrr-chicagos-original-bear-night-06605fe5",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-1079d587",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-1abe4d73",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-3a02d8d3",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-3a0685a4",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-3d3b7659",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-46b8896f",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-5d331e38",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-5f6e6f11",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-5f888843",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-74a1f1a8",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
+    "slug": "grrr-chicagos-original-bear-night-79aa9983",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:27:0 #130d0a:20:1 #3b2a1c:16:3 #d7c587:6:8 #f76c0e:2:19",
+    "accent": "#f76c0e"
+  },
+  {
     "slug": "market-day-1-35c3f1a2",
     "url": "https://northalsted.com/main-events/northalsted-market-days/",
     "faviconBg": "#477789",
@@ -213,6 +443,126 @@
     "paletteSource": "flyer",
     "palette": "#ab865a:25:8 #864c3b:19:8 #422924:13:4 #f1592a:11:20 #ddf60d:2:21",
     "accent": "#f1592a"
+  },
+  {
+    "slug": "nerd-bear-trivia-0c811d4f",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-1a711073",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-1bb51342",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-26470e7a",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-5698858f",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-62f18a11",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-64cbb329",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-65b058a6",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-689b0ec6",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-6ba9f1d0",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-6c0d4e33",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
+  },
+  {
+    "slug": "nerd-bear-trivia-7762d28c",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#242424:28:0 #3b3b3b:24:0 #110f11:14:0 #cdb261:9:11 #58a09d:8:7",
+    "accent": "#cdb261"
   },
   {
     "slug": "new-years-eve-3afe095d",

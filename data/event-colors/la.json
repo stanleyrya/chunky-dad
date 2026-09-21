@@ -240,6 +240,16 @@
     "accent": "#ec3985"
   },
   {
+    "slug": "bear-happy-hour-62645b89",
+    "url": "https://precinctdtla.com/10-29-26/bear-happy-hour-7/",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
+  },
+  {
     "slug": "bear-happy-hour-67a26f5d",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
@@ -327,6 +337,16 @@
     "accent": "#e43383"
   },
   {
+    "slug": "club-chub-46817f0b",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:63:0 #e43383:26:22 #eb6aa5:4:17 #ef85b5:4:14 #f9cfe2:4:5",
+    "accent": "#e43383"
+  },
+  {
     "slug": "club-chub-dtla-latin-night-190605ad",
     "url": "https://www.clubchubusa.com",
     "faviconBg": "#e43383",
@@ -365,6 +385,16 @@
     "paletteSource": "flyer",
     "palette": "#f8f9f5:36:0 #dfe1d3:24:2 #74ec93:18:17 #e3aad7:7:9 #ad7aa5:6:9",
     "accent": "#74ec93"
+  },
+  {
+    "slug": "coach-after-dark-22ce13f0",
+    "url": "https://precinctdtla.com/10-2-26/coach-after-dark-4/",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
   },
   {
     "slug": "cruise-la-leather-and-bootblack-2027-contest-25d72c5d",

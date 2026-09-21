@@ -20,6 +20,16 @@
     "accent": "#e4b354"
   },
   {
+    "slug": "bullpen-23ee7c2f",
+    "url": "https://eaglebarwm.com/event/bullpen/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#120e0a:52:1 #342a1c:13:3 #63462b:10:6 #8d6c4c:9:6 #bba485:7:5",
+    "accent": "#8d6c4c"
+  },
+  {
     "slug": "cannonball-bash-2026-72ca808d",
     "url": "https://cannonballbash.com/product/registration-package/",
     "faviconBg": "#e05f03",
@@ -138,6 +148,16 @@
     "paletteSource": "flyer",
     "palette": "#2b2523:28:1 #070906:16:1 #493732:16:3 #bd8964:10:8 #fd7dac:2:16",
     "accent": "#fd7dac"
+  },
+  {
+    "slug": "daddy-pop-1a5fc9d6",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-18/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
   },
   {
     "slug": "daddy-pop-1ef4ee62",

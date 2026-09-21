@@ -22,6 +22,16 @@
     "accent": "#ea0a8e"
   },
   {
+    "slug": "bearaoke-0ef1f997",
+    "url": "https://beefdip.com/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#e49b5c:21:12 #faecab:20:8 #c3633b:15:13 #8c3b35:12:11 #ecc37d:12:10",
+    "accent": "#c3633b"
+  },
+  {
     "slug": "bearsgiving-2026-6d123f30",
     "paletteSource": "flyer",
     "palette": "#8d6a5b:24:5 #b47c52:20:9 #e49a3c:18:14 #dd4f8b:2:18",
