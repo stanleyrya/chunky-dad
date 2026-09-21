@@ -974,8 +974,59 @@ function buildDeck(runPayload, store, options = {}) {
     // event is in this run (dropped), so its note is not orphaned.
     const presentKeys = new Set(cards.concat(decided).flatMap((entry) => (entry.fixTarget && entry.fixTarget.key ? [entry.key, entry.fixTarget.key] : [entry.key])));
     const presentSeries = new Set(cards.concat(decided).map((entry) => SharedCore.getOwnerReviewSeriesKey(entry.key)).filter(Boolean));
-    const waitingGone = decisions
-        .filter((decision) => SharedCore.getOwnerRejectionMode(decision) === 'fix' && !presentKeys.has(decision.key))
+    // A FIX OFTEN RENAMES THE CARD. The review key carries the title, so
+    // "The Bear Party" sent back for a better name returns as "Lodge NY: The
+    // Bear Party" — a brand-new card — while the note that asked for it sat
+    // here as "waiting", unattached (2026-09-21: 20 of 20 waiting notes were
+    // exactly this). A note whose place and day are on this deck under
+    // another title has been ANSWERED: it rides on that card as its `prior`
+    // ("you sent this back: …"), and is not listed as waiting. A note for a
+    // night already past has nothing left to wait for either.
+    const placeDayOf = (key) => { const parts = String(key || '').split('|'); return parts[0] === 'event' && parts.length >= 4 ? `${parts[2]}|${parts[3]}` : ''; };
+    const presentByPlaceDay = new Map();
+    for (const entry of cards.concat(decided)) {
+        const placeDay = placeDayOf(entry.key);
+        if (placeDay && !presentByPlaceDay.has(placeDay)) presentByPlaceDay.set(placeDay, entry);
+    }
+    // …and a note can be answered with NO card left to show it on: the fixed
+    // event was approved and written, so this run only proposes a no-op
+    // merge for it (2026-09-21: 16 "The Bear Party" notes waiting on nights
+    // already saved as "Lodge NY: The Bear Party"). Same local day, same
+    // city, a name that still reads as the same party → answered.
+    const runEventsByDay = new Map();
+    for (const event of Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : []) {
+        const day = String(core.getOwnerReviewKey(event) || '').split('|')[3] || '';
+        if (!day) continue;
+        if (!runEventsByDay.has(day)) runEventsByDay.set(day, []);
+        runEventsByDay.get(day).push(event);
+    }
+    const answeredByRunEvent = (decision) => {
+        const snapshot = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : {};
+        const title = String(snapshot.title || '').trim();
+        const day = String(decision.key || '').split('|')[3] || '';
+        if (!title || !day) return false;
+        return (runEventsByDay.get(day) || []).some((event) => String(event.title || '').trim() !== title
+            && (!snapshot.city || !event.city || snapshot.city === event.city)
+            && core.areTitlesSimilar(title, event.title));
+    };
+    const unanswered = [];
+    for (const decision of decisions) {
+        if (SharedCore.getOwnerRejectionMode(decision) !== 'fix' || presentKeys.has(decision.key)) continue;
+        const startMs = SharedCore.toEpochMillis(decision.snapshot && decision.snapshot.startDate);
+        if (startMs !== null && startMs < now) continue;
+        const answer = presentByPlaceDay.get(placeDayOf(decision.key));
+        if (answer) {
+            if (!answer.prior && !answer.decision) {
+                const wasTitle = (decision.snapshot && decision.snapshot.title) || '';
+                answer.prior = { verdict: 'reject', stampedAt: decision.stampedAt || null, reason: decision.reason || null,
+                    drift: wasTitle && wasTitle !== answer.proposal.title ? [`title (was “${wasTitle}”)`] : ['title'] };
+            }
+            continue;
+        }
+        if (answeredByRunEvent(decision)) continue;
+        unanswered.push(decision);
+    }
+    const waitingGone = unanswered
         .map((decision) => ({
             key: decision.key,
             kind: decision.kind || 'new',

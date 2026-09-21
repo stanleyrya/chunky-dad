@@ -308,6 +308,34 @@ test('buildDeck: a not-bear card carries the event\'s own review key, so "bear, 
   assert.equal(fixed.cards.filter((entry) => entry.kind === 'new').length, 1, 'changed: back on the stack');
 });
 
+test('buildDeck: a "needs a fix" note whose fix RENAMED the card rides on the renamed card; a note for a night already past is not waiting', () => {
+  const day = iso(FUTURE);
+  const before = { ...newEvent(), _action: 'new', _existingEvent: undefined, _original: undefined, _changes: undefined, title: 'The Bear Party', bar: '', address: '232 W 37th St, New York, NY', url: '', startDate: day, endDate: day };
+  const after = { ...before, title: 'Lodge NY: The Bear Party' };
+  const sentBack = deckOf(runPayload({ analyzedEvents: [before] })).cards[0];
+  const note = rq.buildDecision({ key: sentBack.key, kind: 'new', verdict: 'reject', snapshot: sentBack.proposal, reason: { mode: 'fix', tags: ['wrong title'], text: 'not descriptive enough' } });
+  const pastNote = rq.buildDecision({ key: 'event|old party|somewhere|2020-01-01', kind: 'new', verdict: 'reject', snapshot: { title: 'Old Party', startDate: '2020-01-01T02:00:00.000Z' }, reason: { mode: 'fix', tags: [], text: 'x' } });
+  const goneNote = rq.buildDecision({ key: 'event|vanished party|elsewhere|2030-12-01', kind: 'new', verdict: 'reject', snapshot: { title: 'Vanished Party', startDate: '2030-12-01T02:00:00.000Z' }, reason: { mode: 'fix', tags: [], text: 'y' } });
+  let store = rq.emptyDecisionStore();
+  for (const decision of [note, pastNote, goneNote]) store = rq.upsertDecision(store, decision);
+
+  const deck = deckOf(runPayload({ analyzedEvents: [after] }), store);
+  const renamed = deck.cards.find((card) => card.proposal.title === 'Lodge NY: The Bear Party');
+  assert.ok(renamed, 'the fixed card is back on the stack');
+  assert.equal(renamed.prior.verdict, 'reject');
+  assert.equal(renamed.prior.reason.text, 'not descriptive enough', 'your note rides on it');
+  assert.deepEqual(renamed.prior.drift, ['title (was “The Bear Party”)']);
+  assert.deepEqual(deck.waitingGone.map((entry) => entry.title), ['Vanished Party'], 'answered and past notes are not "waiting"; a truly missing future one still is');
+
+  // The fixed night was approved and written: this run only proposes a no-op
+  // merge for it, so there is no card — the note is answered all the same,
+  // even when the old card had no place of its own (an aggregator's copy).
+  const placeless = rq.buildDecision({ key: 'event|bear party|nyc|' + sentBack.key.split('|')[3], kind: 'new', verdict: 'reject', snapshot: { title: 'The Bear Party', city: 'nyc', startDate: day }, reason: { mode: 'fix', tags: [], text: 'merge with lodge?' } });
+  const saved = { ...after, _action: 'merge', _mergeNoOp: true, _changes: ['notes'], _existingEvent: { title: after.title }, _original: { scraper: {}, calendar: { title: after.title } } };
+  const settled = deckOf(runPayload({ analyzedEvents: [saved] }), rq.upsertDecision(store, placeless));
+  assert.deepEqual(settled.waitingGone.map((entry) => entry.title), ['Vanished Party']);
+});
+
 test('buildDeck: dropped-as-not-bear events become one card per party (future only), decided once a verdict is stored', () => {
   const dropped = (title, start, reason = 'ai: no bear language') => ({
     title, startDate: start, venue: '3 Dollar Bill', reason, host: 'www.3dollarbillbk.com',
