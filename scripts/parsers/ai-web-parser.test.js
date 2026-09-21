@@ -18780,6 +18780,25 @@ test('MEC full calendar on its list skin: the monthly skin is asked for once and
   assert.equal(posts.length, 1);
 });
 
+test('readCardPrintedDate: a listing card\'s date-only line is read without the model — and nothing looser is', () => {
+  const parser = createParser();
+  const now = new Date('2026-09-21T12:00:00Z');
+  assert.deepEqual(parser.readCardPrintedDate(['FRI · OCT 02', 'Queer Leather Happy Hour', '6 PM - 9 PM'], null, now),
+    { date: '2026-10-02', line: 'FRI · OCT 02', startTime: '18:00', endTime: '21:00' });
+  assert.deepEqual(parser.readCardPrintedDate(['SATURDAY, OCT. 10', '2pm-8pm', 'Queen Butch presents Bootea w/ The Carry Nation'], null, now),
+    { date: '2026-10-10', line: 'SATURDAY, OCT. 10', startTime: '14:00', endTime: '20:00' });
+  assert.equal(parser.readCardPrintedDate(['SAT · JAN 09', 'New Year Party'], null, now).date, '2027-01-09', 'a January card in September is next January');
+  assert.equal(parser.readCardPrintedDate(['October 10, 2027', 'Gala'], null, now).date, '2027-10-10');
+  // The printed weekday is a check on the year: Oct 2 is a Friday in 2026, a Saturday in 2027.
+  assert.equal(parser.readCardPrintedDate(['SAT · OCT 02', 'Party'], null, now).date, '2027-10-02');
+  assert.equal(parser.readCardPrintedDate(['Monday, October 10, 2026', 'Party'], null, now), null, 'a stated year whose weekday disagrees reads nothing');
+  // Prose is not a date line; two dates decide nothing; a page of text is not a card.
+  assert.equal(parser.readCardPrintedDate(['Gladys Duffy is back at the helm of Sunday Service on 20th September, hosting her special guest.'], null, now), null);
+  assert.equal(parser.readCardPrintedDate(['FRI · OCT 02', 'Party', 'Also Oct 9 next week'], null, now), null);
+  assert.equal(parser.readCardPrintedDate(Array.from({ length: 13 }, (_, i) => (i === 0 ? 'FRI · OCT 02' : `line ${i}`)), null, now), null);
+  assert.equal(parser.readCardPrintedDate(['Queer Leather Happy Hour', '6 PM - 9 PM'], null, now), null);
+});
+
 test('a description block repeated across a feed’s rows is chrome', () => {
   const parser = createParser();
   const rows = [
