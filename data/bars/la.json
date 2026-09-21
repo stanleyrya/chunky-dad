@@ -26,12 +26,12 @@
     "facebook": "https://www.facebook.com/precinctdtla",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI",
     "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z",
     "faviconBg": "#23252b",
     "faviconFg": "#86878c",
-    "faviconPlate": "#22242a",
     "paletteSource": "favicon",
-    "palette": "#22242a:89:1 #d4d5da:4:1 #a3a5aa:3:1"
+    "palette": "#22242a:89:1 #d4d5da:4:1 #a3a5aa:3:1",
+    "faviconPlate": "#22242a",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z"
   },
   {
     "name": "Akbar",
