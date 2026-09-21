@@ -6,6 +6,110 @@
   "events": [
     {
       "name": "FURBALL CAMP",
+      "day": "Saturday",
+      "time": "9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.0219799,
+        "lng": -75.1167816
+      },
+      "startDate": "2026-08-22T21:00:00",
+      "unprocessedDescription": "description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp\r\ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\naddress: 446 MT NEBO RD, EAST STROUDSBURG, PA, 18301\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
+      "uid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Camp",
+      "image": "https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "EXPERIENCE THE PREMIER LGBT+ CAMPGROUND",
+      "cadence": null,
+      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA, 18301",
+      "website": "https://furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furball-camp-4b98e73b"
+    },
+    {
+      "name": "LEATHER BEARS",
+      "day": "Friday",
+      "time": "7:57AM-7:57AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.0219799,
+        "lng": -75.1167816
+      },
+      "startDate": "2026-10-09T07:57:00",
+      "endDate": "2026-10-12T07:57:00",
+      "unprocessedDescription": "description: Leather Bear Weekend hits hard as we celebrate Nat\rional Coming OUT Day with fur, gear, and unapologetic heat taking over camp. Days stay charged with cigar socials, gear meetups, pup play, and sweaty outdoor hangs that turn flirty fast. Nights crank the dial with harnesses, jocks, cruising energy, and dance floors thick with swagger and leather. It’s a full-force, full-freedom weekend built for anyone ready to show OUT, come OUT, and lean into the wildest side of fall. BOOK HERE\ntimezone: America/New_York\nwebsite: https://campoutpoconos.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg\nimageSource: page\nimageVertical: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg\nbar: Camp Out\nbarSource: venue-site-identity\naddress: 446 MT NEBO RD, EAST STROUDSBURG, PA, 18301\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Camp%20Out%2C%20446%20MT%20NEBO%20RD%2C%20EAST%20STROUDSBURG%2C%20PA%2C%2018301\ninstagram: https://www.instagram.com/campoutpoconos\nkey: leather-bears|2026-10-09|camp out\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "0A3470C9-E5D4-4CE1-8660-69B09BF18D14",
+      "uid": "0A3470C9-E5D4-4CE1-8660-69B09BF18D14",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Camp Out",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg",
+      "imageVertical": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg",
+      "tea": "Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp. Days stay charged with cigar socials, gear meetups, pup play, and sweaty outdoor hangs that turn flirty fast. Nights crank the dial with harnesses, jocks, cruising energy, and dance floors thick with swagger and leather. It’s a full-force, full-freedom weekend built for anyone ready to show OUT, come OUT, and lean into the wildest side of fall. BOOK HERE",
+      "cadence": null,
+      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA, 18301",
+      "website": "https://campoutpoconos.com",
+      "instagram": "https://www.instagram.com/campoutpoconos",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Camp%20Out%2C%20446%20MT%20NEBO%20RD%2C%20EAST%20STROUDSBURG%2C%20PA%2C%2018301",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://campoutpoconos.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/campoutpoconos",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Camp%20Out%2C%20446%20MT%20NEBO%20RD%2C%20EAST%20STROUDSBURG%2C%20PA%2C%2018301",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "leather-bears-0fb7b9c8"
+    },
+    {
+      "name": "FURBALL CAMP",
       "day": "Friday",
       "time": null,
       "eventType": "routine",
@@ -63,58 +167,6 @@
         }
       ],
       "slug": "furball-camp-6c5d7621"
-    },
-    {
-      "name": "FURBALL CAMP",
-      "day": "Saturday",
-      "time": "9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.0219799,
-        "lng": -75.1167816
-      },
-      "startDate": "2026-08-22T21:00:00",
-      "unprocessedDescription": "description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp\r\ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\naddress: 446 MT NEBO RD, EAST STROUDSBURG, PA, 18301\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
-      "uid": "52BBD6C3-0B99-4677-8317-9CF0FF2D5C36",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Camp",
-      "image": "https://static.wixstatic.com/media/238fae_aa9b72943a28499cba999916dce29d49~mv2.png",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "EXPERIENCE THE PREMIER LGBT+ CAMPGROUND",
-      "cadence": null,
-      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA, 18301",
-      "website": "https://furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
-      "shortName": "FUR­BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "furball-camp-4b98e73b"
     }
   ]
 }

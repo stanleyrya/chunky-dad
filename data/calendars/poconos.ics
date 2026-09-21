@@ -6,9 +6,64 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-poconos
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART:20260823T010000Z
+DTSTAMP:20260921T002121Z
+UID:52BBD6C3-0B99-4677-8317-9CF0FF2D5C36
+CREATED:20260821T175546Z
+DESCRIPTION:description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp
+ \ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238
+ fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\
+ naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\, 18301\ninstagram: https:
+ //instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.e
+ e/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSo
+ urce: curated\naddressSource: curated\nimageSource: page\ngmaps: https://ww
+ w.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816
+LAST-MODIFIED:20260821T203005Z
+LOCATION:41.0219799\, -75.1167816
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL CAMP
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261009T115700Z
+DTEND:20261012T115700Z
+DTSTAMP:20260921T002121Z
+UID:0A3470C9-E5D4-4CE1-8660-69B09BF18D14
+CREATED:20260920T233639Z
+DESCRIPTION:description: Leather Bear Weekend hits hard as we celebrate Nat
+ ional Coming OUT Day with fur\, gear\, and unapologetic heat taking over ca
+ mp. Days stay charged with cigar socials\, gear meetups\, pup play\, and sw
+ eaty outdoor hangs that turn flirty fast. Nights crank the dial with harnes
+ ses\, jocks\, cruising energy\, and dance floors thick with swagger and lea
+ ther. It’s a full-force\, full-freedom weekend built for anyone ready to sh
+ ow OUT\, come OUT\, and lean into the wildest side of fall. BOOK HERE\ntime
+ zone: America/New_York\nwebsite: https://campoutpoconos.com\nimage: https:/
+ /files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-4
+ 73d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg\nimageSource: page\nimag
+ eVertical: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d91
+ 1d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg\nbar: 
+ Camp Out\nbarSource: venue-site-identity\naddress: 446 MT NEBO RD\, EAST ST
+ ROUDSBURG\, PA\, 18301\naddressSource: curated\npinSource: curated\ngmaps: 
+ https://www.google.com/maps/search/?api=1&query=Camp%20Out%2C%20446%20MT%20
+ NEBO%20RD%2C%20EAST%20STROUDSBURG%2C%20PA%2C%2018301\ninstagram: https://ww
+ w.instagram.com/campoutpoconos\nkey: leather-bears|2026-10-09|camp out\nbea
+ rSource: keyword
+LAST-MODIFIED:20260920T233639Z
+LOCATION:41.0219799\, -75.1167816
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LEATHER BEARS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260821T040000Z
 DTEND:20260824T035959Z
-DTSTAMP:20260824T214542Z
+DTSTAMP:20260921T002121Z
 UID:4796AF76-FCF2-40C4-B409-34F788DC8EB8
 CREATED:20260701T132044Z
 DESCRIPTION:bar: Camp Out\naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\
@@ -22,28 +77,6 @@ DESCRIPTION:bar: Camp Out\naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\
  SUN - DANCING\nPOOL PARTIES - BEARS\npinSource: curated\naddressSource: cur
  ated\nimageSource: page\nbarSource: curated\ngmaps: https://maps.app.goo.gl
  /LYwCKGeMJAJTy8hx9?g_st=ic
-LAST-MODIFIED:20260821T203005Z
-LOCATION:41.0219799\, -75.1167816
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL CAMP
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260823T010000Z
-DTSTAMP:20260824T214542Z
-UID:52BBD6C3-0B99-4677-8317-9CF0FF2D5C36
-CREATED:20260821T175546Z
-DESCRIPTION:description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp
- \ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238
- fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\
- naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\, 18301\ninstagram: https:
- //instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.e
- e/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSo
- urce: curated\naddressSource: curated\nimageSource: page\ngmaps: https://ww
- w.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816
 LAST-MODIFIED:20260821T203005Z
 LOCATION:41.0219799\, -75.1167816
 SEQUENCE:0

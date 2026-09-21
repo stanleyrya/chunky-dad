@@ -6,53 +6,25 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-atlanta
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260208T030000Z
-DTEND:20260208T080000Z
-DTSTAMP:20260917T220638Z
-UID:B66760F4-84C2-4D7B-88FA-86483970980A
-CREATED:20260123T030740Z
+DTSTART:20251109T030000Z
+DTEND:20251109T080000Z
+DTSTAMP:20260921T002121Z
+UID:2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE
+CREATED:20250928T145258Z
 DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
   am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324
  \ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\
- nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-janu
- ary_2026-v1.jpg\nfacebook: https://www.facebook.com/events/871622958626464\
- nticketUrl: https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball
- -jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator\nshortName: B
- ear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https:
- //www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Br
- idge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324\nkey: bearracuda-2026-02-08-atl
- anta
-LAST-MODIFIED:20260126T235313Z
+ ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-cont
+ ent/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.fa
+ cebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e
+ /bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac
+ -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.
+ google.com/?q=33.81158\,-84.3554\nkey: bearracuda-2025-11-09-atlanta
+LAST-MODIFIED:20251001T224959Z
 LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:NEW DATE: Bearracuda Atlanta❄️Winter Beef Ball: Jock & Underwear Pa
- rty!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260426T010000Z
-DTEND:20260426T070000Z
-DTSTAMP:20260917T220638Z
-UID:26189CDE-B43B-4E65-9A46-35472A1B1374
-CREATED:20260123T030755Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 3\\:00 
- am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324\
- ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlantabear
- pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/cuda-atlan
- ta-april_2026-web.jpg\nfacebook: https://www.facebook.com/events/3839124786
- 219875/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bear-pr
- ide-2026-tickets-1978849934423\nshortName: Bear-rac-uda\ninstagram: https:/
- /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%
- 20GA%2030324\nkey: bearracuda-2026-04-26-atlanta
-LAST-MODIFIED:20260126T235322Z
-LOCATION:33.81158\, -84.3554
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta Bear Pride 2026!
+SUMMARY:Bearracuda Atlanta: Bulges & Jocks
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -60,7 +32,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260823T020000Z
 DTEND:20260823T070000Z
-DTSTAMP:20260917T220638Z
+DTSTAMP:20260921T002121Z
 UID:BCF7BC7E-1341-43A8-B570-ED380209618F
 CREATED:20260713T165324Z
 DESCRIPTION:description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat
@@ -89,9 +61,34 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260426T010000Z
+DTEND:20260426T070000Z
+DTSTAMP:20260921T002121Z
+UID:26189CDE-B43B-4E65-9A46-35472A1B1374
+CREATED:20260123T030755Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 3\\:00 
+ am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324\
+ ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlantabear
+ pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/cuda-atlan
+ ta-april_2026-web.jpg\nfacebook: https://www.facebook.com/events/3839124786
+ 219875/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bear-pr
+ ide-2026-tickets-1978849934423\nshortName: Bear-rac-uda\ninstagram: https:/
+ /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%
+ 20GA%2030324\nkey: bearracuda-2026-04-26-atlanta
+LAST-MODIFIED:20260126T235322Z
+LOCATION:33.81158\, -84.3554
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Atlanta Bear Pride 2026!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250824T020000Z
 DTEND:20250824T070000Z
-DTSTAMP:20260917T220638Z
+DTSTAMP:20260921T002121Z
 UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
 CREATED:20250817T231653Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\nwebsite: https://www.eventbri
@@ -116,25 +113,52 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251109T030000Z
-DTEND:20251109T080000Z
-DTSTAMP:20260917T220638Z
-UID:2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE
-CREATED:20250928T145258Z
+DTSTART:20260208T030000Z
+DTEND:20260208T080000Z
+DTSTAMP:20260921T002121Z
+UID:B66760F4-84C2-4D7B-88FA-86483970980A
+CREATED:20260123T030740Z
 DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
   am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324
  \ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\
- ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-cont
- ent/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.fa
- cebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e
- /bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac
- -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.
- google.com/?q=33.81158\,-84.3554\nkey: bearracuda-2025-11-09-atlanta
-LAST-MODIFIED:20251001T224959Z
+ nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-janu
+ ary_2026-v1.jpg\nfacebook: https://www.facebook.com/events/871622958626464\
+ nticketUrl: https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball
+ -jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator\nshortName: B
+ ear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https:
+ //www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Br
+ idge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324\nkey: bearracuda-2026-02-08-atl
+ anta
+LAST-MODIFIED:20260126T235313Z
 LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta: Bulges & Jocks
+SUMMARY:NEW DATE: Bearracuda Atlanta❄️Winter Beef Ball: Jock & Underwear Pa
+ rty!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270725T000000Z
+DTEND:20270725T030000Z
+DTSTAMP:20260921T002121Z
+UID:CF14EB15-578C-4D1E-BBD5-9CE91A82A223
+CREATED:20260920T233602Z
+DESCRIPTION:description: KINK DOWN SOUTH\nbar: Atlanta Eagle\naddress: 1492
+  PIEDMONT AVE NE\, ATLANTA\, GEORGIA 30309\ntimezone: America/New_York\nima
+ ge: https://atlantaeagle.com/wp-content/uploads/2026/07/2026-07-24-2026-07-
+ 25-ALP-DD.webp\ncover: $8 at 8PM\, $10 at 10PM\nwebsite: https://atlantaeag
+ le.com\nimageSource: page\nimageHorizontal: https://atlantaeagle.com/wp-con
+ tent/uploads/2026/07/2026-07-24-2026-07-25-ALP-DD.webp\nbarSource: curated\
+ naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GEORGIA
+ %2030309\npinSource: curated
+LAST-MODIFIED:20260920T233602Z
+LOCATION:33.7961866\, -84.3711336
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:ATLANTA LEATHER PRIDE 2026
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -142,7 +166,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261115T030000Z
 DTEND:20261115T080000Z
-DTSTAMP:20260917T220638Z
+DTSTAMP:20260921T002121Z
 UID:B73EF6DA-7BFA-489E-A002-2FE5412AF3AA
 CREATED:20260917T215058Z
 DESCRIPTION:description: Bearracuda is back for our FINAL party of the year
@@ -168,6 +192,32 @@ LOCATION:33.8115012\, -84.3552779
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bearracuda Atlanta: DADDY'S HOME
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261003T010000Z
+DTEND:20261003T070000Z
+DTSTAMP:20260921T002121Z
+UID:617B84B3-945C-4D49-A0ED-EC54D5AC4012
+CREATED:20260920T233601Z
+DESCRIPTION:description: LEATHER SLUT\nbar: Atlanta Eagle\naddress: 1492 PI
+ EDMONT AVE NE\, ATLANTA\, GA 30309\ntimezone: America/New_York\ninstagram: 
+ https://instagram.com/atlantaeagle\nfacebook: https://facebook.com/atlantae
+ agle\nimage: https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-
+ OCT02-2550-x-3300-Vertical-Flyer-scaled.webp\nwebsite: https://atlantaeagle
+ .com/event/leather-slut/\nimageVertical: https://atlantaeagle.com/wp-conten
+ t/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp\na
+ ddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GA%203030
+ 9\npinSource: curated\nkey: leather-slut|2026-10-03|atlanta eagle\nimageSou
+ rce: og-image\nbarSource: curated\nbearSource: keyword
+LAST-MODIFIED:20260920T233602Z
+LOCATION:33.7961866\, -84.3711336
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LEATHER SLUT
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

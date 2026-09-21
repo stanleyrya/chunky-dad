@@ -5,7 +5,7 @@
   },
   "events": [
     {
-      "name": "NEW DATE: Bearracuda Atlanta❄️Winter Beef Ball: Jock & Underwear Pa\rrty!",
+      "name": "Bearracuda Atlanta: Bulges & Jocks",
       "day": "Saturday",
       "time": "10PM-3AM",
       "eventType": "routine",
@@ -14,29 +14,30 @@
         "lat": 33.81158,
         "lng": -84.3554
       },
-      "startDate": "2026-02-07T22:00:00",
-      "endDate": "2026-02-08T03:00:00",
-      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-january_2026-v1.jpg\nfacebook: https://www.facebook.com/events/871622958626464\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324\nkey: bearracuda-2026-02-08-atlanta",
+      "startDate": "2025-11-08T22:00:00",
+      "endDate": "2025-11-09T03:00:00",
+      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.facebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=33.81158,-84.3554\nkey: bearracuda-2025-11-09-atlanta",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "B66760F4-84C2-4D7B-88FA-86483970980A",
-      "uid": "B66760F4-84C2-4D7B-88FA-86483970980A",
+      "sourceUid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
+      "uid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Heretic",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-january_2026-v1.jpg",
+      "cover": "$20.73 - $26.82 (as of 10/1)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg",
       "tea": "Doors Open at 10:00 pm - Party Goes Until 3:00 am",
       "cadence": null,
       "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
       "website": "https://bearracuda.com/events/atlbulge/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/871622958626464",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator",
+      "facebook": "https://www.facebook.com/events/645075138661917/",
+      "gmaps": "https://maps.google.com/?q=33.81158,-84.3554",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
@@ -52,21 +53,82 @@
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/871622958626464",
+          "url": "https://www.facebook.com/events/645075138661917/",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324",
+          "url": "https://maps.google.com/?q=33.81158,-84.3554",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator",
+          "url": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "new-date-bearracuda-atlantawinter-beef-ball-jock-underwear-pa-rty-3d2076fd"
+      "slug": "bearracuda-atlanta-bulges-jocks-4b843b95"
+    },
+    {
+      "name": "Bearracuda Atlanta 17 Year Anniversary",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.8115012,
+        "lng": -84.3552779
+      },
+      "startDate": "2026-08-22T22:00:00",
+      "endDate": "2026-08-23T03:00:00",
+      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat\re 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.\nbar: The Heretic\naddress: 2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e/bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: https://bearracuda.com/events/atl17/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV. TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "BCF7BC7E-1341-43A8-B570-ED380209618F",
+      "uid": "BCF7BC7E-1341-43A8-B570-ED380209618F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Heretic",
+      "cover": "ADV. TICKETS",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "17 YEAR ANNIVERSARY Bearracuda is back to celebrate 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.",
+      "cadence": null,
+      "address": "2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324",
+      "website": "https://bearracuda.com/events/atl17/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-17/tickets",
+      "shortName": "Bear­rac­uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/atl17/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-17/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-atlanta-17-year-anniversary-6e646344"
     },
     {
       "name": "Bearracuda Atlanta Bear Pride 2026!",
@@ -133,67 +195,6 @@
       "slug": "bearracuda-atlanta-bear-pride-2026-3ac2015f"
     },
     {
-      "name": "Bearracuda Atlanta 17 Year Anniversary",
-      "day": "Saturday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.8115012,
-        "lng": -84.3552779
-      },
-      "startDate": "2026-08-22T22:00:00",
-      "endDate": "2026-08-23T03:00:00",
-      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat\re 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.\nbar: The Heretic\naddress: 2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e/bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: https://bearracuda.com/events/atl17/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV. TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "BCF7BC7E-1341-43A8-B570-ED380209618F",
-      "uid": "BCF7BC7E-1341-43A8-B570-ED380209618F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Heretic",
-      "cover": "ADV. TICKETS",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "17 YEAR ANNIVERSARY Bearracuda is back to celebrate 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.",
-      "cadence": null,
-      "address": "2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324",
-      "website": "https://bearracuda.com/events/atl17/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-17/tickets",
-      "shortName": "Bear­rac­uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/atl17/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-17/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-atlanta-17-year-anniversary-6e646344"
-    },
-    {
       "name": "Bearracuda Atlanta 16 Year Anniversary!",
       "day": "Saturday",
       "time": "10PM-3AM",
@@ -246,7 +247,7 @@
       "slug": "bearracuda-atlanta-16-year-anniversary-520590b4"
     },
     {
-      "name": "Bearracuda Atlanta: Bulges & Jocks",
+      "name": "NEW DATE: Bearracuda Atlanta❄️Winter Beef Ball: Jock & Underwear Pa\rrty!",
       "day": "Saturday",
       "time": "10PM-3AM",
       "eventType": "routine",
@@ -255,30 +256,29 @@
         "lat": 33.81158,
         "lng": -84.3554
       },
-      "startDate": "2025-11-08T22:00:00",
-      "endDate": "2025-11-09T03:00:00",
-      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.facebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=33.81158,-84.3554\nkey: bearracuda-2025-11-09-atlanta",
+      "startDate": "2026-02-07T22:00:00",
+      "endDate": "2026-02-08T03:00:00",
+      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-january_2026-v1.jpg\nfacebook: https://www.facebook.com/events/871622958626464\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324\nkey: bearracuda-2026-02-08-atlanta",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
-      "uid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
+      "sourceUid": "B66760F4-84C2-4D7B-88FA-86483970980A",
+      "uid": "B66760F4-84C2-4D7B-88FA-86483970980A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Heretic",
-      "cover": "$20.73 - $26.82 (as of 10/1)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-january_2026-v1.jpg",
       "tea": "Doors Open at 10:00 pm - Party Goes Until 3:00 am",
       "cadence": null,
       "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
       "website": "https://bearracuda.com/events/atlbulge/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/645075138661917/",
-      "gmaps": "https://maps.google.com/?q=33.81158,-84.3554",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
+      "facebook": "https://www.facebook.com/events/871622958626464",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
@@ -294,21 +294,68 @@
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/645075138661917/",
+          "url": "https://www.facebook.com/events/871622958626464",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://maps.google.com/?q=33.81158,-84.3554",
+          "url": "https://www.google.com/maps/search/?api=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%20GA%2030324",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
+          "url": "https://www.eventbrite.com/e/bearracuda-atlantawinter-beef-ball-jock-underwear-party-tickets-1967115296806?aff=oddtdtcreator",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-atlanta-bulges-jocks-4b843b95"
+      "slug": "new-date-bearracuda-atlantawinter-beef-ball-jock-underwear-pa-rty-3d2076fd"
+    },
+    {
+      "name": "ATLANTA LEATHER PRIDE 2026",
+      "day": "Saturday",
+      "time": "8PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7961866,
+        "lng": -84.3711336
+      },
+      "startDate": "2027-07-24T20:00:00",
+      "endDate": "2027-07-24T23:00:00",
+      "unprocessedDescription": "description: KINK DOWN SOUTH\nbar: Atlanta Eagle\naddress: 1492\r PIEDMONT AVE NE, ATLANTA, GEORGIA 30309\ntimezone: America/New_York\nimage: https://atlantaeagle.com/wp-content/uploads/2026/07/2026-07-24-2026-07-25-ALP-DD.webp\ncover: $8 at 8PM, $10 at 10PM\nwebsite: https://atlantaeagle.com\nimageSource: page\nimageHorizontal: https://atlantaeagle.com/wp-content/uploads/2026/07/2026-07-24-2026-07-25-ALP-DD.webp\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GEORGIA%2030309\npinSource: curated",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "CF14EB15-578C-4D1E-BBD5-9CE91A82A223",
+      "uid": "CF14EB15-578C-4D1E-BBD5-9CE91A82A223",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Atlanta Eagle",
+      "cover": "$8 at 8PM, $10 at 10PM",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/07/2026-07-24-2026-07-25-ALP-DD.webp",
+      "imageHorizontal": "https://atlantaeagle.com/wp-content/uploads/2026/07/2026-07-24-2026-07-25-ALP-DD.webp",
+      "tea": "KINK DOWN SOUTH",
+      "cadence": null,
+      "address": "1492 PIEDMONT AVE NE, ATLANTA, GEORGIA 30309",
+      "website": "https://atlantaeagle.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GEORGIA%2030309",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://atlantaeagle.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GEORGIA%2030309",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "atlanta-leather-pride-2026-2b5ec599"
     },
     {
       "name": "Bearracuda Atlanta: DADDY'S HOME",
@@ -376,6 +423,64 @@
         }
       ],
       "slug": "bearracuda-atlanta-daddys-home-688536aa"
+    },
+    {
+      "name": "LEATHER SLUT",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7961866,
+        "lng": -84.3711336
+      },
+      "startDate": "2026-10-02T21:00:00",
+      "endDate": "2026-10-03T03:00:00",
+      "unprocessedDescription": "description: LEATHER SLUT\nbar: Atlanta Eagle\naddress: 1492 PI\rEDMONT AVE NE, ATLANTA, GA 30309\ntimezone: America/New_York\ninstagram: https://instagram.com/atlantaeagle\nfacebook: https://facebook.com/atlantaeagle\nimage: https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp\nwebsite: https://atlantaeagle.com/event/leather-slut/\nimageVertical: https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GA%2030309\npinSource: curated\nkey: leather-slut|2026-10-03|atlanta eagle\nimageSource: og-image\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "617B84B3-945C-4D49-A0ED-EC54D5AC4012",
+      "uid": "617B84B3-945C-4D49-A0ED-EC54D5AC4012",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Atlanta Eagle",
+      "image": "https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp",
+      "imageVertical": "https://atlantaeagle.com/wp-content/uploads/2026/09/ONYXSE-10-OCT02-2550-x-3300-Vertical-Flyer-scaled.webp",
+      "tea": "LEATHER SLUT",
+      "cadence": null,
+      "address": "1492 PIEDMONT AVE NE, ATLANTA, GA 30309",
+      "website": "https://atlantaeagle.com/event/leather-slut/",
+      "instagram": "https://instagram.com/atlantaeagle",
+      "facebook": "https://facebook.com/atlantaeagle",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GA%2030309",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://atlantaeagle.com/event/leather-slut/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/atlantaeagle",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://facebook.com/atlantaeagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Atlanta%20Eagle%2C%201492%20PIEDMONT%20AVE%20NE%2C%20ATLANTA%2C%20GA%2030309",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "leather-slut-3b91b082"
     }
   ]
 }

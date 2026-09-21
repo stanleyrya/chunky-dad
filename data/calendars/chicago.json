@@ -22,579 +22,177 @@
   },
   "events": [
     {
-      "name": "CHUNK CHICAGO presents NEW YEARS EVE 2026",
-      "day": "Wednesday",
-      "time": "12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9493756,
-        "lng": -87.64979
-      },
-      "startDate": "2025-12-31T00:00:00",
-      "unprocessedDescription": "bar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 6061\r3, USA\ntimezone: America/Chicago\nbarSource: curated\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-new-years-eve-2026|2025-12-31|cell block\nwebsite: https://www.chunk-party.com\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "520693CE-2DC9-4CA2-8518-01E4B0BBD4F4",
-      "uid": "520693CE-2DC9-4CA2-8518-01E4B0BBD4F4",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "favicon": "https://www.chunk-party.com",
-      "cadence": null,
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-chicago-presents-new-years-eve-2026-2ec535b1"
-    },
-    {
-      "name": "Coach After Dark: Chicago",
-      "day": "Saturday",
-      "time": "9PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.998402,
-        "lng": -87.6709808
-      },
-      "startDate": "2026-02-14T21:00:00",
-      "endDate": "2026-02-15T05:00:00",
-      "unprocessedDescription": "description: This Valentine's Day Coach After Dark\\: The Sport\rs Gear Disco returns to Jackhammer in Chicago!\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626\ntimezone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282\ncover: $20 - $30.65 (as of 1/28)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Foriginal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd\ninstagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI\nkey: coach-after-dark-chicago|2026-02-15|jackhammer",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "0AD1679F-26DC-4355-ABDC-8F79B5C3552A",
-      "uid": "0AD1679F-26DC-4355-ABDC-8F79B5C3552A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Jackhammer",
-      "cover": "$20 - $30.65 (as of 1/28)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Foriginal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd",
-      "tea": "This Valentine's Day Coach After Dark: The Sports Gear Disco returns to Jackhammer in Chicago!",
-      "cadence": null,
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "website": null,
-      "instagram": "https://www.instagram.com/coachafterdark",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
-      "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/coachafterdark",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "coach-after-dark-chicago-78fe7aea"
-    },
-    {
-      "name": "Furball Market Days",
-      "day": "Friday",
-      "time": "10:30PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9498139,
-        "lng": -87.6588771
-      },
-      "startDate": "2025-08-08T22:30:00",
-      "endDate": "2025-08-09T04:00:00",
-      "unprocessedDescription": "Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc\r\nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furball\nShorter: FUR\naddress: 3728 N Clark St, Chicago, IL 60613\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "anpebtqveq4fqmniffj10p0j5o@google.com",
-      "uid": "anpebtqveq4fqmniffj10p0j5o@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Metro",
-      "cover": "~$30",
-      "cadence": null,
-      "address": "3728 N Clark St, Chicago, IL 60613",
-      "website": "https://www.furball.nyc/",
-      "gmaps": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
-      "shortName": "Furball",
-      "shorterName": "FUR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "furball-market-days-78310803"
-    },
-    {
-      "name": "CHUNK CHICAGO presents SAUSAGE PARTY!",
-      "day": "Saturday",
-      "time": "12AM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9493756,
-        "lng": -87.64979
-      },
-      "startDate": "2025-10-11T00:00:00",
-      "endDate": "2025-10-12T03:00:00",
-      "unprocessedDescription": "description: CHUNK CHICAGO presents SAUSAGE PARTY!\nbar: Cell B\rlock\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-sausage-party|2025-10-11|cell block\nbearSource: keyword\ncover: $20.50 - $25.63\npinSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
-      "uid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "cover": "$20.50 - $25.63",
-      "image": "https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "CHUNK CHICAGO presents SAUSAGE PARTY!",
-      "cadence": null,
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-chicago-presents-sausage-party-55be49fe"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-10T17:00:00",
-      "endDate": "2025-07-10T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nInstagram: https://www.instagram.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/North_Dakota/New_Salem",
-      "endTimezone": "America/North_Dakota/New_Salem",
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": false,
-      "sourceUid": "gntkupiisd0hb2k7uptg7j855g@google.com",
-      "uid": "gntkupiisd0hb2k7uptg7j855g@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
-      "cadence": null,
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhourchi",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourchi",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "bear-happy-hour-50e80e42"
-    },
-    {
-      "name": "Market Day 3",
+      "name": "BEARAOKE",
       "day": "Sunday",
-      "time": "11AM-10PM",
+      "time": "9PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9436009,
-        "lng": -87.6494458
+        "lat": 41.9724308,
+        "lng": -87.6676099
       },
-      "startDate": "2025-08-10T11:00:00",
-      "endDate": "2025-08-10T22:00:00",
-      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startDate": "2026-11-15T21:00:00",
+      "endDate": "2026-11-16T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-10\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-11-16|the sofo tap\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
-      "uid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Halsted St. from Belmont to Addison",
-      "cover": "$20 suggested donation",
-      "tea": "Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.",
-      "cadence": null,
-      "address": "801–817 W Roscoe St, Chicago, IL 60657",
-      "website": "https://northalsted.com/main-events/northalsted-market-days/",
-      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://northalsted.com/main-events/northalsted-market-days/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "market-day-3-691a9a51"
-    },
-    {
-      "name": "CHUNK CHICAGO presents SPRING THAW!",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9493756,
-        "lng": -87.64979
-      },
-      "startDate": "2026-03-21T21:00:00",
-      "endDate": "2026-03-22T03:00:00",
-      "unprocessedDescription": "description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE \rTEA HOT GOGO BEARS all night long! Cell Block 9-3\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\nimage: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\ntimezone: America/Chicago\ncover: $20\nimageVertical: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-spring-thaw|2026-03-22|cell block\nbearSource: keyword\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
-      "uid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "sourceUid": "87E64C0A-64F0-49CB-AB94-C97271C40847",
+      "uid": "87E64C0A-64F0-49CB-AB94-C97271C40847",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "cover": "$20",
-      "image": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE TEA HOT GOGO BEARS all night long! Cell Block 9-3",
-      "cadence": null,
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "shortName": "CHUNK",
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-10",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "url": "https://thesofotap.com",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
+          "url": "https://www.instagram.com/thesofotap",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-chicago-presents-spring-thaw-572f1025"
-    },
-    {
-      "name": "Treasure Trail Chicago",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9493268,
-        "lng": -87.6498756
-      },
-      "startDate": "2026-07-25T21:00:00",
-      "endDate": "2026-07-26T03:00:00",
-      "unprocessedDescription": "description: Saturday, July 25th, 2026 Doors at 9pm, Party t\ril LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/05/45-3.png\nshortName: TREAS-URE TRAIL\nwebsite: https://bearracuda.com/\nbearSource: ai\nkey: treasure-trail-chicago|2026-07-26|cell block\nticketUrl: https://www.sickening.events/e/treasurechi/tickets\ncover: $15-$30\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
-      "uid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "cover": "$15-$30",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/05/45-3.png",
-      "tea": "Saturday, July 25th, 2026 Doors at 9pm, Party til LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.",
-      "cadence": null,
-      "address": "3702 N Halsted St, Chicago, IL 60613",
-      "website": "https://bearracuda.com/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
-      "ticketUrl": "https://www.sickening.events/e/treasurechi/tickets",
-      "shortName": "TREAS-URE TRAIL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/treasurechi/tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-10",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "treasure-trail-chicago-2519d1b9"
+      "slug": "bearaoke-2ed6be69"
     },
     {
-      "name": "MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY",
-      "day": "Saturday",
-      "time": "9PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9984139,
-        "lng": -87.6710111
-      },
-      "startDate": "2026-10-10T21:00:00",
-      "endDate": "2026-10-11T05:00:00",
-      "unprocessedDescription": "bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, I\rL 60626\nticketUrl: https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a\nimageSource: jsonld\ncover: $11.58-$16.84\ntimezone: America/Chicago\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a\nbarSource: curated\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI\npinSource: curated\ninstagram: https://www.instagram.com/megawoof_america\nshortName: MEGA­WOOF\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-chicago-11-year-anniversary|2026-10-11|jackhammer\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "AFCDF8AD-96AE-4615-95C1-D7D603F41749",
-      "uid": "AFCDF8AD-96AE-4615-95C1-D7D603F41749",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Jackhammer",
-      "cover": "$11.58-$16.84",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a",
-      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a",
-      "favicon": "https://linktr.ee/megawoof_america",
-      "cadence": null,
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
-      "shortName": "MEGA­WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-chicago-11-year-anniversary-7dd72489"
-    },
-    {
-      "name": "Coach After Dark: Chicago",
-      "day": "Saturday",
-      "time": "9PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.998402,
-        "lng": -87.6709808
-      },
-      "startDate": "2026-05-09T21:00:00",
-      "endDate": "2026-05-10T05:00:00",
-      "unprocessedDescription": "description: The Sports Gear Disco returns to Jackhammer Saturd\ray May 9th! Come gear up and sweat it out on the dance floor!\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626\ntimezone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664\ninstagram: https://www.instagram.com/coachafterdark\ncover: $20.00-$30.65\nwebsite: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664\ngmaps: https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626\nkey: coach-after-dark-chicago|2026-05-10|jackhammer",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "FA8478FF-3F78-4E27-AAB4-B71F3FA40171",
-      "uid": "FA8478FF-3F78-4E27-AAB4-B71F3FA40171",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Jackhammer",
-      "cover": "$20.00-$30.65",
-      "tea": "The Sports Gear Disco returns to Jackhammer Saturday May 9th! Come gear up and sweat it out on the dance floor!",
-      "cadence": null,
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "website": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
-      "instagram": "https://www.instagram.com/coachafterdark",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
-      "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/coachafterdark",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "coach-after-dark-chicago-45a4a493"
-    },
-    {
-      "name": "CHUNK CHICAGO presents NEW YEARS EVE 2026",
+      "name": "NERD BEAR TRIVIA",
       "day": "Wednesday",
-      "time": "9PM-2AM",
+      "time": "8PM-10PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9493268,
-        "lng": -87.6498756
+        "lat": 41.9724308,
+        "lng": -87.6676099
       },
-      "startDate": "2025-12-31T21:00:00",
-      "endDate": "2026-01-01T02:00:00",
-      "unprocessedDescription": "bar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 6061\r3, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-chicago-presents-new-years-eve-2026|2026-01-01|cell block\nimageHorizontal: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg\ndescription: PRESALE TICKETS ARE SOLD OUT We have reserved space at the door for walk-ups, please arrive early DJS MR PICKLES& MARCEAUX MARCEAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CHAMPAGNE TOAST AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "startDate": "2026-11-04T20:00:00",
+      "endDate": "2026-11-04T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-6\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-11-05|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3",
-      "uid": "9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3",
+      "sourceUid": "BEEB8BA5-1348-4041-9F0B-CBCF22805A81",
+      "uid": "BEEB8BA5-1348-4041-9F0B-CBCF22805A81",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "image": "https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg",
-      "imageHorizontal": "https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "PRESALE TICKETS ARE SOLD OUT We have reserved space at the door for walk-ups, please arrive early DJS MR PICKLES& MARCEAUX MARCEAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CHAMPAGNE TOAST AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am",
-      "cadence": null,
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
-      "shortName": "CHUNK",
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-6",
+      "shortName": "NERD BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
+          "url": "https://thesofotap.com",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
+          "url": "https://www.instagram.com/thesofotap",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
           "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-6",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "chunk-chicago-presents-new-years-eve-2026-3afe095d"
+      "slug": "nerd-bear-trivia-62f18a11"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-14T20:00:00",
+      "endDate": "2026-10-14T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-2\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-10-15|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "AF240C91-58E8-411D-B01A-88E2A9E8FFE2",
+      "uid": "AF240C91-58E8-411D-B01A-88E2A9E8FFE2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-2",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-2",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-1a711073"
     },
     {
       "name": "Coach After Dark: Market Days",
@@ -649,6 +247,231 @@
         }
       ],
       "slug": "coach-after-dark-market-days-1945e994"
+    },
+    {
+      "name": "Bearracuda Chicago Jockstrap Party: Tix at the DOOR",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2025-08-29T21:00:00",
+      "endDate": "2025-08-30T04:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• DJ Tim Arnold (Main Floor\r)\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark St, Chicago, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842,-87.67112\nkey: bearracuda-2025-08-30-chicago\npinSource: curated",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
+      "uid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Jackhammer Complex",
+      "cover": "$19.24 - $24.89 (as of 8/29)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg",
+      "tea": "Music & Entertainment",
+      "cadence": null,
+      "address": "6406 N Clark St, Chicago, IL 60626",
+      "website": "https://bearracuda.com/events/chicagoaug/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1227123952423945/",
+      "gmaps": "https://maps.google.com/?q=41.99842,-87.67112",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/chicagoaug/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1227123952423945/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.google.com/?q=41.99842,-87.67112",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-chicago-jockstrap-party-tix-at-the-door-17cea9ba"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-04T21:00:00",
+      "endDate": "2026-10-05T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-4\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-10-05|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "754F667E-5E4E-46AE-82F7-2B0045C1F9FB",
+      "uid": "754F667E-5E4E-46AE-82F7-2B0045C1F9FB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-4",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-4",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-77e8361a"
+    },
+    {
+      "name": "Market Day 2",
+      "day": "Saturday",
+      "time": "11AM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9436009,
+        "lng": -87.6494458
+      },
+      "startDate": "2025-08-09T11:00:00",
+      "endDate": "2025-08-09T22:00:00",
+      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
+      "uid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Halsted St. from Belmont to Addison",
+      "cover": "$20 suggested donation",
+      "tea": "Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.",
+      "cadence": null,
+      "address": "801–817 W Roscoe St, Chicago, IL 60657",
+      "website": "https://northalsted.com/main-events/northalsted-market-days/",
+      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "market-day-2-115ee9f1"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-4\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-10-31|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "3E0723D3-5E83-4061-B55E-006175A47A65",
+      "uid": "3E0723D3-5E83-4061-B55E-006175A47A65",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-4",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-4",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-3d3b7659"
     },
     {
       "name": "CHUNK Chicago",
@@ -758,6 +581,948 @@
       "slug": "belly-up-3e6c6e9e"
     },
     {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-09-30T20:00:00",
+      "endDate": "2026-09-30T22:00:00",
+      "unprocessedDescription": "description: Join Nerd Bear Trivia every Wednesday at SoFo Tap \rin Chicago. Win prizes, enjoy weekly raffles, and test your knowledge with Beartender Thomas from 8PM–10PM.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-4/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\ntimezone: America/Chicago\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-10-01|the sofo tap\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "4DAE3FB7-55BC-4A91-8217-286233A6F1F8",
+      "uid": "4DAE3FB7-55BC-4A91-8217-286233A6F1F8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Join Nerd Bear Trivia every Wednesday at SoFo Tap in Chicago. Win prizes, enjoy weekly raffles, and test your knowledge with Beartender Thomas from 8PM–10PM.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-4/tickets",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-4/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-7762d28c"
+    },
+    {
+      "name": "Coach After Dark: Chicago",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.998402,
+        "lng": -87.6709808
+      },
+      "startDate": "2026-05-09T21:00:00",
+      "endDate": "2026-05-10T05:00:00",
+      "unprocessedDescription": "description: The Sports Gear Disco returns to Jackhammer Saturd\ray May 9th! Come gear up and sweat it out on the dance floor!\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626\ntimezone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664\ninstagram: https://www.instagram.com/coachafterdark\ncover: $20.00-$30.65\nwebsite: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664\ngmaps: https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626\nkey: coach-after-dark-chicago|2026-05-10|jackhammer",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "FA8478FF-3F78-4E27-AAB4-B71F3FA40171",
+      "uid": "FA8478FF-3F78-4E27-AAB4-B71F3FA40171",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "$20.00-$30.65",
+      "tea": "The Sports Gear Disco returns to Jackhammer Saturday May 9th! Come gear up and sweat it out on the dance floor!",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "website": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
+      "instagram": "https://www.instagram.com/coachafterdark",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
+      "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/coachafterdark",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "coach-after-dark-chicago-45a4a493"
+    },
+    {
+      "name": "Coach After Dark: Chicago",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.998402,
+        "lng": -87.6709808
+      },
+      "startDate": "2026-02-14T21:00:00",
+      "endDate": "2026-02-15T05:00:00",
+      "unprocessedDescription": "description: This Valentine's Day Coach After Dark\\: The Sport\rs Gear Disco returns to Jackhammer in Chicago!\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL 60626\ntimezone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282\ncover: $20 - $30.65 (as of 1/28)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Foriginal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd\ninstagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI\nkey: coach-after-dark-chicago|2026-02-15|jackhammer",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "0AD1679F-26DC-4355-ABDC-8F79B5C3552A",
+      "uid": "0AD1679F-26DC-4355-ABDC-8F79B5C3552A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "$20 - $30.65 (as of 1/28)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Foriginal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd",
+      "tea": "This Valentine's Day Coach After Dark: The Sports Gear Disco returns to Jackhammer in Chicago!",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "website": null,
+      "instagram": "https://www.instagram.com/coachafterdark",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/coachafterdark",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "coach-after-dark-chicago-78fe7aea"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-06T21:00:00",
+      "endDate": "2026-11-07T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-11-07|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "DA96EA4D-7A95-43D6-938E-8EBD42E64F02",
+      "uid": "DA96EA4D-7A95-43D6-938E-8EBD42E64F02",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-5",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-3a0685a4"
+    },
+    {
+      "name": "Market Day 1",
+      "day": "Friday",
+      "time": "5PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9436009,
+        "lng": -87.6494458
+      },
+      "startDate": "2025-08-08T17:00:00",
+      "endDate": "2025-08-08T22:00:00",
+      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Friday’s top artists are Saucy Santana and Monét X Change. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "50pmdk0ccoramq9nd5615m8ueh@google.com",
+      "uid": "50pmdk0ccoramq9nd5615m8ueh@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Halsted St. from Belmont to Addison",
+      "cover": "$20 suggested donation",
+      "tea": "Live music street festival with a queer focus. Friday’s top artists are Saucy Santana and Monét X Change. See the website for more artists and entry info.",
+      "cadence": null,
+      "address": "801–817 W Roscoe St, Chicago, IL 60657",
+      "website": "https://northalsted.com/main-events/northalsted-market-days/",
+      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "market-day-1-35c3f1a2"
+    },
+    {
+      "name": "Treasure Trail Chicago",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493268,
+        "lng": -87.6498756
+      },
+      "startDate": "2026-07-25T21:00:00",
+      "endDate": "2026-07-26T03:00:00",
+      "unprocessedDescription": "description: Saturday, July 25th, 2026 Doors at 9pm, Party t\ril LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/05/45-3.png\nshortName: TREAS-URE TRAIL\nwebsite: https://bearracuda.com/\nbearSource: ai\nkey: treasure-trail-chicago|2026-07-26|cell block\nticketUrl: https://www.sickening.events/e/treasurechi/tickets\ncover: $15-$30\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
+      "uid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "cover": "$15-$30",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/05/45-3.png",
+      "tea": "Saturday, July 25th, 2026 Doors at 9pm, Party til LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.",
+      "cadence": null,
+      "address": "3702 N Halsted St, Chicago, IL 60613",
+      "website": "https://bearracuda.com/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+      "ticketUrl": "https://www.sickening.events/e/treasurechi/tickets",
+      "shortName": "TREAS-URE TRAIL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/treasurechi/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-chicago-2519d1b9"
+    },
+    {
+      "name": "GOLDILOXX Chicago",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2026-09-19T21:00:00",
+      "endDate": "2026-09-20T05:00:00",
+      "unprocessedDescription": "description: NYC's GOLDILOXX arrives in Chicago for a unique ni\rghtlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL, 60626\ntimezone: America/Chicago\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp\ninstagram: https://www.instagram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: https://linktr.ee/goldiloxx\nkey: goldiloxx-chicago|2026-09-20|jackhammer\nticketUrl: https://www.sickening.events/e/goldiloxx-chicago/tickets\ncover: $10-$25\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
+      "uid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "$10-$25",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp",
+      "favicon": "https://linktr.ee/goldiloxx",
+      "tea": "NYC's GOLDILOXX arrives in Chicago for a unique nightlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL, 60626",
+      "website": null,
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "ticketUrl": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+      "shortName": "GOLDI­LOXX",
+      "shorterName": "GLX",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "goldiloxx-chicago-7c2b222b"
+    },
+    {
+      "name": "CHUNK CHICAGO presents NEW YEARS EVE 2026",
+      "day": "Wednesday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493268,
+        "lng": -87.6498756
+      },
+      "startDate": "2025-12-31T21:00:00",
+      "endDate": "2026-01-01T02:00:00",
+      "unprocessedDescription": "bar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 6061\r3, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-chicago-presents-new-years-eve-2026|2026-01-01|cell block\nimageHorizontal: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg\ndescription: PRESALE TICKETS ARE SOLD OUT We have reserved space at the door for walk-ups, please arrive early DJS MR PICKLES& MARCEAUX MARCEAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CHAMPAGNE TOAST AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3",
+      "uid": "9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "image": "https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg",
+      "imageHorizontal": "https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg/v1/fill/w_4112,h_3300,al_c,q_90/42b6cb_73cd8b176ba44e4a802aace626e4a830~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "PRESALE TICKETS ARE SOLD OUT We have reserved space at the door for walk-ups, please arrive early DJS MR PICKLES& MARCEAUX MARCEAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CHAMPAGNE TOAST AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am",
+      "cadence": null,
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-chicago-presents-new-years-eve-2026-3afe095d"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-10T17:00:00",
+      "endDate": "2025-07-10T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nInstagram: https://www.instagram.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/North_Dakota/New_Salem",
+      "endTimezone": "America/North_Dakota/New_Salem",
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": false,
+      "sourceUid": "gntkupiisd0hb2k7uptg7j855g@google.com",
+      "uid": "gntkupiisd0hb2k7uptg7j855g@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
+      "cadence": null,
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhourchi",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourchi",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-50e80e42"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-21T20:00:00",
+      "endDate": "2026-10-21T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-4\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-10-22|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "50D6EFDF-80C6-49CD-AF88-4784B93BD344",
+      "uid": "50D6EFDF-80C6-49CD-AF88-4784B93BD344",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-4",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-4",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-26470e7a"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-09-23T20:00:00",
+      "endDate": "2026-09-23T22:00:00",
+      "unprocessedDescription": "description: Join Nerd Bear Trivia every Wednesday at SoFo Tap \rin Chicago. Win prizes, enjoy weekly raffles, and test your knowledge with Beartender Thomas from 8PM–10PM.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-3/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\ntimezone: America/Chicago\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-09-24|the sofo tap\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "9B08575B-2EBC-45DA-B25B-E08A82F45309",
+      "uid": "9B08575B-2EBC-45DA-B25B-E08A82F45309",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Join Nerd Bear Trivia every Wednesday at SoFo Tap in Chicago. Win prizes, enjoy weekly raffles, and test your knowledge with Beartender Thomas from 8PM–10PM.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-3/tickets",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-3/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-6ba9f1d0"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-23T21:00:00",
+      "endDate": "2026-10-24T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-3\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-10-24|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "BBA988ED-62AF-4CD5-8761-C7FED0482130",
+      "uid": "BBA988ED-62AF-4CD5-8761-C7FED0482130",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-3",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-3",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-06605fe5"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-12-09T20:00:00",
+      "endDate": "2026-12-09T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-3\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-12-10|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "A847E72D-37E5-4C29-8D68-2A6A0A796D6C",
+      "uid": "A847E72D-37E5-4C29-8D68-2A6A0A796D6C",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-3",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-3",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-689b0ec6"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-28T20:00:00",
+      "endDate": "2026-10-28T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-10-29|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "29799DD0-870C-42EF-8A32-FFC04038CCF9",
+      "uid": "29799DD0-870C-42EF-8A32-FFC04038CCF9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-5",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-65b058a6"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-09T21:00:00",
+      "endDate": "2026-10-10T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-10-10|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "FB802282-762D-4B22-AA16-A9B668DB685D",
+      "uid": "FB802282-762D-4B22-AA16-A9B668DB685D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-5f888843"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-09-27T21:00:00",
+      "endDate": "2026-09-28T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-3/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\ntimezone: America/Chicago\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-09-28|the sofo tap\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "CA6780AA-38F7-479D-BBBB-E09EABBC1CC6",
+      "uid": "CA6780AA-38F7-479D-BBBB-E09EABBC1CC6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-3/tickets",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-3/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-3349066d"
+    },
+    {
+      "name": "CHUNK CHICAGO presents SPRING THAW!",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493756,
+        "lng": -87.64979
+      },
+      "startDate": "2026-03-21T21:00:00",
+      "endDate": "2026-03-22T03:00:00",
+      "unprocessedDescription": "description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE \rTEA HOT GOGO BEARS all night long! Cell Block 9-3\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\nimage: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\ntimezone: America/Chicago\ncover: $20\nimageVertical: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-spring-thaw|2026-03-22|cell block\nbearSource: keyword\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "uid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "cover": "$20",
+      "image": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE TEA HOT GOGO BEARS all night long! Cell Block 9-3",
+      "cadence": null,
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-chicago-presents-spring-thaw-572f1025"
+    },
+    {
       "name": "MEGAWOOF CHICAGO - JULY - BEARWATCH",
       "day": "Saturday",
       "time": "9PM-5AM",
@@ -817,215 +1582,685 @@
       "slug": "megawoof-chicago-july-bearwatch-7afede0c"
     },
     {
-      "name": "Market Day 1",
-      "day": "Friday",
-      "time": "5PM-10PM",
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9436009,
-        "lng": -87.6494458
+        "lat": 41.9724308,
+        "lng": -87.6676099
       },
-      "startDate": "2025-08-08T17:00:00",
-      "endDate": "2025-08-08T22:00:00",
-      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Friday’s top artists are Saucy Santana and Monét X Change. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startDate": "2026-09-20T21:00:00",
+      "endDate": "2026-09-21T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-2/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\ntimezone: America/Chicago\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-09-21|the sofo tap\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "50pmdk0ccoramq9nd5615m8ueh@google.com",
-      "uid": "50pmdk0ccoramq9nd5615m8ueh@google.com",
+      "sourceUid": "1D21C38C-FFFC-4E99-9AA3-B3531830F486",
+      "uid": "1D21C38C-FFFC-4E99-9AA3-B3531830F486",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Halsted St. from Belmont to Addison",
-      "cover": "$20 suggested donation",
-      "tea": "Live music street festival with a queer focus. Friday’s top artists are Saucy Santana and Monét X Change. See the website for more artists and entry info.",
-      "cadence": null,
-      "address": "801–817 W Roscoe St, Chicago, IL 60657",
-      "website": "https://northalsted.com/main-events/northalsted-market-days/",
-      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-2/tickets",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "url": "https://thesofotap.com",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "market-day-1-35c3f1a2"
-    },
-    {
-      "name": "Market Day 2",
-      "day": "Saturday",
-      "time": "11AM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9436009,
-        "lng": -87.6494458
-      },
-      "startDate": "2025-08-09T11:00:00",
-      "endDate": "2025-08-09T22:00:00",
-      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
-      "uid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Halsted St. from Belmont to Addison",
-      "cover": "$20 suggested donation",
-      "tea": "Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.",
-      "cadence": null,
-      "address": "801–817 W Roscoe St, Chicago, IL 60657",
-      "website": "https://northalsted.com/main-events/northalsted-market-days/",
-      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://northalsted.com/main-events/northalsted-market-days/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "market-day-2-115ee9f1"
-    },
-    {
-      "name": "GOLDILOXX Chicago",
-      "day": "Saturday",
-      "time": "9PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9984139,
-        "lng": -87.6710111
-      },
-      "startDate": "2026-09-19T21:00:00",
-      "endDate": "2026-09-20T05:00:00",
-      "unprocessedDescription": "description: NYC's GOLDILOXX arrives in Chicago for a unique ni\rghtlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL, 60626\ntimezone: America/Chicago\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp\ninstagram: https://www.instagram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: https://linktr.ee/goldiloxx\nkey: goldiloxx-chicago|2026-09-20|jackhammer\nticketUrl: https://www.sickening.events/e/goldiloxx-chicago/tickets\ncover: $10-$25\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
-      "uid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Jackhammer",
-      "cover": "$10-$25",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp",
-      "favicon": "https://linktr.ee/goldiloxx",
-      "tea": "NYC's GOLDILOXX arrives in Chicago for a unique nightlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.",
-      "cadence": null,
-      "address": "6406 North Clark Street, Chicago, IL, 60626",
-      "website": null,
-      "instagram": "https://www.instagram.com/goldiloxx__",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
-      "ticketUrl": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
-      "shortName": "GOLDI­LOXX",
-      "shorterName": "GLX",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/goldiloxx__",
+          "url": "https://www.instagram.com/thesofotap",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-2/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "goldiloxx-chicago-7c2b222b"
+      "slug": "bearaoke-30c5d766"
     },
     {
-      "name": "Bearracuda Chicago Jockstrap Party: Tix at the DOOR",
-      "day": "Friday",
-      "time": "9PM-4AM",
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9984139,
-        "lng": -87.6710111
+        "lat": 41.9724308,
+        "lng": -87.6676099
       },
-      "startDate": "2025-08-29T21:00:00",
-      "endDate": "2025-08-30T04:00:00",
-      "unprocessedDescription": "description: Music & Entertainment\n• DJ Tim Arnold (Main Floor\r)\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark St, Chicago, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842,-87.67112\nkey: bearracuda-2025-08-30-chicago\npinSource: curated",
+      "startDate": "2026-11-25T20:00:00",
+      "endDate": "2026-11-25T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-9\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-11-26|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
-      "uid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
+      "sourceUid": "D50B0A7B-C54E-4A57-8923-35CECF9AAC19",
+      "uid": "D50B0A7B-C54E-4A57-8923-35CECF9AAC19",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "The Jackhammer Complex",
-      "cover": "$19.24 - $24.89 (as of 8/29)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg",
-      "tea": "Music & Entertainment",
-      "cadence": null,
-      "address": "6406 N Clark St, Chicago, IL 60626",
-      "website": "https://bearracuda.com/events/chicagoaug/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1227123952423945/",
-      "gmaps": "https://maps.google.com/?q=41.99842,-87.67112",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
-      "shortName": "Bear-rac-uda",
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-9",
+      "shortName": "NERD BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/chicagoaug/",
+          "url": "https://thesofotap.com",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
+          "url": "https://www.instagram.com/thesofotap",
           "label": "📷 Instagram"
         },
         {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1227123952423945/",
-          "label": "📘 Facebook"
-        },
-        {
           "type": "gmaps",
-          "url": "https://maps.google.com/?q=41.99842,-87.67112",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-9",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-chicago-jockstrap-party-tix-at-the-door-17cea9ba"
+      "slug": "nerd-bear-trivia-1bb51342"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-12-04T21:00:00",
+      "endDate": "2026-12-05T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-9\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-12-05|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "0B92E77C-6ABF-490B-B58B-C1EEFEB40C24",
+      "uid": "0B92E77C-6ABF-490B-B58B-C1EEFEB40C24",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-9",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-9",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-74a1f1a8"
+    },
+    {
+      "name": "CHUNK CHICAGO presents NEW YEARS EVE 2026",
+      "day": "Wednesday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493756,
+        "lng": -87.64979
+      },
+      "startDate": "2025-12-31T00:00:00",
+      "unprocessedDescription": "bar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 6061\r3, USA\ntimezone: America/Chicago\nbarSource: curated\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-new-years-eve-2026|2025-12-31|cell block\nwebsite: https://www.chunk-party.com\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "520693CE-2DC9-4CA2-8518-01E4B0BBD4F4",
+      "uid": "520693CE-2DC9-4CA2-8518-01E4B0BBD4F4",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "favicon": "https://www.chunk-party.com",
+      "cadence": null,
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-chicago-presents-new-years-eve-2026-2ec535b1"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-13T21:00:00",
+      "endDate": "2026-11-14T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-6\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-11-14|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "0C338CAA-7A46-4E40-8DFB-0FBCE54926EA",
+      "uid": "0C338CAA-7A46-4E40-8DFB-0FBCE54926EA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-6",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-6",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-79aa9983"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-20T21:00:00",
+      "endDate": "2026-11-21T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-7\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-11-21|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "CC89E003-8893-4CA6-B194-B74B167F0F7B",
+      "uid": "CC89E003-8893-4CA6-B194-B74B167F0F7B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-7",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-7",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-1079d587"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-18T21:00:00",
+      "endDate": "2026-10-19T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-6\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-10-19|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "AC49393A-72D5-441F-9769-F9468FAB9A04",
+      "uid": "AC49393A-72D5-441F-9769-F9468FAB9A04",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-6",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-6",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-00e30733"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-25T21:00:00",
+      "endDate": "2026-10-26T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-7\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-10-26|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "027BC2D0-0833-4CFD-B81E-EA054BBD14F9",
+      "uid": "027BC2D0-0833-4CFD-B81E-EA054BBD14F9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-7",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-7",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-0801096a"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-16T21:00:00",
+      "endDate": "2026-10-17T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-2\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-10-17|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "B5EACDBE-9CE3-4532-B2DC-8F202602994C",
+      "uid": "B5EACDBE-9CE3-4532-B2DC-8F202602994C",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-2",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-2",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-1abe4d73"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-07T20:00:00",
+      "endDate": "2026-10-07T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-10-08|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "9EEDDB66-8E22-40AA-A9DA-2C5D1A1127D9",
+      "uid": "9EEDDB66-8E22-40AA-A9DA-2C5D1A1127D9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-6c0d4e33"
+    },
+    {
+      "name": "CHUNK CHICAGO presents SAUSAGE PARTY!",
+      "day": "Saturday",
+      "time": "12AM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493756,
+        "lng": -87.64979
+      },
+      "startDate": "2025-10-11T00:00:00",
+      "endDate": "2025-10-12T03:00:00",
+      "unprocessedDescription": "description: CHUNK CHICAGO presents SAUSAGE PARTY!\nbar: Cell B\rlock\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\ninstagram: https://www.instagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nkey: chunk-chicago-presents-sausage-party|2025-10-11|cell block\nbearSource: keyword\ncover: $20.50 - $25.63\npinSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
+      "uid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "cover": "$20.50 - $25.63",
+      "image": "https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "CHUNK CHICAGO presents SAUSAGE PARTY!",
+      "cadence": null,
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-chicago-presents-sausage-party-55be49fe"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-12-11T21:00:00",
+      "endDate": "2026-12-12T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-10\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-12-12|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "5CE632F1-CF3A-42F5-9F9B-DE2D0D3F7939",
+      "uid": "5CE632F1-CF3A-42F5-9F9B-DE2D0D3F7939",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-10",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-10",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-46b8896f"
     },
     {
       "name": "FURBALL CHICAGO MARKET DAYS",
@@ -1084,6 +2319,798 @@
         }
       ],
       "slug": "furball-chicago-market-days-4ca14ebb"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-09-25T21:00:00",
+      "endDate": "2026-09-26T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-3/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\ntimezone: America/Chicago\ncover: NO COVER\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\nkey: grrr-chicago-s-original-bear-night|2026-09-26|the sofo tap\ncadence: FREQ=WEEKLY;BYDAY=FR\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "1E0851DC-0BCF-4EE7-9082-2CD6A9294485",
+      "uid": "1E0851DC-0BCF-4EE7-9082-2CD6A9294485",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "cover": "NO COVER",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-3/tickets",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-3/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-3a02d8d3"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-27T21:00:00",
+      "endDate": "2026-11-28T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-8\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: grrr-chicago-s-original-bear-night|2026-11-28|the sofo tap\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "B7A3AA57-2EB8-4760-9A4F-D33638AC066E",
+      "uid": "B7A3AA57-2EB8-4760-9A4F-D33638AC066E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-8",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-8",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-5f6e6f11"
+    },
+    {
+      "name": "Furball Market Days",
+      "day": "Friday",
+      "time": "10:30PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9498139,
+        "lng": -87.6588771
+      },
+      "startDate": "2025-08-08T22:30:00",
+      "endDate": "2025-08-09T04:00:00",
+      "unprocessedDescription": "Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc\r\nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furball\nShorter: FUR\naddress: 3728 N Clark St, Chicago, IL 60613\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "anpebtqveq4fqmniffj10p0j5o@google.com",
+      "uid": "anpebtqveq4fqmniffj10p0j5o@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Metro",
+      "cover": "~$30",
+      "cadence": null,
+      "address": "3728 N Clark St, Chicago, IL 60613",
+      "website": "https://www.furball.nyc/",
+      "gmaps": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
+      "shortName": "Furball",
+      "shorterName": "FUR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furball-market-days-78310803"
+    },
+    {
+      "name": "GRRR - CHICAGO'S ORIGINAL BEAR NIGHT!",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-02T21:00:00",
+      "endDate": "2026-10-03T02:00:00",
+      "unprocessedDescription": "description: GRRR Chicago’s Weekly Bear Night Fridays &bull; 9\rPM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nticketUrl: https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-4/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp\ntimezone: America/Chicago\ncover: NO COVER\nwebsite: https://thesofotap.com\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\nkey: grrr-chicago-s-original-bear-night|2026-10-03|the sofo tap\ncadence: FREQ=WEEKLY;BYDAY=FR\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: GRRR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "2F9FBFA7-398A-4C22-9968-C78825529F75",
+      "uid": "2F9FBFA7-398A-4C22-9968-C78825529F75",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "cover": "NO COVER",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775872041/saas/logos/image_1775872034233_x6pycjrl4.webp",
+      "tea": "GRRR Chicago’s Weekly Bear Night Fridays &bull; 9PM – 2AM SoFo Tap Lions and tigers and BEARS … oh my. GRRR is Chicago’s weekly Bear Night for the big, the hairy, and the ones who love them. NO COVER &bull; NO ATTITUDE &bull; ALL GRRR",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-4/tickets",
+      "shortName": "GRRR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-4/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "grrr-chicagos-original-bear-night-5d331e38"
+    },
+    {
+      "name": "Market Day 3",
+      "day": "Sunday",
+      "time": "11AM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9436009,
+        "lng": -87.6494458
+      },
+      "startDate": "2025-08-10T11:00:00",
+      "endDate": "2025-08-10T22:00:00",
+      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
+      "uid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Halsted St. from Belmont to Addison",
+      "cover": "$20 suggested donation",
+      "tea": "Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.",
+      "cadence": null,
+      "address": "801–817 W Roscoe St, Chicago, IL 60657",
+      "website": "https://northalsted.com/main-events/northalsted-market-days/",
+      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "market-day-3-691a9a51"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-08T21:00:00",
+      "endDate": "2026-11-09T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-9\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-11-09|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "7E4D7056-43D3-4946-88FE-53A5E0FE7FFB",
+      "uid": "7E4D7056-43D3-4946-88FE-53A5E0FE7FFB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-9",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-9",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-20a730d9"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-12-02T20:00:00",
+      "endDate": "2026-12-02T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-10\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-12-03|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "1468DACF-3C89-4A36-95DF-EC3F09C75C1F",
+      "uid": "1468DACF-3C89-4A36-95DF-EC3F09C75C1F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-10",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-10",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-64cbb329"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-11T20:00:00",
+      "endDate": "2026-11-11T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-7\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-11-12|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "C26574D4-6AA3-423C-B67B-221440EE22BE",
+      "uid": "C26574D4-6AA3-423C-B67B-221440EE22BE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-7",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-7",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-5698858f"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2026-09-24T18:00:00",
+      "endDate": "2026-09-24T22:00:00",
+      "unprocessedDescription": "bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, I\rL, 60626\nticketUrl: https://www.sickening.events/e/bear-happy-hour-3-4/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788990083/saas/logos/image_1788990077939_b0x763vwp.webp\ntimezone: America/Chicago\nwebsite: https://jackhammerchicago.com\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-09-24|jackhammer\nbearSource: keyword\ndescription: Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you’re stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.\ninstagram: https://www.instagram.com/bearhappyhourchi\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "D746F798-718A-4146-9CDC-7264A7157790",
+      "uid": "D746F798-718A-4146-9CDC-7264A7157790",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788990083/saas/logos/image_1788990077939_b0x763vwp.webp",
+      "favicon": "https://linktr.ee/bearhappyhour",
+      "tea": "Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you’re stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL, 60626",
+      "website": "https://jackhammerchicago.com",
+      "instagram": "https://www.instagram.com/bearhappyhourchi",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "ticketUrl": "https://www.sickening.events/e/bear-happy-hour-3-4/tickets",
+      "shortName": "BHH",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://jackhammerchicago.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourchi",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bear-happy-hour-3-4/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-happy-hour-1e5d33be"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-10-11T21:00:00",
+      "endDate": "2026-10-12T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-10-12|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "513FD4CF-7D97-403D-BB20-402903D4C850",
+      "uid": "513FD4CF-7D97-403D-BB20-402903D4C850",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-5",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-773ce50c"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Sunday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-01T21:00:00",
+      "endDate": "2026-11-02T01:00:00",
+      "unprocessedDescription": "description: BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9P\rM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/bearaoke-2-11-11-8\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=SU\nkey: bearaoke|2026-11-02|the sofo tap\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "802E0129-B37D-4BE0-89B2-08203C4F691A",
+      "uid": "802E0129-B37D-4BE0-89B2-08203C4F691A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+      "tea": "BEARAOKE Hosted by Rhett Butlah Sundays &bull; 9PM – 1AM SoFo Tap Grab the mic and take the stage at Bearaoke —a night of big vocals, bold energy, and a crowd that’s here for it. From country favorites to power ballads, anything goes—just bring the confidence.",
+      "cadence": "FREQ=WEEKLY;BYDAY=SU",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-8",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearaoke-2-11-11-8",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-14f03088"
+    },
+    {
+      "name": "NERD BEAR TRIVIA",
+      "day": "Wednesday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9724308,
+        "lng": -87.6676099
+      },
+      "startDate": "2026-11-18T20:00:00",
+      "endDate": "2026-11-18T22:00:00",
+      "unprocessedDescription": "description: Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoF\ro Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.\nbar: The SoFo Tap\naddress: 4923 North Clark Street, Chicago, IL, 60640\nwebsite: https://thesofotap.com\nticketUrl: https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-8\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp\nimageSource: json-api\ntimezone: America/Chicago\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q\npinSource: curated\ninstagram: https://www.instagram.com/thesofotap\ncadence: FREQ=WEEKLY;BYDAY=WE\nkey: nerd-bear-trivia|2026-11-19|the sofo tap\nbearSource: keyword\nshortName: NERD BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "A648FCC7-7C66-44A0-8168-28BA02958EC2",
+      "uid": "A648FCC7-7C66-44A0-8168-28BA02958EC2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The SoFo Tap",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+      "tea": "Nerd Bear Trivia Wednesdays &bull; 8PM – 10PM SoFo Tap Roar with excitement every Wednesday at Nerd Bear Trivia—where brainpower meets bar fun. Grab your crew, test your knowledge, and see if your team has what it takes to come out on top.",
+      "cadence": "FREQ=WEEKLY;BYDAY=WE",
+      "address": "4923 North Clark Street, Chicago, IL, 60640",
+      "website": "https://thesofotap.com",
+      "instagram": "https://www.instagram.com/thesofotap",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+      "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-8",
+      "shortName": "NERD BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thesofotap.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thesofotap",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-8",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "nerd-bear-trivia-0c811d4f"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2026-10-22T18:00:00",
+      "endDate": "2026-10-22T22:00:00",
+      "unprocessedDescription": "bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, I\rL, 60626\nwebsite: https://jackhammerchicago.com\nticketUrl: https://www.sickening.events/e/bear-happy-hour-3-5\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788994067/saas/logos/image_1788994061322_x28w16xcj.webp\ntimezone: America/Chicago\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-10-22|jackhammer\nbearSource: keyword\ndescription: Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you’re stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.\ninstagram: https://www.instagram.com/bearhappyhourchi\npinSource: curated\naddressSource: page\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "C7DAE953-E135-4E66-8C22-D07B57F8196B",
+      "uid": "C7DAE953-E135-4E66-8C22-D07B57F8196B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788994067/saas/logos/image_1788994061322_x28w16xcj.webp",
+      "favicon": "https://linktr.ee/bearhappyhour",
+      "tea": "Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you’re stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL, 60626",
+      "website": "https://jackhammerchicago.com",
+      "instagram": "https://www.instagram.com/bearhappyhourchi",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "ticketUrl": "https://www.sickening.events/e/bear-happy-hour-3-5",
+      "shortName": "BHH",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://jackhammerchicago.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourchi",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bear-happy-hour-3-5",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-happy-hour-11795126"
+    },
+    {
+      "name": "MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2026-10-10T21:00:00",
+      "endDate": "2026-10-11T05:00:00",
+      "unprocessedDescription": "bar: Jackhammer\naddress: 6406 North Clark Street, Chicago, I\rL 60626\nticketUrl: https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a\nimageSource: jsonld\ncover: $11.58-$16.84\ntimezone: America/Chicago\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a\nbarSource: curated\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI\npinSource: curated\ninstagram: https://www.instagram.com/megawoof_america\nshortName: MEGA­WOOF\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-chicago-11-year-anniversary|2026-10-11|jackhammer\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "AFCDF8AD-96AE-4615-95C1-D7D603F41749",
+      "uid": "AFCDF8AD-96AE-4615-95C1-D7D603F41749",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "$11.58-$16.84",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a",
+      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192493576%2F185013722403%2F1%2Foriginal.20260902-171905?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=55fc7918be05bcdf876d85955fe2259a",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "cadence": null,
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
+      "shortName": "MEGA­WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-chicago-11-year-anniversary-7dd72489"
     }
   ]
 }
