@@ -1368,6 +1368,20 @@ class AiWebParser {
                     // offer the UTC view (run 20260802-093810: every US-evening
                     // event compared one day off and the strip refused).
                     event.title = this.stripRedundantTitleDate(event.title, [event._startDateRawText, event.startDate, event.start]);
+                    // The event's OWN street address typed after its name
+                    // ("The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th
+                    // Avenues") goes here, not only at the final build: the
+                    // duplicate fold runs in between and compares NAMES, and
+                    // with the address still in it Lodge NY's party never
+                    // matched the aggregator's copy of it (run
+                    // 20260920-212942: 18 + 12 side by side).
+                    if (this.core && typeof this.core.stripAddressTailFromTitle === 'function' && event.address) {
+                        const bare = this.core.stripAddressTailFromTitle(event.title, event.address);
+                        if (bare && bare !== event.title.trim()) {
+                            console.log(`✂️ TITLE: "${event.title}" → "${bare}" — the tail is the event's own street address (${event.address})`);
+                            event.title = bare;
+                        }
+                    }
                 });
                 // A FEED has no page to derive a brand from (a Google Calendar
                 // export, a JSON endpoint), yet the title doctrine is the same:
