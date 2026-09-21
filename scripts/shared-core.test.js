@@ -7478,6 +7478,53 @@ test('calendar merge: a venue parser\'s clobbering website never displaces the s
   assert.equal(core.parseNotesIntoFields(plain.notes).website, 'https://www.rockbarnyc.com');
 });
 
+// ── Aggregators are for discovery (owner ruling 2026-09-21) ──
+const AGGREGATOR_CONFIG = { name: 'Gathr', siteRole: 'aggregator', urls: ['https://gathrparty.com/'], aggregatorHosts: ['tockify.com'] };
+
+test('aggregator: its copy folds into the event\'s own record, which keeps every field it states — whichever arrives first', async () => {
+  const core = createCore();
+  const start = new Date('2030-09-23T22:00:00.000Z');
+  const own = { title: 'Lodge NY: The Bear Party', startDate: start, description: 'A party for all bears.', address: '232 W 37th St 2nd fl, New York, NY 10018', website: 'https://lodgeny.com', cover: '', image: '', _parserConfig: { name: 'Lodge NY' }, _fieldPriorities: core.getResolvedFieldPriorities({}) };
+  const copy = { title: 'The Bear Party', startDate: start, description: 'For more info, check out bearpartynyc.com. A much longer paragraph the aggregator wrote itself.', address: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', cover: '$30', image: 'https://i.example/flyer.png', _parserConfig: AGGREGATOR_CONFIG, _fieldPriorities: core.getResolvedFieldPriorities({}) };
+  const adapter = buildArbitrationAdapter({});
+  for (const [existing, incoming] of [[own, copy], [copy, own]]) {
+    const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+    assert.equal(merged.title, 'Lodge NY: The Bear Party');
+    assert.equal(merged.description, 'A party for all bears.', 'longer is not better: the organizer\'s words stay');
+    assert.equal(merged.address, own.address);
+    assert.equal(merged.cover, '$30', 'a blank is filled');
+    assert.equal(merged.image, 'https://i.example/flyer.png');
+    assert.equal(merged._parserConfig.name, 'Lodge NY', 'and the record stays the organizer\'s');
+  }
+  assert.equal(adapter.calls.length, 0, 'nothing to arbitrate');
+  // Two aggregators, or two real sources, merge as they always did.
+  assert.equal(core.isAggregatorRecord(own), false);
+  assert.equal(core.isAggregatorRecord(copy), true);
+});
+
+test('aggregator: never linked — links back to its own hosts are cleared, original links stay', () => {
+  const core = createCore();
+  const event = { title: 'X', url: 'https://www.gathrparty.com/e/x', website: 'https://promoter.example/x', ticketUrl: 'https://sub.tockify.com/x', _parserConfig: AGGREGATOR_CONFIG };
+  assert.equal(core.clearAggregatorSelfLinks(event), 2);
+  assert.deepEqual([event.url, event.website, event.ticketUrl], ['', 'https://promoter.example/x', '']);
+  const own = { title: 'Y', url: 'https://gathrparty.com/', _parserConfig: { name: 'Venue', urls: ['https://gathrparty.com/'] } };
+  assert.equal(core.clearAggregatorSelfLinks(own), 0, 'only an aggregator\'s records');
+});
+
+test('aggregator: never changes what a saved event already says — it may fill a blank, and an event only it knows is still proposed', async () => {
+  const core = createCore();
+  const scraped = { title: '[Urban Bear] Mega Bear Blast Closing Night Party', startDate: new Date('2030-08-15T23:00:00.000Z'), bar: 'Rockbar', cover: '$10', description: 'Aggregator blurb', source: 'ai-web', _fieldPriorities: core.getResolvedFieldPriorities({}), _parserConfig: { ...TEST_AI_PARSER_CONFIG, ...AGGREGATOR_CONFIG } };
+  const existing = { title: 'Urban Bear: Mega Bear Blast', startDate: new Date('2030-08-15T21:00:00.000Z'), notes: 'bar: Rockbar\ndescription: The organizer\'s own words' };
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0);
+  assert.equal(finalEvent.title, 'Urban Bear: Mega Bear Blast');
+  assert.equal(new Date(finalEvent.startDate).toISOString(), '2030-08-15T21:00:00.000Z');
+  const notes = core.parseNotesIntoFields(finalEvent.notes);
+  assert.equal(notes.description, 'The organizer\'s own words');
+  assert.equal(notes.cover, '$10', 'the blank is filled');
+});
+
 test('calendar merge: a non-price scrape never clobbers a price-shaped calendar cover', async () => {
   const core = createCore();
   const scraped = {

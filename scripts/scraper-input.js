@@ -249,6 +249,10 @@ const scraperConfig = {
       // event page and reads them as local time (🕒 FEED CLOCK).
       // First-run verification: Megawoof/Twisted Bear dupes must dedup via
       // ticket-url identity; websites must be original URLs, never this host.
+      // siteRole "aggregator": used for DISCOVERY only. Its records never
+      // link back here, lose every contested field to the event's own
+      // source, and never change a field a saved event already has.
+      siteRole: "aggregator",
       urls: ["https://thebearcalendar.com/events/"],
       alwaysBear: true,
       urlDiscoveryDepth: 1,
@@ -266,6 +270,11 @@ const scraperConfig = {
       // paging exists if a longer horizon is ever wanted. Editorial tag, so
       // the bear check still decides, not alwaysBear. Run selection belongs
       // to the picker (no static automationEnabled flag here).
+      // siteRole "aggregator": used for DISCOVERY only. Its records never
+      // link back here, lose every contested field to the event's own
+      // source, and never change a field a saved event already has.
+      siteRole: "aggregator",
+      aggregatorHosts: ["thotyssey.com", "tockify.com"],
       urls: ["https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears"],
       alwaysBear: false,
     },
@@ -563,6 +572,10 @@ const scraperConfig = {
       // Its New York list is bear parties; its Folsom and Dore Alley lists are
       // the whole leather week (Magnitude, Real Bad …), so the bear check
       // decides and the rest waits in the deck's Not bear pile.
+      // siteRole "aggregator": used for DISCOVERY only. Its records never
+      // link back here, lose every contested field to the event's own
+      // source, and never change a field a saved event already has.
+      siteRole: "aggregator",
       urls: ["https://gathrparty.com/"],
       alwaysBear: false,
       urlDiscoveryDepth: 0,
