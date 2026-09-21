@@ -5,342 +5,6 @@
   },
   "events": [
     {
-      "name": "KINK Playground",
-      "day": "Saturday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5374686,
-        "lng": -73.5499132
-      },
-      "startDate": "2026-08-01T22:00:00",
-      "endDate": "2026-08-02T03:00:00",
-      "unprocessedDescription": "description: Bear It\nbar: Bain Mathieu\naddress: 2915 Rue Onta\rrio E, Montréal, QC, H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1\ncover: 29 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/kink-playground-2/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: kink-playground|2026-08-02|bain mathieu\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "451BB189-E0AF-402D-AF11-B82A81E7DE57",
-      "uid": "451BB189-E0AF-402D-AF11-B82A81E7DE57",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Bain Mathieu",
-      "cover": "29 CAD",
-      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1",
-      "favicon": "https://www.bearitmtl.com",
-      "tea": "Bear It",
-      "cadence": null,
-      "address": "2915 Rue Ontario E, Montréal, QC, H2K 1X7",
-      "website": "https://www.bearitmtl.com/event/kink-playground-2/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/kink-playground-2/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "kink-playground-0256844e"
-    },
-    {
-      "name": "KICK OFF – Festival Sugar Bear 2026",
-      "day": "Wednesday",
-      "time": "5PM-8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.520203,
-        "lng": -73.5547522
-      },
-      "startDate": "2026-04-08T17:00:00",
-      "endDate": "2026-04-08T20:00:00",
-      "unprocessedDescription": "description: Vennez récuperer vos pass Come get your pass Au/At\r Kick OFF event Mercredi/Wednesday 8th Avril/April 202617.00 à/to 19.00District Video Lounge Bear It\nbar: District Video Lounge\naddress: 1365 Rue Sainte-Catherine E, Montréal, QC, H2L 2H7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg\ncover: 40-144 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg?fit=1536%2C804&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/festival-sugar-bear-2026/\ngmaps: https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: kick-off-–-festival-sugar-bear-2026|2026-04-08|district video lounge\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "8364F7E9-2EFD-411C-8A50-0B2C3EBE3A6F",
-      "uid": "8364F7E9-2EFD-411C-8A50-0B2C3EBE3A6F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "District Video Lounge",
-      "cover": "40-144 CAD",
-      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg?fit=1536%2C804&ssl=1",
-      "favicon": "https://www.bearitmtl.com",
-      "tea": "Vennez récuperer vos pass Come get your pass Au/At Kick OFF event Mercredi/Wednesday 8th Avril/April 202617.00 à/to 19.00District Video Lounge Bear It",
-      "cadence": null,
-      "address": "1365 Rue Sainte-Catherine E, Montréal, QC, H2L 2H7",
-      "website": "https://www.bearitmtl.com/event/festival-sugar-bear-2026/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/festival-sugar-bear-2026/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "kick-off-festival-sugar-bear-2026-5c98c592"
-    },
-    {
-      "name": "ENSEMBLE",
-      "day": "Saturday",
-      "time": "6PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5182366,
-        "lng": -73.5565931
-      },
-      "startDate": "2026-09-19T18:00:00",
-      "endDate": "2026-09-20T03:00:00",
-      "unprocessedDescription": "bar: Stock Bar\naddress: 1171 Rue Ste Catherine Est, Montréal\\\r, QC\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg\ncover: 19-26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/ensemble/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: ensemble|2026-09-19|stock bar\nimageSource: jsonld\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "FCB19573-E6F0-4B33-B26F-1DED6CDF4528",
-      "uid": "FCB19573-E6F0-4B33-B26F-1DED6CDF4528",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Stock Bar",
-      "cover": "19-26 CAD",
-      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
-      "imageHorizontal": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
-      "favicon": "https://www.bearitmtl.com",
-      "cadence": null,
-      "address": "1171 Rue Ste Catherine Est, Montréal\\, QC",
-      "website": "https://www.bearitmtl.com/event/ensemble/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/ensemble/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "ensemble-653b399f"
-    },
-    {
-      "name": "PLAYGROUND – Thick & Glazed",
-      "day": "Saturday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5374686,
-        "lng": -73.5499132
-      },
-      "startDate": "2026-04-11T22:00:00",
-      "endDate": "2026-04-12T03:00:00",
-      "unprocessedDescription": "bar: Bain Mathieu\naddress: 2915 Rue Ontario E, Montréal, QC\\\r, H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\ncover: 26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/playground-thick-glazed/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: playground-–-thick-glazed|2026-04-12|bain mathieu\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "CB9E9448-3454-4B48-9C47-F37AE004BE30",
-      "uid": "CB9E9448-3454-4B48-9C47-F37AE004BE30",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Bain Mathieu",
-      "cover": "26 CAD",
-      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1",
-      "favicon": "https://www.bearitmtl.com",
-      "cadence": null,
-      "address": "2915 Rue Ontario E, Montréal, QC\\, H2K 1X7",
-      "website": "https://www.bearitmtl.com/event/playground-thick-glazed/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/playground-thick-glazed/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "playground-thick-glazed-0e06efcb"
-    },
-    {
-      "name": "Tour de ville en Bus Rouge – Avec Sasha BAGA",
-      "day": "Friday",
-      "time": "2PM-3:30PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.519641,
-        "lng": -73.555339
-      },
-      "startDate": "2026-04-10T14:00:00",
-      "endDate": "2026-04-10T15:30:00",
-      "unprocessedDescription": "bar: Départ devant L’aigle Noir\naddress: 1315 Rue Sainte-Cathe\rrine E, Montréal, QC, H2L 2H4\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1\ncover: 26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339\npinSource: curated\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: tour-de-ville-en-bus-rouge-–-avec-sasha-baga|2026-04-10|départ devant l’aigle noir\nimageSource: jsonld\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "71876BC7-9A40-4350-A75E-6E9C7E0803F9",
-      "uid": "71876BC7-9A40-4350-A75E-6E9C7E0803F9",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Départ devant L’aigle Noir",
-      "cover": "26 CAD",
-      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1",
-      "favicon": "https://www.bearitmtl.com",
-      "cadence": null,
-      "address": "1315 Rue Sainte-Catherine E, Montréal, QC, H2L 2H4",
-      "website": "https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "tour-de-ville-en-bus-rouge-avec-sasha-baga-0f08c88e"
-    },
-    {
-      "name": "PLAYERS",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5223556,
-        "lng": -73.5528239
-      },
-      "startDate": "2026-10-03T21:00:00",
-      "endDate": "2026-10-04T03:00:00",
-      "unprocessedDescription": "bar: Diamant Rouge\naddress: 1681 Rue Sainte-Catherine Est, Mo\rntréal, QC, H2L 2J5\nwebsite: https://www.bearitmtl.com/event/players/\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1\nimageSource: json-api\ncover: 25-35 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: players|2026-10-04|diamant rouge\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "2AA7B556-50DC-4076-BE24-95F5FD3119B4",
-      "uid": "2AA7B556-50DC-4076-BE24-95F5FD3119B4",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Diamant Rouge",
-      "cover": "25-35 CAD",
-      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1",
-      "favicon": "https://www.bearitmtl.com",
-      "cadence": null,
-      "address": "1681 Rue Sainte-Catherine Est, Montréal, QC, H2L 2J5",
-      "website": "https://www.bearitmtl.com/event/players/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/players/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "players-7f327916"
-    },
-    {
-      "name": "POP Playground",
-      "day": "Friday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5374686,
-        "lng": -73.5499132
-      },
-      "startDate": "2026-07-03T22:00:00",
-      "endDate": "2026-07-04T03:00:00",
-      "unprocessedDescription": "bar: Bain Mathieu\naddress: 2915 Rue Ontario E, Montréal, QC\\\r, H2K 1X7\ncover: 29 CAD\ntimezone: America/Toronto\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/pop-playground/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: pop-playground|2026-07-04|bain mathieu\nbarSource: geo-poi\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Toronto",
-      "wasUTC": true,
-      "sourceUid": "12174A66-1575-492B-A3E4-2FE9309D5A37",
-      "uid": "12174A66-1575-492B-A3E4-2FE9309D5A37",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Bain Mathieu",
-      "cover": "29 CAD",
-      "favicon": "https://www.bearitmtl.com",
-      "cadence": null,
-      "address": "2915 Rue Ontario E, Montréal, QC\\, H2K 1X7",
-      "website": "https://www.bearitmtl.com/event/pop-playground/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-      "shortName": "BEAR IT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearitmtl.com/event/pop-playground/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "pop-playground-5413295a"
-    },
-    {
       "name": "Concours PUP Montréal",
       "day": "Saturday",
       "time": "6PM-9PM",
@@ -389,8 +53,8 @@
       "slug": "concours-pup-montral-6b96639b"
     },
     {
-      "name": "THE HUNT",
-      "day": "Sunday",
+      "name": "Bear it MTL: PLAYERS",
+      "day": "Saturday",
       "time": "9PM-3AM",
       "eventType": "routine",
       "recurring": false,
@@ -398,34 +62,34 @@
         "lat": 45.5223556,
         "lng": -73.5528239
       },
-      "startDate": "2026-09-06T21:00:00",
-      "endDate": "2026-09-07T03:00:00",
-      "unprocessedDescription": "bar: Bar Le Dimant Rouge\naddress: 1681 Rue Sainte-Catherine Es\rt, Montréal, QC, H2L2J5\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg\ncover: 29-37 CAD\ntimezone: America/Toronto\nwebsite: https://www.bearitmtl.com/event/the-hunt/\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: the-hunt|2026-09-07|bar le dimant rouge\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1\nbearSource: ai\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
+      "startDate": "2026-10-03T21:00:00",
+      "endDate": "2026-10-04T03:00:00",
+      "unprocessedDescription": "bar: Diamant Rouge\naddress: 1681 Rue Sainte-Catherine Est, Mo\rntréal, QC, H2L 2J5, Canada\nwebsite: https://www.bearitmtl.com/event/players/\ntimezone: America/Toronto\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: bear-it-mtl-players|2026-10-04|diamant rouge\nbearSource: keyword\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1\ncover: 25-35 CAD\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1\npinSource: geocoded-exact\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Toronto",
       "wasUTC": true,
-      "sourceUid": "0BE3595E-AB86-4617-827F-595357478D68",
-      "uid": "0BE3595E-AB86-4617-827F-595357478D68",
+      "sourceUid": "2AA7B556-50DC-4076-BE24-95F5FD3119B4",
+      "uid": "2AA7B556-50DC-4076-BE24-95F5FD3119B4",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Bar Le Dimant Rouge",
-      "cover": "29-37 CAD",
-      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg",
-      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1",
+      "bar": "Diamant Rouge",
+      "cover": "25-35 CAD",
+      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg?fit=2048%2C1152&ssl=1",
       "favicon": "https://www.bearitmtl.com",
       "cadence": null,
-      "address": "1681 Rue Sainte-Catherine Est, Montréal, QC, H2L2J5",
-      "website": "https://www.bearitmtl.com/event/the-hunt/",
+      "address": "1681 Rue Sainte-Catherine Est, Montréal, QC, H2L 2J5, Canada",
+      "website": "https://www.bearitmtl.com/event/players/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
       "shortName": "BEAR IT",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.bearitmtl.com/event/the-hunt/",
+          "url": "https://www.bearitmtl.com/event/players/",
           "label": "🌐 Website"
         },
         {
@@ -434,7 +98,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "the-hunt-4bf2bf89"
+      "slug": "bear-it-mtl-players-7f327916"
     },
     {
       "name": "GEAR Playground",
@@ -534,6 +198,103 @@
       "slug": "bear-playground-gladiateurs-61bceacf"
     },
     {
+      "name": "PLAYGROUND – Thick & Glazed",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5374686,
+        "lng": -73.5499132
+      },
+      "startDate": "2026-04-11T22:00:00",
+      "endDate": "2026-04-12T03:00:00",
+      "unprocessedDescription": "bar: Bain Mathieu\naddress: 2915 Rue Ontario E, Montréal, QC\\\r, H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\ncover: 26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/playground-thick-glazed/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: playground-–-thick-glazed|2026-04-12|bain mathieu\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "CB9E9448-3454-4B48-9C47-F37AE004BE30",
+      "uid": "CB9E9448-3454-4B48-9C47-F37AE004BE30",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bain Mathieu",
+      "cover": "26 CAD",
+      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "cadence": null,
+      "address": "2915 Rue Ontario E, Montréal, QC\\, H2K 1X7",
+      "website": "https://www.bearitmtl.com/event/playground-thick-glazed/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/playground-thick-glazed/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "playground-thick-glazed-0e06efcb"
+    },
+    {
+      "name": "KINK Playground",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5374686,
+        "lng": -73.5499132
+      },
+      "startDate": "2026-08-01T22:00:00",
+      "endDate": "2026-08-02T03:00:00",
+      "unprocessedDescription": "description: Bear It\nbar: Bain Mathieu\naddress: 2915 Rue Onta\rrio E, Montréal, QC, H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1\ncover: 29 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/kink-playground-2/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: kink-playground|2026-08-02|bain mathieu\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "451BB189-E0AF-402D-AF11-B82A81E7DE57",
+      "uid": "451BB189-E0AF-402D-AF11-B82A81E7DE57",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bain Mathieu",
+      "cover": "29 CAD",
+      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "tea": "Bear It",
+      "cadence": null,
+      "address": "2915 Rue Ontario E, Montréal, QC, H2K 1X7",
+      "website": "https://www.bearitmtl.com/event/kink-playground-2/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/kink-playground-2/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "kink-playground-0256844e"
+    },
+    {
       "name": "Concours M. Ours 2026",
       "day": "Friday",
       "time": "6PM-10:30PM",
@@ -580,6 +341,245 @@
         }
       ],
       "slug": "concours-m-ours-2026-6344a9ba"
+    },
+    {
+      "name": "Tour de ville en Bus Rouge – Avec Sasha BAGA",
+      "day": "Friday",
+      "time": "2PM-3:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.519641,
+        "lng": -73.555339
+      },
+      "startDate": "2026-04-10T14:00:00",
+      "endDate": "2026-04-10T15:30:00",
+      "unprocessedDescription": "bar: Départ devant L’aigle Noir\naddress: 1315 Rue Sainte-Cathe\rrine E, Montréal, QC, H2L 2H4\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1\ncover: 26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339\npinSource: curated\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: tour-de-ville-en-bus-rouge-–-avec-sasha-baga|2026-04-10|départ devant l’aigle noir\nimageSource: jsonld\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "71876BC7-9A40-4350-A75E-6E9C7E0803F9",
+      "uid": "71876BC7-9A40-4350-A75E-6E9C7E0803F9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Départ devant L’aigle Noir",
+      "cover": "26 CAD",
+      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "cadence": null,
+      "address": "1315 Rue Sainte-Catherine E, Montréal, QC, H2L 2H4",
+      "website": "https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=45.519641%2C-73.555339",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "tour-de-ville-en-bus-rouge-avec-sasha-baga-0f08c88e"
+    },
+    {
+      "name": "POP Playground",
+      "day": "Friday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5374686,
+        "lng": -73.5499132
+      },
+      "startDate": "2026-07-03T22:00:00",
+      "endDate": "2026-07-04T03:00:00",
+      "unprocessedDescription": "bar: Bain Mathieu\naddress: 2915 Rue Ontario E, Montréal, QC\\\r, H2K 1X7\ncover: 29 CAD\ntimezone: America/Toronto\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/pop-playground/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: pop-playground|2026-07-04|bain mathieu\nbarSource: geo-poi\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "12174A66-1575-492B-A3E4-2FE9309D5A37",
+      "uid": "12174A66-1575-492B-A3E4-2FE9309D5A37",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bain Mathieu",
+      "cover": "29 CAD",
+      "favicon": "https://www.bearitmtl.com",
+      "cadence": null,
+      "address": "2915 Rue Ontario E, Montréal, QC\\, H2K 1X7",
+      "website": "https://www.bearitmtl.com/event/pop-playground/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/pop-playground/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "pop-playground-5413295a"
+    },
+    {
+      "name": "KICK OFF – Festival Sugar Bear 2026",
+      "day": "Wednesday",
+      "time": "5PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.520203,
+        "lng": -73.5547522
+      },
+      "startDate": "2026-04-08T17:00:00",
+      "endDate": "2026-04-08T20:00:00",
+      "unprocessedDescription": "description: Vennez récuperer vos pass Come get your pass Au/At\r Kick OFF event Mercredi/Wednesday 8th Avril/April 202617.00 à/to 19.00District Video Lounge Bear It\nbar: District Video Lounge\naddress: 1365 Rue Sainte-Catherine E, Montréal, QC, H2L 2H7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg\ncover: 40-144 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg?fit=1536%2C804&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/festival-sugar-bear-2026/\ngmaps: https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: kick-off-–-festival-sugar-bear-2026|2026-04-08|district video lounge\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "8364F7E9-2EFD-411C-8A50-0B2C3EBE3A6F",
+      "uid": "8364F7E9-2EFD-411C-8A50-0B2C3EBE3A6F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "District Video Lounge",
+      "cover": "40-144 CAD",
+      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg?fit=1536%2C804&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "tea": "Vennez récuperer vos pass Come get your pass Au/At Kick OFF event Mercredi/Wednesday 8th Avril/April 202617.00 à/to 19.00District Video Lounge Bear It",
+      "cadence": null,
+      "address": "1365 Rue Sainte-Catherine E, Montréal, QC, H2L 2H7",
+      "website": "https://www.bearitmtl.com/event/festival-sugar-bear-2026/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/festival-sugar-bear-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2L%202H7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "kick-off-festival-sugar-bear-2026-5c98c592"
+    },
+    {
+      "name": "THE HUNT",
+      "day": "Sunday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5223556,
+        "lng": -73.5528239
+      },
+      "startDate": "2026-09-06T21:00:00",
+      "endDate": "2026-09-07T03:00:00",
+      "unprocessedDescription": "bar: Bar Le Dimant Rouge\naddress: 1681 Rue Sainte-Catherine Es\rt, Montréal, QC, H2L2J5\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg\ncover: 29-37 CAD\ntimezone: America/Toronto\nwebsite: https://www.bearitmtl.com/event/the-hunt/\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: the-hunt|2026-09-07|bar le dimant rouge\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1\nbearSource: ai\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "0BE3595E-AB86-4617-827F-595357478D68",
+      "uid": "0BE3595E-AB86-4617-827F-595357478D68",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bar Le Dimant Rouge",
+      "cover": "29-37 CAD",
+      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "cadence": null,
+      "address": "1681 Rue Sainte-Catherine Est, Montréal, QC, H2L2J5",
+      "website": "https://www.bearitmtl.com/event/the-hunt/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/the-hunt/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73.5528239",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "the-hunt-4bf2bf89"
+    },
+    {
+      "name": "ENSEMBLE",
+      "day": "Saturday",
+      "time": "6PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5182366,
+        "lng": -73.5565931
+      },
+      "startDate": "2026-09-19T18:00:00",
+      "endDate": "2026-09-20T03:00:00",
+      "unprocessedDescription": "bar: Stock Bar\naddress: 1171 Rue Ste Catherine Est, Montréal\\\r, QC\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg\ncover: 19-26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/ensemble/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: ensemble|2026-09-19|stock bar\nimageSource: jsonld\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": true,
+      "sourceUid": "FCB19573-E6F0-4B33-B26F-1DED6CDF4528",
+      "uid": "FCB19573-E6F0-4B33-B26F-1DED6CDF4528",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Stock Bar",
+      "cover": "19-26 CAD",
+      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
+      "imageHorizontal": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
+      "favicon": "https://www.bearitmtl.com",
+      "cadence": null,
+      "address": "1171 Rue Ste Catherine Est, Montréal\\, QC",
+      "website": "https://www.bearitmtl.com/event/ensemble/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/ensemble/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "ensemble-653b399f"
     }
   ]
 }

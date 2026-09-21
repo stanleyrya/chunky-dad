@@ -105,8 +105,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 36509,
-      "eventCount": 36
+      "dataLength": 41742,
+      "eventCount": 37
     },
     "hong-kong": {
       "name": "Hong Kong",
@@ -135,7 +135,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 29543,
+      "dataLength": 29548,
       "eventCount": 17
     },
     "madrid": {
@@ -165,7 +165,7 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 16427,
+      "dataLength": 16466,
       "eventCount": 13
     },
     "nola": {
@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 98496,
-      "eventCount": 84
+      "dataLength": 131160,
+      "eventCount": 113
     },
     "palm-springs": {
       "name": "Palm Springs",
