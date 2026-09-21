@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!-- generated: chunky.dad event page -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bear Happy Hour – Chicago – chunky.dad</title>
+  <meta name="description" content="Thu 9/24 · 6PM-10PM CT · @ Jackhammer — Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly…">
+  <link rel="canonical" href="/chicago/bear-happy-hour-1e5d33be/">
+  <meta property="og:type" content="article">
+  <!-- Discord and friends print this above the title; without it the card is
+       anonymous. Kept as the bare domain, which is how the brand reads. -->
+  <meta property="og:site_name" content="chunky.dad">
+  <meta property="og:title" content="Bear Happy Hour – Chicago">
+  <meta property="og:description" content="Thu 9/24 · 6PM-10PM CT · @ Jackhammer — Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly…">
+  <meta property="og:url" content="https://chunky.dad/chicago/bear-happy-hour-1e5d33be/">
+  <meta property="og:image" content="https://chunky.dad/img/og/chicago/bear-happy-hour-1e5d33be.jpg?v=009577a9">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Bear Happy Hour – Chicago">
+  <meta name="twitter:description" content="Thu 9/24 · 6PM-10PM CT · @ Jackhammer — Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly…">
+  <meta name="twitter:image" content="https://chunky.dad/img/og/chicago/bear-happy-hour-1e5d33be.jpg?v=009577a9">
+  <meta name="chunky:flyer" content="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788990083/saas/logos/image_1788990077939_b0x763vwp.webp">
+  <meta name="chunky:name" content="Bear Happy Hour">
+  <meta name="chunky:when" content="Thu 9/24 · 6PM-10PM CT">
+  <meta name="chunky:venue" content="Jackhammer">
+  <meta name="chunky:website" content="https://linktr.ee/bearhappyhour">
+  <meta name="chunky:lat" content="41.9984139">
+  <meta name="chunky:lng" content="-87.6710111">
+  <!-- The redirect runs HERE, in the head, before the body is parsed — so a
+       visitor with JavaScript never paints this page at all. It used to sit
+       after the content, which let the browser render the fallback first: a
+       flash of event text on the way through, which is slower and more jarring
+       than the meta-refresh it replaced. -->
+  <script>
+    (function(){
+      try {
+        var hash = window.location.hash || '';
+        // Prefer incoming params (date/view) when provided; always enforce event param
+        var target = new URL("../?event=bear-happy-hour-1e5d33be&date=2026-09-24&view=week", window.location.href);
+        var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
+        incoming.searchParams.forEach(function(v, k){
+          target.searchParams.set(k, v);
+        });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', "bear-happy-hour-1e5d33be");
+        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
+        location.replace(finalUrl);
+      } catch (e) {
+        location.replace("../?event=bear-happy-hour-1e5d33be&date=2026-09-24&view=week");
+      }
+    })();
+  </script>
+  <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
+       not pull a stylesheet. The fallback is hidden by default and revealed
+       only when scripting is off — a crawler does not render either way, it
+       reads the og: tags above. -->
+  <style>
+    body { margin: 0; background: #10131f; color: #fff;
+           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .event-stub { max-width: 34rem; margin: 0 auto; padding: 3rem 1.5rem; }
+    .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
+    .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
+    .event-stub a { color: #9db2ff; }
+    .event-stub { display: none; }
+  </style>
+  <noscript><style>.event-stub { display: block; }</style></noscript>
+</head>
+<body>
+  <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
+       content instead of a second redirect.
+
+       There used to be a <meta http-equiv="refresh"> in the <head> AND one in
+       a <noscript> here. Link-preview crawlers follow both — they run no JS,
+       which is exactly the condition the <noscript> is written for — so
+       iMessage fetched this page, was sent on to /<city>/, and previewed the
+       CITY card instead of this event's. Testers that do not follow
+       meta-refresh showed the right card, which is the split the owner saw.
+
+       So: a visitor with JS is redirected by the script below, instantly. A
+       visitor without JS, and any crawler, gets this page as it stands — the
+       og: tags in the head, and the link underneath to follow by hand. -->
+  <main class="event-stub">
+    <h1>Bear Happy Hour – Chicago – chunky.dad</h1>
+    <p>Thu 9/24 · 6PM-10PM CT · @ Jackhammer — Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly…</p>
+    <p><a href="../?event=bear-happy-hour-1e5d33be&date=2026-09-24&view=week">Open in the Chicago guide &rarr;</a></p>
+  </main>
+</body>
+</html>
