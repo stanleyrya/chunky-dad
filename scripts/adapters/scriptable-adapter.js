@@ -16197,6 +16197,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // owner sees what the live calendar made of his approvals.
       results.analyzedEvents = mergedPlan;
 
+      // An approved row the live calendar ALREADY matches (a verified merge
+      // no-op) is settled: nothing to write today, and nothing will change
+      // until the owner approves something newer. Without a ledger entry it
+      // was re-analyzed on every execute for good — run 20260920-144111:
+      // 275 rows analyzed, 176 of them no-ops, 94 AI round trips, 101 s, to
+      // write 80. A later approval (newer stamp) brings the row back.
+      const settledRows = freshAnalyzed
+        .filter((event) => event && typeof event === "object" && event._action === "merge" && event._mergeNoOp === true)
+        .map((event) => ({ key: core.getOwnerReviewKey(event), action: "settled", title: String(event.title || "") }))
+        .filter((row) => row.key && !(ledger.entries && ledger.entries[row.key] && ledger.entries[row.key].action !== "settled"));
+      if (settledRows.length > 0) {
+        summary.settled = settledRows.length;
+        console.log(
+          `📱 Scriptable: 🃏 ${settledRows.length} approved row(s) already match the live calendar — recorded as settled, not re-analyzed next time.`,
+        );
+        await this.recordWrittenLedger(ledger, settledRows, new Date().toISOString(), results.savedRunId || results.sourceRunId || null);
+      }
+
       if (freshExecutable.length === 0) {
         await this.presentSavedRunExecutionNotice(
           "Nothing to Write",

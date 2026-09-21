@@ -299,6 +299,14 @@ const scraperPromoters = [
       "gruntparty.monster"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Lodge NY",
+    "shortName": "LODGE",
+    "website": "https://lodgeny.com",
+    "urlPatterns": [
+      "lodgeny.com"
+    ]
   }
 ];
 

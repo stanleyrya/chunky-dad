@@ -409,9 +409,9 @@ const scraperConfig = {
       // archive of ended series is dropped). Titles carry the venue's
       // street address; the address-tail rule strips it at final build.
       // Not every party on the calendar is a bear party — bear check decides.
+      // A curated promoter (data/promoters.json carries its website): its
+      // feed's event names take the brand — "Lodge NY: The Bear Party".
       urls: ["https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics"],
-      alwaysBear: false,
-      metadata: { website: { value: "https://lodgeny.com" } },
     },
     {
       name: "Eagle NYC",

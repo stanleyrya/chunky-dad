@@ -39,13 +39,13 @@
         "note": "The only event-shaped endpoint the bundle names. Answers 500 \"REST API fetch failed: 403\" — their upstream refuses them. Not retried."
       }
     ],
-    "notes": "Recon from one cached read of the shell and one of the bundle on 2026-09-20. 201 objects: 8 live repeats, 39 upcoming singles, 154 past singles (the bear weeks of the summer), 0 repeats with nothing in the window."
+    "notes": "Recon from one cached read of the shell and one of the bundle on 2026-09-20. 201 objects: 9 live repeats, 39 upcoming singles, 154 past singles (the bear weeks of the summer), 0 repeats with nothing in the window."
   },
   "coverage": {
     "confidence": "high",
     "basis": "Feed door: every event object literal in the bundle was read. Repeats are ONE entry each with their nights in the window; dated objects on or after 2026-09-20 are singles; 154 earlier ones are counted as past listings. City is stated only by the row's group (Provincetown Bear Week, Folsom Street Fair, Dore Alley, Fire Island Bear Weekend); ungrouped rows belong to the one menu entry no group code names (NYC).",
-    "publishedEventCount": 47,
-    "documentedEventCount": 47,
+    "publishedEventCount": 48,
+    "documentedEventCount": 48,
     "occurrenceWindow": {
       "start": "2026-09-20",
       "end": "2026-12-19"
@@ -60,7 +60,88 @@
       "kind": "series",
       "title": "The Bear Party",
       "description": "For more info, check out out bearpartynyc.com. For more Lodge parties, view their calendar at lodgeny.com. The Bear Party is a weekly bear party happening every Wednesday, Friday, and Sunday. $30, cash only. Clothes check included. Wednesday & Friday: 6-9pm, Sunday: 1-4pm.",
-      "bar": "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "address": "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
+      "city": "nyc",
+      "timezone": "America/New_York",
+      "image": "https://i.imgur.com/8m2h923.png",
+      "cover": "$30",
+      "startDate": "2026-01-28",
+      "startTime": "13:00",
+      "endTime": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "recurringDays:[0]",
+      "occurrences": [
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The scraper reads the rule's dated nights, never the series.",
+      "evidence": {
+        "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
+        "quote": "{title:\"The Bear Party\",venue:\"232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues\",date:\"Jan 28\",time:\"6:00 PM\",recurringDays:[0]}"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-bear-party-2",
+      "kind": "series",
+      "title": "The Bear Party",
+      "description": "For more info, check out out bearpartynyc.com. For more Lodge parties, view their calendar at lodgeny.com. The Bear Party is a weekly bear party happening every Wednesday, Friday, and Sunday. $30, cash only. Clothes check included. Wednesday & Friday: 6-9pm, Sunday: 1-4pm.",
+      "address": "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues",
       "city": "nyc",
       "timezone": "America/New_York",
       "image": "https://i.imgur.com/8m2h923.png",
@@ -68,23 +149,15 @@
       "startDate": "2026-01-28",
       "startTime": "18:00",
       "endTime": null,
-      "recurrence": "FREQ=WEEKLY;BYDAY=SU,WE,FR",
-      "recurrenceStatedAs": "recurringDays:[0,3,5]",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE,FR",
+      "recurrenceStatedAs": "recurringDays:[3,5]",
       "occurrences": [
-        {
-          "startDate": "2026-09-20",
-          "origin": "rule"
-        },
         {
           "startDate": "2026-09-23",
           "origin": "rule"
         },
         {
           "startDate": "2026-09-25",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-27",
           "origin": "rule"
         },
         {
@@ -96,19 +169,11 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-10-04",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-10-07",
           "origin": "rule"
         },
         {
           "startDate": "2026-10-09",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-11",
           "origin": "rule"
         },
         {
@@ -120,19 +185,11 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-10-18",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-10-21",
           "origin": "rule"
         },
         {
           "startDate": "2026-10-23",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-25",
           "origin": "rule"
         },
         {
@@ -144,19 +201,11 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-01",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-11-04",
           "origin": "rule"
         },
         {
           "startDate": "2026-11-06",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-08",
           "origin": "rule"
         },
         {
@@ -168,19 +217,11 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-15",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-11-18",
           "origin": "rule"
         },
         {
           "startDate": "2026-11-20",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-22",
           "origin": "rule"
         },
         {
@@ -192,10 +233,6 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-29",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-12-02",
           "origin": "rule"
         },
@@ -204,19 +241,11 @@
           "origin": "rule"
         },
         {
-          "startDate": "2026-12-06",
-          "origin": "rule"
-        },
-        {
           "startDate": "2026-12-09",
           "origin": "rule"
         },
         {
           "startDate": "2026-12-11",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-13",
           "origin": "rule"
         },
         {
@@ -233,7 +262,7 @@
       "note": "The scraper reads the rule's dated nights, never the series.",
       "evidence": {
         "url": "https://gathrparty.com/assets/index-Bhyq_j8Z.js",
-        "quote": "{title:\"The Bear Party\",venue:\"232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues\",date:\"Jan 28\",time:\"6:00 PM\",recurringDays:[0,3,5]}"
+        "quote": "{title:\"The Bear Party\",venue:\"232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues\",date:\"Jan 28\",time:\"6:00 PM\",recurringDays:[3,5]}"
       },
       "expect": {
         "extracted": true
@@ -1603,7 +1632,7 @@
       "kind": "single",
       "title": "Goldiloxx | Bear Tea Outside",
       "description": "outdoor bear party at 3db",
-      "bar": "270 Meserole St",
+      "address": "270 Meserole St",
       "city": "nyc",
       "timezone": "America/New_York",
       "ticketUrl": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
