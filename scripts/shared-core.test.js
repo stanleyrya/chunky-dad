@@ -7457,6 +7457,27 @@ test('mergeParsedEvents: _coverFromJsonLdOffers follows the winning cover, never
     'a stamp for the losing cover must not shadow the winning one');
 });
 
+test('calendar merge: a venue parser\'s clobbering website never displaces the saved organizer\'s own site', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    bars: { nyc: [{ name: 'Rockbar', city: 'nyc', website: 'https://www.rockbarnyc.com' }] },
+    promoters: [{ name: 'Furball', website: 'https://www.furball.nyc' }]
+  });
+  const scraped = {
+    title: 'UNDERBEAR HEATWAVE', startDate: new Date('2030-08-15T21:00:00.000Z'), bar: 'Rockbar',
+    website: 'https://www.rockbarnyc.com', url: 'https://www.rockbarnyc.com', source: 'ai-web',
+    _fieldPriorities: { ...core.getResolvedFieldPriorities({}), website: { priority: ['static'], merge: 'clobber' }, url: { priority: ['static'], merge: 'clobber' } },
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = { title: 'UNDERBEAR HEATWAVE', startDate: new Date('2030-08-15T21:00:00.000Z'), notes: 'bar: Rockbar\nwebsite: https://furball.nyc' };
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).website, 'https://furball.nyc');
+  // An uncurated saved link has no such standing: the parser's setting applies.
+  const plain = await core.createFinalEventObject({ ...existing, notes: 'bar: Rockbar\nwebsite: https://someblog.example' }, scraped, { httpAdapter: adapter });
+  assert.equal(core.parseNotesIntoFields(plain.notes).website, 'https://www.rockbarnyc.com');
+});
+
 test('calendar merge: a non-price scrape never clobbers a price-shaped calendar cover', async () => {
   const core = createCore();
   const scraped = {
@@ -15108,6 +15129,33 @@ test('website merge: a ticketing platform URL never displaces an identity link',
 // promoter root beats a platform deep link, asset URLs never win a URL field,
 // and the final build falls back to the curated promoter identity.
 // ---------------------------------------------------------------------------
+
+test('website merge: the organizer\'s own site beats the venue\'s site, whichever side is incoming', () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    bars: { nyc: [{ name: 'Rockbar', city: 'nyc', website: 'https://www.rockbarnyc.com' }, { name: 'Eagle NYC', city: 'nyc', website: 'http://eagle-ny.com' }] },
+    promoters: [
+      { name: 'Furball', website: 'https://www.furball.nyc' },
+      { name: 'Bear Happy Hour', urlPatterns: ['linktr.ee/bearhappyhour'] },
+      { name: 'Goldiloxx', urlPatterns: ['goldiloxx'] }
+    ],
+    festivals: [{ name: 'Urban Bear NYC', website: 'https://www.theurbanbear.com/urbanbearnyc' }]
+  });
+  const reason = "the organizer's own site beats the venue's site — the venue has its own field";
+  // Owner note on "The UnderBear Party": the promoter should win.
+  assert.deepEqual(core.resolveConflictDeterministically('url', 'https://theurbanbear.com', 'https://www.rockbarnyc.com/calendar', null), { winner: 'a', reason });
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://www.rockbarnyc.com', 'https://furball.nyc', null), { winner: 'b', reason });
+  // The promoter's curated presence on a platform host is still the promoter.
+  assert.deepEqual(core.resolveConflictDeterministically('url', 'https://linktr.ee/bearhappyhour', 'https://eagle-ny.com/calendarofevents/bhh/', null), { winner: 'a', reason });
+  // A bare brand word is not a link of theirs (it also sits inside ticket URLs).
+  assert.equal(core.isCuratedOrganizerUrl('https://sickening.events/e/goldiloxx-chicago/tickets'), false);
+  assert.equal(core.isCuratedOrganizerUrl('https://linktr.ee/someoneelse'), false);
+  // Two venues, or an uncurated site, are not this rung's business.
+  const twoVenues = core.resolveConflictDeterministically('url', 'https://www.rockbarnyc.com/a', 'https://eagle-ny.com/b', null);
+  assert.ok(!twoVenues || twoVenues.reason !== reason);
+  const uncurated = core.resolveConflictDeterministically('url', 'https://furball.nyc/x', 'https://somebar.example/y', null);
+  assert.ok(!uncurated || uncurated.reason !== reason);
+});
 
 test('website merge: a BARE promoter root beats a platform deep link (audit pairs verbatim)', () => {
   const core = createCore();
