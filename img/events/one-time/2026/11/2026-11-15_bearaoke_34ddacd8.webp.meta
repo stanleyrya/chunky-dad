@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776023984/saas/logos/image_1776023977890_z6gre8p37.webp",
+  "type": "event",
+  "filename": "2026-11-15_bearaoke_34ddacd8.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "254824",
+  "eventInfo": {
+    "name": "BEARAOKE",
+    "startDate": "2026-11-15T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-21T00:21:38.216Z",
+  "etag": "\"7ab135c035b158364f820a94defbc65a\"",
+  "lastModified": "Sun, 12 Apr 2026 20:00:07 GMT",
+  "flyerOptimized": 1
+}

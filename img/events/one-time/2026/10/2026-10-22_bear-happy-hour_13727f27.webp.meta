@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788994067/saas/logos/image_1788994061322_x28w16xcj.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788994067/saas/logos/image_1788994061322_x28w16xcj.webp",
+  "type": "event",
+  "filename": "2026-10-22_bear-happy-hour_13727f27.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "430096",
+  "eventInfo": {
+    "name": "Bear Happy Hour",
+    "startDate": "2026-10-22T18:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-21T00:21:47.455Z",
+  "etag": "\"5546ab10371a4bd2f7d02440ad9d3e23\"",
+  "lastModified": "Thu, 10 Sep 2026 01:32:29 GMT",
+  "flyerOptimized": 1
+}

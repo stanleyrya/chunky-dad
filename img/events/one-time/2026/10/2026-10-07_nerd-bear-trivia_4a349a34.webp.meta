@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775868520/saas/logos/image_1775868513542_ommzz15dc.webp",
+  "type": "event",
+  "filename": "2026-10-07_nerd-bear-trivia_4a349a34.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "453621",
+  "eventInfo": {
+    "name": "NERD BEAR TRIVIA",
+    "startDate": "2026-10-07T20:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-21T00:21:44.121Z",
+  "etag": "\"5affee0a08c55ecdfe7e3552e7c1d221\"",
+  "lastModified": "Sat, 11 Apr 2026 00:48:59 GMT",
+  "flyerOptimized": 1
+}
