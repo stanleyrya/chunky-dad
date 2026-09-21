@@ -199,11 +199,8 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   // cropped), and wide artwork can take the top of the card instead of a side
   // column. So the primary leads, and the orientation slots are what they
   // always were — alternates, for when there is no primary.
-  //
-  // NOTE: js/dynamic-calendar-loader.js still asks getFlyerCandidates for
-  // 'landscape' on the site's cards, and has a crop rule that only catches an
-  // alternate built from the SAME asset — which this is not. The site card
-  // therefore still shows the bad crop for these five events.
+  // (The site's cards follow the same rule: getFlyerCandidates leads with
+  // the primary unless a caller asks for an orientation.)
   const flyerUrl = String(event.image || event.imageHorizontal || event.imageVertical || '').trim();
 
   // What the share card paints, handed over as data instead of left for
