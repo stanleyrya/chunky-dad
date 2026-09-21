@@ -14465,6 +14465,18 @@ test('an image offered by 3+ distinct segments is page chrome — withheld from 
   assert.equal(parser.getRepeatedSegmentChromeReason(icon, 'https://other.example/events/'), '');
 });
 
+test('a year quoted from the helper pass is not a year the page stated', () => {
+  const parser = createParser();
+  // The model quoting its own helper data back, at confidence 100.
+  assert.equal(parser.resolveExplicitSourceYear('2025-11-07', 'PRE-PARSED HELPER DATA: "Core Event Date": "2025-11-07" and OCR_IMAGE_TEXT: "SAT · NOV 07"', 100, 'SAT · NOV 07 WOOF! 3 PM - 6 PM'), null);
+  // The model's own remark around a quote is not the page either.
+  assert.equal(parser.resolveExplicitSourceYear('2025-12-05', 'OCR_IMAGE_TEXT: "SAT · DEC 05" (and context confirms recurring first Saturday — December 2025 first Saturday is Dec 6, but image explicitly says DEC 05)', 90, 'SAT · DEC 05 WOOF!'), null);
+  assert.equal(parser.resolveExplicitSourceYear('2024-10-04', 'PAGE_TEXT: "Friday October 4, 2024"', 100, ''), 2024);
+  // The page itself printing the year is still a stated year.
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 100, ''), 2021);
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'PRE-PARSED HELPER DATA: "Core Event Date": "2021-01-31" and PAGE_TEXT: "SUNDAY/DOMINGO 01.31.2021"', 100, ''), 2021);
+});
+
 test('a repeating party\'s one poster on every one of its cards is its artwork, not page chrome', () => {
   const parser = createParser();
   const sourceUrl = 'https://venue.example/events/';

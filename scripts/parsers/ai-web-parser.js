@@ -22759,7 +22759,24 @@ TEXT:
             ? this.extractionLimits.explicitSourceYearMinConfidence
             : 90;
         const confidentEnough = typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= minConfidence;
-        const evidenceText = String(evidence || '');
+        // Only what the PAGE printed is evidence of a stated year. The
+        // context-prep pass writes its own reading into the prompt as
+        // PRE-PARSED HELPER DATA ("Core Event Date": "2025-11-07") — a model's
+        // guess, quoted back by the next model at confidence 100. A listing
+        // card printing "SAT · NOV 07" beside a poster uploaded to
+        // /uploads/2025/12/ came back as an "explicit 2025 date" that way and
+        // was dropped as archived (sf-eagle.com replay 2026-09-21: ten future
+        // nights — WOOF!, Beer Bust, Karaoke — lost). Helper quotes are cut
+        // out before the year is looked for.
+        // …and when the evidence QUOTES the page (OCR_IMAGE_TEXT: "SAT · DEC
+        // 05"), only the quoted words are the page's. The model's own remarks
+        // around them are not: '"SAT · DEC 05" (… December 2025 first
+        // Saturday is Dec 6 …)' put a year in the evidence that no page
+        // printed. Evidence with no quotes at all is read whole, as before.
+        const withoutHelper = String(evidence || '')
+            .replace(/PRE-?PARSED HELPER DATA:?\s*(?:"[^"]*"\s*:?\s*)*(?:"[^"]*"|\[[^\]]*\]|\{[^}]*\})?/gi, ' ');
+        const quotedSpans = withoutHelper.match(/"[^"]*"|“[^”]*”/g);
+        const evidenceText = quotedSpans && quotedSpans.length > 0 ? quotedSpans.join(' ') : withoutHelper;
         if (confidentEnough && evidenceText && evidenceText.includes(valueYearMatch[0])) return year;
 
         // Asymmetry between the two ways a year can be wrong. Re-anchoring a
