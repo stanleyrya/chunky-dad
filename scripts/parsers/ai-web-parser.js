@@ -14240,28 +14240,45 @@ class AiWebParser {
     // happens at the offer layer only — segment prompt lines, segment OCR
     // matching, hint reassignment — an image an event ALREADY carries is
     // never deleted by this rule.
+    // "Three different listings" means three different PARTIES. A listing
+    // that prints every night of a repeating party as its own card prints
+    // that party's one poster on every one of them — sf-eagle.com/events:
+    // WOOF! (3 cards), Beer Bust (10), Karaoke with Dana (11), all withheld
+    // as "chrome" and shipped imageless (owner note 2026-09-21: "sf eagle
+    // seems to have images but we don't grab them. At least for woof").
+    // Cards are told apart by their listing title; a card with no readable
+    // title still counts as its own, so untitled furniture is caught as
+    // before.
     applyRepeatedSegmentImageChromeGate(segments, sourceUrl = '') {
         const store = { sourceUrl: String(sourceUrl || ''), reasonsByKey: new Map() };
         this._repeatedSegmentChrome = store;
         const sourceSegments = Array.isArray(segments) ? segments : [];
         if (sourceSegments.length < this.segmentImageChromeMinSegments) return sourceSegments;
 
-        const segmentsByIdentity = new Map(); // stripped key → { count, url }
+        const segmentsByIdentity = new Map(); // stripped key → { count, url, parties }
+        let untitled = 0;
         for (const segment of sourceSegments) {
             const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
             if (!segmentHtml) continue;
+            const listingTitle = String(this.deriveSegmentListingTitle(segment) || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            const party = listingTitle || `untitled-${untitled++}`;
             const seenInSegment = new Set();
             for (const imageUrl of this.extractOrderedImageUrlsFromHtml(segmentHtml, sourceUrl)) {
                 const key = this.stripSizeParams(imageUrl);
                 if (!key || seenInSegment.has(key)) continue;
                 seenInSegment.add(key);
-                const entry = segmentsByIdentity.get(key) || { count: 0, url: imageUrl };
+                const entry = segmentsByIdentity.get(key) || { count: 0, url: imageUrl, parties: new Set() };
                 entry.count += 1;
+                entry.parties.add(party);
                 segmentsByIdentity.set(key, entry);
             }
         }
         for (const [key, entry] of segmentsByIdentity) {
             if (entry.count < this.segmentImageChromeMinSegments) continue;
+            if (entry.parties.size < this.segmentImageChromeMinSegments) {
+                console.log(`🤖 AI Web: Image ${entry.url} repeats on ${entry.count} cards of ${entry.parties.size === 1 ? 'ONE party' : `${entry.parties.size} parties`} ("${[...entry.parties][0]}") — a repeating party's own poster, not page chrome`);
+                continue;
+            }
             store.reasonsByKey.set(key, `it is offered by ${entry.count} distinct segments on this page — repeated across listings means site chrome, not one event's artwork`);
             console.log(`🤖 AI Web: Page-chrome image ${entry.url} — offered by ${entry.count} distinct segments on one page; withholding it from every segment prompt`);
         }
@@ -22742,7 +22759,24 @@ TEXT:
             ? this.extractionLimits.explicitSourceYearMinConfidence
             : 90;
         const confidentEnough = typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= minConfidence;
-        const evidenceText = String(evidence || '');
+        // Only what the PAGE printed is evidence of a stated year. The
+        // context-prep pass writes its own reading into the prompt as
+        // PRE-PARSED HELPER DATA ("Core Event Date": "2025-11-07") — a model's
+        // guess, quoted back by the next model at confidence 100. A listing
+        // card printing "SAT · NOV 07" beside a poster uploaded to
+        // /uploads/2025/12/ came back as an "explicit 2025 date" that way and
+        // was dropped as archived (sf-eagle.com replay 2026-09-21: ten future
+        // nights — WOOF!, Beer Bust, Karaoke — lost). Helper quotes are cut
+        // out before the year is looked for.
+        // …and when the evidence QUOTES the page (OCR_IMAGE_TEXT: "SAT · DEC
+        // 05"), only the quoted words are the page's. The model's own remarks
+        // around them are not: '"SAT · DEC 05" (… December 2025 first
+        // Saturday is Dec 6 …)' put a year in the evidence that no page
+        // printed. Evidence with no quotes at all is read whole, as before.
+        const withoutHelper = String(evidence || '')
+            .replace(/PRE-?PARSED HELPER DATA:?\s*(?:"[^"]*"\s*:?\s*)*(?:"[^"]*"|\[[^\]]*\]|\{[^}]*\})?/gi, ' ');
+        const quotedSpans = withoutHelper.match(/"[^"]*"|“[^”]*”/g);
+        const evidenceText = quotedSpans && quotedSpans.length > 0 ? quotedSpans.join(' ') : withoutHelper;
         if (confidentEnough && evidenceText && evidenceText.includes(valueYearMatch[0])) return year;
 
         // Asymmetry between the two ways a year can be wrong. Re-anchoring a
