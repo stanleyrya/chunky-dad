@@ -3876,6 +3876,41 @@ class SharedCore {
     //                                on one site are unambiguous)
     //   { ambiguousCities: [...] } — claimants disagree on the city
     //   null                       — nobody claims the host, or no bars data
+    // TRUE when the URL is a curated organizer's own link: it carries a
+    // HOST-ANCHORED token of a promoter registry entry (its website, or a
+    // urlPattern / instagram handle with a path — never a bare brand word,
+    // which also occurs inside ticket links), or sits on a curated
+    // festival's own website host.
+    isCuratedOrganizerUrl(url) {
+        const text = String(url || '').trim().toLowerCase();
+        if (!/^https?:\/\//.test(text)) return false;
+        const bare = text.replace(/^https?:\/\/(?:www\.)?/, '');
+        for (const indexed of this.getPromoterRegistryIndex().entries) {
+            for (const token of indexed.urlTokens) {
+                const anchored = String(token || '').replace(/^https?:\/\/(?:www\.)?/, '').replace(/^www\./, '');
+                if (!anchored.includes('.')) continue;
+                if (bare === anchored || bare.startsWith(`${anchored}/`) || bare.startsWith(`${anchored}?`)
+                    || (anchored.includes('/') && bare.startsWith(anchored))) return true;
+            }
+        }
+        const host = this.getHostFromUrl(text).replace(/^www\./, '');
+        if (!host) return false;
+        return (Array.isArray(this.festivals) ? this.festivals : []).some(festival => {
+            const festivalHost = festival && typeof festival.website === 'string'
+                ? this.getHostFromUrl(festival.website).toLowerCase().replace(/^www\./, '') : '';
+            return Boolean(festivalHost) && festivalHost === host;
+        });
+    }
+
+    // TRUE when the URL's host is claimed by a curated bar's `website`.
+    isCuratedVenueSiteUrl(url) {
+        if (typeof this.getWebsiteHostKey !== 'function') return false;
+        const hostKey = this.getWebsiteHostKey(String(url || '').trim());
+        if (!hostKey) return false;
+        const match = this.findCuratedCityByWebsiteHost(hostKey);
+        return Boolean(match && (match.city || match.ambiguousCities));
+    }
+
     findCuratedCityByWebsiteHost(url) {
         const claimants = this.getCuratedBarsClaimingWebsiteHost(url);
         if (claimants.length === 0) return null;
@@ -5029,6 +5064,26 @@ class SharedCore {
             // breaks the card and the map marker. The reverse (a real site
             // replacing a platform link) is allowed, and platform-vs-platform
             // falls through to the rungs below.
+            // Rung −1: WHO THROWS THE PARTY beats WHERE IT IS. The website is
+            // the event's identity (it drives the icon); the venue already has
+            // its own field. When one candidate is a curated organizer's own
+            // link (a promoter registry website / urlPattern, a curated
+            // festival's site) and the other is a curated BAR's site, the
+            // organizer's stays — whichever side is incoming. Owner note
+            // 2026-09-17 on "The UnderBear Party" (theurbanbear.com →
+            // rockbarnyc.com/calendar): "urbanbear (promoter) should mostly
+            // win"; run 20260920-144111 still proposed it for Bears Night Out
+            // and furball.nyc → rockbarnyc.com for UNDERBEAR HEATWAVE. Two
+            // organizers, two venues, or anything uncurated fall through.
+            if (fieldName === 'website' || fieldName === 'url') {
+                const organizerA = this.isCuratedOrganizerUrl(valueA);
+                const organizerB = this.isCuratedOrganizerUrl(valueB);
+                if (organizerA !== organizerB
+                    && this.isCuratedVenueSiteUrl(organizerA ? valueB : valueA)
+                    && !this.isCuratedVenueSiteUrl(organizerA ? valueA : valueB)) {
+                    return { winner: organizerA ? 'a' : 'b', reason: "the organizer's own site beats the venue's site — the venue has its own field" };
+                }
+            }
             if (fieldName === 'website' || fieldName === 'url') {
                 // A URL the PAGE labelled a ticket page counts as a platform
                 // link here even when its host is on no list — that is the
@@ -13659,6 +13714,26 @@ class SharedCore {
                     continue;
                 }
                 // Identical values fall through to the configured strategy (no-op).
+            }
+
+            // WHO THROWS THE PARTY beats WHERE IT IS, under EVERY strategy. A
+            // venue parser stamps its own site as static metadata, merged
+            // "clobber" — so the saved organizer link (theurbanbear.com on
+            // Bears Night Out, furball.nyc on UNDERBEAR HEATWAVE) was replaced
+            // by rockbarnyc.com without the deterministic ladder ever being
+            // asked (run 20260920-144111; owner note: "urbanbear (promoter)
+            // should mostly win"). Same rule as the ladder's organizer rung:
+            // a curated organizer's own link is never displaced by a curated
+            // bar's site — the venue already has its own field.
+            if ((fieldName === 'website' || fieldName === 'url')
+                && typeof calendarValue === 'string' && typeof scraperValue === 'string'
+                && this.isCuratedOrganizerUrl(calendarValue)
+                && !this.isCuratedVenueSiteUrl(calendarValue)
+                && !this.isCuratedOrganizerUrl(scraperValue)
+                && this.isCuratedVenueSiteUrl(scraperValue)) {
+                mergedObject[fieldName] = calendarValue;
+                console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} kept calendar value — the organizer's own site (${calendarValue}) beats the venue's site (${scraperValue}); the venue has its own field`);
+                continue;
             }
 
             // Dates are calendar-critical: a genuinely different startDate/endDate is
