@@ -6330,6 +6330,8 @@ class SharedCore {
                             arr[index] = event;
                         }
                         event._parserConfig = stampedConfig;
+                        const selfLinks = this.clearAggregatorSelfLinks(event);
+                        if (selfLinks > 0) console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" — ${selfLinks} link(s) back to ${stampedConfig.name || 'the aggregator'} cleared; an aggregator is never linked`);
                     });
                     results.allProcessedEvents.push(...parserResult.events);
                 }
@@ -12593,7 +12595,85 @@ class SharedCore {
     }
 
     // Merge two parsed events based on field priorities (for deduplication)
+    // ── Aggregators are for DISCOVERY ───────────────────────────────────
+    // Owner ruling 2026-09-21: "I don't want gathr, bear calendar, thotyssey,
+    // etc. to win text or other fields. I also don't want to link to those
+    // aggregators. I want to just use them to find other websites and
+    // events … we will still propose an event if we can't find a link to
+    // real data, but the main website should win."
+    // An aggregator is a parser configured `siteRole: "aggregator"`. Its
+    // records (a) never link to the aggregator itself, (b) lose EVERY
+    // contested field to a record from the event's own source, filling only
+    // what that record leaves blank, and (c) never change a field a saved
+    // calendar event already has. An event only an aggregator knows is still
+    // proposed, as found.
+    isAggregatorRecord(record) {
+        const config = record && record._parserConfig && typeof record._parserConfig === 'object' ? record._parserConfig : null;
+        return Boolean(config) && String(config.siteRole || '').trim().toLowerCase() === 'aggregator';
+    }
+
+    // Hosts an aggregator parser must never be linked through: its configured
+    // urls, its metadata website, and any `aggregatorHosts` it declares (a
+    // feed served from one host for a site that lives on another).
+    getAggregatorOwnHosts(parserConfig) {
+        const hosts = new Set();
+        const add = (value) => {
+            const raw = String(value || '').trim();
+            const host = (/^https?:\/\//i.test(raw) ? this.getHostFromUrl(raw) : raw).toLowerCase().replace(/^www\./, '');
+            if (host) hosts.add(host);
+        };
+        for (const url of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) add(url);
+        const website = parserConfig && parserConfig.metadata && parserConfig.metadata.website;
+        add(website && typeof website === 'object' ? website.value : website);
+        for (const host of Array.isArray(parserConfig && parserConfig.aggregatorHosts) ? parserConfig.aggregatorHosts : []) add(host);
+        return hosts;
+    }
+
+    // Clears url / website / ticketUrl values that point back at the
+    // aggregator the record came from. Returns the number cleared.
+    clearAggregatorSelfLinks(event) {
+        if (!this.isAggregatorRecord(event)) return 0;
+        const hosts = this.getAggregatorOwnHosts(event._parserConfig);
+        if (hosts.size === 0) return 0;
+        let cleared = 0;
+        for (const field of ['url', 'website', 'ticketUrl']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const host = this.getHostFromUrl(value).toLowerCase().replace(/^www\./, '');
+            if (!host || ![...hosts].some(own => host === own || host.endsWith(`.${own}`))) continue;
+            event[field] = '';
+            cleared++;
+        }
+        return cleared;
+    }
+
+    // The fold of an aggregator's copy into the event's own record: the own
+    // record is the base and keeps every field it has; the copy fills blanks.
+    mergeAggregatorCopyIntoOwnRecord(ownRecord, aggregatorRecord) {
+        const merged = { ...ownRecord };
+        const isEmpty = (value) => value === null || value === undefined
+            || (typeof value === 'string' && value.trim() === '')
+            || (Array.isArray(value) && value.length === 0);
+        const filled = [];
+        for (const [field, value] of Object.entries(aggregatorRecord || {})) {
+            if (field.startsWith('_') || isEmpty(value) || !isEmpty(merged[field])) continue;
+            merged[field] = value;
+            filled.push(field);
+        }
+        console.log(`🧭 AGGREGATOR: "${ownRecord.title || 'event'}" — ${(aggregatorRecord._parserConfig && aggregatorRecord._parserConfig.name) || 'an aggregator'}'s copy folded in; the event's own source keeps every field it states${filled.length > 0 ? `, blanks filled: ${filled.join(', ')}` : ''}`);
+        return merged;
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
+        // Exactly one side from an aggregator: no arbitration, no priorities —
+        // the event's own source wins (see "Aggregators are for DISCOVERY").
+        const existingIsAggregator = this.isAggregatorRecord(existingEvent);
+        const newIsAggregator = this.isAggregatorRecord(newEvent);
+        if (existingIsAggregator !== newIsAggregator) {
+            return existingIsAggregator
+                ? this.mergeAggregatorCopyIntoOwnRecord(newEvent, existingEvent)
+                : this.mergeAggregatorCopyIntoOwnRecord(existingEvent, newEvent);
+        }
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
 
         // Start with newEvent as base to preserve metadata
@@ -13464,6 +13544,9 @@ class SharedCore {
             && this.isDefaultShapedEnd(calendarObject.startDate, calendarObject.endDate)
             && scrapedEndMs !== calendarEndMs;
 
+        const scrapedIsAggregator = this.isAggregatorRecord(scraperObject) || this.isAggregatorRecord(newEvent);
+        const aggregatorKeptFields = [];
+
         // Apply merge logic for each field
         for (const fieldName of allFields) {
             // Skip internal fields. 'url' is an alias/view of 'website' (folded
@@ -13726,6 +13809,15 @@ class SharedCore {
                 // Identical values fall through to the configured strategy (no-op).
             }
 
+            // An aggregator never changes what a saved event already says
+            // (see "Aggregators are for DISCOVERY"): it may fill a blank.
+            if (scrapedIsAggregator && !fieldName.startsWith('_') && fieldName !== 'notes'
+                && !this.isEmptyArbitrationValue(calendarValue)) {
+                if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) aggregatorKeptFields.push(fieldName);
+                mergedObject[fieldName] = calendarValue;
+                continue;
+            }
+
             // WHO THROWS THE PARTY beats WHERE IT IS, under EVERY strategy. A
             // venue parser stamps its own site as static metadata, merged
             // "clobber" — so the saved organizer link (theurbanbear.com on
@@ -13788,6 +13880,10 @@ class SharedCore {
                     mergedObject[fieldName] = calendarValue;
                     break;
             }
+        }
+
+        if (aggregatorKeptFields.length > 0) {
+            console.log(`🧭 AGGREGATOR: "${mergeTitle}" — the saved event keeps ${aggregatorKeptFields.join(', ')}; an aggregator only fills blanks`);
         }
 
         // STEP 3b: AI arbitration for genuine conflicts — one batched request.
