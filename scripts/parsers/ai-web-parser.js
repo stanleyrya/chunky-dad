@@ -21144,6 +21144,44 @@ TEXT:
         return dates;
     }
 
+    // …and when the model DID return a date that names another day than
+    // the card's own date line, the card wins here too — before the
+    // gates below judge the model's date. sf-eagle.com's November WOOF!
+    // card prints "SAT · NOV 07"; its poster says "EVERY FIRST SATURDAY",
+    // the model answered Nov 1, and the record was then dropped as "a
+    // date this page never states" (run 20260921-184116). Same doctrine
+    // as applyCardStatedDateOverFlyerDate, applied where it can still
+    // save the record. The model's clock is kept.
+    preferCardPrintedDateOverModelDate(aiEvent, htmlData, title = '') {
+        if (!aiEvent || typeof aiEvent !== 'object') return false;
+        const modelDateText = String(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, '') || '');
+        const modelDay = /^(\d{4})-(\d{2})-(\d{2})/.exec(modelDateText);
+        if (modelDay && htmlData && Array.isArray(htmlData.segmentCardLines)) {
+            const printed = this.readCardPrintedDate(htmlData.segmentCardLines, htmlData.segmentPageDateContext);
+            if (printed && printed.date.slice(5) !== `${modelDay[2]}-${modelDay[3]}`) {
+                console.log(`📅 AI Web: "${title || 'Unknown'}" — the model read ${modelDay[0]}, the card itself prints "${printed.line}" → ${printed.date}; the card's date ships`);
+                const clock = /T(\d{2}:\d{2})/.exec(modelDateText);
+                if (clock && !this.firstNonEmpty(aiEvent.startTime, '')) aiEvent.startTime = clock[1];
+                aiEvent.startDate = printed.date;
+                if (aiEvent.start) aiEvent.start = '';
+                const modelEnd = /^(\d{4}-\d{2}-\d{2})/.exec(String(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, '') || ''));
+                // The end moves by the same number of days (an end after
+                // midnight stays the morning after); its clock is kept.
+                if (modelEnd) {
+                    const dayMs = 24 * 60 * 60 * 1000;
+                    const shift = Date.parse(`${printed.date}T00:00:00Z`) - Date.parse(`${modelDay[0]}T00:00:00Z`);
+                    const endClock = /T(\d{2}:\d{2})/.exec(String(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, '') || ''));
+                    const movedEnd = new Date(Date.parse(`${modelEnd[1]}T00:00:00Z`) + Math.round(shift / dayMs) * dayMs);
+                    if (endClock && !this.firstNonEmpty(aiEvent.endTime, '')) aiEvent.endTime = endClock[1];
+                    aiEvent.endDate = Number.isNaN(movedEnd.getTime()) ? '' : movedEnd.toISOString().slice(0, 10);
+                    if (aiEvent.end) aiEvent.end = '';
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     // A listing card's printed date, read without the model: { date:
     // 'YYYY-MM-DD', line, startTime, endTime } or null.
     //
@@ -21866,6 +21904,7 @@ TEXT:
                 console.log(`📅 AI Web: "${title || 'Unknown'}" — the model's date did not survive; the card itself prints "${printed.line}" → ${printed.date}${printed.startTime && aiEvent.startTime === printed.startTime ? ` ${printed.startTime}` : ''}`);
             }
         }
+        this.preferCardPrintedDateOverModelDate(aiEvent, htmlData, title);
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
         let startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);

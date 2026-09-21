@@ -18780,6 +18780,24 @@ test('MEC full calendar on its list skin: the monthly skin is asked for once and
   assert.equal(posts.length, 1);
 });
 
+test('a card\'s own date line beats a model date that names another day; an agreeing or absent card line changes nothing', () => {
+  const parser = createParser();
+  const card = { segmentCardLines: ['SAT · NOV 07', 'WOOF!', '3 PM - 6 PM'], segmentPageDateContext: null };
+  // The poster says "every first Saturday"; the model answered Nov 1.
+  const wrong = { startDate: '2026-11-01', startTime: '15:00', endDate: '2026-11-01', endTime: '18:00' };
+  assert.equal(parser.preferCardPrintedDateOverModelDate(wrong, card, 'WOOF!'), true);
+  assert.deepEqual([wrong.startDate, wrong.startTime, wrong.endDate, wrong.endTime], ['2026-11-07', '15:00', '2026-11-07', '18:00']);
+  // An end after midnight stays the morning after.
+  const late = { start: '2026-11-01T22:00', end: '2026-11-02T02:00' };
+  parser.preferCardPrintedDateOverModelDate(late, card, 'WOOF!');
+  assert.deepEqual([late.startDate, late.startTime, late.endDate, late.endTime, late.start, late.end], ['2026-11-07', '22:00', '2026-11-08', '02:00', '', '']);
+  // Agreement, no card line, or a page that is not a listing card: untouched.
+  const right = { startDate: '2026-11-07', startTime: '15:00' };
+  assert.equal(parser.preferCardPrintedDateOverModelDate(right, card, 'WOOF!'), false);
+  assert.equal(parser.preferCardPrintedDateOverModelDate({ startDate: '2026-11-01' }, { segmentCardLines: ['WOOF!', 'Every first Saturday in November'] }, 'WOOF!'), false);
+  assert.equal(parser.preferCardPrintedDateOverModelDate({ startDate: '2026-11-01' }, { html: '<html></html>' }, 'WOOF!'), false);
+});
+
 test('readCardPrintedDate: a listing card\'s date-only line is read without the model — and nothing looser is', () => {
   const parser = createParser();
   const now = new Date('2026-09-21T12:00:00Z');
