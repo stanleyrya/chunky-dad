@@ -55,6 +55,7 @@ window.EVENT_PLATES = {
   "3dollarbillbk.com": "#3c3225",
   "rockbarnyc.com": "#000000",
   "tys.nyc": "#ffffff",
+  "lodgeny.com": "#ffffff",
   "nowherebarnyc.com": "#ffffff",
   "flexbar.nyc": "#ffffff",
   "juliusbarny.com": "#ffffff",

@@ -1,5 +1,14 @@
 [
   {
+    "slug": "bear-it-mtl-players-7f327916",
+    "url": "https://www.bearitmtl.com/event/players/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:59:0 #434343:11:0 #232323:9:0"
+  },
+  {
     "slug": "bear-playground-gladiateurs-61bceacf",
     "url": "https://www.bearitmtl.com/event/bear-playground-gladiateurs/",
     "faviconBg": "#1a1a1a",
