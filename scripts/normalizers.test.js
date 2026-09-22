@@ -2937,6 +2937,19 @@ test('city routing: on a curated venue\'s own site the venue decides before the 
   assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', description: 'a monthly gathering in Seattle', url: 'https://promoter.example/' }), 'seattle');
 });
 
+test('curated-bar city backfill: a page that names a city we do not cover blocks a namesake bar elsewhere', () => {
+  const core = new SharedCore({ sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] } }, { eventSchema: EventSchema, bars: { sitges: [{ name: 'The Bear Cave', city: 'sitges' }] } });
+  const normalizer = new LocationNormalizer(core);
+  const seoul = { title: 'MEOSUM PARTY', city: 'seoul', bar: 'BEAR CAVE', startDate: '2030-09-26T23:55:00.000Z' };
+  captureConsoleLog(() => { normalizer.normalize(seoul); });
+  assert.equal(seoul.city, 'unknown', 'waits for a Seoul calendar instead of shipping to Sitges');
+  assert.equal(seoul._unrecognizedCity, 'seoul');
+  // No city stated at all: the curated bar still speaks.
+  const nowhere = { title: 'Bear Night', bar: 'The Bear Cave', startDate: '2030-09-26T23:55:00.000Z' };
+  captureConsoleLog(() => { normalizer.normalize(nowhere); });
+  assert.equal(nowhere.city, 'sitges');
+});
+
 test('site-identity city backfill: two curated bars sharing one site AGREE on the city — literal 3dollarbillbk repro', () => {
   const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
   const event = {

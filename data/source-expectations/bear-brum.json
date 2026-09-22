@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "source": "Bear Brum",
+  "slug": "bear-brum",
+  "status": "complete",
+  "recheckAfter": "2026-10-22",
+  "recon": {
+    "date": "2026-09-22",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.bearbrum.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.bearbrum.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "Wix warmupData → widgetTPASection … events.events[]",
+        "note": "Wix Events site. The page's own warmup blob carries the event list (one item: the weekend pass) with scheduling.config start/end/timeZoneId, location (Birmingham, UK) and the Wix event page slug; the visible page also prints the nights' ticket links (Dandy on OutSavvy, BEEFMINCE on DICE). No JSON-LD events, only a WebSite node."
+      },
+      {
+        "url": "https://linktr.ee/bearbrum",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The linktree he sent: links to bearbrum.com, /guide (404) and the festival's Instagram/Facebook. Nothing of its own."
+      }
+    ],
+    "notes": "Recon from one cached read of the site on 2026-09-22. Bear Brum is Birmingham's bear festival, 25–27 September 2026."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: every item in the Wix events blob (one). The festival publishes one dated record — the pass — and hands the nights to other promoters.",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-09-22",
+      "end": "2026-12-21"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "birmingham",
+    "timezone": "Europe/London",
+    "website": "https://www.bearbrum.com"
+  },
+  "events": [
+    {
+      "id": "bear-brum-weekend-pass-2026-09-25",
+      "kind": "single",
+      "title": "BEAR BRUM WEEKEND PASS",
+      "description": null,
+      "address": "Birmingham, UK",
+      "city": "birmingham",
+      "timezone": "Europe/London",
+      "startDate": "2026-09-25",
+      "startTime": "17:00",
+      "endDate": "2026-09-27",
+      "endTime": "21:00",
+      "website": "https://www.bearbrum.com/event-details/bear-brum-weekend-pass-1",
+      "image": "https://static.wixstatic.com/media/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "The weekend pass, 25 Sept 17:00 – 27 Sept 21:00 Europe/London (Wix scheduling.config). The nights inside it (Dandy at Eden Bar, BEEFMINCE at The Hub) are sold by their own promoters and are not events of this feed.",
+      "evidence": {
+        "url": "https://www.bearbrum.com/",
+        "quote": "\"title\":\"BEAR BRUM WEEKEND PASS\" … \"startDate\":\"2026-09-25T16:00:00.000Z\",\"endDate\":\"2026-09-27T20:00:00.000Z\",\"timeZoneId\":\"Europe/London\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

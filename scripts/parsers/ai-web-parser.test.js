@@ -12558,8 +12558,10 @@ test('lumberyard: a multi-event segment hands the bar rescue TEXT, never the raw
   assert.ok(htmlData.html.includes('</svg>'), 'the prompt payload still carries the raw segment HTML');
   // The exact URL signal from the run: the SVG's own xmlns is the segment's
   // only link, and its slug token "svg" is what "</svg>" converged with.
-  assert.ok(htmlData.html.includes('SEGMENT_LINK_URL: http://www.w3.org/2000/svg'),
-    'the fixture must reproduce the run\'s xmlns link signal');
+  // The SVG's xmlns is no longer a link candidate at all (an XML namespace
+  // is an identifier, never a page) — the run's signal is reproduced by the
+  // markup, and the guard below still has to hold without it.
+  assert.ok(!htmlData.html.includes('SEGMENT_LINK_URL: http://www.w3.org/2000/svg'), 'an xmlns never becomes the segment link');
   assert.equal(htmlData.segmentText, LUMBERYARD_SEGMENT_LINES.join('\n'));
   assert.equal(/<[a-zA-Z!/]/.test(htmlData.segmentText), false, 'no markup reaches the rescue PAGE corpus');
 });

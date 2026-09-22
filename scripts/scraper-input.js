@@ -581,6 +581,48 @@ const scraperConfig = {
       urlDiscoveryDepth: 0,
     },
     {
+      name: "whereto.party",
+      // Aggregator for nightlife worldwide (42 cities across Asia-Pacific,
+      // Europe and the Americas), submitted by organizers. Server-rendered
+      // Next.js. /cities is the directory: it links every city page, and
+      // each city page carries ~20 cards (title, city · venue, date · time,
+      // price, flyer, a link to its own event page) out to about a month,
+      // no paging. The crawl follows the directory's city links itself — a
+      // city they add appears here on its own, nothing to maintain. The
+      // generic card splitter reads the cards. General nightlife — the bear
+      // check decides. siteRole "aggregator": discovery only.
+      siteRole: "aggregator",
+      urls: ["https://whereto.party/cities"],
+      urlDiscoveryDepth: 1,
+      discoveryAllowedPatterns: ["whereto.party/in/"],
+      maxAdditionalUrls: 60,
+      alwaysBear: false,
+    },
+    {
+      name: "Bear Brum",
+      // Birmingham's bear festival (late September). bearbrum.com is a Wix
+      // Events site: the page's own warmup blob carries the weekend pass as
+      // one dated event with its Wix event page and flyer (the Wix reader).
+      // The festival's nights (Dandy, BEEFMINCE at The Hub) are sold by other
+      // promoters and arrive through them.
+      urls: ["https://www.bearbrum.com/"],
+      alwaysBear: true,
+      metadata: {
+        website: { value: "https://www.bearbrum.com" },
+        instagram: { value: "https://www.instagram.com/bear_brum_festival" },
+      },
+    },
+    {
+      name: "Xposure Events",
+      // Eventbrite organizer behind Western Xposure (Fall, XXL, the X-mas
+      // Holiday Bear Retreat) at CCBC Resort Hotel. The organizer page lists
+      // every upcoming event with its ticket page — the same door as
+      // Megawoof America and Bearracuda. Their events reached us only as The
+      // Bear Calendar's copies; this is the organizer's own statement.
+      urls: ["https://www.eventbrite.com/o/25444337255"],
+      alwaysBear: true,
+    },
+    {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,
       // URL blocking, AI/OCR settings, and field merging are all automatic.
