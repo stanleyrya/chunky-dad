@@ -21215,6 +21215,14 @@ TEXT:
         }
         if (!dateLine) return null;
         const card = stated.find(date => Number.isFinite(date.year)) || stated[0];
+        // A year printed ANYWHERE on the date line is the card's year. A range
+        // puts it at the far end — "May 22 – 23, 2026" — where the month-day
+        // reader never sees it, and the nearest-future guess then filed last
+        // May's party under next May (beefdip.com, run 20260921-191051). Two
+        // different years on one line decide nothing.
+        const lineYears = [...new Set((dateLine.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number))];
+        if (lineYears.length > 1) return null;
+        if (!Number.isFinite(card.year) && lineYears.length === 1) card.year = lineYears[0];
         let year = Number.isFinite(card.year) ? card.year
             : (pageDateContext && pageDateContext.month === card.month && Number.isFinite(pageDateContext.year) ? pageDateContext.year : null);
         // A weekday printed on the date line is a check on the year: "FRI ·

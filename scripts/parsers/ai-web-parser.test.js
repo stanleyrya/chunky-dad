@@ -18807,6 +18807,9 @@ test('readCardPrintedDate: a listing card\'s date-only line is read without the 
     { date: '2026-10-10', line: 'SATURDAY, OCT. 10', startTime: '14:00', endTime: '20:00' });
   assert.equal(parser.readCardPrintedDate(['SAT · JAN 09', 'New Year Party'], null, now).date, '2027-01-09', 'a January card in September is next January');
   assert.equal(parser.readCardPrintedDate(['October 10, 2027', 'Gala'], null, now).date, '2027-10-10');
+  // A range prints its year at the far end: it is still the card's year (and last May stays last May).
+  assert.equal(parser.readCardPrintedDate(['May 22 – 23, 2026', 'Pride Pool Party'], null, now).date, '2026-05-22');
+  assert.equal(parser.readCardPrintedDate(['Dec 31, 2026 – Jan 1, 2027', 'NYE'], null, now), null, 'two dates, two years: decides nothing');
   // The printed weekday is a check on the year: Oct 2 is a Friday in 2026, a Saturday in 2027.
   assert.equal(parser.readCardPrintedDate(['SAT · OCT 02', 'Party'], null, now).date, '2027-10-02');
   assert.equal(parser.readCardPrintedDate(['Monday, October 10, 2026', 'Party'], null, now), null, 'a stated year whose weekday disagrees reads nothing');
