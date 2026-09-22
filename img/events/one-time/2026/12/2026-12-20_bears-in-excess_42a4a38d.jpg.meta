@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+  "type": "event",
+  "filename": "2026-12-20_bears-in-excess_42a4a38d.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "473745",
+  "eventInfo": {
+    "name": "Bears in Excess",
+    "startDate": "2026-12-20T13:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-22T04:08:57.425Z",
+  "etag": "\"abcaed4b96097135b4f35b243b743145\"",
+  "lastModified": "Mon, 24 Aug 2026 09:50:45 GMT",
+  "flyerOptimized": 1
+}
