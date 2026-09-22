@@ -228,6 +228,16 @@
     "accent": "#db1164"
   },
   {
+    "slug": "tidal-wave-43219c30",
+    "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3da29e:19:9 #e88459:18:14 #ecc4ab:16:6 #7fceb3:9:9 #db1164:7:23",
+    "accent": "#db1164"
+  },
+  {
     "slug": "welcome-party-6cf6baa0",
     "url": "https://beefdip.com/tags/",
     "faviconBg": "#e30309",

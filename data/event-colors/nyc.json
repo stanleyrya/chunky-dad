@@ -500,6 +500,66 @@
     "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
   },
   {
+    "slug": "fursdays-05bb45e9",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-0f576565",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-174f4494",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-1b0ef1b3",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-1efbbdbe",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-43d12bf7",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-4e4ff5f9",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-6cfacf06",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-6d66bb19",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-7e1f908f",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
     "slug": "fuzzy-0380f9f1",
     "url": "https://fuzzy.nyc/",
     "faviconBg": "#e69dc7",
@@ -763,6 +823,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-43531dc9",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-4f7f5d8a",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -941,6 +1011,16 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
     "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-6e5bebcd",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010001:43:0 #bd8a7b:12:7 #6c483e:11:5 #d05007:9:18 #f6b55b:7:13",
+    "accent": "#d05007"
   },
   {
     "slug": "lodge-ny-the-bear-party-6f104395",
