@@ -6,60 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-toronto
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20261101T010000Z
-DTEND:20261101T034500Z
-DTSTAMP:20260921T002121Z
-UID:503112A0-17B1-4F9C-9162-4E3E59CD59A0
-CREATED:20260920T233635Z
-DESCRIPTION:description: an evening for bears and their admirers With DJ's 
- to be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www
- .blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-
- 495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash
- -2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY\;BYDAY=-1SA\nbar: Black Eag
- le Toronto\naddress: 457 Church St\, Toronto\, ON M4Y 2C5\naddressSource: c
- urated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=
- 1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON
- %20M4Y%202C5\nkey: northern-bear-bash|2026-11-01|black eagle toronto\nimage
- Source: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortNam
- e: NORTHERN BEAR
-LAST-MODIFIED:20260920T233635Z
-LOCATION:43.6641525\, -79.3801656
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:NORTHERN BEAR BASH
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261018T170000Z
-DTEND:20261018T220000Z
-DTSTAMP:20260921T002121Z
-UID:F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940
-CREATED:20260919T161239Z
-DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
- o\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: 
- https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-ima
- ges/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https:/
- /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebb
- dda00bcf1459e.jpg\ncadence: FREQ=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2
- 026-10-18|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinS
- ource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: c
- urated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess
- %2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario
-LAST-MODIFIED:20260920T233638Z
-LOCATION:43.6620695\, -79.3773558
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bears in Excess
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20270131T180000Z
 DTEND:20270131T230000Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260922T040836Z
 UID:A16A6303-3DBC-48D0-995D-8DCAE323008B
 CREATED:20260919T161240Z
 DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
@@ -81,9 +30,34 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261220T180000Z
+DTEND:20261220T230000Z
+DTSTAMP:20260922T040836Z
+UID:C7FD1DB1-4283-40CC-B71E-B2C7979DE578
+CREATED:20260922T031119Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
+ o\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: 
+ https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-ima
+ ges/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\
+ nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/
+ public/event-images/ebbdda00bcf1459e.jpg\nbarSource: curated\naddressSource
+ : curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Exc
+ ess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario\npinSource: curat
+ ed\ncadence: FREQ=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2026-12-20|spa e
+ xcess\nbearSource: keyword\nshortName: BEARS IN EXCESS
+LAST-MODIFIED:20260922T031119Z
+LOCATION:43.6620695\, -79.3773558
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears in Excess
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260920T170000Z
 DTEND:20260920T220000Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260922T040836Z
 UID:65B3C505-B6ED-45D9-8AD5-13E45BE68C7C
 CREATED:20260919T161238Z
 DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
@@ -106,32 +80,26 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251206T150000Z
-DTEND:20251207T080000Z
-DTSTAMP:20260921T002121Z
-UID:ACED9449-C269-4068-8EAF-ED9E84842207
-CREATED:20260829T204850Z
-DESCRIPTION:description: Toronto… get ready for it. Montreal\\\\'s PLAYGROU
- ND is coming to the city for the very first time\, and trust us\, we’re com
- ing in with a BANG! On December 6th\, 2025\, we’re opening a playground whe
- re every body\, every style and every fantasy gets the space to shine. Leat
- her\, rubber\, sports gear\, drag\, kink\, bears\, pups\, […]\nbar: Buddies
-  in Bad Times Theatre\naddress: 12 Alexander Street\, Toronto\, M4Y1B4\nima
- ge: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playgrou
- nd-Vignette2.jpg?fit=1022%2C538&ssl=1\ncover: 22 CAD\ntimezone: America/Tor
- onto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploa
- ds/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1\naddressSource: pa
- ge\nwebsite: https://www.bearitmtl.com/event/playground-toronto/\ngmaps: ht
- tps://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20
- Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4\npinSource: g
- eocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey:
-  playground-toronto|2025-12-06|buddies in bad times theatre\nimageSource: j
- sonld\nbarSource: geo-poi\nbearSource: ai
-LAST-MODIFIED:20260829T204850Z
-LOCATION:43.6632092\, -79.3829940
+DTSTART:20261018T170000Z
+DTEND:20261018T220000Z
+DTSTAMP:20260922T040836Z
+UID:F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940
+CREATED:20260919T161239Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
+ o\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: 
+ https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-ima
+ ges/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https:/
+ /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebb
+ dda00bcf1459e.jpg\ncadence: FREQ=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2
+ 026-10-18|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinS
+ ource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: c
+ urated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess
+ %2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario
+LAST-MODIFIED:20260920T233638Z
+LOCATION:43.6620695\, -79.3773558
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Playground Toronto
+SUMMARY:Bears in Excess
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -139,7 +107,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260927T010000Z
 DTEND:20260927T034500Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260922T040836Z
 UID:6D9D73C1-D1C6-41D1-AECD-5A3985AA7BB4
 CREATED:20260920T233634Z
 DESCRIPTION:description: an evening for bears and their admirers With DJ's 
@@ -163,26 +131,53 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261115T180000Z
-DTEND:20261115T230000Z
-DTSTAMP:20260921T002121Z
-UID:E9B485C8-C499-41BE-8039-3CEB6008761A
-CREATED:20260919T161239Z
-DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
- o\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: 
- https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-ima
- ges/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https:/
- /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebb
- dda00bcf1459e.jpg\ncadence: FREQ=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2
- 026-11-15|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinS
- ource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: c
- urated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess
- %2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario
-LAST-MODIFIED:20260920T233638Z
-LOCATION:43.6620695\, -79.3773558
+DTSTART:20261101T010000Z
+DTEND:20261101T034500Z
+DTSTAMP:20260922T040836Z
+UID:503112A0-17B1-4F9C-9162-4E3E59CD59A0
+CREATED:20260920T233635Z
+DESCRIPTION:description: an evening for bears and their admirers With DJ's 
+ to be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www
+ .blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-
+ 495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash
+ -2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY\;BYDAY=-1SA\nbar: Black Eag
+ le Toronto\naddress: 457 Church St\, Toronto\, ON M4Y 2C5\naddressSource: c
+ urated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=
+ 1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON
+ %20M4Y%202C5\nkey: northern-bear-bash|2026-11-01|black eagle toronto\nimage
+ Source: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortNam
+ e: NORTHERN BEAR
+LAST-MODIFIED:20260920T233635Z
+LOCATION:43.6641525\, -79.3801656
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bears in Excess
+SUMMARY:NORTHERN BEAR BASH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T020000Z
+DTEND:20261129T044500Z
+DTSTAMP:20260922T040836Z
+UID:C82C3152-36B6-43AA-99A2-B541A80AEB7A
+CREATED:20260920T233635Z
+DESCRIPTION:description: an evening for bears and their admirers With DJ's 
+ to be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www
+ .blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-
+ 495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash
+ -2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY\;BYDAY=-1SA\nbar: Black Eag
+ le Toronto\naddress: 457 Church St\, Toronto\, ON M4Y 2C5\naddressSource: c
+ urated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=
+ 1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON
+ %20M4Y%202C5\nkey: northern-bear-bash|2026-11-29|black eagle toronto\nimage
+ Source: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortNam
+ e: NORTHERN BEAR
+LAST-MODIFIED:20260920T233636Z
+LOCATION:43.6641525\, -79.3801656
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:NORTHERN BEAR BASH
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -190,7 +185,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261010T230000Z
 DTEND:20261011T014500Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260922T040836Z
 UID:67A8C2DE-B820-412D-847F-10AACE0EAF56
 CREATED:20260920T233636Z
 DESCRIPTION:description: A NIGHT FOR DADDIES\, DADDY CHASERS AND FRIENDS OP
@@ -215,27 +210,57 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261129T020000Z
-DTEND:20261129T044500Z
-DTSTAMP:20260921T002121Z
-UID:C82C3152-36B6-43AA-99A2-B541A80AEB7A
-CREATED:20260920T233635Z
-DESCRIPTION:description: an evening for bears and their admirers With DJ's 
- to be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www
- .blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-
- 495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash
- -2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY\;BYDAY=-1SA\nbar: Black Eag
- le Toronto\naddress: 457 Church St\, Toronto\, ON M4Y 2C5\naddressSource: c
- urated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=
- 1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON
- %20M4Y%202C5\nkey: northern-bear-bash|2026-11-29|black eagle toronto\nimage
- Source: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortNam
- e: NORTHERN BEAR
-LAST-MODIFIED:20260920T233636Z
-LOCATION:43.6641525\, -79.3801656
+DTSTART:20261115T180000Z
+DTEND:20261115T230000Z
+DTSTAMP:20260922T040836Z
+UID:E9B485C8-C499-41BE-8039-3CEB6008761A
+CREATED:20260919T161239Z
+DESCRIPTION:bar: Spa Excess\naddress: 105 Carlton Street\, Toronto\, Ontari
+ o\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: 
+ https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-ima
+ ges/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https:/
+ /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebb
+ dda00bcf1459e.jpg\ncadence: FREQ=MONTHLY\;BYDAY=3SU\nkey: bears-in-excess|2
+ 026-11-15|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinS
+ ource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: c
+ urated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess
+ %2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario
+LAST-MODIFIED:20260920T233638Z
+LOCATION:43.6620695\, -79.3773558
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:NORTHERN BEAR BASH
+SUMMARY:Bears in Excess
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251206T150000Z
+DTEND:20251207T080000Z
+DTSTAMP:20260922T040836Z
+UID:ACED9449-C269-4068-8EAF-ED9E84842207
+CREATED:20260829T204850Z
+DESCRIPTION:description: Toronto… get ready for it. Montreal\\\\'s PLAYGROU
+ ND is coming to the city for the very first time\, and trust us\, we’re com
+ ing in with a BANG! On December 6th\, 2025\, we’re opening a playground whe
+ re every body\, every style and every fantasy gets the space to shine. Leat
+ her\, rubber\, sports gear\, drag\, kink\, bears\, pups\, […]\nbar: Buddies
+  in Bad Times Theatre\naddress: 12 Alexander Street\, Toronto\, M4Y1B4\nima
+ ge: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playgrou
+ nd-Vignette2.jpg?fit=1022%2C538&ssl=1\ncover: 22 CAD\ntimezone: America/Tor
+ onto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploa
+ ds/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1\naddressSource: pa
+ ge\nwebsite: https://www.bearitmtl.com/event/playground-toronto/\ngmaps: ht
+ tps://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20
+ Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4\npinSource: g
+ eocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey:
+  playground-toronto|2025-12-06|buddies in bad times theatre\nimageSource: j
+ sonld\nbarSource: geo-poi\nbearSource: ai
+LAST-MODIFIED:20260829T204850Z
+LOCATION:43.6632092\, -79.3829940
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Playground Toronto
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

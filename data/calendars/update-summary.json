@@ -177,8 +177,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 131160,
-      "eventCount": 113
+      "dataLength": 132138,
+      "eventCount": 115
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -225,8 +225,8 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 30980,
-      "eventCount": 27
+      "dataLength": 32078,
+      "eventCount": 28
     },
     "sacramento": {
       "name": "Sacramento",
@@ -273,8 +273,8 @@
     "toronto": {
       "name": "Toronto",
       "status": "success",
-      "dataLength": 11232,
-      "eventCount": 9
+      "dataLength": 12387,
+      "eventCount": 10
     },
     "torremolinos": {
       "name": "Torremolinos",
