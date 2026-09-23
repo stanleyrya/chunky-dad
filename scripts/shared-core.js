@@ -8574,6 +8574,25 @@ class SharedCore {
                     continue;
                 }
             }
+            // An aggregator's own pages are only ever its listing and its
+            // per-event copies — and its cards already say everything a copy
+            // would (title, venue, date, price, flyer, the original link),
+            // while its records may never carry its own link anyway (see
+            // "Aggregators are for DISCOVERY"). Crawling deeper on the
+            // aggregator's host buys nothing: whereto.party's first run spent
+            // 80 of its 120-request budget on /events/<slug> pages that each
+            // returned 0 events. Off-host links (the organizers' sites) are
+            // the discovery and are still followed.
+            if (currentDepth > 0 && parserConfig && String(parserConfig.siteRole || '').toLowerCase() === 'aggregator'
+                && !this.isConfiguredParserUrlForCrawl(url, parserConfig)
+                && this.getAggregatorOwnHosts(parserConfig).size > 0) {
+                const host = this.getHostFromUrl(url).toLowerCase().replace(/^www\./, '');
+                const own = [...this.getAggregatorOwnHosts(parserConfig)].some(h => host === h || host.endsWith(`.${h}`));
+                if (own && !this.matchesAggregatorListingPattern(url, parserConfig)) {
+                    await displayAdapter.logInfo(`SYSTEM: Not crawling ${url} — an aggregator's own event page repeats its card; only its listings and the links off it are read`);
+                    continue;
+                }
+            }
             if (this.hasProcessedUrl(processedUrls, url)) {
                 if (currentDepth === 0) {
                     await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
@@ -8913,6 +8932,25 @@ class SharedCore {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: chain cap (${ADAPTIVE_CRAWL_MAX_HOPS} hops) reached at ${url} — not following ${linksToConsider.length} link(s)`);
                         linksToConsider = [];
                         adaptiveFollowBlocked = true;
+                    } else if (linksToConsider.length > 0 && currentDepth > 0 && pageClassification === 'link-aggregator'
+                        && !this.isConfiguredParserUrlForCrawl(url, parserConfig)) {
+                        // A link hub DISCOVERED deeper in a source's site is that
+                        // site's directory of OTHER places — bearbrum.com/cityguide
+                        // (bars, clubs, a café chain) sent the crawl to
+                        // nightingaleclub.co.uk and bostonteaparty.co.uk, whose
+                        // toddler mornings shipped as Bear Brum events. A hub
+                        // the owner CONFIGURED (a linktree root) is the source's
+                        // own front door and every link on it is the payload; a
+                        // hub found on the way only fans out to the source's own
+                        // hosts.
+                        const configuredHosts = (Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [])
+                            .map(root => this.getRegistrableDomainFromUrl(root)).filter(Boolean);
+                        const before = linksToConsider.length;
+                        linksToConsider = linksToConsider.filter(link => configuredHosts.includes(this.getRegistrableDomainFromUrl(link)));
+                        if (linksToConsider.length < before) {
+                            await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a link hub found inside the source — following only its ${linksToConsider.length} same-site link(s), not the ${before - linksToConsider.length} to other places (a hub's links are only the payload when the owner configured the hub)`);
+                        }
+                        if (linksToConsider.length === 0) adaptiveFollowBlocked = true;
                     }
                 }
                 // No fan-out from another org's site either: every page deeper
@@ -10417,6 +10455,23 @@ class SharedCore {
         const owner = owners.get(this.getUrlDedupeKey(url)) || '';
         const ownName = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name : '';
         return owner && owner !== ownName ? owner : '';
+    }
+
+    // One of this parser's configured urls[] (dedupe-key equality).
+    isConfiguredParserUrlForCrawl(url, parserConfig) {
+        const key = this.getUrlDedupeKey(url);
+        return !!key && (Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []).some(root => this.getUrlDedupeKey(root) === key);
+    }
+
+    // On an aggregator's own host, the pages worth reading are its LISTINGS:
+    // what discoveryAllowedPatterns names (whereto.party/in/<city>), else
+    // pages that look like the configured roots (same path depth as a root).
+    matchesAggregatorListingPattern(url, parserConfig) {
+        const patterns = Array.isArray(parserConfig && parserConfig.discoveryAllowedPatterns) ? parserConfig.discoveryAllowedPatterns : [];
+        if (patterns.length > 0) return patterns.some(pattern => String(url).toLowerCase().includes(String(pattern).toLowerCase()));
+        const depth = (value) => (this.parseUrl(value) || { pathname: '' }).pathname.replace(/\/+$/, '').split('/').filter(Boolean).length;
+        const roots = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        return roots.some(root => depth(root) === depth(url));
     }
 
     hasProcessedUrl(processedUrls, url) {

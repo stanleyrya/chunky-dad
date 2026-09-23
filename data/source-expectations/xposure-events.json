@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "source": "Xposure Events",
+  "slug": "xposure-events",
+  "status": "complete",
+  "recheckAfter": "2026-10-22",
+  "recon": {
+    "date": "2026-09-22",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.com/o/25444337255"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/25444337255",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 3,
+        "truthFlag": "organizer \"Xposure Events, LLC\"; 3 event links",
+        "note": "Eventbrite organizer page (Next.js, server-rendered): every upcoming event with its name, venue and ticket page — the same door as Megawoof America and Bearracuda. No JSON-LD on the listing; each ticket page carries its own."
+      }
+    ],
+    "notes": "Recon from one cached read on 2026-09-22 plus the parser's first run. Western Xposure at CCBC Resort Hotel, Cathedral City: Fall 2026, XXL, and the X-mas Holiday Bear Retreat."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "The organizer page lists every upcoming event of the organizer; all were read.",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
+    "occurrenceWindow": {
+      "start": "2026-09-22",
+      "end": "2026-12-21"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "palm-springs",
+    "timezone": "America/Los_Angeles",
+    "bar": "CCBC Resort Hotel"
+  },
+  "events": [
+    {
+      "id": "western-xposure-fall-2026-2026-10-08",
+      "kind": "single",
+      "title": "Western Xposure: Fall 2026",
+      "bar": "CCBC Resort Hotel",
+      "city": "palm-springs",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-08",
+      "startTime": null,
+      "endDate": "2026-10-12",
+      "endTime": null,
+      "ticketUrl": "https://www.eventbrite.com/e/western-xposure-fall-2026-tickets-1975198341410",
+      "website": "https://www.westernxposure.com/westernxposurefall",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577483%2F147944147159%2F1%2Foriginal.20241124-202417?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=4c306264c701d5d91d1f5bdf4387a983",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "Read off the organizer page on the recon date; the clock is on the ticket page.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/25444337255",
+        "quote": "\"name\":\"Western Xposure: Fall 2026\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "western-xposure-s-xxl-2026-10-15",
+      "kind": "single",
+      "title": "Western Xposure's XXL",
+      "bar": "CCBC Resort Hotel",
+      "city": "palm-springs",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-15",
+      "startTime": null,
+      "endDate": "2026-10-19",
+      "endTime": null,
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "Read off the organizer page on the recon date; the clock is on the ticket page.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/25444337255",
+        "quote": "\"name\":\"Western Xposure's XXL\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "western-x-mas-holiday-bear-retreat-2026-2026-12-24",
+      "kind": "single",
+      "title": "Western X-Mas: Holiday Bear Retreat 2026",
+      "bar": "CCBC Resort Hotel",
+      "city": "palm-springs",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-12-24",
+      "startTime": null,
+      "endDate": "2026-12-28",
+      "endTime": null,
+      "ticketUrl": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "Read off the organizer page on the recon date; the clock is on the ticket page.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/25444337255",
+        "quote": "\"name\":\"Western X-Mas: Holiday Bear Retreat 2026\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": []
+}

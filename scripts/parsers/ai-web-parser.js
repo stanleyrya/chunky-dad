@@ -15445,12 +15445,21 @@ class AiWebParser {
             for (const pattern of patterns) {
                 for (const match of source.matchAll(pattern)) {
                     const candidate = this.truncateAtEncodedDelimiter(match[1] || match[0]);
-                    if (candidate) candidates.add(candidate);
+                    if (candidate && !this.isMarkupNamespaceUrl(candidate)) candidates.add(candidate);
                 }
             }
         }
 
         return Array.from(candidates);
+    }
+
+    // An XML namespace is not a link. Inline SVG icons carry
+    // xmlns="http://www.w3.org/2000/svg" and, sitting first in a card's
+    // markup, that string became the card's SEGMENT_LINK_URL on every
+    // whereto.party card (2026-09-22). Schema vocabularies (schema.org,
+    // ogp.me) are the same shape: identifiers, never pages.
+    isMarkupNamespaceUrl(url) {
+        return /^https?:\/\/(?:www\.)?(?:w3\.org\/|schema\.org\/?|ogp\.me\/|purl\.org\/|xmlns\.com\/|ns\.adobe\.com\/)/i.test(String(url || '').trim());
     }
 
     // In the RAW (undecoded) scan the quote that ends an attribute value is

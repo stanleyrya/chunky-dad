@@ -1162,6 +1162,24 @@ class LocationNormalizer extends BaseNormalizer {
         const result = this.core.findCuratedBarCityByName(barName);
         if (!result) return event;
         const title = event.title || 'unknown';
+        // The page NAMED a city we do not cover ("seoul", parked on
+        // _unrecognizedCity): a bar of the same name curated elsewhere is a
+        // namesake, not this venue — whereto.party's Seoul nights at "Bear
+        // Cave" were filed under Sitges on the strength of Sitges' Bear Cave
+        // (run 2026-09-22). The refusal stays as it was; the event waits as
+        // unknown until that city has a calendar.
+        // Only a NAMED PLACE counts as stated: a single proper word ("seoul",
+        // "lisbon"). A region label ("socal / southwest", Eagle LA's ONYX)
+        // names no place and never outranks the venue.
+        const statedElsewhere = typeof event._unrecognizedCity === 'string' ? event._unrecognizedCity.trim() : '';
+        const statedIsPlaceName = /^[\p{L}][\p{L}'’.-]*(?: [\p{L}][\p{L}'’.-]*){0,2}$/u.test(statedElsewhere);
+        if (statedElsewhere && statedIsPlaceName && !result.ambiguousCities && result.city) {
+            const statedKey = this.matchCityInText(statedElsewhere) || this.resolveCityKeyQuietly(statedElsewhere) || '';
+            if (statedKey !== result.city) {
+                console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — the page says "${statedElsewhere}", so the curated "${result.bar.name}" in ${result.city} is a namesake, not this venue`);
+                return event;
+            }
+        }
         if (result.ambiguousCities) {
             console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — bar "${barName}" is curated in multiple cities (${result.ambiguousCities.join(', ')})`);
             return event;
