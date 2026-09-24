@@ -75,6 +75,9 @@ const MULTI_EVENT_SCHEDULE_CLOCK_TIMES = 4;
 // stamps that positively corroborate an extracted bar name without meaning
 // "already curated". Candidate evidence caps sourceEvents per venue.
 const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-site', 'geo-poi']);
+// A pin this close to a curated bar's pin IS that bar's door (findCuratedBarByPlace):
+// an exact geocode of the same street address lands on the same placemark.
+const CURATED_BAR_SAME_PLACE_KM = 0.025;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
 
 // Provenance stamps that positively corroborate a bar name / street address
@@ -3795,6 +3798,33 @@ class SharedCore {
             && this.normalizeBarNameKey(bar.name) === normalized) || null;
     }
 
+    // The curated bar that STANDS at this place, whatever it is called: a
+    // curated pin within CURATED_BAR_SAME_PLACE_KM of the coordinates (an
+    // exact geocode of a curated door lands on the curated pin, usually
+    // byte-identical), or the same numbered street line (isSameStreetAddress
+    // — never fuzzy). A name is what a page CALLS a venue; a party name in
+    // the venue slot ("Locker Room", Furball's night at Legacy, 79 Warrenton
+    // St — run 20260924-055217) passes every name check and still names a
+    // place the curated data already knows. Null when nothing matches or
+    // neither pin nor address is usable.
+    findCuratedBarByPlace(cityBars, coordinates, address = '') {
+        if (!Array.isArray(cityBars) || cityBars.length === 0) return null;
+        const pin = typeof coordinates === 'string' && this.isCoordinatePair(coordinates) ? coordinates.trim() : '';
+        const parsedAddress = this.parseAddressForComparison(typeof address === 'string' ? address : '');
+        if (!pin && !parsedAddress) return null;
+        return cityBars.find(bar => {
+            if (!bar || typeof bar !== 'object') return false;
+            if (pin && typeof bar.coordinates === 'string') {
+                const km = this.coordinatePairDistanceKm(pin, bar.coordinates);
+                if (km !== null && km <= CURATED_BAR_SAME_PLACE_KM) return true;
+            }
+            if (parsedAddress && typeof bar.address === 'string') {
+                return this.isSameStreetAddress(parsedAddress, this.parseAddressForComparison(bar.address));
+            }
+            return false;
+        }) || null;
+    }
+
     // Cross-city curated-bar lookup for city backfill: when an event's city is
     // unknown we don't know WHICH city's bars to search, so scan every city's
     // curated bars for a full-name match (normalizeBarNameKey equality — the
@@ -7498,6 +7528,17 @@ class SharedCore {
     //     already-known; approx/page pins are not location proof).
     //   - resolved city, and the bar name does NOT match that city's curated
     //     bars (findCuratedBarByName's normalization).
+    //   - …and neither the pin nor the address is a curated bar's door
+    //     (findCuratedBarByPlace). This runs on PRE-merge records: the AI
+    //     read Furball's flyer as bar="Locker Room" — the party's name at
+    //     Legacy, 79 Warrenton St, Boston — and the calendar merge
+    //     corrected the name to the curated "Legacy" while the candidate
+    //     list kept proposing "Locker Room" at Legacy's byte-identical pin
+    //     (run 20260924-055217). Curated data outranks a page's name.
+    //   - …and the map POI at the pin does not contradict the name
+    //     (_geoPoiBarMatch === false, the "differs from bar" evidence line):
+    //     when the map names the place at that pin something else, the
+    //     bar field is not the venue standing there.
     isNewVenueCandidateEvent(event) {
         if (!event || typeof event !== 'object') return false;
         const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
@@ -7512,6 +7553,9 @@ class SharedCore {
         if (!cityKey) return false;
         const cityBars = this.getCuratedCityBars(cityKey);
         if (cityBars && this.findCuratedBarByName(cityBars, bar)) return false;
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        if (cityBars && this.findCuratedBarByPlace(cityBars, location, address)) return false;
+        if (event._geoPoiBarMatch === false) return false;
         return true;
     }
 
@@ -21123,9 +21167,10 @@ class SharedCore {
             ? event._staticFields
             : {};
         const shortNameIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'shortName');
-        const names = [event.title, event.name, event.originalTitle,
-            shortNameIsBranding ? '' : event.shortName,
-            shortNameIsBranding ? '' : fields.shortName]
+        const shortNames = [shortNameIsBranding ? '' : event.shortName, shortNameIsBranding ? '' : fields.shortName]
+            .map(value => String(value || '').trim())
+            .filter(Boolean);
+        const names = [event.title, event.name, event.originalTitle, ...shortNames]
             .map(value => String(value || '').trim())
             .filter(Boolean);
         return {
@@ -21137,6 +21182,9 @@ class SharedCore {
                 || null,
             ticketUrl: this.normalizeTicketUrlForIdentity(event.ticketUrl || fields.ticketUrl),
             names: [...new Set(names)],
+            // The event's own shortName values, kept apart so the name rung
+            // can tell a one-word label from a title (see areIdentityNamesSimilar).
+            shortNames: [...new Set(shortNames)],
             bar: String(event.bar || fields.bar || '').trim(),
             address: String(event.address || fields.address || '').trim(),
             locationText: typeof event.location === 'string' ? event.location : '',
@@ -21166,13 +21214,55 @@ class SharedCore {
         return Boolean(dayA) && dayA === dayB;
     }
 
+    // A ONE-WORD shortName is a label, not a name: "LEATHER" (stamped on
+    // Lone Star's "Leather and Gear Happy Hour") sits inside "SF Queer
+    // Leather Happy Hour: Folsom Edition" at the SF Eagle, 330 m away, and
+    // areTitlesSimilar's containment rung read that shared word as one
+    // event while the two titles themselves compared FALSE (run
+    // 20260924-055217, proposed every run since 09-20). A single token
+    // still vouches when it IS the other name ("FUR-BALL" vs "FURBALL",
+    // the renamed-event signal of #1440) or the other name's own party
+    // name before its colon/dash ("MEGAWOOF" vs "Megawoof: DURO") — never
+    // by merely occurring inside a longer title. Multi-word shortNames and
+    // titles keep the full areTitlesSimilar treatment.
     areIdentityNamesSimilar(shapeA, shapeB) {
+        const isSingleTokenShortName = (shape, name) => Array.isArray(shape.shortNames)
+            && shape.shortNames.includes(name)
+            && name.trim().split(/\s+/).length === 1;
+        const normalizeName = (name) => this.normalizeIdentityText(this.decodeBasicHtmlEntities(name));
+        const partyName = (name) => {
+            const match = String(name).match(/^([^:\-\u2013\u2014]+)/);
+            return normalizeName(match ? match[1] : name);
+        };
         for (const nameA of shapeA.names) {
             for (const nameB of shapeB.names) {
+                if (isSingleTokenShortName(shapeA, nameA) || isSingleTokenShortName(shapeB, nameB)) {
+                    const normA = normalizeName(nameA);
+                    const normB = normalizeName(nameB);
+                    if (normA && normB && (normA === normB || partyName(nameA) === partyName(nameB))) return true;
+                    continue;
+                }
                 if (this.areTitlesSimilar(nameA, nameB)) return true;
             }
         }
         return false;
+    }
+
+    // Does this address name a street, or only a locality? The street line
+    // (first comma segment; the whole text when there is no comma) must
+    // carry a house number or an ordinal street ("398 12th Street…",
+    // "Motzstraße 19", "Pier 39"). A 5–6 digit run is a house number only
+    // when it LEADS the line ("10521 Ventura Blvd"); trailing, it is the
+    // postal code of a city-and-ZIP-only address ("San Francisco CA
+    // 94103"), which names no door.
+    addressStatesStreet(address) {
+        const line = String(address || '').split(',')[0].trim();
+        if (!line) return false;
+        const tokens = line.split(/\s+/);
+        return tokens.some((token, index) => {
+            if (/^\d{1,4}(?:-\d{1,6})?[a-z]?$/i.test(token) || /^\d{1,4}(?:st|nd|rd|th)$/i.test(token)) return true;
+            return /^\d{5,6}$/.test(token) && index === 0 && tokens.length > 1;
+        });
     }
 
     areIdentityPlacesSimilar(shapeA, shapeB) {
@@ -21190,9 +21280,18 @@ class SharedCore {
         if (barA && barA.length >= 4 && locationB.includes(barA)) return true;
         if (barB && barB.length >= 4 && locationA.includes(barB)) return true;
 
+        // One address inside the other is one place ONLY when the shorter
+        // side names a street. A city-and-ZIP-only address ("San Francisco
+        // CA 94103", the calendar's Lone Star Saloon record) is a substring
+        // of EVERY full address in that ZIP — it contained the SF Eagle's
+        // "398 12th Street, San Francisco, CA 94103" and welded two bars
+        // 330 m apart into one happy hour (run 20260924-055217). A locality
+        // is not a place (same doctrine as areEventsDistinctByPlace).
         const addressA = this.normalizeIdentityText(shapeA.address);
         const addressB = this.normalizeIdentityText(shapeB.address);
+        const shorterAddress = addressA.length <= addressB.length ? shapeA.address : shapeB.address;
         if (addressA.length >= 10 && addressB.length >= 10 &&
+            this.addressStatesStreet(shorterAddress) &&
             (addressA === addressB || addressA.includes(addressB) || addressB.includes(addressA))) {
             return true;
         }
@@ -21324,7 +21423,9 @@ class SharedCore {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
-        // and any pair of name-ish fields (title/name/shortName) similar.
+        // and any pair of name-ish fields (title/name/shortName) similar — a
+        // one-word shortName only by being the other name, never by sitting
+        // inside it (areIdentityNamesSimilar).
         // The requireCloseStartTimes=false relaxation exists for ONE shape: a
         // degraded scrape whose missing start time defaulted to local midnight
         // must still match its properly-timed twin. It was never meant to let
@@ -21348,8 +21449,19 @@ class SharedCore {
         // token the source prints across 3+ of its own titles, this rung has
         // no evidence; the stronger rungs above (ticket url, event page url,
         // same instant + link lineage) are untouched.
+        // …and, like place-exact-start, this rung fails closed on any
+        // POSITIVE place contradiction: two bar names that are not one bar,
+        // two numbered street lines that differ, two ticket paths on one
+        // vendor. A place rung that agrees on one weak signal (a contained
+        // address, a shared pin box) while the bars DISAGREE is reading
+        // coincidence, not identity — Lone Star Saloon's "Leather and Gear
+        // Happy Hour" (5–8pm, 1354 Harrison) and the SF Eagle's "SF Queer
+        // Leather Happy Hour: Folsom Edition" (6–9pm, 398 12th St) are two
+        // real happy hours 330 m apart, and this rung folded them every run
+        // from 09-20 (run 20260924-055217).
         if (startsAreCompatible &&
             this.areIdentityPlacesSimilar(incoming, existing) &&
+            !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent) &&
             this.areIdentityNamesSimilar(incoming, existing) &&
             !this.titleAffinityIsCorpusGeneric(newEvent, existingEvent)) {
             return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';

@@ -691,3 +691,30 @@ test('the left swipe\'s answers: "needs a fix" is counted as waiting and returns
   assert.ok(lines[0].startsWith('- [NEEDS FIX]'), text);
   assert.ok(lines[1].startsWith('- [NOT AN EVENT]'), text);
 });
+
+// ---------------------------------------------------------------------------
+// tools/apply-bar-approvals.js — planBarPromotions dedupes by DOOR, not only
+// by name: "Locker Room" (Furball's party name, run 20260924-055217) was
+// approved at Legacy's own pin and street line.
+// ---------------------------------------------------------------------------
+test('planBarPromotions: an approval at a curated bar\'s address or pin is a rename, not an addition', () => {
+  const { planBarPromotions } = require('../tools/apply-bar-approvals');
+  const legacy = { name: 'Legacy', city: 'boston', address: '79 Warrenton St, Boston, MA 02116', coordinates: '42.3499063, -71.0658453' };
+  const approval = (snapshot) => ({ kind: 'bar', verdict: 'approve', key: `${snapshot.city}|${snapshot.name}`, snapshot });
+  const plan = planBarPromotions({ decisions: [
+    approval({ name: 'Locker Room', city: 'boston', address: '79 WARRENTON ST', coordinates: '42.3499063, -71.0658453' }),
+    approval({ name: 'Club Cafe', city: 'boston', address: '209 Columbus Ave, Boston, MA 02116', coordinates: '42.3480, -71.0740' }),
+    approval({ name: 'Club Café Boston', city: 'boston', address: '209 Columbus Avenue', coordinates: '42.3480100, -71.0740100' })
+  ] }, { boston: [legacy] });
+  assert.deepEqual(plan.additions.map((entry) => entry.bar.name), ['Club Cafe'], 'one new door; the pin twin in the same batch folds into it');
+  assert.deepEqual(plan.skipped.map((entry) => `${entry.name}: ${entry.why}`), [
+    'Locker Room: same address/pin as curated "Legacy"',
+    'Club Café Boston: same address/pin as curated "Club Cafe"'
+  ]);
+  // A pin-only approval (no comparable street line) still folds on the pin alone.
+  const pinOnly = planBarPromotions({ decisions: [
+    approval({ name: 'The Locker Room', city: 'boston', address: 'Boston, MA', coordinates: '42.3499100, -71.0658500' })
+  ] }, { boston: [legacy] });
+  assert.deepEqual(pinOnly.additions, []);
+  assert.equal(pinOnly.skipped[0].why, 'same address/pin as curated "Legacy"');
+});
