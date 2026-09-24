@@ -880,6 +880,14 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        // Language-selector params name a TRANSLATION of a page, never a
+        // different page: ?lang=de is the same event as the plain URL. They
+        // are stripped alongside tracking params for identity (dedupe key)
+        // and for the crawl URL — run 20260924-055217 fetched
+        // eaglemanchester.com/event-details/hellbent-12?lang=de beside the
+        // plain page and the model then picked the "more canonical" ?lang=de
+        // as the event's url. Mirrors SharedCore.localeParamPattern.
+        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -6676,6 +6684,13 @@ class AiWebParser {
             rejectedSamples: {}
         };
 
+        // The page's own hreflang alternates (translations of THIS document
+        // and the locale path prefixes they reveal) — computed once, checked
+        // for every candidate at the single funnel below. Null when the page
+        // declares none, and then nothing about locales is assumed.
+        const localeAlternates = this.collectLocaleAlternates(html, sourceUrl);
+        discoveryStats.localeAlternates = localeAlternates;
+
         try {
             const hrefCandidates = this.extractHrefCandidates(html);
             discoveryStats.hrefCandidates = hrefCandidates.length;
@@ -6773,6 +6788,12 @@ class AiWebParser {
         // re-fetching a detail page it had already extracted, purely because
         // the page advertised its own canonical.
         this.suppressSelfCanonicalUrls(urls, html, sourceUrl);
+
+        const localeSkipped = Number(discoveryStats.rejectedReasons['locale-alternate'] || 0);
+        if (localeAlternates && localeSkipped > 0) {
+            const prefixes = Array.from(localeAlternates.localePrefixes).map(prefix => `/${prefix}/`).join(', ');
+            console.log(`🤖 AI Web: Locale alternates skipped for ${sourceUrl}: ${localeSkipped} link(s) — hreflang twins of this page${prefixes ? ` and pages under ${prefixes}` : ''} are translations, not new pages; following the x-default ${localeAlternates.defaultUrl}`);
+        }
 
         const rankedUrls = this.rankAdditionalUrls(urls);
         const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
@@ -9024,6 +9045,156 @@ class AiWebParser {
         return hrefs;
     }
 
+    // The page's <link rel="alternate" hreflang="…"> family: every entry
+    // names a TRANSLATION of this same document, and the one flagged
+    // x-default (else the rel=canonical, else the page itself) is the copy
+    // to follow. Wix sites publish one per language on every page
+    // (eaglemanchester.com: x-default + de-de + fr-fr + nl-nl + en-gb) and
+    // run 20260924-055217 crawled 52 locale twins among its 87 Eagle
+    // Manchester pages, then picked /fr/ and ?lang=de copies as event urls.
+    // Returns null when the page declares no hreflang alternates — nothing
+    // is then assumed about locales. Otherwise:
+    //   defaultUrl     — the copy to follow (resolved, tracking/locale-stripped)
+    //   alternateKeys  — dedupe keys of every non-default alternate
+    //   localePrefixes — first path segments the alternates add in front of
+    //                    the default's path (de, fr, nl …): every same-site
+    //                    link under such a prefix is a translation too.
+    //   host           — the default copy's host (www-stripped)
+    // A prefix is derived only when the alternate's path is EXACTLY the
+    // default's path with one locale-shaped segment in front (fail closed:
+    // an alternate on another host or with a different slug yields no
+    // prefix, only its own exact key).
+    collectLocaleAlternates(html, sourceUrl) {
+        if (!html || typeof html !== 'string') return null;
+        const linkTagRegex = /<link\b[^>]*>/gi;
+        const alternates = [];
+        let xDefault = '';
+        let linkMatch;
+        while ((linkMatch = linkTagRegex.exec(html)) !== null) {
+            const tag = linkMatch[0];
+            const relMatch = tag.match(/\brel\s*=\s*["']([^"']*)["']/i);
+            if (!relMatch || !/(?:^|\s)alternate(?:\s|$)/i.test(relMatch[1])) continue;
+            const langMatch = tag.match(/\bhreflang\s*=\s*["']([^"']*)["']/i);
+            if (!langMatch) continue;
+            const hrefMatch = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i);
+            if (!hrefMatch) continue;
+            const hreflang = String(langMatch[1] || '').trim().toLowerCase();
+            const resolved = this.resolveLocaleAlternateHref(hrefMatch[1], sourceUrl);
+            if (!resolved) continue;
+            if (hreflang === 'x-default') {
+                if (!xDefault) xDefault = resolved;
+                continue;
+            }
+            alternates.push({ hreflang, url: resolved });
+        }
+        // The same declaration in embedded JSON: a language list whose
+        // entries pair a languageCode with that language's url (Wix
+        // multilingual prints `siteLanguages` on EVERY page, including
+        // the ones that carry no hreflang tags at all — eaglemanchester.com
+        // /apply and the /form pages declare /de/, /fr/, /nl/ twins only
+        // this way). An entry flagged isPrimaryLanguage or coded x-default
+        // is the default copy. Structural shape only, no host named.
+        const jsonEntryRegex = /\{[^{}]*"languageCode"\s*:\s*"([^"]+)"[^{}]*\}/g;
+        let jsonMatch;
+        while ((jsonMatch = jsonEntryRegex.exec(html)) !== null) {
+            const entry = jsonMatch[0];
+            const urlMatch = entry.match(/"url"\s*:\s*"((?:https?:\\?\/\\?\/|\\u002f\\u002f)[^"]+)"/i)
+                || entry.match(/"url"\s*:\s*"(https?:[^"]+)"/i);
+            if (!urlMatch) continue;
+            const resolved = this.resolveLocaleAlternateHref(urlMatch[1], sourceUrl);
+            if (!resolved) continue;
+            const code = String(jsonMatch[1] || '').trim().toLowerCase();
+            const isPrimary = /"isPrimaryLanguage"\s*:\s*true/i.test(entry);
+            if (code === 'x-default' || isPrimary) {
+                if (!xDefault) xDefault = resolved;
+                continue;
+            }
+            alternates.push({ hreflang: code, url: resolved });
+        }
+        if (alternates.length === 0 && !xDefault) return null;
+
+        let defaultUrl = xDefault;
+        if (!defaultUrl) {
+            const canonical = this.extractSelfDeclaredCanonicalUrls(html)
+                .map(declared => this.resolveLocaleAlternateHref(declared, sourceUrl))
+                .find(Boolean);
+            defaultUrl = canonical || this.resolveLocaleAlternateHref(sourceUrl, sourceUrl) || String(sourceUrl || '');
+        }
+        const defaultKey = this.getUrlDedupeKey(defaultUrl);
+        const defaultParts = this.parseUrlComponents(defaultUrl);
+        const defaultHost = defaultParts ? String(defaultParts.hostname || '').toLowerCase().replace(/^www\./, '') : '';
+        const defaultSegments = defaultParts ? String(defaultParts.pathname || '/').split('/').filter(Boolean) : [];
+
+        const alternateKeys = new Set();
+        const localePrefixes = new Set();
+        for (const alternate of alternates) {
+            const key = this.getUrlDedupeKey(alternate.url);
+            if (!key || key === defaultKey) continue; // en-gb pointing at the default IS the default
+            alternateKeys.add(key);
+            const parts = this.parseUrlComponents(alternate.url);
+            if (!parts) continue;
+            const host = String(parts.hostname || '').toLowerCase().replace(/^www\./, '');
+            if (!defaultHost || host !== defaultHost) continue;
+            const segments = String(parts.pathname || '/').split('/').filter(Boolean);
+            if (segments.length !== defaultSegments.length + 1) continue;
+            const prefix = String(segments[0] || '').toLowerCase();
+            if (!/^[a-z]{2,3}(?:[-_][a-z0-9]{2,4})?$/i.test(prefix)) continue;
+            const rest = segments.slice(1).map(segment => segment.toLowerCase());
+            const expected = defaultSegments.map(segment => segment.toLowerCase());
+            if (rest.join('/') !== expected.join('/')) continue;
+            localePrefixes.add(prefix);
+        }
+        return { defaultUrl, defaultKey, alternateKeys, localePrefixes, host: defaultHost };
+    }
+
+    // JSON-escaped hrefs ("https:\/\/…") are decoded here so the answer does
+    // not depend on which normalizeUrl the adapter injected.
+    resolveLocaleAlternateHref(href, sourceUrl) {
+        try {
+            const normalized = this.stripLocaleParams(this.stripTrackingParams(this.normalizeUrl(this.decodeUrlEscapes(href), sourceUrl)));
+            return typeof normalized === 'string' && /^https?:\/\//i.test(normalized) ? this.stripUrlFragment(normalized) : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    // Is this (already normalized and stripped) candidate a translation of
+    // the page — one of its declared hreflang alternates, or any same-site
+    // page under a locale prefix the alternates revealed?
+    isLocaleAlternateCandidate(url, localeAlternates) {
+        if (!url || !localeAlternates) return false;
+        const key = this.getUrlDedupeKey(url);
+        if (key && localeAlternates.alternateKeys.has(key)) return true;
+        if (localeAlternates.localePrefixes.size === 0 || !localeAlternates.host) return false;
+        const parts = this.parseUrlComponents(url);
+        if (!parts) return false;
+        const host = String(parts.hostname || '').toLowerCase().replace(/^www\./, '');
+        if (host !== localeAlternates.host) return false;
+        const firstSegment = String(parts.pathname || '/').split('/').filter(Boolean)[0] || '';
+        return Boolean(firstSegment) && localeAlternates.localePrefixes.has(firstSegment.toLowerCase());
+    }
+
+    // String-only twin of the locale half of stripTrackingParams — works on
+    // iOS JavaScriptCore, where the URL global does not exist and
+    // stripTrackingParams returns its input untouched.
+    stripLocaleParams(url) {
+        const text = typeof url === 'string' ? url : '';
+        const queryIndex = text.indexOf('?');
+        if (queryIndex === -1) return url;
+        const hashIndex = text.indexOf('#', queryIndex);
+        const base = text.slice(0, queryIndex);
+        const query = hashIndex === -1 ? text.slice(queryIndex + 1) : text.slice(queryIndex + 1, hashIndex);
+        const hash = hashIndex === -1 ? '' : text.slice(hashIndex);
+        const kept = query.split('&').filter(part => {
+            if (!part) return false;
+            const rawKey = part.split('=')[0];
+            let key = rawKey;
+            try { key = decodeURIComponent(rawKey.replace(/\+/g, ' ')); } catch (_) { key = rawKey; }
+            return !this.localeParamPattern.test(key);
+        });
+        return `${base}${kept.length > 0 ? `?${kept.join('&')}` : ''}${hash}`;
+    }
+
     // Onboarding harvest (discoveryOnly runs only): instagram/facebook links are
     // scanned during URL discovery but rejected as blocked hosts — here the FIRST
     // profile-like link per host is collected instead, for the suggested-config
@@ -9088,7 +9259,17 @@ class AiWebParser {
             }
             return false;
         }
-        const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
+        // stripTrackingParams needs the URL global (absent on iOS), so the
+        // locale strip is repeated here in string form: ?lang=de names the
+        // same page on every platform.
+        const url = this.stripLocaleParams(this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl)));
+        const localeAlternates = discoveryStats && typeof discoveryStats === 'object'
+            ? discoveryStats.localeAlternates || null
+            : null;
+        if (localeAlternates && this.isLocaleAlternateCandidate(url, localeAlternates)) {
+            this.recordRejectedCandidate(discoveryStats, 'locale-alternate', rawUrl, url);
+            return false;
+        }
         const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
         if (!validation.valid) {
             if (discoveryStats && typeof discoveryStats === 'object') {
@@ -9159,7 +9340,7 @@ class AiWebParser {
             // Strip tracking/affiliate params so the same event with different tracking
             // suffixes (e.g. ?aff=ebdsoporgprofile, ?utm_source=…) deduplicates correctly.
             for (const key of [...parsed.searchParams.keys()]) {
-                if (this.trackingParamPattern.test(key)) {
+                if (this.trackingParamPattern.test(key) || this.localeParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }
@@ -9170,20 +9351,23 @@ class AiWebParser {
             // URL branch does or www/bare-host variants dedupe differently on
             // the phone than in Node (run 20260724-161423 crawled both
             // massive.club variants because of exactly that gap).
-            return String(url || '')
+            return this.stripLocaleParams(String(url || '')
                 .replace(/#.*$/, '')
-                .replace(/^(https?:\/\/)www\./i, '$1')
+                .replace(/^(https?:\/\/)www\./i, '$1'))
                 .replace(/\/$/, '')
                 .toLowerCase();
         }
     }
 
+    // Tracking params AND language-selector params (see localeParamPattern):
+    // neither changes which page a URL names, so neither belongs in a crawl
+    // URL or a stored link.
     stripTrackingParams(url) {
         if (!url) return url;
         try {
             const parsed = new URL(url);
             for (const key of [...parsed.searchParams.keys()]) {
-                if (this.trackingParamPattern.test(key)) {
+                if (this.trackingParamPattern.test(key) || this.localeParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }

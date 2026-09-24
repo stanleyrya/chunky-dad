@@ -24513,3 +24513,169 @@ test('ownerDecisionCovers: "needs a fix" waits until ANY visible field changes; 
   assert.equal(SharedCore.ownerDecisionCovers(legacy, { ...proposal, startDate: '2026-10-03T23:00:00.000Z' }), false);
   assert.equal(SharedCore.getOwnerRejectionMode({ verdict: 'approve', reason: { mode: 'fix' } }), '', 'an approval has no rejection mode');
 });
+
+// ── Locale twins are one link (run 20260924-055217, Eagle Manchester) ─────
+// The model was handed eaglemanchester.com/event-details/hellbent-12 and its
+// ?lang=de twin as two candidates and picked the "more canonical" ?lang=de.
+// A language selector names a translation of a page, never another page.
+test('link identity: ?lang= / ?locale= / ?hl= twins are the same target; meaningful queries still differ', () => {
+  const core = createCore();
+  const plain = 'https://www.eaglemanchester.com/event-details/hellbent-12';
+  assert.equal(core.getUrlDedupeKey(`${plain}?lang=de`), core.getUrlDedupeKey(plain));
+  assert.equal(core.getUrlDedupeKey(`${plain}?locale=fr-fr&utm_source=x`), core.getUrlDedupeKey(plain));
+  assert.equal(core.getUrlDedupeKey(`${plain}?hl=en`), core.getUrlDedupeKey(plain));
+  assert.equal(core.isSameLinkTarget(`${plain}?lang=de`, 'https://eaglemanchester.com/event-details/hellbent-12/'), true);
+  // and the merge never sees the pair as a conflict
+  assert.deepEqual(core.resolveConflictDeterministically('website', `${plain}?lang=de`, plain, null),
+    { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' });
+  // Queries that select a DIFFERENT document are untouched.
+  assert.notEqual(core.getUrlDedupeKey('https://eaglela.com/events/b-bar/?occurrence=2026-08-06'), core.getUrlDedupeKey('https://eaglela.com/events/b-bar/'));
+  assert.equal(core.isSameLinkTarget('https://x.example/p?id=1', 'https://x.example/p?id=2'), false);
+  // The pattern is a whole-key match: "language" yes, "slang"/"hlx" no.
+  assert.equal(core.getUrlDedupeKey('https://x.example/p?language=en'), 'https://x.example/p');
+  assert.equal(core.getUrlDedupeKey('https://x.example/p?slang=en'), 'https://x.example/p?slang=en');
+});
+
+// ── A stored link is never shallowed (run 20260924-055217, Goldiloxx: Bear Tea) ──
+// The calendar held the event's own Squarespace page
+// (3dollarbillbk.com/rsvp/2026/9/12/bear-tea — the venue rescheduled it and
+// Squarespace keeps the creation-date slug); the venue parser's static
+// website (the site root, merged "clobber") replaced it without the ladder
+// ever being asked, and the final build then promoted the /rsvp listing
+// parked in ticketUrl over the root. Two shallow shapes, one rule: a
+// same-site strict path-prefix of the stored link is its listing or front
+// door — it names every event under it, never this one.
+const BEAR_TEA_PAGE = 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea';
+
+test('isSameSiteParentPathOf: strict same-site path prefixes only', () => {
+  const core = createCore();
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com', BEAR_TEA_PAGE), true, 'the root is the empty prefix');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE), true, 'the listing');
+  assert.equal(core.isSameSiteParentPathOf('https://3dollarbillbk.com/rsvp/?view=list', BEAR_TEA_PAGE), true, 'www/slash/query spelling is irrelevant');
+  assert.equal(core.isSameSiteParentPathOf(BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp'), false, 'direction matters');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea', BEAR_TEA_PAGE), false, 'a sibling page is not a prefix');
+  assert.equal(core.isSameSiteParentPathOf(BEAR_TEA_PAGE, BEAR_TEA_PAGE), false, 'equal depth is not a prefix');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rs', BEAR_TEA_PAGE), false, 'segments, not characters');
+  assert.equal(core.isSameSiteParentPathOf('https://other.example/rsvp', BEAR_TEA_PAGE), false, 'another site');
+  assert.equal(core.isSameSiteParentPathOf('https://beefdip.com', 'https://beefdip.com/tags/foam'), false, 'a taxonomy archive is never the protected deeper page (same carve-out as the root rule)');
+});
+
+test('deterministic ladder: a same-site deeper URL beats its parent path in both directions; siblings still arbitrate', () => {
+  const core = createCore();
+  const reason = 'same-site deeper URL beats its parent path (listing/front door)';
+  assert.deepEqual(core.resolveConflictDeterministically('website', BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp', null), { winner: 'a', reason });
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE, null), { winner: 'b', reason });
+  assert.deepEqual(core.resolveConflictDeterministically('url', 'https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE, null), { winner: 'b', reason });
+  // The bare root keeps its own long-standing rung and reason text.
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://www.3dollarbillbk.com', BEAR_TEA_PAGE, null),
+    { winner: 'b', reason: 'same-host deeper URL beats domain root' });
+  // Two different event pages under the same listing are not a prefix pair.
+  const sibling = core.resolveConflictDeterministically('website', BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea', null);
+  assert.ok(!sibling || sibling.reason !== reason, `siblings must not hit the parent-path rung, got ${JSON.stringify(sibling)}`);
+});
+
+// The real pair from runs/20260924-055217.json (analyzedEvents[39]):
+// `_original.calendar.website` vs the scraped static website.
+function buildBearTeaPair(core, scrapedWebsite) {
+  const start = new Date('2026-10-03T20:00:00.000Z');
+  const scraped = {
+    title: 'Bear Tea', startDate: start, endDate: null, source: 'ai-web', city: 'nyc',
+    website: scrapedWebsite, instagram: 'https://www.instagram.com/3dollarbillbk',
+    image: 'https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784937998565-53UO4O9I6PGBGDTXOYX6/BEARTEA%2BSEP12.png',
+    _sourcePageUrl: 'https://www.3dollarbillbk.com/rsvp', _venueSitePageHost: '3dollarbillbk.com', _extractionSource: 'ai',
+    _pageClassification: 'multi-event-page', _pageOrigin: 'listing', _venueSiteHostIsListing: true,
+    _staticFields: { website: scrapedWebsite, instagram: 'https://www.instagram.com/3dollarbillbk' },
+    _parserConfig: { name: '3 Dollar Bill' },
+    _fieldPriorities: {
+      ...core.getResolvedFieldPriorities({}),
+      website: { priority: ['static'], merge: 'clobber' },
+      instagram: { priority: ['static'], merge: 'clobber' }
+    }
+  };
+  const existing = {
+    title: 'Goldiloxx: Bear Tea', startDate: start, endDate: new Date('2026-10-04T02:00:00.000Z'),
+    location: '40.7084144, -73.9380583', url: '',
+    notes: [
+      'ticketUrl: https://www.3dollarbillbk.com/rsvp',
+      'image: https://d3flpus5evl89n.cloudfront.net/56b4c4fddf82fe40ce873cdc/6aa5a4fac21023da95c29bfb/scaled_896.jpg',
+      'cover: $25', 'timezone: America/New_York', 'instagram: https://www.instagram.com/goldiloxx__',
+      'bar: 3 Dollar Bill', 'address: 260 Meserole St, Brooklyn, NY 11206, USA',
+      `website: ${BEAR_TEA_PAGE}`,
+      'description: Nick Laughlin presents a bear tea dance at 3 Dollar Bill featuring DJ Joe Michael & Dicap.'
+    ].join('\n')
+  };
+  return { scraped, existing };
+}
+
+test('calendar merge: a clobbering venue root never shallows the stored event page (Goldiloxx: Bear Tea)', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com');
+  const adapter = buildArbitrationAdapter({});
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let merged;
+  try {
+    merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    restore();
+  }
+  assert.equal(merged.website, BEAR_TEA_PAGE, 'the deeper stored link is kept');
+  assert.equal(merged.url, BEAR_TEA_PAGE, 'url and website are ONE field');
+  assert.equal(core.parseNotesIntoFields(merged.notes).website, BEAR_TEA_PAGE);
+  assert.ok(lines.includes('🔒 MERGE: "Bear Tea" field=website resolved deterministically — same-host deeper URL beats domain root'),
+    `decided by the ladder, got: ${JSON.stringify(lines.filter(l => l.includes('website')))}`);
+  assert.ok(!lines.some(line => /clobbered .*website/.test(line)), 'website is not in the clobber summary');
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.source, 'deterministic');
+});
+
+test('calendar merge: the listing the event was scraped off never shallows its own event page either', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com/rsvp');
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, BEAR_TEA_PAGE);
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.reason, 'same-site deeper URL beats its parent path (listing/front door)');
+});
+
+test('calendar merge: a genuinely different same-site deep link still replaces a stale one', async () => {
+  const core = createCore();
+  // The venue rescheduled Bear Tea and its page moved to the new slug.
+  const fresh = 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea';
+  const { scraped, existing } = buildBearTeaPair(core, fresh);
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, fresh, 'a sibling page is not a prefix — the configured clobber applies');
+  assert.equal(merged.url, fresh);
+});
+
+test('calendar merge: an aggregator with the deeper link still only fills blanks', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea');
+  scraped._parserConfig = { name: 'Gathr', siteRole: 'aggregator', urls: ['https://gathrparty.com/'] };
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, BEAR_TEA_PAGE, 'an aggregator record never wins a stored field');
+});
+
+test('final build drops a same-site listing parked in ticketUrl when website is its own event page', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'Goldiloxx: Bear Tea',
+    startDate: new Date('2026-10-03T20:00:00.000Z'),
+    city: 'nyc',
+    website: BEAR_TEA_PAGE,
+    ticketUrl: 'https://www.3dollarbillbk.com/rsvp'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, BEAR_TEA_PAGE, 'the event page is never demoted to its listing');
+  assert.ok(!analyzed.ticketUrl, 'the listing sells nothing — not a ticket link');
+  assert.ok(lines.some(line => line.includes('dropped ticketUrl https://www.3dollarbillbk.com/rsvp') && line.includes('listing (the parent path of its own event page)')),
+    `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
+  assert.ok(!lines.some(line => line.includes('promoted to website/url')), 'no promotion of the listing');
+});
