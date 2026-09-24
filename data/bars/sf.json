@@ -75,5 +75,11 @@
     "city": "sf",
     "address": "1192 Folsom St, San Francisco, CA 94103, USA",
     "coordinates": "37.7752814, -122.4099546"
+  },
+  {
+    "name": "Mr. S Leather",
+    "city": "sf",
+    "address": "385 8th Street, San Francisco",
+    "coordinates": "37.7743246, -122.4086188"
   }
 ]

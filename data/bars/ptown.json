@@ -48,5 +48,17 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
     "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
     "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
+  },
+  {
+    "name": "Provincetown Inn",
+    "city": "ptown",
+    "address": "1 Commercial Street, Provincetown, Massachusetts",
+    "coordinates": "42.0372527, -70.1953862"
+  },
+  {
+    "name": "Monkey Bar",
+    "city": "ptown",
+    "address": "149 Commercial Street, Provincetown, Massachusetts",
+    "coordinates": "42.0464374, -70.1910464"
   }
 ]

@@ -41,7 +41,9 @@ const scraperBars = {
       "coordinates": "33.8116248, -84.3726225",
       "website": "https://woofsatlanta.com",
       "instagram": "https://www.instagram.com/woofsatlanta",
-      "facebook": "https://www.facebook.com/WoofsAtlanta"
+      "facebook": "https://www.facebook.com/WoofsAtlanta",
+      "faviconBg": "#461b22",
+      "faviconFg": "#f1f1f1"
     }
   ],
   "bangkok": [
@@ -370,6 +372,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/precinctdtla",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI",
       "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct",
+      "faviconBg": "#23252b",
+      "faviconFg": "#86878c",
       "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z"
     },
     {
@@ -675,6 +679,18 @@ const scraperBars = {
       "city": "nyc",
       "address": "447 E 13th St, New York, NY 10009, USA",
       "coordinates": "40.7299744, -73.9811697"
+    },
+    {
+      "name": "The Deep End",
+      "city": "nyc",
+      "address": "1080 Wyckoff Avenue, New York, New York",
+      "coordinates": "40.6944617, -73.9025245"
+    },
+    {
+      "name": "Bareburger",
+      "city": "nyc",
+      "address": "2233 Broadway, New York, New York",
+      "coordinates": "40.7844043, -73.9799172"
     }
   ],
   "palm-springs": [
@@ -839,6 +855,18 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
       "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
       "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
+    },
+    {
+      "name": "Provincetown Inn",
+      "city": "ptown",
+      "address": "1 Commercial Street, Provincetown, Massachusetts",
+      "coordinates": "42.0372527, -70.1953862"
+    },
+    {
+      "name": "Monkey Bar",
+      "city": "ptown",
+      "address": "149 Commercial Street, Provincetown, Massachusetts",
+      "coordinates": "42.0464374, -70.1910464"
     }
   ],
   "pv": [
@@ -971,6 +999,12 @@ const scraperBars = {
       "faviconBg": "#010102",
       "faviconFg": "#535557",
       "gayCitiesLastScrapedAt": "2026-07-22T18:31:06.867Z"
+    },
+    {
+      "name": "Phoenix Comics & Games",
+      "city": "seattle",
+      "address": "113 Broadway E, Seattle, WA 98102",
+      "coordinates": "47.6191274, -122.3210517"
     }
   ],
   "sf": [
@@ -1046,6 +1080,12 @@ const scraperBars = {
       "city": "sf",
       "address": "1192 Folsom St, San Francisco, CA 94103, USA",
       "coordinates": "37.7752814, -122.4099546"
+    },
+    {
+      "name": "Mr. S Leather",
+      "city": "sf",
+      "address": "385 8th Street, San Francisco",
+      "coordinates": "37.7743246, -122.4086188"
     }
   ],
   "sitges": [
