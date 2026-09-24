@@ -18354,7 +18354,7 @@ test('DICE widget: rows become events — venue, address, pin, price in minor un
   assert.equal(brief.location, '51.4863391, -0.1217784');
   assert.equal(brief.cover, '12 GBP');
   assert.equal(brief.ticketUrl, 'https://link.dice.fm/P01');
-  assert.equal(brief.image, 'https://dice-media.example/p.jpg');
+  assert.equal(brief.image, 'https://dice-media.example/o.jpg', 'the uncropped original, not the portrait slice');
   assert.equal(brief.description, 'BEEFMINCE presents BRIEF ENCOUNTER');
   assert.equal(brief.website, 'https://beefmince.example/events');
   assert.equal(welly.title, 'Welly Takeover');
@@ -18536,11 +18536,11 @@ test("a rejected image crop falls back to the row's other renditions of the same
     event_images: { portrait: `${file}?rect=249,0,634,1153`, square: `${file}?rect=0,52,1755,1755`, landscape: `${file}?rect=0,571,1755,1053` },
     images: [file]
   }), source);
-  assert.equal(event.image, `${file}?rect=249,0,634,1153`, 'portrait is still the first choice');
-  assert.deepEqual(event._imageAlternates, [`${file}?rect=0,571,1755,1053`, `${file}?rect=0,52,1755,1755`, file]);
+  assert.equal(event.image, file, 'the uncropped master is the first choice; the crops are slices of it');
+  assert.deepEqual(event._imageAlternates, [`${file}?rect=249,0,634,1153`, `${file}?rect=0,571,1755,1053`, `${file}?rect=0,52,1755,1755`]);
 
-  // The vision pass rejects the narrow portrait crop as a textless thumbnail.
-  parser.getNonEventImageOcrReason = (url) => url.includes('rect=249') ? 'the vision pass classified it as thumbnail with no readable text' : '';
+  // The vision pass rejects the master and the narrow portrait crop.
+  parser.getNonEventImageOcrReason = (url) => (!url.includes('rect=') || url.includes('rect=249')) ? 'the vision pass classified it as thumbnail with no readable text' : '';
   parser.rejectNonEventImageValues(event, { url: source, html: '' });
   assert.equal(event.image, `${file}?rect=0,571,1755,1053`, 'the next rendition of the same artwork, not an imageless event');
   assert.equal(event.imageSource, 'json-api');

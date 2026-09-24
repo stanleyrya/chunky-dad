@@ -7624,8 +7624,14 @@ class AiWebParser {
         if (ticketUrl) event.ticketUrl = ticketUrl;
         if (event.bar) event._barFromJsonLd = true;
         const images = row.event_images && typeof row.event_images === 'object' ? row.event_images : {};
-        const cropUrls = [images.portrait, images.landscape, images.square,
-            ...(Array.isArray(row.images) ? row.images : [])]
+        // The uncropped master first: DICE's portrait/landscape/square are
+        // `?rect=` slices of the same file, and the portrait slice cuts a
+        // wide poster's sides off (run 20260924-055217, Bear Belly's
+        // ?rect=338,0,1485,2700 lost the "B" of BEAR BELLY; SPOOKMINCE's crop
+        // read "OOKMIN"). The whole picture is the picture; the crops stay
+        // as alternates for the gate and the orientation slots.
+        const cropUrls = [...(Array.isArray(row.images) ? row.images : []),
+            images.portrait, images.landscape, images.square]
             .map(value => this.normalizeHttpUrlValue(String(value || '').trim()))
             .filter(Boolean);
         const image = cropUrls[0] || '';

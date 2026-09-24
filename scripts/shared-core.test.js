@@ -23942,6 +23942,15 @@ test('merge: the same title in another case keeps the saved spelling ("FUZZY" st
   assert.equal(flipped.winner, 'b', 'whichever side the calendar is on');
   const renamed = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy Fridays', context);
   assert.ok(!renamed || !/saved spelling stays/.test(renamed.reason), 'a different name is a real conflict');
+  // The cover tail the final build drops is no spelling either: "🐻 BEAR
+  // HAPPY HOUR | NO COVER" is the saved "Bear Happy Hour" (Eagle NYC's
+  // hand-curated weekly, rewritten every run before this fold).
+  const tailed = { records: { a: { title: 'Bear Happy Hour', bar: 'Eagle NYC' }, b: { title: '🐻 BEAR HAPPY HOUR | NO COVER', bar: 'Eagle NYC' } }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  const keptTailed = core.resolveConflictDeterministically('title', 'Bear Happy Hour', '🐻 BEAR HAPPY HOUR | NO COVER', tailed);
+  assert.equal(keptTailed.winner, 'a');
+  assert.match(keptTailed.reason, /saved spelling stays/);
+  const edition = core.resolveConflictDeterministically('title', 'Bear Happy Hour', 'Bear Happy Hour: Folsom Edition | NO COVER', tailed);
+  assert.ok(!edition || !/saved spelling stays/.test(edition.reason), 'a real addition to the name is still a conflict');
 });
 
 test('merge: when both records share one event page, the title its slug spells out wins', () => {
@@ -24266,6 +24275,40 @@ test('FetchPoliteness: under enforce, a configured root and the doors opened fro
   gate.beginOpeningRoot('https://tickets.example/o/organizer-1');
   await assert.rejects(gate.run('https://other.example/api/x', async () => 'never'), (error) => error.politeness.reason === 'robots');
   gate.endOpeningRoot();
+});
+
+test('crawl: a door the PARSER opens while a configured root is parsed (a ?format=json twin) is first-party under enforce; the same door under a discovered page is refused', async () => {
+  const robotsBody = 'User-agent: *\nDisallow: /*?format=json\n';
+  const { gate } = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const fetched = [];
+  const refused = [];
+  const httpAdapter = {
+    getFetchPoliteness: () => gate,
+    fetchData: async (url) => gate.run(url, async () => { fetched.push(url); return { html: '<html><body></body></html>', url, statusCode: 200, headers: {} }; })
+      .catch((error) => { if (error && error.politeness) refused.push(url); throw error; })
+  };
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => {
+        // The parser's own door: the collection's JSON twin, on the same host.
+        try { await httpAdapter.fetchData(`${htmlData.url.replace(/\/$/, '')}?format=json`); } catch (_) { /* refused */ }
+        return {
+          events: [],
+          additionalLinks: htmlData.url === 'https://venue.example/rsvp' ? ['https://venue.example/rsvp/2026/9/12/bear-tea'] : []
+        };
+      }
+    }
+  };
+  await core.processParser(
+    { name: 'Venue', urls: ['https://venue.example/rsvp'], urlDiscoveryDepth: 1, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/rsvp?format=json'), `the root's twin, opened from inside parseEvents, is requested: ${fetched.join(', ')}`);
+  assert.ok(fetched.includes('https://venue.example/rsvp/2026/9/12/bear-tea'), 'the discovered event page itself is allowed by robots');
+  assert.ok(refused.includes('https://venue.example/rsvp/2026/9/12/bear-tea?format=json'), `a discovered page's twin is not first-party: refused ${refused.join(', ')}`);
+  assert.equal(gate.openingRoot, '', 'no window left open after the crawl');
 });
 
 test('FetchPoliteness: an API call (a geocoder) is paced and parked like a page but never judged by robots.txt', async () => {

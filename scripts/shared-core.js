@@ -4923,8 +4923,16 @@ class SharedCore {
             // Nowhere" scraped (the tail the final build drops aside) — is
             // not a rename: the saved spelling stays. Case is the owner's
             // call, not a scrape's (owner 2026-09-18: "I like how Fuzzy is caps").
+            // The cover tail the final build drops ("🐻 BEAR HAPPY HOUR | NO
+            // COVER" → "BEAR HAPPY HOUR") is folded away HERE too: the fold
+            // used to run on the tailed title, miss the saved "Bear Happy
+            // Hour", and send an emoji-and-caps twin to the AI, which
+            // rewrote a hand-curated weekly series every run (Eagle NYC,
+            // run 20260924-055217, 3 of 17 title changes).
             const bar = (context.records.b && context.records.b.bar) || (context.records.a && context.records.a.bar) || '';
-            const fold = (value) => this.normalizeIdentityText(this.stripVenueSuffixFromTitle(String(value || ''), bar));
+            const fold = (value) => this.normalizeIdentityText(
+                this.stripCoverPartsFromTitle(this.stripVenueSuffixFromTitle(String(value || ''), bar)).title
+            );
             const foldedA = fold(valueA);
             if (foldedA && foldedA === fold(valueB) && String(valueA || '').trim() !== String(valueB || '').trim()) {
                 const saved = context.sideLabels.a === 'calendar' ? 'a' : 'b';
@@ -8633,6 +8641,7 @@ class SharedCore {
                 }
             }
 
+            const politeGate = currentDepth === 0 && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
             try {
                 const shouldUseInlineInput = includeInlineInput &&
                     currentDepth === 0 &&
@@ -8643,7 +8652,6 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
-                const politeGate = currentDepth === 0 && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
                 if (politeGate && typeof politeGate.beginOpeningRoot === 'function') politeGate.beginOpeningRoot(url);
                 const fetchedHtmlData = shouldUseInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
@@ -8667,7 +8675,15 @@ class SharedCore {
                 const htmlData = shouldUseInlineInput || currentDepth !== 0
                     ? spaResolvedHtmlData
                     : await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter);
-                if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
+                // The window stays open through the PARSE of the root page:
+                // the parser opens doors of its own there — a Squarespace
+                // collection's ?format=json twin, an EventON or MEC month
+                // call, an Elfsight boot, a DICE widget — and those are how
+                // the site serves its page just as the door chain above is.
+                // Run 20260924-055217: 3dollarbillbk.com's robots.txt
+                // disallows /*?format=json, the twin was refused from inside
+                // parseEvents, and Bear Tea lost its own page. It closes in
+                // the finally below, even when the parse throws.
 
                 // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
                 // (absence is what signals adaptive to parsers); numeric mode passes
@@ -8679,17 +8695,23 @@ class SharedCore {
                         urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                     };
 
-                const { pageClassification, parseResult, urlParserName } = await this.parsePageForCrawl({
-                    url,
-                    htmlData,
-                    parsers,
-                    parserName,
-                    allowParserAutoSwitch,
-                    parserConfig: perPageParserConfig,
-                    mainConfig,
-                    displayAdapter,
-                    httpAdapter
-                });
+                let crawlParse;
+                try {
+                    crawlParse = await this.parsePageForCrawl({
+                        url,
+                        htmlData,
+                        parsers,
+                        parserName,
+                        allowParserAutoSwitch,
+                        parserConfig: perPageParserConfig,
+                        mainConfig,
+                        displayAdapter,
+                        httpAdapter
+                    });
+                } finally {
+                    if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
+                }
+                const { pageClassification, parseResult, urlParserName } = crawlParse;
 
                 // Every crawled page's classification, not only the roots':
                 // the aggregator-pointer pass needs to know what the page an
@@ -9166,6 +9188,8 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Crawl page ${url} found ${deduplicatedUrls.length} unique additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
             } catch (error) {
+                // A door chain that threw leaves no window open behind it.
+                if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
                 const message = error?.message || 'Unknown error';
                 // A refusal by the politeness gate (the host is parked after a
                 // 429/403, its per-run budget is spent, or robots.txt forbids
@@ -23808,9 +23832,12 @@ class FetchPoliteness {
         // these sources on purpose, and a source's own doors (its feed, its
         // month grid, its calendar widget's AJAX) are how the site itself
         // serves the page — refusing them is refusing the source. So the
-        // configured roots, and every request made while a root page is being
-        // opened (`openingRoot`, set by the crawl around the door chain), are
-        // first-party and never robots-refused; DISCOVERED pages are.
+        // configured roots, and every same-host request made while a root
+        // page is being opened AND parsed (`openingRoot`, set by the crawl
+        // around the door chain and the parse — the parser opens doors of
+        // its own: a Squarespace ?format=json twin, a month call, a widget
+        // boot), are first-party and never robots-refused; DISCOVERED pages
+        // are.
         // The core registers its configured-root test at run start
         // (setConfiguredRootTest) — the adapters need not know the core.
         this.isConfiguredRoot = typeof options.isConfiguredRoot === 'function' ? options.isConfiguredRoot : (() => false);
