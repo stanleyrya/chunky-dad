@@ -545,6 +545,14 @@ class SharedCore {
         // is exactly how every non-networked test and the web path behave.
         this.networkResilience = options.networkResilience || null;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        // Language-selector params (?lang=de, ?locale=fr, ?hl=en) name a
+        // TRANSLATION of a page, never a different page — for link identity
+        // (getUrlDedupeKey / isSameLinkTarget) a ?lang=de twin is the same
+        // target as the plain URL. Run 20260924-055217: the model was handed
+        // eaglemanchester.com/event-details/hellbent-12 and its ?lang=de twin
+        // as two candidates and picked the "more canonical" ?lang=de one.
+        // Mirrors AiWebParser.localeParamPattern.
+        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
         
         // URL-to-parser mapping for automatic parser detection (parser: "auto").
         // Only scheme URLs resolve to a specific parser; every http(s) URL falls
@@ -2476,6 +2484,30 @@ class SharedCore {
         const incumbentFirstSegment = String(incumbentParts.segments[0] || '').toLowerCase();
         if (/^(?:tags?|categor(?:y|ies)|archives?|labels?|topics?)$/.test(incumbentFirstSegment)) return false;
         return candidateIsRoot && incumbentParts.segments.length > 0;
+    }
+
+    // The general shape of the rule above: on ONE site, is `candidate` a
+    // strict path-prefix of `incumbent` — its parent listing or front door
+    // (/rsvp, or /, against /rsvp/2026/9/12/bear-tea)? A parent path names
+    // every event under it, never THIS one, so it can never replace the
+    // deeper stored link. Query strings are ignored on both sides (a
+    // filtered listing is still the listing). Fails closed: different sites,
+    // equal depth, a candidate that is not a prefix, and the taxonomy
+    // archives the root rule excludes all return false. Run 20260924-055217
+    // (Goldiloxx: Bear Tea): a venue parser's clobbering website replaced
+    // the calendar's own event page with the venue root, and the final
+    // build then promoted the /rsvp listing over it.
+    isSameSiteParentPathOf(candidate, incumbent) {
+        const candidateParts = this.getUrlRuleParts(candidate);
+        const incumbentParts = this.getUrlRuleParts(incumbent);
+        if (!candidateParts || !incumbentParts) return false;
+        if (!this.areUrlHostsSameSite(candidateParts.host, incumbentParts.host)) return false;
+        const incumbentFirstSegment = String(incumbentParts.segments[0] || '').toLowerCase();
+        if (/^(?:tags?|categor(?:y|ies)|archives?|labels?|topics?)$/.test(incumbentFirstSegment)) return false;
+        const shallow = candidateParts.segments.map(segment => String(segment).toLowerCase());
+        const deep = incumbentParts.segments.map(segment => String(segment).toLowerCase());
+        if (shallow.length >= deep.length) return false;
+        return shallow.every((segment, index) => segment === deep[index]);
     }
 
     // Query-string parameter lookup built on plain string splitting —
@@ -5056,6 +5088,21 @@ class SharedCore {
                             };
                         }
                     }
+                }
+            }
+            // The root rung, generalized (2026-09-24): a same-SITE parent
+            // path (/rsvp against /rsvp/2026/9/12/bear-tea) is the listing
+            // every event under it shares — the deeper URL is the one that
+            // names THIS event. Sits outside the exact-host block so a
+            // www/subdomain spelling difference cannot send the pair to the
+            // arbiter. Identity fields only; equal depth or a non-prefix
+            // still arbitrates.
+            if (fieldName === 'website' || fieldName === 'url') {
+                if (this.isSameSiteParentPathOf(valueA, valueB)) {
+                    return { winner: 'b', reason: 'same-site deeper URL beats its parent path (listing/front door)' };
+                }
+                if (this.isSameSiteParentPathOf(valueB, valueA)) {
+                    return { winner: 'a', reason: 'same-site deeper URL beats its parent path (listing/front door)' };
                 }
             }
             // Cross-host website/url rungs. Rung 1: a bare homepage never
@@ -10532,7 +10579,7 @@ class SharedCore {
         const filtered = parts.filter(part => {
             const [rawKey = ''] = String(part).split('=');
             const normalizedKey = this.decodeQueryComponent(rawKey).toLowerCase();
-            return !this.trackingParamPattern.test(normalizedKey);
+            return !this.trackingParamPattern.test(normalizedKey) && !this.localeParamPattern.test(normalizedKey);
         });
         return filtered.length > 0 ? `?${filtered.join('&')}` : '';
     }
@@ -13899,6 +13946,31 @@ class SharedCore {
                 && this.isCuratedVenueSiteUrl(scraperValue)) {
                 mergedObject[fieldName] = calendarValue;
                 console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} kept calendar value — the organizer's own site (${calendarValue}) beats the venue's site (${scraperValue}); the venue has its own field`);
+                continue;
+            }
+
+            // A STORED LINK IS NEVER SHALLOWED, under EVERY strategy. The
+            // scraped website is often a curated site root or the listing
+            // the record was scraped off, merged "clobber" by a venue
+            // parser's static metadata — while the calendar already holds
+            // this event's own page on that same site. Run 20260924-055217
+            // (Goldiloxx: Bear Tea at 3 Dollar Bill): the stored
+            // /rsvp/2026/9/12/bear-tea was clobbered by the venue root, and
+            // the final build then promoted the /rsvp listing over it. The
+            // deterministic ladder and rankMergeWebsite both already prefer
+            // the deeper same-site link — this closes the clobber bypass.
+            // url is website's alias (folded above), so website is the only
+            // field this needs. Aggregators returned above; a genuinely
+            // different same-site page (a new slug) is not a prefix and
+            // still replaces the stored one exactly as before.
+            // Routed through the deterministic ladder (queueArbitrationConflict
+            // → resolveConflictDeterministically), whose same-site depth
+            // rungs decide it and log the stable 🔒 line — never inline, so
+            // every strategy reaches the same answer by the same rung.
+            if (fieldName === 'website'
+                && typeof calendarValue === 'string' && typeof scraperValue === 'string'
+                && this.isSameSiteParentPathOf(scraperValue, calendarValue)) {
+                queueArbitrationConflict(fieldName, calendarValue, scraperValue);
                 continue;
             }
 
@@ -19662,17 +19734,24 @@ class SharedCore {
                             'venue-site event page promoted from ticketUrl to website/url at final build');
                         this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
                             'moved to website/url — a page on the venue\'s own site is not a ticket vendor link');
-                    } else if (canonicalWebsite && this.isBareRootBuryingSameSiteEventPage(ticketUrl, canonicalWebsite)) {
+                    } else if (canonicalWebsite
+                        && (this.isBareRootBuryingSameSiteEventPage(ticketUrl, canonicalWebsite)
+                            || (!ticketRoleStamped && this.isSameSiteParentPathOf(ticketUrl, canonicalWebsite)))) {
                         // The mirror shape: the ticketUrl is the same site's
-                        // bare front door while website already names the
-                        // event. A homepage sells no tickets, so the field is
-                        // noise (corpus 2026-08-06: chunk-party.com ×3 and
-                        // bearracuda.com ×1 stored exactly this way).
+                        // bare front door — or (2026-09-24) the listing the
+                        // event page sits under, /rsvp against
+                        // /rsvp/2026/9/12/bear-tea — while website already
+                        // names the event. A homepage or listing sells no
+                        // tickets, so the field is noise (corpus 2026-08-06:
+                        // chunk-party.com ×3 and bearracuda.com ×1 stored
+                        // exactly this way). A listing the page itself
+                        // labelled a ticket page (markTicketRoleUrl) is kept.
+                        const shape = this.isBareRootBuryingSameSiteEventPage(ticketUrl, canonicalWebsite) ? 'homepage' : 'listing (the parent path of its own event page)';
                         delete analyzedEvent.ticketUrl;
                         notesNeedRebuild = true;
-                        console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — it is the same site's homepage, not a ticket link`);
+                        console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — it is the same site's ${shape}, not a ticket link`);
                         this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
-                            'ticketUrl dropped at final build — the same site\'s homepage, not a ticket link');
+                            `ticketUrl dropped at final build — the same site's ${shape}, not a ticket link`);
                     }
                 }
             }

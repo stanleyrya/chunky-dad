@@ -19597,3 +19597,133 @@ test('the page\'s sole large content picture is its artwork: adopted when nothin
   const fresh = createParser();
   assert.equal(fresh.getSoleBodyArtworkUrl(htmlData), '');
 });
+
+// ── Locale twins are translations, not pages (run 20260924-055217) ────────
+// Eagle Manchester (Wix) prints <link rel="alternate" hreflang="…"> for
+// every language on every page. URL discovery kept them (only resource
+// hints were excluded), so 52 of the run's 87 Eagle Manchester pages were
+// /de/, /fr/, /nl/ twins, and the model then picked "?lang=de" and "/fr/"
+// copies as event urls. The page declares its own translations; discovery
+// follows only the x-default copy.
+function localeAlternateHtml(slug, { xDefault = true, jsonOnly = false } = {}) {
+  const base = 'https://www.eaglemanchester.com';
+  const links = jsonOnly ? '' : `
+    <link rel="canonical" href="${base}/event-details/${slug}"/>
+    ${xDefault ? `<link rel="alternate" href="${base}/event-details/${slug}" hreflang="x-default"/>` : ''}
+    <link rel="alternate" href="${base}/de/event-details/${slug}" hreflang="de-de"/>
+    <link rel="alternate" href="${base}/fr/event-details/${slug}" hreflang="fr-fr"/>
+    <link rel="alternate" href="${base}/nl/event-details/${slug}" hreflang="nl-nl"/>
+    <link rel="alternate" href="${base}/event-details/${slug}" hreflang="en-gb"/>`;
+  const json = jsonOnly ? `<script>var s = {"currentLanguage":{"languageCode":"en","locale":"en-gb","url":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/${slug}","isPrimaryLanguage":true},"siteLanguages":[{"languageCode":"de","locale":"de-de","resolutionMethod":"Subdirectory","url":"https:\\/\\/www.eaglemanchester.com\\/de\\/event-details\\/${slug}","isPrimaryLanguage":false},{"languageCode":"fr","locale":"fr-fr","url":"https:\\/\\/www.eaglemanchester.com\\/fr\\/event-details\\/${slug}","isPrimaryLanguage":false},{"languageCode":"en","locale":"en-gb","url":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/${slug}","isPrimaryLanguage":true}]};</script>` : '';
+  return `
+    <html><head>${links}${json}</head><body>
+      <a href="${base}/event-details/manbears-social-2026-12-12-16-00">Manbears Social</a>
+      <a href="${base}/de/event-details/manbears-social-2026-12-12-16-00">Manbears Social (DE)</a>
+      <a href="${base}/fr/eventlist">Événements</a>
+      <a href="${base}/event-details/hellbent-13?lang=de">Hellbent (DE)</a>
+      <a href="${base}/event-details/hellbent-13">Hellbent</a>
+      <a href="${base}/de">Deutsch</a>
+      <a href="${base}/eventlist">Events</a>
+    </body></html>`;
+}
+
+test('URL discovery skips a page\'s hreflang alternates, every link under their locale prefixes, and ?lang= twins', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00';
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let links;
+  try {
+    links = parser.extractAdditionalUrls(localeAlternateHtml('hanky-panky-2026-09-26-23-00'), sourceUrl, {});
+  } finally {
+    console.log = originalLog;
+  }
+  const localeLinks = links.filter(link => /eaglemanchester\.com\/(?:de|fr|nl)(?:\/|$)|[?&]lang=/i.test(link));
+  assert.deepEqual(localeLinks, [], `no translation may be crawled, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00'));
+  assert.ok(links.includes('https://www.eaglemanchester.com/eventlist'));
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/hellbent-13'), 'the ?lang=de twin collapses onto the plain page');
+  assert.equal(links.filter(link => /hellbent-13/.test(link)).length, 1, 'one Hellbent, not two');
+  assert.ok(logs.some(line => line.includes('Locale alternates skipped for') && line.includes('/de/, /fr/, /nl/')),
+    `one log line names the locale prefixes, got: ${JSON.stringify(logs.filter(l => l.includes('Locale')))}`);
+  assert.ok(logs.some(line => line.includes('rejectedTopReasons=') && line.includes('locale-alternate')), 'counted in the discovery stats');
+});
+
+test('collectLocaleAlternates reads the page\'s declaration: x-default first, then canonical, then the page itself', () => {
+  const parser = createParser();
+  const slug = 'hanky-panky-2026-09-26-23-00';
+  const base = 'https://www.eaglemanchester.com';
+  const withDefault = parser.collectLocaleAlternates(localeAlternateHtml(slug), `${base}/event-details/${slug}`);
+  assert.equal(withDefault.defaultUrl, `${base}/event-details/${slug}`);
+  assert.deepEqual(Array.from(withDefault.localePrefixes).sort(), ['de', 'fr', 'nl']);
+  assert.equal(withDefault.alternateKeys.size, 3, 'en-gb pointing at the default IS the default, not an alternate');
+  assert.equal(withDefault.host, 'eaglemanchester.com');
+  // Read from a /de/ twin: the x-default is the copy to follow, and the
+  // twin's own URL is now one of the alternates.
+  const fromTwin = parser.collectLocaleAlternates(localeAlternateHtml(slug), `${base}/de/event-details/${slug}`);
+  assert.equal(fromTwin.defaultUrl, `${base}/event-details/${slug}`);
+  assert.equal(parser.isLocaleAlternateCandidate(`${base}/de/event-details/${slug}`, fromTwin), true);
+  assert.equal(parser.isLocaleAlternateCandidate(`${base}/event-details/${slug}`, fromTwin), false, 'the default copy is followed');
+  // No x-default: the canonical stands in.
+  const noDefault = parser.collectLocaleAlternates(localeAlternateHtml(slug, { xDefault: false }), `${base}/event-details/${slug}`);
+  assert.equal(noDefault.defaultUrl, `${base}/event-details/${slug}`);
+  assert.deepEqual(Array.from(noDefault.localePrefixes).sort(), ['de', 'fr', 'nl']);
+  // No declaration at all → null, and nothing is assumed about /de/ paths.
+  assert.equal(parser.collectLocaleAlternates('<html><body><a href="https://x.example/de/page">x</a></body></html>', 'https://x.example/'), null);
+});
+
+test('a page with no hreflang declaration keeps its /xx/ links (fail closed)', () => {
+  const parser = createParser();
+  const html = '<html><body><a href="https://venue.example/de/party">DE section</a><a href="https://venue.example/events/party">Party</a></body></html>';
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events', {});
+  assert.ok(links.includes('https://venue.example/de/party'), 'without a declaration /de/ may be a real section');
+  assert.ok(links.includes('https://venue.example/events/party'));
+});
+
+test('locale prefixes are derived only from an alternate that is EXACTLY the default path behind one locale segment', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <link rel="alternate" href="https://venue.example/events/party" hreflang="x-default"/>
+      <link rel="alternate" href="https://de.venue.example/events/party" hreflang="de"/>
+      <link rel="alternate" href="https://venue.example/fr/evenements/fete" hreflang="fr"/>
+      <link rel="alternate" href="https://venue.example/es/events/party" hreflang="es"/>
+    </head><body>
+      <a href="https://venue.example/es/events/other">Otro</a>
+      <a href="https://venue.example/fr/evenements/autre">Autre</a>
+      <a href="https://de.venue.example/events/other">Andere</a>
+    </body></html>`;
+  const alt = parser.collectLocaleAlternates(html, 'https://venue.example/events/party');
+  assert.deepEqual(Array.from(alt.localePrefixes), ['es'], 'a subdomain twin and a translated slug yield no prefix');
+  assert.equal(alt.alternateKeys.size, 3, 'but each declared twin is still an exact alternate');
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/party', {});
+  assert.ok(!links.includes('https://venue.example/es/events/other'), 'under a derived prefix → skipped');
+  assert.ok(links.includes('https://venue.example/fr/evenements/autre'), 'no prefix derived → left alone');
+  assert.ok(links.includes('https://de.venue.example/events/other'), 'another host is never prefixed');
+});
+
+test('the JSON language list (Wix siteLanguages) declares the same twins on pages that carry no hreflang tags', () => {
+  const parser = createParser();
+  const slug = 'ultimate00s';
+  const sourceUrl = `https://www.eaglemanchester.com/event-details/${slug}`;
+  const alt = parser.collectLocaleAlternates(localeAlternateHtml(slug, { jsonOnly: true }), sourceUrl);
+  assert.equal(alt.defaultUrl, sourceUrl, 'isPrimaryLanguage marks the default copy');
+  assert.deepEqual(Array.from(alt.localePrefixes).sort(), ['de', 'fr']);
+  const links = parser.extractAdditionalUrls(localeAlternateHtml(slug, { jsonOnly: true }), sourceUrl, {});
+  assert.ok(!links.some(link => /\/(?:de|fr)\//.test(link) || /\/de$/.test(link)), `got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00'));
+});
+
+test('parser link identity strips language selectors on both the URL-global and string-only paths', () => {
+  const parser = createParser();
+  const plain = 'https://www.eaglemanchester.com/event-details/hellbent-12';
+  assert.equal(parser.getUrlDedupeKey(`${plain}?lang=de`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.stripTrackingParams(`${plain}?lang=de&utm_source=ig`), plain);
+  // String-only twin (iOS has no URL global): same answers.
+  assert.equal(parser.stripLocaleParams(`${plain}?lang=de`), plain);
+  assert.equal(parser.stripLocaleParams(`${plain}?lang=de/form`), plain, 'the run\'s malformed "?lang=de/form" collapses too');
+  assert.equal(parser.stripLocaleParams(`${plain}?occurrence=2026-10-01&locale=fr#top`), `${plain}?occurrence=2026-10-01#top`);
+  assert.equal(parser.stripLocaleParams('https://x.example/p?slang=en'), 'https://x.example/p?slang=en', 'whole-key match only');
+  assert.equal(parser.stripLocaleParams(plain), plain);
+});
