@@ -2944,6 +2944,16 @@ test('curated-bar city backfill: a page that names a city we do not cover blocks
   captureConsoleLog(() => { normalizer.normalize(seoul); });
   assert.equal(seoul.city, 'unknown', 'waits for a Seoul calendar instead of shipping to Sitges');
   assert.equal(seoul._unrecognizedCity, 'seoul');
+  // The listing page's own path names the place when the model returned no city.
+  const byPath = { title: 'Where to party in Seoul', bar: 'The Bear Cave', startDate: '2030-09-26T23:55:00.000Z', _sourcePageUrl: 'https://whereto.party/in/seoul' };
+  captureConsoleLog(() => { normalizer.normalize(byPath); });
+  assert.equal(byPath.city, 'unknown');
+  // A path that names the bar's own city, or names no place, changes nothing.
+  const sitgesPath = { title: 'Bear Night', bar: 'The Bear Cave', startDate: '2030-09-26T23:55:00.000Z', _sourcePageUrl: 'https://agg.example/in/sitges' };
+  captureConsoleLog(() => { normalizer.normalize(sitgesPath); });
+  assert.equal(sitgesPath.city, 'sitges');
+  assert.equal(normalizer.placeNameFromSourcePagePath('https://agg.example/events/2026/09/26/party', 'sitges'), '');
+  assert.equal(normalizer.placeNameFromSourcePagePath('https://agg.example/in/kuala-lumpur', 'sitges'), 'kuala lumpur');
   // No city stated at all: the curated bar still speaks.
   const nowhere = { title: 'Bear Night', bar: 'The Bear Cave', startDate: '2030-09-26T23:55:00.000Z' };
   captureConsoleLog(() => { normalizer.normalize(nowhere); });
