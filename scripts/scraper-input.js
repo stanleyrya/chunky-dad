@@ -763,9 +763,12 @@ const scraperConfig = {
       //   "report"  — log every path it disallows, request it anyway
       //   "enforce" — never request a disallowed path
       //   "off"     — do not read robots.txt at all
-      // Report-only first: some ticket platforms disallow the very listing
-      // pages we read, so see what it would cut before switching it on.
-      robots: "report",
+      // Enforced for DISCOVERED pages. A configured root and the doors it is
+      // opened through (feed, month grid, widget AJAX) are first-party and
+      // are requested regardless — report mode showed robots would have cut
+      // Thotyssey's tockify feed, TicketSauce, Redeye, Google Calendar ICS
+      // and Squarespace JSON twins, every one a door we chose on purpose.
+      robots: "enforce",
       // exemptHosts: ["example.org"], // never paced/parked (chunky.dad, localhost and the tailnet always are)
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)

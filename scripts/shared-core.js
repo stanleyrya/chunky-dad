@@ -6277,6 +6277,12 @@ class SharedCore {
         // Parsers never started because the network gave up part-way through.
         const networkTruncatedParsers = [];
         this.noteConfiguredListingUrls(config.parsers);
+        // The politeness gate treats configured roots as first-party for
+        // robots.txt (see FetchPoliteness.isFirstPartyRequest).
+        if (httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function') {
+            const gate = httpAdapter.getFetchPoliteness();
+            if (gate && typeof gate.setConfiguredRootTest === 'function') gate.setConfiguredRootTest((url) => this.isConfiguredListingUrl(url));
+        }
         // Which source reads which configured page IN THIS RUN — only a
         // source that will actually run owns its page (a one-parser run, or a
         // source switched off, owns nothing, so nothing is left unread).
@@ -8637,6 +8643,8 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
+                const politeGate = currentDepth === 0 && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
+                if (politeGate && typeof politeGate.beginOpeningRoot === 'function') politeGate.beginOpeningRoot(url);
                 const fetchedHtmlData = shouldUseInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
                     : await httpAdapter.fetchData(url);
@@ -8659,6 +8667,7 @@ class SharedCore {
                 const htmlData = shouldUseInlineInput || currentDepth !== 0
                     ? spaResolvedHtmlData
                     : await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter);
+                if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
 
                 // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
                 // (absence is what signals adaptive to parsers); numeric mode passes
@@ -23795,6 +23804,28 @@ class FetchPoliteness {
         this.exemptHosts = (Array.isArray(options.exemptHosts) ? options.exemptHosts : FetchPoliteness.DEFAULT_EXEMPT_HOSTS)
             .map(host => String(host || '').trim().toLowerCase()).filter(Boolean);
         this.hosts = new Map();
+        // robots.txt is for CRAWLERS finding pages. The owner configured
+        // these sources on purpose, and a source's own doors (its feed, its
+        // month grid, its calendar widget's AJAX) are how the site itself
+        // serves the page — refusing them is refusing the source. So the
+        // configured roots, and every request made while a root page is being
+        // opened (`openingRoot`, set by the crawl around the door chain), are
+        // first-party and never robots-refused; DISCOVERED pages are.
+        // The core registers its configured-root test at run start
+        // (setConfiguredRootTest) — the adapters need not know the core.
+        this.isConfiguredRoot = typeof options.isConfiguredRoot === 'function' ? options.isConfiguredRoot : (() => false);
+        this.openingRoot = '';
+    }
+
+    // The crawl calls this around a configured root's door chain (fetch,
+    // gate, SPA door, machine door): requests inside it are first-party.
+    setConfiguredRootTest(test) { if (typeof test === 'function') this.isConfiguredRoot = test; }
+    beginOpeningRoot(url) { this.openingRoot = String(url || ''); }
+    endOpeningRoot() { this.openingRoot = ''; }
+
+    isFirstPartyRequest(url) {
+        try { if (this.isConfiguredRoot(url)) return true; } catch (_) { /* fail closed */ }
+        return Boolean(this.openingRoot) && FetchPoliteness.hostKeyOf(url) === FetchPoliteness.hostKeyOf(this.openingRoot);
     }
 
     // Host key: lowercased, "www." dropped — dilf.uk and www.dilf.uk are one
@@ -23983,11 +24014,14 @@ class FetchPoliteness {
             const verdict = FetchPoliteness.robotsVerdict(robots, path);
             if (!verdict.allowed) {
                 state.robotsDisallowed.push({ path, rule: verdict.rule });
-                if (this.robotsMode === 'enforce') {
+                if (this.robotsMode === 'enforce' && this.isFirstPartyRequest(url)) {
+                    this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — a configured source's own page or door, requested anyway`);
+                } else if (this.robotsMode === 'enforce') {
                     this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — not requested`);
                     throw this.buildRefusal(`robots.txt of ${hostKey} disallows ${path} (${verdict.rule})`, 'robots', hostKey);
+                } else {
+                    this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — report-only, requested anyway`);
                 }
-                this.log(`🤖 ROBOTS: ${hostKey} disallows ${path} (${verdict.rule}) — report-only, requested anyway`);
             }
         }
         if (state.requests >= this.maxRequestsPerHost) {
