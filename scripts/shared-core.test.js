@@ -110,6 +110,123 @@ test('analyzeEventAction keeps genuinely different same-venue events separate', 
   assert.equal(analysis.action, 'new');
 });
 
+// === Two happy hours 330 m apart are two events (run 20260924-055217) ===
+// Lone Star Saloon's "Leather and Gear Happy Hour" (5–8pm, 1354 Harrison;
+// saved with a city+ZIP-only address and shortName LEATHER) and the SF
+// Eagle's "SF Queer Leather Happy Hour: Folsom Edition" (6–9pm, 398 12th
+// St). The titles compare FALSE and the bars contradict, yet place-time-name
+// folded them every run from 09-20: the calendar's "San Francisco CA 94103"
+// is a substring of the Eagle's full address, and the one-word shortName
+// "LEATHER" sits inside the Eagle's title. Field values are the run's own
+// `_original.scraper` / `_original.calendar` records.
+const SF_CITIES = { sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] } };
+function buildSfEagleScraped(overrides = {}) {
+  return {
+    title: 'SF Queer Leather Happy Hour: Folsom Edition',
+    description: 'Join us for our Folsom Edition of the SF Queer Leather Happy Hour!',
+    startDate: new Date('2026-09-26T01:00:00.000Z'),
+    endDate: new Date('2026-09-26T04:00:00.000Z'),
+    bar: 'SF Eagle',
+    address: '398 12th Street, San Francisco, CA 94103',
+    location: '37.7699927, -122.4134077',
+    city: 'sf',
+    timezone: 'America/Los_Angeles',
+    source: 'ai-web',
+    url: 'https://www.sf-eagle.com/events/sf-queer-leather-happy-hour-folsom-edition/',
+    ...overrides
+  };
+}
+function buildLoneStarSaved(overrides = {}, notesOverride = null) {
+  const notes = notesOverride !== null ? notesOverride : [
+    'address: San Francisco CA 94103',
+    'timezone: America/Los_Angeles',
+    'website: https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-gear-happy-hour',
+    'bar: Lone Star Saloon',
+    'shortName: LEATHER'
+  ].join('\n');
+  return {
+    title: 'Leather and Gear Happy Hour',
+    name: 'Leather and Gear Happy Hour',
+    startDate: new Date('2026-09-26T00:00:00.000Z'),
+    endDate: new Date('2026-09-26T03:00:00.000Z'),
+    location: '37.7721663, -122.4108890',
+    calendarTimezone: 'America/Los_Angeles',
+    notes,
+    ...overrides
+  };
+}
+
+test('identity: contradicting bars veto place-time-name even when weaker place rungs agree', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  const scraped = buildSfEagleScraped();
+  const saved = buildLoneStarSaved();
+  const incoming = core.buildIdentityComparisonShape(scraped);
+  const existing = core.buildIdentityComparisonShape(saved);
+  assert.equal(core.areTitlesSimilar(scraped.title, saved.title), false, 'the titles themselves never matched');
+  assert.equal(core.haveContradictingPlaceEvidence(incoming, existing, scraped, saved), true, 'SF Eagle vs Lone Star Saloon is a positive contradiction');
+  assert.equal(core.getSameEventIdentitySignal(scraped, saved), null);
+  const analysis = core.analyzeEventAction(scraped, [saved]);
+  assert.equal(analysis.action, 'new', `two bars 330 m apart stay two events (${analysis.reason})`);
+});
+
+test('identity: a city+ZIP-only address contains nothing', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  assert.equal(core.addressStatesStreet('San Francisco CA 94103'), false);
+  assert.equal(core.addressStatesStreet('Dallas, TX 75219'), false);
+  assert.equal(core.addressStatesStreet('398 12th Street, San Francisco, CA 94103'), true);
+  assert.equal(core.addressStatesStreet('10521 Ventura Blvd, Studio City, CA'), true, 'a 5-digit run LEADING the line is a house number');
+  assert.equal(core.addressStatesStreet('Motzstraße 19, 10777 Berlin'), true, 'trailing house numbers (European format) still name a street');
+  // The contradiction veto aside, the address rung alone must not read the
+  // calendar's locality as the Eagle's door.
+  const incoming = core.buildIdentityComparisonShape(buildSfEagleScraped({ location: '', bar: '' }));
+  const existing = core.buildIdentityComparisonShape(buildLoneStarSaved({ location: '' }, 'address: San Francisco CA 94103'));
+  assert.equal(core.areIdentityPlacesSimilar(incoming, existing), false);
+  // …while a real street line inside a fuller spelling of itself still is one place.
+  const fuller = core.buildIdentityComparisonShape(buildLoneStarSaved({ location: '' }, 'address: 398 12th St, San Francisco, CA 94103'));
+  assert.equal(core.areIdentityPlacesSimilar(incoming, fuller), true);
+});
+
+test('identity: a one-word shortName vouches only for a name it IS, never one it sits inside', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  const eagle = core.buildIdentityComparisonShape(buildSfEagleScraped());
+  const loneStar = core.buildIdentityComparisonShape(buildLoneStarSaved());
+  assert.deepEqual(loneStar.shortNames, ['LEATHER']);
+  assert.equal(core.areIdentityNamesSimilar(eagle, loneStar), false, '"LEATHER" inside the Eagle title is a shared word, not a shared event');
+  // The renamed-event signal (#1440) is untouched: a shortName that IS the other name…
+  const furballShort = core.buildIdentityComparisonShape({ title: 'DALLAS FREEDOM TEA', shortName: 'FUR-BALL' });
+  const furball = core.buildIdentityComparisonShape({ name: 'FURBALL' });
+  assert.equal(core.areIdentityNamesSimilar(furballShort, furball), true);
+  // …or the other title's own party name before its colon.
+  const megawoof = core.buildIdentityComparisonShape({ title: 'Megawoof: DURO' });
+  const megawoofShort = core.buildIdentityComparisonShape({ title: 'DURO', shortName: 'MEGAWOOF' });
+  assert.equal(core.areIdentityNamesSimilar(megawoof, megawoofShort), true);
+  // A multi-word shortName keeps the full title treatment.
+  const multiWord = core.buildIdentityComparisonShape({ title: 'Saturday Social', shortName: 'SF Queer Leather Happy Hour' });
+  assert.equal(core.areIdentityNamesSimilar(eagle, multiWord), true);
+});
+
+test('identity: same bar spelled two ways, an hour apart, still folds through place-time-name', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  // The same-event control: one happy hour, the site's title beside the
+  // calendar's shorter one, the bar spelled with its article, the stored
+  // clock an hour off (legacy wall-clock data) — no ticket url, no shared
+  // event page, so only the place-time-name rung can meet the pair.
+  const scraped = buildSfEagleScraped({ url: '' });
+  const saved = buildLoneStarSaved({
+    title: 'SF Queer Leather Happy Hour',
+    name: 'SF Queer Leather Happy Hour',
+    location: '37.7699927, -122.4134077'
+  }, [
+    'bar: The SF Eagle',
+    'address: 398 12th St, San Francisco, CA 94103',
+    'timezone: America/Los_Angeles'
+  ].join('\n'));
+  assert.equal(core.getSameEventIdentitySignal(scraped, saved), 'place-time-name');
+  const analysis = core.analyzeEventAction(scraped, [saved]);
+  assert.equal(analysis.action, 'merge');
+  assert.match(analysis.reason, /Same event identity \(place-time-name\)/);
+});
+
 // === Cross-parser calendar reconciliation (runs 20260811-132205 / -133948) ===
 // One real event — 2026-08-16 at Massive, Seattle — reached the calendar as
 // "Treasure Trail" (massive.club, key treasure-trail|2026-08-16|massive) and
@@ -10725,6 +10842,36 @@ test('a bar matching the city\'s curated bars is excluded (already known)', () =
   ]).length, 1);
 });
 
+test('a candidate whose pin or address is a curated bar\'s door is excluded, whatever the page called it', () => {
+  const core = createVenueDiscoveryCore();
+  // "Locker Room" is a party name in the venue slot (Furball at Legacy, run
+  // 20260924-055217): the name matches no curated bar, the pin is the
+  // curated pin byte for byte.
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: SEATTLE_CUFF_BAR.coordinates, address: '1533 13TH AVE' })
+  ]), [], 'same pin + same street line');
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: '47.6142100, -122.3168600', address: '' })
+  ]), [], 'a pin metres from the curated pin, no address');
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: '47.6135, -122.3163', address: '1533 13th Ave, Seattle, WA 98122' })
+  ]), [], 'the curated street line under a pin 90 m off');
+  // The map POI at the pin naming a different place is the same veto from
+  // the geocoder's side ("map POI at pin: … differs from bar").
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', _geoPoiName: 'Legacy', _geoPoiBarMatch: false })
+  ]), [], '_geoPoiBarMatch === false');
+  // A genuinely new door — different pin, different street — still surfaces,
+  // and a matching POI verdict never vetoes.
+  assert.equal(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ _geoPoiName: 'Massive', _geoPoiBarMatch: true })
+  ]).length, 1);
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], SEATTLE_CUFF_BAR.coordinates).name, 'The Cuff Complex');
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '', '1533 13th Ave').name, 'The Cuff Complex');
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '47.6135, -122.3163', '1400 12th Ave, Seattle'), null);
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '', ''), null);
+});
+
 test('events of the same venue dedup into one candidate with unioned evidence', () => {
   const core = createVenueDiscoveryCore();
   const candidates = core.buildNewVenueCandidates([
@@ -11024,9 +11171,12 @@ test('evidence: _geoPoiName and _geoPoiBarMatch never serialize into notes', () 
 
 test('new venue candidates carry a computed evidence panel from the same builder', () => {
   const core = createEvidencePanelCore();
+  // A pin 180 m from the Cuff's: at the curated pin itself the candidate is
+  // vetoed as the Cuff's own door (findCuratedBarByPlace), whatever the page
+  // called it.
   const [candidate] = core.buildNewVenueCandidates([
     buildVenueCandidateEvent({
-      location: '47.6142, -122.3169',
+      location: '47.6150, -122.3190',
       _geoPoiName: 'Massive Nightclub',
       _geoPoiBarMatch: true
     })
