@@ -662,6 +662,31 @@ function findPriorDecision(proposal, decisions, SharedCore) {
     };
 }
 
+// Which fields a "needs a fix" note's tags name — the deck's own vocabulary.
+const FIX_TAG_FIELDS = {
+    'wrong time': ['startDate', 'endDate'],
+    'wrong date': ['startDate', 'endDate'],
+    'wrong venue': ['bar', 'address', 'location'],
+    'wrong title': ['title'],
+    'bad image': ['image']
+};
+
+// { tags, fields } when EVERY drifted field is one a tag of the note names
+// (and at least one tag is a field tag); null otherwise. Fails closed on an
+// untagged note, on "other"/"duplicate"/"fragment", and on any drift
+// outside the named fields.
+function driftCoveredByNoteTags(prior, proposal) {
+    const tags = prior && prior.reason && Array.isArray(prior.reason.tags) ? prior.reason.tags : [];
+    const named = new Set();
+    for (const tag of tags) for (const field of FIX_TAG_FIELDS[String(tag).toLowerCase()] || []) named.add(field);
+    if (named.size === 0) return null;
+    if (tags.some((tag) => !FIX_TAG_FIELDS[String(tag).toLowerCase()])) return null;
+    const drift = (Array.isArray(prior.drift) ? prior.drift : []).map((entry) => String(entry).replace(/\s*\(.*$/, ''));
+    if (drift.length === 0) return null;
+    if (!drift.every((field) => named.has(field))) return null;
+    return { tags: tags.slice(), fields: drift };
+}
+
 // Pending NEW nights of one party (same title and place) are one card on
 // the deck — one swipe decides them all, each under its own key. Every
 // member carries the group and its nights, labelled in the event's zone.
@@ -863,6 +888,21 @@ function buildDeck(runPayload, store, options = {}) {
         // rides on the card as `prior`, so the owner sees it is a second
         // look, what they said last time, and what changed since.
         const prior = decision ? null : findPriorDecision(proposal, decisions, SharedCore);
+        // THE FIX YOU ASKED FOR ARRIVED. A card sent back "needs a fix" with
+        // tags naming the wrong fields, whose ONLY changes since are those
+        // fields, is what the owner asked to see — approved, with the note
+        // as its audit trail, instead of a second swipe (audit 2026-09-22:
+        // every fix cost two swipes). Untagged notes, "other", and any
+        // change outside the named fields still come back for a look.
+        const fixed = prior && prior.verdict === 'reject' && !prior.night && (proposal.kind === 'new')
+            && SharedCore.getOwnerRejectionMode({ verdict: 'reject', reason: prior.reason }) === 'fix'
+            ? driftCoveredByNoteTags(prior, proposal) : null;
+        if (fixed) {
+            file({ id: `e${index}`, kind: proposal.kind, key: proposal.key, sourceIndex: index, proposal,
+                display: buildReviewDisplayContext(event, payload, core, extras), prior, autoApproved: fixed },
+                { key: proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: new Date(now).toISOString(), reason: null, snapshot: proposal, autoApproved: fixed });
+            return;
+        }
         file(
             {
                 id: `e${index}`,
@@ -1009,21 +1049,27 @@ function buildDeck(runPayload, store, options = {}) {
             && (!snapshot.city || !event.city || snapshot.city === event.city)
             && core.areTitlesSimilar(title, event.title));
     };
+    // A note that has been ANSWERED — its night is past, or the fix is
+    // already saved with no card left — has nothing to wait for; it is
+    // listed here so the server can drop it from the store, and the fix
+    // queue (/review/rejections) stops naming done work. A note riding on a
+    // returned card as `prior` stays until that card is decided.
+    const answeredNoteKeys = [];
     const unanswered = [];
     for (const decision of decisions) {
         if (SharedCore.getOwnerRejectionMode(decision) !== 'fix' || presentKeys.has(decision.key)) continue;
         const startMs = SharedCore.toEpochMillis(decision.snapshot && decision.snapshot.startDate);
-        if (startMs !== null && startMs < now) continue;
+        if (startMs !== null && startMs < now) { answeredNoteKeys.push(decision.key); continue; }
         const answer = presentByPlaceDay.get(placeDayOf(decision.key));
         if (answer) {
             if (!answer.prior && !answer.decision) {
                 const wasTitle = (decision.snapshot && decision.snapshot.title) || '';
                 answer.prior = { verdict: 'reject', stampedAt: decision.stampedAt || null, reason: decision.reason || null,
-                    drift: wasTitle && wasTitle !== answer.proposal.title ? [`title (was “${wasTitle}”)`] : ['title'] };
+                    drift: wasTitle && wasTitle !== answer.proposal.title ? [`title (was “${wasTitle}”)`] : ['title'], key: decision.key };
             }
             continue;
         }
-        if (answeredByRunEvent(decision)) continue;
+        if (answeredByRunEvent(decision)) { answeredNoteKeys.push(decision.key); continue; }
         unanswered.push(decision);
     }
     const waitingGone = unanswered
@@ -1044,6 +1090,11 @@ function buildDeck(runPayload, store, options = {}) {
     return {
         runId,
         waitingGone,
+        answeredNoteKeys,
+        // Approvals the deck made itself (a fix arrived exactly as asked) —
+        // not yet in the store; the server writes them at deck build so the
+        // phone's execute sees them like any swipe.
+        autoApprovals: decided.filter((entry) => entry.autoApproved).map((entry) => ({ ...entry.decision, autoApproved: entry.autoApproved })),
         savedAt: (payload.summary && payload.summary.timestamp) || null,
         environment: (payload.runContext && payload.runContext.environment) || null,
         runShape: describeRunShape(payload),

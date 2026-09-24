@@ -1898,7 +1898,27 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot, cities);
     const writtenLedger = reviewQueue.loadWrittenLedger(sharedRoot);
-    const deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
+    let deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
+    // The deck closes its own loops (audit 2026-09-22): notes whose fix is
+    // saved or whose night has passed are dropped from the store, and a
+    // card that came back changed in exactly the fields a note named is
+    // approved on the owner's behalf. Both are written here — the Mac is
+    // the store's only writer — and the deck is rebuilt on the new store so
+    // what renders is what was stored.
+    const answered = Array.isArray(deck.answeredNoteKeys) ? deck.answeredNoteKeys : [];
+    const autoApprovals = Array.isArray(deck.autoApprovals) ? deck.autoApprovals : [];
+    if (answered.length > 0 || autoApprovals.length > 0) {
+        let next = store;
+        for (const key of answered) next = reviewQueue.clearDecision(next, key).store;
+        for (const decision of autoApprovals) {
+            next = reviewQueue.upsertDecision(next, reviewQueue.buildDecision({ key: decision.key, kind: decision.kind, verdict: 'approve', runId: run.runId, snapshot: decision.snapshot,
+                reason: { tags: [], text: `auto: the fix you asked for arrived (${decision.autoApproved.fields.join(', ')})`, mode: '' } }));
+        }
+        const saved = reviewQueue.saveDecisions(reviewQueue.getDecisionsPath(sharedRoot), next);
+        if (answered.length > 0) console.log(`Review: dropped ${answered.length} answered "needs a fix" note(s): ${answered.join(', ')}`);
+        if (autoApprovals.length > 0) console.log(`Review: auto-approved ${autoApprovals.length} card(s) whose fix arrived as asked: ${autoApprovals.map((d) => d.key).join(', ')}`);
+        deck = reviewQueue.buildDeck(run.payload, saved, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
+    }
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
