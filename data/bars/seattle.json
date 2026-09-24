@@ -97,5 +97,11 @@
     "palette": "#000000:91:0 #6f6564:2:1 #838682:1:1",
     "faviconPlate": "#010101",
     "gayCitiesLastScrapedAt": "2026-07-22T18:31:06.867Z"
+  },
+  {
+    "name": "Phoenix Comics & Games",
+    "city": "seattle",
+    "address": "113 Broadway E, Seattle, WA 98102",
+    "coordinates": "47.6191274, -122.3210517"
   }
 ]
