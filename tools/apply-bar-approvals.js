@@ -14,6 +14,14 @@
 //
 //   node tools/apply-bar-approvals.js            # promote + regenerate
 //   node tools/apply-bar-approvals.js --dry-run  # print what would change
+//   node tools/apply-bar-approvals.js --pr       # …and open a PR with the diff
+//
+// --pr is what the daily launchd job runs after the sweep (see
+// tools/launchd/*.plist.template): approved bars become a PR on their own —
+// the owner's only step is the merge. The branch is made in a throwaway
+// worktree off origin/main so the primary checkout (the review server's
+// working tree) is never switched; an open bar-approvals PR is updated in
+// place (same branch), and nothing happens when there is nothing to promote.
 //
 // Shared dir: CHUNKY_SHARED_STORAGE_DIR, defaulting to the iCloud Scriptable
 // tree (same default as the server and the launchd job).
@@ -109,8 +117,51 @@ function writeAdditions(additions, root = repoRoot) {
     return written;
 }
 
+const PR_BRANCH = 'bar-approvals';
+
+function git(args, cwd, opts = {}) {
+    const result = spawnSync('git', args, { cwd, encoding: 'utf8', ...opts });
+    if (result.status !== 0 && !opts.allowFail) throw new Error(`git ${args.join(' ')} failed: ${(result.stderr || result.stdout || '').trim()}`);
+    return (result.stdout || '').trim();
+}
+
+// Promote inside a fresh worktree off origin/main, commit, push, and open (or
+// update) the bar-approvals PR. Returns the PR URL, or '' when nothing to do.
+function promoteAsPullRequest(store) {
+    const os = require('os');
+    const worktree = fs.mkdtempSync(path.join(os.tmpdir(), 'bar-approvals-'));
+    fs.rmdirSync(worktree);
+    git(['fetch', '--quiet', 'origin', 'main'], repoRoot);
+    const existing = git(['ls-remote', '--heads', 'origin', PR_BRANCH], repoRoot);
+    git(['worktree', 'add', '--quiet', '-B', PR_BRANCH, worktree, existing ? `origin/${PR_BRANCH}` : 'origin/main'], repoRoot);
+    try {
+        if (existing) git(['merge', '--quiet', '--no-edit', 'origin/main'], worktree, { allowFail: true });
+        // Re-plan against the worktree's own data: an earlier PR run may have
+        // promoted some of these already.
+        const { additions: fresh } = planBarPromotions(store, loadCuratedBars(worktree));
+        if (fresh.length === 0) return '';
+        writeAdditions(fresh, worktree);
+        const generated = spawnSync(process.execPath, [path.join(worktree, 'tools', 'generate-scraper-bars.js')], { cwd: worktree, stdio: 'inherit' });
+        if (generated.status !== 0) throw new Error('generate-scraper-bars.js failed in the worktree');
+        git(['add', '-A'], worktree);
+        if (!git(['status', '--porcelain'], worktree)) return '';
+        const names = fresh.map((a) => `${a.bar.name} (${a.city})`).join(', ');
+        git(['-c', 'user.name=chunky-dad review deck', '-c', 'user.email=review-deck@chunky.dad', 'commit', '--quiet', '-m', `Bars: promote ${fresh.length} approved on the review deck — ${names}`], worktree);
+        git(['push', '--quiet', '-u', 'origin', PR_BRANCH], worktree);
+        const open = spawnSync('gh', ['pr', 'list', '--head', PR_BRANCH, '--state', 'open', '--json', 'url', '--jq', '.[0].url'], { cwd: worktree, encoding: 'utf8' });
+        const openUrl = (open.stdout || '').trim();
+        if (openUrl) return openUrl;
+        const created = spawnSync('gh', ['pr', 'create', '--head', PR_BRANCH, '--title', `Bars: ${fresh.length} approved on the review deck`, '--body', `Approved by swiping right on bar cards; promoted into data/bars/<city>.json by the daily job (tools/apply-bar-approvals.js --pr).\n\n${fresh.map((a) => `- ${a.bar.name} (${a.city}) — ${a.bar.address}`).join('\n')}\n\nThe Google Sheet sync keeps local additions (tools/sync-bars.js merges both), so the sheet need not change.`], { cwd: worktree, encoding: 'utf8' });
+        if (created.status !== 0) throw new Error(`gh pr create failed: ${(created.stderr || '').trim()}`);
+        return (created.stdout || '').trim();
+    } finally {
+        git(['worktree', 'remove', '--force', worktree], repoRoot, { allowFail: true });
+    }
+}
+
 function main(argv) {
     const dryRun = argv.includes('--dry-run');
+    const asPr = argv.includes('--pr');
     const sharedRoot = resolveSharedRoot();
     const decisionsPath = getDecisionsPath(sharedRoot);
     const store = loadDecisions(decisionsPath);
@@ -130,6 +181,11 @@ function main(argv) {
     }
     if (dryRun) {
         console.log(`Dry run: ${additions.length} bar(s) would be appended to data/bars/.`);
+        return 0;
+    }
+    if (asPr) {
+        const url = promoteAsPullRequest(store);
+        console.log(url ? `Opened/updated PR: ${url}` : 'Nothing new for the PR (already promoted on the branch).');
         return 0;
     }
     const written = writeAdditions(additions, repoRoot);

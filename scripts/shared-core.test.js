@@ -24249,6 +24249,25 @@ test('FetchPoliteness reads robots.txt once per host: report logs and requests, 
   }
 });
 
+test('FetchPoliteness: under enforce, a configured root and the doors opened from it are first-party — requested and logged, never refused; discovered pages are refused', async () => {
+  const robotsBody = 'User-agent: *\nDisallow: /api/\nDisallow: /o/\n';
+  const { gate, logs } = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
+  gate.setConfiguredRootTest((url) => url === 'https://tickets.example/o/organizer-1');
+  // The configured root itself, though disallowed.
+  assert.equal(await gate.run('https://tickets.example/o/organizer-1', async () => 'root'), 'root');
+  // Its own door (the feed the page is opened through), inside the root's window.
+  gate.beginOpeningRoot('https://tickets.example/o/organizer-1');
+  assert.equal(await gate.run('https://tickets.example/api/events?organizer=1', async () => 'feed'), 'feed');
+  gate.endOpeningRoot();
+  assert.ok(logs.some(line => line.includes("a configured source's own page or door, requested anyway")), logs.join('\n'));
+  // A discovered page on the same host, outside the window: refused.
+  await assert.rejects(gate.run('https://tickets.example/o/organizer-2', async () => 'never'), (error) => error.politeness.reason === 'robots');
+  // A different host's door, even inside the window, is not first-party.
+  gate.beginOpeningRoot('https://tickets.example/o/organizer-1');
+  await assert.rejects(gate.run('https://other.example/api/x', async () => 'never'), (error) => error.politeness.reason === 'robots');
+  gate.endOpeningRoot();
+});
+
 test('FetchPoliteness: an API call (a geocoder) is paced and parked like a page but never judged by robots.txt', async () => {
   let robotsReads = 0;
   const { gate, sleeps, logs } = makePoliteness({ robots: 'enforce', minHostGapMs: 1000, fetchRobotsText: async () => { robotsReads++; return 'User-agent: *\nDisallow: /search\n'; } });

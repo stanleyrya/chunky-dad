@@ -51,7 +51,7 @@
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
-        <string>cd "__REPO__" &amp;&amp; { /usr/bin/git pull --ff-only --quiet origin main || echo "run-once: git pull failed — running with the current checkout"; }; "__NODE__" "__REPO__/tools/run-once.js"</string>
+        <string>cd "__REPO__" &amp;&amp; { /usr/bin/git pull --ff-only --quiet origin main || echo "run-once: git pull failed — running with the current checkout"; }; "__NODE__" "__REPO__/tools/run-once.js"; "__NODE__" "__REPO__/tools/apply-bar-approvals.js" --pr || echo "apply-bar-approvals: failed — approved bars stay in owner-decisions.json until the next run"</string>
     </array>
     <key>WorkingDirectory</key>
     <string>__REPO__</string>
