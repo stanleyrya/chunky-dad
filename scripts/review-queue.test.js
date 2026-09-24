@@ -305,7 +305,43 @@ test('buildDeck: a not-bear card carries the event\'s own review key, so "bear, 
   assert.equal(waiting.cards.filter((entry) => entry.kind === 'new').length, 0, 'unchanged: still waiting on the fix');
   assert.equal(waiting.counts.waiting, 1);
   const fixed = deckOf(kept('https://x/fixed.jpg'), store, { bearVerdicts: verdicts });
-  assert.equal(fixed.cards.filter((entry) => entry.kind === 'new').length, 1, 'changed: back on the stack');
+  // The note said 'bad image' and only the image changed: approved on the owner's behalf, no second swipe.
+  assert.equal(fixed.cards.filter((entry) => entry.kind === 'new').length, 0, 'changed as asked: approved, not re-offered');
+  assert.equal(fixed.autoApprovals.length, 1);
+});
+
+test('buildDeck: a card that comes back changed in exactly the fields a "needs a fix" note named is approved on the owner\'s behalf; answered notes are listed for pruning', () => {
+  const day = iso(FUTURE);
+  const before = { ...newEvent(), _action: 'new', _existingEvent: undefined, _original: undefined, _changes: undefined, title: 'Bear Tea', bar: 'The Yard', address: '', url: 'https://promoter.example/tea', image: 'https://x/wrong.jpg', startDate: day, endDate: day };
+  const sentBack = deckOf(runPayload({ analyzedEvents: [before] })).cards[0];
+  const note = rq.buildDecision({ key: sentBack.key, kind: 'new', verdict: 'reject', snapshot: sentBack.proposal, reason: { mode: 'fix', tags: ['bad image'], text: 'wrong flyer' } }, { now: new Date(Date.UTC(2029, 0, 1)) });
+  const store = rq.upsertDecision(rq.emptyDecisionStore(), note);
+
+  // Only the image changed → approved, note kept as audit.
+  const imageFixed = deckOf(runPayload({ analyzedEvents: [{ ...before, image: 'https://x/right.jpg' }] }), store);
+  assert.equal(imageFixed.cards.length, 0, 'no second swipe');
+  const auto = imageFixed.decided.find((entry) => entry.autoApproved);
+  assert.ok(auto, 'filed as decided');
+  assert.equal(auto.decision.verdict, 'approve');
+  assert.deepEqual(auto.autoApproved.fields, ['image']);
+  assert.equal(imageFixed.autoApprovals.length, 1);
+  assert.equal(imageFixed.autoApprovals[0].key, sentBack.key);
+
+  // Image AND time changed → the time was not asked for: back on the stack with the note.
+  const moreChanged = deckOf(runPayload({ analyzedEvents: [{ ...before, image: 'https://x/right.jpg', startDate: iso(FUTURE + 3600000), endDate: iso(FUTURE + 3600000) }] }), store);
+  assert.equal(moreChanged.cards.length, 1);
+  assert.ok(moreChanged.cards[0].prior, 'the note rides along');
+  assert.equal(moreChanged.autoApprovals.length, 0);
+
+  // An untagged note never auto-approves.
+  const untagged = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: sentBack.key, kind: 'new', verdict: 'reject', snapshot: sentBack.proposal, reason: { mode: 'fix', tags: [], text: 'something is off' } }, { now: new Date(Date.UTC(2029, 0, 1)) }));
+  assert.equal(deckOf(runPayload({ analyzedEvents: [{ ...before, image: 'https://x/right.jpg' }] }), untagged).cards.length, 1);
+
+  // A note whose night has passed is answered: listed for pruning.
+  const pastNote = rq.buildDecision({ key: 'event|old party|somewhere|2020-01-01', kind: 'new', verdict: 'reject', snapshot: { title: 'Old Party', startDate: '2020-01-01T02:00:00.000Z' }, reason: { mode: 'fix', tags: [], text: 'x' } });
+  const pastDeck = deckOf(runPayload({ analyzedEvents: [] }), rq.upsertDecision(rq.emptyDecisionStore(), pastNote));
+  assert.equal(pastDeck.answeredNoteKeys.length, 1);
+  assert.ok(pastDeck.answeredNoteKeys[0].startsWith('event|old party|'));
 });
 
 test('buildDeck: a "needs a fix" note whose fix RENAMED the card rides on the renamed card; a note for a night already past is not waiting', () => {
@@ -638,9 +674,11 @@ test('the left swipe\'s answers: "needs a fix" is counted as waiting and returns
   assert.equal(waiting.decided.find((entry) => entry.key === card.key).rejectionMode, 'fix');
   assert.deepEqual(waiting.waitingGone, []);
 
-  // The scraper now shows another image for the same card → back on the stack.
-  const returned = deckOf(payloadWith(newEvent({ image: 'https://cdn.example/the-right-flyer.jpg' })), store);
-  assert.ok(returned.cards.some((entry) => entry.key === card.key), 'the fixed card is pending again');
+  // The scraper now shows another image AND another title for the same card → the
+  // title was not asked for, so it is back on the stack (only-the-image would be
+  // approved on the owner's behalf — see the auto-approve test).
+  const returned = deckOf(payloadWith(newEvent({ image: 'https://cdn.example/the-right-flyer.jpg', title: 'BEEFMINCE x RVT (new name)' })), store);
+  assert.ok(returned.cards.some((entry) => entry.prior && entry.prior.reason && entry.prior.reason.text === 'wrong flyer'), 'the fixed card is pending again, carrying the note');
   assert.equal(returned.counts.waiting, 0);
 
   // The run no longer proposes that card at all → the note is named, not lost.
