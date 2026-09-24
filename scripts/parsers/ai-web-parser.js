@@ -3139,6 +3139,71 @@ class AiWebParser {
     // date line plus another line, or most of its lines). The merged list is
     // put back in document order so sequential image pairing still walks the
     // page top to bottom.
+    //
+    // Card-shaped elements: the page's own event boundaries. Shared by the
+    // JSON-LD card tier and the coverage audit's card resolution so both
+    // read the same markup the same way.
+    //
+    // A card-shaped opening tag is an <article>, <li>, or a div/section
+    // with role="listitem" or an item/card/event class. Returned in
+    // document order with the position of the "<".
+    findCardShapedOpenTags(html) {
+        const source = String(html || '');
+        const opens = [];
+        if (!source) return opens;
+        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
+        let open;
+        while ((open = openPattern.exec(source)) !== null) {
+            if (!this.isCardShapedTagAttrs(open[2])) continue;
+            opens.push({ tag: open[1].toLowerCase(), start: open.index });
+        }
+        return opens;
+    }
+
+    isCardShapedTagAttrs(attrs) {
+        const text = String(attrs || '');
+        return /role=["']listitem["']/i.test(text) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(text);
+    }
+
+    // The index just past the closing tag that balances the element opened
+    // at `from`, or -1 when the markup never closes it.
+    findElementCloseIndex(html, tag, from) {
+        const source = String(html || '');
+        const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+        pattern.lastIndex = from;
+        let depth = 0;
+        let token;
+        while ((token = pattern.exec(source)) !== null) {
+            if (token[1] === '/') {
+                depth--;
+                if (depth === 0) return token.index + token[0].length;
+            } else if (!/\/\s*>$/.test(token[0])) {
+                depth++;
+            }
+        }
+        return -1;
+    }
+
+    // The nearest card-shaped element enclosing [from, to) that `accept`
+    // approves: walks the card-shaped opening tags before `from` from the
+    // innermost outward, skipping elements that close before `to` (earlier
+    // siblings) and elements `accept` rejects (a card's own inner
+    // "event-title" div), and returns the first survivor as
+    // { tag, start, end } — or null when nothing encloses the span.
+    findEnclosingCardElement(html, cardOpens, from, to = from, accept = () => true) {
+        const source = String(html || '');
+        const opens = Array.isArray(cardOpens) ? cardOpens : [];
+        for (let i = opens.length - 1; i >= 0; i--) {
+            const open = opens[i];
+            if (open.start >= from) continue;
+            const end = this.findElementCloseIndex(source, open.tag, open.start);
+            if (end < to) continue;
+            const element = { tag: open.tag, start: open.start, end };
+            if (accept(element)) return element;
+        }
+        return null;
+    }
+
     // Card windows from JSON-LD: for every <script type="application/ld+json">
     // holding an Event, the nearest enclosing repeated element (an
     // <article>, <li>, or a div/section with role="listitem" or an
@@ -3167,36 +3232,18 @@ class AiWebParser {
             if (events.length === 1) scripts.push({ index: match.index, end: match.index + match[0].length });
         }
         if (scripts.length < 2) return [];
-        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
-        const isCardTag = (attrs) => /role=["']listitem["']/i.test(attrs) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(attrs);
-        const closeOf = (tag, from) => {
-            const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
-            pattern.lastIndex = from;
-            let depth = 0;
-            let token;
-            while ((token = pattern.exec(source)) !== null) {
-                if (token[1] === '/') {
-                    depth--;
-                    if (depth === 0) return token.index + token[0].length;
-                } else if (!/\/\s*>$/.test(token[0])) {
-                    depth++;
-                }
-            }
-            return -1;
-        };
+        const cardOpens = this.findCardShapedOpenTags(source);
         const cards = [];
         for (const script of scripts) {
             // Nearest card-shaped opening tag before the script that still
             // encloses it.
             let best = null;
-            openPattern.lastIndex = 0;
-            let open;
-            while ((open = openPattern.exec(source)) !== null && open.index < script.index) {
-                if (!isCardTag(open[2])) continue;
-                best = { tag: open[1].toLowerCase(), start: open.index };
+            for (const open of cardOpens) {
+                if (open.start >= script.index) break;
+                best = open;
             }
             if (!best) return [];
-            const end = closeOf(best.tag, best.start);
+            const end = this.findElementCloseIndex(source, best.tag, best.start);
             if (end < 0 || end <= script.end) return [];
             cards.push({ start: best.start, end });
         }
@@ -3231,14 +3278,23 @@ class AiWebParser {
         const structuredKeySets = structured.map(segment =>
             new Set((Array.isArray(segment.lines) ? segment.lines : []).map(lineKey).filter(Boolean)));
 
-        const unclaimed = [];
-        const unclaimedCompact = [];
-        let claimedCount = 0;
-        for (const window of flatSegments) {
-            const lines = Array.isArray(window.lines) ? window.lines : [];
-            const keys = lines.map(lineKey).filter(Boolean);
-            if (keys.length === 0) continue;
-            if (!this.segmentHasDateSignal(lines)) continue;
+        // Cards, not text windows. The flat splitter cuts at date lines, so
+        // on a listing whose cards read title-THEN-date every text window
+        // is the previous card's date, link and image under this card's
+        // title — a chimera. www.massive.club's homepage swiper (run
+        // 20260924-055217): "Oct 10, 2026 9:00 PM / TKVR | Nolid /
+        // tixr.com/e/207002" is Treasure Trail's night and ticket under
+        // TKVR's name; dedup then matched TKVR to the calendar's Treasure
+        // Trail by the shared link and renamed it. A window is therefore
+        // resolved to the card ELEMENT that holds its title before anything
+        // else looks at it, and that element's own body — its date, its
+        // link, its image — is the window. Windows that resolve to the same
+        // card are one listing.
+        const records = this.extractBodyPartRecords(html);
+        const cardResolver = this.createCardWindowResolver(html, flatSegments, records);
+        const structuredTitleThenDate = this.segmentsReadTitleThenDate(structured);
+        const resolvedCardKeys = new Set();
+        const claimedByStructured = (lines) => {
             // Claimed = OVERLAPS a structured window: two shared content lines
             // (calls-to-action repeat on every card and prove nothing), or
             // most of its content lines. A shared DATE alone is not overlap — two
@@ -3265,11 +3321,31 @@ class AiWebParser {
                 .filter(Boolean);
             const claimedByDate = timedDateKeys.length > 0
                 && structuredKeySets.some(keySet => timedDateKeys.every(key => keySet.has(key)));
+            return { claimed, claimedByDate };
+        };
+
+        const unclaimed = [];
+        const unclaimedCards = [];
+        const unclaimedCompact = [];
+        let claimedCount = 0;
+        for (const window of flatSegments) {
+            const lines = Array.isArray(window.lines) ? window.lines : [];
+            const keys = lines.map(lineKey).filter(Boolean);
+            if (keys.length === 0) continue;
+            if (!this.segmentHasDateSignal(lines)) continue;
+            const card = cardResolver.resolveWindow(window);
+            const { claimed, claimedByDate } = claimedByStructured(card ? card.segment.lines : lines);
             if (claimed || claimedByDate) {
                 claimedCount++;
                 if (claimedByDate && !claimed) {
                     console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" is the tail of a structured card (its timed date line is that card's) — not a listing of its own`);
                 }
+                continue;
+            }
+            if (card) {
+                if (resolvedCardKeys.has(card.key)) continue;
+                resolvedCardKeys.add(card.key);
+                unclaimedCards.push(card);
                 continue;
             }
             // One listing states at most a start and an end — the same bound
@@ -3313,6 +3389,18 @@ class AiWebParser {
                     continue;
                 }
             }
+            // No card element holds this window's title. On a page whose
+            // cards DO resolve and read title-then-date, a text window whose
+            // date comes before its title is the splitter's cut across two
+            // cards — the previous card's night under this title — and a
+            // text window cannot be trusted to carry its own date: reject
+            // it rather than emit a chimera. (massive.club: "Jan 2, 2027
+            // 10:00 PM / view EVENTS CALENDAR" is Horse Meat Disco's night
+            // under the page's calendar link.)
+            if (cardResolver.pageHasCards && structuredTitleThenDate && this.segmentReadsDateThenTitle(window)) {
+                console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" has no card element of its own and its date precedes its title on a title-then-date page — a cut across two cards, not a listing`);
+                continue;
+            }
             unclaimed.push(window);
         }
         // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
@@ -3329,6 +3417,20 @@ class AiWebParser {
             if (!key || seenCompactKeys.has(key)) continue;
             seenCompactKeys.add(key);
             if (structuredKeySets.some(keySet => keySet.has(key))) continue;
+            // A dated line sitting inside a card element is that card's
+            // date line, not a row of its own: the card is the listing (on
+            // massive.club's swiper, "Oct 10, 2026 9:00 PM" alone reached
+            // the model as a titleless segment carrying Treasure Trail's
+            // ticket link).
+            const card = cardResolver.resolveLine(line);
+            if (card) {
+                if (resolvedCardKeys.has(card.key)) continue;
+                const { claimed, claimedByDate } = claimedByStructured(card.segment.lines);
+                if (claimed || claimedByDate) continue;
+                resolvedCardKeys.add(card.key);
+                unclaimedCards.push(card);
+                continue;
+            }
             const rowHtml = this.extractRawHtmlForMultiEventSegment(html, [line]) || line;
             // A row with a date and a name but no time and no link is a
             // fragment of an announcement, not a listing (owner, 2026-09-13:
@@ -3339,7 +3441,13 @@ class AiWebParser {
             if (!statesTime && !carriesLink) continue;
             unclaimedCompact.push({ lines: [line], html: rowHtml });
         }
-        if (unclaimed.length === 0 && unclaimedCompact.length === 0) return structured;
+        if (unclaimed.length === 0 && unclaimedCards.length === 0 && unclaimedCompact.length === 0) return structured;
+
+        // Card windows are the page's own segmentation, not a second
+        // opinion: each is one card element with one listing inside, so
+        // the wholesale-disagreement gate below (which judges TEXT windows)
+        // does not apply to them.
+        const cardPositions = new Map(unclaimedCards.map(card => [card.segment, card.start]));
 
         // A second opinion only counts when it mostly agrees. The audit
         // exists for a FEW cards dropped from an otherwise right
@@ -3351,7 +3459,8 @@ class AiWebParser {
         // the finding, so say it, loudly, and let the structured result
         // stand.
         const additionCap = Math.max(3, structured.length);
-        let additions = unclaimedCompact.slice(0, 24);
+        unclaimedCards.sort((a, b) => a.start - b.start);
+        let additions = unclaimedCards.map(card => card.segment).concat(unclaimedCompact.slice(0, 24));
         if (unclaimed.length > 0) {
             if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
                 console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing from it; this page's segmentation needs a look`);
@@ -3363,13 +3472,17 @@ class AiWebParser {
         unclaimed.length = 0;
         unclaimed.push(...additions);
 
-        console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding text window(s): ${unclaimed.map(window => `"${this.deriveSegmentListingTitle(window)}"`).join(', ')}`);
+        const describe = (windows) => windows.map(window => `"${this.deriveSegmentListingTitle(window) || (window.lines && window.lines[0]) || ''}"`).join(', ');
+        const cardWindows = unclaimed.filter(window => cardPositions.has(window));
+        const textWindows = unclaimed.filter(window => !cardPositions.has(window));
+        console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding ${cardWindows.length > 0 ? `card window(s): ${describe(cardWindows)}` : ''}${cardWindows.length > 0 && textWindows.length > 0 ? '; ' : ''}${textWindows.length > 0 ? `text window(s): ${describe(textWindows)}` : ''}`);
 
-        // Document order: earliest matched text position first; anything
-        // whose position cannot be located keeps its relative place after
-        // the located ones.
-        const records = this.extractBodyPartRecords(html);
+        // Document order: a card window sits where its element opens;
+        // otherwise earliest matched text position first; anything whose
+        // position cannot be located keeps its relative place after the
+        // located ones.
         const positionOf = (segment) => {
+            if (cardPositions.has(segment)) return cardPositions.get(segment);
             const bounds = this.findMultiEventSegmentTextBounds(html, segment.lines, records);
             return bounds && Number.isFinite(bounds.rawStart) ? bounds.rawStart : Number.POSITIVE_INFINITY;
         };
@@ -3393,6 +3506,201 @@ class AiWebParser {
         const recordedDated = stats && Number.isFinite(Number(stats.datedCandidateCount)) ? Number(stats.datedCandidateCount) : 0;
         this.recordMultiEventSegmentationStats(Math.max(recordedDated, merged.length), 'structure group + coverage audit');
         return merged;
+    }
+
+    // Resolves a text window to the card ELEMENT that holds it, for the
+    // coverage audit. The window's anchor is its listing-title line (its
+    // first line when it has no title — a dated compact row); the anchor is
+    // located in the page's body-part records and the nearest card-shaped
+    // element enclosing it (findEnclosingCardElement) that carries a date
+    // AND a title of its own is the card. The card's body is the window:
+    // its own date, link and image, never a neighbour's.
+    //
+    // The card must be ONE listing — count distinct event titles per card,
+    // not text windows: a card element with more than two date lines, or
+    // holding the titles of two different text windows, is a list
+    // container the walk-back reached because the page's real cards carry
+    // no card-shaped markup, and is refused (the window then stays a text
+    // window under the audit's usual rules).
+    //
+    // resolveWindow(window) / resolveLine(line) return
+    // { key, start, end, segment } or null; results are memoized per
+    // anchor so windows resolving to the same card share one key.
+    createCardWindowResolver(html, flatSegments, records = null) {
+        const source = String(html || '');
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const windows = Array.isArray(flatSegments) ? flatSegments : [];
+        const bodyRecords = Array.isArray(records) ? records : this.extractBodyPartRecords(source);
+        const recordByKey = new Map();
+        for (const record of bodyRecords) {
+            const key = lineKey(record.text);
+            if (key && !recordByKey.has(key)) recordByKey.set(key, record);
+        }
+        // Where the anchor line's own text sits: the first text node inside
+        // the record's [rawStart, rawEnd) span that is part of the line. A
+        // record's bounds are flush points (the previous and the next
+        // line-break tag), and either may lie outside the element holding
+        // the text — "</a>" breaks no line, so a link's text is flushed by
+        // whatever closes next, possibly deep inside the following card.
+        // The text node itself is inside every element that encloses it.
+        const anchorPositionOf = (line) => {
+            const record = recordByKey.get(lineKey(line));
+            if (!record || !Number.isFinite(record.rawStart) || !Number.isFinite(record.rawEnd)) return -1;
+            const target = lineKey(record.text);
+            const slice = source.slice(record.rawStart, record.rawEnd);
+            const tagPattern = /<[^>]+>/g;
+            let last = 0;
+            let match;
+            const textNodeMatches = (text, offset) => {
+                const leading = text.length - text.replace(/^\s+/, '').length;
+                const node = lineKey(this.decodeBasicEntities(text));
+                if (!node) return -1;
+                return target.includes(node) || node.includes(target) ? record.rawStart + offset + leading : -1;
+            };
+            while ((match = tagPattern.exec(slice)) !== null) {
+                const found = textNodeMatches(slice.slice(last, match.index), last);
+                if (found >= 0) return found;
+                last = match.index + match[0].length;
+            }
+            const tail = textNodeMatches(slice.slice(last), last);
+            return tail >= 0 ? tail : record.rawEnd - 1;
+        };
+        const anchorLineOf = (window) => {
+            const lines = Array.isArray(window && window.lines) ? window.lines : [];
+            const title = this.deriveSegmentListingTitle(window);
+            if (title) {
+                const titleKey = lineKey(title);
+                const exact = lines.find(line => lineKey(line) === titleKey);
+                if (exact) return exact;
+                const holder = lines.find(line => lineKey(line).includes(titleKey));
+                if (holder) return holder;
+            }
+            return lines.find(line => lineKey(line)) || '';
+        };
+        // Every text window's title, positioned — the listings the page
+        // states, for the one-listing-per-card check.
+        const windowTitleAnchors = [];
+        const seenTitleKeys = new Set();
+        for (const window of windows) {
+            const title = this.deriveSegmentListingTitle(window);
+            const key = lineKey(title);
+            if (!key || seenTitleKeys.has(key)) continue;
+            seenTitleKeys.add(key);
+            const position = anchorPositionOf(anchorLineOf(window));
+            if (position >= 0) windowTitleAnchors.push({ key, position });
+        }
+        const cardOpens = source ? this.findCardShapedOpenTags(source) : [];
+        const cache = new Map();
+        const resolveLine = (line) => {
+            const key = lineKey(line);
+            if (!key) return null;
+            if (cache.has(key)) return cache.get(key);
+            let resolved = null;
+            const position = anchorPositionOf(line);
+            if (position >= 0 && cardOpens.length > 0) {
+                const linesOf = (element) => this.extractBodyParts(source.slice(element.start, element.end), this.extractionLimits.multiEventScanLineLimit)
+                    .map(text => this.normalizeWhitespace(text))
+                    .filter(Boolean);
+                let elementLines = null;
+                const element = this.findEnclosingCardElement(source, cardOpens, position, position, (candidate) => {
+                    const lines = linesOf(candidate);
+                    if (!this.segmentHasDateSignal(lines) || !this.deriveSegmentListingTitle({ lines })) return false;
+                    elementLines = lines;
+                    return true;
+                });
+                if (element && elementLines) {
+                    const titlesInside = windowTitleAnchors.filter(anchor => anchor.position >= element.start && anchor.position < element.end).length;
+                    const elementHtml = source.slice(element.start, element.end);
+                    // The structured tier's floor, unchanged: a card under
+                    // the character floor is a scrap unless it identifies
+                    // itself — its primary destination is one no other
+                    // element on the page links (a row of identical ticket
+                    // buttons identifies nothing; see
+                    // mapMultiEventGroupIdentityLinks).
+                    const clearsFloor = elementLines.join('\n').length >= this.extractionLimits.multiEventMinSegmentChars
+                        || this.multiEventElementIdentifiesItself(source, elementHtml);
+                    if (clearsFloor && this.countMultiEventDateSignals(elementLines) <= 2 && titlesInside <= 1) {
+                        resolved = {
+                            key: `${element.start}:${element.end}`,
+                            start: element.start,
+                            end: element.end,
+                            segment: {
+                                lines: this.trimSegmentLinesToChars(elementLines, this.extractionLimits.multiEventMaxSegmentChars),
+                                html: elementHtml
+                            }
+                        };
+                    }
+                }
+            }
+            cache.set(key, resolved);
+            return resolved;
+        };
+        const resolveWindow = (window) => resolveLine(anchorLineOf(window));
+        const resolver = { resolveLine, resolveWindow, pageHasCards: false };
+        // Whether the page has card markup at all decides how an
+        // unresolvable window is judged (see the chimera guard).
+        resolver.pageHasCards = windows.some(window => Boolean(resolveWindow(window)));
+        return resolver;
+    }
+
+    // Does a card element identify itself on its page: its primary
+    // destination (extractMultiEventEntryIdentityLink) is linked nowhere on
+    // the page outside the element. The page-wide twin of
+    // mapMultiEventGroupIdentityLinks for an element that belongs to no
+    // repeated group.
+    multiEventElementIdentifiesItself(pageHtml, elementHtml) {
+        const link = this.extractMultiEventEntryIdentityLink(elementHtml);
+        if (!link) return false;
+        const countLinks = (html) => {
+            const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+            let count = 0;
+            let match;
+            while ((match = pattern.exec(String(html || ''))) !== null) {
+                if (String(match[1] || '').split('#')[0].trim() === link) count++;
+            }
+            return count;
+        };
+        return countLinks(pageHtml) === countLinks(elementHtml);
+    }
+
+    // Where a window's title sits relative to its date. The dated line is
+    // the first TIMED date line (date plus clock) when there is one,
+    // otherwise the first date-signal line; the title is
+    // deriveSegmentListingTitle's line. Returns null when either is
+    // missing.
+    segmentTitleAndDateIndexes(segment) {
+        const lines = Array.isArray(segment && segment.lines) ? segment.lines : [];
+        const title = this.deriveSegmentListingTitle(segment);
+        if (!title) return null;
+        const titleKey = this.normalizeWhitespace(title).toLowerCase();
+        const titleIndex = lines.findIndex(line => this.normalizeWhitespace(String(line || '')).toLowerCase().includes(titleKey));
+        if (titleIndex < 0) return null;
+        const timedIndex = lines.findIndex(line => this.hasMultiEventDateSignal(line) && /\b\d{1,2}:\d{2}\b|\b\d{1,2}\s*[ap]\.?m\b/i.test(line));
+        const dateIndex = timedIndex >= 0 ? timedIndex : lines.findIndex(line => this.hasMultiEventDateSignal(line));
+        if (dateIndex < 0 || dateIndex === titleIndex) return null;
+        return { titleIndex, dateIndex };
+    }
+
+    // Do the page's structured cards read title-then-date? True when the
+    // cards with a locatable title and date mostly put the title first.
+    segmentsReadTitleThenDate(segments) {
+        let titleFirst = 0;
+        let dateFirst = 0;
+        for (const segment of (Array.isArray(segments) ? segments : [])) {
+            const indexes = this.segmentTitleAndDateIndexes(segment);
+            if (!indexes) continue;
+            if (indexes.titleIndex < indexes.dateIndex) titleFirst++;
+            else dateFirst++;
+        }
+        return titleFirst > 0 && titleFirst > dateFirst;
+    }
+
+    // A text window whose every date-signal line precedes its title.
+    segmentReadsDateThenTitle(segment) {
+        const indexes = this.segmentTitleAndDateIndexes(segment);
+        if (!indexes) return false;
+        const lines = Array.isArray(segment && segment.lines) ? segment.lines : [];
+        return lines.every((line, index) => index < indexes.titleIndex || !this.hasMultiEventDateSignal(line));
     }
 
     // The flat text splitter: the page's body lines, sliced at date/title
