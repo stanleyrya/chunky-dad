@@ -19232,6 +19232,69 @@ test('coverage audit: a window whose timed date line already belongs to a struct
   assert.ok(logs.some(line => line.includes('is the tail of a structured card')), JSON.stringify(logs));
 });
 
+// www.massive.club's homepage (run 20260924-055217): a JSON-LD list of the
+// week's cards, then a swiper of title-THEN-date cards with no JSON-LD. The
+// flat splitter cuts at date lines, so every swiper text window was the
+// previous card's date, ticket link and image under this card's title —
+// "Oct 10, 2026 9:00 PM / TKVR | Nolid / tixr.com/e/207002" is Treasure
+// Trail's night under TKVR's name. The audit must hand each card its own
+// element, never a text window.
+test('coverage audit: a title-then-date card is its own element, never the text window that cuts at its date', () => {
+  const parser = createParser();
+  const listCard = (n, title, day, time) => `<div role="listitem" class="event-item w-dyn-item"><div class="w-embed"><script type="application/ld+json">{"@type":"Event","name":"${title}","startDate":"2026-09-${day}T${time}:00-07:00","url":"https://massive.example/events/${n}"}</script></div>
+    <a href="https://tixr.example/e/${n}">get TICKETS</a>
+    <h3>${title}</h3>
+    <div>Sep ${day}, 2026 ${time}</div></div>`;
+  const swiperCard = (n, title, date) => `<div role="listitem" class="swiper-slide w-dyn-item"><div style="background-image:url(&quot;https://cdn.example/${n}.webp&quot;)" class="card__img-container"></div><div class="swiper-items"><a href="https://tixr.example/e/${n}" target="_blank"><div class="tix-tables">GET TICKETS</div></a></div><div class="pinktext"><div class="infotext bold">${title}</div><div class="infotext white">${date}</div></div></div>`;
+  const swiper = [
+    [207002, 'Treasure Trail | Seattle', 'Oct 10, 2026 9:00 PM'],
+    [202706, 'TKVR | Nolid', 'Oct 15, 2026 10:00 PM'],
+    [205790, 'Looking', 'Oct 16, 2026 10:00 PM'],
+    [207003, 'Bearracuda | Seattle - Red Light District', 'Nov 7, 2026 9:00 PM']
+  ];
+  const html = `<html><body>
+    <div class="swiper-wrapper" role="list">${swiper.map(([n, title, date]) => swiperCard(n, title, date)).join('')}</div>
+    <a href="/calendar" class="button">view EVENTS CALENDAR</a>
+    <div role="list" class="event-grid w-dyn-items">${listCard(1, 'Twink Bash: Chasers', 26, '21:00')}${listCard(2, 'PERVERT MX (SEATTLE)', 27, '22:00')}</div>
+  </body></html>`;
+
+  // The trap, as the text tier sees it: each window is the previous card's
+  // date under this card's title.
+  let flat;
+  withCapturedLogs(() => { flat = parser.buildFlatTextMultiEventSegments(html, { recordStats: false }); });
+  assert.ok(flat.some(window => window.lines.includes('Oct 10, 2026 9:00 PM') && window.lines.includes('TKVR | Nolid')),
+    `the flat splitter cuts at the date line, got ${JSON.stringify(flat.map(window => window.lines))}`);
+
+  let segments;
+  const logs = withCapturedLogs(() => { segments = parser.buildMultiEventSegments(html, 'https://massive.example/'); });
+  const swiperWindows = swiper.map(([, title]) => segments.find(segment => segment.lines.includes(title)));
+  swiper.forEach(([n, title, date], index) => {
+    const segment = swiperWindows[index];
+    assert.ok(segment, `"${title}" has a window of its own; got ${JSON.stringify(segments.map(s => s.lines))}`);
+    assert.deepEqual(segment.lines, [title, date], `"${title}" carries its own date`);
+    const links = Array.from(segment.html.matchAll(/tixr\.example\/e\/(\d+)/g)).map(match => match[1]);
+    assert.deepEqual([...new Set(links)], [String(n)], `"${title}" carries only its own ticket link`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, 'https://massive.example/');
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: https://tixr.example/e/${n}`), JSON.stringify(resourceLines));
+    assert.ok(resourceLines.includes(`SEGMENT_IMAGE_URL: https://cdn.example/${n}.webp`), `"${title}" carries its own poster, got ${JSON.stringify(resourceLines)}`);
+  });
+  assert.equal(segments.length, 6, `two JSON-LD cards + four swiper cards, nothing else: ${JSON.stringify(segments.map(s => s.lines))}`);
+  assert.ok(!segments.some(segment => segment.lines.includes('view EVENTS CALENDAR')),
+    'the calendar link under the last card\'s date is a cut across two cards, not a listing');
+  assert.ok(logs.some(line => /Coverage audit: 2 structured window\(s\) left 4 dated listing\(s\) unclaimed — adding card window\(s\): "Treasure Trail \| Seattle", "TKVR \| Nolid", "Looking", "Bearracuda/.test(line)), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"view EVENTS CALENDAR" has no card element of its own')), logs.join('\n'));
+
+  // No card-shaped element around a card (plain divs in a list container):
+  // the container holds every card's date, so it is refused and the window
+  // is judged as the text window it is — nothing is invented.
+  const plainHtml = `<html><body><div class="events-list">${swiper.map(([n, title, date]) => `<div><a href="https://tixr.example/e/${n}">GET TICKETS</a><p>${title}</p><p>${date}</p></div>`).join('')}</div></body></html>`;
+  let plainFlat;
+  withCapturedLogs(() => { plainFlat = parser.buildFlatTextMultiEventSegments(plainHtml, { recordStats: false }); });
+  const resolver = parser.createCardWindowResolver(plainHtml, plainFlat);
+  assert.equal(resolver.pageHasCards, false);
+  assert.ok(plainFlat.every(window => resolver.resolveWindow(window) === null));
+});
+
 // ============================================================================
 // JSON-API: id-keyed row maps and event envelopes (TicketSauce widget feed)
 // ============================================================================
