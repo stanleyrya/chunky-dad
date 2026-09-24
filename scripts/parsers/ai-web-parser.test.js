@@ -19597,3 +19597,95 @@ test('the page\'s sole large content picture is its artwork: adopted when nothin
   const fresh = createParser();
   assert.equal(fresh.getSoleBodyArtworkUrl(htmlData), '');
 });
+
+// ── Listing prose: an article that lists events one sentence each ──────────
+test('listing prose: a monthly roundup yields one dated event per line and per date, city from the heading', () => {
+  const parser = createParser();
+  const cityConfig = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    dc: { timezone: 'America/New_York', patterns: ['dc', 'washington dc'] },
+    toronto: { timezone: 'America/Toronto', patterns: ['toronto'] }
+  };
+  const html = `<html><head>
+    <meta property="article:published_time" content="2026-07-02T01:13:46+00:00" />
+    </head><body><article>
+    <h1>Bear nights and events in the USA &amp; Canada this July!</h1>
+    <p>Looking for bear nights or bear events this month? Check out the list below to see what is going on and start planning!</p>
+    <h3>New York City</h3>
+    <p><strong>Rockstrap</strong> at Rockbar NYC on July 3rd (<a href="https://www.rockbarnyc.com/calendar">link</a>)</p>
+    <p>Bears 4 Bareburger at Bareburger Hell&#8217;s Kitchen on July 2nd, July 9th and July 16th (<a href="https://www.instagram.com/Gay4BareBurger/">link</a>)</p>
+    <p>Bear Week Provincetown 2026 from July 11th through July 18th (<a href="https://ptownbears.org/">link</a>)</p>
+    <h3>DC</h3>
+    <p>Bear Cave Underwear Party at Green Lantern on July 18th (<a href="https://example.org/cave">link</a>)</p>
+    <h3>Canada</h3>
+    <p>Bearcumunion in Ottawa on July 3rd (<a href="https://example.org/ottawa">link</a>)</p>
+    <p>Northern Bear Bash at The Black Eagle in Toronto on July 25th (<a href="https://example.org/nbb">link</a>)</p>
+    <h3>What&#8217;s On Tap for 2026:</h3>
+    <p>Dates: July 17–20, 2026</p>
+    </article></body></html>`;
+  const events = parser.collectListingProseEvents(html, 'https://bearworldmag.com/roundup/', cityConfig);
+  const summary = events.map(e => `${e.startDate.toISOString()}|${e.title}|${e.bar || ''}|${e.city || ''}|${e.timezone || ''}`);
+  assert.deepEqual(summary, [
+    '2026-07-03T04:00:00.000Z|Rockstrap|Rockbar NYC|nyc|America/New_York',
+    '2026-07-02T04:00:00.000Z|Bears 4 Bareburger|Bareburger Hell’s Kitchen|nyc|America/New_York',
+    '2026-07-09T04:00:00.000Z|Bears 4 Bareburger|Bareburger Hell’s Kitchen|nyc|America/New_York',
+    '2026-07-16T04:00:00.000Z|Bears 4 Bareburger|Bareburger Hell’s Kitchen|nyc|America/New_York',
+    '2026-07-11T04:00:00.000Z|Bear Week Provincetown 2026||nyc|America/New_York',
+    '2026-07-18T04:00:00.000Z|Bear Cave Underwear Party|Green Lantern|dc|America/New_York',
+    '2026-07-03T00:00:00.000Z|Bearcumunion||Ottawa|',
+    '2026-07-25T04:00:00.000Z|Northern Bear Bash|The Black Eagle|toronto|America/Toronto'
+  ]);
+  // The range ends when its last day does; single nights state no end.
+  assert.equal(events[4].endDate.toISOString(), '2026-07-19T04:00:00.000Z');
+  assert.equal(events[0].endDate, null);
+  // The line's link is the party's own; the article is the record's page.
+  assert.equal(events[0].ticketUrl, 'https://www.rockbarnyc.com/calendar');
+  assert.equal(events[0].url, undefined);
+  assert.equal(events[0].source, 'listing-prose');
+});
+
+test('listing prose: fewer than three listing lines is an article, not a listing', () => {
+  const parser = createParser();
+  const html = `<article><h3>Chicago</h3>
+    <p>GRRR at The Sofo Tap on June 5th (<a href="https://x.example/1">link</a>)</p>
+    <p>Belly Up at Jackhammer on June 6th (<a href="https://x.example/2">link</a>)</p>
+    <p>We had a great time at the festival on June 7th and can't wait for next year. The photos say it all.</p></article>`;
+  assert.deepEqual(parser.collectListingProseEvents(html, 'https://mag.example/post/', {}), []);
+});
+
+test('listing prose line grammar: date before or after the venue, ranges, doubled dates, labels, clocks', () => {
+  const parser = createParser();
+  const line = (text) => parser.parseListingProseLine(text);
+  assert.deepEqual(line('Bears LA Event on July 10th at The Eagle'), { title: 'Bears LA Event', venue: 'The Eagle', city: '', dates: ['July 10'], range: null, time: '' });
+  assert.deepEqual(line('Brewery Bears Happy Hour at The Dallas Eagle July 10th'), { title: 'Brewery Bears Happy Hour', venue: 'The Dallas Eagle', city: '', dates: ['July 10'], range: null, time: '' });
+  assert.deepEqual(line('Tidal Wave June 18th-21st at Hilton Palm Springs'), { title: 'Tidal Wave', venue: 'Hilton Palm Springs', city: '', dates: [], range: { from: 'June 18', to: 'June 21' }, time: '' });
+  assert.deepEqual(line('June 5th Bear Night at Tryangles Bar on June 5th'), { title: 'Bear Night', venue: 'Tryangles Bar', city: '', dates: ['June 5'], range: null, time: '' });
+  assert.deepEqual(line('Bear Pub in Pride Park 2026 at Oslo Pride on June June 26th'), { title: 'Bear Pub in Pride Park 2026', venue: 'Oslo Pride', city: '', dates: ['June 26'], range: null, time: '' });
+  assert.deepEqual(line('Bears in Space at Akbar on Oct 3rd at 9pm'), { title: 'Bears in Space', venue: 'Akbar', city: '', dates: ['Oct 3'], range: null, time: '21:00' });
+  assert.deepEqual(line('Opening Night Party @ FLEX (Hell’s Kitchen) – Thursday, September 17th'), { title: 'Opening Night Party', venue: 'FLEX (Hell’s Kitchen)', city: '', dates: ['September 17'], range: null, time: '' });
+  assert.deepEqual(line('Amsterdam Bear Pride from June 11th through June 14th, full schedule on their website'), { title: 'Amsterdam Bear Pride', venue: '', city: '', dates: [], range: { from: 'June 11', to: 'June 14' }, time: '' });
+  assert.equal(line('Dates: September 17–20, 2026'), null);
+  assert.equal(line('Looking for bear nights this month? Check the list below.'), null);
+});
+
+test('article feed: a WordPress posts payload becomes one page of articles, each read with its own URL and date', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const post = (link, date, body) => ({ id: 1, date, link, title: { rendered: 'Roundup' }, content: { rendered: body } });
+  const listing = `<h3>New York City</h3>
+    <p>Rockstrap at Rockbar NYC on January 3rd (<a href="https://x.example/1">link</a>)</p>
+    <p>Bears Night Out at Rockbar NYC on January 4th (<a href="https://x.example/2">link</a>)</p>
+    <p>Goldiloxx at Red Eye NY on January 10th (<a href="https://x.example/3">link</a>)</p>`;
+  const payload = [
+    post('https://mag.example/january/', '2026-12-29T10:00:00', listing),
+    post('https://mag.example/recap/', '2026-12-20T10:00:00', '<p>What a year it was. Thanks to everyone who came out.</p>')
+  ];
+  const html = parser.renderArticleFeedPayloadAsHtml(payload, 'https://mag.example/wp-json/wp/v2/posts');
+  assert.equal((html.match(/<article\b/g) || []).length, 2);
+  const events = parser.collectListingProseEvents(html, 'https://mag.example/wp-json/wp/v2/posts', cityConfig);
+  // Published December 29th, listing January: the year is the next one.
+  assert.deepEqual(events.map(e => e.startDate.toISOString().slice(0, 10)), ['2027-01-03', '2027-01-04', '2027-01-10']);
+  assert.ok(events.every(e => e.url === undefined && e.ticketUrl.startsWith('https://x.example/')));
+  // An event feed is not an article feed.
+  assert.equal(parser.renderArticleFeedPayloadAsHtml([{ title: 'Party', start: '2026-10-01T21:00:00', venue: 'Bar' }], 'https://x.example/api'), '');
+});
