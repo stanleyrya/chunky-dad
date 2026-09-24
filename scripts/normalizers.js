@@ -1171,9 +1171,16 @@ class LocationNormalizer extends BaseNormalizer {
         // Only a NAMED PLACE counts as stated: a single proper word ("seoul",
         // "lisbon"). A region label ("socal / southwest", Eagle LA's ONYX)
         // names no place and never outranks the venue.
-        const statedElsewhere = typeof event._unrecognizedCity === 'string' ? event._unrecognizedCity.trim() : '';
-        const statedIsPlaceName = /^[\p{L}][\p{L}'’.-]*(?: [\p{L}][\p{L}'’.-]*){0,2}$/u.test(statedElsewhere);
-        if (statedElsewhere && statedIsPlaceName && !result.ambiguousCities && result.city) {
+        // …and a listing page whose own address names its place (whereto.party
+        // /in/seoul, a city-hub's /events/tokyo/) says the same thing when
+        // the model returned no city at all: "Where to party in Seoul" at
+        // Bear Cave still went to Sitges (run 20260923-191910).
+        const statedOnPage = typeof event._unrecognizedCity === 'string' ? event._unrecognizedCity.trim() : '';
+        const fromPage = statedOnPage ? '' : this.placeNameFromSourcePagePath(event._sourcePageUrl, result.city);
+        const stated = statedOnPage || fromPage;
+        const statedIsPlaceName = /^[\p{L}][\p{L}'’.-]*(?: [\p{L}][\p{L}'’.-]*){0,2}$/u.test(stated);
+        if (stated && statedIsPlaceName && !result.ambiguousCities && result.city) {
+            const statedElsewhere = stated;
             const statedKey = this.matchCityInText(statedElsewhere) || this.resolveCityKeyQuietly(statedElsewhere) || '';
             if (statedKey !== result.city) {
                 console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — the page says "${statedElsewhere}", so the curated "${result.bar.name}" in ${result.city} is a namesake, not this venue`);
@@ -1219,6 +1226,28 @@ class LocationNormalizer extends BaseNormalizer {
     // the parser config are the only inputs. A resolved city is never
     // overwritten, and provenance is stamped via the existing _citySource
     // convention.
+    // The place a listing page's own path names, when that path is a city
+    // slug UNDER a locative segment (/in/seoul, /city/tokyo, /events/osaka/)
+    // and the slug resolves to a city different from `city` (a slug that IS
+    // that city, or no city at all, says nothing). '' otherwise. Structural:
+    // no site names, no slug list — the cities config is the only vocabulary
+    // besides the page's own path, and an unconfigured slug counts as a
+    // stated (unrecognized) place only when it is a plain word.
+    placeNameFromSourcePagePath(sourcePageUrl, city) {
+        const parsed = this.core && typeof this.core.parseUrl === 'function' ? this.core.parseUrl(String(sourcePageUrl || '')) : null;
+        const segments = parsed && typeof parsed.pathname === 'string' ? parsed.pathname.split('/').filter(Boolean) : [];
+        for (let i = 1; i < segments.length; i++) {
+            if (!/^(?:in|city|cities|events|location|locations|venues|area|region)$/i.test(segments[i - 1])) continue;
+            const slug = decodeURIComponent(segments[i]).toLowerCase();
+            if (!/^[\p{L}]+(?:-[\p{L}]+)*$/u.test(slug)) continue;
+            const words = slug.replace(/-/g, ' ');
+            const key = this.matchCityInText(words) || this.resolveCityKeyQuietly(words) || '';
+            if (key && key === city) return '';
+            return words;
+        }
+        return '';
+    }
+
     // TRUE when the host of the event's website/url/source page is claimed
     // by curated bars of exactly one city (the same lookup, same order, as
     // backfillCityFromIdentitySignals' first rung).
