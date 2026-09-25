@@ -5007,8 +5007,11 @@ class SharedCore {
             // The title that slug spells out beats the one it does not
             // ("Hellbent" over the page tagline "Where Fetish Meets Pop!",
             // both linking eaglemanchester.com/event-details/hellbent-13).
+            // …unless the two records contradict on a hard fact
+            // (getIdentityContradiction): then the shared link is one a
+            // chimera carried off a neighbouring card, and names nothing.
             const slug = this.getSharedEventLinkSlug(context.records.a, context.records.b);
-            if (slug) {
+            if (slug && !this.haveContradictingIdentityEvidence(context.records.a, context.records.b)) {
                 const namesA = this.eventSlugNamesTitle(slug, valueA);
                 const namesB = this.eventSlugNamesTitle(slug, valueB);
                 if (namesA !== namesB) {
@@ -12385,8 +12388,17 @@ class SharedCore {
                 // …and a feed that gave the two rows different ids has already
                 // stated they are different events (areDistinctPublishedFeedRows),
                 // which vetoes the key collision exactly like a place mismatch.
+                // …and so does any hard-fact contradiction (getIdentityContradiction:
+                // two ticket ids on one vendor, two curated doors, two stated
+                // days) — a key template names a slot, and two records can
+                // share a slot's key and still be two events.
+                const keyMatchContradiction = this.getIdentityContradiction(event, keyMatch, identityScanOptions);
+                if (keyMatchContradiction) {
+                    console.log(`🛑 IDENTITY: "${event.title || 'event'}" shares key "${key}" with "${keyMatch.title || 'event'}", but their ${keyMatchContradiction} contradict — two events, not folded`);
+                }
                 if (this.areEventsDistinctByPlace(event, keyMatch)
-                    || this.areDistinctPublishedFeedRows(event, keyMatch)) {
+                    || this.areDistinctPublishedFeedRows(event, keyMatch)
+                    || keyMatchContradiction) {
                     // The base-key holder is at a different venue, but a previous veto may
                     // have parked another record of THIS event under a suffixed key
                     // ("key--2", "key--3", ...). Walk the whole collision chain before
@@ -12397,7 +12409,8 @@ class SharedCore {
                         if (holder === keyMatch) continue;
                         if (existingKey !== key && !existingKey.startsWith(`${key}--`)) continue;
                         if (this.areDistinctPublishedFeedRows(event, holder)) continue;
-                        if (!this.areEventsDistinctByPlace(event, holder)) {
+                        if (!this.areEventsDistinctByPlace(event, holder)
+                            && !this.haveContradictingIdentityEvidence(event, holder, identityScanOptions)) {
                             chainMatch = holder;
                             break;
                         }
@@ -12501,7 +12514,19 @@ class SharedCore {
                 continue;
             }
             const holder = eventsByUrl.get(urlKey);
-            if (holder && this.areStartDatesWithinDays(holder, event, 7)) {
+            // The hard-fact gate, minus what this pass exists to tolerate: the
+            // days (a date-corrupted twin is its whole point) and free-text
+            // bar names (an OCR-hallucinated venue). Two ticket ids on one
+            // vendor, two curated doors or two numbered street lines behind
+            // one shared url are still two events (a chimera wearing a
+            // neighbouring card's page link).
+            const sameUrlContradiction = holder
+                ? this.getIdentityContradiction(holder, event, { ignoreStatedDays: true, softBarNames: true })
+                : null;
+            if (sameUrlContradiction) {
+                console.log(`🛑 IDENTITY: "${event.title || 'event'}" shares event URL ${urlKey} with "${holder.title || 'event'}", but their ${sameUrlContradiction} contradict — two events, not folded`);
+            }
+            if (holder && !sameUrlContradiction && this.areStartDatesWithinDays(holder, event, 7)) {
                 console.log(`🔄 SharedCore: Same event URL — merging "${holder.title || 'event'}" and "${event.title || 'event'}" despite city/venue mismatch`);
                 // Identity fields (key/city/timezone) must come from the richer
                 // record — corrupted identity fields are exactly why these records
@@ -20623,10 +20648,23 @@ class SharedCore {
             }
         }
         
-        // Check for exact or similar duplicates
+        // Check for exact or similar duplicates. Every fold rung from here
+        // down passes the hard-fact contradiction gate (getIdentityContradiction):
+        // a similar title at the same minute is still two events when the
+        // records name two curated doors, two street lines or two ticket ids
+        // on one vendor. The key rungs above are the calendar's own identity
+        // contract (a curated matchKey is the owner's instruction) and are
+        // not gated.
+        const contradicts = (existing, rung) => {
+            const contradiction = this.getIdentityContradiction(event, existing);
+            if (!contradiction) return false;
+            console.log(`🛑 IDENTITY: "${event.title || 'event'}" would match "${existing.title || existing.name || 'event'}" by ${rung}, but their ${contradiction} contradict — two events, not folded`);
+            return true;
+        };
         const exactMatch = existingEventsData.find(existing =>
             this.areTitlesSimilar(existing.title || existing.name, event.title) &&
-            this.areDatesEqual(existing.startDate, event.startDate, 1)
+            this.areDatesEqual(existing.startDate, event.startDate, 1) &&
+            !contradicts(existing, 'a similar title at the same minute')
         );
 
         if (exactMatch) {
@@ -20702,7 +20740,8 @@ class SharedCore {
             
             const mergeableConflict = timeConflicts.find(existing =>
                 timeSimilar(existing) &&
-                (this.areTitlesSimilar(existing.title || existing.name, event.title) || venuesSimilar(existing))
+                (this.areTitlesSimilar(existing.title || existing.name, event.title) || venuesSimilar(existing)) &&
+                !contradicts(existing, 'an overlapping slot')
             );
             
             if (mergeableConflict) {
@@ -21417,13 +21456,33 @@ class SharedCore {
         return false;
     }
 
+    // Every rung below passes the hard-fact contradiction gate
+    // (getIdentityContradiction): a rung that says "same event" for a pair
+    // whose stated bars, street lines, curated doors, days or event
+    // destinations disagree is reading a carried-off link or a coincidence,
+    // and the pair stays two events. The cross-source ticket-url rung keeps
+    // its free-text bar leniency (softBarNames) — the warehouse case: one
+    // ticket page under the promoter's bar name on one site and the venue's
+    // own on the other — while two cards of ONE listing page get no such
+    // leniency, exactly as before. Logged once per vetoed rung so the run
+    // log shows which fold the gate refused and why.
+    getSameEventIdentitySignal(newEvent, existingEvent, options = {}) {
+        const signal = this.getUngatedSameEventIdentitySignal(newEvent, existingEvent, options);
+        if (!signal) return null;
+        const softBarNames = signal === 'ticket-url' && !this.recordsShareSourcePage(newEvent, existingEvent);
+        const contradiction = this.getIdentityContradiction(newEvent, existingEvent, { ...options, softBarNames });
+        if (!contradiction) return signal;
+        console.log(`🛑 IDENTITY: "${newEvent.title || newEvent.name || 'event'}" would match "${existingEvent.title || existingEvent.name || 'event'}" by ${signal}, but their ${contradiction} contradict — two events, not folded`);
+        return null;
+    }
+
     // Returns the name of the matched identity signal for logging, or null when the
     // events look distinct. Signals are ordered strongest-first.
     // options.requireCloseStartTimes (default true): the place-time-name signal demands
     // start times within 2 hours. Cross-parser dedup relaxes this to same-local-day,
     // because a degraded scrape (missing start time → midnight default) must still
     // match its properly-timed twin from another source.
-    getSameEventIdentitySignal(newEvent, existingEvent, options = {}) {
+    getUngatedSameEventIdentitySignal(newEvent, existingEvent, options = {}) {
         if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
             return null;
         }
@@ -21869,14 +21928,50 @@ class SharedCore {
         return a.some(x => b.some(y => x === y || (x.length >= 6 && y.length >= 6 && within(x, y, 1))));
     }
 
+    // TRUE when both street lines (the first comma segment, diacritics
+    // folded, abbreviations expanded) carry a number and either their
+    // numbers share none ("1354 Harrison" / "398 12th") or their street
+    // names — the words that are not numbers, street-type designators or
+    // one-letter tokens — share none ("100 Main St" / "100 Oak Ave"). Word
+    // order and the house-number convention are free to differ: "Malecón 4"
+    // is "4 Malecon", "Carrer de Bonaire 12" is "Calle Bonaire 12" (the
+    // BEEFMINCE Sitges and BeefDip calendar pairs, run 20260924-055217). A
+    // line that names no street (addressStatesStreet: a bare street, a
+    // city-and-ZIP locality whose only number is its postal code)
+    // contradicts nothing.
+    areContradictingStreetLines(addressA, addressB) {
+        if (!this.addressStatesStreet(addressA) || !this.addressStatesStreet(addressB)) return false;
+        const lineTokens = (address) => this.normalizeAddressTokens(this.foldDiacritics(String(address || '').split(',')[0]).replace(/ß/g, 'ss'));
+        const tokensA = lineTokens(addressA);
+        const tokensB = lineTokens(addressB);
+        // House numbers and ordinal streets; a 5–6 digit run is a postal code
+        // unless it leads the line ("10521 Ventura Blvd").
+        const numbers = (tokens) => tokens.filter((token, index) => /^\d{1,4}(?:-\d{1,6})?[a-z]?$/.test(token)
+            || /^\d{1,4}(?:st|nd|rd|th)$/.test(token) || (index === 0 && /^\d{5,6}$/.test(token)));
+        const numbersA = numbers(tokensA);
+        const numbersB = numbers(tokensB);
+        if (numbersA.length === 0 || numbersB.length === 0) return false;
+        if (!numbersA.some(token => numbersB.includes(token))) return true;
+        const names = (tokens) => tokens.filter(token => !/^\d/.test(token) && token.length >= 2 && !ADDRESS_STREET_TYPE_TOKENS.includes(token));
+        const namesA = names(tokensA);
+        const namesB = names(tokensB);
+        if (namesA.length === 0 || namesB.length === 0) return false;
+        // One street word leading another ("Motzstr" / "Motzstrasse") is
+        // one street abbreviated.
+        const sameWord = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
+        return !namesA.some(tokenA => namesB.some(tokenB => sameWord(tokenA, tokenB)));
+    }
+
     // TRUE when both records state a place/ticket fact and the facts differ:
     // two bar names that are not the same bar, two street addresses (both
     // numbered) that are not the same street address, or two ticket links
     // on different event paths. Absent or one-sided evidence is not a
     // contradiction.
     haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null) {
-        const barA = this.normalizeIdentityText(shapeA.bar);
-        const barB = this.normalizeIdentityText(shapeB.bar);
+        // A placeholder venue ("Check instagram for this week's location.",
+        // the roaming Bear Happy Hour series) names no bar and contradicts none.
+        const barA = SharedCore.isPlaceholderVenueText(shapeA.bar) ? '' : this.normalizeIdentityText(shapeA.bar);
+        const barB = SharedCore.isPlaceholderVenueText(shapeB.bar) ? '' : this.normalizeIdentityText(shapeB.bar);
         // One name contained in the other is one bar under two spellings.
         // The 4-letter floor keeps a stray short token from vouching for a
         // containment; a short name whose words LEAD the longer name ("Ty's"
@@ -21889,19 +21984,42 @@ class SharedCore {
             return shortTokens.length >= 1 && shortTokens.length < longTokens.length
                 && shortTokens.every((token, index) => longTokens[index] === token);
         };
+        // …and a bar named INSIDE the other record's address or location
+        // text is that record's own venue under a stray bar extraction
+        // ("Aigle Noir" on a record whose address reads "Bain Mathieu, 2915
+        // Rue Ontario E" — the Concours PUP pair, run 20260727-145617): the
+        // record contradicts itself, not its twin.
+        const namedInPlaceText = (bar, shape) => bar.length >= 4
+            && (this.normalizeIdentityText(shape.address).includes(bar)
+                || this.normalizeIdentityText(shape.locationText).includes(bar));
         const sameBarSpelledTwice = barA === barB
             || (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))
-            || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar);
-        if (barA && barB && !sameBarSpelledTwice) {
-            return true;
-        }
+            || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar)
+            || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA);
+        const barsDiffer = Boolean(barA && barB && !sameBarSpelledTwice);
         // The street LINE only ("722 East Burnside Street"): the locality
         // and region spellings after it vary between records of one place.
-        const streetLine = (address) => this.normalizeIdentityText(String(address || '').split(',')[0]);
-        const streetA = streetLine(shapeA.address);
-        const streetB = streetLine(shapeB.address);
-        if (/\d/.test(streetA) && /\d/.test(streetB) && streetA !== streetB
-            && !(streetA.includes(streetB) || streetB.includes(streetA))) {
+        // Two numbered lines contradict when their numbers or their street
+        // NAMES share nothing (areContradictingStreetLines) — "3702 N
+        // Halsted" and "3702 North Halsted Street" (Treasure Trail Chicago),
+        // "260 Meserole St" and "260 Meserole Dr" (LORAX XCX, one scrape's
+        // slip on the street type) are one door; "1354 Harrison" and "398
+        // 12th" are two.
+        const streetsAgree = this.areSameStreetLine(shapeA.address, shapeB.address);
+        const streetsDiffer = !streetsAgree && this.areContradictingStreetLines(shapeA.address, shapeB.address);
+        // Bars and streets check each other: two bar names at ONE numbered
+        // street line are one door under two names — a party name in the
+        // venue slot ("Locker Room" for Furball's night at Legacy, 79
+        // Warrenton St), a venue's two names ("The Eagle Bar" / "The Black
+        // Eagle", 15 Bloom St) — and one bar name over two house numbers is
+        // one venue's two doors or one scrape's slip (3 Dollar Bill's 260 and
+        // 270 Meserole). Only a disagreement the other axis does not
+        // positively overrule is a contradiction: two bars with no shared
+        // street line (SF Eagle / Lone Star Saloon, 398 12th vs a ZIP-only
+        // locality), two street lines with no shared bar name (9 Bob Note,
+        // 270 Meserole / 3 Dollar Bill, 260 Meserole — run 20260911).
+        const barsAgree = Boolean(barA && barB && sameBarSpelledTwice);
+        if ((barsDiffer && !streetsAgree) || (streetsDiffer && !barsAgree)) {
             return true;
         }
         // A purchase sub-path is the same ticket page ("…/e/<slug>" and
@@ -21926,11 +22044,262 @@ class SharedCore {
         // the paths are incomparable — one party sold on tixr by the venue
         // and on sickening.events by the promoter (Treasure Trail at Massive,
         // run 20260916-093055: the veto kept two cards for one night).
+        // …and a listing parked in ticketUrl above its own event page
+        // ("3dollarbillbk.com/rsvp" beside "…/rsvp/2026/9/12/bear-tea",
+        // Goldiloxx Bear Tea, run 20260924-055217) is the hub the page hangs
+        // from, not a second ticket.
         const ticketA = ticketKey(eventA && eventA.ticketUrl);
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
         const hostOf = (key) => key.split('/')[0];
-        if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)) return true;
+        const hubAbove = (shorter, longer) => longer.startsWith(`${shorter}/`);
+        if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)
+            && !hubAbove(ticketA, ticketB) && !hubAbove(ticketB, ticketA)) return true;
         return false;
+    }
+
+    // === Hard-fact contradiction gate ===
+    // "We keep having malformed events merging data together" (owner,
+    // 2026-09-24). The pattern: a chimera or a lookalike record reaches the
+    // identity rungs, ONE rung says "same event" — a ticket link the chimera
+    // carried off a neighbouring card ("TKVR | Nolid" matched "Treasure
+    // Trail" by tixr.com/e/207002, run 20260924-055217), place-time-name
+    // through a ZIP-only address (SF Queer Leather Happy Hour into Lone
+    // Star's Leather and Gear Happy Hour, same run), a shared event-page
+    // slug — and the record folds into a real saved event, after which the
+    // position-biased arbiter rewrites the saved fields. So EVERY rung that
+    // can fold two records passes this one gate: when both records STATE a
+    // hard fact and the facts disagree, they are two events whatever else
+    // they share. Hard facts, and only these:
+    //   - place: two bar names that are not one bar, two numbered street
+    //     lines that differ, two ticket paths on one vendor
+    //     (haveContradictingPlaceEvidence), or two places that resolve to
+    //     two DIFFERENT curated bars (getCuratedBarForIdentity — a name on
+    //     one side, a curated door's address or pin on the other);
+    //   - night: each record's OWN stated local night, when both resolve
+    //     (haveContradictingStatedDays — a 2am start is the evening before's);
+    //   - destination: two different event pages or ticket ids on ONE
+    //     platform, when both carry one (getContradictingDestinations).
+    // Titles are NOT a hard fact — a listing stub "Party" and its detail
+    // page "Party: Halloween Edition" are one event — so no rung ever vetoes
+    // on title dissimilarity. Absent or one-sided evidence is never a
+    // contradiction: a stub with no link, no address and no time still
+    // folds into its detail page (one event scraped twice), and a venue's
+    // own event page beside the ticket platform's page for the same night
+    // is one destination on two hosts, not two destinations.
+    // Returns the contradiction as a short phrase for the log, or null.
+    //   options.softBarNames: free-text bar names alone do not veto (the
+    //     cross-source ticket-url rung — a warehouse party under the
+    //     promoter's bar name on one site and the venue's name on the
+    //     ticket site still shares one ticket page; curated bars, street
+    //     lines, days and destinations still veto).
+    //   options.ignoreStatedDays: the days are not compared (the same-URL
+    //     pass, whose 7-day window exists for date-corrupted twins).
+    //   options.excludedUrlIdentityHostPaths / excludedTicketUrlKeys: the
+    //     batch's hub and pass pages (deduplicateEvents), never destinations.
+    getIdentityContradiction(eventA, eventB, options = {}) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        const shapeA = this.buildIdentityComparisonShape(eventA);
+        const shapeB = this.buildIdentityComparisonShape(eventB);
+        const place = this.haveContradictingPlaceEvidence(
+            options.softBarNames ? { ...shapeA, bar: '' } : shapeA,
+            options.softBarNames ? { ...shapeB, bar: '' } : shapeB,
+            eventA, eventB);
+        if (place) return 'place';
+        const curatedA = this.getCuratedBarForIdentity(eventA, shapeA, eventB);
+        const curatedB = curatedA ? this.getCuratedBarForIdentity(eventB, shapeB, eventA) : null;
+        if (curatedA && curatedB && this.normalizeBarNameKey(curatedA.name) !== this.normalizeBarNameKey(curatedB.name)) {
+            return `curated bars ("${curatedA.name}" vs "${curatedB.name}")`;
+        }
+        if (!options.ignoreStatedDays && this.haveContradictingStatedDays(eventA, eventB)) return 'stated days';
+        const destinations = this.getContradictingDestinations(eventA, eventB, options);
+        if (destinations) return `destinations (${destinations.a} vs ${destinations.b})`;
+        return null;
+    }
+
+    haveContradictingIdentityEvidence(eventA, eventB, options = {}) {
+        return this.getIdentityContradiction(eventA, eventB, options) !== null;
+    }
+
+    // The curated bar a record's place evidence names — its bar name
+    // (full-name equality, findCuratedBarByName), else the curated door
+    // whose street address it states (isSameStreetAddress, never fuzzy),
+    // else the ONE curated pin within CURATED_BAR_SAME_PLACE_KM of its own
+    // pin. Two curated pins in reach (sister rooms of one building, 3 Dollar
+    // Bill / 9 Bob Note) resolve nothing: a pin cannot tell rooms apart. A
+    // party name in the venue slot ("Locker Room" at Legacy) names no
+    // curated bar and resolves nothing either. Curated data of the record's
+    // city (or its partner's, when the record states none); no bars data
+    // fails open.
+    getCuratedBarForIdentity(event, shape, partnerEvent = null) {
+        const cityOf = (record) => {
+            if (!record || typeof record !== 'object') return '';
+            if (typeof record.city === 'string' && record.city.trim()) return record.city.trim();
+            const notes = typeof record.notes === 'string' && record.notes.includes('city') ? this.parseNotesIntoFields(record.notes) : null;
+            return notes && typeof notes.city === 'string' ? notes.city.trim() : '';
+        };
+        const cityBars = this.getCuratedCityBars(cityOf(event) || cityOf(partnerEvent));
+        if (!cityBars) return null;
+        const byName = shape.bar ? this.findCuratedBarByName(cityBars, shape.bar) : null;
+        if (byName) return byName;
+        const parsedAddress = this.addressStatesStreet(shape.address) ? this.parseAddressForComparison(shape.address) : null;
+        if (parsedAddress) {
+            const byAddress = cityBars.filter(bar => bar && typeof bar.address === 'string'
+                && this.isSameStreetAddress(parsedAddress, this.parseAddressForComparison(bar.address)));
+            if (byAddress.length === 1) return byAddress[0];
+            if (byAddress.length > 1) return null;
+        }
+        if (shape.coordinates) {
+            const pin = `${shape.coordinates.lat}, ${shape.coordinates.lng}`;
+            const byPin = cityBars.filter(bar => {
+                if (!bar || typeof bar.coordinates !== 'string') return false;
+                const km = this.coordinatePairDistanceKm(pin, bar.coordinates);
+                return km !== null && km <= CURATED_BAR_SAME_PLACE_KM;
+            });
+            if (byPin.length === 1) return byPin[0];
+        }
+        return null;
+    }
+
+    // Each record's OWN stated local NIGHT (its own timezone, or its city's;
+    // a _timezoneUnresolved record's UTC components ARE its wall clock), with
+    // getEventNightKey's rollover: a start after midnight and before 4am
+    // belongs to the evening before it ("GEAR NIGHT!" at 2am is Friday
+    // night's party). A record whose clock cannot be resolved states no day.
+    haveContradictingStatedDays(eventA, eventB) {
+        const nightOf = (event) => {
+            const parts = this.getMergeLocalStartParts(event);
+            if (!parts || !parts.localDay) return '';
+            if (parts.minutesOfDay > 0 && parts.minutesOfDay < 4 * 60) {
+                const [year, month, day] = parts.localDay.split('-').map(Number);
+                return new Date(Date.UTC(year, month - 1, day) - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            }
+            return parts.localDay;
+        };
+        const nightA = nightOf(eventA);
+        const nightB = nightOf(eventB);
+        return Boolean(nightA && nightB) && nightA !== nightB;
+    }
+
+    // The event destinations a record carries: its ticketUrl, url and
+    // website (the notes fields too, for a calendar record), each reduced
+    // to host + path — query and fragment dropped, a purchase sub-path
+    // ("/tickets", "/buy") folded away, www folded. Not destinations: a
+    // bare root (a front door), a short link (one opaque token — it
+    // redirects to a page, it names none), a statically stamped website
+    // (parser branding), the batch's hub pages (3+ records on one path),
+    // pass pages (_ticketUrlFanIn / excludedTicketUrlKeys), and anything an
+    // AGGREGATOR record links — aggregators are discovery only, and their
+    // links go stale (The Bear Calendar pointed Manbears Social's October
+    // night at the venue's August page, run 20260924-055217).
+    getIdentityDestinations(event, options = {}) {
+        if (this.isAggregatorRecord(event)) return [];
+        const fields = typeof event.notes === 'string' && event.notes ? this.parseNotesIntoFields(event.notes) : {};
+        const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+        const websiteIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'website');
+        const ticketIsPass = Number(event._ticketUrlFanIn) >= 3
+            || (options.excludedTicketUrlKeys instanceof Set
+                && options.excludedTicketUrlKeys.has(this.getUrlDedupeKey(String(event.ticketUrl || fields.ticketUrl || '').trim())));
+        const excludedHostPaths = options.excludedUrlIdentityHostPaths instanceof Set ? options.excludedUrlIdentityHostPaths : null;
+        const candidates = [
+            ticketIsPass ? '' : event.ticketUrl, ticketIsPass ? '' : fields.ticketUrl,
+            event.url, fields.url,
+            websiteIsBranding ? '' : event.website, websiteIsBranding ? '' : fields.website
+        ];
+        const seen = new Set();
+        const destinations = [];
+        for (const candidate of candidates) {
+            const destination = this.parseIdentityDestination(candidate);
+            if (!destination || seen.has(destination.key)) continue;
+            if (excludedHostPaths && excludedHostPaths.has(destination.hostPath)) continue;
+            seen.add(destination.key);
+            destinations.push(destination);
+        }
+        return destinations;
+    }
+
+    parseIdentityDestination(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        const match = raw.split('#')[0].split('?')[0].match(/^https?:\/\/([^/]+)(\/.*)?$/i);
+        if (!match) return null;
+        const host = match[1].toLowerCase().replace(/^www\./, '').split(':')[0];
+        const path = String(match[2] || '').replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
+        const segments = path.split('/').filter(Boolean);
+        if (segments.length === 0) return null;
+        if (segments.length === 1 && /^[A-Za-z0-9]{6,16}$/.test(segments[0])
+            && /\d/.test(segments[0]) && /[a-z]/i.test(segments[0])) return null;
+        const leaf = segments[segments.length - 1];
+        const idMatch = leaf.match(/(?:^|-|_)(\d{5,})$/);
+        return {
+            host,
+            segments: segments.map(segment => segment.toLowerCase()),
+            hostPath: `${host}${path}`,
+            key: `${host}/${segments.join('/')}`.toLowerCase(),
+            // The platform's event id, when the leaf ends in one ("…/e/207002",
+            // "…/events/treasure-trail-207002"): a slug rewrite keeps it.
+            id: idMatch ? idMatch[1] : '',
+            // The leaf minus a trailing number: a MEC install renumbers one
+            // event's slug per month ("karaoke-19", "karaoke-20").
+            stem: leaf.toLowerCase().replace(/[-_]?\d+$/, '')
+        };
+    }
+
+    // Two different event destinations on ONE host = two events. Compared
+    // host by host, only where both records carry a destination on that
+    // host, and only after nothing on the host agrees (the same page, the
+    // same platform id under a rewritten slug, or a hub above a leaf — a
+    // listing url beside the page it lists). Two platform ids on one host
+    // that differ contradict ("…/POOL-PARTY/696752" vs "…/DANCE-PARTY/
+    // 700051" — the mirror of the event-url-id rung); so do two leaves
+    // under one parent directory whose stems differ, on a ticketing host
+    // (TICKETING_PLATFORM_HOSTS, or a host either record buys its ticket
+    // from), where the vendor names events by path. A
+    // venue site's own page hierarchy is editorial (listings, hubs,
+    // per-occurrence slugs), so two of its slugs without ids never
+    // contradict. Lineage — one record's destination is the page the other
+    // was scraped from — is agreement: the stub and the page it points at.
+    getContradictingDestinations(eventA, eventB, options = {}) {
+        const destinationsA = this.getIdentityDestinations(eventA, options);
+        if (destinationsA.length === 0) return null;
+        const destinationsB = this.getIdentityDestinations(eventB, options);
+        if (destinationsB.length === 0) return null;
+        const sourceKey = (event) => {
+            const source = this.parseIdentityDestination(event._sourcePageUrl);
+            return source ? source.key : '';
+        };
+        const sourceA = sourceKey(eventA);
+        const sourceB = sourceKey(eventB);
+        if ((sourceB && destinationsA.some(destination => destination.key === sourceB))
+            || (sourceA && destinationsB.some(destination => destination.key === sourceA))) {
+            return null;
+        }
+        const ticketHost = (event) => {
+            const fields = typeof event.notes === 'string' && event.notes ? this.parseNotesIntoFields(event.notes) : {};
+            const ticket = this.parseIdentityDestination(event.ticketUrl || fields.ticketUrl);
+            return ticket ? ticket.host : '';
+        };
+        const vendorHosts = new Set([...TICKETING_PLATFORM_HOSTS, ticketHost(eventA), ticketHost(eventB)].filter(Boolean));
+        const isPrefix = (shorter, longer) => shorter.length < longer.length
+            && shorter.every((segment, index) => segment === longer[index]);
+        const agree = (a, b) => a.key === b.key
+            || (a.id && a.id === b.id)
+            || isPrefix(a.segments, b.segments) || isPrefix(b.segments, a.segments);
+        const siblings = (a, b) => a.segments.length >= 2 && a.segments.length === b.segments.length
+            && a.segments.slice(0, -1).every((segment, index) => segment === b.segments[index]);
+        const contradict = (a, b) => {
+            if (a.id && b.id) return a.id !== b.id;
+            return siblings(a, b) && vendorHosts.has(a.host) && a.stem !== b.stem;
+        };
+        for (const host of new Set(destinationsA.map(destination => destination.host))) {
+            const onHostA = destinationsA.filter(destination => destination.host === host);
+            const onHostB = destinationsB.filter(destination => destination.host === host);
+            if (onHostB.length === 0) continue;
+            if (onHostA.some(a => onHostB.some(b => agree(a, b)))) continue;
+            for (const a of onHostA) {
+                const b = onHostB.find(candidate => contradict(a, candidate));
+                if (b) return { a: a.key, b: b.key };
+            }
+        }
+        return null;
     }
 
     areEventsDistinctByPlace(eventA, eventB) {
@@ -22552,6 +22921,14 @@ class SharedCore {
         // token sequences (entity/punctuation variants of one name) never
         // reach this test.
         if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(eventA, eventB, shorter)) return null;
+        // Hard-fact gate: a title subset at one venue on one night is still
+        // two events when their ticket ids, curated doors or street lines
+        // disagree (getIdentityContradiction).
+        const contradiction = this.getIdentityContradiction(eventA, eventB);
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${eventA.title || 'event'}" would match "${eventB.title || 'event'}" by venue+night+title-subset, but their ${contradiction} contradict — two events, not folded`);
+            return null;
+        }
         return 'venue+night+title-subset';
     }
 
@@ -22605,6 +22982,12 @@ class SharedCore {
         // a shorter title made only of the source's programme vocabulary is
         // not evidence that these two records are one event.
         if (shorter.length !== longer.length && !this.hasDistinctiveSharedTitleTokens(newEvent, existingEvent, shorter)) return null;
+        // Hard-fact gate (getIdentityContradiction), like every fold rung.
+        const contradiction = this.getIdentityContradiction(newEvent, existingEvent);
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${newEvent.title || newEvent.name || 'event'}" would match "${existingEvent.title || existingEvent.name || 'event'}" by place+day+title-subset, but their ${contradiction} contradict — two events, not folded`);
+            return null;
+        }
         return 'place+day+title-subset';
     }
 
