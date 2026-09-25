@@ -22,6 +22,7 @@
     "city": "seattle",
     "address": "9630 16th Ave SW, Seattle, WA 98106",
     "coordinates": "47.5165235, -122.3548059",
+    "website": "https://www.thelumberyardbar.com",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
     "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
     "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
@@ -31,6 +32,7 @@
     "city": "seattle",
     "address": "1533 13th Ave, Seattle, WA 98122",
     "coordinates": "47.6150778, -122.3157208",
+    "website": "https://cuffcomplex.com",
     "facebook": "https://www.facebook.com/thecuffcomplex",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
     "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",

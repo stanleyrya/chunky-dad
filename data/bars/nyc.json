@@ -155,13 +155,15 @@
     "name": "C'mon Everybody",
     "city": "nyc",
     "address": "325 Franklin Avenue, New York, New York, 11216",
-    "coordinates": "40.6882793, -73.9569264"
+    "coordinates": "40.6882793, -73.9569264",
+    "website": "https://www.cmoneverybody.com"
   },
   {
     "name": "Red Eye NY",
     "city": "nyc",
     "address": "355 West 41st Street, New York NY 10036",
-    "coordinates": "40.7577763, -73.9925418"
+    "coordinates": "40.7577763, -73.9925418",
+    "website": "https://redeyeny.com"
   },
   {
     "name": "Julius'",

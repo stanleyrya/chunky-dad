@@ -4,6 +4,7 @@
     "city": "sf",
     "address": "398 12th Street, San Francisco, CA 94103",
     "coordinates": "37.7699927, -122.4134077",
+    "website": "https://www.sf-eagle.com",
     "instagram": "https://www.instagram.com/sfeaglebar",
     "facebook": "https://www.facebook.com/SFEagleBar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
@@ -15,6 +16,7 @@
     "city": "sf",
     "address": "1347 Folsom St, San Francisco, CA 94103",
     "coordinates": "37.773088, -122.412193",
+    "website": "https://powerhousebar.com",
     "instagram": "https://www.instagram.com/sfpowerhouse",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
@@ -35,6 +37,7 @@
     "city": "sf",
     "address": "1354 Harrison St, San Francisco, CA 94103",
     "coordinates": "37.7721717, -122.410901",
+    "website": "https://www.lonestarsf.com",
     "facebook": "https://www.facebook.com/lonestarsf",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
@@ -80,6 +83,7 @@
     "name": "Mr. S Leather",
     "city": "sf",
     "address": "385 8th Street, San Francisco",
-    "coordinates": "37.7743246, -122.4086188"
+    "coordinates": "37.7743246, -122.4086188",
+    "website": "https://www.mr-s-leather.com"
   }
 ]
