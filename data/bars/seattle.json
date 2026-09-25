@@ -25,7 +25,13 @@
     "website": "https://www.thelumberyardbar.com",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
     "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
+    "faviconBg": "#5d3d25",
+    "faviconFg": "#e9e8e6",
+    "faviconPlate": "#010100",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
+    "accent": "#9b1926"
   },
   {
     "name": "The Cuff Complex",
@@ -36,7 +42,12 @@
     "facebook": "https://www.facebook.com/thecuffcomplex",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
     "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
   },
   {
     "name": "Seattle Eagle",

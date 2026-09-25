@@ -20,7 +20,13 @@
     "facebook": "https://www.facebook.com/Duke.Of.Welly",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
     "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z",
+    "faviconBg": "#522838",
+    "faviconFg": "#d8ca8e",
+    "faviconPlate": "#020202",
+    "paletteSource": "favicon",
+    "palette": "#602d2c:23:7 #0a0201:17:3 #90e7f9:15:9 #fc2127:11:24 #10b90b:6:23",
+    "accent": "#fc2127"
   },
   {
     "name": "Kings Arms",
@@ -43,7 +49,12 @@
     "facebook": "https://www.facebook.com/EagleLDN",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
     "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
+    "faviconBg": "#060606",
+    "faviconFg": "#787878",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:56:0 #bcbcbc:8:0 #939393:8:0"
   },
   {
     "name": "Westminster Pier",
