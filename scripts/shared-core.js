@@ -17546,6 +17546,56 @@ class SharedCore {
         return '';
     }
 
+    // Does the parser config's `siteRole` declaration apply to THIS event's own
+    // source page? A declaration is about the site the parser was POINTED at,
+    // so it applies to pages on the hosts its own `urls` name - and to every
+    // page when the config names no urls at all (nothing to scope by). It never
+    // travels to a third-party host the crawl wandered onto: runs
+    // 20260924-055217 / 20260925-110542 crawled joininghearts.org (a charity),
+    // spankguys.uk (a promoter) and georgiaaquarium.org off the Atlanta Eagle /
+    // Eagle Manchester / Lone Star knobs, and rung 2 below then called every
+    // one of those pages "the venue's own site".
+    //
+    // The same rule as the ai-web parser's parserConfigRoleAppliesToPage (#1828)
+    // - restated here rather than imported, because parsers are standalone and
+    // cannot be required from shared-core. Two deliberate differences, both
+    // because this side judges the EVENT's source url rather than the page the
+    // parser was fetching:
+    //   - the hosts come from getParserConfigOwnHosts, which reads the config's
+    //     `urls` AND its curated metadata.website (the same pair
+    //     getAggregatorOwnHosts already treats as "this parser's own hosts").
+    //     A venue whose listings are served by a ticketing API - Jackhammer and
+    //     The SoFo Tap are both configured at an events.ticketsauce.com feed -
+    //     still owns the pages on the site its own config names, and measured
+    //     over runs 20260924/20260925 that is five real events per run;
+    //   - the comparison key is shared-core's registrable domain (the one rung 4
+    //     already uses), so a config's domain covers its own subdomains.
+    parserConfigRoleAppliesToEventSource(event, parserConfig) {
+        const configuredDomains = this.getParserConfigOwnHosts(parserConfig);
+        if (configuredDomains.length === 0) return true;
+        const sourceDomain = this.getRegistrableDomainFromUrl(this.getSeriesAuthoritySourceUrl(event));
+        return Boolean(sourceDomain) && configuredDomains.includes(sourceDomain);
+    }
+
+    // The registrable domains a parser config names as ITS OWN: the urls it
+    // crawls plus its curated metadata website. Returns [] when the config
+    // names none (an unscoped config - nothing to compare against).
+    getParserConfigOwnHosts(parserConfig) {
+        const values = [...(Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [])];
+        const website = parserConfig && parserConfig.metadata && parserConfig.metadata.website;
+        values.push(website && typeof website === 'object' ? website.value : website);
+        const domains = [];
+        for (const value of values) {
+            const raw = String(value || '').trim();
+            if (!raw) continue;
+            // getRegistrableDomainFromUrl only reads absolute http(s) urls;
+            // a config may name a bare host, so give it a scheme first.
+            const domain = this.getRegistrableDomainFromUrl(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+            if (domain && !domains.includes(domain)) domains.push(domain);
+        }
+        return domains;
+    }
+
     // Is the page this event came from the VENUE'S OWN SITE? Every rung is a
     // durable restatement of the ai-web parser's page-level
     // getPageSiteRole(htmlData) === 'venue' determination (live in production:
@@ -17553,7 +17603,8 @@ class SharedCore {
     // "www.3dollarbillbk.com: venue"), reachable from shared-core without the
     // htmlData the parser holds:
     //   1) _pageSiteRole - the determination stamped straight onto the event;
-    //   2) parser config `siteRole` - resolvePageSiteRole's own precedence #1;
+    //   2) parser config `siteRole` - resolvePageSiteRole's own precedence #1,
+    //      SCOPED to the parser's own hosts (parserConfigRoleAppliesToEventSource);
     //   3) barSource 'venue-site'/'venue-site-identity' - stamped ONLY when
     //      getPageSiteRole said 'venue' AND the page's own declared venue name
     //      matched this event's bar (stampBarSourceProvenance / the #1545
@@ -17565,7 +17616,9 @@ class SharedCore {
     //      config, immune to the stamp-loss the rungs above can suffer when a
     //      record passes through createFinalEventObject.
     // Explicit 'organizer' at rungs 1-2 is a hard NO - an organizer site never
-    // qualifies as a venue's own site.
+    // qualifies as a venue's own site, and that NO is unscoped: a denial can
+    // only ever be over-cautious, while a GRANT on a host the config never
+    // named is the bug rung 2 used to have.
     isVenueOwnSiteSource(event) {
         if (!event || typeof event !== 'object') return false;
         const stampedRole = String(event._pageSiteRole || '').trim().toLowerCase();
@@ -17573,7 +17626,7 @@ class SharedCore {
         if (stampedRole === 'organizer') return false;
         const parserConfig = event._parserConfig && typeof event._parserConfig === 'object' ? event._parserConfig : null;
         const configRole = String((parserConfig && parserConfig.siteRole) || '').trim().toLowerCase();
-        if (configRole === 'venue') return true;
+        if (configRole === 'venue' && this.parserConfigRoleAppliesToEventSource(event, parserConfig)) return true;
         if (configRole === 'organizer') return false;
         const barSource = String(event.barSource || '').trim();
         if (barSource === 'venue-site' || barSource === 'venue-site-identity') return true;
@@ -17921,6 +17974,11 @@ class SharedCore {
             event?._pastSpanWithheld !== true &&
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
+            // A city that names no CONFIGURED city calendar: the only calendars
+            // a scraped event may ever be written to are the city calendars in
+            // the cities config. Anything else on the phone is a curated
+            // dataset (chunky-dad-festivals) or somebody's personal calendar.
+            !event?._noCityCalendarWithheld &&
             event?._announcementOnlyWithheld !== true &&
             // One record, one destination: a record assembled from two
             // listings (stamp site: the ai-web parser's
@@ -17999,6 +18057,7 @@ class SharedCore {
             '_festivalContext',
             '_pastSpanWithheld',
             '_unresolvedCityWithheld',
+            '_noCityCalendarWithheld',
             '_announcementOnlyWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
@@ -18038,6 +18097,10 @@ class SharedCore {
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
+        if (event._noCityCalendarWithheld) {
+            const city = String(event._noCityCalendarWithheld.city || '').trim();
+            return `WITHHELD (city${city ? ` "${city}"` : ''} has no configured city calendar — a scraped event is never written to a non-city calendar)`;
+        }
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
         if (event._chimeraWithheld) {
             const reason = String(event._chimeraWithheld.reason || '').trim();
@@ -20574,11 +20637,32 @@ class SharedCore {
             // 2026-09-12: "Connecticut Bear", city unknown, planned as NEW
             // against a 404 unknown.ics). Flag, don't drop: the card stays in
             // the results UI; only the calendar write is withheld.
+            //
+            // The same withhold answers a wider question: WHICH calendar could
+            // this ever be written to? A scraped event may only ever land in a
+            // CITY calendar from the configured city list. Every other calendar
+            // on the phone is somebody else's dataset — "chunky-dad-festivals"
+            // is generated into data/festivals.json by tools/process-festivals.js
+            // and is a CURATED dataset the scraper must never author (audit
+            // 2026-09-25: its "Bear Week Provincetown" and "Bear Pride Chicago"
+            // umbrellas came back carrying the scraper's own notes shape,
+            // `bar: Venue TBA / timezone / uid / favicon`, timed at 2026-08-28
+            // 21:00 in place of their all-day ranges). So the test is not
+            // "is the city string non-empty" but "does this city resolve to a
+            // CONFIGURED city calendar" — resolveCalendarTarget, the one
+            // decision both adapters' getCalendarName delegates to. A city the
+            // config does not carry fails closed there to chunky-dad-unknown,
+            // and an event routed to it is withheld here rather than left to
+            // find some other calendar downstream.
             {
                 const cityKey = String(analyzedEvent.city || '').trim().toLowerCase();
                 if (!cityKey || cityKey === 'unknown') {
                     analyzedEvent._unresolvedCityWithheld = true;
                     console.log(`🗺️ NO CITY: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — no resolvable city, so no calendar to write to; card kept in results`);
+                } else if (SharedCore.citiesConfigNamesCalendars(this.cities)
+                    && !SharedCore.resolveCalendarTarget(this.cities, cityKey).recognized) {
+                    analyzedEvent._noCityCalendarWithheld = { city: cityKey };
+                    console.log(`🗺️ NO CITY CALENDAR: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — city "${cityKey}" names no configured city calendar, and a scraped event is never written to a calendar that is not one; card kept in results`);
                 }
             }
 
@@ -24187,6 +24271,17 @@ class SharedCore {
     // (cities injected, no I/O); the caller does the logging so each adapter
     // keeps its own log prefix.
     // Returns { name, recognized, requested }.
+    // Does this cities config express calendar targets AT ALL? Production's
+    // scripts/scraper-cities.js names a `calendar` for all 48 cities; a config
+    // that names none is not describing calendars (test fixtures, a trimmed
+    // harness), so the "must be a configured city calendar" gates stay
+    // unscoped against it — nothing to scope by, the same rule a parser config
+    // with no `urls` gets.
+    static citiesConfigNamesCalendars(cities) {
+        const map = cities && typeof cities === 'object' ? cities : {};
+        return Object.values(map).some(cityConfig => cityConfig && cityConfig.calendar);
+    }
+
     static resolveCalendarTarget(cities, city) {
         const requested = String(city == null ? '' : city).trim();
         const map = cities && typeof cities === 'object' ? cities : {};
