@@ -24679,3 +24679,114 @@ test('final build drops a same-site listing parked in ticketUrl when website is 
     `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
   assert.ok(!lines.some(line => line.includes('promoted to website/url')), 'no promotion of the listing');
 });
+
+// ============================================================================
+// ONE RECORD, ONE DESTINATION — the withheld chimera downstream of the parser
+// ============================================================================
+//
+// The ai-web parser stamps `_chimeraWithheld` on a record assembled from two
+// listings (applyOneDestinationGuard). Everything after the parser must
+// treat it as a card with a reason and nothing else: never a dedup
+// candidate, never a bear-check subject, never a calendar match, never a
+// write — the run 20260924-055217 damage was exactly a chimera folding into
+// the saved Treasure Trail by its borrowed ticket link.
+function buildChimeraStamp(overrides = {}) {
+  return {
+    page: 'https://massive.example/',
+    reason: 'fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking"',
+    destinations: [
+      { field: 'title', value: 'bearracuda', cards: [{ index: 4, title: 'Bearracuda' }] },
+      { field: 'ticketUrl', value: 'https://tixr.example/e/205790', cards: [{ index: 3, title: 'Looking' }] }
+    ],
+    ...overrides
+  };
+}
+
+test('one destination: a chimera-stamped record is withheld from execution, labeled with its reason, and never a review proposal', () => {
+  const core = createCore();
+  const chimera = { title: 'Bearracuda', _action: 'new', _chimeraWithheld: buildChimeraStamp() };
+  const plain = { title: 'Looking', _action: 'new' };
+  assert.deepEqual(SharedCore.filterEventsForExecution([chimera, plain]).map(e => e.title), ['Looking']);
+  assert.equal(SharedCore.describeExecutionDisposition(chimera),
+    'WITHHELD (assembled from two listings — fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking")');
+  assert.equal(SharedCore.describeExecutionDisposition(plain), 'NEW');
+  assert.equal(core.isOwnerReviewCandidate(chimera), false, 'the deck never offers a chimera for approval');
+  assert.equal(core.isOwnerReviewCandidate(plain), true);
+  // The stamp is parse-time provenance: a saved-run re-analysis keeps it.
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_chimeraWithheld'));
+  assert.deepEqual(SharedCore.stripCalendarAnalysisStamps(chimera)._chimeraWithheld, chimera._chimeraWithheld);
+});
+
+test('one destination: prepareEventsForCalendar never matches a chimera against the calendar', async () => {
+  const core = createFestivalCore([]);
+  const adapter = buildFestivalPrepAdapter([]);
+  const chimera = {
+    title: 'Bearracuda | Seattle - Red Light District',
+    bar: 'Massive',
+    address: '1400 E Union St, Seattle, WA',
+    startDate: '2026-10-17T05:00:00.000Z',
+    endDate: '2026-10-17T08:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://tixr.example/e/205790',
+    city: 'seattle',
+    source: 'ai-web',
+    isBearEvent: true,
+    _chimeraWithheld: buildChimeraStamp()
+  };
+  const real = { ...chimera, title: 'Looking' };
+  delete real._chimeraWithheld;
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([chimera, real], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(adapter.calls.map(call => call.title), ['Looking'], 'the calendar is searched for the real record only');
+  const withheld = analyzed.find(e => e._chimeraWithheld);
+  assert.ok(withheld, 'flag, don\'t drop: the chimera is still an analyzed card');
+  assert.equal(withheld._action, 'new');
+  assert.equal(withheld._analysis.reason, 'assembled from two listings — never matched against the calendar, write withheld');
+  assert.equal(withheld._existingEvent, undefined);
+  assert.equal(withheld._mergeDiff, undefined);
+  assert.equal(withheld._venueOverlap, undefined, 'a chimera takes no part in overlap or slot findings');
+  assert.equal(withheld._slotWins, undefined);
+  assert.equal(analyzed.find(e => e.title === 'Looking')._slotYield, undefined, 'and the real record yields nothing to it');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed).map(e => e.title), ['Looking']);
+  assert.ok(logs.some(line => line.startsWith('🧬 ONE DESTINATION: "Bearracuda | Seattle - Red Light District" is assembled from two listings') && line.includes('never matched against the calendar')), logs.join('\n'));
+});
+
+test('one destination: processParser sets a chimera aside before dedup and the bear check, and it rejoins the parser\'s events with its stamp', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const startDate = new Date(Date.now() + 10 * 86400000);
+  const real = { title: 'Looking', startDate, bar: 'Massive', address: '1400 E Union St, Seattle, WA', ticketUrl: 'https://tixr.example/e/205790', city: 'seattle', isBearEvent: true };
+  // Same ticket link, same night: the ticket-url rung would fold these.
+  const chimera = { ...real, title: 'Bearracuda | Seattle - Red Light District', _chimeraWithheld: buildChimeraStamp() };
+  const pages = { 'https://massive.example/': { events: [chimera, real] } };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const result = await core.processParser(
+    { name: 'Massive', urls: ['https://massive.example/'], ai: CRAWL_AI, alwaysBear: true },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Bearracuda | Seattle - Red Light District', 'Looking'], 'both records come back');
+  const kept = result.events.find(e => e.title === 'Looking');
+  const withheld = result.events.find(e => e._chimeraWithheld);
+  assert.ok(withheld, 'the chimera keeps its stamp');
+  assert.equal(kept.title, 'Looking', 'the real record was never merged with the chimera');
+  assert.equal(result.duplicatesRemoved, 0, 'dedup never saw the chimera');
+  assert.equal(result.chimeraWithheld, 1);
+  assert.equal(result.totalEvents, 2);
+  assert.ok(display.logs.some(line => line.includes('1 record(s) assembled from two listings set aside') && line.includes('"Bearracuda | Seattle - Red Light District"')), display.logs.join('\n'));
+  // Without the stamp the same pair is one event scraped twice — folded.
+  const twin = { ...chimera };
+  delete twin._chimeraWithheld;
+  const folded = await core.processParser(
+    { name: 'Massive', urls: ['https://massive.example/'], ai: CRAWL_AI, alwaysBear: true },
+    {}, httpAdapter, display, createCrawlHarness({ 'https://massive.example/': { events: [twin, real] } }).parsers
+  );
+  assert.equal(folded.events.length, 1, 'unstamped twins still fold (the guard changes nothing for them)');
+  assert.equal(folded.chimeraWithheld, undefined);
+});

@@ -6696,6 +6696,29 @@ class SharedCore {
             icsFeedCollector
         });
 
+        // ONE RECORD, ONE DESTINATION. A record the parser stamped
+        // `_chimeraWithheld` was assembled from two listings (its title from
+        // one card, its ticket link or artwork from the neighbour — see
+        // applyOneDestinationGuard). It is set aside HERE, before any pass
+        // that reads the run as a corpus, before dedup and before the bear
+        // check, and rejoins the parser's events only at the end: it must
+        // never be folded into a real record by an identity rung (that is
+        // exactly how a shared ticket link renamed the calendar's Treasure
+        // Trail to TKVR, run 20260924-055217) and never be judged as a
+        // party. Flag, don't drop: it stays in the results with its reason;
+        // filterEventsForExecution withholds the write.
+        const chimeraWithheldEvents = [];
+        for (let i = allEvents.length - 1; i >= 0; i--) {
+            const candidate = allEvents[i];
+            if (candidate && typeof candidate === 'object' && candidate._chimeraWithheld) {
+                chimeraWithheldEvents.unshift(candidate);
+                allEvents.splice(i, 1);
+            }
+        }
+        if (chimeraWithheldEvents.length > 0) {
+            await displayAdapter.logInfo(`SYSTEM: ${chimeraWithheldEvents.length} record(s) assembled from two listings set aside — shown in results, never deduplicated, merged or written: ${chimeraWithheldEvents.map(event => `"${event.title || 'Unknown'}"`).join(', ')}`);
+        }
+
         // Venue-site address consensus (deterministic, parser-derived): the
         // ai-web parser harvested map-directions addresses per registrable
         // site during the crawl; with every page of the run now seen, fill
@@ -6831,11 +6854,23 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
 
+        // Withheld chimeras rejoin the parser's events here — after dedup and
+        // the bear check, which never saw them — so the results UI shows
+        // them with their reason (prepareEventsForCalendar never matches
+        // them to the calendar; filterEventsForExecution never writes them).
+        // Future-window filtered like every other record: a stale chimera
+        // is not worth a card.
+        if (chimeraWithheldEvents.length > 0) this.clearDegenerateScrapedEnds(chimeraWithheldEvents);
+        const chimeraEventsInWindow = chimeraWithheldEvents.length > 0
+            ? this.filterFutureEvents(chimeraWithheldEvents, effectiveParserConfig.daysToLookAhead, keepPastEvents)
+            : [];
+        const finalEvents = chimeraEventsInWindow.length > 0 ? bearEvents.concat(chimeraEventsInWindow) : bearEvents;
+
         const result = {
             name: effectiveParserConfig.name,
             parserType: parserName,
             urlCount,
-            totalEvents: allEvents.length,
+            totalEvents: allEvents.length + chimeraWithheldEvents.length,
             // Since the 2026-08-06 reorder (dedup before the bear check) there
             // is no post-filter dedup step: rawBearEvents and bearEvents are
             // the same count, and duplicatesRemoved covers the FULL parsed set
@@ -6844,10 +6879,13 @@ class SharedCore {
             bearEvents: bearEvents.length,
             duplicatesRemoved: duplicatesRemoved,
             durationMs: Date.now() - parserStartedAt,
-            events: bearEvents,
+            events: finalEvents,
             urlClassifications,
             config: effectiveParserConfig // Include config for orchestrator to use
         };
+        if (chimeraEventsInWindow.length > 0) {
+            result.chimeraWithheld = chimeraEventsInWindow.length;
+        }
 
         if (enrichDropCollector.length > 0) {
             result.enrichOnlyDrops = enrichDropCollector;
@@ -17527,6 +17565,12 @@ class SharedCore {
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
             event?._announcementOnlyWithheld !== true &&
+            // One record, one destination: a record assembled from two
+            // listings (stamp site: the ai-web parser's
+            // applyOneDestinationGuard) is never written — and never
+            // merged: processParser keeps it out of dedup and
+            // prepareEventsForCalendar never matches it to the calendar.
+            !event?._chimeraWithheld &&
             // Owner review (swipe deck): a rejected or not-yet-reviewed
             // proposal is withheld — stamped only by applyOwnerDecisions on
             // the review execute path, so the phone's own flow never sees it.
@@ -17637,6 +17681,10 @@ class SharedCore {
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
+        if (event._chimeraWithheld) {
+            const reason = String(event._chimeraWithheld.reason || '').trim();
+            return `WITHHELD (assembled from two listings${reason ? ` — ${reason}` : ''})`;
+        }
         if (event._ownerReviewWithheld) {
             if (event._ownerReviewWithheld.status === 'rejected') {
                 const reason = String(event._ownerReviewWithheld.reason || '').trim();
@@ -18991,6 +19039,23 @@ class SharedCore {
             const sourceFestival = this.resolveFestivalForSource(event, festivalSourceHosts);
             if (sourceFestival) {
                 this.applyCuratedFestivalContext(event, sourceFestival);
+            }
+
+            // ONE RECORD, ONE DESTINATION: a record assembled from two
+            // listings is never matched against the calendar — a match is
+            // how its borrowed ticket link folded it into a real saved
+            // event and the arbiter rewrote the saved fields. It is
+            // analyzed as a stand-alone NEW record that the execution gate
+            // withholds, so the card stays in results with its reason and
+            // takes no part in slot precedence or overlap findings.
+            if (event._chimeraWithheld) {
+                const reason = String(event._chimeraWithheld.reason || '').trim();
+                console.log(`🧬 ONE DESTINATION: "${event.title || 'Unknown'}" is assembled from two listings${reason ? ` (${reason})` : ''} — never matched against the calendar; write withheld; card kept in results`);
+                analyzedEvents.push(await this.buildAnalyzedCalendarEvent(event, {
+                    action: 'new',
+                    reason: 'assembled from two listings — never matched against the calendar, write withheld'
+                }, calendarAdapter, config));
+                continue;
             }
 
             // Get existing events from the adapter

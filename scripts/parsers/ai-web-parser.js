@@ -2028,6 +2028,9 @@ class AiWebParser {
         let missSegmentsSpent = 0;
         let uncachedSegmentsSkipped = 0;
 
+        // The page's own card map, for the one-destination check below.
+        const destinationCards = this.buildPageDestinationCards(html, sourceUrl);
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
             const budgetSpent = missSegmentsSpent >= missBudget;
@@ -2062,6 +2065,11 @@ class AiWebParser {
                     };
                     this.applyCardStatedDateOverFlyerDate(event, segment.lines, pageDateContext);
                     this.applySegmentOwnPageLink(event, segmentHtmlData);
+                    // One record, one destination: judged on the finished
+                    // record, after the card's own link was adopted, before
+                    // the page's events are returned (see
+                    // applyOneDestinationGuard). Flag, don't drop.
+                    this.applyOneDestinationGuard(event, destinationCards, sourceUrl);
                     events.push(event);
                 }
             } catch (err) {
@@ -2150,6 +2158,304 @@ class AiWebParser {
         event.ticketUrl = link;
         console.log(`🔗 LINKS: "${event.title || 'event'}" takes its listing card's own link ${link} — the model returned none`);
         return true;
+    }
+
+    // ── ONE RECORD, ONE DESTINATION ─────────────────────────────────────
+    // A scraped record points at the listing its fields came from: the
+    // card that states its title, the card that links its ticket page, the
+    // card whose artwork it carries. Those must be ONE listing. Every
+    // malformed merge this pipeline has produced had the same shape — a
+    // record ASSEMBLED FROM TWO NEIGHBOURING CARDS (a text window that
+    // opened one card late on www.massive.club, run 20260924-055217: Nov 7
+    // "Bearracuda"'s title over Oct 16 "Looking"'s date, ticket link
+    // tixr.com/e/205790 and flyer; eaglela.com run 20260806: fence-post
+    // windows carrying the neighbour's JSON-LD) — and then an identity rung
+    // folded the chimera into a real saved event by the shared link and the
+    // AI arbiter rewrote the saved fields (Treasure Trail renamed to TKVR).
+    // The splitters are fixed one layout at a time; this is the invariant
+    // under all of them, judged on the RECORD, after extraction and before
+    // the page's events are returned, so a chimera never reaches dedup or
+    // the calendar merge.
+    //
+    // "Destination" = a card element of the page: the page's own card map
+    // (buildPageDestinationCards — card-shaped elements that each state one
+    // date and one title, innermost wins). A record's title, stated date,
+    // link fields and image are each attributed to the cards that hold
+    // them; a URL the page itself is, or that three or more cards share (a
+    // row of identical ticket buttons, the venue's map pin), constrains
+    // nothing. Two different EVENTS — not two different URLs — is the
+    // test: a card that links its ticket page and its own event page is
+    // one destination because both sit in one card. Only the fields that
+    // resolve to some card take part, and the record is a chimera exactly
+    // when no single card holds all of them.
+    //
+    // Without a card map (a page whose cards carry no card-shaped markup)
+    // the one destination signal left is platform identity: two link
+    // fields on the same host and path prefix naming different event
+    // ids/slugs (tixr.com/e/205790 beside tixr.com/e/207002).
+    //
+    // Flag, don't drop: the record is stamped `_chimeraWithheld` (an
+    // underscore field — internal, never notes) and stays in the run's
+    // events so the results UI and the review deck can show it and why;
+    // shared-core keeps a stamped record out of dedup, out of the bear
+    // check and out of the calendar match, and filterEventsForExecution
+    // withholds the write. A record with one destination, or none, is
+    // untouched — a listing stub with no link and its crawled detail page
+    // are still "one event scraped twice", folded by dedup as before.
+    buildPageDestinationCards(html, sourceUrl = '') {
+        const source = String(html || '');
+        const memo = this._pageDestinationCardsMemo;
+        if (memo && memo.html === source && memo.sourceUrl === sourceUrl) return memo.cards;
+        const cards = this.computePageDestinationCards(source, sourceUrl);
+        this._pageDestinationCardsMemo = { html: source, sourceUrl, cards };
+        return cards;
+    }
+
+    computePageDestinationCards(html, sourceUrl = '') {
+        const source = String(html || '');
+        if (!source) return [];
+        const opens = this.findCardShapedOpenTags(source);
+        if (opens.length === 0) return [];
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const qualifying = [];
+        for (const open of opens) {
+            const end = this.findElementCloseIndex(source, open.tag, open.start);
+            if (end < 0) continue;
+            const elementHtml = source.slice(open.start, end);
+            const lines = this.extractBodyParts(elementHtml, this.extractionLimits.multiEventScanLineLimit)
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            if (lines.length === 0) continue;
+            // One listing: a date, a title, at most a start and an end.
+            if (!this.segmentHasDateSignal(lines)) continue;
+            if (this.countMultiEventDateSignals(lines) > 2) continue;
+            const title = this.deriveSegmentListingTitle({ lines });
+            if (!title) continue;
+            qualifying.push({ start: open.start, end, html: elementHtml, lines, title });
+        }
+        if (qualifying.length === 0) return [];
+        // Innermost wins: an element enclosing another qualifying element is
+        // a list container, not a card.
+        const innermost = qualifying.filter(card => !qualifying.some(other =>
+            other !== card && other.start >= card.start && other.end <= card.end && (other.start > card.start || other.end < card.end)));
+        const cards = [];
+        for (const card of innermost) {
+            const urlKeys = new Set();
+            const imageKeys = new Set();
+            for (const candidate of this.extractUrlCandidatesFromRawHtml(card.html)) {
+                const normalized = this.normalizeUrl(candidate, sourceUrl);
+                if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+                urlKeys.add(this.getUrlDedupeKey(normalized));
+                const imageKey = this.getDestinationImageKey(normalized);
+                if (imageKey) imageKeys.add(imageKey);
+            }
+            cards.push({
+                index: cards.length,
+                start: card.start,
+                end: card.end,
+                html: card.html,
+                lines: card.lines,
+                lineKeys: card.lines.map(lineKey),
+                title: card.title,
+                titleKey: lineKey(card.title),
+                statedDates: this.collectCardStatedDates(card.lines),
+                urlKeys,
+                imageKeys
+            });
+        }
+        return cards;
+    }
+
+    // The comparison key for artwork: proxy-unwrapped, size params stripped,
+    // exactly as the OCR↔segment matcher keys images.
+    getDestinationImageKey(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return '';
+        const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(raw) || raw);
+        if (!normalized) return '';
+        return this.stripSizeParams(normalized) || '';
+    }
+
+    // Which of the page's cards hold this record's fields. Returns
+    // [{ field, value, cards: [index, …] }] — one entry per field that
+    // resolved to at least one card and does not resolve to every card.
+    resolveRecordDestinationCards(event, cards, sourceUrl = '') {
+        const list = Array.isArray(cards) ? cards : [];
+        if (!event || typeof event !== 'object' || list.length === 0) return [];
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const pageKey = sourceUrl ? this.getUrlDedupeKey(sourceUrl) : '';
+        const attributions = [];
+        // A link or picture that three or more cards share is page
+        // furniture — a category link, the venue's map pin, a shared
+        // "tickets" button, a repeated poster (the same bar the segment
+        // image chrome gate draws) — and names no listing. A title is
+        // different: a party that repeats is titled on every one of its
+        // cards, and any of them is a fair destination.
+        const record = (field, value, holders) => {
+            if (holders.length === 0 || holders.length === list.length) return;
+            if (field !== 'title' && holders.length >= this.segmentImageChromeMinSegments) return;
+            attributions.push({ field, value, cards: holders.map(card => card.index) });
+        };
+
+        // Title: the card whose own listing title or one of whose
+        // title-shaped lines states it. Prose lines never anchor a title (a
+        // neighbour's description mentioning this party is not its card),
+        // and neither does a call-to-action ("TICKETS" is on every card).
+        const titleMax = this.extractionLimits.multiEventTitleMaxChars;
+        // A weekday or month on its own ("Wed", "September"), a clock, a
+        // date line or a call-to-action is a card's furniture, not a name.
+        const isFurnitureLine = (line) => this.isMultiEventCallToActionLine(line)
+            || this.hasMultiEventDateSignal(line)
+            || this.isDayHeaderEchoTitle(line)
+            || this.isTimeOnlyLineText(line)
+            || /^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?\.?$/i.test(String(line || '').trim());
+        const anchorsTitle = (card, i, titleKey) => {
+            const line = card.lines[i];
+            if (isFurnitureLine(line)) return false;
+            const key = card.lineKeys[i];
+            return key === titleKey || (key.includes(titleKey) && line.length <= titleMax);
+        };
+        const titleKeys = [...new Set([event._titleBeforeBrandPrefix, event.title]
+            .map(lineKey).filter(key => key && key.length >= 4))]
+            .filter(key => !isFurnitureLine(key));
+        for (const titleKey of titleKeys) {
+            const exact = list.filter(card => (card.titleKey === titleKey && !isFurnitureLine(card.title))
+                || card.lineKeys.some((key, i) => key === titleKey && anchorsTitle(card, i, titleKey)));
+            const holders = exact.length > 0 ? exact : list.filter(card =>
+                (card.titleKey.length >= 4 && !isFurnitureLine(card.title) && titleKey.includes(card.titleKey))
+                || card.lineKeys.some((key, i) => anchorsTitle(card, i, titleKey)));
+            if (holders.length > 0) {
+                record('title', titleKey, holders);
+                break;
+            }
+        }
+
+        // Link fields: url and website are one field; a ticket link is its
+        // own. The listing page itself is where the record was FOUND, not
+        // what it is.
+        const seenLinkKeys = new Set();
+        for (const field of ['ticketUrl', 'url', 'website']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const normalized = this.normalizeUrl(value, sourceUrl);
+            if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || seenLinkKeys.has(key)) continue;
+            seenLinkKeys.add(key);
+            const path = (normalized.match(/^https?:\/\/[^/?#]+([^#]*)/i) || ['', ''])[1].replace(/\/+$/, '');
+            const holders = list.filter(card => card.urlKeys.has(key)
+                || card.html.includes(value)
+                || (path.length > 1 && card.html.includes(path)));
+            record(field, normalized, holders);
+        }
+
+        // Artwork: the card whose markup carries the picture (an <img>, a
+        // background-image, its JSON-LD image), keyed like the OCR matcher.
+        const image = typeof event.image === 'string' ? event.image.trim() : '';
+        if (image) {
+            const imageKey = this.getDestinationImageKey(this.normalizeUrl(image, sourceUrl) || image);
+            const upgraded = imageKey ? this.upgradeCdnThumbnailUrl(imageKey) : '';
+            const upgradedKey = upgraded && upgraded !== imageKey ? this.getDestinationImageKey(upgraded) : '';
+            const holders = list.filter(card => (imageKey && card.imageKeys.has(imageKey))
+                || (upgradedKey && card.imageKeys.has(upgradedKey))
+                || card.html.includes(image));
+            record('image', image, holders);
+        }
+
+        // Date: the card that states the record's night (its local day, or
+        // the evening before it for a night that starts after midnight),
+        // by the same reading applyCardStatedDateOverFlyerDate trusts. A
+        // day no card states constrains nothing — and the date is judged
+        // only when every card the record's other fields point at prints
+        // a readable date, so a card whose date lives in an attribute can
+        // never lose its own record to a neighbour's date line.
+        const anchored = new Set(attributions.flatMap(attribution => attribution.cards));
+        const anchoredCardsDated = [...anchored].every(index => list[index] && list[index].statedDates.length > 0);
+        const localDays = event.startDate && anchoredCardsDated ? this.getFlyerLocalDateCandidates(event) : null;
+        if (Array.isArray(localDays) && localDays.length > 0) {
+            const statesDay = (card) => card.statedDates.some(stated => localDays.some(local =>
+                stated.month === local.month && stated.day === local.day
+                && (!Number.isFinite(stated.year) || stated.year === local.year)));
+            record('date', `${localDays[0].year}-${String(localDays[0].month).padStart(2, '0')}-${String(localDays[0].day).padStart(2, '0')}`, list.filter(statesDay));
+        }
+        return attributions;
+    }
+
+    // Same platform, different event: two link fields on one host whose
+    // paths share every segment but the last and differ there
+    // (tixr.com/e/205790 vs tixr.com/e/207002; site/events/looking vs
+    // site/events/tkvr). Different path prefixes on one host are one
+    // event's ticket page and event page, not two events.
+    findSamePlatformLinkConflict(event, sourceUrl = '') {
+        const parts = [];
+        for (const field of ['ticketUrl', 'url', 'website']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const normalized = this.normalizeUrl(value, sourceUrl);
+            const match = normalized ? String(normalized).match(/^https?:\/\/([^/?#]+)((?:\/[^/?#]+)+)\/?(?:[?#]|$)/i) : null;
+            if (!match) continue;
+            const host = match[1].toLowerCase().replace(/^www\./, '');
+            const segments = match[2].split('/').filter(Boolean);
+            if (segments.length < 2) continue;
+            parts.push({ field, url: normalized, host, prefix: segments.slice(0, -1).join('/').toLowerCase(), last: segments[segments.length - 1].toLowerCase() });
+        }
+        for (let i = 0; i < parts.length; i++) {
+            for (let j = i + 1; j < parts.length; j++) {
+                const a = parts[i];
+                const b = parts[j];
+                if (a.host === b.host && a.prefix === b.prefix && a.last !== b.last) {
+                    return { a, b };
+                }
+            }
+        }
+        return null;
+    }
+
+    // The record-level check. Stamps `_chimeraWithheld` and logs one line
+    // naming the destinations; returns true when the record was withheld.
+    applyOneDestinationGuard(event, cards, sourceUrl = '') {
+        if (!event || typeof event !== 'object') return false;
+        const title = event.title || 'event';
+        const page = sourceUrl || event._sourcePageUrl || '';
+        const attributions = this.resolveRecordDestinationCards(event, cards, sourceUrl);
+        if (attributions.length >= 2) {
+            let common = new Set(attributions[0].cards);
+            for (const attribution of attributions.slice(1)) {
+                common = new Set(attribution.cards.filter(index => common.has(index)));
+            }
+            if (common.size === 0) {
+                const list = Array.isArray(cards) ? cards : [];
+                const describeCards = (indexes) => indexes.slice(0, 2).map(index => `card ${index + 1} "${list[index] ? list[index].title : '?'}"`).join(' or ');
+                const destinations = attributions.map(attribution => ({
+                    field: attribution.field,
+                    value: attribution.value,
+                    cards: attribution.cards.map(index => ({ index: index + 1, title: list[index] ? list[index].title : '' }))
+                }));
+                const summary = attributions.map(attribution => `${attribution.field} → ${describeCards(attribution.cards)}`).join('; ');
+                event._chimeraWithheld = {
+                    page,
+                    reason: `fields come from different listings: ${summary}`,
+                    destinations
+                };
+                console.log(`🧬 ONE DESTINATION: "${title}" is assembled from two listings on ${page || 'this page'} — ${summary} — withheld (never merged, never written); card kept in results`);
+                return true;
+            }
+        }
+        const conflict = this.findSamePlatformLinkConflict(event, sourceUrl);
+        if (conflict) {
+            const summary = `${conflict.a.field} ${conflict.a.url} and ${conflict.b.field} ${conflict.b.url} name two events on ${conflict.a.host}`;
+            event._chimeraWithheld = {
+                page,
+                reason: summary,
+                destinations: [
+                    { field: conflict.a.field, value: conflict.a.url, cards: [] },
+                    { field: conflict.b.field, value: conflict.b.url, cards: [] }
+                ]
+            };
+            console.log(`🧬 ONE DESTINATION: "${title}" points at two events — ${summary} — withheld (never merged, never written); card kept in results`);
+            return true;
+        }
+        return false;
     }
 
     async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null, httpAdapter = null) {
