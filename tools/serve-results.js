@@ -694,6 +694,7 @@ function renderReviewNotesChangeRows(display = {}, shown = {}) {
 
 function renderReviewBadges(display = {}) {
     const badges = [];
+    if (display.bigDrift) badges.push(`<span class="badge warn drift">🧭 big drift — ${escapeHtmlText(display.bigDrift.reason || 'identity changed')} · withheld until you decide</span>`);
     if (display.recurring) badges.push('<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
     if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
@@ -701,6 +702,27 @@ function renderReviewBadges(display = {}) {
     if (display.slotTakeover && display.slotTakeover.from) badges.push(`<span class="badge">🪑 takes the slot of the saved ${escapeHtmlText(display.slotTakeover.fromCadence || '')} night “${escapeHtmlText(display.slotTakeover.from)}”</span>`);
     if (Array.isArray(display.venueOverlaps) && display.venueOverlaps.length > 0) badges.push(`<span class="badge warn">⚔️ overlaps ${escapeHtmlText(display.venueOverlaps.join(', '))}</span>`);
     return badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
+}
+
+// The big-drift facts block (review-queue buildReviewDisplayContext →
+// shared-core assessMergeDrift): the identity fields that move are
+// already rows above; this names the rung that matched the two records,
+// the hard facts that still agree, and the two pages the owner can open
+// to see for himself. Only on a card whose merge is withheld for drift.
+function renderReviewDriftFacts(display = {}) {
+    const drift = display && display.bigDrift && typeof display.bigDrift === 'object' ? display.bigDrift : null;
+    if (!drift) return '';
+    const labels = { title: 'title', startDay: 'start day', bar: 'venue', url: 'event link', location: 'pin' };
+    const moved = (Array.isArray(drift.fields) ? drift.fields : [])
+        .map((entry) => `${labels[entry.field] || entry.field}${entry.kind === 'rename' ? ' (renamed — no shared word)' : entry.field === 'location' && Number.isFinite(entry.km) ? ` (moved ${entry.km >= 1 ? `${entry.km.toFixed(1)} km` : `${Math.round(entry.km * 1000)} m`})` : ''}`);
+    const rows = [
+        `<div class="fact"><span class="fact-k">moves</span><span class="fact-v warn">${moved.length > 0 ? escapeHtmlText(moved.join(' · ')) : '—'}</span></div>`,
+        `<div class="fact"><span class="fact-k">matched as one event by</span><span class="fact-v">${escapeHtmlText(drift.matchedBy || 'unknown')}</span></div>`,
+        `<div class="fact"><span class="fact-k">still agrees on</span><span class="fact-v">${Array.isArray(drift.agree) && drift.agree.length > 0 ? escapeHtmlText(drift.agree.join(' · ')) : '<span class="none">nothing</span>'}</span></div>`,
+        `<div class="fact"><span class="fact-k">scraped from</span><span class="fact-v">${drift.sourcePageUrl ? reviewAnchor(drift.sourcePageUrl, reviewUrlLabel(drift.sourcePageUrl, 60)) : '<span class="none">∅</span>'}</span></div>`,
+        `<div class="fact"><span class="fact-k">calendar link</span><span class="fact-v">${drift.calendarUrl ? reviewAnchor(drift.calendarUrl, reviewUrlLabel(drift.calendarUrl, 60)) : '<span class="none">∅</span>'}</span></div>`
+    ];
+    return `<div class="drift"><div class="drift-head">🧭 Big drift — nothing is written until you decide</div>${rows.join('')}</div>`;
 }
 
 function renderReviewEvidence(lines) {
@@ -897,6 +919,7 @@ function renderReviewCard(entry, ctx = {}) {
   ${renderReviewLinkHistory(entry, proposal, display)}
   ${renderReviewBearRow(display, proposal)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display, changes)) : ''}
+  ${isMerge ? renderReviewDriftFacts(display) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
@@ -1044,6 +1067,14 @@ a { color:var(--accent); }
 .chg-n.warn { color:var(--no); font-weight:600; }
 .chg-n.why { color:var(--ink); opacity:.8; }
 .chg-notes .now { color:var(--ink); }
+.badge.drift { font-weight:600; }
+.drift { margin:10px 0; border:1px solid var(--no); border-radius:10px; overflow:hidden; }
+.drift-head { padding:5px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--no); background:var(--bg); font-weight:600; }
+.fact { display:grid; grid-template-columns:96px 1fr; gap:3px 10px; padding:7px 10px; border-top:1px solid var(--line); font-size:13px; }
+.fact-k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding-top:2px; }
+.fact-v { word-break:break-word; }
+.fact-v.warn { color:var(--no); font-weight:600; }
+.fact-v .none { color:var(--muted); font-style:italic; }
 .evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
 .notes { margin-top:10px; font-size:12px; }
 .notes summary { cursor:pointer; color:var(--muted); }

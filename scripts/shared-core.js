@@ -1636,9 +1636,11 @@ class SharedCore {
 
     isOwnerReviewCandidate(event) {
         if (!event || typeof event !== 'object') return false;
-        if (SharedCore.filterEventsForExecution([event]).length !== 1) return false;
+        if (SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length !== 1) return false;
         if (event._action === 'new') return true;
-        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event));
+        // A big-drift merge is ALWAYS a card — it is withheld from every
+        // automatic write precisely so the owner sees its data.
+        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event)) || Boolean(event._bigDriftWithheld);
         return false;
     }
 
@@ -1683,6 +1685,166 @@ class SharedCore {
     // (normalizers.js stays free of a SharedCore import).
     isPlaceholderVenueText(value) {
         return SharedCore.isPlaceholderVenueText(value);
+    }
+
+    // ---------------------------------------------------------------------
+    // BIG DRIFT — a merge that rewrites the saved event's identity is not
+    // applied by any automatic path; it becomes a deck card that shows the
+    // data (owner 2026-09-25: "present data for me to make a decision when
+    // it's really unclear"). Judged on the FINAL analyzed record against
+    // the calendar record it would overwrite, after every notes/title pass
+    // (the same place the merge no-op gate judges). Five identity-bearing
+    // dimensions: title, start day, venue, event link, pin.
+    //
+    //   drift  = the title is RENAMED (the two names share no distinctive
+    //            word: "Treasure Trail" → "TKVR | Nolid", run
+    //            20260924-055217), OR the title changes together with any
+    //            other dimension, OR three or more dimensions change.
+    //
+    // NOT drift, by construction: another spelling of the same title
+    // (case, emoji, whitespace, a cover tail, a venue tail — the "same
+    // title, another spelling" fold), a placeholder venue giving way to a
+    // named one ("Check instagram for this week's location." → Eagle NYC),
+    // a venue respelled at the same street door (Precinct DTLA → Precinct
+    // LA at 357 S Broadway), a same-site deeper link replacing its listing
+    // or root, a pin that moves within 150 m, and a blank filled in.
+    // Aggregator-sourced merges never change stored fields, so they never
+    // reach this. Returns null (no drift) or the facts block the deck card
+    // shows: { fields, reason, matchedBy, agree, sourcePageUrl, calendarUrl }.
+    // ---------------------------------------------------------------------
+    static getBigDriftPinRadiusKm() {
+        return 0.15;
+    }
+
+    // The "same title, another spelling" fold (resolveCalendarMergeByAuthority):
+    // venue tail and cover tail dropped, diacritics and entities folded,
+    // everything but letters and digits removed.
+    foldTitleForDrift(title, bar) {
+        const bare = this.stripCoverPartsFromTitle(this.stripVenueSuffixFromTitle(String(title || ''), bar)).title;
+        return this.normalizeIdentityText(this.foldDiacritics(this.decodeBasicHtmlEntities(bare)));
+    }
+
+    // Do two titles name the same party in different words? TRUE when they
+    // share a distinctive title token (getCrossSourceTitleTokens: venue,
+    // city, cadence and stop words already dropped; generic party
+    // vocabulary dropped here) or one token leads the other ("xposure" /
+    // "xposures"), or areTitlesSimilar's containment rung says so. FALSE is
+    // a rename.
+    titlesShareIdentity(titleA, titleB, bar) {
+        if (this.areTitlesSimilar(titleA, titleB)) return true;
+        const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bear', 'bears', 'presents',
+            'annual', 'tickets', 'dance', 'social', 'happy', 'hour', 'club', 'edition', 'show', 'special', 'live', 'closing',
+            'opening', 'official', 'afterparty', 'after']);
+        const barKey = this.normalizeBarNameKey(bar);
+        const tokens = (title) => this.getCrossSourceTitleTokens(title, barKey ? [barKey] : [])
+            .filter(token => token.length >= 3 && !generic.has(token) && !/^\d+$/.test(token));
+        const a = tokens(titleA);
+        const b = tokens(titleB);
+        if (a.length === 0 || b.length === 0) return false;
+        const leads = (x, y) => x.length >= 5 && y.length >= 5 && (x.startsWith(y) || y.startsWith(x));
+        return a.some(x => b.some(y => x === y || leads(x, y)));
+    }
+
+    assessMergeDrift(event) {
+        if (!event || typeof event !== 'object' || event._action !== 'merge') return null;
+        const calendar = event._original && event._original.calendar && typeof event._original.calendar === 'object'
+            ? event._original.calendar
+            : null;
+        const existing = event._existingEvent && typeof event._existingEvent === 'object' ? event._existingEvent : calendar;
+        if (!calendar || !existing) return null;
+        const text = (value) => String(value || '').trim();
+        const timezone = event.timezone || calendar.timezone || this.getCityTimezone(event.city) || null;
+        const fields = [];
+        const agree = [];
+
+        // 1. Title — beyond the spelling fold. A rename shares no word.
+        const savedTitle = text(existing.title || calendar.title);
+        const newTitle = text(event.title);
+        let rename = false;
+        if (savedTitle && newTitle && savedTitle !== newTitle
+            && this.foldTitleForDrift(savedTitle, calendar.bar || event.bar) !== this.foldTitleForDrift(newTitle, event.bar || calendar.bar)) {
+            rename = !this.titlesShareIdentity(savedTitle, newTitle, event.bar || calendar.bar);
+            fields.push({ field: 'title', from: savedTitle, to: newTitle, kind: rename ? 'rename' : 'reword' });
+        }
+
+        // 2. Start day — the local calendar day, not the clock.
+        const savedDay = this.normalizeEventDateLocal(existing.startDate || calendar.startDate, timezone) || '';
+        const newDay = this.normalizeEventDateLocal(event.startDate, timezone) || '';
+        if (savedDay && newDay && savedDay !== newDay) {
+            fields.push({ field: 'startDay', from: savedDay, to: newDay });
+        } else if (savedDay && savedDay === newDay) {
+            agree.push(`same night (${savedDay})`);
+        }
+
+        // 3. Venue — two named bars that are not one bar at one door. A
+        // placeholder, a blank, a contained spelling, or the same street
+        // line is the same place.
+        const savedBar = text(calendar.bar);
+        const newBar = text(event.bar);
+        const savedBarKey = SharedCore.isPlaceholderVenueText(savedBar) ? '' : this.normalizeBarNameKey(savedBar);
+        const newBarKey = SharedCore.isPlaceholderVenueText(newBar) ? '' : this.normalizeBarNameKey(newBar);
+        const sameStreet = this.areSameStreetLine(calendar.address, event.address);
+        if (savedBarKey && newBarKey) {
+            const sameBar = savedBarKey === newBarKey
+                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)));
+            if (sameBar) agree.push(`same bar (${newBar})`);
+            else if (sameStreet) agree.push(`same street (${text(event.address).split(',')[0]})`);
+            else fields.push({ field: 'bar', from: savedBar, to: newBar });
+        } else if (sameStreet) {
+            agree.push(`same street (${text(event.address).split(',')[0]})`);
+        }
+
+        // 4. Event link — url and website are one field; a same-site deeper
+        // page replacing its listing/root, or the same page respelled, is
+        // the same link.
+        const savedLink = text(calendar.website || existing.url || calendar.url);
+        const newLink = text(event.website || event.url);
+        if (savedLink && newLink) {
+            const sameLink = this.canonicalMergeUrl(savedLink) === this.canonicalMergeUrl(newLink)
+                || this.isSameSiteParentPathOf(savedLink, newLink)
+                || this.isSameSiteParentPathOf(newLink, savedLink);
+            if (sameLink) agree.push(`same event page (${this.canonicalMergeUrl(newLink) || newLink})`);
+            else fields.push({ field: 'url', from: savedLink, to: newLink });
+        }
+        const savedTicket = this.normalizeTicketUrlForIdentity(calendar.ticketUrl);
+        if (savedTicket && savedTicket === this.normalizeTicketUrlForIdentity(event.ticketUrl)) {
+            agree.push(`same ticket page (${savedTicket})`);
+        }
+
+        // 5. Pin — moved beyond the small radius. Added or removed is a fill.
+        const km = this.coordinatePairDistanceKm(existing.location || calendar.location, event.location);
+        if (km !== null) {
+            if (km > SharedCore.getBigDriftPinRadiusKm()) {
+                fields.push({ field: 'location', from: text(existing.location || calendar.location), to: text(event.location), km: Math.round(km * 1000) / 1000 });
+            } else {
+                agree.push(`same pin (${Math.round(km * 1000)} m apart)`);
+            }
+        }
+
+        const titleDrift = fields.find(entry => entry.field === 'title');
+        const big = rename || (titleDrift && fields.length >= 2) || fields.length >= 3;
+        if (!big) return null;
+        const labels = { title: 'title', startDay: 'start day', bar: 'venue', url: 'event link', location: 'pin' };
+        const names = fields.map(entry => labels[entry.field] || entry.field);
+        const listed = names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+        const reason = rename && fields.length === 1
+            ? 'title renamed (no shared word)'
+            : `${listed} changed${rename ? ' (title renamed)' : ''}`;
+        const scraper = event._original && event._original.scraper && typeof event._original.scraper === 'object' ? event._original.scraper : {};
+        return {
+            fields,
+            reason,
+            rename,
+            matchedBy: text(event._analysis && event._analysis.reason) || 'unknown',
+            agree,
+            sourcePageUrl: text(scraper._sourcePageUrl || event._sourcePageUrl || scraper.url || scraper.website),
+            calendarUrl: savedLink
+        };
+    }
+
+    // The gate's predicate: stamped big drift with no owner approval.
+    static isBigDriftWithheld(event) {
+        return Boolean(event && typeof event === 'object' && event._bigDriftWithheld && !event._ownerReviewApproved);
     }
 
     // "<Party> at <Venue>" — the listing convention of every aggregator row
@@ -1950,7 +2112,9 @@ class SharedCore {
         const store = this.rekeyOwnerDecisions(Array.isArray(decisions) ? decisions : []);
         for (const event of Array.isArray(analyzedEvents) ? analyzedEvents : []) {
             if (!event || typeof event !== 'object') continue;
-            if (SharedCore.filterEventsForExecution([event]).length !== 1) {
+            // The deck's view: a big-drift merge is a card, so it reaches the
+            // decision lookup below (approved → writes; otherwise withheld).
+            if (SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length !== 1) {
                 counts.withheld++;
                 continue;
             }
@@ -17578,10 +17742,23 @@ class SharedCore {
     // text ("View Event →") is not an event name, so the record stays fully
     // visible in results (flag, don't drop) but never reaches a write — see
     // getEventSanityFlags rule 8 and the 🚫 JUNK TITLE log at the stamp site.
-    static filterEventsForExecution(analyzedEvents) {
+    // options.offeringToOwner: the deck's own view — a big-drift merge is
+    // withheld from every AUTOMATIC write, but it is exactly what the deck
+    // exists to show, so the card builders (isOwnerReviewCandidate,
+    // applyOwnerDecisions) look through that one withhold. Nothing else
+    // is relaxed.
+    static filterEventsForExecution(analyzedEvents, options = {}) {
         if (!Array.isArray(analyzedEvents)) return [];
+        const offeringToOwner = Boolean(options && options.offeringToOwner);
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
+            // BIG DRIFT (assessMergeDrift, stamped in buildAnalyzedCalendarEvent):
+            // a merge that renames the saved event or moves its identity
+            // never auto-applies — the phone's normal flow, the headless
+            // orchestrator and the saved-run execute all withhold it. Only
+            // the deck's approval (_ownerReviewApproved, stamped by
+            // applyOwnerDecisions on the reviewed-run path) lets it write.
+            (offeringToOwner || !SharedCore.isBigDriftWithheld(event)) &&
             // Fully-past spans are display-only: nothing left to attend, so
             // the write is withheld at analysis (buildAnalyzedCalendarEvent
             // stamps _pastSpanWithheld + the span-fully-past review flag)
@@ -17670,6 +17847,7 @@ class SharedCore {
             '_announcementOnlyWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
+            '_bigDriftWithheld',
             '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
@@ -17716,6 +17894,10 @@ class SharedCore {
                 return `WITHHELD (rejected by owner${reason ? ` — ${reason}` : ''})`;
             }
             return 'WITHHELD (awaiting owner review)';
+        }
+        if (SharedCore.isBigDriftWithheld(event)) {
+            const reason = String(event._bigDriftWithheld.reason || '').trim();
+            return `WITHHELD (big drift — ${reason || 'identity changed'}; decide on the deck)`;
         }
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (event._slotYield) return `WITHHELD (${event._slotYield.cadence} night yields the slot to "${event._slotYield.to}")`;
@@ -20505,6 +20687,17 @@ class SharedCore {
                 analyzedEvent._mergeNoOp = changedBeyondNotes.length === 0 && notesIdentical;
                 if (analyzedEvent._mergeNoOp) {
                     console.log(`⏸️ MERGE: "${analyzedEvent.title || 'Unknown'}" produced no field changes — write skipped`);
+                } else {
+                    // BIG DRIFT — judged here, on the final payload, for the
+                    // same reason the no-op gate is: every later pass has run.
+                    // The stamp is what filterEventsForExecution withholds
+                    // and what the deck card shows (assessMergeDrift).
+                    const drift = this.assessMergeDrift(analyzedEvent);
+                    if (drift) {
+                        analyzedEvent._bigDriftWithheld = drift;
+                        const savedTitle = String((analyzedEvent._existingEvent && analyzedEvent._existingEvent.title) || analyzedEvent._original.calendar.title || 'Unknown');
+                        console.log(`🧭 BIG DRIFT: "${savedTitle}" → "${analyzedEvent.title || 'Unknown'}" — ${drift.reason}; matched by ${drift.matchedBy}; agrees on ${drift.agree.length > 0 ? drift.agree.join(', ') : 'nothing'} — withheld from every automatic write; decide on the deck`);
+                    }
                 }
             } else if (SharedCore.isOverrideCreate(analyzedEvent)) {
                 // Same gate for a single-night OVERRIDE of a saved series: it

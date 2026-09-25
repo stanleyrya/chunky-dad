@@ -10271,6 +10271,24 @@ test('write-policy: a _mergeNoOp merge sits in the already-saved pile and never 
   assert.equal(adapter.getWriteActionFromEvent(unstamped), 'update');
 });
 
+test('write-policy: a big-drift merge sits in the withheld pile with its reason, never promises an UPDATE, and is actionable again once the deck approves it', () => {
+  const adapter = buildAdapter();
+  const { SharedCore } = require('../shared-core');
+  const event = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  event._mergeNoOp = false;
+  event._bigDriftWithheld = { fields: [{ field: 'title', from: 'A', to: 'B', kind: 'rename' }], reason: 'title renamed (no shared word)', matchedBy: 'Key match found', agree: [] };
+  const placement = adapter.classifyEventForResultsSection(event);
+  assert.equal(placement.section, 'withheld');
+  assert.equal(placement.reason, '🧭 big drift — title renamed (no shared word) — decide on the deck');
+  assert.equal(adapter.getWriteActionFromEvent(event), 'withheld');
+  assert.deepEqual(SharedCore.filterEventsForExecution([event]), [], 'the pile and the gate agree');
+
+  const approved = { ...event, _ownerReviewApproved: { key: 'event|x', stampedAt: '2030-01-01T00:00:00.000Z' } };
+  assert.equal(adapter.classifyEventForResultsSection(approved).section, 'actionable', 'approved on the deck: the write is on');
+  assert.equal(adapter.getWriteActionFromEvent(approved), 'update');
+  assert.equal(SharedCore.filterEventsForExecution([approved]).length, 1);
+});
+
 test('write-policy: an empty _changes never outranks a false _mergeNoOp (GOLIDLOXX span-correction shape)', () => {
   const adapter = buildAdapter();
   // Run 20260828-105507: the calendar carried the same wrong 9PM→4PM end as
