@@ -3036,12 +3036,26 @@ class AiWebParser {
             // single-time/range skips above — same standard as the dated-line
             // span path's isUsable: a time node is never a listing title.
             if (this.isTimeOnlyLineText(line)) continue;
+            // A bare weekday is the card's date tag, not its name: a
+            // "06 / Sep / Sun / BEARS IN SPACE!!" card printed its day as
+            // three lines, the month line is a date signal and skipped
+            // above, and "Sun" was handed back as the listing's own title
+            // (akbarsilverlake.com/upcoming-events, run 20260925-110542 —
+            // the one-destination map labelled every card by weekday).
+            if (this.isBareWeekdayLine(line)) continue;
             if (/^https?:\/\//i.test(line)) continue;
             // First candidate decides: a plausible title is short; a long first
             // line is prose/description, so no hint is derived at all.
             return line.length <= this.extractionLimits.multiEventTitleMaxChars ? line : '';
         }
         return '';
+    }
+
+    // A line that is nothing but a weekday name — "Sun", "Sunday", "Sat.",
+    // "Mon," — the way listing cards print a date tag one token per line.
+    isBareWeekdayLine(line) {
+        const text = this.normalizeWhitespace(String(line || ''));
+        return /^(?:sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(?:day|sday|nesday|rsday|urday)?[.,]?$/i.test(text);
     }
 
     // The name span of a listing line that carries BOTH the event name and its
@@ -3146,6 +3160,10 @@ class AiWebParser {
             '\\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?'
                 + '|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
                 + '\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b',
+            // Day-first: "02 Sep", "26th September 2026" — the same
+            // adjacent-number rule, the other way round.
+            '\\b\\d{1,2}(?:st|nd|rd|th)?\\.?\\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?'
+                + '|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\b\\.?(?:,?\\s+\\d{4})?',
             // Numeric date: 5/23, 07.04, 12-25-2026
             '\\b(?:0?[1-9]|1[0-2])[\\/.-](?:0?[1-9]|[12]\\d|3[01])(?:[\\/.-](?:\\d{2}|\\d{4}))?\\b'
         ].join('|'), 'gi');
@@ -3669,6 +3687,23 @@ class AiWebParser {
             return { claimed, claimedByDate };
         };
 
+        // Every card the resolver finds for any window, by page span. A
+        // window that resolves to no card of its own but whose anchor sits
+        // INSIDE one of these is that card's text — the splitter's next
+        // window after a date-then-title card's title is the same card's
+        // tail (its date line, its time, its venue), and judged on its own
+        // it became a listing (synthetic Squarespace list: "Friday, July 17,
+        // 2026 / 11:00 PM / Red Room" under The Belly Party's card). Content
+        // overlap cannot say this — sibling cards share their furniture
+        // lines (category, times, calendar links, a recurring blurb).
+        const resolvedCardSpans = [];
+        for (const window of flatSegments) {
+            const card = cardResolver.resolveWindow(window);
+            if (card && !resolvedCardSpans.some(span => span.key === card.key)) resolvedCardSpans.push({ key: card.key, start: card.start, end: card.end });
+        }
+        const insideResolvedCard = (position) => position >= 0
+            && resolvedCardSpans.some(span => position >= span.start && position < span.end);
+
         const unclaimed = [];
         const unclaimedCards = [];
         const unclaimedCompact = [];
@@ -3679,6 +3714,10 @@ class AiWebParser {
             if (keys.length === 0) continue;
             if (!this.segmentHasDateSignal(lines)) continue;
             const card = cardResolver.resolveWindow(window);
+            if (!card && insideResolvedCard(cardResolver.locateWindow(window))) {
+                claimedCount++;
+                continue;
+            }
             const { claimed, claimedByDate } = claimedByStructured(card ? card.segment.lines : lines);
             if (claimed || claimedByDate) {
                 claimedCount++;
@@ -3776,6 +3815,7 @@ class AiWebParser {
                 unclaimedCards.push(card);
                 continue;
             }
+            if (insideResolvedCard(cardResolver.locateLine(line))) continue;
             const rowHtml = this.extractRawHtmlForMultiEventSegment(html, [line]) || line;
             // A row with a date and a name but no time and no link is a
             // fragment of an announcement, not a listing (owner, 2026-09-13:
@@ -3871,6 +3911,8 @@ class AiWebParser {
     // resolveWindow(window) / resolveLine(line) return
     // { key, start, end, segment } or null; results are memoized per
     // anchor so windows resolving to the same card share one key.
+    // locateWindow(window) / locateLine(line) return the anchor's page
+    // position (-1 when unlocatable).
     createCardWindowResolver(html, flatSegments, records = null) {
         const source = String(html || '');
         const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
@@ -3947,15 +3989,56 @@ class AiWebParser {
                     .map(text => this.normalizeWhitespace(text))
                     .filter(Boolean);
                 let elementLines = null;
-                const element = this.findEnclosingCardElement(source, cardOpens, position, position, (candidate) => {
+                let element = this.findEnclosingCardElement(source, cardOpens, position, position, (candidate) => {
                     const lines = linesOf(candidate);
                     if (!this.segmentHasDateSignal(lines) || !this.deriveSegmentListingTitle({ lines })) return false;
                     elementLines = lines;
                     return true;
                 });
                 if (element && elementLines) {
+                    // The nearest card-shaped element can be the card's own
+                    // info block — Squarespace's <div class="eventlist-column-
+                    // info"> holds the title, the date and the link, while
+                    // the thumbnail sits in a sibling <a> under the
+                    // <article>. Climb to an enclosing card-shaped element
+                    // that is the SAME listing — it adds no title element
+                    // and no date, only resources and furniture — and stop
+                    // at the first that is not (the list container).
+                    const titleCount = this.countMultiEventEntryTitleElements(source.slice(element.start, element.end));
+                    const dateCount = this.countMultiEventDateSignals(elementLines);
+                    for (let i = cardOpens.length - 1; i >= 0; i--) {
+                        const open = cardOpens[i];
+                        if (open.start >= element.start) continue;
+                        const end = this.findElementCloseIndex(source, open.tag, open.start);
+                        if (end < element.end) continue;
+                        const outer = { tag: open.tag, start: open.start, end };
+                        const outerLines = linesOf(outer);
+                        const sameListing = this.countMultiEventEntryTitleElements(source.slice(outer.start, outer.end)) === titleCount
+                            && this.countMultiEventDateSignals(outerLines) === dateCount;
+                        if (!sameListing) break;
+                        element = outer;
+                        elementLines = outerLines;
+                    }
                     const titlesInside = windowTitleAnchors.filter(anchor => anchor.position >= element.start && anchor.position < element.end).length;
                     const elementHtml = source.slice(element.start, element.end);
+                    // One listing per card, by the page's own markup where
+                    // it has any: an element that names itself exactly once
+                    // (one heading / title-classed element, nested ones
+                    // merged) and gives THIS window's title as that name is
+                    // one card, whatever the text splitter cut it into. On a
+                    // date-then-title card the splitter's second window
+                    // opens at the card's date line and its "title" is the
+                    // venue line after it ("Friday, July 17, 2026 / 10:00 PM
+                    // / Red Room" under The Belly Party's <h1> on
+                    // www.massbearsandcubs.org/events), so counting window
+                    // titles alone refused every such card. A list container
+                    // with one heading of its own over headingless cards
+                    // names something else, not the window, and is still
+                    // judged by the titles inside it.
+                    const titleElements = this.findMultiEventEntryTitleElements(elementHtml);
+                    const namesThisWindowOnce = this.countMultiEventEntryTitleElements(elementHtml) === 1
+                        && titleElements.some(titleElement => position >= element.start + titleElement.start && position < element.start + titleElement.end);
+                    const oneListing = namesThisWindowOnce || titlesInside <= 1;
                     // The structured tier's floor, unchanged: a card under
                     // the character floor is a scrap unless it identifies
                     // itself — its primary destination is one no other
@@ -3964,7 +4047,7 @@ class AiWebParser {
                     // mapMultiEventGroupIdentityLinks).
                     const clearsFloor = elementLines.join('\n').length >= this.extractionLimits.multiEventMinSegmentChars
                         || this.multiEventElementIdentifiesItself(source, elementHtml);
-                    if (clearsFloor && this.countMultiEventDateSignals(elementLines) <= 2 && titlesInside <= 1) {
+                    if (clearsFloor && this.countMultiEventDateSignals(elementLines) <= 2 && oneListing) {
                         resolved = {
                             key: `${element.start}:${element.end}`,
                             start: element.start,
@@ -3981,7 +4064,11 @@ class AiWebParser {
             return resolved;
         };
         const resolveWindow = (window) => resolveLine(anchorLineOf(window));
-        const resolver = { resolveLine, resolveWindow, pageHasCards: false };
+        // Where a line / a window's anchor sits on the page (-1 when it
+        // cannot be located), for callers that judge by position.
+        const locateLine = (line) => anchorPositionOf(line);
+        const locateWindow = (window) => anchorPositionOf(anchorLineOf(window));
+        const resolver = { resolveLine, resolveWindow, locateLine, locateWindow, pageHasCards: false };
         // Whether the page has card markup at all decides how an
         // unresolvable window is judged (see the chimera guard).
         resolver.pageHasCards = windows.some(window => Boolean(resolveWindow(window)));
@@ -4683,16 +4770,48 @@ class AiWebParser {
             grouped.set(resourceGroup.signature, resourceGroup.entries);
         }
 
-        return Array.from(grouped.entries())
+        const groups = Array.from(grouped.entries())
             .map(([signature, entries]) => {
                 const outermost = this.keepOutermostGroupEntries(entries);
                 return {
                     signature,
                     entries: outermost,
-                    eventLikeCount: outermost.filter(entry => this.isMultiEventLikeHtml(entry.html)).length
+                    eventLikeCount: outermost.filter(entry => this.isMultiEventLikeHtml(entry.html)).length,
+                    identifiedCount: this.mapMultiEventGroupIdentityLinks(outermost).filter(Boolean).length
                 };
             })
-            .filter(group => group.entries.length >= 2 && group.eventLikeCount >= 2)
+            .filter(group => group.entries.length >= 2 && group.eventLikeCount >= 2);
+        // A fence-post group cuts ACROSS the page's cards when its anchors
+        // sit inside the entries of a card-like container group, one or a
+        // few per card: each slice then runs from inside one card into the
+        // next, and carries the first card's poster over the second card's
+        // text (www.3dollarbillbk.com/rsvp: 74 <figure> anchors inside 67
+        // <article> cards, and the figure group outranked the articles by
+        // one event-like slice). The element-bounded cards are the page's
+        // own segmentation; the cut ranks behind every group that is not
+        // one. A wrapper holding several cards (a day section over three
+        // parties on whereto.party/in/south-korea, a month section over
+        // ten cards) is not the cards: when any container entry holds two
+        // event-like slices' anchors, nothing is demoted. A card's own
+        // extra image anchors (a flyer carousel) do not count — the slice
+        // between two images of one card names no event.
+        const cardLikeContainers = groups.filter(group => /^container:/.test(group.signature) && group.eventLikeCount * 2 >= group.entries.length);
+        for (const group of groups) {
+            group.crossesCards = false;
+            if (/^container:/.test(group.signature)) continue;
+            const anchorAt = (anchor) => (Number.isFinite(anchor.anchorStart) ? anchor.anchorStart : anchor.start);
+            group.crossesCards = cardLikeContainers.some(container => {
+                let holding = 0;
+                for (const entry of container.entries) {
+                    const inside = group.entries.filter(anchor => anchorAt(anchor) > entry.start && anchorAt(anchor) < entry.end);
+                    if (inside.length === 0) continue;
+                    if (inside.filter(anchor => this.isMultiEventLikeHtml(anchor.html)).length >= 2) return false;
+                    holding++;
+                }
+                return holding * 2 >= group.entries.length;
+            });
+        }
+        return groups
             .sort((a, b) => {
                 // A card group is PREDOMINANTLY events; a scaffolding group
                 // merely contains them. Two real listings make the difference
@@ -4714,8 +4833,34 @@ class AiWebParser {
                 const aIsCards = a.eventLikeCount * 2 >= a.entries.length;
                 const bIsCards = b.eventLikeCount * 2 >= b.entries.length;
                 if (aIsCards !== bIsCards) return aIsCards ? -1 : 1;
+                if (a.crossesCards !== b.crossesCards) return a.crossesCards ? 1 : -1;
                 if (b.eventLikeCount !== a.eventLikeCount) return b.eventLikeCount - a.eventLikeCount;
+                // Same number of events: a group whose entries MOSTLY
+                // identify themselves — each holding a destination no
+                // sibling holds (mapMultiEventGroupIdentityLinks) — is the
+                // page's own card list and outranks one that does not.
+                // akbarsilverlake.com/upcoming-events: 17 <article> cards,
+                // each linking its own event page, and a fence-post group
+                // cut between the cards' media divs that touches the same
+                // 17 events but holds no card's own link — it used to win
+                // on raw entry count (20 anchors to 18 articles) and every
+                // window took the NEXT card's link. A property of the group,
+                // not a count: a fence-post group's last slice ends at its
+                // own element and keeps a link the others lost, and that
+                // one entry must not outrank a card list with none
+                // (eagleportland.com/events: 92 articles, 0 identified).
+                const aIdentifies = a.identifiedCount * 2 >= a.entries.length;
+                const bIdentifies = b.identifiedCount * 2 >= b.entries.length;
+                if (aIdentifies !== bIdentifies) return aIdentifies ? -1 : 1;
                 if (b.entries.length !== a.entries.length) return b.entries.length - a.entries.length;
+                // A full tie: the element-bounded group over the fence-post
+                // reconstruction of the same cards (hereticatlanta.com/events:
+                // the info-box divs as container entries and as fence-post
+                // anchors — the fence-post copy's last slice has no next
+                // anchor and runs into the footer).
+                const aIsContainer = /^container:/.test(a.signature);
+                const bIsContainer = /^container:/.test(b.signature);
+                if (aIsContainer !== bIsContainer) return aIsContainer ? -1 : 1;
                 return a.entries[0].start - b.entries[0].start;
             });
     }
@@ -4726,13 +4871,44 @@ class AiWebParser {
     // slice really does hold more than one thing; one or zero means it is a
     // single card, whatever its text looks like line by line.
     countMultiEventEntryTitleElements(html) {
-        const source = String(html || '');
-        if (!source) return 0;
-        const headings = source.match(/<h[1-6]\b[^>]*>/gi) || [];
-        const titled = source.match(/<[a-z0-9]+\b[^>]*\b(?:class|data-hook|data-testid)\s*=\s*["'][^"']*\btitle\b[^"']*["'][^>]*>/gi) || [];
+        const elements = this.findMultiEventEntryTitleElements(html);
         // A heading that is itself the title-classed element must not count
         // twice, so take whichever signal names more.
-        return Math.max(headings.length, titled.length);
+        const headings = elements.filter(element => element.isHeading).length;
+        const titled = elements.filter(element => element.isTitled).length;
+        return Math.max(headings, titled);
+    }
+
+    // The elements that name something in a card slice — heading tags and
+    // title-classed/-hooked elements — as { tag, start, end, isHeading,
+    // isTitled } in document order, with NESTED ones merged into the
+    // outermost: a title element inside a title element is the same name
+    // printed once, not two things. Squarespace event lists wrap the
+    // card's link in its heading (<h1 class="eventlist-title"><a
+    // class="eventlist-title-link">Monthly Trivia</a></h1>), and counting
+    // both split every card of www.massbearsandcubs.org/events at its own
+    // date line — 49 cards became 62 windows, each title left in the
+    // half-window above its night (run 20260925-110542).
+    findMultiEventEntryTitleElements(html) {
+        const source = String(html || '');
+        if (!source) return [];
+        const elements = [];
+        const pattern = /<([a-z][a-z0-9]*)\b([^>]*)>/gi;
+        let coverEnd = -1;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            const tag = match[1].toLowerCase();
+            const attrs = match[2] || '';
+            const isHeading = /^h[1-6]$/.test(tag);
+            const isTitled = /\b(?:class|data-hook|data-testid)\s*=\s*["'][^"']*\btitle\b[^"']*["']/i.test(attrs);
+            if (!isHeading && !isTitled) continue;
+            if (match.index < coverEnd) continue;
+            const balancedEnd = /\/\s*$/.test(attrs) ? -1 : this.findElementCloseIndex(source, tag, match.index);
+            const end = balancedEnd > 0 ? balancedEnd : match.index + match[0].length;
+            elements.push({ tag, start: match.index, end, isHeading, isTitled });
+            coverEnd = end;
+        }
+        return elements;
     }
 
     // Sibling cards, never a card and its own insides. One event card is never
@@ -5058,8 +5234,114 @@ class AiWebParser {
         console.log(`🤖 AI Web: Segment budget ${budget} for ${sourceLabel} (${datedCandidateCount} dated candidate item(s), baseline ${this.extractionLimits.multiEventMaxSegments}, ceiling ${this.extractionLimits.multiEventMaxSegmentsDenseCeiling}) — items beyond the budget produce no events`);
     }
 
+    // How many DATES a segment states — the "at most a start and an end"
+    // gate counts dates, not date lines. Listing cards print one date
+    // several ways: a month tag ("Sep"), an end tag ("to Sep 27"), the
+    // start and end lines ("Sat, Sep 26, 2026" / "Sun, Sep 27, 2026"), and
+    // an excerpt that repeats the night in prose. Counting lines read that
+    // card as four dates and refused it (www.massbearsandcubs.org/events:
+    // 17 of 49 cards, every multi-day one; run 20260925-110542). A line
+    // restates a date when it carries no clock time, every date it names
+    // is named by another line, and it is a TAG or PROSE — a bare month
+    // ("Sep"), an end tag ("to Sep 27"), a sentence — not a date printed
+    // as a line of its own: a day section holding three same-night cards
+    // (whereto.party/in/bangkok: "Thursday, 8 October" / … / "Thu, 8
+    // October 2026" / …) prints the night once per card, and each such
+    // line is a listing's own date line. Lines whose date cannot be keyed
+    // (multilingual or unusual forms) and lines with a clock time count
+    // one each, as before: two timed lines on one night can be two
+    // listings.
     countMultiEventDateSignals(lines) {
-        return (Array.isArray(lines) ? lines : []).filter(line => this.hasMultiEventDateSignal(line)).length;
+        const dated = (Array.isArray(lines) ? lines : []).filter(line => this.hasMultiEventDateSignal(line));
+        if (dated.length <= 1) return dated.length;
+        const clockPattern = /\b\d{1,2}:\d{2}\b|\b\d{1,2}\s*[ap]\.?m\b/i;
+        const keyed = dated.map(line => ({ line, ...this.extractMultiEventDateLineKeys(line) }));
+        const statedDates = new Set();
+        keyed.forEach(entry => entry.dates.forEach(key => statedDates.add(key)));
+        const statedMonths = new Set(Array.from(statedDates).map(key => key.split('-')[0]));
+        let count = 0;
+        const counted = new Set();
+        // Date lines proper first — timed, or nothing but a date — one each;
+        // then the tags and the prose, which count only the dates no line
+        // above them stated.
+        const statements = keyed.filter(entry => entry.dates.length > 0 && (clockPattern.test(entry.line) || this.isPureDateLine(entry.line)));
+        for (const entry of statements) {
+            count++;
+            entry.dates.forEach(key => counted.add(key));
+        }
+        for (const entry of keyed) {
+            if (statements.includes(entry)) continue;
+            const timed = clockPattern.test(entry.line);
+            if (entry.dates.length > 0) {
+                const fresh = entry.dates.filter(key => !counted.has(key));
+                count += fresh.length;
+                entry.dates.forEach(key => counted.add(key));
+                continue;
+            }
+            // No day named: a bare month tag restates a dated line in that
+            // month; anything else is a date signal this cannot key.
+            const bareMonthRestated = !timed && entry.months.length > 0 && entry.months.every(month => statedMonths.has(month));
+            if (!bareMonthRestated) count++;
+        }
+        return count;
+    }
+
+    // A line that is nothing but a date: weekday, day, month, year and
+    // separators ("Thu, 8 October 2026", "Sat, Sep 26, 2026", "Saturday,
+    // 26 September") — no other word.
+    isPureDateLine(line) {
+        const text = this.foldDiacritics(this.normalizeWhitespace(String(line || '')));
+        if (!text || !/\d/.test(text)) return false;
+        const vocab = this.getMultilingualDateVocabulary();
+        const stripped = text
+            .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b\.?/gi, ' ')
+            .replace(new RegExp(`\\b(?:${vocab.monthAlternation})\\b\\.?`, 'gi'), ' ')
+            .replace(/\b(?:sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(?:day|sday|nesday|rsday|urday)?\b\.?/gi, ' ')
+            .replace(vocab.weekdayNamePattern, ' ')
+            .replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/gi, ' ')
+            .replace(/\b(?:19|20)?\d{2}\b/g, ' ');
+        return !/[a-z]/i.test(stripped);
+    }
+
+    // The calendar dates a line names, keyed "month-day" (month index 1-12,
+    // year ignored), plus the bare months it names with no day. Month names
+    // in either order ("Sep 26", "26 Sep", "September 26th") and numeric
+    // month/day ("9/26"); a day range ("3–7 Jun", "Jun 3-7") names both
+    // ends. Returns { dates: [], months: [] }.
+    extractMultiEventDateLineKeys(line) {
+        const text = this.foldDiacritics(String(line || ''));
+        const monthNames = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+        const monthIndexOf = (name) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+            .indexOf(String(name || '').slice(0, 3).toLowerCase()) + 1;
+        const dayRange = '(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*[-\u2013\u2014]\\s*(\\d{1,2})(?:st|nd|rd|th)?)?';
+        const dates = new Set();
+        const months = new Set();
+        const covered = [];
+        let match;
+        const addDays = (month, first, second) => {
+            dates.add(`${month}-${parseInt(first, 10)}`);
+            if (second) dates.add(`${month}-${parseInt(second, 10)}`);
+        };
+        const monthFirst = new RegExp(`\\b${monthNames}\\.?\\s+${dayRange}\\b`, 'gi');
+        while ((match = monthFirst.exec(text)) !== null) {
+            addDays(monthIndexOf(match[1]), match[2], match[3]);
+            covered.push([match.index, match.index + match[0].length]);
+        }
+        const dayFirst = new RegExp(`\\b${dayRange}\\.?\\s+${monthNames}\\b`, 'gi');
+        while ((match = dayFirst.exec(text)) !== null) {
+            addDays(monthIndexOf(match[3]), match[1], match[2]);
+            covered.push([match.index, match.index + match[0].length]);
+        }
+        const insideCovered = (index) => covered.some(([start, end]) => index >= start && index < end);
+        const numeric = /\b(0?[1-9]|1[0-2])[\/.-](0?[1-9]|[12]\d|3[01])(?:[\/.-](?:\d{2}|\d{4}))?\b/g;
+        while ((match = numeric.exec(text)) !== null) {
+            if (!insideCovered(match.index)) dates.add(`${parseInt(match[1], 10)}-${parseInt(match[2], 10)}`);
+        }
+        const bareMonth = new RegExp(`\\b${monthNames}\\b`, 'gi');
+        while ((match = bareMonth.exec(text)) !== null) {
+            if (!insideCovered(match.index)) months.add(String(monthIndexOf(match[1])));
+        }
+        return { dates: Array.from(dates), months: Array.from(months) };
     }
 
     hasMultiEventScriptLikeText(lines) {
@@ -5177,6 +5459,108 @@ class AiWebParser {
         return html;
     }
 
+    // The same fence-post leak for the next card's OPENING markup: a slice
+    // that runs from one card's anchor to the next card's anchor ends with
+    // the tail of its own card and then whatever the next card opens
+    // BEFORE its anchor — its <article>, its <a href="…"> — with no
+    // visible text between. akbarsilverlake.com/upcoming-events (run
+    // 20260925-110542): the anchors are each card's media div, every card
+    // opens <article><a href="/event/NAME/"> before it, so every slice
+    // carried the NEXT card's link and BEARS IN SPACE was linked to
+    // /event/learn-the-words-bitch/. Positional rule, like the JSON-LD
+    // trim: after the slice's last visible text, the first opening tag
+    // whose element never closes inside the slice begins the next card —
+    // truncate there. Closing tags in that tail (the card's own </a>,
+    // </article>) are kept; a slice whose every trailing element closes
+    // is untouched.
+    trimTrailingUnclosedOpeningsFromFencePostSlice(entryHtml) {
+        const html = String(entryHtml || '');
+        if (!html) return html;
+        // Script and style bodies are neither text nor markup here: a
+        // "2E3<a?2300-a" inside inline JS is not an opening tag (whereto.party
+        // /in/tokyo: the last slice, running to the page end, was cut inside
+        // its trailing <script> and the JS became the card's visible text).
+        const scan = this.blankScriptAndStyleContents(html);
+        const tagPattern = /<[^>]*>/g;
+        let lastTextEnd = 0;
+        let last = 0;
+        let match;
+        while ((match = tagPattern.exec(scan)) !== null) {
+            if (scan.slice(last, match.index).trim()) lastTextEnd = match.index;
+            last = match.index + match[0].length;
+        }
+        if (scan.slice(last).trim()) return html;
+        const tail = scan.slice(lastTextEnd);
+        const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+        const openPattern = /<([a-z][a-z0-9]*)\b([^>]*)>/gi;
+        let open;
+        while ((open = openPattern.exec(tail)) !== null) {
+            const tag = open[1].toLowerCase();
+            if (voidTags.has(tag) || /\/\s*$/.test(open[2] || '')) continue;
+            if (this.findElementCloseIndex(tail, tag, open.index) < 0) {
+                return html.slice(0, lastTextEnd + open.index);
+            }
+        }
+        return html;
+    }
+
+    // The same markup with every <script> and <style> body replaced by
+    // spaces of the same length, so tag scans skip their contents while
+    // every position still maps onto the original.
+    blankScriptAndStyleContents(html) {
+        const source = String(html || '');
+        // Called once per fence-post anchor with the whole page (and per
+        // slice with the slice): keep the last few results.
+        const cache = this._blankedMarkupCache || (this._blankedMarkupCache = []);
+        const hit = cache.find(entry => entry.source === source);
+        if (hit) return hit.blanked;
+        const blanked = source.replace(/(<(script|style)\b[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi,
+            (whole, open, tag, body, close) => open + ' '.repeat(body.length) + close);
+        cache.push({ source, blanked });
+        if (cache.length > 4) cache.shift();
+        return blanked;
+    }
+
+    // The mirror of that trim, at the HEAD of the slice: the card's own
+    // wrappers open just before the anchor — events.humanitix.com wraps
+    // each card as <a class="EventCard" href="…"><div class="banner">
+    // <picture>…, so a slice anchored on the <picture> began inside the
+    // card's own link and never held its href (it held the NEXT card's,
+    // until the tail trim above took that away). An opening tag that
+    // immediately precedes the anchor (whitespace only between) and whose
+    // element closes inside the slice is the card's own wrapper: walk
+    // back over the run of such tags and start the slice at the outermost.
+    // Returns the new start (anchorStart when there is nothing to take).
+    extendFencePostSliceStart(source, anchorStart, end) {
+        const html = this.blankScriptAndStyleContents(source);
+        let start = anchorStart;
+        for (let pass = 0; pass < 16; pass++) {
+            // Index arithmetic, never a regex over the page prefix: blanked
+            // script bodies are long runs of spaces and a trailing-space
+            // regex goes quadratic on them.
+            let position = start;
+            while (position > 0 && /\s/.test(html[position - 1])) position--;
+            if (position === 0 || html[position - 1] !== '>') break;
+            // Comments between wrapper and anchor (a framework's hydration
+            // markers) are not markup of their own: step over them.
+            if (html.slice(Math.max(0, position - 3), position) === '-->') {
+                const commentStart = html.lastIndexOf('<!--', position);
+                if (commentStart < 0) break;
+                start = commentStart;
+                continue;
+            }
+            const tagStart = html.lastIndexOf('<', position - 1);
+            if (tagStart < 0) break;
+            const tag = html.slice(tagStart, position);
+            const open = tag.match(/^<([a-z][a-z0-9]*)\b([^>]*)>$/i);
+            if (!open || /\/\s*$/.test(open[2] || '')) break;
+            const closeIndex = this.findElementCloseIndex(html, open[1].toLowerCase(), tagStart);
+            if (closeIndex < 0 || closeIndex > end) break;
+            start = tagStart;
+        }
+        return start;
+    }
+
     // End offset of the element that opens at `lastStart`, but only when the
     // PREVIOUS window (previousStart → lastStart) is itself exactly one such
     // element plus whitespace. Null otherwise — a window that is not an
@@ -5207,6 +5591,54 @@ class AiWebParser {
         if (previousEnd === null || previousEnd > lastStart) return null;
         if (source.slice(previousEnd, lastStart).trim() !== '') return null;
         return elementEndFrom(lastStart);
+    }
+
+    // One fence-post entry: the slice from this anchor to the next one,
+    // then made the CARD rather than the cut —
+    //  - the LAST window has no next anchor to stop it, so it ran on
+    //    through whatever follows the list (sf-eagle.com/events/: the final
+    //    card took the empty-state line, the "sync to your calendar" strip
+    //    and the footer's social links with it); when the window before it
+    //    is exactly one element, the cards ARE elements and the last one
+    //    ends at its own balanced close too;
+    //  - the next card's JSON-LD and opening tags at the tail are trimmed
+    //    (trimTrailingJsonLdFromFencePostSlice,
+    //    trimTrailingUnclosedOpeningsFromFencePostSlice);
+    //  - the card's own wrappers opened just before the anchor are taken
+    //    (extendFencePostSliceStart), never past the previous entry's end.
+    // Records `entryStart` / `entryEnd` on the anchor for the next entry's
+    // sake and returns { html, start, anchorStart, end, kind }.
+    buildFencePostEntry(source, groupAnchors, index, kind) {
+        const anchor = groupAnchors[index];
+        const nextAnchor = groupAnchors[index + 1];
+        const previous = index > 0 ? groupAnchors[index - 1] : null;
+        let end = nextAnchor
+            ? nextAnchor.start
+            : Math.min(source.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+        if (!nextAnchor && previous) {
+            const ownEnd = this.findOwnElementEndForLastWindow(source, anchor.start, previous.start);
+            if (ownEnd !== null && ownEnd < end) end = ownEnd;
+        }
+        const trimmedHtml = this.trimTrailingUnclosedOpeningsFromFencePostSlice(
+            this.trimTrailingJsonLdFromFencePostSlice(source.slice(anchor.start, end)));
+        end = anchor.start + trimmedHtml.length;
+        const previousEnd = previous && Number.isFinite(previous.entryEnd) ? previous.entryEnd : 0;
+        const start = Math.max(previousEnd, this.extendFencePostSliceStart(source, anchor.start, end));
+        // The last window, once it starts at its own wrapper: the same
+        // one-element rule, judged on the wrappers the entries now start at.
+        if (!nextAnchor && previous && start < anchor.start && Number.isFinite(previous.entryStart)) {
+            const ownEnd = this.findOwnElementEndForLastWindow(source, start, previous.entryStart);
+            if (ownEnd !== null && ownEnd < end) end = ownEnd;
+        }
+        anchor.entryStart = start;
+        anchor.entryEnd = end;
+        return {
+            html: source.slice(start, end),
+            start,
+            anchorStart: anchor.start,
+            end,
+            kind
+        };
     }
 
     extractRepeatedMultiEventResourceGroups(html) {
@@ -5242,31 +5674,7 @@ class AiWebParser {
         const groups = [];
         for (const [signature, groupAnchors] of bySignature.entries()) {
             if (groupAnchors.length < 2) continue;
-            const entries = groupAnchors.map((anchor, index) => {
-                const nextAnchor = groupAnchors[index + 1];
-                let end = nextAnchor
-                    ? nextAnchor.start
-                    : Math.min(source.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
-                // The LAST window has no next anchor to stop it, so it ran on
-                // through whatever follows the list — sf-eagle.com/events/: the
-                // final card (<a class="card event-card">) took the empty-state
-                // line, the "sync to your calendar" strip and the footer's
-                // social links with it. When the window before it is exactly
-                // one element (it ends on the close tag of the tag it opens
-                // with), the cards ARE elements: the last one ends at its own
-                // balanced close too.
-                if (!nextAnchor && index > 0) {
-                    const ownEnd = this.findOwnElementEndForLastWindow(source, anchor.start, groupAnchors[index - 1].start);
-                    if (ownEnd !== null && ownEnd < end) end = ownEnd;
-                }
-                const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(source.slice(anchor.start, end));
-                return {
-                    html: entryHtml,
-                    start: anchor.start,
-                    end: anchor.start + entryHtml.length,
-                    kind: 'resource'
-                };
-            });
+            const entries = groupAnchors.map((anchor, index) => this.buildFencePostEntry(source, groupAnchors, index, 'resource'));
             groups.push({ signature, entries });
         }
         for (const linkGroup of this.extractRepeatedMultiEventLinkGroups(source)) {
@@ -5339,26 +5747,7 @@ class AiWebParser {
         const groups = [];
         for (const [signature, groupAnchors] of bySignature.entries()) {
             if (groupAnchors.length < 2) continue;
-            const entries = groupAnchors.map((anchor, index) => {
-                const nextAnchor = groupAnchors[index + 1];
-                let end = nextAnchor
-                    ? nextAnchor.start
-                    : Math.min(text.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
-                // Same last-window rule as the resource groups: when the
-                // window before it is exactly one element, the last card ends
-                // at its own close instead of running into the page footer.
-                if (!nextAnchor && index > 0) {
-                    const ownEnd = this.findOwnElementEndForLastWindow(text, anchor.start, groupAnchors[index - 1].start);
-                    if (ownEnd !== null && ownEnd < end) end = ownEnd;
-                }
-                const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(text.slice(anchor.start, end));
-                return {
-                    html: entryHtml,
-                    start: anchor.start,
-                    end: anchor.start + entryHtml.length,
-                    kind: 'resource-link'
-                };
-            });
+            const entries = groupAnchors.map((anchor, index) => this.buildFencePostEntry(text, groupAnchors, index, 'resource-link'));
             groups.push({ signature, entries });
         }
         return groups;
@@ -5892,6 +6281,15 @@ class AiWebParser {
     // — before any date or title line — are dropped as chrome; the terminal
     // CTA is the first one AFTER content. A card with no content line at all
     // keeps the old first-CTA rule.
+    //
+    // A CTA that a DATE line still follows is not terminal either: a card
+    // that prints its day header, then its ticket button, then its name,
+    // venue and dated time (whereto.party's city feeds: "Saturday, 26
+    // September / Tickets / Drip KL presents Yusef Kifah / … / Sat, 26
+    // September 2026 · 22:00") was cut to the header and the button. The
+    // terminal CTA is the first one after the card's last date line; a
+    // bare title after a CTA (the next card's name on a title-then-date
+    // list) still ends the window there.
     trimLinesAfterTerminalCallToAction(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
@@ -5907,11 +6305,14 @@ class AiWebParser {
         const withoutLeadingCtas = normalizedLines.filter((line, index) =>
             index >= firstContentIndex || !this.isMultiEventCallToActionLine(line));
         const contentIndex = withoutLeadingCtas.findIndex(isContentLine);
+        let lastDateIndex = -1;
+        withoutLeadingCtas.forEach((line, index) => { if (this.hasMultiEventDateSignal(line)) lastDateIndex = index; });
+        const anchorIndex = Math.max(contentIndex, lastDateIndex);
         const terminalCtaOffset = withoutLeadingCtas
-            .slice(contentIndex + 1)
+            .slice(anchorIndex + 1)
             .findIndex(line => this.isMultiEventCallToActionLine(line));
         if (terminalCtaOffset < 0) return withoutLeadingCtas;
-        return withoutLeadingCtas.slice(0, contentIndex + 1 + terminalCtaOffset + 1);
+        return withoutLeadingCtas.slice(0, anchorIndex + 1 + terminalCtaOffset + 1);
     }
 
     isMultiEventCallToActionLine(value) {
@@ -6792,7 +7193,8 @@ class AiWebParser {
             monthAdjacentPattern,
             weekdayHeaderPattern,
             weekdayAbbrevHeaderPattern,
-            monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`)
+            monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`),
+            weekdayNamePattern: new RegExp(`\\b(?:${alternation(weekdaysFull)}|${alternation(weekdaysAbbrev)})\\b\\.?`, 'gi')
         };
         return this._multilingualDateVocabulary;
     }
