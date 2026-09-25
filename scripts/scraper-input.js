@@ -278,6 +278,25 @@ const scraperConfig = {
       urls: ["https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears"],
       alwaysBear: false,
     },
+    {
+      name: "Bear World Magazine",
+      // Bear press (WordPress). Its "events" category is one request: the
+      // site's own REST posts endpoint answers the ten latest articles with
+      // their bodies. Most are recaps and announcements; the monthly
+      // roundups ("Bear nights and events in the USA & Canada this July!")
+      // list a hundred nights as one sentence each under a heading per city,
+      // and run/festival announcements carry their schedules the same way.
+      // The article-feed door turns the payload into pages and the
+      // listing-prose reader reads the sentences — nothing here names a
+      // month, a city or a post. Editorial, so the bear check decides.
+      // siteRole "aggregator": discovery only — records never link back
+      // here and lose every contested field to the event's own source.
+      siteRole: "aggregator",
+      aggregatorHosts: ["bearworldmag.com"],
+      urls: ["https://bearworldmag.com/wp-json/wp/v2/posts?categories=10&per_page=10&_fields=id,date,modified,link,title,content"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+    },
     // ── Added 2026-09-12 from promoter discovery (organizers behind events
     // the aggregators already carried). Each is read through a door the
     // crawler finds itself — no per-site code.
