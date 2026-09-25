@@ -1309,13 +1309,15 @@ class AiWebParser {
             // more: a MEC listing page marks up its featured/upcoming subset
             // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
             // An article that LISTS events (see collectListingProseEvents)
-            // outranks whatever structured data the article page marks up
-            // about itself (a WebPage/Article node is not its events).
+            // is read only when nothing structured describes the page's
+            // events: every calendar widget, feed and JSON-LD Event node
+            // outranks prose (run 20260925-110542: 92 prose lines from
+            // Precinct's card blurbs displaced its 153 EventON cards). An
+            // Article page's own JSON-LD (a WebPage/Article node) is not
+            // an event, so completeJsonLdEvents is empty there.
             const listingProseEvents = jsonApiPayload === null ? this.collectListingProseEvents(html, sourceUrl, cityConfig) : [];
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
-                : (listingProseEvents.length > 0
-                    ? 'listing-prose'
                 : (eventOnEvents.length > 0 && eventOnEvents.length >= completeJsonLdEvents.length
                     ? 'eventon'
                 : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
@@ -1326,7 +1328,8 @@ class AiWebParser {
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
-                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))))))));
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice'
+                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
                 : (structuredSource === 'listing-prose'
@@ -8600,6 +8603,11 @@ class AiWebParser {
         const before = source.slice(0, match.index).replace(/\s+(?:on|from)\s*$/i, '');
         // "Dates: September 17–20" — a label before the date is not a party.
         if (/:\s*$/.test(before)) return null;
+        // Listing prose names the party FIRST. A line that opens with its
+        // date ("Sat, Sep 26 F8 Nightclub & Bar MORE INFO" — a tour list's
+        // card text, chunk-party.com, run 20260925-110542) is a card the
+        // splitter reads, not a sentence.
+        if (!before.trim()) return null;
         let after = source.slice(match.index + match[0].length);
         // "(from 1pm–7pm)" / "at 9pm" after the date states the clock.
         let time = '';
@@ -8690,6 +8698,7 @@ class AiWebParser {
         const blocks = [...String(body || '').matchAll(/<(h[1-4]|p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi)];
         const rows = [];
         let heading = '';
+        let paragraphs = 0;
         for (const block of blocks) {
             const tag = block[1].toLowerCase();
             const inner = block[2];
@@ -8704,11 +8713,17 @@ class AiWebParser {
             }
             const link = (inner.match(/<a\b[^>]*href=["']([^"']+)["']/i) || [])[1] || '';
             const text = decode(inner.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' ').replace(/<[^>]+>/g, ' '));
+            if (text.split(/\s+/).length >= 3) paragraphs++;
             const line = this.parseListingProseLine(text);
             if (!line) continue;
             rows.push({ ...line, link: link ? this.normalizeUrl(this.decodeEntitiesFully(link), sourceUrl) : '', heading });
         }
-        if (rows.length < 3) return [];
+        // A listing article IS its lines (the roundups: 106 of 117
+        // paragraphs, 82 of 91). A page where a few paragraphs happen to
+        // read like lines — a campground's season list among 141
+        // paragraphs of amenities (campoutpoconos.com/accommodations, 20
+        // of 141) — is prose that mentions dates.
+        if (rows.length < 3 || rows.length * 2 < paragraphs) return [];
         // The year is the article's: a roundup published July 1st lists
         // July nights; one published December 29th lists January's.
         const publishedMs = /^\d{4}-\d{2}-\d{2}/.test(String(published || '')) ? Date.parse(String(published).slice(0, 10) + 'T12:00:00Z') : NaN;
