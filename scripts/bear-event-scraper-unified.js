@@ -503,6 +503,14 @@ class BearEventScraperOrchestrator {
                         if (dryRunSkipped > 0) {
                             console.log(`🐻 Orchestrator: Excluding ${dryRunSkipped} events from dry-run parsers`);
                         }
+                        // Big-drift merges wait on the deck (shared-core
+                        // assessMergeDrift); the headless write never applies them.
+                        const bigDriftWithheld = typeof this.modules.SharedCore.isBigDriftWithheld === 'function'
+                            ? analyzedEvents.filter(event => this.modules.SharedCore.isBigDriftWithheld(event))
+                            : [];
+                        if (bigDriftWithheld.length > 0) {
+                            console.log(`🐻 Orchestrator: 🧭 ${bigDriftWithheld.length} big-drift merge${bigDriftWithheld.length === 1 ? '' : 's'} withheld — waiting on the deck: ${bigDriftWithheld.map(event => `"${event.title || 'Unknown'}"`).join(', ')}`);
+                        }
                         console.log(`🐻 Orchestrator: Executing calendar actions (${executableEvents.length} events)`);
                         try {
                             calendarEvents = await finalAdapter.executeCalendarActions(executableEvents, config);

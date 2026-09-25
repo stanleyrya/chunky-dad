@@ -23141,6 +23141,250 @@ test('applyOwnerDecisions: approved writes, unreviewed and rejected are withheld
   assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_ownerReviewWithheld'));
 });
 
+// ---------------------------------------------------------------------------
+// BIG DRIFT (owner 2026-09-25: "present data for me to make a decision when
+// it's really unclear"): a merge that renames the saved event or moves its
+// identity never auto-applies — it waits on the deck with its facts.
+// ---------------------------------------------------------------------------
+const DRIFT_START = '2030-10-11T02:00:00.000Z'; // Thu Oct 10, 22:00 in New York
+
+// A saved calendar record and the FINAL merged payload the analysis would
+// write over it — the shape assessMergeDrift judges (after every pass).
+function driftMerge(finalOverrides = {}, calendarOverrides = {}, options = {}) {
+  const calendar = {
+    title: 'Treasure Trail',
+    startDate: DRIFT_START,
+    endDate: '2030-10-11T08:00:00.000Z',
+    bar: 'Massive',
+    address: '619 E Pine St, Seattle, WA 98122',
+    location: '47.6150824, -122.3237201',
+    website: 'https://bearracuda.com/events/ttoct/',
+    ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets',
+    url: '',
+    ...calendarOverrides
+  };
+  const existing = { title: calendar.title, startDate: calendar.startDate, endDate: calendar.endDate, location: calendar.location, url: '' };
+  return {
+    title: 'Treasure Trail',
+    startDate: DRIFT_START,
+    endDate: '2030-10-11T08:00:00.000Z',
+    bar: 'Massive',
+    address: '619 E Pine St, Seattle, WA 98122',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    location: '47.6150824, -122.3237201',
+    website: 'https://bearracuda.com/events/ttoct/',
+    url: 'https://bearracuda.com/events/ttoct/',
+    ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets',
+    _parserConfig: { name: 'Bearracuda', dryRun: false },
+    _action: 'merge',
+    _analysis: { action: 'merge', reason: options.reason || 'Key match found' },
+    _existingEvent: existing,
+    _original: { scraper: { _sourcePageUrl: 'https://sickening.events/e/bearracuda-treasure-trail-october' }, calendar },
+    _changes: ['title', 'notes'],
+    _mergeNoOp: false,
+    ...finalOverrides
+  };
+}
+
+test('big drift definition: another spelling, a placeholder venue, a deeper same-site link, a nearby pin and a filled blank are NOT drift', () => {
+  const core = createReviewCore();
+  // Same title, another spelling: case, emoji, whitespace, a cover tail, a venue tail.
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'TREASURE  TRAIL' })), null, 'case + whitespace');
+  assert.equal(core.assessMergeDrift(driftMerge({ title: '🐻 BEAR HAPPY HOUR | NO COVER', bar: 'Eagle NYC' }, { title: 'Bear Happy Hour', bar: 'Eagle NYC' })), null,
+    'the emoji-and-caps twin with a cover tail (Eagle NYC, run 20260924-055217)');
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'Treasure Trail at Massive' })), null, 'the venue tail the final build drops');
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'CAPITÁN Party' }, { title: 'CAPITAN Party' })), null, 'diacritics');
+  // Placeholder venue → a real one, with the pin filled in.
+  assert.equal(core.assessMergeDrift(driftMerge(
+    { title: '🐻 BEAR HAPPY HOUR', bar: 'Eagle NYC', address: '554 W 28th St, New York, NY', location: '40.7508, -74.0037' },
+    { title: 'Bear Happy Hour', bar: "Check instagram for this week's location.", address: '', location: '' })), null,
+    '"Check instagram…" → Eagle NYC is a fill, not a move');
+  // A same-site deeper page replacing its listing or root.
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'Goldiloxx: Bear Tea', url: 'https://www.3dollarbillbk.com/rsvp/2030/10/10/bear-tea', website: 'https://www.3dollarbillbk.com/rsvp/2030/10/10/bear-tea' },
+    { title: 'Goldiloxx: Bear Tea', website: 'https://www.3dollarbillbk.com/rsvp' })), null, 'the Bear Tea link merge');
+  assert.deepEqual(core.assessMergeDrift(driftMerge({ title: 'TKVR | Nolid', url: 'https://bearracuda.com/events/ttoct', website: 'https://bearracuda.com/events/ttoct' }, { website: 'https://www.bearracuda.com/events/ttoct/' })).fields.map((entry) => entry.field),
+    ['title'], 'www + trailing slash is the same link — only the rename counts');
+  // A pin that moves a few metres, a venue respelled at the same street door, and a blank filled.
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'Club Chub Los Angeles - DISNEY BLOODBATH', bar: 'Precinct LA', address: '357 South Broadway, Los Angeles, California, 90013', location: '34.0498149, -118.2493321' },
+    { title: 'CLUB CHUB', bar: 'Precinct DTLA', address: '357 S Broadway, Los Angeles, CA 90013', location: '34.0498043, -118.2493258' })), null,
+    'a reworded title + a venue respelled at the same door + a 1 m pin move (CLUB CHUB, run 20260924-055217)');
+  assert.equal(core.assessMergeDrift(driftMerge({ title: "Western Xposure's XXL", bar: 'CCBC Resort Hotel', startDate: '2030-10-11T03:00:00.000Z' }, { title: 'Western Xposure XXL', bar: 'CCBC Resort' })), null,
+    'a contained bar spelling and a later clock on the same night');
+  assert.equal(core.assessMergeDrift(driftMerge({ bar: 'Massive', location: '47.6150824, -122.3237201' }, { bar: '', location: '' })), null, 'blanks filled');
+  // Two non-title dimensions alone are not big drift (the deck still shows them as a normal merge card).
+  assert.equal(core.assessMergeDrift(driftMerge({ startDate: '2030-10-12T02:00:00.000Z', url: 'https://other.example/party', website: 'https://other.example/party' })), null,
+    'start day + link without a title change stays an ordinary merge');
+  assert.equal(core.assessMergeDrift(driftMerge({ _action: 'new' })), null, 'only merges are judged');
+});
+
+test('big drift definition: a rename alone, a reworded title with another moved dimension, or three moved dimensions', () => {
+  const core = createReviewCore();
+  // The 09-24 rename: nothing but the title changed, and the two names share no word.
+  const rename = core.assessMergeDrift(driftMerge({ title: 'TKVR | Nolid' }));
+  assert.ok(rename, 'Treasure Trail → TKVR | Nolid is big drift');
+  assert.equal(rename.rename, true);
+  assert.equal(rename.reason, 'title renamed (no shared word)');
+  assert.deepEqual(rename.fields.map((entry) => entry.field), ['title']);
+  assert.equal(rename.matchedBy, 'Key match found');
+  assert.deepEqual(rename.agree, [
+    'same night (2030-10-10)', 'same bar (Massive)', 'same event page (bearracuda.com/events/ttoct)',
+    'same ticket page (sickening.events/e/bearracuda-treasure-trail-october/tickets)', 'same pin (0 m apart)'
+  ]);
+  assert.equal(rename.sourcePageUrl, 'https://sickening.events/e/bearracuda-treasure-trail-october');
+  assert.equal(rename.calendarUrl, 'https://bearracuda.com/events/ttoct/');
+  // A reworded title (shares a word) on its own is an ordinary merge…
+  assert.equal(core.assessMergeDrift(driftMerge({ title: 'Treasure Trail: Tricks & Treats' })), null, 'an extension of the saved name');
+  // …but with the start day moved it is drift.
+  const reworded = core.assessMergeDrift(driftMerge({ title: 'Treasure Trail: Tricks & Treats', startDate: '2030-10-12T02:00:00.000Z' }));
+  assert.ok(reworded);
+  assert.equal(reworded.rename, false);
+  assert.equal(reworded.reason, 'title and start day changed');
+  assert.deepEqual(reworded.fields.map((entry) => entry.field), ['title', 'startDay']);
+  // Title + a different venue at a different street (the Lone Star → SF Eagle fold, run 20260924-055217).
+  const venue = core.assessMergeDrift(driftMerge(
+    { title: 'SF Queer Leather Happy Hour: Folsom Edition', bar: 'SF Eagle', address: '398 12th Street, San Francisco, CA 94103', url: 'https://www.sf-eagle.com/events/x/', website: 'https://www.sf-eagle.com/events/x/' },
+    { title: 'Leather and Gear Happy Hour', bar: 'Lone Star Saloon', address: 'San Francisco CA 94103', website: 'https://www.lonestarsf.com/new-events-1/2030/10/10/leather-and-gear-happy-hour' },
+    { reason: 'Same event identity (place-time-name)' }));
+  assert.ok(venue);
+  assert.equal(venue.reason, 'title, venue and event link changed');
+  assert.equal(venue.matchedBy, 'Same event identity (place-time-name)');
+  assert.ok(venue.agree.includes('same pin (0 m apart)'), 'the pin the merge kept still agrees — the card says so');
+  // Title + pin moved beyond the radius.
+  const moved = core.assessMergeDrift(driftMerge({ title: 'Treasure Trail: Tricks & Treats', location: '47.6205, -122.3493' }));
+  assert.ok(moved);
+  assert.deepEqual(moved.fields.map((entry) => entry.field), ['title', 'location']);
+  assert.ok(moved.fields[1].km > 1, 'the distance rides on the field');
+  // Three dimensions without the title: start day + venue elsewhere + link on another host.
+  const three = core.assessMergeDrift(driftMerge({ startDate: '2030-10-12T02:00:00.000Z', bar: 'The Cuff', address: '1533 13th Ave, Seattle, WA 98122', url: 'https://other.example/party', website: 'https://other.example/party' }));
+  assert.ok(three);
+  assert.equal(three.reason, 'start day, venue and event link changed');
+  assert.equal(SharedCore.getBigDriftPinRadiusKm(), 0.15);
+});
+
+test('big drift gate: withheld from every automatic path, a deck card all the same, and written only once the owner approves it', () => {
+  const core = createReviewCore();
+  const drifted = driftMerge({ title: 'TKVR | Nolid' });
+  drifted._bigDriftWithheld = core.assessMergeDrift(drifted);
+  assert.ok(drifted._bigDriftWithheld);
+  assert.deepEqual(SharedCore.filterEventsForExecution([drifted]), [], 'the phone\'s normal flow, the headless run and the saved-run execute all withhold it');
+  assert.equal(SharedCore.isBigDriftWithheld(drifted), true);
+  assert.equal(SharedCore.describeExecutionDisposition(drifted), 'WITHHELD (big drift — title renamed (no shared word); decide on the deck)');
+  assert.equal(SharedCore.filterEventsForExecution([drifted], { offeringToOwner: true }).length, 1, 'the deck looks through that one withhold');
+  assert.equal(core.isOwnerReviewCandidate(drifted), true, 'always a card');
+  const proposal = core.buildOwnerReviewProposal(drifted);
+  assert.deepEqual(proposal.changes.title, { from: 'Treasure Trail', to: 'TKVR | Nolid' });
+
+  // Unreviewed on the deck's execute path: still withheld, labelled honestly.
+  const awaiting = driftMerge({ title: 'TKVR | Nolid' });
+  awaiting._bigDriftWithheld = core.assessMergeDrift(awaiting);
+  const originalLog = console.log;
+  console.log = () => {};
+  let counts;
+  try {
+    counts = core.applyOwnerDecisions([awaiting], []);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(counts, { approved: 0, rejected: 0, awaiting: 1, housekeeping: 0, withheld: 0 });
+  assert.equal(SharedCore.describeExecutionDisposition(awaiting), 'WITHHELD (awaiting owner review)');
+  assert.deepEqual(SharedCore.filterEventsForExecution([awaiting]), []);
+
+  // Approved on the deck: the approval stamp is what lets it through.
+  const approved = driftMerge({ title: 'TKVR | Nolid' });
+  approved._bigDriftWithheld = core.assessMergeDrift(approved);
+  const decision = { key: proposal.key, kind: 'merge', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: proposal };
+  console.log = () => {};
+  try {
+    counts = core.applyOwnerDecisions([approved], [decision]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(counts.approved, 1);
+  assert.ok(approved._ownerReviewApproved);
+  assert.equal(SharedCore.isBigDriftWithheld(approved), false);
+  assert.equal(SharedCore.filterEventsForExecution([approved]).length, 1, 'the approved big-drift merge writes on the review path');
+  assert.equal(SharedCore.describeExecutionDisposition(approved), 'MERGE');
+
+  // A rejection still withholds it, and the stamp is stripped on replay.
+  const rejected = driftMerge({ title: 'TKVR | Nolid' });
+  rejected._bigDriftWithheld = core.assessMergeDrift(rejected);
+  console.log = () => {};
+  try {
+    core.applyOwnerDecisions([rejected], [{ ...decision, verdict: 'reject', reason: { tags: ['wrong title'], text: 'keep the party name' } }]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(SharedCore.filterEventsForExecution([rejected]), []);
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_bigDriftWithheld'));
+  assert.equal(SharedCore.stripCalendarAnalysisStamps(rejected)._bigDriftWithheld, undefined, 'a saved-run replay re-judges drift on the fresh analysis');
+});
+
+test('big drift end to end: the analysis stamps the rename on the final payload with the 🧭 line; an ordinary merge is untouched', async () => {
+  const core = createReviewCore();
+  const start = new Date('2030-10-11T02:00:00.000Z');
+  const end = new Date('2030-10-11T08:00:00.000Z');
+  const scraped = (title) => ({
+    title,
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'Massive',
+    address: '619 E Pine St, Seattle, WA 98122',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    location: '47.6150824, -122.3237201',
+    website: 'https://bearracuda.com/events/ttoct/',
+    ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets',
+    bearSource: 'keyword',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { name: 'Bearracuda', dryRun: false, ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } },
+    _sourcePageUrl: 'https://sickening.events/e/bearracuda-treasure-trail-october'
+  });
+  const existing = {
+    title: 'Treasure Trail',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '47.6150824, -122.3237201',
+    url: '',
+    notes: 'bar: Massive\naddress: 619 E Pine St, Seattle, WA 98122\nwebsite: https://bearracuda.com/events/ttoct/\nticketUrl: https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets'
+  };
+  // The simulated arbiter always takes the scraped title (by value, whichever slot holds it).
+  const adapterFor = (wanted) => ({
+    getExistingEvents: async () => [existing],
+    postJson: async (endpoint, payload) => {
+      const pick = arbitrationSlotHolding(String(payload.prompt || ''), 'title', wanted);
+      if (!pick) return { ok: true, status: 200, text: JSON.stringify({ response: '' }) };
+      return { ok: true, status: 200, text: JSON.stringify({ response: JSON.stringify({ choices: { title: { pick, value: wanted, reason: 'the event name' } } }) }) };
+    }
+  });
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let renamed;
+  let extended;
+  try {
+    renamed = await core.prepareEventsForCalendar([scraped('TKVR | Nolid')], adapterFor('TKVR | Nolid'), {});
+    extended = await core.prepareEventsForCalendar([scraped('Treasure Trail: Tricks & Treats')], adapterFor('Treasure Trail: Tricks & Treats'), {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(renamed[0]._action, 'merge');
+  assert.equal(renamed[0].title, 'TKVR | Nolid', 'the arbiter took the scraped title');
+  assert.equal(renamed[0]._mergeNoOp, false);
+  assert.ok(renamed[0]._bigDriftWithheld, 'the rename is stamped on the final payload');
+  assert.equal(renamed[0]._bigDriftWithheld.rename, true);
+  assert.equal(renamed[0]._bigDriftWithheld.sourcePageUrl, 'https://sickening.events/e/bearracuda-treasure-trail-october');
+  assert.ok(logLines.some((line) => line.startsWith('🧭 BIG DRIFT: "Treasure Trail" → "TKVR | Nolid" — title renamed (no shared word); matched by ')
+    && line.includes('withheld from every automatic write; decide on the deck')), `expected the 🧭 line, got ${JSON.stringify(logLines.filter((line) => line.includes('BIG DRIFT')))}`);
+  assert.deepEqual(SharedCore.filterEventsForExecution(renamed), []);
+  assert.equal(core.isOwnerReviewCandidate(renamed[0]), true);
+
+  assert.equal(extended[0]._action, 'merge');
+  assert.equal(extended[0].title, 'Treasure Trail: Tricks & Treats');
+  assert.equal(extended[0]._bigDriftWithheld, undefined, 'a reworded title alone is an ordinary merge');
+  assert.equal(SharedCore.filterEventsForExecution(extended).length, 1, 'nothing changes for non-drift merges');
+});
+
 // A single-night OVERRIDE of a saved series (owner, deck review 2026-09-14:
 // "override requests don't show the diff between the original event and the
 // new one"): analysis action 'new', but built on the series occurrence it

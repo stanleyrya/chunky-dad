@@ -575,7 +575,24 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
     const storedVerdict = Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
         ? core.findStoredBearVerdict(event)
         : null;
+    // Big drift (shared-core assessMergeDrift, stamped at analysis): the
+    // merge is withheld from every automatic write and the card carries
+    // the facts — which identity fields move, the rung that matched the
+    // two records, the hard facts that still agree, and the two pages.
+    const drift = event._bigDriftWithheld && typeof event._bigDriftWithheld === 'object' ? event._bigDriftWithheld : null;
+    const bigDrift = drift ? {
+        reason: String(drift.reason || ''),
+        rename: drift.rename === true,
+        fields: (Array.isArray(drift.fields) ? drift.fields : [])
+            .filter((entry) => entry && typeof entry === 'object')
+            .map((entry) => ({ field: String(entry.field || ''), from: String(entry.from || ''), to: String(entry.to || ''), ...(entry.kind ? { kind: String(entry.kind) } : {}), ...(Number.isFinite(entry.km) ? { km: entry.km } : {}) })),
+        matchedBy: String(drift.matchedBy || ''),
+        agree: (Array.isArray(drift.agree) ? drift.agree : []).map((line) => String(line)).filter(Boolean),
+        sourcePageUrl: String(drift.sourcePageUrl || ''),
+        calendarUrl: String(drift.calendarUrl || '')
+    } : null;
     return {
+        bigDrift,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
         bearIdentity: buildBearIdentity(event),

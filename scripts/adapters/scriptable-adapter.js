@@ -6803,6 +6803,17 @@ class ScriptableAdapter {
         const eventsFromActiveParsers = SharedCore.filterEventsForExecution(
           results.analyzedEvents,
         );
+        // Big-drift merges never reach the execute prompt (shared-core
+        // assessMergeDrift): they wait on the deck, where the card shows
+        // what would change and the owner decides.
+        const bigDriftWithheld = results.analyzedEvents.filter((event) =>
+          SharedCore.isBigDriftWithheld(event),
+        );
+        if (bigDriftWithheld.length > 0) {
+          console.log(
+            `📱 Scriptable: 🧭 ${bigDriftWithheld.length} big-drift merge${bigDriftWithheld.length === 1 ? "" : "s"} withheld from the execute prompt — decide on the deck: ${bigDriftWithheld.map((event) => `"${event.title || "Unknown"}"`).join(", ")}`,
+          );
+        }
 
         const globalDryRun = results.config?.config?.dryRun;
         const hasActiveEvents = eventsFromActiveParsers.length > 0;
@@ -16824,6 +16835,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
             : "🃏 awaiting owner review — not swiped yet",
       };
     }
+    // Big drift (shared-core assessMergeDrift): the merge renames the saved
+    // event or moves its identity, so no automatic path writes it — the
+    // deck card shows the data and the owner decides.
+    if (SharedCore.isBigDriftWithheld(event)) {
+      const reason = String(event._bigDriftWithheld.reason || "").trim();
+      return {
+        section: "withheld",
+        reason: `🧭 big drift — ${reason || "identity changed"} — decide on the deck`,
+      };
+    }
     if (
       // _mergeNoOp is the write path's own no-op stamp (shared-core: final
       // payload field-identical to the calendar record, notes projection
@@ -16899,6 +16920,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // Owner review: rejected / not-yet-swiped proposals are withheld by the
     // same gate on the reviewed-run execute path.
     if (event._ownerReviewWithheld) return "withheld";
+    // Big drift: withheld by the same gate until the deck approves it.
+    if (SharedCore.isBigDriftWithheld(event)) return "withheld";
     // A merge stamped _mergeNoOp is skipped by the same
     // filterEventsForExecution gate — the card must not promise an UPDATE
     // that never runs.
