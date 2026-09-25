@@ -20093,7 +20093,9 @@ test('listing prose line grammar: date before or after the venue, ranges, double
   assert.deepEqual(line('Bears LA Event on July 10th at The Eagle'), { title: 'Bears LA Event', venue: 'The Eagle', city: '', dates: ['July 10'], range: null, time: '' });
   assert.deepEqual(line('Brewery Bears Happy Hour at The Dallas Eagle July 10th'), { title: 'Brewery Bears Happy Hour', venue: 'The Dallas Eagle', city: '', dates: ['July 10'], range: null, time: '' });
   assert.deepEqual(line('Tidal Wave June 18th-21st at Hilton Palm Springs'), { title: 'Tidal Wave', venue: 'Hilton Palm Springs', city: '', dates: [], range: { from: 'June 18', to: 'June 21' }, time: '' });
-  assert.deepEqual(line('June 5th Bear Night at Tryangles Bar on June 5th'), { title: 'Bear Night', venue: 'Tryangles Bar', city: '', dates: ['June 5'], range: null, time: '' });
+  // A line that opens with its date is a card's text, not a sentence.
+  assert.equal(line('June 5th Bear Night at Tryangles Bar on June 5th'), null);
+  assert.equal(line('Sat, Sep 26 F8 Nightclub & Bar MORE INFO'), null);
   assert.deepEqual(line('Bear Pub in Pride Park 2026 at Oslo Pride on June June 26th'), { title: 'Bear Pub in Pride Park 2026', venue: 'Oslo Pride', city: '', dates: ['June 26'], range: null, time: '' });
   assert.deepEqual(line('Bears in Space at Akbar on Oct 3rd at 9pm'), { title: 'Bears in Space', venue: 'Akbar', city: '', dates: ['Oct 3'], range: null, time: '21:00' });
   assert.deepEqual(line('Opening Night Party @ FLEX (Hell’s Kitchen) – Thursday, September 17th'), { title: 'Opening Night Party', venue: 'FLEX (Hell’s Kitchen)', city: '', dates: ['September 17'], range: null, time: '' });
@@ -20122,4 +20124,34 @@ test('article feed: a WordPress posts payload becomes one page of articles, each
   assert.ok(events.every(e => e.url === undefined && e.ticketUrl.startsWith('https://x.example/')));
   // An event feed is not an article feed.
   assert.equal(parser.renderArticleFeedPayloadAsHtml([{ title: 'Party', start: '2026-10-01T21:00:00', venue: 'Bar' }], 'https://x.example/api'), '');
+});
+
+test('listing prose: a page where listing lines are the minority of its paragraphs is prose that mentions dates', () => {
+  const parser = createParser();
+  const filler = Array.from({ length: 12 }, (_, i) => `<p>Paragraph ${i} describes the campground, its amenities and the pool in a few words.</p>`).join('');
+  const html = `<article><h3>Seasons</h3>
+    <p>Spring Opening at the Lodge on April 23rd</p>
+    <p>Summer Kickoff at the Pool on May 21st</p>
+    <p>Fall Festival at the Barn on September 12th</p>${filler}</article>`;
+  assert.deepEqual(parser.collectListingProseEvents(html, 'https://camp.example/accommodations/', {}), []);
+});
+
+test('structured ladder: listing prose yields to every structured source (an EventON calendar keeps its cards)', async () => {
+  const parser = createParser();
+  const roundup = `<h3>Los Angeles</h3>
+    <p>Bear Night at Precinct on October 3rd (<a href="https://x.example/1">link</a>)</p>
+    <p>Cubscout at The Eagle on October 4th (<a href="https://x.example/2">link</a>)</p>
+    <p>Club Chub at Precinct on October 10th (<a href="https://x.example/3">link</a>)</p>`;
+  assert.equal(parser.collectListingProseEvents(`<article>${roundup}</article>`, 'https://venue.example/calendar/', {}).length, 3, 'precondition: the lines read as a listing');
+  // The same lines beside JSON-LD Event nodes: the nodes are the events.
+  const jsonLd = `<script type="application/ld+json">${JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Event', name: 'Bear Night', startDate: '2026-10-03T21:00:00-07:00', location: { '@type': 'Place', name: 'Precinct', address: '357 S Broadway, Los Angeles, CA 90013' }, url: 'https://venue.example/event/bear-night/' },
+    { '@context': 'https://schema.org', '@type': 'Event', name: 'Club Chub', startDate: '2026-10-10T21:00:00-07:00', location: { '@type': 'Place', name: 'Precinct', address: '357 S Broadway, Los Angeles, CA 90013' }, url: 'https://venue.example/event/club-chub/' }
+  ])}</script>`;
+  const html = `<html><head>${jsonLd}</head><body><article>${roundup}</article></body></html>`;
+  parser.extractOcrFromAllImages = async () => { throw new Error('no OCR'); };
+  parser.core.callAiGenerate = async () => { throw new Error('no AI'); };
+  const result = await parser.parseEvents({ url: 'https://venue.example/calendar/', html }, {}, null, 'multi-event-page', null);
+  assert.equal(result.extractionSummary && result.extractionSummary.source, 'jsonld', 'the Event nodes are the structured source, not the prose');
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Bear Night', 'Club Chub']);
 });
