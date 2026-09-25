@@ -25783,3 +25783,52 @@ test('getParserConfigOwnHosts: urls plus the curated metadata website, bare host
   assert.deepEqual(core.getParserConfigOwnHosts({ name: 'x' }), []);
   assert.deepEqual(core.getParserConfigOwnHosts(null), []);
 });
+
+test('page site role travels with the events extracted from that page — one stamp, every parser and route', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const stamp = (role) => {
+    const parseResult = {
+      events: [{ title: 'Bear Night', startDate: new Date('2026-10-03T21:00:00.000Z') }],
+      bearDroppedEvents: [{ event: { title: 'Trivia', startDate: new Date('2026-10-04T21:00:00.000Z') }, reason: 'not bear' }]
+    };
+    const count = core.stampPageSiteRoleOnEvents(parseResult, { url: 'https://venue.example/events', pageSiteRole: role });
+    return { count, kept: parseResult.events[0]._pageSiteRole, dropped: parseResult.bearDroppedEvents[0].event._pageSiteRole };
+  };
+  // Dropped records carry it too: a manual rescue must see the same fact.
+  assert.deepEqual(stamp('venue'), { count: 2, kept: 'venue', dropped: 'venue' });
+  assert.deepEqual(stamp('organizer'), { count: 2, kept: 'organizer', dropped: 'organizer' });
+  // Undetermined pages stamp nothing — absence is not "not a venue".
+  assert.deepEqual(stamp(''), { count: 0, kept: undefined, dropped: undefined });
+  assert.deepEqual(stamp('something-else'), { count: 0, kept: undefined, dropped: undefined });
+  // A role the parser already put on the event is never overwritten.
+  const own = { events: [{ title: 'X', _pageSiteRole: 'organizer' }] };
+  assert.equal(core.stampPageSiteRoleOnEvents(own, { pageSiteRole: 'venue' }), 0);
+  assert.equal(own.events[0]._pageSiteRole, 'organizer');
+  // It is extraction provenance, not analysis output: a saved run replayed on
+  // the phone keeps it (unlike _action/_original and the withhold stamps).
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_pageSiteRole'));
+  const replayed = SharedCore.stripCalendarAnalysisStamps({ title: 'X', _pageSiteRole: 'venue', _action: 'new' });
+  assert.equal(replayed._pageSiteRole, 'venue');
+  assert.equal(replayed._action, undefined);
+  // …and it is what isVenueOwnSiteSource's first rung reads, so a venue page
+  // needs no per-parser siteRole knob to be the venue's own site.
+  assert.equal(core.isVenueOwnSiteSource({ title: 'X', _pageSiteRole: 'venue' }), true);
+  assert.equal(core.isVenueOwnSiteSource({ title: 'X', _pageSiteRole: 'organizer', _parserConfig: { siteRole: 'venue', urls: ['https://venue.example/'] }, url: 'https://venue.example/e/1' }), false);
+});
+
+test('crawl: a page parse stamps its site role onto the events it produced', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const htmlData = { url: 'https://venue.example/events', html: '<html></html>', pageSiteRole: 'venue' };
+  const parsers = {
+    'ai-web': {
+      parseEvents: async () => ({ events: [{ title: 'Bear Night', startDate: new Date('2026-10-03T21:00:00.000Z') }], additionalLinks: [] })
+    }
+  };
+  const { parseResult } = await core.parsePageForCrawl({
+    url: htmlData.url, htmlData, parsers, parserName: 'ai-web', parserConfig: { name: 'Venue', ai: CRAWL_AI },
+    displayAdapter: display, httpAdapter: { fetchData: async () => htmlData }
+  });
+  assert.equal(parseResult.events[0]._pageSiteRole, 'venue');
+});

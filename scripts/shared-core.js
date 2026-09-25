@@ -10705,6 +10705,34 @@ class SharedCore {
         return titleTokens.every(token => venueTokens.has(token));
     }
 
+    // A page's site role travels with the events extracted from it.
+    // Page-derived only: the parser has already decided whether a config
+    // role applies to THIS host (parserConfigRoleAppliesToPage), so what is
+    // cached on htmlData is a statement about this page, which is why it
+    // outranks the config's statement about a site.
+    stampPageSiteRoleOnEvents(parseResult, htmlData) {
+        const role = htmlData && typeof htmlData === 'object' && typeof htmlData.pageSiteRole === 'string'
+            ? htmlData.pageSiteRole.trim().toLowerCase()
+            : '';
+        if (role !== 'venue' && role !== 'organizer') return 0;
+        const events = parseResult && Array.isArray(parseResult.events) ? parseResult.events : [];
+        let stamped = 0;
+        for (const event of events) {
+            if (!event || typeof event !== 'object' || !Object.isExtensible(event)) continue;
+            if (event._pageSiteRole) continue;
+            event._pageSiteRole = role;
+            stamped++;
+        }
+        const dropped = parseResult && Array.isArray(parseResult.bearDroppedEvents) ? parseResult.bearDroppedEvents : [];
+        for (const entry of dropped) {
+            const event = entry && entry.event;
+            if (!event || typeof event !== 'object' || !Object.isExtensible(event) || event._pageSiteRole) continue;
+            event._pageSiteRole = role;
+            stamped++;
+        }
+        return stamped;
+    }
+
     async parsePageForCrawl({
         url,
         htmlData,
@@ -10779,6 +10807,15 @@ class SharedCore {
         const parseResult = await Promise.resolve(
             urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification, httpAdapter)
         );
+        // The page's OWN site role, stamped onto the events that came off it.
+        // The parser determines it per page (JSON-LD venue type, a curated
+        // brand name, a curated bar's website host, the listings' addresses)
+        // and caches it on htmlData; before this it went no further, so
+        // isVenueOwnSiteSource's first and strongest rung — "the
+        // determination stamped straight onto the event" — was dead code and
+        // a per-parser siteRole knob was the only durable answer. One place,
+        // every parser and every extraction route: a page is a page.
+        this.stampPageSiteRoleOnEvents(parseResult, htmlData);
         return { pageClassification, parseResult, urlParserName };
     }
 
