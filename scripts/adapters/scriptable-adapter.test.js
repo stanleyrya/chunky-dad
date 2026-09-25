@@ -11680,3 +11680,82 @@ test('write-policy: a _chimeraWithheld record sits in the withheld pile with its
   assert.equal(Core.filterEventsForExecution([event]).length, 0, 'the pile and the gate agree');
   assert.equal(adapter.classifyEventForResultsSection({ title: 'Looking', _action: 'new' }).section, 'actionable');
 });
+
+// ---------------------------------------------------------------------------
+// A WRITE TARGET IS ALWAYS A CONFIGURED CITY CALENDAR.
+//
+// The phone holds 49 calendars — city calendars, personal ones, and curated
+// datasets. "chunky-dad-festivals" is the database data/festivals.json is
+// generated from, and in August 2026 two of its umbrellas came back carrying
+// the scraper's notes shape, timed, in place of their all-day ranges. Whatever
+// wrote them, resolving a calendar to write to must fail closed on anything
+// that is not a city calendar in the configured city list.
+// ---------------------------------------------------------------------------
+
+function buildCityCalendarAdapter() {
+  return new ScriptableAdapter({
+    cities: {
+      dallas: { calendar: 'chunky-dad-dallas', timezone: 'America/Chicago', patterns: ['dallas'] },
+      ptown: { calendar: 'chunky-dad-provincetown', timezone: 'America/New_York', patterns: ['provincetown'] }
+    }
+  });
+}
+
+test('calendar target: only a configured city calendar is a write target', () => {
+  const adapter = buildCityCalendarAdapter();
+  assert.equal(adapter.isConfiguredCityCalendar('chunky-dad-dallas'), true);
+  assert.equal(adapter.isConfiguredCityCalendar('chunky-dad-provincetown'), true);
+  // The curated dataset calendar, the unknown fallback, and anything else.
+  assert.equal(adapter.isConfiguredCityCalendar('chunky-dad-festivals'), false,
+    'a curated dataset calendar is never a write target');
+  assert.equal(adapter.isConfiguredCityCalendar('chunky-dad-unknown'), false);
+  assert.equal(adapter.isConfiguredCityCalendar('Calendar'), false);
+  assert.equal(adapter.isConfiguredCityCalendar(''), false);
+  // A config that names no calendars at all has nothing to scope by.
+  assert.equal(new ScriptableAdapter({ cities: {} }).isConfiguredCityCalendar('chunky-dad-festivals'), true);
+});
+
+test('calendar target: getOrCreateCalendar refuses a non-city calendar loudly, before it even looks', async () => {
+  const adapter = buildCityCalendarAdapter();
+  const logLines = [];
+  const originalLog = console.log;
+  const originalForEvents = global.Calendar.forEvents;
+  let lookups = 0;
+  global.Calendar.forEvents = async () => { lookups++; return [{ title: 'chunky-dad-festivals' }, { title: 'chunky-dad-dallas' }]; };
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  try {
+    await assert.rejects(
+      () => adapter.getOrCreateCalendar('chunky-dad-festivals'),
+      /is not a configured city calendar/
+    );
+    assert.equal(lookups, 0, 'the refusal happens before the calendar is ever looked up');
+    assert.ok(logLines.some(line => line.includes('chunky-dad-festivals') && line.includes('not a configured city calendar')),
+      JSON.stringify(logLines));
+
+    // A city calendar still resolves normally.
+    const calendar = await adapter.getOrCreateCalendar('chunky-dad-dallas');
+    assert.equal(calendar.title, 'chunky-dad-dallas');
+  } finally {
+    console.log = originalLog;
+    global.Calendar.forEvents = originalForEvents;
+  }
+});
+
+test('calendar target: an unrecognized city routes to the unknown name, which is itself refused', async () => {
+  const adapter = buildCityCalendarAdapter();
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  try {
+    // getCalendarName never invents a name from the city string...
+    assert.equal(adapter.getCalendarName('festivals'), 'chunky-dad-unknown');
+    assert.equal(adapter.getCalendarName('wilton manors'), 'chunky-dad-unknown');
+    // ...and that fallback target is not a city calendar, so it cannot resolve.
+    await assert.rejects(
+      () => adapter.getOrCreateCalendar(adapter.getCalendarName('festivals')),
+      /is not a configured city calendar/
+    );
+  } finally {
+    console.log = originalLog;
+  }
+});

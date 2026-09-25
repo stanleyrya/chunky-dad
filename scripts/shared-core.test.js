@@ -25539,3 +25539,247 @@ test('contradiction gate: a vendor venue page in ticketUrl names no event; the d
   const elsewhere = { title: 'x', bar: 'SF Eagle', address: '1 Unknown Rd, San Francisco', city: 'sf' };
   assert.equal(core.getCuratedBarForIdentity(elsewhere, core.buildIdentityComparisonShape(elsewhere)), null);
 });
+
+// ---------------------------------------------------------------------------
+// A SCRAPED EVENT MAY ONLY EVER LAND IN A CONFIGURED CITY CALENDAR.
+//
+// The phone holds 49 calendars. One of them, "chunky-dad-festivals", is a
+// CURATED dataset — data/festivals.json is generated from it — and in August
+// 2026 its "Bear Week Provincetown" and "Bear Pride Chicago" umbrellas came
+// back carrying the scraper's own notes shape, timed, in place of their all-day
+// ranges. Whatever wrote them, the target resolution must make it impossible:
+// a city that names no configured city calendar withholds the write instead of
+// looking for some other calendar to land in (flag, don't drop — the card stays
+// in results).
+// ---------------------------------------------------------------------------
+
+function createCalendarTargetCore() {
+  return new SharedCore({
+    dallas: { calendar: 'chunky-dad-dallas', timezone: 'America/Chicago', patterns: ['dallas'] },
+    ptown: { calendar: 'chunky-dad-provincetown', timezone: 'America/New_York', patterns: ['provincetown'] }
+  }, { eventSchema: EventSchema });
+}
+
+test('calendar target: a city with no configured city calendar withholds the write with the 🗺️ NO CITY CALENDAR line', async () => {
+  const core = createCalendarTargetCore();
+  const adapter = buildPrepCalendarAdapter([]);
+  const upcoming = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
+  // "festivals" is a real calendar on the phone and NOT a city: the curated
+  // dataset the site's Bear Events section is generated from.
+  const strayEvent = {
+    title: 'Bear Week Provincetown',
+    startDate: upcoming,
+    endDate: new Date(upcoming.getTime() + 3 * 60 * 60 * 1000),
+    bar: 'Venue TBA',
+    city: 'festivals',
+    address: '1 Commercial St, Provincetown, MA',
+    ticketUrl: 'https://www.eventbrite.com/o/ptownbears-78481077703',
+    shortName: 'BEAR WEEK'
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([strayEvent], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(analyzed.length, 1, "flag-don't-drop: the card stays in the results");
+  assert.deepEqual(analyzed[0]._noCityCalendarWithheld, { city: 'festivals' });
+  assert.ok(logLines.some(line => line.startsWith('🗺️ NO CITY CALENDAR: "Bear Week Provincetown" withheld from calendar write')),
+    `withhold line expected, got: ${JSON.stringify(logLines.filter(line => line.includes('CITY')))}`);
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'an event with no configured city calendar never reaches a calendar write');
+  assert.equal(
+    SharedCore.describeExecutionDisposition(analyzed[0]),
+    'WITHHELD (city "festivals" has no configured city calendar — a scraped event is never written to a non-city calendar)'
+  );
+
+  // A configured city on the same core is untouched.
+  const realCity = { ...strayEvent, title: 'Bear Happy Hour', city: 'dallas' };
+  const clean = await core.prepareEventsForCalendar([realCity], buildPrepCalendarAdapter([]), {});
+  assert.equal(clean[0]._noCityCalendarWithheld, undefined);
+  assert.equal(SharedCore.filterEventsForExecution(clean).length, 1);
+});
+
+test('calendar target: city "unknown" still uses the no-city withhold, and both stamps are stripped at re-analysis', async () => {
+  const core = createCalendarTargetCore();
+  const upcoming = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([{
+      title: 'Connecticut Bear',
+      startDate: upcoming,
+      endDate: new Date(upcoming.getTime() + 3 * 60 * 60 * 1000),
+      bar: 'Ursa Men',
+      city: 'unknown',
+      address: '1 Main St, Hartford, CT',
+      shortName: 'CT BEAR'
+    }], buildPrepCalendarAdapter([]), {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed[0]._unresolvedCityWithheld, true);
+  assert.equal(analyzed[0]._noCityCalendarWithheld, undefined, 'one reason per event: unknown keeps its own line');
+  assert.ok(logLines.some(line => line.startsWith('🗺️ NO CITY: "Connecticut Bear" withheld')), JSON.stringify(logLines.filter(l => l.includes('CITY'))));
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), []);
+
+  // Both withhold stamps are analysis-time and must not survive a re-analysis.
+  const keys = SharedCore.getCalendarAnalysisStampKeys();
+  assert.ok(keys.includes('_unresolvedCityWithheld'));
+  assert.ok(keys.includes('_noCityCalendarWithheld'));
+});
+
+test('calendar target: a cities config that names no calendars at all stays unscoped', async () => {
+  // The scoping rule has the same shape as the parser-config host check: with
+  // nothing to scope by, nothing is refused. Production's scraper-cities.js
+  // names a calendar for all 48 cities, so this only ever covers fixtures.
+  assert.equal(SharedCore.citiesConfigNamesCalendars({ dallas: { timezone: 'America/Chicago' } }), false);
+  assert.equal(SharedCore.citiesConfigNamesCalendars({ dallas: { calendar: 'chunky-dad-dallas' } }), true);
+  assert.equal(SharedCore.citiesConfigNamesCalendars(null), false);
+
+  const core = createCore(); // CITIES fixture: no `calendar` keys anywhere
+  const upcoming = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'DALLAS FREEDOM TEA',
+    startDate: upcoming,
+    endDate: new Date(upcoming.getTime() + 3 * 60 * 60 * 1000),
+    bar: 'Station 4',
+    city: 'dallas',
+    address: '3911 Cedar Springs Rd, Dallas, TX 75219',
+    shortName: 'TEA'
+  }], buildPrepCalendarAdapter([]), {});
+  assert.equal(analyzed[0]._noCityCalendarWithheld, undefined);
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// isVenueOwnSiteSource rung 2 is SCOPED to the parser's own hosts.
+//
+// A `siteRole: "venue"` knob is a statement about the site the parser was
+// pointed at, not about every page a crawl wandered onto. Unscoped, it made
+// joininghearts.org (a charity), spankguys.uk (a promoter) and
+// georgiaaquarium.org "the venue's own site" through the Atlanta Eagle / Eagle
+// Manchester / Lone Star knobs (run 20260925-053031), and over the saved runs
+// 20260924-055217 / 20260925-110542 it also spoke for dice.fm, linktr.ee and
+// eventbrite.com pages. PR #1828 fixed exactly this class in the parser
+// (parserConfigRoleAppliesToPage); this is the same rule on the shared-core side.
+// ---------------------------------------------------------------------------
+
+test('venue-own-site: a venue-role parser does not speak for a third-party host it crawled onto', () => {
+  const core = createCore();
+  const jackhammer = {
+    name: 'Jackhammer',
+    siteRole: 'venue',
+    // Configured at a TicketSauce feed, with the venue's real site in metadata.
+    urls: ['https://events.ticketsauce.com/events/events_by_organization/60a71c30/69c6fe8a/0/0/0/false/false/true/true/0'],
+    metadata: { website: { value: 'https://jackhammerchicago.com' } }
+  };
+
+  // Off-host: a linktr.ee page the crawl reached is not the venue's own site.
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY',
+    bar: 'Jackhammer',
+    url: 'https://linktr.ee/megawoof',
+    _parserConfig: jackhammer
+  }), false, 'linktr.ee is not Jackhammer speaking for itself');
+
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'FLEX',
+    bar: 'Jackhammer',
+    url: 'https://www.eventbrite.com/e/flex-tickets-99999',
+    _parserConfig: jackhammer
+  }), false, 'eventbrite is not Jackhammer speaking for itself');
+
+  // On-host: the feed the parser crawls AND the site its own config names.
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'BEARAOKE',
+    bar: 'Jackhammer',
+    url: 'https://events.ticketsauce.com/events/1234',
+    _parserConfig: jackhammer
+  }), true, "the parser's own configured feed still counts");
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'Belly Up',
+    bar: 'Jackhammer',
+    url: 'https://jackhammerchicago.com/events/belly-up',
+    _parserConfig: jackhammer
+  }), true, "a venue whose listings are served by a ticketing API still owns its own site");
+
+  // A page with no source url at all cannot be shown to be on-host.
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'Belly Up',
+    bar: 'Jackhammer',
+    _parserConfig: jackhammer
+  }), false, 'no source url → the declaration cannot be placed');
+
+  // Subdomains of a configured domain are the same site.
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'Belly Up',
+    bar: 'Jackhammer',
+    _sourcePageUrl: 'https://tickets.jackhammerchicago.com/e/1',
+    _parserConfig: jackhammer
+  }), true);
+});
+
+test('venue-own-site: a config with no urls stays unscoped, and explicit organizer is still a hard NO', () => {
+  const core = createCore();
+  // No urls and no metadata website: nothing to scope by, so the declaration
+  // applies wherever the record came from (existing behaviour, relied on by
+  // configs that name no urls at all).
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'Karaoke',
+    bar: 'Dallas Eagle',
+    url: 'https://anything.example/events/karaoke',
+    _parserConfig: { name: 'Dallas Eagle', siteRole: 'venue' }
+  }), true);
+
+  // organizer is refused on every host, scoped or not — a denial can only ever
+  // be over-cautious.
+  for (const parserConfig of [
+    { name: 'Furball', siteRole: 'organizer', urls: ['https://furball.nyc/'] },
+    { name: 'Furball', siteRole: 'organizer' }
+  ]) {
+    assert.equal(core.isVenueOwnSiteSource({
+      title: 'FURBALL',
+      bar: 'Eagle NYC',
+      barSource: 'venue-site',
+      url: 'https://furball.nyc/events/1',
+      _parserConfig: parserConfig
+    }), false, 'an organizer site never qualifies as a venue own site');
+    assert.equal(core.isVenueOwnSiteSource({
+      title: 'FURBALL',
+      bar: 'Eagle NYC',
+      barSource: 'venue-site',
+      url: 'https://someothersite.example/e/1',
+      _parserConfig: parserConfig
+    }), false, 'off-host does not turn the organizer denial into a yes');
+  }
+
+  // The page-derived stamp (rung 1) still outranks the config declaration.
+  assert.equal(core.isVenueOwnSiteSource({
+    title: 'Bear Belly',
+    bar: "C'mon Everybody",
+    _pageSiteRole: 'venue',
+    url: 'https://dice.fm/event/bear-belly',
+    _parserConfig: { name: "C'mon Everybody", siteRole: 'venue', urls: ['https://www.cmoneverybody.com/events'] }
+  }), true, 'a page-derived venue determination is about THIS page and wins');
+});
+
+test('getParserConfigOwnHosts: urls plus the curated metadata website, bare hosts included', () => {
+  const core = createCore();
+  assert.deepEqual(core.getParserConfigOwnHosts({
+    urls: ['https://www.eaglela.com/events/', 'https://eaglela.com/calendar'],
+    metadata: { website: { value: 'eaglela.com' } }
+  }), ['eaglela.com']);
+  assert.deepEqual(core.getParserConfigOwnHosts({
+    urls: ['https://events.ticketsauce.com/x'],
+    metadata: { website: 'https://thesofotap.com' }
+  }), ['ticketsauce.com', 'thesofotap.com']);
+  assert.deepEqual(core.getParserConfigOwnHosts({ name: 'x' }), []);
+  assert.deepEqual(core.getParserConfigOwnHosts(null), []);
+});
