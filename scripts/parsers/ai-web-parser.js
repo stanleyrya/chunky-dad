@@ -76,6 +76,16 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
+// Page-identity scans (JSON-LD, meta tags, brand names, footer text) read at
+// most this many characters of the raw HTML — a bound on scanning an
+// enormous document, not a content window.
+const HTML_SCAN_MAX_CHARS = 500000;
+// The smallest HTML budget an extraction prompt is ever built with, whatever
+// aiConfig.maxHtmlChars says.
+const PROMPT_HTML_MIN_CHARS = 500;
+// A month/day with no year that fell more than this long ago names NEXT
+// year's date (a listing never advertises last month's party).
+const MONTH_DAY_YEAR_ROLLOVER_GRACE_MS = 31 * 24 * 60 * 60 * 1000;
 // Class/data-attribute word parts that mark a repeated element as a candidate
 // event card. Shared by hasContainerStructureHint and getMultiEventStructureSignature
 // so the gate and the signature it guards always agree.
@@ -211,6 +221,9 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 // expectations document.
 const JSON_API_FEED_HORIZON_DAYS = 90;
 const JSON_API_FEED_MAX_PAGES = 6;
+// Feed RRULE expansion starts this far behind "now" so a night already under
+// way is still an occurrence.
+const JSON_API_FEED_WINDOW_PAST_MS = 24 * 60 * 60 * 1000;
 // A Wix Events list widget ships only its FIRST page inside the page's warmup
 // blob; the rest is fetched by the widget itself. Same page budget as the JSON
 // feeds above, and the same 90-day horizon.
@@ -3101,7 +3114,7 @@ class AiWebParser {
             const now = new Date();
             year = now.getFullYear();
             const candidate = new Date(Date.UTC(year, month - 1, day));
-            if (candidate.getTime() < now.getTime() - 31 * 24 * 60 * 60 * 1000) year += 1;
+            if (candidate.getTime() < now.getTime() - MONTH_DAY_YEAR_ROLLOVER_GRACE_MS) year += 1;
         }
         const pad = (value) => String(value).padStart(2, '0');
         return `${year}-${pad(month)}-${pad(day)}`;
@@ -7761,7 +7774,7 @@ class AiWebParser {
         if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
         const Core = this.core && this.core.constructor;
         if (!Core || typeof Core.expandRruleOccurrencesInWindow !== 'function') return [event];
-        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
         // The rule names LOCAL weekdays ("3rd Saturday" of Toronto, not of
         // UTC) — anchor the expansion on the entry's own wall clock.
@@ -12919,7 +12932,7 @@ class AiWebParser {
             : null;
         if (!expander) return [event];
         const now = Date.now();
-        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
         let occurrences = null;
         try {
@@ -14347,7 +14360,7 @@ class AiWebParser {
             const requestedNames = requested.map(entry => entry.eventKey);
 
             const aiConfig = this.getAiConfig(parserConfig);
-            const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+            const maxHtmlChars = Math.max(PROMPT_HTML_MIN_CHARS, Number(aiConfig.maxHtmlChars));
             const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
             // One targeted request: first content snippet only. dataFlags carry
             // jsonLd (true for this page) so the two-pass extractor skips its
@@ -17104,7 +17117,7 @@ class AiWebParser {
     }
 
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
+        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -18133,7 +18146,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return false;
         if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
-        const result = this.extractJsonLdParts(String(html).slice(0, 500000))
+        const result = this.extractJsonLdParts(String(html).slice(0, HTML_SCAN_MAX_CHARS))
             .some(part => this.containsEventType(part));
         if (Object.isExtensible(htmlData)) {
             htmlData.hasEventTypedJsonLd = result;
@@ -18445,7 +18458,7 @@ class AiWebParser {
 
     async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields, httpAdapter = null) {
         const promptFields = Array.isArray(fields) ? fields : [];
-        const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+        const maxHtmlChars = Math.max(PROMPT_HTML_MIN_CHARS, Number(aiConfig.maxHtmlChars));
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
         const validationState = { validatedFields: new Set() };
@@ -18654,7 +18667,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, 500000));
+        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, HTML_SCAN_MAX_CHARS));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -22324,7 +22337,7 @@ TEXT:
             if (!agrees(year)) return null;
         } else {
             let first = now.getUTCFullYear();
-            if (Date.UTC(first, card.month - 1, card.day) < now.getTime() - 31 * 24 * 60 * 60 * 1000) first += 1;
+            if (Date.UTC(first, card.month - 1, card.day) < now.getTime() - MONTH_DAY_YEAR_ROLLOVER_GRACE_MS) first += 1;
             year = [first, first + 1, first - 1].find(agrees);
             if (!Number.isFinite(year)) return null;
         }
@@ -24498,7 +24511,7 @@ TEXT:
     }
 
     extractPageBrandNames(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const names = new Set();
         const addName = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -24567,7 +24580,7 @@ TEXT:
     }
 
     extractPageSiteTaglines(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const taglines = new Set();
         const addTagline = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -24698,7 +24711,7 @@ TEXT:
     // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
     // entity-decoded and whitespace-collapsed. '' when absent.
     extractOgMetaContent(html, keyName) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const metaRegex = /<meta\b[^>]*>/gi;
         let match;
         while ((match = metaRegex.exec(source)) !== null) {
@@ -24719,7 +24732,7 @@ TEXT:
     // above answers only the first, so the rest were invisible. Same decoding, so
     // list[0] always equals extractOgMetaContent's answer.
     extractOgMetaContentAll(html, keyName) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const metaRegex = /<meta\b[^>]*>/gi;
         const values = [];
         let match;
@@ -24743,7 +24756,7 @@ TEXT:
     // skip-empty rule, so filtering the result to one key always equals
     // extractOgMetaContentAll's answer for that key.
     extractOgMetaEntriesAll(html, keyNames) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const wanted = new Set(keyNames);
         const metaRegex = /<meta\b[^>]*>/gi;
         const entries = [];
@@ -27963,7 +27976,7 @@ TEXT:
     }
 
     extractJsonLdSiteSignals(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const signals = { venueType: '', venueName: '', organizationTypeFound: false };
         const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
         const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
@@ -28033,7 +28046,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
+        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');

@@ -79,6 +79,16 @@ const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-s
 // an exact geocode of the same street address lands on the same placemark.
 const CURATED_BAR_SAME_PLACE_KM = 0.025;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
+// Ticket links are followed/kept only for events that started less than
+// this long ago — a page still selling last night's tickets is not a lead.
+const TICKET_LINK_PAST_EVENT_GRACE_MS = 24 * 60 * 60 * 1000;
+// A JavaScript shell or a confirmation gate is a SMALL document; anything
+// longer than this is content and is never read as either.
+const SHELL_PAGE_MAX_CHARS = 60000;
+// Decode cap for the one-line AI answers (field trim, short name): a part
+// range or a short name is ~10 tokens, and a model that ignores the format
+// must stay cheap.
+const SHORT_ANSWER_NUM_PREDICT = 200;
 
 // Provenance stamps that positively corroborate a bar name / street address
 // for the BUILT gmaps link (owner ask 2026-08-14: a bare coordinate query is
@@ -9171,7 +9181,7 @@ class SharedCore {
                         const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim().split('#')[0] : '';
                         if (!ticketUrl || !/^https?:\/\//i.test(ticketUrl)) continue;
                         const startMs = SharedCore.toEpochMillis(event.startDate);
-                        if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) continue;
+                        if (Number.isFinite(startMs) && (Date.now() - startMs) > TICKET_LINK_PAST_EVENT_GRACE_MS) continue;
                         const normalized = this.normalizeUrl(ticketUrl, ticketUrl);
                         if (!normalized || seenTicketLinks.has(normalized) || this.hasProcessedUrl(processedUrls, normalized)) continue;
                         if (this.getUrlDedupeKey(normalized) === this.getUrlDedupeKey(url)) continue;
@@ -9515,7 +9525,7 @@ class SharedCore {
             const startMs = event && event.startDate instanceof Date
                 ? event.startDate.getTime()
                 : Date.parse(String((event && event.startDate) || ''));
-            if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) {
+            if (Number.isFinite(startMs) && (Date.now() - startMs) > TICKET_LINK_PAST_EVENT_GRACE_MS) {
                 console.log(`🗂️ SharedCore: Skipping ticket link for past event "${event.title || 'unknown'}" (started ${new Date(startMs).toISOString().slice(0, 10)}): ${ticketUrl}`);
                 continue;
             }
@@ -11805,7 +11815,7 @@ class SharedCore {
         const prompt = this.buildFieldTrimPrompt({ eventTitle: title, entries: overlong });
         // A part range is ~10 tokens; the old text-echo answers ran to ~300.
         // Capping the decode keeps a model that ignores the format cheap.
-        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
+        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || SHORT_ANSWER_NUM_PREDICT, SHORT_ANSWER_NUM_PREDICT) };
         const rawResponse = await this.callAiGenerate(trimAiConfig, prompt, 'field-trim', httpAdapter);
 
         let parsed = null;
@@ -12149,7 +12159,7 @@ class SharedCore {
 
         const maxChars = aiConfig.shortNameDeriveMaxChars;
         const prompt = this.buildShortNamePrompt({ eventTitle: title, maxChars });
-        const shortNameAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
+        const shortNameAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || SHORT_ANSWER_NUM_PREDICT, SHORT_ANSWER_NUM_PREDICT) };
 
         let rawResponse = null;
         try {
@@ -15056,7 +15066,7 @@ class SharedCore {
     // it — a JSON body or JSON-LD is content, not a shell.
     looksLikeSpaShell(html) {
         const source = typeof html === 'string' ? html : '';
-        if (!source || source.length > 60000) return false;
+        if (!source || source.length > SHELL_PAGE_MAX_CHARS) return false;
         if (source.trim()[0] === '{' || source.trim()[0] === '[') return false;
         if (!/<script\b[^>]*\ssrc\s*=/i.test(source)) return false;
         // Structured data that describes EVENTS means the page has content
@@ -15553,7 +15563,7 @@ class SharedCore {
     // Returns { action, fields } or null.
     detectConfirmationGate(html, pageUrl) {
         const source = String(html || '');
-        if (!source || source.length > 60000 || !/<form\b/i.test(source)) return null;
+        if (!source || source.length > SHELL_PAGE_MAX_CHARS || !/<form\b/i.test(source)) return null;
         const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
         const body = bodyMatch ? bodyMatch[1] : source;
         const visible = this.decodeBasicHtmlEntities(body
@@ -24824,6 +24834,9 @@ if (typeof module !== 'undefined' && module.exports) {
         NetworkResilience,
         SharedCore,
         PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS,
+        // "Same door" radius for curated pins — one number for the runtime
+        // (findCuratedBarByPlace) and the bar-approval tool.
+        CURATED_BAR_SAME_PLACE_KM,
         // Pure title date-segment detector, shared with the ai-web parser's
         // extraction-time strip (one implementation, defined upstream here).
         detectTitleDateSegment: SharedCore.detectTitleDateSegment
