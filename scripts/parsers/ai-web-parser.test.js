@@ -19296,6 +19296,374 @@ test('coverage audit: a title-then-date card is its own element, never the text 
 });
 
 // ============================================================================
+// Date-then-title cards (akbarsilverlake.com, massbearsandcubs.org — run
+// 20260925-110542)
+// ============================================================================
+
+// akbarsilverlake.com/upcoming-events: 17 <article class="…-item"> cards,
+// each opening <article><a href="/event/NAME/"> BEFORE its media div, then
+// a "06 / Sep / Sun" date tag, then the <h4> title. A fence-post group cut
+// between the media divs touched the same 17 events and outranked the
+// article group on raw entry count; every slice ran to the next media div
+// and so carried the NEXT card's <a href> — BEARS IN SPACE linked to
+// /event/learn-the-words-bitch/ and the one-destination guard withheld
+// ten records, labelling every card by its weekday.
+function buildDateTagCardPage() {
+  const card = (slug, day, weekday, title, sub) => `<article class="grid-item">
+    <a class="grid-link" href="https://venue.example/event/${slug}/">
+      <div class="grid-media"><img src="https://venue.example/img/${slug}.jpg" alt="${title}" />
+        <time class="grid-date" datetime="2026-09-${day}">
+          <span>${day}</span>
+          <span>Sep</span>
+          <span>${weekday}</span>
+        </time></div>
+      <h4 class="grid-title">${title}</h4>${sub ? `<p class="grid-sub">${sub}</p>` : ''}
+    </a></article>`;
+  const cards = [
+    ['craftaoke', '02', 'Wed', 'Craftaoke', 'Craftnight &amp; Karaoke'],
+    ['gaymers-night', '03', 'Thu', 'Gaymers Night', 'Presented by the Gayming Society'],
+    ['slash-fiction', '05', 'Sat', 'Slash Fiction', ''],
+    ['bears-in-space', '06', 'Sun', 'BEARS IN SPACE!!', 'Season Closer!'],
+    ['learn-the-words', '07', 'Mon', 'Learn the Words, Bitch!', 'The Legendary Lip Sync Contest']
+  ];
+  return { cards, html: `<html><body><h2>This Month's EVENTS</h2><div class="grid">${cards.map(c => card(...c)).join('\n')}</div><footer><a href="/">Home</a></footer></body></html>` };
+}
+
+test('date-tag cards: the article group outranks the fence-post cut between media divs, and every window links its own event page', () => {
+  const parser = createParser();
+  const { cards, html } = buildDateTagCardPage();
+  let segments;
+  const logs = withCapturedLogs(() => { segments = parser.buildMultiEventSegments(html, 'https://venue.example/upcoming-events/'); });
+  assert.equal(segments.length, cards.length, JSON.stringify(segments.map(s => s.lines)));
+  cards.forEach(([slug, , weekday, title], index) => {
+    const segment = segments[index];
+    assert.ok(segment.lines.includes(title), `card ${index + 1} holds "${title}": ${JSON.stringify(segment.lines)}`);
+    const links = Array.from(new Set(Array.from(segment.html.matchAll(/venue\.example\/event\/([a-z-]+)\//g)).map(m => m[1])));
+    assert.deepEqual(links, [slug], `"${title}" carries only its own link`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, 'https://venue.example/upcoming-events/');
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: https://venue.example/event/${slug}/`), JSON.stringify(resourceLines));
+    assert.ok(resourceLines.includes(`SEGMENT_IMAGE_URL: https://venue.example/img/${slug}.jpg`), JSON.stringify(resourceLines));
+    assert.equal(parser.deriveSegmentListingTitle(segment), title, `the card's listing title is its name, not "${weekday}"`);
+  });
+  assert.ok(!logs.some(line => line.includes('ONE DESTINATION')), logs.join('\n'));
+
+  // The group ranking: the media-div fence-post group's anchors sit inside
+  // the <article> cards, one per card, so it cuts across them and ranks
+  // behind the article group.
+  const groups = parser.extractRepeatedMultiEventStructureGroups(html);
+  assert.ok(groups.length >= 2, `both groups found: ${JSON.stringify(groups.map(g => g.signature))}`);
+  assert.match(groups[0].signature, /^container:article:/);
+  assert.equal(groups[0].crossesCards, false);
+  const mediaGroup = groups.find(group => /^resource:div:/.test(group.signature));
+  assert.ok(mediaGroup && mediaGroup.crossesCards === true, JSON.stringify(groups.map(g => [g.signature, g.crossesCards])));
+  // Each fence-post slice, trimmed at the next card's opening and extended
+  // back over its own <article><a href>, is nevertheless the card itself.
+  const bearsSlice = mediaGroup.entries.find(entry => entry.html.includes('BEARS IN SPACE'));
+  assert.deepEqual([...new Set(Array.from(bearsSlice.html.matchAll(/venue\.example\/event\/([a-z-]+)\//g)).map(m => m[1]))], ['bears-in-space']);
+});
+
+test('fence-post slices: the next card\'s unclosed opening tags after the entry\'s last text are trimmed; closed tails and text after are kept', () => {
+  const parser = createParser();
+  const leaking = '<div class="grid-media"><img src="/a.jpg" /><time>06 Sep</time></div><h4>BEARS IN SPACE!!</h4><p>Season Closer!</p></a>\n</article>\n<article class="grid-item">\n<a class="grid-link" href="https://venue.example/event/learn-the-words/">\n';
+  const trimmed = parser.trimTrailingUnclosedOpeningsFromFencePostSlice(leaking);
+  assert.ok(!trimmed.includes('learn-the-words'), `the next card's link is trimmed: ${trimmed}`);
+  assert.ok(trimmed.endsWith('</article>\n'), `the entry's own closing tags stay: ${JSON.stringify(trimmed.slice(-30))}`);
+  assert.ok(trimmed.includes('Season Closer!'));
+
+  // Every trailing element closes inside the slice: untouched.
+  const closed = '<div class="card"><h4>NIGHT ONE</h4><div class="badges"><span></span></div></div>';
+  assert.equal(parser.trimTrailingUnclosedOpeningsFromFencePostSlice(closed), closed);
+  // Visible text after the opening: it is the entry's own, untouched.
+  const followedByText = '<h4>NIGHT ONE</h4></div><div class="next"><p>Doors at 9pm</p>';
+  assert.equal(parser.trimTrailingUnclosedOpeningsFromFencePostSlice(followedByText), followedByText);
+  // Void and self-closing tags in the tail never count as unclosed.
+  const voids = '<h4>NIGHT ONE</h4><br><img src="/x.jpg"><hr/>';
+  assert.equal(parser.trimTrailingUnclosedOpeningsFromFencePostSlice(voids), voids);
+  assert.equal(parser.trimTrailingUnclosedOpeningsFromFencePostSlice(''), '');
+});
+
+// events.humanitix.com wraps each card as <a class="EventCard" href="…">
+// <div class="banner"><!--[0--><picture>…: a slice anchored on the
+// <picture> began inside the card's own link and, running to the next
+// picture, held the NEXT card's <a href> — every card on the page linked
+// one card over.
+test('fence-post slices: a slice takes the wrappers its anchor sits in — the card\'s own link — and never the next card\'s', () => {
+  const parser = createParser();
+  const card = (n, title, date) => `<li><a href="https://tix.example/events/${n}" class="EventCard"><div class="banner"><!--[0--><picture class="Image"><img src="https://img.example/${n}.webp" alt="${title} flyer"></picture><!--]--></div><div class="details"><div class="date">${date}</div><div class="title">${title}</div><div class="location">Brass City Games, Chicago</div></div></a></li>`;
+  const cards = [[1, 'Drinking & Dragons at Brass City Games', 'Thu, Sep 24, 6pm - 9pm CDT'], [2, 'Questers Guild at the Trading Post', 'Sat, Sep 26, 3pm - 6pm CDT'], [3, 'Drinking and Dragons at Spiteful Brewing Taproom', 'Sun, Sep 27, 12:30pm - 3:30pm CDT']];
+  const html = `<html><body><ul class="events">${cards.map(c => card(...c)).join('\n')}</ul><footer><a href="https://tix.example/united-states">All events</a></footer><script>var a = 2E3<a?2300-a:0;</script></body></html>`;
+  const groups = parser.extractRepeatedMultiEventResourceGroups(html);
+  const pictures = groups.find(group => /^resource:picture/.test(group.signature));
+  assert.ok(pictures, JSON.stringify(groups.map(g => g.signature)));
+  assert.equal(pictures.entries.length, 3);
+  cards.forEach(([n], index) => {
+    const entry = pictures.entries[index];
+    assert.ok(entry.html.startsWith(`<li><a href="https://tix.example/events/${n}"`), `entry ${index + 1} starts at its own wrappers: ${entry.html.slice(0, 80)}`);
+    assert.deepEqual([...new Set(Array.from(entry.html.matchAll(/tix\.example\/events\/(\d+)/g)).map(m => m[1]))], [String(n)]);
+    assert.ok(entry.anchorStart > entry.start && entry.end > entry.anchorStart);
+  });
+  // The last slice ends at its own </a>, not in the footer or the script.
+  assert.ok(!pictures.entries[2].html.includes('united-states') && !pictures.entries[2].html.includes('<script'), pictures.entries[2].html.slice(-200));
+  // Script bodies are not markup: "2E3<a?2300-a" never reads as an unclosed <a>.
+  const withScript = '<h4>NIGHT</h4><p>Sep 5</p></div><script>var a = 2E3<a?2300-a:0;</script>';
+  assert.equal(parser.trimTrailingUnclosedOpeningsFromFencePostSlice(withScript), withScript);
+  assert.equal(parser.extendFencePostSliceStart('<div class="card"><!-- marker --><img src="x.jpg"></div>', 33, 60), 0);
+  assert.equal(parser.extendFencePostSliceStart('</div><img src="x.jpg"><p>t</p>', 6, 30), 6, 'a closing tag before the anchor is not a wrapper');
+});
+
+// whereto.party/in/kuala-lumpur: one <section> per day — the day header,
+// the ticket button, then the card's name, venue and dated time. The
+// button sat between the header and the body, was taken as the terminal
+// CTA, and the window was cut to "Saturday, 26 September / Tickets".
+test('trimLinesAfterTerminalCallToAction: a CTA that a date line still follows is not terminal', () => {
+  const parser = createParser();
+  assert.deepEqual(
+    parser.trimLinesAfterTerminalCallToAction(['Saturday, 26 September', 'Tickets', 'Drip KL presents Yusef Kifah', 'Kuala Lumpur · Drip Kuala Lumpur', 'Sat, 26 September 2026 · 22:00', '50-80 MYR']),
+    ['Saturday, 26 September', 'Tickets', 'Drip KL presents Yusef Kifah', 'Kuala Lumpur · Drip Kuala Lumpur', 'Sat, 26 September 2026 · 22:00', '50-80 MYR']);
+  // A bare title after the CTA (the next card's name on a title-then-date list) still ends the window.
+  assert.deepEqual(parser.trimLinesAfterTerminalCallToAction(['TKVR | Nolid', 'Oct 15, 2026 10:00 PM', 'GET TICKETS', 'Looking']), ['TKVR | Nolid', 'Oct 15, 2026 10:00 PM', 'GET TICKETS']);
+  // Leading CTAs before any content are still chrome.
+  assert.deepEqual(parser.trimLinesAfterTerminalCallToAction(['GET YOUR TICKETS HERE', 'Dallas', 'Oct 3, 2026', 'Buy tickets', 'Next Card']), ['Dallas', 'Oct 3, 2026', 'Buy tickets']);
+});
+
+// A fence-post group whose anchors sit inside a card-like container's
+// entries, one per card, cuts across those cards (www.3dollarbillbk.com
+// /rsvp: 74 <figure> anchors in 67 <article> cards); a container whose
+// entries hold several event-like anchor slices each (a day section over
+// three same-night parties) is not the cards and demotes nothing.
+test('structure groups: a fence-post group cutting across a container\'s cards ranks behind the container; a section over several cards demotes nothing', () => {
+  const parser = createParser();
+  const article = (n, title, day) => `<article class="event-card"><div class="info"><h3>${title}</h3><p>Sat, Oct ${day}, 2026 9:00 PM</p><p>Doors at eight, DJs till late, no cover before ten. Bring a friend.</p><figure class="image-block"><img src="https://cdn.example/${n}.jpg"></figure></div><a href="/events/${n}">Details</a></article>`;
+  const one = `<html><body><div class="hero"><figure class="image-block"><img src="https://cdn.example/hero.jpg"></figure></div>${[1, 2, 3, 4].map(n => article(n, `Night ${n}`, 10 + n)).join('\n')}</body></html>`;
+  const groups = parser.extractRepeatedMultiEventStructureGroups(one);
+  const figures = groups.find(group => /^resource:figure/.test(group.signature));
+  const articles = groups.find(group => /^container:article/.test(group.signature));
+  assert.ok(figures && articles, JSON.stringify(groups.map(g => g.signature)));
+  assert.equal(figures.crossesCards, true);
+  assert.equal(articles.crossesCards, false);
+  assert.equal(groups[0], articles, 'the element-bounded cards rank first');
+
+  const section = (day, cards) => `<section class="day-section"><h2>Saturday, Oct ${day}</h2>${cards.map(([n, title]) => `<div class="party"><img src="https://cdn.example/${n}.jpg"><h3>${title}</h3><p>Sat, Oct ${day}, 2026 ${n + 8}:00 PM</p><p>A long enough description line to make this slice look like an event on its own.</p><a href="/e/${n}">Tickets</a></div>`).join('')}</section>`;
+  const many = `<html><body>${section(10, [[1, 'Alpha Night'], [2, 'Beta Night'], [3, 'Gamma Night']])}${section(17, [[4, 'Delta Night'], [5, 'Epsilon Night']])}</body></html>`;
+  const sectioned = parser.extractRepeatedMultiEventStructureGroups(many);
+  const images = sectioned.find(group => /^resource:img/.test(group.signature));
+  assert.ok(images, JSON.stringify(sectioned.map(g => g.signature)));
+  assert.equal(images.crossesCards, false, 'a section holding three cards is not the cards');
+});
+
+test('deriveSegmentListingTitle: a bare weekday line is a date tag, never the listing title', () => {
+  const parser = createParser();
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Sep', 'Sun', 'BEARS IN SPACE!!', 'Season Closer!'] }), 'BEARS IN SPACE!!');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['06', 'Sep', 'Wed', 'Craftaoke'] }), 'Craftaoke');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Saturday', 'Slash Fiction'] }), 'Slash Fiction');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Sep', 'Sun'] }), '', 'a card with no name line has no listing title');
+  // The same tag printed inline: a day-first date with its weekday is a date line, not a name.
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['02 Sep Wed', 'Craftaoke'] }), 'Craftaoke');
+  assert.equal(parser.deriveListingTitleSpanFromDatedLine('26 Sep 2026 BEAR NIGHT'), 'BEAR NIGHT');
+  for (const line of ['Sun', 'Sunday', 'Sat.', 'Mon,', 'Tues', 'Thurs', 'Wednesday']) assert.ok(parser.isBareWeekdayLine(line), line);
+  for (const line of ['Sunday Funday', 'Sun Ra Arkestra', 'Sat, Sep 26, 2026', 'Monday Night Bingo']) assert.ok(!parser.isBareWeekdayLine(line), line);
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Sunday Funday', 'Sep 26'] }), 'Sunday Funday');
+});
+
+test('countMultiEventEntryTitleElements: a title element nested in a title element is one name', () => {
+  const parser = createParser();
+  // Squarespace: the card's link inside its heading.
+  assert.equal(parser.countMultiEventEntryTitleElements('<h1 class="eventlist-title"><a href="/e/1" class="eventlist-title-link">Monthly Trivia</a></h1><p>Thu</p>'), 1);
+  assert.equal(parser.countMultiEventEntryTitleElements('<div class="card-title"><h3>Name</h3></div>'), 1);
+  // Two siblings still name two things.
+  assert.equal(parser.countMultiEventEntryTitleElements('<h3>NIGHT ONE</h3><p>Sep 5</p><h3>NIGHT TWO</h3><p>Sep 6</p>'), 2);
+  assert.equal(parser.countMultiEventEntryTitleElements('<div class="title">A</div><div class="title">B</div>'), 2);
+  // A heading beside a separate title-classed element: whichever signal names more (unchanged).
+  assert.equal(parser.countMultiEventEntryTitleElements('<h3>Name</h3><div class="event-title">Name</div>'), 1);
+  assert.equal(parser.countMultiEventEntryTitleElements('<p>no names</p>'), 0);
+  const elements = parser.findMultiEventEntryTitleElements('<h1 class="t-title"><a class="t-title-link">X</a></h1><h2>Y</h2>');
+  assert.deepEqual(elements.map(e => [e.tag, e.isHeading, e.isTitled]), [['h1', true, true], ['h2', true, false]]);
+});
+
+test('countMultiEventDateSignals: counts the dates a card states, not the lines that restate them', () => {
+  const parser = createParser();
+  // Squarespace multi-day card: month tag, end tag, start line, end line = two dates.
+  assert.equal(parser.countMultiEventDateSignals(['Sep', 'to Sep 27', 'Events', 'Alley Bears', 'Sat, Sep 26, 2026', '9:00 PM', 'Sun, Sep 27, 2026', '12:00 AM']), 2);
+  // Month tag, date line, and an excerpt repeating the night = one date.
+  assert.equal(parser.countMultiEventDateSignals(['Nov', 'Bear Boutique', 'Sunday, November 15, 2026', 'Bear Boutique returns to Club Café on Sunday, November 15, 2026.']), 1);
+  // Three different nights are still three, timed or not.
+  assert.equal(parser.countMultiEventDateSignals(['Oct 10, 2026 9:00 PM', 'A', 'Oct 15, 2026 10:00 PM', 'B', 'Oct 16, 2026 10:00 PM', 'C']), 3);
+  assert.equal(parser.countMultiEventDateSignals(['Oct 10', 'A', 'Oct 15', 'B', 'Oct 16', 'C']), 3);
+  // Two timed lines on one night can be two listings.
+  assert.equal(parser.countMultiEventDateSignals(['Sep 26 9:00 PM', 'Sep 26 11:00 PM']), 2);
+  // A date printed as a line of its own is a listing's date line even when
+  // another line states the same date (a day section holding two same-night
+  // cards prints the night once per card); prose restating it is not.
+  assert.equal(parser.countMultiEventDateSignals(['26 Sep 2026', 'September 26th', 'Sep']), 2);
+  assert.equal(parser.countMultiEventDateSignals(['26 Sep 2026', 'Doors open on September 26th at nine', 'Sep']), 1);
+  assert.equal(parser.countMultiEventDateSignals(['Thursday, 8 October', 'Chai T Grande', 'Thu, 8 October 2026 · 21:00 – 02:00', 'ROAD TO ENCHANTED', 'Thu, 8 October 2026', '650 THB']), 3, 'a day section over two same-night cards is not one listing');
+  assert.equal(parser.countMultiEventDateSignals(['Sonntag, 11.10.26', 'Wann: Sonntag, 11.10.2026, 10:00 Uhr', 'Wann: Sonntag, 11.10.2026, ab 13:00 Uhr']), 3, 'multilingual weekday headers are date lines too');
+  // A day range names both ends.
+  assert.equal(parser.countMultiEventDateSignals(['June 2027', '3–7 Jun Bear Jamboree — Orlando', '16–21 Jun BiggerVegas 2027']), 4);
+  for (const line of ['Thu, 8 October 2026', 'Sat, Sep 26, 2026', 'Saturday, 26 September', 'Sonntag, 11.10.26']) assert.ok(parser.isPureDateLine(line), line);
+  for (const line of ['to Sep 27', 'Sep', 'Oct 10, 2026 9:00 PM', '3–7 Jun Bear Jamboree', 'Wann: Sonntag, 11.10.2026']) assert.ok(!parser.isPureDateLine(line), line);
+  assert.equal(parser.countMultiEventDateSignals(['Sep', 'Oct', 'Nov']), 3);
+  assert.equal(parser.countMultiEventDateSignals(['no dates here']), 0);
+});
+
+// www.massbearsandcubs.org/events (Squarespace event list): each <article>
+// prints a month tag, its category, the title (a link nested in the <h1>),
+// then the full date, times and venue. Page-wide the flat splitter dedupes
+// repeated lines, so its windows are the previous card's date line under
+// this card's title — "Sunday, July 19, 2026 / The Belly Party (Bear
+// Week)" is Bear Tea's night — and the card's own tail ("Friday, July 17,
+// 2026 / 11:00 PM / Red Room") opens a second window whose "title" is the
+// venue line. The resolver refused the card for holding two window titles.
+function buildSquarespaceEventListPage() {
+  const card = (n, month, title, date, start, end, venue) => `<article class="eventlist-event"><a href="https://site.example/events/${n}" class="eventlist-column-thumbnail"><img src="https://cdn.example/${n}.png" alt="${title}"></a>
+    <div class="eventlist-column-date"><div class="eventlist-datetag-startdate--month">${month}</div><div class="eventlist-datetag-startdate--day">${date.match(/\d+/)[0]}</div></div>
+    <div class="eventlist-column-info"><div class="eventlist-cats"><a href="?category=Events">Events</a></div>
+    <h1 class="eventlist-title"><a href="https://site.example/events/${n}" class="eventlist-title-link">${title}</a></h1>
+    <ul class="eventlist-meta"><li><time class="event-date">${date}</time></li><li>${start}</li><li>${end}</li><li>${venue} <a href="http://maps.example/?q=${encodeURIComponent(venue)}">(map)</a></li><li><a href="http://calendar.example/${n}">Google Calendar</a> <a href="https://site.example/events/${n}?format=ical">ICS</a></li></ul>
+    <div class="eventlist-excerpt"><p>Join us every third Sunday for Bear Tea from 4–10 p.m.</p></div>
+    <a href="https://site.example/events/${n}" class="eventlist-button">View Event →</a></div></article>`;
+  const cards = [
+    [1, 'Aug', 'Bear Tea - Meet MA Bear 2027!', 'Sunday, August 16, 2026', '4:00 PM', '10:00 PM', 'Club Cafe'],
+    [2, 'Aug', 'Monthly Trivia', 'Thursday, August 20, 2026', '8:00 PM', '10:00 PM', 'The Alley Bar'],
+    [3, 'Jul', 'Bear Tea /Club Cafe', 'Sunday, July 19, 2026', '4:00 PM', '10:00 PM', 'Club Cafe'],
+    [4, 'Jul', 'The Belly Party (Bear Week)', 'Friday, July 17, 2026', '10:00 PM', '11:00 PM', 'Red Room'],
+    [5, 'Jul', 'Monthly Trivia', 'Thursday, July 16, 2026', '8:00 PM', '10:00 PM', 'The Alley Bar']
+  ];
+  return { cards, html: `<html><body><div class="eventlist">${cards.map(c => card(...c)).join('\n')}</div></body></html>` };
+}
+
+test('card resolver: the previous card\'s date under this card\'s title resolves to the card holding the title, and the card\'s own tail window is that card\'s', () => {
+  const parser = createParser();
+  const { cards, html } = buildSquarespaceEventListPage();
+  let flat;
+  withCapturedLogs(() => { flat = parser.buildFlatTextMultiEventSegments(html, { recordStats: false }); });
+  const chimera = flat.find(window => window.lines.includes('The Belly Party (Bear Week)'));
+  assert.ok(chimera && chimera.lines.includes('Sunday, July 19, 2026'), `the trap: Bear Tea's night under The Belly Party's title — ${JSON.stringify(flat.map(w => w.lines))}`);
+  const tail = flat.find(window => window.lines.includes('Red Room (map)'));
+  assert.ok(tail && !tail.lines.includes('The Belly Party (Bear Week)'), `the card's tail opens a window of its own: ${JSON.stringify(tail && tail.lines)}`);
+
+  const resolver = parser.createCardWindowResolver(html, flat);
+  const card = resolver.resolveWindow(chimera);
+  assert.ok(card, 'the window resolves to the card element holding its title');
+  assert.ok(card.segment.lines.includes('The Belly Party (Bear Week)') && card.segment.lines.includes('Friday, July 17, 2026'), JSON.stringify(card.segment.lines));
+  assert.ok(!card.segment.lines.includes('Sunday, July 19, 2026'), 'only the card\'s own date');
+  const links = Array.from(new Set(Array.from(card.segment.html.matchAll(/site\.example\/events\/(\d+)/g)).map(m => m[1])));
+  assert.deepEqual(links, ['4'], 'only the card\'s own link');
+  assert.ok(card.segment.html.includes('https://cdn.example/4.png') && !card.segment.html.includes('cdn.example/3.png'), 'only the card\'s own image');
+  const position = resolver.locateWindow(tail);
+  assert.ok(position >= card.start && position < card.end, 'the tail window sits inside the resolved card');
+
+  // Through the audit: with two structured windows given, the other three
+  // cards come back as card windows — and the tail is nobody's listing.
+  const structured = cards.slice(0, 2).map(([, month, title, date]) => ({ lines: [month, 'Events', title, date], html: '' }));
+  let covered;
+  const logs = withCapturedLogs(() => { covered = parser.coverUnclaimedDatedWindows(html, structured); });
+  assert.equal(covered.length, 4, `${JSON.stringify(covered.map(s => s.lines.slice(0, 4)))}\n${logs.join('\n')}`);
+  const bellyWindow = covered.find(s => s.lines.includes('The Belly Party (Bear Week)'));
+  assert.deepEqual(bellyWindow.lines.filter(line => parser.hasMultiEventDateSignal(line)), ['Jul', 'Friday, July 17, 2026'], 'its own month tag and night, nothing of Bear Tea\'s');
+  assert.ok(!covered.some(s => s.lines[0] === 'Sunday, July 19, 2026' || s.lines[0] === 'Friday, July 17, 2026'), 'no text window survives beside its card');
+});
+
+// A date-then-title list: each card prints its date line, then its weekday,
+// then its name, then its ticket link. The text window is aligned (it opens
+// at the card's own date), but the window's title used to be the weekday
+// line — "Saturday" — and the page-wide record lookup found the FIRST card
+// printing that weekday, so two cards resolved to the same element and one
+// was dropped as its duplicate.
+test('card resolver: a date-above-title card resolves by its name line, never by the weekday line printed between date and name', () => {
+  const parser = createParser();
+  const listCard = (n, title, day, time) => `<div role="listitem" class="event-item w-dyn-item"><div class="w-embed"><script type="application/ld+json">{"@type":"Event","name":"${title}","startDate":"2026-09-${day}T${time}:00-07:00","url":"https://massive.example/events/${n}"}</script></div>
+    <a href="https://tixr.example/e/${n}">get TICKETS</a><h3>${title}</h3><div>Sep ${day}, 2026 ${time}</div></div>`;
+  const dated = [
+    [301, 'Sat, Oct 10, 2026', 'Saturday', 'Treasure Trail | Seattle'],
+    [302, 'Thu, Oct 15, 2026', 'Thursday', 'TKVR | Nolid'],
+    [303, 'Sat, Oct 17, 2026', 'Saturday', 'Looking | Seattle Edition'],
+    [304, 'Thu, Oct 22, 2026', 'Thursday', 'Bearracuda | Seattle']
+  ];
+  const datedCard = (n, date, weekday, title) => `<div role="listitem" class="swiper-slide w-dyn-item"><img src="https://cdn.example/${n}.webp" alt=""><div class="infotext white">${date}</div><div class="infotext small">${weekday}</div><div class="infotext bold">${title}</div><div class="swiper-items"><a href="https://tixr.example/e/${n}" target="_blank">GET TICKETS</a></div></div>`;
+  const html = `<html><body>
+    <div class="swiper-wrapper" role="list">${dated.map(card => datedCard(...card)).join('')}</div>
+    <div role="list" class="event-grid w-dyn-items">${listCard(1, 'Twink Bash: Chasers', 26, '21:00')}${listCard(2, 'PERVERT MX (SEATTLE)', 27, '22:00')}</div>
+  </body></html>`;
+
+  let flat;
+  withCapturedLogs(() => { flat = parser.buildFlatTextMultiEventSegments(html, { recordStats: false }); });
+  const resolver = parser.createCardWindowResolver(html, flat);
+  const resolved = new Map();
+  for (const [n, date, , title] of dated) {
+    const window = flat.find(candidate => candidate.lines.includes(title));
+    assert.ok(window && window.lines[0] === date, `"${title}" opens at its own date: ${JSON.stringify(flat.map(w => w.lines))}`);
+    assert.equal(parser.deriveSegmentListingTitle(window), title, 'the name line is the title, not the weekday');
+    const card = resolver.resolveWindow(window);
+    assert.ok(card, `"${title}" resolves to its card`);
+    assert.ok(!resolved.has(card.key), `"${title}" resolves to a card of its own, not "${resolved.get(card.key)}"'s`);
+    resolved.set(card.key, title);
+    assert.deepEqual(card.segment.lines.filter(line => parser.hasMultiEventDateSignal(line)), [date]);
+    assert.deepEqual([...new Set(Array.from(card.segment.html.matchAll(/tixr\.example\/e\/(\d+)/g)).map(m => m[1]))], [String(n)]);
+    assert.ok(card.segment.html.includes(`https://cdn.example/${n}.webp`));
+  }
+
+  let segments;
+  const logs = withCapturedLogs(() => { segments = parser.buildMultiEventSegments(html, 'https://massive.example/'); });
+  assert.equal(segments.length, 6, `two JSON-LD cards + four dated cards: ${JSON.stringify(segments.map(s => s.lines))}\n${logs.join('\n')}`);
+  for (const [n, date, weekday, title] of dated) {
+    const segment = segments.find(s => s.lines.includes(title));
+    assert.deepEqual(segment.lines.filter(line => !parser.isMultiEventCallToActionLine(line)), [date, weekday, title], `"${title}" is its own card`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, 'https://massive.example/');
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: https://tixr.example/e/${n}`), JSON.stringify(resourceLines));
+    assert.ok(resourceLines.includes(`SEGMENT_IMAGE_URL: https://cdn.example/${n}.webp`), JSON.stringify(resourceLines));
+  }
+});
+
+test('card resolver: a list container that names itself once over headingless cards is still refused', () => {
+  const parser = createParser();
+  const cards = [['1', 'Treasure Trail', 'Oct 10, 2026 9:00 PM'], ['2', 'TKVR', 'Oct 15, 2026 10:00 PM']];
+  const html = `<html><body><div class="events-list"><h2>Upcoming</h2>${cards.map(([n, title, date]) => `<div><a href="https://tixr.example/e/${n}">GET TICKETS</a><p>${title}</p><p>${date}</p></div>`).join('')}</div></body></html>`;
+  let flat;
+  withCapturedLogs(() => { flat = parser.buildFlatTextMultiEventSegments(html, { recordStats: false }); });
+  const resolver = parser.createCardWindowResolver(html, flat);
+  assert.equal(resolver.pageHasCards, false);
+  assert.ok(flat.every(window => resolver.resolveWindow(window) === null), 'the container holds two listings — its one heading names the list, not a window');
+});
+
+test('date-then-title cards end to end: a Squarespace event list segments one whole card per article and the one-destination guard withholds nothing', async () => {
+  const { cards, html } = buildSquarespaceEventListPage();
+  const parser = createParser();
+  const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  parser.extractSingleEvent = async (segmentHtmlData) => {
+    const lines = String(segmentHtmlData.html || '').split('\n');
+    const link = (lines.find(line => line.startsWith('SEGMENT_LINK_URL:')) || '').replace(/^SEGMENT_LINK_URL:\s*/, '');
+    const image = (lines.find(line => line.startsWith('SEGMENT_IMAGE_URL:')) || '').replace(/^SEGMENT_IMAGE_URL:\s*/, '');
+    const cardLines = Array.isArray(segmentHtmlData.segmentCardLines) ? segmentHtmlData.segmentCardLines : [];
+    const title = cardLines.find(line => cards.some(card => card[2] === line)) || '';
+    const dateLine = cardLines.find(line => /^\w+day, \w+ \d{1,2}, \d{4}$/.test(line)) || '';
+    const match = dateLine.match(/^\w+day, (\w+) (\d{1,2}), (\d{4})$/);
+    if (!title || !match) return null;
+    const event = { title, startDate: new Date(Date.UTC(Number(match[3]), MONTHS.indexOf(match[1].toLowerCase()), Number(match[2]), 16)), timezone: 'America/New_York' };
+    if (link) event.url = link;
+    if (image) event.image = image;
+    return event;
+  };
+  const captured = [];
+  const originalLog = console.log;
+  console.log = (...args) => { captured.push(args.join(' ')); };
+  let events;
+  try {
+    events = await parser.extractEventsFromMultiEventPage({ html, url: 'https://site.example/events' }, {}, {}, [], [], {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(events.length, cards.length, JSON.stringify(events.map(e => [e.title, e.startDate])));
+  cards.forEach(([n, , title, , , , ]) => {
+    const event = events.find(e => e.title === title && e.url === `https://site.example/events/${n}`);
+    assert.ok(event, `"${title}" links its own page: ${JSON.stringify(events.map(e => [e.title, e.url]))}`);
+    assert.equal(event.image, `https://cdn.example/${n}.png`);
+    assert.equal(event._chimeraWithheld, undefined);
+  });
+  assert.deepEqual(captured.filter(line => line.includes('ONE DESTINATION')), []);
+});
+
+// ============================================================================
 // JSON-API: id-keyed row maps and event envelopes (TicketSauce widget feed)
 // ============================================================================
 // Abridged REAL shape from events.ticketsauce.com/events/events_by_organization
