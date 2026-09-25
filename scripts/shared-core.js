@@ -22042,7 +22042,7 @@ class SharedCore {
     // numbered) that are not the same street address, or two ticket links
     // on different event paths. Absent or one-sided evidence is not a
     // contradiction.
-    haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null) {
+    haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null, options = {}) {
         // A placeholder venue ("Check instagram for this week's location.",
         // the roaming Bear Happy Hour series) names no bar and contradicts none.
         const barA = SharedCore.isPlaceholderVenueText(shapeA.bar) ? '' : this.normalizeIdentityText(shapeA.bar);
@@ -22082,7 +22082,10 @@ class SharedCore {
             || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar)
             || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA)
             || namedAsTitle(barA, shapeB) || namedAsTitle(barB, shapeA);
-        const barsDiffer = Boolean(barA && barB && !sameBarSpelledTwice);
+        // options.barsNeverContradict: two free-text names are two
+        // spellings, never two bars (the identity gate) — but one name over
+        // two house numbers still says one venue.
+        const barsDiffer = !options.barsNeverContradict && Boolean(barA && barB && !sameBarSpelledTwice);
         // The street LINE only ("722 East Burnside Street"): the locality
         // and region spellings after it vary between records of one place.
         // Two numbered lines contradict when their numbers or their street
@@ -22091,7 +22094,19 @@ class SharedCore {
         // "260 Meserole St" and "260 Meserole Dr" (LORAX XCX, one scrape's
         // slip on the street type) are one door; "1354 Harrison" and "398
         // 12th" are two.
-        const streetsAgree = this.areSameStreetLine(shapeA.address, shapeB.address);
+        // Two numbered doors whose PINS sit within one building of each
+        // other are one place — 3 Dollar Bill (260 Meserole) and its yard
+        // "9 Bob Note" (270 Meserole) are 28 m apart, one complex under
+        // two names and two numbers (Bear Tea, replay 2026-09-25). Only a
+        // pin both records state can vouch; no pins, no vouching.
+        const pinsTouch = (() => {
+            const a = shapeA.coordinates;
+            const b = shapeB.coordinates;
+            if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(b.lat)) return false;
+            const km = this.coordinatePairDistanceKm(`${a.lat}, ${a.lng}`, `${b.lat}, ${b.lng}`);
+            return km !== null && km <= CURATED_BAR_SAME_PLACE_KM * 2;
+        })();
+        const streetsAgree = this.areSameStreetLine(shapeA.address, shapeB.address) || pinsTouch;
         const streetsDiffer = !streetsAgree && this.areContradictingStreetLines(shapeA.address, shapeB.address);
         // Bars and streets check each other: two bar names at ONE numbered
         // street line are one door under two names — a party name in the
@@ -22123,6 +22138,11 @@ class SharedCore {
             const shortToken = match[2].replace(/\/+$/, '').match(/^\/([A-Za-z0-9]{6,16})$/);
             if (shortToken && /\d/.test(shortToken[1]) && /[a-z]/i.test(shortToken[1])) return '';
             const path = match[2].replace(/\/+$/, '').replace(/\/(?:tickets?|buy|checkout|register|rsvp|order)$/i, '');
+            // A vendor's venue/organizer/artist page ("dice.fm/venue/cmon-
+            // everybody-ad2x" parked in ticketUrl by an aggregator row —
+            // Bear Belly, run 20260925-110542) is a hub, not an event: it
+            // names no ticket path to disagree with.
+            if (/^\/(?:venues?|o|org|organi[sz]ers?|artists?|promoters?|profiles?|users?|collections?|series|hosts?|pages?)(?:\/|$)/i.test(path)) return '';
             return `${match[1].replace(/^www\./i, '')}${path}`.toLowerCase();
         };
         // Only the SAME vendor can contradict itself: a vendor names events
@@ -22138,8 +22158,19 @@ class SharedCore {
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
         const hostOf = (key) => key.split('/')[0];
         const hubAbove = (shorter, longer) => longer.startsWith(`${shorter}/`);
+        // …and a vendor reaches one event by several routes: "dice.fm/event/
+        // l878lw-qts-brooklyn-…" from the page's JSON-LD, "dice.fm/partner/
+        // tickets/event/l878lw-qts-brooklyn-…" from its button (QTS:
+        // Brooklyn, replay 2026-09-25). One route's path ending in the
+        // other's, whole segments, is the same event down a longer hall.
+        const pathOf = (key) => key.slice(key.indexOf('/'));
+        const sameLeafRoute = (a, b) => {
+            const shorter = pathOf(a).length <= pathOf(b).length ? pathOf(a) : pathOf(b);
+            const longer = shorter === pathOf(a) ? pathOf(b) : pathOf(a);
+            return shorter.split('/').filter(Boolean).length >= 2 && longer.endsWith(shorter);
+        };
         if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)
-            && !hubAbove(ticketA, ticketB) && !hubAbove(ticketB, ticketA)) return true;
+            && !hubAbove(ticketA, ticketB) && !hubAbove(ticketB, ticketA) && !sameLeafRoute(ticketA, ticketB)) return true;
         return false;
     }
 
@@ -22186,14 +22217,31 @@ class SharedCore {
         if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
         const shapeA = this.buildIdentityComparisonShape(eventA);
         const shapeB = this.buildIdentityComparisonShape(eventB);
-        const place = this.haveContradictingPlaceEvidence(
-            options.softBarNames ? { ...shapeA, bar: '' } : shapeA,
-            options.softBarNames ? { ...shapeB, bar: '' } : shapeB,
-            eventA, eventB);
-        if (place) return 'place';
-        const curatedA = this.getCuratedBarForIdentity(eventA, shapeA, eventB);
+        // Two records pointing at ONE event page are that event: the page
+        // outranks every place reading (Goldiloxx Bear Tea, run
+        // 20260925-110542 — the ticket page says "The Yard @ 9 Bob Note,
+        // 270 Meserole", the calendar says 3 Dollar Bill, 260 Meserole, and
+        // both carry …/rsvp/2026/9/12/bear-tea). A record that carries a
+        // neighbour's page is a chimera, withheld before it gets here.
+        const sharedPage = Boolean(this.getSharedEventLinkSlug(eventA, eventB));
+        // Free-text bar names are never a hard fact here: a flyer word in
+        // the venue slot ("NERD SWEAT" for Dungeons & Doms at the Dallas
+        // Eagle, "Looking" for Looking at Massive — run 20260925-110542
+        // refused 40 pairs on "place", most of them one event under two
+        // bar spellings). The doors that can contradict are curated ones
+        // (below), numbered street lines, nights and destinations.
+        const curatedA = sharedPage ? null : this.getCuratedBarForIdentity(eventA, shapeA, eventB);
         const curatedB = curatedA ? this.getCuratedBarForIdentity(eventB, shapeB, eventA) : null;
-        if (curatedA && curatedB && this.normalizeBarNameKey(curatedA.name) !== this.normalizeBarNameKey(curatedB.name)) {
+        // Two curated doors within one building of each other are one
+        // complex (3 Dollar Bill, 260 Meserole, and The Yard at 9 Bob Note,
+        // 270 — 28 m): the doors' own pins settle the place, whatever the
+        // two street lines say.
+        const curatedKm = curatedA && curatedB && typeof curatedA.coordinates === 'string' && typeof curatedB.coordinates === 'string'
+            ? this.coordinatePairDistanceKm(curatedA.coordinates, curatedB.coordinates) : null;
+        const oneComplex = curatedKm !== null && curatedKm <= CURATED_BAR_SAME_PLACE_KM * 2;
+        const place = !sharedPage && !oneComplex && this.haveContradictingPlaceEvidence(shapeA, shapeB, eventA, eventB, { barsNeverContradict: true });
+        if (place) return 'place';
+        if (curatedA && curatedB && !oneComplex && this.normalizeBarNameKey(curatedA.name) !== this.normalizeBarNameKey(curatedB.name)) {
             return `curated bars ("${curatedA.name}" vs "${curatedB.name}")`;
         }
         if (!options.ignoreStatedDays && this.haveContradictingStatedDays(eventA, eventB)) return 'stated days';
@@ -22225,15 +22273,20 @@ class SharedCore {
         };
         const cityBars = this.getCuratedCityBars(cityOf(event) || cityOf(partnerEvent));
         if (!cityBars) return null;
-        const byName = shape.bar ? this.findCuratedBarByName(cityBars, shape.bar) : null;
-        if (byName) return byName;
+        // The DOOR before the name: a record at 398 12th St is the SF Eagle
+        // whatever its bar slot says ("Eagle Bar" found Manchester's "The
+        // Eagle Bar" by name, Hysteria, run 20260925-110542). A street line
+        // that matches no curated door in the city refuses the name too —
+        // the record stands somewhere we do not curate.
         const parsedAddress = this.addressStatesStreet(shape.address) ? this.parseAddressForComparison(shape.address) : null;
         if (parsedAddress) {
             const byAddress = cityBars.filter(bar => bar && typeof bar.address === 'string'
                 && this.isSameStreetAddress(parsedAddress, this.parseAddressForComparison(bar.address)));
             if (byAddress.length === 1) return byAddress[0];
-            if (byAddress.length > 1) return null;
+            return null;
         }
+        const byName = shape.bar ? this.findCuratedBarByName(cityBars, shape.bar) : null;
+        if (byName) return byName;
         if (shape.coordinates) {
             const pin = `${shape.coordinates.lat}, ${shape.coordinates.lng}`;
             const byPin = cityBars.filter(bar => {

@@ -24896,7 +24896,7 @@ test('contradiction gate (a): a shared ticket link never folds two stated nights
   let sameUrl;
   try { sameUrl = await core.deduplicateEvents([pageA, pageB], null); } finally { restore(); }
   assert.equal(sameUrl.length, 2, 'two tixr ids behind one page url are two events');
-  assert.ok(lines.some(line => line.includes('shares event URL') && line.includes('place contradict')), `got: ${lines.join(' | ')}`);
+  assert.ok(lines.some(line => line.includes('shares event URL') && line.includes('destinations (tixr.com/e/207002 vs tixr.com/e/202706) contradict')), `got: ${lines.join(' | ')}`);
   // …while the date-corrupted same-URL twin of the chunk-party case still folds (softBarNames + ignoreStatedDays).
   assert.equal(core.getIdentityContradiction(
     { title: 'CHUNK', bar: 'SEBUCO', city: 'sitges', timezone: 'Europe/Madrid', startDate: new Date('2026-07-25T21:00:00.000Z'), url: 'https://www.chunk-party.com/dore-alley-2026' },
@@ -24910,13 +24910,24 @@ test('contradiction gate (b): a shared event-page slug never folds two bars — 
   const eagle = { title: 'SF Queer Leather Happy Hour: Folsom Edition', startDate: new Date('2026-09-26T01:00:00.000Z'), bar: 'SF Eagle', address: '398 12th Street, San Francisco, CA 94103', city: 'sf', timezone: 'America/Los_Angeles', url: eaglePage, source: 'ai-web' };
   const loneStarWithEagleLink = { title: 'Leather and Gear Happy Hour', startDate: new Date('2026-09-26T00:00:00.000Z'), bar: 'Lone Star Saloon', city: 'sf', timezone: 'America/Los_Angeles', url: eaglePage, source: 'ai-web' };
   assert.equal(core.getUngatedSameEventIdentitySignal(loneStarWithEagleLink, eagle, { requireCloseStartTimes: false }), 'event-page-url', 'precondition: the slug rung alone says same event');
-  assert.equal(core.getIdentityContradiction(loneStarWithEagleLink, eagle), 'place');
-  assert.equal(core.getSameEventIdentitySignal(loneStarWithEagleLink, eagle, { requireCloseStartTimes: false }), null);
-  const byName = await core.deduplicateEvents([{ ...eagle }, { ...loneStarWithEagleLink }], null);
-  assert.equal(byName.length, 2, 'two bar names behind one slug are two events');
+  // Two records on ONE event page are that event — the page outranks the
+  // place reading (a record carrying a neighbour's page is a chimera and
+  // never gets here). Without the shared page, bar names alone are not a
+  // hard fact; the CURATED doors they and the street line resolve to are
+  // (SF Eagle at 398 12th, Lone Star by name).
+  assert.equal(core.getIdentityContradiction(loneStarWithEagleLink, eagle), null);
+  const loneStarByName = { ...loneStarWithEagleLink, url: 'https://lonestarsf.com/events/leather-gear-happy-hour' };
+  assert.equal(core.getIdentityContradiction(loneStarByName, eagle), 'curated bars ("Lone Star Saloon" vs "SF Eagle")');
+  const byName = await core.deduplicateEvents([{ ...eagle }, { ...loneStarByName }], null);
+  assert.equal(byName.length, 2, 'two curated doors are two events');
+  // Two free-text names with no curated door behind either are two
+  // spellings until a harder fact says otherwise (run 20260925-110542:
+  // "NERD SWEAT" for Dungeons & Doms at the Dallas Eagle).
+  assert.equal(createGateCore().getIdentityContradiction(
+    { ...loneStarWithEagleLink, bar: 'NERD SWEAT' }, { ...eagle, address: '' }), null);
   // Curated doors: "SF Eagle" by name on one side, 1354 Harrison (the Lone
   // Star's curated address) with NO bar name on the other.
-  const loneStarByAddress = { ...loneStarWithEagleLink, bar: '', address: '1354 Harrison St, San Francisco, CA 94103' };
+  const loneStarByAddress = { ...loneStarByName, bar: '', address: '1354 Harrison St, San Francisco, CA 94103' };
   const eagleByName = { ...eagle, address: '' };
   assert.equal(core.getCuratedBarForIdentity(loneStarByAddress, core.buildIdentityComparisonShape(loneStarByAddress)).name, 'Lone Star Saloon');
   assert.equal(core.getIdentityContradiction(loneStarByAddress, eagleByName), 'curated bars ("Lone Star Saloon" vs "SF Eagle")');
@@ -24994,7 +25005,11 @@ test('contradiction gate: controls that must still fold — stub + detail page, 
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Locker Room', address: '79 WARRENTON ST' }, { bar: 'Legacy', address: '79 Warrenton Street, Boston, MA 02116' }), false, 'a party name in the venue slot at the venue\'s own door');
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'The Eagle Bar', address: '15 Bloom St, Manchester M1 3HZ, UK' }, { bar: 'The Black Eagle', address: '15 Bloom St, Manchester M1 3HZ, UK' }), false);
   assert.equal(core.haveContradictingPlaceEvidence({ bar: '3 Dollar Bill', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), false);
-  assert.equal(core.haveContradictingPlaceEvidence({ bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), true, 'two rooms, two doors');
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), true, 'two rooms, two doors — with no pins to say otherwise');
+  // …but the pins say the two doors are 28 m apart: one complex.
+  assert.equal(core.haveContradictingPlaceEvidence(
+    { bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206', coordinates: { lat: 40.708456, lng: -73.9377301 } },
+    { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA', coordinates: { lat: 40.7084144, lng: -73.9380583 } }), false, 'pins within one building vouch for one place');
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Delfin Beach Resort', address: 'Calle Rodolfo Gomez 111, PV' }, { bar: 'CC Slaughters', address: 'LÁZARO CÁRDENAS 254, PV MX' }), true);
   // A listing parked in ticketUrl above its own event page is not a second ticket.
   assert.equal(core.haveContradictingPlaceEvidence({}, {}, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea' }, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp' }), false);
@@ -25048,8 +25063,11 @@ test('contradiction gate: a shared slug names no title once the records contradi
   const agree = core.resolveConflictDeterministically('title', a.title, b.title, { records: { a, b }, sideLabels: { a: 'calendar', b: 'scraped' } });
   assert.equal(agree && agree.winner, 'a', 'the slug still names the title for records that agree');
   assert.match(agree.reason, /names this title/);
-  const contradicting = { ...b, bar: 'The Rembrandt' };
-  const vetoed = core.resolveConflictDeterministically('title', a.title, contradicting.title, { records: { a, b: contradicting }, sideLabels: { a: 'calendar', b: 'scraped' } });
+  // The shared page outranks place; only a harder fact (two stated nights)
+  // says two events.
+  const contradicting = { ...b, startDate: new Date('2026-10-03T21:00:00.000Z'), timezone: 'Europe/London' };
+  const anchored = { ...a, startDate: new Date('2026-10-10T21:00:00.000Z'), timezone: 'Europe/London' };
+  const vetoed = core.resolveConflictDeterministically('title', anchored.title, contradicting.title, { records: { a: anchored, b: contradicting }, sideLabels: { a: 'calendar', b: 'scraped' } });
   assert.equal(vetoed, null, `a carried-off link names nothing: ${vetoed && vetoed.reason}`);
 });
 
@@ -25063,7 +25081,41 @@ test('contradiction gate: a bar that is the other record\'s title is the party n
   assert.equal(core.getIdentityContradiction(card, misread), null);
   const out = await core.deduplicateEvents([card, misread], null);
   assert.equal(out.length, 1, `the shared ticket link still folds them: ${out.map(e => e.title).join(' | ')}`);
-  // A genuinely different bar under a similar title still contradicts.
-  const elsewhere = { ...misread, bar: 'Neighbours', address: '1509 Broadway' };
-  assert.ok(core.getIdentityContradiction(card, elsewhere));
+  // A genuinely different door under a similar title, with no shared
+  // page, still contradicts (the street line is the hard fact).
+  const elsewhere = { ...misread, bar: 'Neighbours', address: '1509 Broadway', ticketUrl: '' };
+  assert.equal(core.getIdentityContradiction(card, elsewhere), 'place');
+});
+
+test('contradiction gate: a vendor venue page in ticketUrl names no event; the door outranks the bar name in the curated lookup', () => {
+  const core = createGateCore(GATE_BARS);
+  // Bear Belly, run 20260925-110542: the promoter's dice event page vs an
+  // aggregator row carrying dice's VENUE page — one night at C'mon Everybody.
+  const own = { title: 'Bear Belly • Bear Tea Dance', startDate: new Date('2026-09-26T22:00:00.000Z'), bar: "C'mon Everybody", address: '325 Franklin Ave, Brooklyn, NY 11238, USA, New York', city: 'nyc', timezone: 'America/New_York', ticketUrl: 'https://dice.fm/event/nvxpyq-bear-belly-bear-tea-dance-26th-sep-cmon-everybody-new-york-tickets' };
+  const listed = { title: 'Bear Belly', startDate: new Date('2026-09-26T22:00:00.000Z'), bar: "C'mon Everybody", address: '325 Franklin Avenue, New York, New York, 11216', city: 'nyc', timezone: 'America/New_York', ticketUrl: 'https://dice.fm/venue/cmon-everybody-ad2x' };
+  assert.equal(core.getIdentityContradiction(own, listed), null);
+  // Two dice EVENT pages on one night are still two events.
+  assert.ok(core.getIdentityContradiction(own, { ...listed, ticketUrl: 'https://dice.fm/event/abcdef-other-party-26th-sep-cmon-everybody-new-york-tickets' }));
+  // …but one event reached by two routes ("/event/<slug>" from JSON-LD,
+  // "/partner/tickets/event/<slug>?dice_id=…" from the button — QTS:
+  // Brooklyn) is one event: the leaf names it.
+  assert.equal(core.getIdentityContradiction(
+    { ...own, ticketUrl: 'https://dice.fm/event/l878lw-qts-brooklyn-17th-oct-3-dollar-bill-new-york-tickets' },
+    { ...listed, ticketUrl: 'https://dice.fm/partner/tickets/event/l878lw-qts-brooklyn-17th-oct-3-dollar-bill-new-york-tickets?dice_id=10206258&dice_channel=web' }), null);
+  // Hysteria at 398 12th St with "Eagle Bar" in the bar slot is the SF Eagle
+  // by its door, never a namesake found by name.
+  const hysteria = { title: 'Hysteria', bar: 'Eagle Bar', address: '398 12th st', city: 'sf' };
+  assert.equal(core.getCuratedBarForIdentity(hysteria, core.buildIdentityComparisonShape(hysteria)).name, 'SF Eagle');
+  // Two curated doors within one building are one complex: 3 Dollar Bill
+  // (260 Meserole) and The Yard at 9 Bob Note (270), 28 m apart.
+  const twoDoors = createGateCore({ nyc: [
+    { name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206', coordinates: '40.7084144, -73.9380583' },
+    { name: 'The Yard at 9 Bob Note', address: '270 Meserole St, Brooklyn, NY 11206', coordinates: '40.708456, -73.9377301' }
+  ] });
+  assert.equal(twoDoors.getIdentityContradiction(
+    { title: 'Bear Tea', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206', city: 'nyc' },
+    { title: 'Goldiloxx: Bear Tea', bar: 'The Yard at 9 Bob Note', address: '270 Meserole St, Brooklyn, NY 11206', city: 'nyc' }), null);
+  // A street that matches no curated door refuses the name too.
+  const elsewhere = { title: 'x', bar: 'SF Eagle', address: '1 Unknown Rd, San Francisco', city: 'sf' };
+  assert.equal(core.getCuratedBarForIdentity(elsewhere, core.buildIdentityComparisonShape(elsewhere)), null);
 });
