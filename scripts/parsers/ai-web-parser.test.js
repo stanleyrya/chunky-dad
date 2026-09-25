@@ -18354,7 +18354,7 @@ test('DICE widget: rows become events — venue, address, pin, price in minor un
   assert.equal(brief.location, '51.4863391, -0.1217784');
   assert.equal(brief.cover, '12 GBP');
   assert.equal(brief.ticketUrl, 'https://link.dice.fm/P01');
-  assert.equal(brief.image, 'https://dice-media.example/p.jpg');
+  assert.equal(brief.image, 'https://dice-media.example/o.jpg', 'the uncropped original, not the portrait slice');
   assert.equal(brief.description, 'BEEFMINCE presents BRIEF ENCOUNTER');
   assert.equal(brief.website, 'https://beefmince.example/events');
   assert.equal(welly.title, 'Welly Takeover');
@@ -18536,11 +18536,11 @@ test("a rejected image crop falls back to the row's other renditions of the same
     event_images: { portrait: `${file}?rect=249,0,634,1153`, square: `${file}?rect=0,52,1755,1755`, landscape: `${file}?rect=0,571,1755,1053` },
     images: [file]
   }), source);
-  assert.equal(event.image, `${file}?rect=249,0,634,1153`, 'portrait is still the first choice');
-  assert.deepEqual(event._imageAlternates, [`${file}?rect=0,571,1755,1053`, `${file}?rect=0,52,1755,1755`, file]);
+  assert.equal(event.image, file, 'the uncropped master is the first choice; the crops are slices of it');
+  assert.deepEqual(event._imageAlternates, [`${file}?rect=249,0,634,1153`, `${file}?rect=0,571,1755,1053`, `${file}?rect=0,52,1755,1755`]);
 
-  // The vision pass rejects the narrow portrait crop as a textless thumbnail.
-  parser.getNonEventImageOcrReason = (url) => url.includes('rect=249') ? 'the vision pass classified it as thumbnail with no readable text' : '';
+  // The vision pass rejects the master and the narrow portrait crop.
+  parser.getNonEventImageOcrReason = (url) => (!url.includes('rect=') || url.includes('rect=249')) ? 'the vision pass classified it as thumbnail with no readable text' : '';
   parser.rejectNonEventImageValues(event, { url: source, html: '' });
   assert.equal(event.image, `${file}?rect=0,571,1755,1053`, 'the next rendition of the same artwork, not an imageless event');
   assert.equal(event.imageSource, 'json-api');
@@ -19232,6 +19232,69 @@ test('coverage audit: a window whose timed date line already belongs to a struct
   assert.ok(logs.some(line => line.includes('is the tail of a structured card')), JSON.stringify(logs));
 });
 
+// www.massive.club's homepage (run 20260924-055217): a JSON-LD list of the
+// week's cards, then a swiper of title-THEN-date cards with no JSON-LD. The
+// flat splitter cuts at date lines, so every swiper text window was the
+// previous card's date, ticket link and image under this card's title —
+// "Oct 10, 2026 9:00 PM / TKVR | Nolid / tixr.com/e/207002" is Treasure
+// Trail's night under TKVR's name. The audit must hand each card its own
+// element, never a text window.
+test('coverage audit: a title-then-date card is its own element, never the text window that cuts at its date', () => {
+  const parser = createParser();
+  const listCard = (n, title, day, time) => `<div role="listitem" class="event-item w-dyn-item"><div class="w-embed"><script type="application/ld+json">{"@type":"Event","name":"${title}","startDate":"2026-09-${day}T${time}:00-07:00","url":"https://massive.example/events/${n}"}</script></div>
+    <a href="https://tixr.example/e/${n}">get TICKETS</a>
+    <h3>${title}</h3>
+    <div>Sep ${day}, 2026 ${time}</div></div>`;
+  const swiperCard = (n, title, date) => `<div role="listitem" class="swiper-slide w-dyn-item"><div style="background-image:url(&quot;https://cdn.example/${n}.webp&quot;)" class="card__img-container"></div><div class="swiper-items"><a href="https://tixr.example/e/${n}" target="_blank"><div class="tix-tables">GET TICKETS</div></a></div><div class="pinktext"><div class="infotext bold">${title}</div><div class="infotext white">${date}</div></div></div>`;
+  const swiper = [
+    [207002, 'Treasure Trail | Seattle', 'Oct 10, 2026 9:00 PM'],
+    [202706, 'TKVR | Nolid', 'Oct 15, 2026 10:00 PM'],
+    [205790, 'Looking', 'Oct 16, 2026 10:00 PM'],
+    [207003, 'Bearracuda | Seattle - Red Light District', 'Nov 7, 2026 9:00 PM']
+  ];
+  const html = `<html><body>
+    <div class="swiper-wrapper" role="list">${swiper.map(([n, title, date]) => swiperCard(n, title, date)).join('')}</div>
+    <a href="/calendar" class="button">view EVENTS CALENDAR</a>
+    <div role="list" class="event-grid w-dyn-items">${listCard(1, 'Twink Bash: Chasers', 26, '21:00')}${listCard(2, 'PERVERT MX (SEATTLE)', 27, '22:00')}</div>
+  </body></html>`;
+
+  // The trap, as the text tier sees it: each window is the previous card's
+  // date under this card's title.
+  let flat;
+  withCapturedLogs(() => { flat = parser.buildFlatTextMultiEventSegments(html, { recordStats: false }); });
+  assert.ok(flat.some(window => window.lines.includes('Oct 10, 2026 9:00 PM') && window.lines.includes('TKVR | Nolid')),
+    `the flat splitter cuts at the date line, got ${JSON.stringify(flat.map(window => window.lines))}`);
+
+  let segments;
+  const logs = withCapturedLogs(() => { segments = parser.buildMultiEventSegments(html, 'https://massive.example/'); });
+  const swiperWindows = swiper.map(([, title]) => segments.find(segment => segment.lines.includes(title)));
+  swiper.forEach(([n, title, date], index) => {
+    const segment = swiperWindows[index];
+    assert.ok(segment, `"${title}" has a window of its own; got ${JSON.stringify(segments.map(s => s.lines))}`);
+    assert.deepEqual(segment.lines, [title, date], `"${title}" carries its own date`);
+    const links = Array.from(segment.html.matchAll(/tixr\.example\/e\/(\d+)/g)).map(match => match[1]);
+    assert.deepEqual([...new Set(links)], [String(n)], `"${title}" carries only its own ticket link`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, 'https://massive.example/');
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: https://tixr.example/e/${n}`), JSON.stringify(resourceLines));
+    assert.ok(resourceLines.includes(`SEGMENT_IMAGE_URL: https://cdn.example/${n}.webp`), `"${title}" carries its own poster, got ${JSON.stringify(resourceLines)}`);
+  });
+  assert.equal(segments.length, 6, `two JSON-LD cards + four swiper cards, nothing else: ${JSON.stringify(segments.map(s => s.lines))}`);
+  assert.ok(!segments.some(segment => segment.lines.includes('view EVENTS CALENDAR')),
+    'the calendar link under the last card\'s date is a cut across two cards, not a listing');
+  assert.ok(logs.some(line => /Coverage audit: 2 structured window\(s\) left 4 dated listing\(s\) unclaimed — adding card window\(s\): "Treasure Trail \| Seattle", "TKVR \| Nolid", "Looking", "Bearracuda/.test(line)), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"view EVENTS CALENDAR" has no card element of its own')), logs.join('\n'));
+
+  // No card-shaped element around a card (plain divs in a list container):
+  // the container holds every card's date, so it is refused and the window
+  // is judged as the text window it is — nothing is invented.
+  const plainHtml = `<html><body><div class="events-list">${swiper.map(([n, title, date]) => `<div><a href="https://tixr.example/e/${n}">GET TICKETS</a><p>${title}</p><p>${date}</p></div>`).join('')}</div></body></html>`;
+  let plainFlat;
+  withCapturedLogs(() => { plainFlat = parser.buildFlatTextMultiEventSegments(plainHtml, { recordStats: false }); });
+  const resolver = parser.createCardWindowResolver(plainHtml, plainFlat);
+  assert.equal(resolver.pageHasCards, false);
+  assert.ok(plainFlat.every(window => resolver.resolveWindow(window) === null));
+});
+
 // ============================================================================
 // JSON-API: id-keyed row maps and event envelopes (TicketSauce widget feed)
 // ============================================================================
@@ -19596,6 +19659,377 @@ test('the page\'s sole large content picture is its artwork: adopted when nothin
   // An unmeasured picture is never assumed large.
   const fresh = createParser();
   assert.equal(fresh.getSoleBodyArtworkUrl(htmlData), '');
+});
+
+// ── Locale twins are translations, not pages (run 20260924-055217) ────────
+// Eagle Manchester (Wix) prints <link rel="alternate" hreflang="…"> for
+// every language on every page. URL discovery kept them (only resource
+// hints were excluded), so 52 of the run's 87 Eagle Manchester pages were
+// /de/, /fr/, /nl/ twins, and the model then picked "?lang=de" and "/fr/"
+// copies as event urls. The page declares its own translations; discovery
+// follows only the x-default copy.
+function localeAlternateHtml(slug, { xDefault = true, jsonOnly = false } = {}) {
+  const base = 'https://www.eaglemanchester.com';
+  const links = jsonOnly ? '' : `
+    <link rel="canonical" href="${base}/event-details/${slug}"/>
+    ${xDefault ? `<link rel="alternate" href="${base}/event-details/${slug}" hreflang="x-default"/>` : ''}
+    <link rel="alternate" href="${base}/de/event-details/${slug}" hreflang="de-de"/>
+    <link rel="alternate" href="${base}/fr/event-details/${slug}" hreflang="fr-fr"/>
+    <link rel="alternate" href="${base}/nl/event-details/${slug}" hreflang="nl-nl"/>
+    <link rel="alternate" href="${base}/event-details/${slug}" hreflang="en-gb"/>`;
+  const json = jsonOnly ? `<script>var s = {"currentLanguage":{"languageCode":"en","locale":"en-gb","url":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/${slug}","isPrimaryLanguage":true},"siteLanguages":[{"languageCode":"de","locale":"de-de","resolutionMethod":"Subdirectory","url":"https:\\/\\/www.eaglemanchester.com\\/de\\/event-details\\/${slug}","isPrimaryLanguage":false},{"languageCode":"fr","locale":"fr-fr","url":"https:\\/\\/www.eaglemanchester.com\\/fr\\/event-details\\/${slug}","isPrimaryLanguage":false},{"languageCode":"en","locale":"en-gb","url":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/${slug}","isPrimaryLanguage":true}]};</script>` : '';
+  return `
+    <html><head>${links}${json}</head><body>
+      <a href="${base}/event-details/manbears-social-2026-12-12-16-00">Manbears Social</a>
+      <a href="${base}/de/event-details/manbears-social-2026-12-12-16-00">Manbears Social (DE)</a>
+      <a href="${base}/fr/eventlist">Événements</a>
+      <a href="${base}/event-details/hellbent-13?lang=de">Hellbent (DE)</a>
+      <a href="${base}/event-details/hellbent-13">Hellbent</a>
+      <a href="${base}/de">Deutsch</a>
+      <a href="${base}/eventlist">Events</a>
+    </body></html>`;
+}
+
+test('URL discovery skips a page\'s hreflang alternates, every link under their locale prefixes, and ?lang= twins', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.eaglemanchester.com/event-details/hanky-panky-2026-09-26-23-00';
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let links;
+  try {
+    links = parser.extractAdditionalUrls(localeAlternateHtml('hanky-panky-2026-09-26-23-00'), sourceUrl, {});
+  } finally {
+    console.log = originalLog;
+  }
+  const localeLinks = links.filter(link => /eaglemanchester\.com\/(?:de|fr|nl)(?:\/|$)|[?&]lang=/i.test(link));
+  assert.deepEqual(localeLinks, [], `no translation may be crawled, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00'));
+  assert.ok(links.includes('https://www.eaglemanchester.com/eventlist'));
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/hellbent-13'), 'the ?lang=de twin collapses onto the plain page');
+  assert.equal(links.filter(link => /hellbent-13/.test(link)).length, 1, 'one Hellbent, not two');
+  assert.ok(logs.some(line => line.includes('Locale alternates skipped for') && line.includes('/de/, /fr/, /nl/')),
+    `one log line names the locale prefixes, got: ${JSON.stringify(logs.filter(l => l.includes('Locale')))}`);
+  assert.ok(logs.some(line => line.includes('rejectedTopReasons=') && line.includes('locale-alternate')), 'counted in the discovery stats');
+});
+
+test('collectLocaleAlternates reads the page\'s declaration: x-default first, then canonical, then the page itself', () => {
+  const parser = createParser();
+  const slug = 'hanky-panky-2026-09-26-23-00';
+  const base = 'https://www.eaglemanchester.com';
+  const withDefault = parser.collectLocaleAlternates(localeAlternateHtml(slug), `${base}/event-details/${slug}`);
+  assert.equal(withDefault.defaultUrl, `${base}/event-details/${slug}`);
+  assert.deepEqual(Array.from(withDefault.localePrefixes).sort(), ['de', 'fr', 'nl']);
+  assert.equal(withDefault.alternateKeys.size, 3, 'en-gb pointing at the default IS the default, not an alternate');
+  assert.equal(withDefault.host, 'eaglemanchester.com');
+  // Read from a /de/ twin: the x-default is the copy to follow, and the
+  // twin's own URL is now one of the alternates.
+  const fromTwin = parser.collectLocaleAlternates(localeAlternateHtml(slug), `${base}/de/event-details/${slug}`);
+  assert.equal(fromTwin.defaultUrl, `${base}/event-details/${slug}`);
+  assert.equal(parser.isLocaleAlternateCandidate(`${base}/de/event-details/${slug}`, fromTwin), true);
+  assert.equal(parser.isLocaleAlternateCandidate(`${base}/event-details/${slug}`, fromTwin), false, 'the default copy is followed');
+  // No x-default: the canonical stands in.
+  const noDefault = parser.collectLocaleAlternates(localeAlternateHtml(slug, { xDefault: false }), `${base}/event-details/${slug}`);
+  assert.equal(noDefault.defaultUrl, `${base}/event-details/${slug}`);
+  assert.deepEqual(Array.from(noDefault.localePrefixes).sort(), ['de', 'fr', 'nl']);
+  // No declaration at all → null, and nothing is assumed about /de/ paths.
+  assert.equal(parser.collectLocaleAlternates('<html><body><a href="https://x.example/de/page">x</a></body></html>', 'https://x.example/'), null);
+});
+
+test('a page with no hreflang declaration keeps its /xx/ links (fail closed)', () => {
+  const parser = createParser();
+  const html = '<html><body><a href="https://venue.example/de/party">DE section</a><a href="https://venue.example/events/party">Party</a></body></html>';
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events', {});
+  assert.ok(links.includes('https://venue.example/de/party'), 'without a declaration /de/ may be a real section');
+  assert.ok(links.includes('https://venue.example/events/party'));
+});
+
+test('locale prefixes are derived only from an alternate that is EXACTLY the default path behind one locale segment', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <link rel="alternate" href="https://venue.example/events/party" hreflang="x-default"/>
+      <link rel="alternate" href="https://de.venue.example/events/party" hreflang="de"/>
+      <link rel="alternate" href="https://venue.example/fr/evenements/fete" hreflang="fr"/>
+      <link rel="alternate" href="https://venue.example/es/events/party" hreflang="es"/>
+    </head><body>
+      <a href="https://venue.example/es/events/other">Otro</a>
+      <a href="https://venue.example/fr/evenements/autre">Autre</a>
+      <a href="https://de.venue.example/events/other">Andere</a>
+    </body></html>`;
+  const alt = parser.collectLocaleAlternates(html, 'https://venue.example/events/party');
+  assert.deepEqual(Array.from(alt.localePrefixes), ['es'], 'a subdomain twin and a translated slug yield no prefix');
+  assert.equal(alt.alternateKeys.size, 3, 'but each declared twin is still an exact alternate');
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/party', {});
+  assert.ok(!links.includes('https://venue.example/es/events/other'), 'under a derived prefix → skipped');
+  assert.ok(links.includes('https://venue.example/fr/evenements/autre'), 'no prefix derived → left alone');
+  assert.ok(links.includes('https://de.venue.example/events/other'), 'another host is never prefixed');
+});
+
+test('the JSON language list (Wix siteLanguages) declares the same twins on pages that carry no hreflang tags', () => {
+  const parser = createParser();
+  const slug = 'ultimate00s';
+  const sourceUrl = `https://www.eaglemanchester.com/event-details/${slug}`;
+  const alt = parser.collectLocaleAlternates(localeAlternateHtml(slug, { jsonOnly: true }), sourceUrl);
+  assert.equal(alt.defaultUrl, sourceUrl, 'isPrimaryLanguage marks the default copy');
+  assert.deepEqual(Array.from(alt.localePrefixes).sort(), ['de', 'fr']);
+  const links = parser.extractAdditionalUrls(localeAlternateHtml(slug, { jsonOnly: true }), sourceUrl, {});
+  assert.ok(!links.some(link => /\/(?:de|fr)\//.test(link) || /\/de$/.test(link)), `got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00'));
+});
+
+test('parser link identity strips language selectors on both the URL-global and string-only paths', () => {
+  const parser = createParser();
+  const plain = 'https://www.eaglemanchester.com/event-details/hellbent-12';
+  assert.equal(parser.getUrlDedupeKey(`${plain}?lang=de`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.stripTrackingParams(`${plain}?lang=de&utm_source=ig`), plain);
+  // String-only twin (iOS has no URL global): same answers.
+  assert.equal(parser.stripLocaleParams(`${plain}?lang=de`), plain);
+  assert.equal(parser.stripLocaleParams(`${plain}?lang=de/form`), plain, 'the run\'s malformed "?lang=de/form" collapses too');
+  assert.equal(parser.stripLocaleParams(`${plain}?occurrence=2026-10-01&locale=fr#top`), `${plain}?occurrence=2026-10-01#top`);
+  assert.equal(parser.stripLocaleParams('https://x.example/p?slang=en'), 'https://x.example/p?slang=en', 'whole-key match only');
+  assert.equal(parser.stripLocaleParams(plain), plain);
+});
+
+// ============================================================================
+// ONE RECORD, ONE DESTINATION (applyOneDestinationGuard)
+// ============================================================================
+//
+// The record-level invariant under every splitter: a record whose title,
+// stated date, ticket link and artwork come from different cards of its
+// page is a chimera and is withheld before it can reach dedup or the
+// calendar merge (www.massive.club run 20260924-055217: "Bearracuda"'s
+// title over "Looking"'s night, ticket link and flyer, folded into the
+// saved Treasure Trail by the shared link). The page below is the
+// massive.club swiper shape: title-THEN-date cards, each with its own
+// ticket link, event page and poster.
+const ONE_DESTINATION_PAGE_URL = 'https://massive.example/';
+const ONE_DESTINATION_CARDS = [
+  [207002, 'Treasure Trail | Seattle', 'Oct 10, 2026 9:00 PM', '2026-10-11T04:00:00.000Z'],
+  [202706, 'TKVR | Nolid', 'Oct 15, 2026 10:00 PM', '2026-10-16T05:00:00.000Z'],
+  [205790, 'Looking', 'Oct 16, 2026 10:00 PM', '2026-10-17T05:00:00.000Z'],
+  [207003, 'Bearracuda | Seattle - Red Light District', 'Nov 7, 2026 9:00 PM', '2026-11-08T05:00:00.000Z']
+];
+const ONE_DESTINATION_TZ = 'America/Los_Angeles';
+function buildOneDestinationPage(cards = ONE_DESTINATION_CARDS) {
+  const card = (n, title, date) => `<div role="listitem" class="swiper-slide w-dyn-item"><div style="background-image:url(&quot;https://cdn.example/${n}.webp&quot;)" class="card__img-container"></div><div class="swiper-items"><a href="https://tixr.example/e/${n}" target="_blank"><div class="tix-tables">GET TICKETS</div></a></div><div class="pinktext"><div class="infotext bold">${title}</div><div class="infotext white">${date}</div><div><a href="/events/${n}">details</a></div></div></div>`;
+  return `<html><body><div class="swiper-wrapper" role="list">${cards.map(([n, title, date]) => card(n, title, date)).join('')}</div><a href="/calendar" class="button">view EVENTS CALENDAR</a></body></html>`;
+}
+function buildOneDestinationRecord(index, overrides = {}) {
+  const [n, title, , iso] = ONE_DESTINATION_CARDS[index];
+  return {
+    title,
+    startDate: new Date(iso),
+    timezone: ONE_DESTINATION_TZ,
+    ticketUrl: `https://tixr.example/e/${n}`,
+    image: `https://cdn.example/${n}.webp`,
+    ...overrides
+  };
+}
+
+test('one destination: the page card map is one card per listing element, innermost, with its date, links and artwork', () => {
+  const parser = createParser();
+  const cards = parser.buildPageDestinationCards(buildOneDestinationPage(), ONE_DESTINATION_PAGE_URL);
+  assert.deepEqual(cards.map(card => card.title), ONE_DESTINATION_CARDS.map(([, title]) => title));
+  assert.deepEqual(cards[2].statedDates, [{ month: 10, day: 16, year: 2026 }], 'the card states its night');
+  assert.ok(cards[2].urlKeys.has(parser.getUrlDedupeKey('https://tixr.example/e/205790')), 'the card holds its ticket link');
+  assert.ok(cards[2].urlKeys.has(parser.getUrlDedupeKey('https://massive.example/events/205790')), 'relative links resolve against the page');
+  assert.ok(cards[2].imageKeys.has('https://cdn.example/205790.webp'), 'the card holds its poster');
+  assert.equal(parser.buildPageDestinationCards(buildOneDestinationPage(), ONE_DESTINATION_PAGE_URL), cards, 'memoized per page');
+  // A list container wrapping the cards is not a card (innermost wins).
+  const nested = `<html><body><div class="event-list-item"><ul>${['<li class="item"><h3>Bear Night</h3><p>Oct 3, 2026 9:00 PM</p></li>', '<li class="item"><h3>Cub Social</h3><p>Oct 10, 2026 9:00 PM</p></li>'].join('')}</ul></div></body></html>`;
+  assert.deepEqual(parser.buildPageDestinationCards(nested, ONE_DESTINATION_PAGE_URL).map(card => card.title), ['Bear Night', 'Cub Social']);
+  // No card-shaped markup: no map, and the guard falls open to the
+  // platform-identity rule alone.
+  assert.deepEqual(parser.buildPageDestinationCards('<html><body><div><p>Bear Night</p><p>Oct 3, 2026</p></div></body></html>', ONE_DESTINATION_PAGE_URL), []);
+});
+
+test('one destination: a record whose title is one card\'s and whose night, ticket link and poster are the neighbour\'s is withheld, naming both', () => {
+  const parser = createParser();
+  const cards = parser.buildPageDestinationCards(buildOneDestinationPage(), ONE_DESTINATION_PAGE_URL);
+  // The chimera as run 20260924-055217 assembled it: Bearracuda's title
+  // over Looking's night, ticket link and flyer.
+  const chimera = buildOneDestinationRecord(2, { title: 'Bearracuda | Seattle - Red Light District' });
+  let withheld;
+  const logs = withCapturedLogs(() => { withheld = parser.applyOneDestinationGuard(chimera, cards, ONE_DESTINATION_PAGE_URL); });
+  assert.equal(withheld, true);
+  assert.ok(chimera._chimeraWithheld, 'flag, don\'t drop: the record is stamped, not deleted');
+  assert.equal(chimera._chimeraWithheld.page, ONE_DESTINATION_PAGE_URL);
+  assert.deepEqual(chimera._chimeraWithheld.destinations.map(d => `${d.field}→${d.cards.map(c => c.title).join('/')}`),
+    ['title→Bearracuda | Seattle - Red Light District', 'ticketUrl→Looking', 'image→Looking', 'date→TKVR | Nolid/Looking'],
+    'the night is Oct 16 local — the Oct 16 card, or the Oct 15 card for a night that runs past midnight');
+  assert.equal(chimera._chimeraWithheld.reason,
+    'fields come from different listings: title → card 4 "Bearracuda | Seattle - Red Light District"; ticketUrl → card 3 "Looking"; image → card 3 "Looking"; date → card 2 "TKVR | Nolid" or card 3 "Looking"');
+  const line = logs.find(entry => entry.includes('🧬 ONE DESTINATION'));
+  assert.ok(line && line.includes('"Bearracuda | Seattle - Red Light District" is assembled from two listings on https://massive.example/')
+    && line.includes('card 4 "Bearracuda | Seattle - Red Light District"') && line.includes('card 3 "Looking"') && line.includes('withheld'), line);
+  assert.equal(chimera.title, 'Bearracuda | Seattle - Red Light District', 'no field is rewritten');
+  assert.equal(chimera.ticketUrl, 'https://tixr.example/e/205790', 'no field is dropped');
+
+  // The title alone against the ticket link is enough (no artwork, no
+  // date stated by any card).
+  const titleOnly = { title: 'TKVR | Nolid', startDate: new Date('2026-12-01T05:00:00.000Z'), ticketUrl: 'https://tixr.example/e/207002' };
+  withCapturedLogs(() => parser.applyOneDestinationGuard(titleOnly, cards, ONE_DESTINATION_PAGE_URL));
+  assert.ok(titleOnly._chimeraWithheld, 'Treasure Trail\'s ticket link under TKVR\'s name (the run\'s TKVR rename)');
+  // The title against the night alone is enough too: the previous card's
+  // date line under this card's title, with this card's own link (the
+  // text tier's cut on a title-then-date page).
+  const dateOnly = buildOneDestinationRecord(1, { startDate: new Date(ONE_DESTINATION_CARDS[0][3]) });
+  withCapturedLogs(() => parser.applyOneDestinationGuard(dateOnly, cards, ONE_DESTINATION_PAGE_URL));
+  assert.ok(dateOnly._chimeraWithheld, 'TKVR on Treasure Trail\'s night');
+  assert.ok(dateOnly._chimeraWithheld.reason.includes('date → card 1 "Treasure Trail | Seattle"'), dateOnly._chimeraWithheld.reason);
+  // The brand-prefixed title still resolves through its pre-rewrite value.
+  const prefixed = buildOneDestinationRecord(1, { title: 'MASSIVE: Looking', _titleBeforeBrandPrefix: 'Looking' });
+  withCapturedLogs(() => parser.applyOneDestinationGuard(prefixed, cards, ONE_DESTINATION_PAGE_URL));
+  assert.ok(prefixed._chimeraWithheld, 'the pre-prefix title is what the page states');
+});
+
+test('one destination: a record with one destination, or none, is untouched', () => {
+  const parser = createParser();
+  const cards = parser.buildPageDestinationCards(buildOneDestinationPage(), ONE_DESTINATION_PAGE_URL);
+  const aligned = ONE_DESTINATION_CARDS.map(([n], index) => buildOneDestinationRecord(index, { url: `https://massive.example/events/${n}` }));
+  const logs = withCapturedLogs(() => {
+    for (const event of aligned) assert.equal(parser.applyOneDestinationGuard(event, cards, ONE_DESTINATION_PAGE_URL), false, event.title);
+  });
+  assert.ok(aligned.every(event => !event._chimeraWithheld), 'every field of every card comes from that card');
+  assert.deepEqual(logs.filter(line => line.includes('ONE DESTINATION')), []);
+
+  // A listing stub: title and date, no link, no picture — one event scraped
+  // twice with its detail page is dedup's job, never a chimera.
+  const stub = { title: 'Looking', startDate: new Date(ONE_DESTINATION_CARDS[2][3]), timezone: ONE_DESTINATION_TZ };
+  assert.equal(parser.applyOneDestinationGuard(stub, cards, ONE_DESTINATION_PAGE_URL), false);
+  assert.equal(stub._chimeraWithheld, undefined);
+  // A stub whose only links are the listing page itself and a page link
+  // no card holds.
+  const pageLinked = { ...stub, url: ONE_DESTINATION_PAGE_URL, ticketUrl: 'https://massive.example/calendar' };
+  assert.equal(parser.applyOneDestinationGuard(pageLinked, cards, ONE_DESTINATION_PAGE_URL), false);
+  // A title the page does not state (composed from a flyer) with the
+  // card's own night, link and poster: one destination.
+  const flyerTitled = buildOneDestinationRecord(2, { title: 'LOOKING: BEAR NIGHT' });
+  assert.equal(parser.applyOneDestinationGuard(flyerTitled, cards, ONE_DESTINATION_PAGE_URL), false);
+  // A night after midnight is still the card's evening.
+  const afterMidnight = buildOneDestinationRecord(2, { startDate: new Date('2026-10-17T07:30:00.000Z') });
+  assert.equal(parser.applyOneDestinationGuard(afterMidnight, cards, ONE_DESTINATION_PAGE_URL), false, '12:30 AM local on Oct 17 is the Oct 16 card');
+  // A stated day no card prints constrains nothing.
+  const otherNight = buildOneDestinationRecord(2, { startDate: new Date('2026-12-01T05:00:00.000Z') });
+  assert.equal(parser.applyOneDestinationGuard(otherNight, cards, ONE_DESTINATION_PAGE_URL), false);
+  // A card whose own date is unreadable (an attribute, a numeric form) can
+  // never lose its record to a neighbour's date line: the date is judged
+  // only when every card the record points at prints a readable date.
+  const mixed = buildOneDestinationPage([
+    [1, 'Bear Night', '10/03/2026 9:00 PM'],
+    [2, 'Cub Social', 'Oct 4, 2026 9:00 PM']
+  ]);
+  const mixedCards = parser.buildPageDestinationCards(mixed, ONE_DESTINATION_PAGE_URL);
+  assert.equal(mixedCards.length, 2);
+  assert.deepEqual(mixedCards[0].statedDates, []);
+  const numericDated = { title: 'Bear Night', startDate: new Date('2026-10-04T04:00:00.000Z'), timezone: ONE_DESTINATION_TZ, ticketUrl: 'https://tixr.example/e/1' };
+  assert.equal(parser.applyOneDestinationGuard(numericDated, mixedCards, ONE_DESTINATION_PAGE_URL), false, 'Oct 3 local: only the neighbour prints a readable date, so the date is not judged');
+  // No card map at all: nothing to judge by, the record passes.
+  const mapless = buildOneDestinationRecord(2, { title: 'Bearracuda | Seattle - Red Light District' });
+  assert.equal(parser.applyOneDestinationGuard(mapless, [], ONE_DESTINATION_PAGE_URL), false);
+  assert.equal(mapless._chimeraWithheld, undefined);
+});
+
+test('one destination: a card linking its ticket page AND its own event page is one event on two hosts, not two events', () => {
+  const parser = createParser();
+  const cards = parser.buildPageDestinationCards(buildOneDestinationPage(), ONE_DESTINATION_PAGE_URL);
+  const twoHosts = buildOneDestinationRecord(2, { website: 'https://massive.example/events/205790' });
+  assert.equal(parser.applyOneDestinationGuard(twoHosts, cards, ONE_DESTINATION_PAGE_URL), false);
+  assert.equal(twoHosts._chimeraWithheld, undefined);
+  // The same pair with no card map: different hosts and different path
+  // prefixes are never "two events" either.
+  assert.equal(parser.applyOneDestinationGuard({ ...twoHosts }, [], ONE_DESTINATION_PAGE_URL), false);
+  assert.equal(parser.findSamePlatformLinkConflict({ ticketUrl: 'https://site.example/events/woof', url: 'https://site.example/tickets/woof-2026' }), null,
+    'one host, two path prefixes: the event page and its ticket page');
+});
+
+test('one destination: without a card map, two link fields naming different events on one platform are two destinations', () => {
+  const parser = createParser();
+  const twoEvents = buildOneDestinationRecord(2, { url: 'https://tixr.example/e/207003', image: undefined });
+  let withheld;
+  const logs = withCapturedLogs(() => { withheld = parser.applyOneDestinationGuard(twoEvents, [], ONE_DESTINATION_PAGE_URL); });
+  assert.equal(withheld, true);
+  assert.ok(twoEvents._chimeraWithheld && twoEvents._chimeraWithheld.reason.includes('name two events on tixr.example'), JSON.stringify(twoEvents._chimeraWithheld));
+  assert.ok(logs.some(line => line.includes('🧬 ONE DESTINATION: "Looking" points at two events')), logs.join('\n'));
+  // www and bare host are one platform; a query string is not an identity.
+  const same = buildOneDestinationRecord(2, { ticketUrl: 'https://www.tixr.example/e/205790?aff=x', url: 'https://tixr.example/e/205790' });
+  assert.equal(parser.applyOneDestinationGuard(same, [], ONE_DESTINATION_PAGE_URL), false);
+});
+
+test('one destination: a shared link or poster (three or more cards) and a call-to-action line name no listing', () => {
+  const parser = createParser();
+  const shared = (n, title, date) => `<li class="event"><div><img src="https://cdn.example/venue-logo.png"></div><div><a href="https://tickets.example/venue">TICKETS</a></div><h3><a href="https://site.example/events/${n}">${title}</a></h3><p>${date}</p></li>`;
+  const html = `<html><body><ul>${shared(1, 'Bear Night', 'Oct 3, 2026 9:00 PM')}${shared(2, 'Cub Social', 'Oct 10, 2026 9:00 PM')}${shared(3, 'Leather Tea', 'Oct 17, 2026 4:00 PM')}</ul></body></html>`;
+  const cards = parser.buildPageDestinationCards(html, 'https://site.example/events');
+  assert.equal(cards.length, 3);
+  const record = { title: 'Cub Social', startDate: new Date('2026-10-11T04:00:00.000Z'), ticketUrl: 'https://tickets.example/venue', image: 'https://cdn.example/venue-logo.png', url: 'https://site.example/events/2' };
+  assert.equal(parser.applyOneDestinationGuard(record, cards, 'https://site.example/events'), false, 'the venue\'s shared ticket button and logo constrain nothing');
+  const cta = { title: 'TICKETS', startDate: record.startDate, url: 'https://site.example/events/2', image: 'https://cdn.example/venue-logo.png' };
+  assert.equal(parser.applyOneDestinationGuard(cta, cards, 'https://site.example/events'), false, 'a CTA title anchors to no card');
+  // But a real cross-card record on the same page is still caught.
+  const crossed = { title: 'Bear Night', startDate: record.startDate, url: 'https://site.example/events/3' };
+  withCapturedLogs(() => parser.applyOneDestinationGuard(crossed, cards, 'https://site.example/events'));
+  assert.ok(crossed._chimeraWithheld);
+});
+
+// End to end on the segment path: with the structured tiers bypassed (the
+// page as a layout the card tiers do not recognise), the flat text
+// windows reach extraction one card late — each is the previous card's
+// date line under this card's title; the guard withholds every assembled
+// record before the page's events are returned and leaves the aligned
+// ones alone.
+test('one destination: on the segment path a misaligned text window\'s record is withheld before the page\'s events are returned', async () => {
+  const html = buildOneDestinationPage();
+  // A faithful stand-in model: the window's non-date line is the title,
+  // its date line the start, its resource lines the link and poster.
+  const standIn = (parser) => async (segmentHtmlData) => {
+    const lines = String(segmentHtmlData.html || '').split('\n');
+    const link = (lines.find(line => line.startsWith('SEGMENT_LINK_URL:')) || '').replace(/^SEGMENT_LINK_URL:\s*/, '');
+    const image = (lines.find(line => line.startsWith('SEGMENT_IMAGE_URL:')) || '').replace(/^SEGMENT_IMAGE_URL:\s*/, '');
+    const cardLines = Array.isArray(segmentHtmlData.segmentCardLines) ? segmentHtmlData.segmentCardLines : [];
+    const title = cardLines.find(line => !parser.hasMultiEventDateSignal(line) && !parser.isMultiEventCallToActionLine(line)) || '';
+    const dateLine = cardLines.find(line => parser.hasMultiEventDateSignal(line)) || '';
+    const stated = ONE_DESTINATION_CARDS.find(([, , date]) => date === dateLine);
+    if (!title || !stated) return null;
+    const event = { title, startDate: new Date(stated[3]), timezone: ONE_DESTINATION_TZ };
+    if (link) event.ticketUrl = link;
+    if (image) event.image = image;
+    return event;
+  };
+  const extract = async (parser) => {
+    parser.extractSingleEvent = standIn(parser);
+    const captured = [];
+    const originalLog = console.log;
+    console.log = (...args) => { captured.push(args.join(' ')); };
+    try {
+      const events = await parser.extractEventsFromMultiEventPage({ html, url: ONE_DESTINATION_PAGE_URL }, {}, {}, [], [], {});
+      return { events, captured };
+    } finally {
+      console.log = originalLog;
+    }
+  };
+
+  const broken = createParser();
+  broken.buildStructuredMultiEventSegments = () => [];
+  const { events, captured } = await extract(broken);
+  const assembled = events.filter(event => ONE_DESTINATION_CARDS.some(([, title, , iso]) => title === event.title && new Date(iso).getTime() !== event.startDate.getTime()));
+  assert.ok(assembled.length >= 2, `the text tier put the previous card's night under this card's title: ${JSON.stringify(events.map(e => [e.title, e.startDate]))}`);
+  for (const record of assembled) {
+    assert.ok(record._chimeraWithheld, `"${record.title}" on ${record.startDate.toISOString()} withheld`);
+    assert.ok(record._chimeraWithheld.destinations.some(d => d.field === 'date'), 'the night names the neighbour card');
+  }
+  for (const record of events.filter(event => event._chimeraWithheld)) {
+    assert.ok(assembled.includes(record), `"${record.title}" is aligned yet withheld`);
+  }
+  assert.equal(captured.filter(line => line.includes('🧬 ONE DESTINATION')).length, assembled.length, 'one line per withheld record');
+
+  // The fixed splitter (card windows) on the same page: no withholds.
+  const fixed = createParser();
+  const aligned = await extract(fixed);
+  assert.equal(aligned.events.length, 4);
+  assert.deepEqual(aligned.events.filter(event => event._chimeraWithheld), []);
+  assert.deepEqual(aligned.captured.filter(line => line.includes('ONE DESTINATION')), []);
 });
 
 // ── Listing prose: an article that lists events one sentence each ──────────

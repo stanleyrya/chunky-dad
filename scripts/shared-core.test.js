@@ -110,6 +110,123 @@ test('analyzeEventAction keeps genuinely different same-venue events separate', 
   assert.equal(analysis.action, 'new');
 });
 
+// === Two happy hours 330 m apart are two events (run 20260924-055217) ===
+// Lone Star Saloon's "Leather and Gear Happy Hour" (5–8pm, 1354 Harrison;
+// saved with a city+ZIP-only address and shortName LEATHER) and the SF
+// Eagle's "SF Queer Leather Happy Hour: Folsom Edition" (6–9pm, 398 12th
+// St). The titles compare FALSE and the bars contradict, yet place-time-name
+// folded them every run from 09-20: the calendar's "San Francisco CA 94103"
+// is a substring of the Eagle's full address, and the one-word shortName
+// "LEATHER" sits inside the Eagle's title. Field values are the run's own
+// `_original.scraper` / `_original.calendar` records.
+const SF_CITIES = { sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] } };
+function buildSfEagleScraped(overrides = {}) {
+  return {
+    title: 'SF Queer Leather Happy Hour: Folsom Edition',
+    description: 'Join us for our Folsom Edition of the SF Queer Leather Happy Hour!',
+    startDate: new Date('2026-09-26T01:00:00.000Z'),
+    endDate: new Date('2026-09-26T04:00:00.000Z'),
+    bar: 'SF Eagle',
+    address: '398 12th Street, San Francisco, CA 94103',
+    location: '37.7699927, -122.4134077',
+    city: 'sf',
+    timezone: 'America/Los_Angeles',
+    source: 'ai-web',
+    url: 'https://www.sf-eagle.com/events/sf-queer-leather-happy-hour-folsom-edition/',
+    ...overrides
+  };
+}
+function buildLoneStarSaved(overrides = {}, notesOverride = null) {
+  const notes = notesOverride !== null ? notesOverride : [
+    'address: San Francisco CA 94103',
+    'timezone: America/Los_Angeles',
+    'website: https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-gear-happy-hour',
+    'bar: Lone Star Saloon',
+    'shortName: LEATHER'
+  ].join('\n');
+  return {
+    title: 'Leather and Gear Happy Hour',
+    name: 'Leather and Gear Happy Hour',
+    startDate: new Date('2026-09-26T00:00:00.000Z'),
+    endDate: new Date('2026-09-26T03:00:00.000Z'),
+    location: '37.7721663, -122.4108890',
+    calendarTimezone: 'America/Los_Angeles',
+    notes,
+    ...overrides
+  };
+}
+
+test('identity: contradicting bars veto place-time-name even when weaker place rungs agree', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  const scraped = buildSfEagleScraped();
+  const saved = buildLoneStarSaved();
+  const incoming = core.buildIdentityComparisonShape(scraped);
+  const existing = core.buildIdentityComparisonShape(saved);
+  assert.equal(core.areTitlesSimilar(scraped.title, saved.title), false, 'the titles themselves never matched');
+  assert.equal(core.haveContradictingPlaceEvidence(incoming, existing, scraped, saved), true, 'SF Eagle vs Lone Star Saloon is a positive contradiction');
+  assert.equal(core.getSameEventIdentitySignal(scraped, saved), null);
+  const analysis = core.analyzeEventAction(scraped, [saved]);
+  assert.equal(analysis.action, 'new', `two bars 330 m apart stay two events (${analysis.reason})`);
+});
+
+test('identity: a city+ZIP-only address contains nothing', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  assert.equal(core.addressStatesStreet('San Francisco CA 94103'), false);
+  assert.equal(core.addressStatesStreet('Dallas, TX 75219'), false);
+  assert.equal(core.addressStatesStreet('398 12th Street, San Francisco, CA 94103'), true);
+  assert.equal(core.addressStatesStreet('10521 Ventura Blvd, Studio City, CA'), true, 'a 5-digit run LEADING the line is a house number');
+  assert.equal(core.addressStatesStreet('Motzstraße 19, 10777 Berlin'), true, 'trailing house numbers (European format) still name a street');
+  // The contradiction veto aside, the address rung alone must not read the
+  // calendar's locality as the Eagle's door.
+  const incoming = core.buildIdentityComparisonShape(buildSfEagleScraped({ location: '', bar: '' }));
+  const existing = core.buildIdentityComparisonShape(buildLoneStarSaved({ location: '' }, 'address: San Francisco CA 94103'));
+  assert.equal(core.areIdentityPlacesSimilar(incoming, existing), false);
+  // …while a real street line inside a fuller spelling of itself still is one place.
+  const fuller = core.buildIdentityComparisonShape(buildLoneStarSaved({ location: '' }, 'address: 398 12th St, San Francisco, CA 94103'));
+  assert.equal(core.areIdentityPlacesSimilar(incoming, fuller), true);
+});
+
+test('identity: a one-word shortName vouches only for a name it IS, never one it sits inside', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  const eagle = core.buildIdentityComparisonShape(buildSfEagleScraped());
+  const loneStar = core.buildIdentityComparisonShape(buildLoneStarSaved());
+  assert.deepEqual(loneStar.shortNames, ['LEATHER']);
+  assert.equal(core.areIdentityNamesSimilar(eagle, loneStar), false, '"LEATHER" inside the Eagle title is a shared word, not a shared event');
+  // The renamed-event signal (#1440) is untouched: a shortName that IS the other name…
+  const furballShort = core.buildIdentityComparisonShape({ title: 'DALLAS FREEDOM TEA', shortName: 'FUR-BALL' });
+  const furball = core.buildIdentityComparisonShape({ name: 'FURBALL' });
+  assert.equal(core.areIdentityNamesSimilar(furballShort, furball), true);
+  // …or the other title's own party name before its colon.
+  const megawoof = core.buildIdentityComparisonShape({ title: 'Megawoof: DURO' });
+  const megawoofShort = core.buildIdentityComparisonShape({ title: 'DURO', shortName: 'MEGAWOOF' });
+  assert.equal(core.areIdentityNamesSimilar(megawoof, megawoofShort), true);
+  // A multi-word shortName keeps the full title treatment.
+  const multiWord = core.buildIdentityComparisonShape({ title: 'Saturday Social', shortName: 'SF Queer Leather Happy Hour' });
+  assert.equal(core.areIdentityNamesSimilar(eagle, multiWord), true);
+});
+
+test('identity: same bar spelled two ways, an hour apart, still folds through place-time-name', () => {
+  const core = new SharedCore(SF_CITIES, { eventSchema: EventSchema });
+  // The same-event control: one happy hour, the site's title beside the
+  // calendar's shorter one, the bar spelled with its article, the stored
+  // clock an hour off (legacy wall-clock data) — no ticket url, no shared
+  // event page, so only the place-time-name rung can meet the pair.
+  const scraped = buildSfEagleScraped({ url: '' });
+  const saved = buildLoneStarSaved({
+    title: 'SF Queer Leather Happy Hour',
+    name: 'SF Queer Leather Happy Hour',
+    location: '37.7699927, -122.4134077'
+  }, [
+    'bar: The SF Eagle',
+    'address: 398 12th St, San Francisco, CA 94103',
+    'timezone: America/Los_Angeles'
+  ].join('\n'));
+  assert.equal(core.getSameEventIdentitySignal(scraped, saved), 'place-time-name');
+  const analysis = core.analyzeEventAction(scraped, [saved]);
+  assert.equal(analysis.action, 'merge');
+  assert.match(analysis.reason, /Same event identity \(place-time-name\)/);
+});
+
 // === Cross-parser calendar reconciliation (runs 20260811-132205 / -133948) ===
 // One real event — 2026-08-16 at Massive, Seattle — reached the calendar as
 // "Treasure Trail" (massive.club, key treasure-trail|2026-08-16|massive) and
@@ -10725,6 +10842,36 @@ test('a bar matching the city\'s curated bars is excluded (already known)', () =
   ]).length, 1);
 });
 
+test('a candidate whose pin or address is a curated bar\'s door is excluded, whatever the page called it', () => {
+  const core = createVenueDiscoveryCore();
+  // "Locker Room" is a party name in the venue slot (Furball at Legacy, run
+  // 20260924-055217): the name matches no curated bar, the pin is the
+  // curated pin byte for byte.
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: SEATTLE_CUFF_BAR.coordinates, address: '1533 13TH AVE' })
+  ]), [], 'same pin + same street line');
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: '47.6142100, -122.3168600', address: '' })
+  ]), [], 'a pin metres from the curated pin, no address');
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', location: '47.6135, -122.3163', address: '1533 13th Ave, Seattle, WA 98122' })
+  ]), [], 'the curated street line under a pin 90 m off');
+  // The map POI at the pin naming a different place is the same veto from
+  // the geocoder's side ("map POI at pin: … differs from bar").
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'Locker Room', _geoPoiName: 'Legacy', _geoPoiBarMatch: false })
+  ]), [], '_geoPoiBarMatch === false');
+  // A genuinely new door — different pin, different street — still surfaces,
+  // and a matching POI verdict never vetoes.
+  assert.equal(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ _geoPoiName: 'Massive', _geoPoiBarMatch: true })
+  ]).length, 1);
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], SEATTLE_CUFF_BAR.coordinates).name, 'The Cuff Complex');
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '', '1533 13th Ave').name, 'The Cuff Complex');
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '47.6135, -122.3163', '1400 12th Ave, Seattle'), null);
+  assert.equal(core.findCuratedBarByPlace([SEATTLE_CUFF_BAR], '', ''), null);
+});
+
 test('events of the same venue dedup into one candidate with unioned evidence', () => {
   const core = createVenueDiscoveryCore();
   const candidates = core.buildNewVenueCandidates([
@@ -11024,9 +11171,12 @@ test('evidence: _geoPoiName and _geoPoiBarMatch never serialize into notes', () 
 
 test('new venue candidates carry a computed evidence panel from the same builder', () => {
   const core = createEvidencePanelCore();
+  // A pin 180 m from the Cuff's: at the curated pin itself the candidate is
+  // vetoed as the Cuff's own door (findCuratedBarByPlace), whatever the page
+  // called it.
   const [candidate] = core.buildNewVenueCandidates([
     buildVenueCandidateEvent({
-      location: '47.6142, -122.3169',
+      location: '47.6150, -122.3190',
       _geoPoiName: 'Massive Nightclub',
       _geoPoiBarMatch: true
     })
@@ -23942,6 +24092,15 @@ test('merge: the same title in another case keeps the saved spelling ("FUZZY" st
   assert.equal(flipped.winner, 'b', 'whichever side the calendar is on');
   const renamed = core.resolveConflictDeterministically('title', 'FUZZY', 'Fuzzy Fridays', context);
   assert.ok(!renamed || !/saved spelling stays/.test(renamed.reason), 'a different name is a real conflict');
+  // The cover tail the final build drops is no spelling either: "🐻 BEAR
+  // HAPPY HOUR | NO COVER" is the saved "Bear Happy Hour" (Eagle NYC's
+  // hand-curated weekly, rewritten every run before this fold).
+  const tailed = { records: { a: { title: 'Bear Happy Hour', bar: 'Eagle NYC' }, b: { title: '🐻 BEAR HAPPY HOUR | NO COVER', bar: 'Eagle NYC' } }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  const keptTailed = core.resolveConflictDeterministically('title', 'Bear Happy Hour', '🐻 BEAR HAPPY HOUR | NO COVER', tailed);
+  assert.equal(keptTailed.winner, 'a');
+  assert.match(keptTailed.reason, /saved spelling stays/);
+  const edition = core.resolveConflictDeterministically('title', 'Bear Happy Hour', 'Bear Happy Hour: Folsom Edition | NO COVER', tailed);
+  assert.ok(!edition || !/saved spelling stays/.test(edition.reason), 'a real addition to the name is still a conflict');
 });
 
 test('merge: when both records share one event page, the title its slug spells out wins', () => {
@@ -24268,6 +24427,40 @@ test('FetchPoliteness: under enforce, a configured root and the doors opened fro
   gate.endOpeningRoot();
 });
 
+test('crawl: a door the PARSER opens while a configured root is parsed (a ?format=json twin) is first-party under enforce; the same door under a discovered page is refused', async () => {
+  const robotsBody = 'User-agent: *\nDisallow: /*?format=json\n';
+  const { gate } = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const fetched = [];
+  const refused = [];
+  const httpAdapter = {
+    getFetchPoliteness: () => gate,
+    fetchData: async (url) => gate.run(url, async () => { fetched.push(url); return { html: '<html><body></body></html>', url, statusCode: 200, headers: {} }; })
+      .catch((error) => { if (error && error.politeness) refused.push(url); throw error; })
+  };
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => {
+        // The parser's own door: the collection's JSON twin, on the same host.
+        try { await httpAdapter.fetchData(`${htmlData.url.replace(/\/$/, '')}?format=json`); } catch (_) { /* refused */ }
+        return {
+          events: [],
+          additionalLinks: htmlData.url === 'https://venue.example/rsvp' ? ['https://venue.example/rsvp/2026/9/12/bear-tea'] : []
+        };
+      }
+    }
+  };
+  await core.processParser(
+    { name: 'Venue', urls: ['https://venue.example/rsvp'], urlDiscoveryDepth: 1, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/rsvp?format=json'), `the root's twin, opened from inside parseEvents, is requested: ${fetched.join(', ')}`);
+  assert.ok(fetched.includes('https://venue.example/rsvp/2026/9/12/bear-tea'), 'the discovered event page itself is allowed by robots');
+  assert.ok(refused.includes('https://venue.example/rsvp/2026/9/12/bear-tea?format=json'), `a discovered page's twin is not first-party: refused ${refused.join(', ')}`);
+  assert.equal(gate.openingRoot, '', 'no window left open after the crawl');
+});
+
 test('FetchPoliteness: an API call (a geocoder) is paced and parked like a page but never judged by robots.txt', async () => {
   let robotsReads = 0;
   const { gate, sleeps, logs } = makePoliteness({ robots: 'enforce', minHostGapMs: 1000, fetchRobotsText: async () => { robotsReads++; return 'User-agent: *\nDisallow: /search\n'; } });
@@ -24319,4 +24512,558 @@ test('ownerDecisionCovers: "needs a fix" waits until ANY visible field changes; 
   assert.equal(SharedCore.ownerDecisionCovers(legacy, { ...proposal, description: 'changed' }), false === false && SharedCore.getOwnerReviewDrift(legacy, { ...proposal, description: 'changed' }).length === 0, 'the description is not in the legacy fingerprint');
   assert.equal(SharedCore.ownerDecisionCovers(legacy, { ...proposal, startDate: '2026-10-03T23:00:00.000Z' }), false);
   assert.equal(SharedCore.getOwnerRejectionMode({ verdict: 'approve', reason: { mode: 'fix' } }), '', 'an approval has no rejection mode');
+});
+
+// ── Locale twins are one link (run 20260924-055217, Eagle Manchester) ─────
+// The model was handed eaglemanchester.com/event-details/hellbent-12 and its
+// ?lang=de twin as two candidates and picked the "more canonical" ?lang=de.
+// A language selector names a translation of a page, never another page.
+test('link identity: ?lang= / ?locale= / ?hl= twins are the same target; meaningful queries still differ', () => {
+  const core = createCore();
+  const plain = 'https://www.eaglemanchester.com/event-details/hellbent-12';
+  assert.equal(core.getUrlDedupeKey(`${plain}?lang=de`), core.getUrlDedupeKey(plain));
+  assert.equal(core.getUrlDedupeKey(`${plain}?locale=fr-fr&utm_source=x`), core.getUrlDedupeKey(plain));
+  assert.equal(core.getUrlDedupeKey(`${plain}?hl=en`), core.getUrlDedupeKey(plain));
+  assert.equal(core.isSameLinkTarget(`${plain}?lang=de`, 'https://eaglemanchester.com/event-details/hellbent-12/'), true);
+  // and the merge never sees the pair as a conflict
+  assert.deepEqual(core.resolveConflictDeterministically('website', `${plain}?lang=de`, plain, null),
+    { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' });
+  // Queries that select a DIFFERENT document are untouched.
+  assert.notEqual(core.getUrlDedupeKey('https://eaglela.com/events/b-bar/?occurrence=2026-08-06'), core.getUrlDedupeKey('https://eaglela.com/events/b-bar/'));
+  assert.equal(core.isSameLinkTarget('https://x.example/p?id=1', 'https://x.example/p?id=2'), false);
+  // The pattern is a whole-key match: "language" yes, "slang"/"hlx" no.
+  assert.equal(core.getUrlDedupeKey('https://x.example/p?language=en'), 'https://x.example/p');
+  assert.equal(core.getUrlDedupeKey('https://x.example/p?slang=en'), 'https://x.example/p?slang=en');
+});
+
+// ── A stored link is never shallowed (run 20260924-055217, Goldiloxx: Bear Tea) ──
+// The calendar held the event's own Squarespace page
+// (3dollarbillbk.com/rsvp/2026/9/12/bear-tea — the venue rescheduled it and
+// Squarespace keeps the creation-date slug); the venue parser's static
+// website (the site root, merged "clobber") replaced it without the ladder
+// ever being asked, and the final build then promoted the /rsvp listing
+// parked in ticketUrl over the root. Two shallow shapes, one rule: a
+// same-site strict path-prefix of the stored link is its listing or front
+// door — it names every event under it, never this one.
+const BEAR_TEA_PAGE = 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea';
+
+test('isSameSiteParentPathOf: strict same-site path prefixes only', () => {
+  const core = createCore();
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com', BEAR_TEA_PAGE), true, 'the root is the empty prefix');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE), true, 'the listing');
+  assert.equal(core.isSameSiteParentPathOf('https://3dollarbillbk.com/rsvp/?view=list', BEAR_TEA_PAGE), true, 'www/slash/query spelling is irrelevant');
+  assert.equal(core.isSameSiteParentPathOf(BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp'), false, 'direction matters');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea', BEAR_TEA_PAGE), false, 'a sibling page is not a prefix');
+  assert.equal(core.isSameSiteParentPathOf(BEAR_TEA_PAGE, BEAR_TEA_PAGE), false, 'equal depth is not a prefix');
+  assert.equal(core.isSameSiteParentPathOf('https://www.3dollarbillbk.com/rs', BEAR_TEA_PAGE), false, 'segments, not characters');
+  assert.equal(core.isSameSiteParentPathOf('https://other.example/rsvp', BEAR_TEA_PAGE), false, 'another site');
+  assert.equal(core.isSameSiteParentPathOf('https://beefdip.com', 'https://beefdip.com/tags/foam'), false, 'a taxonomy archive is never the protected deeper page (same carve-out as the root rule)');
+});
+
+test('deterministic ladder: a same-site deeper URL beats its parent path in both directions; siblings still arbitrate', () => {
+  const core = createCore();
+  const reason = 'same-site deeper URL beats its parent path (listing/front door)';
+  assert.deepEqual(core.resolveConflictDeterministically('website', BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp', null), { winner: 'a', reason });
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE, null), { winner: 'b', reason });
+  assert.deepEqual(core.resolveConflictDeterministically('url', 'https://www.3dollarbillbk.com/rsvp', BEAR_TEA_PAGE, null), { winner: 'b', reason });
+  // The bare root keeps its own long-standing rung and reason text.
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://www.3dollarbillbk.com', BEAR_TEA_PAGE, null),
+    { winner: 'b', reason: 'same-host deeper URL beats domain root' });
+  // Two different event pages under the same listing are not a prefix pair.
+  const sibling = core.resolveConflictDeterministically('website', BEAR_TEA_PAGE, 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea', null);
+  assert.ok(!sibling || sibling.reason !== reason, `siblings must not hit the parent-path rung, got ${JSON.stringify(sibling)}`);
+});
+
+// The real pair from runs/20260924-055217.json (analyzedEvents[39]):
+// `_original.calendar.website` vs the scraped static website.
+function buildBearTeaPair(core, scrapedWebsite) {
+  const start = new Date('2026-10-03T20:00:00.000Z');
+  const scraped = {
+    title: 'Bear Tea', startDate: start, endDate: null, source: 'ai-web', city: 'nyc',
+    website: scrapedWebsite, instagram: 'https://www.instagram.com/3dollarbillbk',
+    image: 'https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784937998565-53UO4O9I6PGBGDTXOYX6/BEARTEA%2BSEP12.png',
+    _sourcePageUrl: 'https://www.3dollarbillbk.com/rsvp', _venueSitePageHost: '3dollarbillbk.com', _extractionSource: 'ai',
+    _pageClassification: 'multi-event-page', _pageOrigin: 'listing', _venueSiteHostIsListing: true,
+    _staticFields: { website: scrapedWebsite, instagram: 'https://www.instagram.com/3dollarbillbk' },
+    _parserConfig: { name: '3 Dollar Bill' },
+    _fieldPriorities: {
+      ...core.getResolvedFieldPriorities({}),
+      website: { priority: ['static'], merge: 'clobber' },
+      instagram: { priority: ['static'], merge: 'clobber' }
+    }
+  };
+  const existing = {
+    title: 'Goldiloxx: Bear Tea', startDate: start, endDate: new Date('2026-10-04T02:00:00.000Z'),
+    location: '40.7084144, -73.9380583', url: '',
+    notes: [
+      'ticketUrl: https://www.3dollarbillbk.com/rsvp',
+      'image: https://d3flpus5evl89n.cloudfront.net/56b4c4fddf82fe40ce873cdc/6aa5a4fac21023da95c29bfb/scaled_896.jpg',
+      'cover: $25', 'timezone: America/New_York', 'instagram: https://www.instagram.com/goldiloxx__',
+      'bar: 3 Dollar Bill', 'address: 260 Meserole St, Brooklyn, NY 11206, USA',
+      `website: ${BEAR_TEA_PAGE}`,
+      'description: Nick Laughlin presents a bear tea dance at 3 Dollar Bill featuring DJ Joe Michael & Dicap.'
+    ].join('\n')
+  };
+  return { scraped, existing };
+}
+
+test('calendar merge: a clobbering venue root never shallows the stored event page (Goldiloxx: Bear Tea)', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com');
+  const adapter = buildArbitrationAdapter({});
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let merged;
+  try {
+    merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    restore();
+  }
+  assert.equal(merged.website, BEAR_TEA_PAGE, 'the deeper stored link is kept');
+  assert.equal(merged.url, BEAR_TEA_PAGE, 'url and website are ONE field');
+  assert.equal(core.parseNotesIntoFields(merged.notes).website, BEAR_TEA_PAGE);
+  assert.ok(lines.includes('🔒 MERGE: "Bear Tea" field=website resolved deterministically — same-host deeper URL beats domain root'),
+    `decided by the ladder, got: ${JSON.stringify(lines.filter(l => l.includes('website')))}`);
+  assert.ok(!lines.some(line => /clobbered .*website/.test(line)), 'website is not in the clobber summary');
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.source, 'deterministic');
+});
+
+test('calendar merge: the listing the event was scraped off never shallows its own event page either', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com/rsvp');
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, BEAR_TEA_PAGE);
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.reason, 'same-site deeper URL beats its parent path (listing/front door)');
+});
+
+test('calendar merge: a genuinely different same-site deep link still replaces a stale one', async () => {
+  const core = createCore();
+  // The venue rescheduled Bear Tea and its page moved to the new slug.
+  const fresh = 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea';
+  const { scraped, existing } = buildBearTeaPair(core, fresh);
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, fresh, 'a sibling page is not a prefix — the configured clobber applies');
+  assert.equal(merged.url, fresh);
+});
+
+test('calendar merge: an aggregator with the deeper link still only fills blanks', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com/rsvp/2026/10/3/bear-tea');
+  scraped._parserConfig = { name: 'Gathr', siteRole: 'aggregator', urls: ['https://gathrparty.com/'] };
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.website, BEAR_TEA_PAGE, 'an aggregator record never wins a stored field');
+});
+
+test('final build drops a same-site listing parked in ticketUrl when website is its own event page', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'Goldiloxx: Bear Tea',
+    startDate: new Date('2026-10-03T20:00:00.000Z'),
+    city: 'nyc',
+    website: BEAR_TEA_PAGE,
+    ticketUrl: 'https://www.3dollarbillbk.com/rsvp'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, BEAR_TEA_PAGE, 'the event page is never demoted to its listing');
+  assert.ok(!analyzed.ticketUrl, 'the listing sells nothing — not a ticket link');
+  assert.ok(lines.some(line => line.includes('dropped ticketUrl https://www.3dollarbillbk.com/rsvp') && line.includes('listing (the parent path of its own event page)')),
+    `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
+  assert.ok(!lines.some(line => line.includes('promoted to website/url')), 'no promotion of the listing');
+});
+
+// ============================================================================
+// ONE RECORD, ONE DESTINATION — the withheld chimera downstream of the parser
+// ============================================================================
+//
+// The ai-web parser stamps `_chimeraWithheld` on a record assembled from two
+// listings (applyOneDestinationGuard). Everything after the parser must
+// treat it as a card with a reason and nothing else: never a dedup
+// candidate, never a bear-check subject, never a calendar match, never a
+// write — the run 20260924-055217 damage was exactly a chimera folding into
+// the saved Treasure Trail by its borrowed ticket link.
+function buildChimeraStamp(overrides = {}) {
+  return {
+    page: 'https://massive.example/',
+    reason: 'fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking"',
+    destinations: [
+      { field: 'title', value: 'bearracuda', cards: [{ index: 4, title: 'Bearracuda' }] },
+      { field: 'ticketUrl', value: 'https://tixr.example/e/205790', cards: [{ index: 3, title: 'Looking' }] }
+    ],
+    ...overrides
+  };
+}
+
+test('one destination: a chimera-stamped record is withheld from execution, labeled with its reason, and never a review proposal', () => {
+  const core = createCore();
+  const chimera = { title: 'Bearracuda', _action: 'new', _chimeraWithheld: buildChimeraStamp() };
+  const plain = { title: 'Looking', _action: 'new' };
+  assert.deepEqual(SharedCore.filterEventsForExecution([chimera, plain]).map(e => e.title), ['Looking']);
+  assert.equal(SharedCore.describeExecutionDisposition(chimera),
+    'WITHHELD (assembled from two listings — fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking")');
+  assert.equal(SharedCore.describeExecutionDisposition(plain), 'NEW');
+  assert.equal(core.isOwnerReviewCandidate(chimera), false, 'the deck never offers a chimera for approval');
+  assert.equal(core.isOwnerReviewCandidate(plain), true);
+  // The stamp is parse-time provenance: a saved-run re-analysis keeps it.
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_chimeraWithheld'));
+  assert.deepEqual(SharedCore.stripCalendarAnalysisStamps(chimera)._chimeraWithheld, chimera._chimeraWithheld);
+});
+
+test('one destination: prepareEventsForCalendar never matches a chimera against the calendar', async () => {
+  const core = createFestivalCore([]);
+  const adapter = buildFestivalPrepAdapter([]);
+  const chimera = {
+    title: 'Bearracuda | Seattle - Red Light District',
+    bar: 'Massive',
+    address: '1400 E Union St, Seattle, WA',
+    startDate: '2026-10-17T05:00:00.000Z',
+    endDate: '2026-10-17T08:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://tixr.example/e/205790',
+    city: 'seattle',
+    source: 'ai-web',
+    isBearEvent: true,
+    _chimeraWithheld: buildChimeraStamp()
+  };
+  const real = { ...chimera, title: 'Looking' };
+  delete real._chimeraWithheld;
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([chimera, real], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(adapter.calls.map(call => call.title), ['Looking'], 'the calendar is searched for the real record only');
+  const withheld = analyzed.find(e => e._chimeraWithheld);
+  assert.ok(withheld, 'flag, don\'t drop: the chimera is still an analyzed card');
+  assert.equal(withheld._action, 'new');
+  assert.equal(withheld._analysis.reason, 'assembled from two listings — never matched against the calendar, write withheld');
+  assert.equal(withheld._existingEvent, undefined);
+  assert.equal(withheld._mergeDiff, undefined);
+  assert.equal(withheld._venueOverlap, undefined, 'a chimera takes no part in overlap or slot findings');
+  assert.equal(withheld._slotWins, undefined);
+  assert.equal(analyzed.find(e => e.title === 'Looking')._slotYield, undefined, 'and the real record yields nothing to it');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed).map(e => e.title), ['Looking']);
+  assert.ok(logs.some(line => line.startsWith('🧬 ONE DESTINATION: "Bearracuda | Seattle - Red Light District" is assembled from two listings') && line.includes('never matched against the calendar')), logs.join('\n'));
+});
+
+test('one destination: processParser sets a chimera aside before dedup and the bear check, and it rejoins the parser\'s events with its stamp', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const startDate = new Date(Date.now() + 10 * 86400000);
+  const real = { title: 'Looking', startDate, bar: 'Massive', address: '1400 E Union St, Seattle, WA', ticketUrl: 'https://tixr.example/e/205790', city: 'seattle', isBearEvent: true };
+  // Same ticket link, same night: the ticket-url rung would fold these.
+  const chimera = { ...real, title: 'Bearracuda | Seattle - Red Light District', _chimeraWithheld: buildChimeraStamp() };
+  const pages = { 'https://massive.example/': { events: [chimera, real] } };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const result = await core.processParser(
+    { name: 'Massive', urls: ['https://massive.example/'], ai: CRAWL_AI, alwaysBear: true },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Bearracuda | Seattle - Red Light District', 'Looking'], 'both records come back');
+  const kept = result.events.find(e => e.title === 'Looking');
+  const withheld = result.events.find(e => e._chimeraWithheld);
+  assert.ok(withheld, 'the chimera keeps its stamp');
+  assert.equal(kept.title, 'Looking', 'the real record was never merged with the chimera');
+  assert.equal(result.duplicatesRemoved, 0, 'dedup never saw the chimera');
+  assert.equal(result.chimeraWithheld, 1);
+  assert.equal(result.totalEvents, 2);
+  assert.ok(display.logs.some(line => line.includes('1 record(s) assembled from two listings set aside') && line.includes('"Bearracuda | Seattle - Red Light District"')), display.logs.join('\n'));
+  // Without the stamp the same pair is one event scraped twice — folded.
+  const twin = { ...chimera };
+  delete twin._chimeraWithheld;
+  const folded = await core.processParser(
+    { name: 'Massive', urls: ['https://massive.example/'], ai: CRAWL_AI, alwaysBear: true },
+    {}, httpAdapter, display, createCrawlHarness({ 'https://massive.example/': { events: [twin, real] } }).parsers
+  );
+  assert.equal(folded.events.length, 1, 'unstamped twins still fold (the guard changes nothing for them)');
+  assert.equal(folded.chimeraWithheld, undefined);
+});
+// ---------------------------------------------------------------------------
+// Hard-fact contradiction gate (owner, 2026-09-24: "we keep having malformed
+// events merging data together"). Every fold rung passes
+// getIdentityContradiction: a chimera that carried a neighbouring card's
+// ticket link / page slug, or a lookalike at the same slot, reaches ONE rung
+// that says "same event" and used to fold into a real saved event — after
+// which the position-biased arbiter rewrote the saved fields. Records below
+// are the parse-time shapes of run 20260924-055217 (massive.club windows
+// 1/19 and 2/19, the /calendar card 8/13, bearracuda.com/events/ttoct), and
+// every "must still fold" control is verified through the real fold
+// (deduplicateEvents over parse-time records, analyzeEventAction against a
+// calendar record) — never on finished records.
+// ---------------------------------------------------------------------------
+const GATE_CITIES = {
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] }
+};
+const GATE_BARS = {
+  sf: [
+    { name: 'SF Eagle', address: '398 12th St, San Francisco, CA 94103', coordinates: '37.7699927, -122.4134077' },
+    { name: 'Lone Star Saloon', address: '1354 Harrison St, San Francisco, CA 94103', coordinates: '37.7721663, -122.4108890' }
+  ],
+  seattle: [{ name: 'Massive', address: '619 E Pine St, Seattle, WA 98122', coordinates: '47.6150824, -122.3237201' }]
+};
+function createGateCore(bars = {}) {
+  return new SharedCore(GATE_CITIES, { eventSchema: EventSchema, bars });
+}
+const MASSIVE_HOME = 'https://www.massive.club/';
+// massive.club homepage window 2/19: "Oct 10, 2026 9:00 PM / TKVR | Nolid /
+// SEGMENT_LINK_URL https://tixr.com/e/207002" — Treasure Trail's date and
+// ticket link under the next card's title.
+function buildTkvrChimera(overrides = {}) {
+  return {
+    title: 'TKVR | Nolid', startDate: new Date('2026-10-11T04:00:00.000Z'), bar: 'Massive', address: '619 E Pine St, Seattle, WA 98122',
+    city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/207002', website: MASSIVE_HOME,
+    _sourcePageUrl: MASSIVE_HOME, source: 'ai-web', ...overrides
+  };
+}
+// massive.club homepage window 1/19 → "Treasure Trail", Oct 10 9pm, tixr 207002.
+function buildTreasureTrailMassive(overrides = {}) {
+  return {
+    title: 'Treasure Trail', startDate: new Date('2026-10-11T04:00:00.000Z'), bar: 'Massive', address: '619 E Pine St, Seattle, WA 98122',
+    city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/207002', website: MASSIVE_HOME,
+    _sourcePageUrl: MASSIVE_HOME, source: 'ai-web', ...overrides
+  };
+}
+// bearracuda.com/events/ttoct → "Treasure Trail Seattle", MASSIVE, the promoter's sickening.events ticket.
+function buildTreasureTrailBearracuda(overrides = {}) {
+  return {
+    title: 'Treasure Trail Seattle', startDate: new Date('2026-10-11T04:00:00.000Z'), endDate: new Date('2026-10-11T10:00:00.000Z'),
+    bar: 'MASSIVE', address: '619 E. Pine St', city: 'seattle', timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets',
+    url: 'https://bearracuda.com/events/ttoct/', website: 'https://bearracuda.com/events/ttoct/',
+    _sourcePageUrl: 'https://bearracuda.com/events/ttoct/', source: 'ai-web', ...overrides
+  };
+}
+function buildGateSaved(record, extraNotes = []) {
+  return {
+    title: record.title, name: record.title, startDate: record.startDate, endDate: record.endDate || record.startDate,
+    location: '47.6150824, -122.3237201', calendarTimezone: 'America/Los_Angeles',
+    notes: [`bar: ${record.bar}`, `address: ${record.address}`, 'timezone: America/Los_Angeles',
+      record.ticketUrl ? `ticketUrl: ${record.ticketUrl}` : '', record.url ? `website: ${record.url}` : '', ...extraNotes].filter(Boolean).join('\n')
+  };
+}
+function captureGateLogs(lines) {
+  const original = console.log;
+  console.log = (...args) => { const line = args.join(' '); if (line.startsWith('🛑 IDENTITY')) lines.push(line); };
+  return () => { console.log = original; };
+}
+
+test('contradiction gate: the real TKVR|Nolid chimera and Treasure Trail state no hard contradiction and still fold (the parser\'s job, not identity\'s)', async () => {
+  const core = createGateCore();
+  const chimera = buildTkvrChimera();
+  const real = buildTreasureTrailMassive();
+  assert.equal(core.getIdentityContradiction(chimera, real), null);
+  assert.equal(core.getSameEventIdentitySignal(chimera, real, { requireCloseStartTimes: false }), 'ticket-url');
+  const out = await core.deduplicateEvents([buildTreasureTrailMassive(), buildTkvrChimera()], null);
+  assert.equal(out.length, 1, 'same day, same bar, one tixr id — nothing for the gate to veto');
+  // The venue's tixr page and the promoter's sickening.events page for one
+  // night are one destination on two vendors, never a contradiction.
+  assert.equal(core.getIdentityContradiction(buildTreasureTrailMassive(), buildTreasureTrailBearracuda()), null);
+  const crossVendor = await core.deduplicateEvents([buildTreasureTrailBearracuda(), buildTreasureTrailMassive()], null);
+  assert.equal(crossVendor.length, 1, 'venue site + ticket platform for one event still fold');
+  const analysis = core.analyzeEventAction(buildTreasureTrailMassive(), [buildGateSaved(buildTreasureTrailBearracuda())]);
+  assert.equal(analysis.action, 'merge');
+});
+
+test('contradiction gate (a): a shared ticket link never folds two stated nights, nor a shared event url two ticket ids', async () => {
+  const core = createGateCore();
+  // The chimera keeps its carried link but states its OWN night (Oct 15,
+  // the /calendar card's date).
+  const chimeraOwnNight = buildTkvrChimera({ startDate: new Date('2026-10-16T05:00:00.000Z') });
+  assert.equal(core.haveContradictingStatedDays(chimeraOwnNight, buildTreasureTrailMassive()), true);
+  assert.equal(core.getSameEventIdentitySignal(chimeraOwnNight, buildTreasureTrailMassive(), { requireCloseStartTimes: false }), null);
+  const out = await core.deduplicateEvents([buildTreasureTrailMassive(), chimeraOwnNight], null);
+  assert.deepEqual(out.map(event => event.title).sort(), ['TKVR | Nolid', 'Treasure Trail']);
+  assert.equal(core.analyzeEventAction(chimeraOwnNight, [buildGateSaved(buildTreasureTrailMassive())]).action, 'new');
+  // The same-URL pass tolerates days (a date-corrupted twin is its point)
+  // but not a second ticket id on the vendor behind one shared page.
+  const pageA = { title: 'Treasure Trail', startDate: new Date('2026-10-11T04:00:00.000Z'), bar: 'Massive', city: 'seattle', timezone: 'America/Los_Angeles', url: 'https://bearracuda.com/events/ttoct/', ticketUrl: 'https://tixr.com/e/207002', source: 'ai-web' };
+  const pageB = { title: 'TKVR | Nolid', startDate: new Date('2026-10-16T05:00:00.000Z'), bar: 'Massive', city: 'seattle', timezone: 'America/Los_Angeles', url: 'https://bearracuda.com/events/ttoct/', ticketUrl: 'https://tixr.com/e/202706', source: 'ai-web' };
+  const lines = [];
+  const restore = captureGateLogs(lines);
+  let sameUrl;
+  try { sameUrl = await core.deduplicateEvents([pageA, pageB], null); } finally { restore(); }
+  assert.equal(sameUrl.length, 2, 'two tixr ids behind one page url are two events');
+  assert.ok(lines.some(line => line.includes('shares event URL') && line.includes('place contradict')), `got: ${lines.join(' | ')}`);
+  // …while the date-corrupted same-URL twin of the chunk-party case still folds (softBarNames + ignoreStatedDays).
+  assert.equal(core.getIdentityContradiction(
+    { title: 'CHUNK', bar: 'SEBUCO', city: 'sitges', timezone: 'Europe/Madrid', startDate: new Date('2026-07-25T21:00:00.000Z'), url: 'https://www.chunk-party.com/dore-alley-2026' },
+    { title: 'CHUNK', bar: 'Public Works', city: 'sf', timezone: 'America/Los_Angeles', startDate: new Date('2026-07-27T04:00:00.000Z'), url: 'https://www.chunk-party.com/dore-alley-2026/' },
+    { ignoreStatedDays: true, softBarNames: true }), null);
+});
+
+test('contradiction gate (b): a shared event-page slug never folds two bars — by name, or by a curated door the other side names', async () => {
+  const core = createGateCore(GATE_BARS);
+  const eaglePage = 'https://www.sf-eagle.com/events/sf-queer-leather-happy-hour-folsom-edition/';
+  const eagle = { title: 'SF Queer Leather Happy Hour: Folsom Edition', startDate: new Date('2026-09-26T01:00:00.000Z'), bar: 'SF Eagle', address: '398 12th Street, San Francisco, CA 94103', city: 'sf', timezone: 'America/Los_Angeles', url: eaglePage, source: 'ai-web' };
+  const loneStarWithEagleLink = { title: 'Leather and Gear Happy Hour', startDate: new Date('2026-09-26T00:00:00.000Z'), bar: 'Lone Star Saloon', city: 'sf', timezone: 'America/Los_Angeles', url: eaglePage, source: 'ai-web' };
+  assert.equal(core.getUngatedSameEventIdentitySignal(loneStarWithEagleLink, eagle, { requireCloseStartTimes: false }), 'event-page-url', 'precondition: the slug rung alone says same event');
+  assert.equal(core.getIdentityContradiction(loneStarWithEagleLink, eagle), 'place');
+  assert.equal(core.getSameEventIdentitySignal(loneStarWithEagleLink, eagle, { requireCloseStartTimes: false }), null);
+  const byName = await core.deduplicateEvents([{ ...eagle }, { ...loneStarWithEagleLink }], null);
+  assert.equal(byName.length, 2, 'two bar names behind one slug are two events');
+  // Curated doors: "SF Eagle" by name on one side, 1354 Harrison (the Lone
+  // Star's curated address) with NO bar name on the other.
+  const loneStarByAddress = { ...loneStarWithEagleLink, bar: '', address: '1354 Harrison St, San Francisco, CA 94103' };
+  const eagleByName = { ...eagle, address: '' };
+  assert.equal(core.getCuratedBarForIdentity(loneStarByAddress, core.buildIdentityComparisonShape(loneStarByAddress)).name, 'Lone Star Saloon');
+  assert.equal(core.getIdentityContradiction(loneStarByAddress, eagleByName), 'curated bars ("Lone Star Saloon" vs "SF Eagle")');
+  const byDoor = await core.deduplicateEvents([{ ...eagleByName }, { ...loneStarByAddress }], null);
+  assert.equal(byDoor.length, 2);
+  assert.equal(core.analyzeEventAction(loneStarByAddress, [buildGateSaved(eagleByName)]).action, 'new');
+  // Without bars data the curated rung fails open — and a pin within reach
+  // of TWO curated doors resolves nothing.
+  assert.equal(createGateCore().getCuratedBarForIdentity(loneStarByAddress, createGateCore().buildIdentityComparisonShape(loneStarByAddress)), null);
+  const twinDoors = createGateCore({ sf: [{ name: 'Room A', coordinates: '37.7699927, -122.4134077' }, { name: 'Room B', coordinates: '37.7699930, -122.4134080' }] });
+  const pinned = { title: 'x', city: 'sf', location: '37.7699927, -122.4134077' };
+  assert.equal(twinDoors.getCuratedBarForIdentity(pinned, twinDoors.buildIdentityComparisonShape(pinned)), null);
+});
+
+test('contradiction gate (c): same bar, same start, two ticket ids on one platform — two parties, on every fold rung', async () => {
+  const core = createGateCore();
+  const teaA = { title: 'Bear Tea at Massive', startDate: new Date('2026-10-11T23:00:00.000Z'), bar: 'Massive', address: '619 E Pine St, Seattle, WA 98122', city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://dice.fm/event/abc123-bear-tea-massive', source: 'ai-web' };
+  // The second id sits in `url`, not ticketUrl — the field the old
+  // ticket-path veto never read.
+  const teaB = { title: 'Bear Tea: Late Shift', startDate: new Date('2026-10-11T23:00:00.000Z'), bar: 'Massive', address: '619 E Pine St, Seattle, WA 98122', city: 'seattle', timezone: 'America/Los_Angeles', url: 'https://dice.fm/event/xyz789-bear-tea-late-shift', source: 'ai-web' };
+  assert.equal(core.getIdentityContradiction(teaB, teaA), 'destinations (dice.fm/event/xyz789-bear-tea-late-shift vs dice.fm/event/abc123-bear-tea-massive)');
+  const lines = [];
+  const restore = captureGateLogs(lines);
+  let out;
+  try { out = await core.deduplicateEvents([{ ...teaA }, { ...teaB }], null); } finally { restore(); }
+  assert.equal(out.length, 2, 'the cross-source venue+night+title-subset pass is gated too');
+  assert.ok(lines.some(line => line.includes('by venue+night+title-subset') && line.includes('destinations')), `got: ${lines.join(' | ')}`);
+  assert.equal(core.analyzeEventAction(teaB, [buildGateSaved(teaA)]).action, 'new', 'place+day+title-subset is gated');
+  // Same title at the same minute, two dice ids in ticketUrl: the
+  // calendar's "Similar event found" rung is gated.
+  const teaC = { ...teaA, ticketUrl: 'https://dice.fm/event/xyz789-bear-tea-late-shift' };
+  const similar = core.analyzeEventAction(teaC, [buildGateSaved(teaA)]);
+  assert.equal(similar.action, 'new', similar.reason);
+  // Same key (title|date|bar), two ids: the key-collision merge is gated.
+  const keyed = await core.deduplicateEvents([{ ...teaA }, { ...teaC }], null);
+  assert.equal(keyed.length, 2, 'a key template names a slot; two ticket ids in one slot are two events');
+  assert.ok(keyed.some(event => event.key.endsWith('--2')), 'the second record parks under a suffixed key');
+});
+
+test('contradiction gate: controls that must still fold — stub + detail page, lineage, placeholders, one door spelled twice', async () => {
+  const core = createGateCore();
+  const detail = { title: 'Party: Halloween Edition', startDate: new Date('2026-10-11T04:00:00.000Z'), bar: 'Massive', address: '619 E Pine St, Seattle, WA 98122', city: 'seattle', timezone: 'America/Los_Angeles', url: 'https://www.massive.club/events/party-halloween', ticketUrl: 'https://tixr.com/e/207002', _sourcePageUrl: 'https://www.massive.club/events/party-halloween', source: 'ai-web' };
+  // A listing stub with no time, no address, no ticket — only the card's
+  // link to its page (the crawl's own lineage) or the bar the listing named.
+  const stubByLink = { title: 'Party', startDate: new Date('2026-10-10T07:00:00.000Z'), city: 'seattle', timezone: 'America/Los_Angeles', url: 'https://www.massive.club/events/party-halloween', website: 'https://www.massive.club/calendar', _sourcePageUrl: 'https://www.massive.club/calendar', source: 'ai-web' };
+  assert.equal(core.getIdentityContradiction(stubByLink, detail), null, 'a stub with no facts contradicts nothing');
+  assert.equal(core.getSameEventIdentitySignal(stubByLink, detail, { requireCloseStartTimes: false }), 'event-page-url');
+  const stubByBar = { title: 'Party', startDate: new Date('2026-10-10T07:00:00.000Z'), bar: 'Massive', city: 'seattle', timezone: 'America/Los_Angeles', website: 'https://www.massive.club/calendar', _sourcePageUrl: 'https://www.massive.club/calendar', source: 'ai-web' };
+  assert.equal(core.getIdentityContradiction(stubByBar, detail), null, 'a listing url beside the page it lists is not a second destination');
+  assert.equal(core.getSameEventIdentitySignal(stubByBar, detail, { requireCloseStartTimes: false }), 'place-day-name');
+  assert.equal((await core.deduplicateEvents([{ ...detail }, { ...stubByLink }], null)).length, 1);
+  assert.equal((await core.deduplicateEvents([{ ...detail }, { ...stubByBar }], null)).length, 1);
+  // Lineage: the stub that links the detail page beside the detail page
+  // that carries its own (different-host) ticket.
+  const ttStub = buildTreasureTrailMassive({ url: 'https://bearracuda.com/events/ttoct/', ticketUrl: '' });
+  assert.equal(core.getIdentityContradiction(ttStub, buildTreasureTrailBearracuda()), null);
+  // A placeholder venue contradicts no bar (the roaming BHH series).
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Eagle LA' }, { bar: 'Check instagram for this week’s location.' }), false);
+  // A bar named inside the other record's address is that record's own
+  // venue under a stray extraction (Concours PUP, run 20260727-145617).
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Bain Mathieu' }, { bar: 'Aigle Noir', address: 'Bain Mathieu, 2915 Rue Ontario E, Montréal' }), false);
+  // One door spelled twice is one door; two doors are two. Word order,
+  // house-number convention, diacritics and abbreviations are free.
+  assert.equal(core.areContradictingStreetLines('3702 N Halsted', '3702 North Halsted Street, Chicago, IL, 60613'), false);
+  assert.equal(core.areContradictingStreetLines('260 Meserole St, Brooklyn, NY, 11206', '260 Meserole Dr, Brooklyn, NY'), false);
+  assert.equal(core.areContradictingStreetLines('Carrer de Bonaire 12, 08870 Sitges', 'Calle Bonaire 12, Sitges, Barcelona, 08870'), false);
+  assert.equal(core.areContradictingStreetLines('Malecón 4, Zona Romántica, Emiliano Zapata, P.V.', '4 Malecon, Puerto Vallarta, Jalisco'), false);
+  assert.equal(core.areContradictingStreetLines('Motzstraße 19, 10777 Berlin', 'Motzstr. 19'), false);
+  assert.equal(core.areContradictingStreetLines('San Francisco CA 94103', '398 12th Street'), false, 'a ZIP is not a house number');
+  assert.equal(core.areContradictingStreetLines('1354 Harrison St, San Francisco, CA 94103', '398 12th Street, San Francisco, CA 94103'), true);
+  assert.equal(core.areContradictingStreetLines('100 Main St', '100 Oak Ave'), true);
+  assert.equal(core.areContradictingStreetLines('2233 Broadway, New York', '366 W 46th St, New York'), true);
+  // Bars and streets check each other: two names at one door, one name
+  // over two doors — neither is a contradiction; two names AND two doors is.
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Locker Room', address: '79 WARRENTON ST' }, { bar: 'Legacy', address: '79 Warrenton Street, Boston, MA 02116' }), false, 'a party name in the venue slot at the venue\'s own door');
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'The Eagle Bar', address: '15 Bloom St, Manchester M1 3HZ, UK' }, { bar: 'The Black Eagle', address: '15 Bloom St, Manchester M1 3HZ, UK' }), false);
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: '3 Dollar Bill', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), false);
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), true, 'two rooms, two doors');
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Delfin Beach Resort', address: 'Calle Rodolfo Gomez 111, PV' }, { bar: 'CC Slaughters', address: 'LÁZARO CÁRDENAS 254, PV MX' }), true);
+  // A listing parked in ticketUrl above its own event page is not a second ticket.
+  assert.equal(core.haveContradictingPlaceEvidence({}, {}, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea' }, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp' }), false);
+  assert.equal(core.haveContradictingPlaceEvidence({}, {}, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea' }, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp/2026/9/19/bear-tea' }), true);
+  // Nights, not calendar days: a 2am start is the evening before's party.
+  assert.equal(core.haveContradictingStatedDays({ startDate: new Date('2026-07-26T02:00:00.000Z'), timezone: 'America/Chicago' }, { startDate: new Date('2026-07-26T07:00:00.000Z'), timezone: 'America/Chicago' }), false);
+  assert.equal(core.haveContradictingStatedDays({ startDate: new Date('2026-07-26T02:00:00.000Z'), timezone: 'America/Chicago' }, { startDate: new Date('2026-07-27T02:00:00.000Z'), timezone: 'America/Chicago' }), true);
+  assert.equal(core.haveContradictingStatedDays({ startDate: new Date('2026-07-26T02:00:00.000Z') }, { startDate: new Date('2026-07-27T02:00:00.000Z'), timezone: 'America/Chicago' }), false, 'a record whose clock cannot be resolved states no night');
+});
+
+test('contradiction gate: what counts as two destinations', () => {
+  const core = createGateCore();
+  const pair = (a, b, options) => core.getContradictingDestinations(a, b, options || {});
+  // Agreement: a hub above its leaf, one platform id under two slugs, the
+  // same page with a purchase sub-path, lineage.
+  assert.equal(pair({ url: 'https://site.com/events' }, { url: 'https://site.com/events/party' }), null);
+  assert.equal(pair({ url: 'https://www.eventim.us/event/POOL-PARTY/696752' }, { url: 'https://eventim.us/event/DANCE-PARTY/696752' }), null);
+  assert.equal(pair({ ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets' }, { ticketUrl: 'https://sickening.events/e/bearracuda-treasure-trail-october' }), null);
+  assert.equal(pair({ url: 'https://site.com/e/party', _sourcePageUrl: 'https://site.com/list' }, { url: 'https://dice.fm/event/x', _sourcePageUrl: 'https://site.com/e/party' }), null);
+  // Not comparable: two vendors, short links, bare roots, a venue site's own
+  // two slugs (editorial hierarchy — renumbered or not), a pass page.
+  assert.equal(pair({ ticketUrl: 'https://tixr.com/e/207002' }, { ticketUrl: 'https://www.sickening.events/e/bearracuda-treasure-trail-october/tickets' }), null);
+  assert.equal(pair({ ticketUrl: 'https://link.dice.fm/P0194faadd01' }, { ticketUrl: 'https://link.dice.fm/Q0194faadd02' }), null);
+  assert.equal(pair({ url: 'https://www.massive.club/' }, { url: 'https://massive.club/' }), null);
+  assert.equal(pair({ url: 'https://site.com/events/list' }, { url: 'https://site.com/events/party' }), null);
+  assert.equal(pair({ url: 'https://site.com/events/karaoke-19/', ticketUrl: 'https://site.com/events/karaoke-19/' }, { url: 'https://site.com/events/karaoke-20/' }), null);
+  assert.equal(pair({ ticketUrl: 'https://beefdip.com/tags/', _ticketUrlFanIn: 7 }, { ticketUrl: 'https://beefdip.com/tags/other' }), null);
+  assert.equal(pair({ ticketUrl: 'https://tixr.com/e/207002' }, { ticketUrl: 'https://tixr.com/e/202706' }, { excludedTicketUrlKeys: new Set([core.getUrlDedupeKey('https://tixr.com/e/207002')]) }), null);
+  // Contradiction: two platform ids on one host; two vendor paths on a host
+  // either record buys tickets from — whichever field carries them; a
+  // calendar record's notes count as its fields.
+  assert.deepEqual(pair({ url: 'https://www.eventim.us/event/POOL-PARTY/696752' }, { url: 'https://eventim.us/event/DANCE-PARTY/700051' }), { a: 'eventim.us/event/pool-party/696752', b: 'eventim.us/event/dance-party/700051' });
+  assert.deepEqual(pair({ ticketUrl: 'https://dice.fm/event/a-one' }, { url: 'https://dice.fm/event/b-two' }), { a: 'dice.fm/event/a-one', b: 'dice.fm/event/b-two' });
+  assert.deepEqual(pair({ ticketUrl: 'https://tixr.com/e/207002' }, { notes: 'ticketUrl: https://tixr.com/e/202706\nbar: Massive' }), { a: 'tixr.com/e/207002', b: 'tixr.com/e/202706' });
+  // A statically stamped website is branding, never a destination.
+  assert.equal(pair({ ticketUrl: 'https://dice.fm/event/a-one', website: 'https://dice.fm/event/b-two', _staticFields: { website: 'https://dice.fm/event/b-two' } }, { ticketUrl: 'https://dice.fm/event/a-one' }), null);
+  // An aggregator's link is discovery, never evidence: The Bear Calendar
+  // pointed Manbears Social's October night at the venue's August page.
+  const staleAggregator = { title: 'Manbears Social', url: 'https://www.eaglemanchester.com/event-details/manbears-social-2026-08-08-16-00', _parserConfig: { name: 'The Bear Calendar', siteRole: 'aggregator' } };
+  const venueOwn = { title: 'Manbears Social', ticketUrl: 'https://www.eaglemanchester.com/fr/event-details/manbears-social-2026-10-10-16-00', url: 'https://www.eaglemanchester.com/event-details/manbears-social-2026-10-10-16-00' };
+  assert.equal(pair(staleAggregator, venueOwn), null);
+  assert.ok(pair({ ...staleAggregator, _parserConfig: { name: 'Eagle Manchester' } }, venueOwn), 'two of the venue\'s own event pages, on the host it sells from, are two events');
+});
+
+test('contradiction gate: a shared slug names no title once the records contradict', () => {
+  const core = createGateCore();
+  const page = 'https://eaglemanchester.com/event-details/hellbent-13';
+  const a = { title: 'Hellbent', bar: 'Eagle Manchester', url: page };
+  const b = { title: 'Where Fetish Meets Pop!', bar: 'Eagle Manchester', url: page };
+  assert.equal(core.getSharedEventLinkSlug(a, b), 'hellbent-13');
+  const agree = core.resolveConflictDeterministically('title', a.title, b.title, { records: { a, b }, sideLabels: { a: 'calendar', b: 'scraped' } });
+  assert.equal(agree && agree.winner, 'a', 'the slug still names the title for records that agree');
+  assert.match(agree.reason, /names this title/);
+  const contradicting = { ...b, bar: 'The Rembrandt' };
+  const vetoed = core.resolveConflictDeterministically('title', a.title, contradicting.title, { records: { a, b: contradicting }, sideLabels: { a: 'calendar', b: 'scraped' } });
+  assert.equal(vetoed, null, `a carried-off link names nothing: ${vetoed && vetoed.reason}`);
+});
+
+test('contradiction gate: a bar that is the other record\'s title is the party name read as a venue, not a second bar', async () => {
+  const core = createGateCore();
+  // massive.club's Oct 16 card read twice (replay 2026-09-24): the JSON-LD
+  // card says Massive; the flat window's extraction put the party name in
+  // the venue slot. One event, one door.
+  const card = { title: 'Looking', startDate: new Date('2026-10-17T05:00:00.000Z'), bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/205790', source: 'ai-web' };
+  const misread = { title: 'Looking for Party Monsters', startDate: new Date('2026-10-17T05:00:00.000Z'), bar: 'Looking', address: '619 EPINE', city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/205790', source: 'ai-web' };
+  assert.equal(core.getIdentityContradiction(card, misread), null);
+  const out = await core.deduplicateEvents([card, misread], null);
+  assert.equal(out.length, 1, `the shared ticket link still folds them: ${out.map(e => e.title).join(' | ')}`);
+  // A genuinely different bar under a similar title still contradicts.
+  const elsewhere = { ...misread, bar: 'Neighbours', address: '1509 Broadway' };
+  assert.ok(core.getIdentityContradiction(card, elsewhere));
 });

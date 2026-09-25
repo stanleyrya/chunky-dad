@@ -16855,6 +16855,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         reason: "⏳ span fully past — nothing left to attend",
       };
     }
+    // One record, one destination (ai-web applyOneDestinationGuard): the
+    // record's title, link and artwork come from different listings on its
+    // page — never merged, never written; the chip says which.
+    if (event._chimeraWithheld) {
+      const reason = String(event._chimeraWithheld.reason || "").trim();
+      return {
+        section: "withheld",
+        reason: `🧬 assembled from two listings${reason ? ` — ${reason}` : ""}`,
+      };
+    }
     if (SharedCore.hasJunkTitleSanityFlag(event)) {
       return {
         section: "withheld",

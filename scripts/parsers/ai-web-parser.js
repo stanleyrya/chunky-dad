@@ -880,6 +880,14 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        // Language-selector params name a TRANSLATION of a page, never a
+        // different page: ?lang=de is the same event as the plain URL. They
+        // are stripped alongside tracking params for identity (dedupe key)
+        // and for the crawl URL — run 20260924-055217 fetched
+        // eaglemanchester.com/event-details/hellbent-12?lang=de beside the
+        // plain page and the model then picked the "more canonical" ?lang=de
+        // as the event's url. Mirrors SharedCore.localeParamPattern.
+        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -2038,6 +2046,9 @@ class AiWebParser {
         let missSegmentsSpent = 0;
         let uncachedSegmentsSkipped = 0;
 
+        // The page's own card map, for the one-destination check below.
+        const destinationCards = this.buildPageDestinationCards(html, sourceUrl);
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
             const budgetSpent = missSegmentsSpent >= missBudget;
@@ -2072,6 +2083,11 @@ class AiWebParser {
                     };
                     this.applyCardStatedDateOverFlyerDate(event, segment.lines, pageDateContext);
                     this.applySegmentOwnPageLink(event, segmentHtmlData);
+                    // One record, one destination: judged on the finished
+                    // record, after the card's own link was adopted, before
+                    // the page's events are returned (see
+                    // applyOneDestinationGuard). Flag, don't drop.
+                    this.applyOneDestinationGuard(event, destinationCards, sourceUrl);
                     events.push(event);
                 }
             } catch (err) {
@@ -2160,6 +2176,304 @@ class AiWebParser {
         event.ticketUrl = link;
         console.log(`🔗 LINKS: "${event.title || 'event'}" takes its listing card's own link ${link} — the model returned none`);
         return true;
+    }
+
+    // ── ONE RECORD, ONE DESTINATION ─────────────────────────────────────
+    // A scraped record points at the listing its fields came from: the
+    // card that states its title, the card that links its ticket page, the
+    // card whose artwork it carries. Those must be ONE listing. Every
+    // malformed merge this pipeline has produced had the same shape — a
+    // record ASSEMBLED FROM TWO NEIGHBOURING CARDS (a text window that
+    // opened one card late on www.massive.club, run 20260924-055217: Nov 7
+    // "Bearracuda"'s title over Oct 16 "Looking"'s date, ticket link
+    // tixr.com/e/205790 and flyer; eaglela.com run 20260806: fence-post
+    // windows carrying the neighbour's JSON-LD) — and then an identity rung
+    // folded the chimera into a real saved event by the shared link and the
+    // AI arbiter rewrote the saved fields (Treasure Trail renamed to TKVR).
+    // The splitters are fixed one layout at a time; this is the invariant
+    // under all of them, judged on the RECORD, after extraction and before
+    // the page's events are returned, so a chimera never reaches dedup or
+    // the calendar merge.
+    //
+    // "Destination" = a card element of the page: the page's own card map
+    // (buildPageDestinationCards — card-shaped elements that each state one
+    // date and one title, innermost wins). A record's title, stated date,
+    // link fields and image are each attributed to the cards that hold
+    // them; a URL the page itself is, or that three or more cards share (a
+    // row of identical ticket buttons, the venue's map pin), constrains
+    // nothing. Two different EVENTS — not two different URLs — is the
+    // test: a card that links its ticket page and its own event page is
+    // one destination because both sit in one card. Only the fields that
+    // resolve to some card take part, and the record is a chimera exactly
+    // when no single card holds all of them.
+    //
+    // Without a card map (a page whose cards carry no card-shaped markup)
+    // the one destination signal left is platform identity: two link
+    // fields on the same host and path prefix naming different event
+    // ids/slugs (tixr.com/e/205790 beside tixr.com/e/207002).
+    //
+    // Flag, don't drop: the record is stamped `_chimeraWithheld` (an
+    // underscore field — internal, never notes) and stays in the run's
+    // events so the results UI and the review deck can show it and why;
+    // shared-core keeps a stamped record out of dedup, out of the bear
+    // check and out of the calendar match, and filterEventsForExecution
+    // withholds the write. A record with one destination, or none, is
+    // untouched — a listing stub with no link and its crawled detail page
+    // are still "one event scraped twice", folded by dedup as before.
+    buildPageDestinationCards(html, sourceUrl = '') {
+        const source = String(html || '');
+        const memo = this._pageDestinationCardsMemo;
+        if (memo && memo.html === source && memo.sourceUrl === sourceUrl) return memo.cards;
+        const cards = this.computePageDestinationCards(source, sourceUrl);
+        this._pageDestinationCardsMemo = { html: source, sourceUrl, cards };
+        return cards;
+    }
+
+    computePageDestinationCards(html, sourceUrl = '') {
+        const source = String(html || '');
+        if (!source) return [];
+        const opens = this.findCardShapedOpenTags(source);
+        if (opens.length === 0) return [];
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const qualifying = [];
+        for (const open of opens) {
+            const end = this.findElementCloseIndex(source, open.tag, open.start);
+            if (end < 0) continue;
+            const elementHtml = source.slice(open.start, end);
+            const lines = this.extractBodyParts(elementHtml, this.extractionLimits.multiEventScanLineLimit)
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            if (lines.length === 0) continue;
+            // One listing: a date, a title, at most a start and an end.
+            if (!this.segmentHasDateSignal(lines)) continue;
+            if (this.countMultiEventDateSignals(lines) > 2) continue;
+            const title = this.deriveSegmentListingTitle({ lines });
+            if (!title) continue;
+            qualifying.push({ start: open.start, end, html: elementHtml, lines, title });
+        }
+        if (qualifying.length === 0) return [];
+        // Innermost wins: an element enclosing another qualifying element is
+        // a list container, not a card.
+        const innermost = qualifying.filter(card => !qualifying.some(other =>
+            other !== card && other.start >= card.start && other.end <= card.end && (other.start > card.start || other.end < card.end)));
+        const cards = [];
+        for (const card of innermost) {
+            const urlKeys = new Set();
+            const imageKeys = new Set();
+            for (const candidate of this.extractUrlCandidatesFromRawHtml(card.html)) {
+                const normalized = this.normalizeUrl(candidate, sourceUrl);
+                if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+                urlKeys.add(this.getUrlDedupeKey(normalized));
+                const imageKey = this.getDestinationImageKey(normalized);
+                if (imageKey) imageKeys.add(imageKey);
+            }
+            cards.push({
+                index: cards.length,
+                start: card.start,
+                end: card.end,
+                html: card.html,
+                lines: card.lines,
+                lineKeys: card.lines.map(lineKey),
+                title: card.title,
+                titleKey: lineKey(card.title),
+                statedDates: this.collectCardStatedDates(card.lines),
+                urlKeys,
+                imageKeys
+            });
+        }
+        return cards;
+    }
+
+    // The comparison key for artwork: proxy-unwrapped, size params stripped,
+    // exactly as the OCR↔segment matcher keys images.
+    getDestinationImageKey(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return '';
+        const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(raw) || raw);
+        if (!normalized) return '';
+        return this.stripSizeParams(normalized) || '';
+    }
+
+    // Which of the page's cards hold this record's fields. Returns
+    // [{ field, value, cards: [index, …] }] — one entry per field that
+    // resolved to at least one card and does not resolve to every card.
+    resolveRecordDestinationCards(event, cards, sourceUrl = '') {
+        const list = Array.isArray(cards) ? cards : [];
+        if (!event || typeof event !== 'object' || list.length === 0) return [];
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const pageKey = sourceUrl ? this.getUrlDedupeKey(sourceUrl) : '';
+        const attributions = [];
+        // A link or picture that three or more cards share is page
+        // furniture — a category link, the venue's map pin, a shared
+        // "tickets" button, a repeated poster (the same bar the segment
+        // image chrome gate draws) — and names no listing. A title is
+        // different: a party that repeats is titled on every one of its
+        // cards, and any of them is a fair destination.
+        const record = (field, value, holders) => {
+            if (holders.length === 0 || holders.length === list.length) return;
+            if (field !== 'title' && holders.length >= this.segmentImageChromeMinSegments) return;
+            attributions.push({ field, value, cards: holders.map(card => card.index) });
+        };
+
+        // Title: the card whose own listing title or one of whose
+        // title-shaped lines states it. Prose lines never anchor a title (a
+        // neighbour's description mentioning this party is not its card),
+        // and neither does a call-to-action ("TICKETS" is on every card).
+        const titleMax = this.extractionLimits.multiEventTitleMaxChars;
+        // A weekday or month on its own ("Wed", "September"), a clock, a
+        // date line or a call-to-action is a card's furniture, not a name.
+        const isFurnitureLine = (line) => this.isMultiEventCallToActionLine(line)
+            || this.hasMultiEventDateSignal(line)
+            || this.isDayHeaderEchoTitle(line)
+            || this.isTimeOnlyLineText(line)
+            || /^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?\.?$/i.test(String(line || '').trim());
+        const anchorsTitle = (card, i, titleKey) => {
+            const line = card.lines[i];
+            if (isFurnitureLine(line)) return false;
+            const key = card.lineKeys[i];
+            return key === titleKey || (key.includes(titleKey) && line.length <= titleMax);
+        };
+        const titleKeys = [...new Set([event._titleBeforeBrandPrefix, event.title]
+            .map(lineKey).filter(key => key && key.length >= 4))]
+            .filter(key => !isFurnitureLine(key));
+        for (const titleKey of titleKeys) {
+            const exact = list.filter(card => (card.titleKey === titleKey && !isFurnitureLine(card.title))
+                || card.lineKeys.some((key, i) => key === titleKey && anchorsTitle(card, i, titleKey)));
+            const holders = exact.length > 0 ? exact : list.filter(card =>
+                (card.titleKey.length >= 4 && !isFurnitureLine(card.title) && titleKey.includes(card.titleKey))
+                || card.lineKeys.some((key, i) => anchorsTitle(card, i, titleKey)));
+            if (holders.length > 0) {
+                record('title', titleKey, holders);
+                break;
+            }
+        }
+
+        // Link fields: url and website are one field; a ticket link is its
+        // own. The listing page itself is where the record was FOUND, not
+        // what it is.
+        const seenLinkKeys = new Set();
+        for (const field of ['ticketUrl', 'url', 'website']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const normalized = this.normalizeUrl(value, sourceUrl);
+            if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || seenLinkKeys.has(key)) continue;
+            seenLinkKeys.add(key);
+            const path = (normalized.match(/^https?:\/\/[^/?#]+([^#]*)/i) || ['', ''])[1].replace(/\/+$/, '');
+            const holders = list.filter(card => card.urlKeys.has(key)
+                || card.html.includes(value)
+                || (path.length > 1 && card.html.includes(path)));
+            record(field, normalized, holders);
+        }
+
+        // Artwork: the card whose markup carries the picture (an <img>, a
+        // background-image, its JSON-LD image), keyed like the OCR matcher.
+        const image = typeof event.image === 'string' ? event.image.trim() : '';
+        if (image) {
+            const imageKey = this.getDestinationImageKey(this.normalizeUrl(image, sourceUrl) || image);
+            const upgraded = imageKey ? this.upgradeCdnThumbnailUrl(imageKey) : '';
+            const upgradedKey = upgraded && upgraded !== imageKey ? this.getDestinationImageKey(upgraded) : '';
+            const holders = list.filter(card => (imageKey && card.imageKeys.has(imageKey))
+                || (upgradedKey && card.imageKeys.has(upgradedKey))
+                || card.html.includes(image));
+            record('image', image, holders);
+        }
+
+        // Date: the card that states the record's night (its local day, or
+        // the evening before it for a night that starts after midnight),
+        // by the same reading applyCardStatedDateOverFlyerDate trusts. A
+        // day no card states constrains nothing — and the date is judged
+        // only when every card the record's other fields point at prints
+        // a readable date, so a card whose date lives in an attribute can
+        // never lose its own record to a neighbour's date line.
+        const anchored = new Set(attributions.flatMap(attribution => attribution.cards));
+        const anchoredCardsDated = [...anchored].every(index => list[index] && list[index].statedDates.length > 0);
+        const localDays = event.startDate && anchoredCardsDated ? this.getFlyerLocalDateCandidates(event) : null;
+        if (Array.isArray(localDays) && localDays.length > 0) {
+            const statesDay = (card) => card.statedDates.some(stated => localDays.some(local =>
+                stated.month === local.month && stated.day === local.day
+                && (!Number.isFinite(stated.year) || stated.year === local.year)));
+            record('date', `${localDays[0].year}-${String(localDays[0].month).padStart(2, '0')}-${String(localDays[0].day).padStart(2, '0')}`, list.filter(statesDay));
+        }
+        return attributions;
+    }
+
+    // Same platform, different event: two link fields on one host whose
+    // paths share every segment but the last and differ there
+    // (tixr.com/e/205790 vs tixr.com/e/207002; site/events/looking vs
+    // site/events/tkvr). Different path prefixes on one host are one
+    // event's ticket page and event page, not two events.
+    findSamePlatformLinkConflict(event, sourceUrl = '') {
+        const parts = [];
+        for (const field of ['ticketUrl', 'url', 'website']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const normalized = this.normalizeUrl(value, sourceUrl);
+            const match = normalized ? String(normalized).match(/^https?:\/\/([^/?#]+)((?:\/[^/?#]+)+)\/?(?:[?#]|$)/i) : null;
+            if (!match) continue;
+            const host = match[1].toLowerCase().replace(/^www\./, '');
+            const segments = match[2].split('/').filter(Boolean);
+            if (segments.length < 2) continue;
+            parts.push({ field, url: normalized, host, prefix: segments.slice(0, -1).join('/').toLowerCase(), last: segments[segments.length - 1].toLowerCase() });
+        }
+        for (let i = 0; i < parts.length; i++) {
+            for (let j = i + 1; j < parts.length; j++) {
+                const a = parts[i];
+                const b = parts[j];
+                if (a.host === b.host && a.prefix === b.prefix && a.last !== b.last) {
+                    return { a, b };
+                }
+            }
+        }
+        return null;
+    }
+
+    // The record-level check. Stamps `_chimeraWithheld` and logs one line
+    // naming the destinations; returns true when the record was withheld.
+    applyOneDestinationGuard(event, cards, sourceUrl = '') {
+        if (!event || typeof event !== 'object') return false;
+        const title = event.title || 'event';
+        const page = sourceUrl || event._sourcePageUrl || '';
+        const attributions = this.resolveRecordDestinationCards(event, cards, sourceUrl);
+        if (attributions.length >= 2) {
+            let common = new Set(attributions[0].cards);
+            for (const attribution of attributions.slice(1)) {
+                common = new Set(attribution.cards.filter(index => common.has(index)));
+            }
+            if (common.size === 0) {
+                const list = Array.isArray(cards) ? cards : [];
+                const describeCards = (indexes) => indexes.slice(0, 2).map(index => `card ${index + 1} "${list[index] ? list[index].title : '?'}"`).join(' or ');
+                const destinations = attributions.map(attribution => ({
+                    field: attribution.field,
+                    value: attribution.value,
+                    cards: attribution.cards.map(index => ({ index: index + 1, title: list[index] ? list[index].title : '' }))
+                }));
+                const summary = attributions.map(attribution => `${attribution.field} → ${describeCards(attribution.cards)}`).join('; ');
+                event._chimeraWithheld = {
+                    page,
+                    reason: `fields come from different listings: ${summary}`,
+                    destinations
+                };
+                console.log(`🧬 ONE DESTINATION: "${title}" is assembled from two listings on ${page || 'this page'} — ${summary} — withheld (never merged, never written); card kept in results`);
+                return true;
+            }
+        }
+        const conflict = this.findSamePlatformLinkConflict(event, sourceUrl);
+        if (conflict) {
+            const summary = `${conflict.a.field} ${conflict.a.url} and ${conflict.b.field} ${conflict.b.url} name two events on ${conflict.a.host}`;
+            event._chimeraWithheld = {
+                page,
+                reason: summary,
+                destinations: [
+                    { field: conflict.a.field, value: conflict.a.url, cards: [] },
+                    { field: conflict.b.field, value: conflict.b.url, cards: [] }
+                ]
+            };
+            console.log(`🧬 ONE DESTINATION: "${title}" points at two events — ${summary} — withheld (never merged, never written); card kept in results`);
+            return true;
+        }
+        return false;
     }
 
     async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null, httpAdapter = null) {
@@ -3157,6 +3471,71 @@ class AiWebParser {
     // date line plus another line, or most of its lines). The merged list is
     // put back in document order so sequential image pairing still walks the
     // page top to bottom.
+    //
+    // Card-shaped elements: the page's own event boundaries. Shared by the
+    // JSON-LD card tier and the coverage audit's card resolution so both
+    // read the same markup the same way.
+    //
+    // A card-shaped opening tag is an <article>, <li>, or a div/section
+    // with role="listitem" or an item/card/event class. Returned in
+    // document order with the position of the "<".
+    findCardShapedOpenTags(html) {
+        const source = String(html || '');
+        const opens = [];
+        if (!source) return opens;
+        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
+        let open;
+        while ((open = openPattern.exec(source)) !== null) {
+            if (!this.isCardShapedTagAttrs(open[2])) continue;
+            opens.push({ tag: open[1].toLowerCase(), start: open.index });
+        }
+        return opens;
+    }
+
+    isCardShapedTagAttrs(attrs) {
+        const text = String(attrs || '');
+        return /role=["']listitem["']/i.test(text) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(text);
+    }
+
+    // The index just past the closing tag that balances the element opened
+    // at `from`, or -1 when the markup never closes it.
+    findElementCloseIndex(html, tag, from) {
+        const source = String(html || '');
+        const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+        pattern.lastIndex = from;
+        let depth = 0;
+        let token;
+        while ((token = pattern.exec(source)) !== null) {
+            if (token[1] === '/') {
+                depth--;
+                if (depth === 0) return token.index + token[0].length;
+            } else if (!/\/\s*>$/.test(token[0])) {
+                depth++;
+            }
+        }
+        return -1;
+    }
+
+    // The nearest card-shaped element enclosing [from, to) that `accept`
+    // approves: walks the card-shaped opening tags before `from` from the
+    // innermost outward, skipping elements that close before `to` (earlier
+    // siblings) and elements `accept` rejects (a card's own inner
+    // "event-title" div), and returns the first survivor as
+    // { tag, start, end } — or null when nothing encloses the span.
+    findEnclosingCardElement(html, cardOpens, from, to = from, accept = () => true) {
+        const source = String(html || '');
+        const opens = Array.isArray(cardOpens) ? cardOpens : [];
+        for (let i = opens.length - 1; i >= 0; i--) {
+            const open = opens[i];
+            if (open.start >= from) continue;
+            const end = this.findElementCloseIndex(source, open.tag, open.start);
+            if (end < to) continue;
+            const element = { tag: open.tag, start: open.start, end };
+            if (accept(element)) return element;
+        }
+        return null;
+    }
+
     // Card windows from JSON-LD: for every <script type="application/ld+json">
     // holding an Event, the nearest enclosing repeated element (an
     // <article>, <li>, or a div/section with role="listitem" or an
@@ -3185,36 +3564,18 @@ class AiWebParser {
             if (events.length === 1) scripts.push({ index: match.index, end: match.index + match[0].length });
         }
         if (scripts.length < 2) return [];
-        const openPattern = /<(article|li|div|section)\b([^>]*)>/gi;
-        const isCardTag = (attrs) => /role=["']listitem["']/i.test(attrs) || /class=["'][^"']*\b(?:w-dyn-item|listitem|list-item|item|card|event)[\w-]*\b[^"']*["']/i.test(attrs);
-        const closeOf = (tag, from) => {
-            const pattern = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
-            pattern.lastIndex = from;
-            let depth = 0;
-            let token;
-            while ((token = pattern.exec(source)) !== null) {
-                if (token[1] === '/') {
-                    depth--;
-                    if (depth === 0) return token.index + token[0].length;
-                } else if (!/\/\s*>$/.test(token[0])) {
-                    depth++;
-                }
-            }
-            return -1;
-        };
+        const cardOpens = this.findCardShapedOpenTags(source);
         const cards = [];
         for (const script of scripts) {
             // Nearest card-shaped opening tag before the script that still
             // encloses it.
             let best = null;
-            openPattern.lastIndex = 0;
-            let open;
-            while ((open = openPattern.exec(source)) !== null && open.index < script.index) {
-                if (!isCardTag(open[2])) continue;
-                best = { tag: open[1].toLowerCase(), start: open.index };
+            for (const open of cardOpens) {
+                if (open.start >= script.index) break;
+                best = open;
             }
             if (!best) return [];
-            const end = closeOf(best.tag, best.start);
+            const end = this.findElementCloseIndex(source, best.tag, best.start);
             if (end < 0 || end <= script.end) return [];
             cards.push({ start: best.start, end });
         }
@@ -3249,14 +3610,23 @@ class AiWebParser {
         const structuredKeySets = structured.map(segment =>
             new Set((Array.isArray(segment.lines) ? segment.lines : []).map(lineKey).filter(Boolean)));
 
-        const unclaimed = [];
-        const unclaimedCompact = [];
-        let claimedCount = 0;
-        for (const window of flatSegments) {
-            const lines = Array.isArray(window.lines) ? window.lines : [];
-            const keys = lines.map(lineKey).filter(Boolean);
-            if (keys.length === 0) continue;
-            if (!this.segmentHasDateSignal(lines)) continue;
+        // Cards, not text windows. The flat splitter cuts at date lines, so
+        // on a listing whose cards read title-THEN-date every text window
+        // is the previous card's date, link and image under this card's
+        // title — a chimera. www.massive.club's homepage swiper (run
+        // 20260924-055217): "Oct 10, 2026 9:00 PM / TKVR | Nolid /
+        // tixr.com/e/207002" is Treasure Trail's night and ticket under
+        // TKVR's name; dedup then matched TKVR to the calendar's Treasure
+        // Trail by the shared link and renamed it. A window is therefore
+        // resolved to the card ELEMENT that holds its title before anything
+        // else looks at it, and that element's own body — its date, its
+        // link, its image — is the window. Windows that resolve to the same
+        // card are one listing.
+        const records = this.extractBodyPartRecords(html);
+        const cardResolver = this.createCardWindowResolver(html, flatSegments, records);
+        const structuredTitleThenDate = this.segmentsReadTitleThenDate(structured);
+        const resolvedCardKeys = new Set();
+        const claimedByStructured = (lines) => {
             // Claimed = OVERLAPS a structured window: two shared content lines
             // (calls-to-action repeat on every card and prove nothing), or
             // most of its content lines. A shared DATE alone is not overlap — two
@@ -3283,11 +3653,31 @@ class AiWebParser {
                 .filter(Boolean);
             const claimedByDate = timedDateKeys.length > 0
                 && structuredKeySets.some(keySet => timedDateKeys.every(key => keySet.has(key)));
+            return { claimed, claimedByDate };
+        };
+
+        const unclaimed = [];
+        const unclaimedCards = [];
+        const unclaimedCompact = [];
+        let claimedCount = 0;
+        for (const window of flatSegments) {
+            const lines = Array.isArray(window.lines) ? window.lines : [];
+            const keys = lines.map(lineKey).filter(Boolean);
+            if (keys.length === 0) continue;
+            if (!this.segmentHasDateSignal(lines)) continue;
+            const card = cardResolver.resolveWindow(window);
+            const { claimed, claimedByDate } = claimedByStructured(card ? card.segment.lines : lines);
             if (claimed || claimedByDate) {
                 claimedCount++;
                 if (claimedByDate && !claimed) {
                     console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" is the tail of a structured card (its timed date line is that card's) — not a listing of its own`);
                 }
+                continue;
+            }
+            if (card) {
+                if (resolvedCardKeys.has(card.key)) continue;
+                resolvedCardKeys.add(card.key);
+                unclaimedCards.push(card);
                 continue;
             }
             // One listing states at most a start and an end — the same bound
@@ -3331,6 +3721,18 @@ class AiWebParser {
                     continue;
                 }
             }
+            // No card element holds this window's title. On a page whose
+            // cards DO resolve and read title-then-date, a text window whose
+            // date comes before its title is the splitter's cut across two
+            // cards — the previous card's night under this title — and a
+            // text window cannot be trusted to carry its own date: reject
+            // it rather than emit a chimera. (massive.club: "Jan 2, 2027
+            // 10:00 PM / view EVENTS CALENDAR" is Horse Meat Disco's night
+            // under the page's calendar link.)
+            if (cardResolver.pageHasCards && structuredTitleThenDate && this.segmentReadsDateThenTitle(window)) {
+                console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" has no card element of its own and its date precedes its title on a title-then-date page — a cut across two cards, not a listing`);
+                continue;
+            }
             unclaimed.push(window);
         }
         // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
@@ -3347,6 +3749,20 @@ class AiWebParser {
             if (!key || seenCompactKeys.has(key)) continue;
             seenCompactKeys.add(key);
             if (structuredKeySets.some(keySet => keySet.has(key))) continue;
+            // A dated line sitting inside a card element is that card's
+            // date line, not a row of its own: the card is the listing (on
+            // massive.club's swiper, "Oct 10, 2026 9:00 PM" alone reached
+            // the model as a titleless segment carrying Treasure Trail's
+            // ticket link).
+            const card = cardResolver.resolveLine(line);
+            if (card) {
+                if (resolvedCardKeys.has(card.key)) continue;
+                const { claimed, claimedByDate } = claimedByStructured(card.segment.lines);
+                if (claimed || claimedByDate) continue;
+                resolvedCardKeys.add(card.key);
+                unclaimedCards.push(card);
+                continue;
+            }
             const rowHtml = this.extractRawHtmlForMultiEventSegment(html, [line]) || line;
             // A row with a date and a name but no time and no link is a
             // fragment of an announcement, not a listing (owner, 2026-09-13:
@@ -3357,7 +3773,13 @@ class AiWebParser {
             if (!statesTime && !carriesLink) continue;
             unclaimedCompact.push({ lines: [line], html: rowHtml });
         }
-        if (unclaimed.length === 0 && unclaimedCompact.length === 0) return structured;
+        if (unclaimed.length === 0 && unclaimedCards.length === 0 && unclaimedCompact.length === 0) return structured;
+
+        // Card windows are the page's own segmentation, not a second
+        // opinion: each is one card element with one listing inside, so
+        // the wholesale-disagreement gate below (which judges TEXT windows)
+        // does not apply to them.
+        const cardPositions = new Map(unclaimedCards.map(card => [card.segment, card.start]));
 
         // A second opinion only counts when it mostly agrees. The audit
         // exists for a FEW cards dropped from an otherwise right
@@ -3369,7 +3791,8 @@ class AiWebParser {
         // the finding, so say it, loudly, and let the structured result
         // stand.
         const additionCap = Math.max(3, structured.length);
-        let additions = unclaimedCompact.slice(0, 24);
+        unclaimedCards.sort((a, b) => a.start - b.start);
+        let additions = unclaimedCards.map(card => card.segment).concat(unclaimedCompact.slice(0, 24));
         if (unclaimed.length > 0) {
             if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
                 console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing from it; this page's segmentation needs a look`);
@@ -3381,13 +3804,17 @@ class AiWebParser {
         unclaimed.length = 0;
         unclaimed.push(...additions);
 
-        console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding text window(s): ${unclaimed.map(window => `"${this.deriveSegmentListingTitle(window)}"`).join(', ')}`);
+        const describe = (windows) => windows.map(window => `"${this.deriveSegmentListingTitle(window) || (window.lines && window.lines[0]) || ''}"`).join(', ');
+        const cardWindows = unclaimed.filter(window => cardPositions.has(window));
+        const textWindows = unclaimed.filter(window => !cardPositions.has(window));
+        console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding ${cardWindows.length > 0 ? `card window(s): ${describe(cardWindows)}` : ''}${cardWindows.length > 0 && textWindows.length > 0 ? '; ' : ''}${textWindows.length > 0 ? `text window(s): ${describe(textWindows)}` : ''}`);
 
-        // Document order: earliest matched text position first; anything
-        // whose position cannot be located keeps its relative place after
-        // the located ones.
-        const records = this.extractBodyPartRecords(html);
+        // Document order: a card window sits where its element opens;
+        // otherwise earliest matched text position first; anything whose
+        // position cannot be located keeps its relative place after the
+        // located ones.
         const positionOf = (segment) => {
+            if (cardPositions.has(segment)) return cardPositions.get(segment);
             const bounds = this.findMultiEventSegmentTextBounds(html, segment.lines, records);
             return bounds && Number.isFinite(bounds.rawStart) ? bounds.rawStart : Number.POSITIVE_INFINITY;
         };
@@ -3411,6 +3838,201 @@ class AiWebParser {
         const recordedDated = stats && Number.isFinite(Number(stats.datedCandidateCount)) ? Number(stats.datedCandidateCount) : 0;
         this.recordMultiEventSegmentationStats(Math.max(recordedDated, merged.length), 'structure group + coverage audit');
         return merged;
+    }
+
+    // Resolves a text window to the card ELEMENT that holds it, for the
+    // coverage audit. The window's anchor is its listing-title line (its
+    // first line when it has no title — a dated compact row); the anchor is
+    // located in the page's body-part records and the nearest card-shaped
+    // element enclosing it (findEnclosingCardElement) that carries a date
+    // AND a title of its own is the card. The card's body is the window:
+    // its own date, link and image, never a neighbour's.
+    //
+    // The card must be ONE listing — count distinct event titles per card,
+    // not text windows: a card element with more than two date lines, or
+    // holding the titles of two different text windows, is a list
+    // container the walk-back reached because the page's real cards carry
+    // no card-shaped markup, and is refused (the window then stays a text
+    // window under the audit's usual rules).
+    //
+    // resolveWindow(window) / resolveLine(line) return
+    // { key, start, end, segment } or null; results are memoized per
+    // anchor so windows resolving to the same card share one key.
+    createCardWindowResolver(html, flatSegments, records = null) {
+        const source = String(html || '');
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const windows = Array.isArray(flatSegments) ? flatSegments : [];
+        const bodyRecords = Array.isArray(records) ? records : this.extractBodyPartRecords(source);
+        const recordByKey = new Map();
+        for (const record of bodyRecords) {
+            const key = lineKey(record.text);
+            if (key && !recordByKey.has(key)) recordByKey.set(key, record);
+        }
+        // Where the anchor line's own text sits: the first text node inside
+        // the record's [rawStart, rawEnd) span that is part of the line. A
+        // record's bounds are flush points (the previous and the next
+        // line-break tag), and either may lie outside the element holding
+        // the text — "</a>" breaks no line, so a link's text is flushed by
+        // whatever closes next, possibly deep inside the following card.
+        // The text node itself is inside every element that encloses it.
+        const anchorPositionOf = (line) => {
+            const record = recordByKey.get(lineKey(line));
+            if (!record || !Number.isFinite(record.rawStart) || !Number.isFinite(record.rawEnd)) return -1;
+            const target = lineKey(record.text);
+            const slice = source.slice(record.rawStart, record.rawEnd);
+            const tagPattern = /<[^>]+>/g;
+            let last = 0;
+            let match;
+            const textNodeMatches = (text, offset) => {
+                const leading = text.length - text.replace(/^\s+/, '').length;
+                const node = lineKey(this.decodeBasicEntities(text));
+                if (!node) return -1;
+                return target.includes(node) || node.includes(target) ? record.rawStart + offset + leading : -1;
+            };
+            while ((match = tagPattern.exec(slice)) !== null) {
+                const found = textNodeMatches(slice.slice(last, match.index), last);
+                if (found >= 0) return found;
+                last = match.index + match[0].length;
+            }
+            const tail = textNodeMatches(slice.slice(last), last);
+            return tail >= 0 ? tail : record.rawEnd - 1;
+        };
+        const anchorLineOf = (window) => {
+            const lines = Array.isArray(window && window.lines) ? window.lines : [];
+            const title = this.deriveSegmentListingTitle(window);
+            if (title) {
+                const titleKey = lineKey(title);
+                const exact = lines.find(line => lineKey(line) === titleKey);
+                if (exact) return exact;
+                const holder = lines.find(line => lineKey(line).includes(titleKey));
+                if (holder) return holder;
+            }
+            return lines.find(line => lineKey(line)) || '';
+        };
+        // Every text window's title, positioned — the listings the page
+        // states, for the one-listing-per-card check.
+        const windowTitleAnchors = [];
+        const seenTitleKeys = new Set();
+        for (const window of windows) {
+            const title = this.deriveSegmentListingTitle(window);
+            const key = lineKey(title);
+            if (!key || seenTitleKeys.has(key)) continue;
+            seenTitleKeys.add(key);
+            const position = anchorPositionOf(anchorLineOf(window));
+            if (position >= 0) windowTitleAnchors.push({ key, position });
+        }
+        const cardOpens = source ? this.findCardShapedOpenTags(source) : [];
+        const cache = new Map();
+        const resolveLine = (line) => {
+            const key = lineKey(line);
+            if (!key) return null;
+            if (cache.has(key)) return cache.get(key);
+            let resolved = null;
+            const position = anchorPositionOf(line);
+            if (position >= 0 && cardOpens.length > 0) {
+                const linesOf = (element) => this.extractBodyParts(source.slice(element.start, element.end), this.extractionLimits.multiEventScanLineLimit)
+                    .map(text => this.normalizeWhitespace(text))
+                    .filter(Boolean);
+                let elementLines = null;
+                const element = this.findEnclosingCardElement(source, cardOpens, position, position, (candidate) => {
+                    const lines = linesOf(candidate);
+                    if (!this.segmentHasDateSignal(lines) || !this.deriveSegmentListingTitle({ lines })) return false;
+                    elementLines = lines;
+                    return true;
+                });
+                if (element && elementLines) {
+                    const titlesInside = windowTitleAnchors.filter(anchor => anchor.position >= element.start && anchor.position < element.end).length;
+                    const elementHtml = source.slice(element.start, element.end);
+                    // The structured tier's floor, unchanged: a card under
+                    // the character floor is a scrap unless it identifies
+                    // itself — its primary destination is one no other
+                    // element on the page links (a row of identical ticket
+                    // buttons identifies nothing; see
+                    // mapMultiEventGroupIdentityLinks).
+                    const clearsFloor = elementLines.join('\n').length >= this.extractionLimits.multiEventMinSegmentChars
+                        || this.multiEventElementIdentifiesItself(source, elementHtml);
+                    if (clearsFloor && this.countMultiEventDateSignals(elementLines) <= 2 && titlesInside <= 1) {
+                        resolved = {
+                            key: `${element.start}:${element.end}`,
+                            start: element.start,
+                            end: element.end,
+                            segment: {
+                                lines: this.trimSegmentLinesToChars(elementLines, this.extractionLimits.multiEventMaxSegmentChars),
+                                html: elementHtml
+                            }
+                        };
+                    }
+                }
+            }
+            cache.set(key, resolved);
+            return resolved;
+        };
+        const resolveWindow = (window) => resolveLine(anchorLineOf(window));
+        const resolver = { resolveLine, resolveWindow, pageHasCards: false };
+        // Whether the page has card markup at all decides how an
+        // unresolvable window is judged (see the chimera guard).
+        resolver.pageHasCards = windows.some(window => Boolean(resolveWindow(window)));
+        return resolver;
+    }
+
+    // Does a card element identify itself on its page: its primary
+    // destination (extractMultiEventEntryIdentityLink) is linked nowhere on
+    // the page outside the element. The page-wide twin of
+    // mapMultiEventGroupIdentityLinks for an element that belongs to no
+    // repeated group.
+    multiEventElementIdentifiesItself(pageHtml, elementHtml) {
+        const link = this.extractMultiEventEntryIdentityLink(elementHtml);
+        if (!link) return false;
+        const countLinks = (html) => {
+            const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+            let count = 0;
+            let match;
+            while ((match = pattern.exec(String(html || ''))) !== null) {
+                if (String(match[1] || '').split('#')[0].trim() === link) count++;
+            }
+            return count;
+        };
+        return countLinks(pageHtml) === countLinks(elementHtml);
+    }
+
+    // Where a window's title sits relative to its date. The dated line is
+    // the first TIMED date line (date plus clock) when there is one,
+    // otherwise the first date-signal line; the title is
+    // deriveSegmentListingTitle's line. Returns null when either is
+    // missing.
+    segmentTitleAndDateIndexes(segment) {
+        const lines = Array.isArray(segment && segment.lines) ? segment.lines : [];
+        const title = this.deriveSegmentListingTitle(segment);
+        if (!title) return null;
+        const titleKey = this.normalizeWhitespace(title).toLowerCase();
+        const titleIndex = lines.findIndex(line => this.normalizeWhitespace(String(line || '')).toLowerCase().includes(titleKey));
+        if (titleIndex < 0) return null;
+        const timedIndex = lines.findIndex(line => this.hasMultiEventDateSignal(line) && /\b\d{1,2}:\d{2}\b|\b\d{1,2}\s*[ap]\.?m\b/i.test(line));
+        const dateIndex = timedIndex >= 0 ? timedIndex : lines.findIndex(line => this.hasMultiEventDateSignal(line));
+        if (dateIndex < 0 || dateIndex === titleIndex) return null;
+        return { titleIndex, dateIndex };
+    }
+
+    // Do the page's structured cards read title-then-date? True when the
+    // cards with a locatable title and date mostly put the title first.
+    segmentsReadTitleThenDate(segments) {
+        let titleFirst = 0;
+        let dateFirst = 0;
+        for (const segment of (Array.isArray(segments) ? segments : [])) {
+            const indexes = this.segmentTitleAndDateIndexes(segment);
+            if (!indexes) continue;
+            if (indexes.titleIndex < indexes.dateIndex) titleFirst++;
+            else dateFirst++;
+        }
+        return titleFirst > 0 && titleFirst > dateFirst;
+    }
+
+    // A text window whose every date-signal line precedes its title.
+    segmentReadsDateThenTitle(segment) {
+        const indexes = this.segmentTitleAndDateIndexes(segment);
+        if (!indexes) return false;
+        const lines = Array.isArray(segment && segment.lines) ? segment.lines : [];
+        return lines.every((line, index) => index < indexes.titleIndex || !this.hasMultiEventDateSignal(line));
     }
 
     // The flat text splitter: the page's body lines, sliced at date/title
@@ -6386,6 +7008,13 @@ class AiWebParser {
             rejectedSamples: {}
         };
 
+        // The page's own hreflang alternates (translations of THIS document
+        // and the locale path prefixes they reveal) — computed once, checked
+        // for every candidate at the single funnel below. Null when the page
+        // declares none, and then nothing about locales is assumed.
+        const localeAlternates = this.collectLocaleAlternates(html, sourceUrl);
+        discoveryStats.localeAlternates = localeAlternates;
+
         try {
             const hrefCandidates = this.extractHrefCandidates(html);
             discoveryStats.hrefCandidates = hrefCandidates.length;
@@ -6483,6 +7112,12 @@ class AiWebParser {
         // re-fetching a detail page it had already extracted, purely because
         // the page advertised its own canonical.
         this.suppressSelfCanonicalUrls(urls, html, sourceUrl);
+
+        const localeSkipped = Number(discoveryStats.rejectedReasons['locale-alternate'] || 0);
+        if (localeAlternates && localeSkipped > 0) {
+            const prefixes = Array.from(localeAlternates.localePrefixes).map(prefix => `/${prefix}/`).join(', ');
+            console.log(`🤖 AI Web: Locale alternates skipped for ${sourceUrl}: ${localeSkipped} link(s) — hreflang twins of this page${prefixes ? ` and pages under ${prefixes}` : ''} are translations, not new pages; following the x-default ${localeAlternates.defaultUrl}`);
+        }
 
         const rankedUrls = this.rankAdditionalUrls(urls);
         const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
@@ -7642,8 +8277,14 @@ class AiWebParser {
         if (ticketUrl) event.ticketUrl = ticketUrl;
         if (event.bar) event._barFromJsonLd = true;
         const images = row.event_images && typeof row.event_images === 'object' ? row.event_images : {};
-        const cropUrls = [images.portrait, images.landscape, images.square,
-            ...(Array.isArray(row.images) ? row.images : [])]
+        // The uncropped master first: DICE's portrait/landscape/square are
+        // `?rect=` slices of the same file, and the portrait slice cuts a
+        // wide poster's sides off (run 20260924-055217, Bear Belly's
+        // ?rect=338,0,1485,2700 lost the "B" of BEAR BELLY; SPOOKMINCE's crop
+        // read "OOKMIN"). The whole picture is the picture; the crops stay
+        // as alternates for the gate and the orientation slots.
+        const cropUrls = [...(Array.isArray(row.images) ? row.images : []),
+            images.portrait, images.landscape, images.square]
             .map(value => this.normalizeHttpUrlValue(String(value || '').trim()))
             .filter(Boolean);
         const image = cropUrls[0] || '';
@@ -8984,6 +9625,156 @@ class AiWebParser {
         return hrefs;
     }
 
+    // The page's <link rel="alternate" hreflang="…"> family: every entry
+    // names a TRANSLATION of this same document, and the one flagged
+    // x-default (else the rel=canonical, else the page itself) is the copy
+    // to follow. Wix sites publish one per language on every page
+    // (eaglemanchester.com: x-default + de-de + fr-fr + nl-nl + en-gb) and
+    // run 20260924-055217 crawled 52 locale twins among its 87 Eagle
+    // Manchester pages, then picked /fr/ and ?lang=de copies as event urls.
+    // Returns null when the page declares no hreflang alternates — nothing
+    // is then assumed about locales. Otherwise:
+    //   defaultUrl     — the copy to follow (resolved, tracking/locale-stripped)
+    //   alternateKeys  — dedupe keys of every non-default alternate
+    //   localePrefixes — first path segments the alternates add in front of
+    //                    the default's path (de, fr, nl …): every same-site
+    //                    link under such a prefix is a translation too.
+    //   host           — the default copy's host (www-stripped)
+    // A prefix is derived only when the alternate's path is EXACTLY the
+    // default's path with one locale-shaped segment in front (fail closed:
+    // an alternate on another host or with a different slug yields no
+    // prefix, only its own exact key).
+    collectLocaleAlternates(html, sourceUrl) {
+        if (!html || typeof html !== 'string') return null;
+        const linkTagRegex = /<link\b[^>]*>/gi;
+        const alternates = [];
+        let xDefault = '';
+        let linkMatch;
+        while ((linkMatch = linkTagRegex.exec(html)) !== null) {
+            const tag = linkMatch[0];
+            const relMatch = tag.match(/\brel\s*=\s*["']([^"']*)["']/i);
+            if (!relMatch || !/(?:^|\s)alternate(?:\s|$)/i.test(relMatch[1])) continue;
+            const langMatch = tag.match(/\bhreflang\s*=\s*["']([^"']*)["']/i);
+            if (!langMatch) continue;
+            const hrefMatch = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i);
+            if (!hrefMatch) continue;
+            const hreflang = String(langMatch[1] || '').trim().toLowerCase();
+            const resolved = this.resolveLocaleAlternateHref(hrefMatch[1], sourceUrl);
+            if (!resolved) continue;
+            if (hreflang === 'x-default') {
+                if (!xDefault) xDefault = resolved;
+                continue;
+            }
+            alternates.push({ hreflang, url: resolved });
+        }
+        // The same declaration in embedded JSON: a language list whose
+        // entries pair a languageCode with that language's url (Wix
+        // multilingual prints `siteLanguages` on EVERY page, including
+        // the ones that carry no hreflang tags at all — eaglemanchester.com
+        // /apply and the /form pages declare /de/, /fr/, /nl/ twins only
+        // this way). An entry flagged isPrimaryLanguage or coded x-default
+        // is the default copy. Structural shape only, no host named.
+        const jsonEntryRegex = /\{[^{}]*"languageCode"\s*:\s*"([^"]+)"[^{}]*\}/g;
+        let jsonMatch;
+        while ((jsonMatch = jsonEntryRegex.exec(html)) !== null) {
+            const entry = jsonMatch[0];
+            const urlMatch = entry.match(/"url"\s*:\s*"((?:https?:\\?\/\\?\/|\\u002f\\u002f)[^"]+)"/i)
+                || entry.match(/"url"\s*:\s*"(https?:[^"]+)"/i);
+            if (!urlMatch) continue;
+            const resolved = this.resolveLocaleAlternateHref(urlMatch[1], sourceUrl);
+            if (!resolved) continue;
+            const code = String(jsonMatch[1] || '').trim().toLowerCase();
+            const isPrimary = /"isPrimaryLanguage"\s*:\s*true/i.test(entry);
+            if (code === 'x-default' || isPrimary) {
+                if (!xDefault) xDefault = resolved;
+                continue;
+            }
+            alternates.push({ hreflang: code, url: resolved });
+        }
+        if (alternates.length === 0 && !xDefault) return null;
+
+        let defaultUrl = xDefault;
+        if (!defaultUrl) {
+            const canonical = this.extractSelfDeclaredCanonicalUrls(html)
+                .map(declared => this.resolveLocaleAlternateHref(declared, sourceUrl))
+                .find(Boolean);
+            defaultUrl = canonical || this.resolveLocaleAlternateHref(sourceUrl, sourceUrl) || String(sourceUrl || '');
+        }
+        const defaultKey = this.getUrlDedupeKey(defaultUrl);
+        const defaultParts = this.parseUrlComponents(defaultUrl);
+        const defaultHost = defaultParts ? String(defaultParts.hostname || '').toLowerCase().replace(/^www\./, '') : '';
+        const defaultSegments = defaultParts ? String(defaultParts.pathname || '/').split('/').filter(Boolean) : [];
+
+        const alternateKeys = new Set();
+        const localePrefixes = new Set();
+        for (const alternate of alternates) {
+            const key = this.getUrlDedupeKey(alternate.url);
+            if (!key || key === defaultKey) continue; // en-gb pointing at the default IS the default
+            alternateKeys.add(key);
+            const parts = this.parseUrlComponents(alternate.url);
+            if (!parts) continue;
+            const host = String(parts.hostname || '').toLowerCase().replace(/^www\./, '');
+            if (!defaultHost || host !== defaultHost) continue;
+            const segments = String(parts.pathname || '/').split('/').filter(Boolean);
+            if (segments.length !== defaultSegments.length + 1) continue;
+            const prefix = String(segments[0] || '').toLowerCase();
+            if (!/^[a-z]{2,3}(?:[-_][a-z0-9]{2,4})?$/i.test(prefix)) continue;
+            const rest = segments.slice(1).map(segment => segment.toLowerCase());
+            const expected = defaultSegments.map(segment => segment.toLowerCase());
+            if (rest.join('/') !== expected.join('/')) continue;
+            localePrefixes.add(prefix);
+        }
+        return { defaultUrl, defaultKey, alternateKeys, localePrefixes, host: defaultHost };
+    }
+
+    // JSON-escaped hrefs ("https:\/\/…") are decoded here so the answer does
+    // not depend on which normalizeUrl the adapter injected.
+    resolveLocaleAlternateHref(href, sourceUrl) {
+        try {
+            const normalized = this.stripLocaleParams(this.stripTrackingParams(this.normalizeUrl(this.decodeUrlEscapes(href), sourceUrl)));
+            return typeof normalized === 'string' && /^https?:\/\//i.test(normalized) ? this.stripUrlFragment(normalized) : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    // Is this (already normalized and stripped) candidate a translation of
+    // the page — one of its declared hreflang alternates, or any same-site
+    // page under a locale prefix the alternates revealed?
+    isLocaleAlternateCandidate(url, localeAlternates) {
+        if (!url || !localeAlternates) return false;
+        const key = this.getUrlDedupeKey(url);
+        if (key && localeAlternates.alternateKeys.has(key)) return true;
+        if (localeAlternates.localePrefixes.size === 0 || !localeAlternates.host) return false;
+        const parts = this.parseUrlComponents(url);
+        if (!parts) return false;
+        const host = String(parts.hostname || '').toLowerCase().replace(/^www\./, '');
+        if (host !== localeAlternates.host) return false;
+        const firstSegment = String(parts.pathname || '/').split('/').filter(Boolean)[0] || '';
+        return Boolean(firstSegment) && localeAlternates.localePrefixes.has(firstSegment.toLowerCase());
+    }
+
+    // String-only twin of the locale half of stripTrackingParams — works on
+    // iOS JavaScriptCore, where the URL global does not exist and
+    // stripTrackingParams returns its input untouched.
+    stripLocaleParams(url) {
+        const text = typeof url === 'string' ? url : '';
+        const queryIndex = text.indexOf('?');
+        if (queryIndex === -1) return url;
+        const hashIndex = text.indexOf('#', queryIndex);
+        const base = text.slice(0, queryIndex);
+        const query = hashIndex === -1 ? text.slice(queryIndex + 1) : text.slice(queryIndex + 1, hashIndex);
+        const hash = hashIndex === -1 ? '' : text.slice(hashIndex);
+        const kept = query.split('&').filter(part => {
+            if (!part) return false;
+            const rawKey = part.split('=')[0];
+            let key = rawKey;
+            try { key = decodeURIComponent(rawKey.replace(/\+/g, ' ')); } catch (_) { key = rawKey; }
+            return !this.localeParamPattern.test(key);
+        });
+        return `${base}${kept.length > 0 ? `?${kept.join('&')}` : ''}${hash}`;
+    }
+
     // Onboarding harvest (discoveryOnly runs only): instagram/facebook links are
     // scanned during URL discovery but rejected as blocked hosts — here the FIRST
     // profile-like link per host is collected instead, for the suggested-config
@@ -9048,7 +9839,17 @@ class AiWebParser {
             }
             return false;
         }
-        const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
+        // stripTrackingParams needs the URL global (absent on iOS), so the
+        // locale strip is repeated here in string form: ?lang=de names the
+        // same page on every platform.
+        const url = this.stripLocaleParams(this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl)));
+        const localeAlternates = discoveryStats && typeof discoveryStats === 'object'
+            ? discoveryStats.localeAlternates || null
+            : null;
+        if (localeAlternates && this.isLocaleAlternateCandidate(url, localeAlternates)) {
+            this.recordRejectedCandidate(discoveryStats, 'locale-alternate', rawUrl, url);
+            return false;
+        }
         const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
         if (!validation.valid) {
             if (discoveryStats && typeof discoveryStats === 'object') {
@@ -9119,7 +9920,7 @@ class AiWebParser {
             // Strip tracking/affiliate params so the same event with different tracking
             // suffixes (e.g. ?aff=ebdsoporgprofile, ?utm_source=…) deduplicates correctly.
             for (const key of [...parsed.searchParams.keys()]) {
-                if (this.trackingParamPattern.test(key)) {
+                if (this.trackingParamPattern.test(key) || this.localeParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }
@@ -9130,20 +9931,23 @@ class AiWebParser {
             // URL branch does or www/bare-host variants dedupe differently on
             // the phone than in Node (run 20260724-161423 crawled both
             // massive.club variants because of exactly that gap).
-            return String(url || '')
+            return this.stripLocaleParams(String(url || '')
                 .replace(/#.*$/, '')
-                .replace(/^(https?:\/\/)www\./i, '$1')
+                .replace(/^(https?:\/\/)www\./i, '$1'))
                 .replace(/\/$/, '')
                 .toLowerCase();
         }
     }
 
+    // Tracking params AND language-selector params (see localeParamPattern):
+    // neither changes which page a URL names, so neither belongs in a crawl
+    // URL or a stored link.
     stripTrackingParams(url) {
         if (!url) return url;
         try {
             const parsed = new URL(url);
             for (const key of [...parsed.searchParams.keys()]) {
-                if (this.trackingParamPattern.test(key)) {
+                if (this.trackingParamPattern.test(key) || this.localeParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }

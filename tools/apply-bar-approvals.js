@@ -52,6 +52,47 @@ function normalizeCityKey(value) {
     return String(value || '').trim().toLowerCase();
 }
 
+// One place under two names is one bar: an approval whose street line or
+// pin matches an entry already in data/bars (or another approval in this
+// batch) is a rename of a known door, not an addition — "Locker Room",
+// Furball's party name at Legacy, 79 Warrenton St (run 20260924-055217),
+// must never land beside Legacy in boston.json. Street line = the first
+// comma segment, lowercased alphanumerics ("79 WARRENTON ST" and "79
+// Warrenton St, Boston, MA 02116" agree); pins agree within ~25 m.
+function normalizeStreetLineKey(address) {
+    const line = String(address || '').split(',')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    return /\d/.test(line) ? line : '';
+}
+
+function parsePin(value) {
+    const match = String(value || '').trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+    if (!match) return null;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+const SAME_PLACE_KM = 0.025;
+
+function pinsAgree(valueA, valueB) {
+    const a = parsePin(valueA);
+    const b = parsePin(valueB);
+    if (!a || !b) return false;
+    const toRadians = (degrees) => degrees * Math.PI / 180;
+    const sinHalfLat = Math.sin(toRadians(b.lat - a.lat) / 2);
+    const sinHalfLng = Math.sin(toRadians(b.lng - a.lng) / 2);
+    const h = sinHalfLat * sinHalfLat
+        + Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * sinHalfLng * sinHalfLng;
+    return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h))) <= SAME_PLACE_KM;
+}
+
+function samePlace(bar, entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    const streetKey = normalizeStreetLineKey(bar.address);
+    if (streetKey && streetKey === normalizeStreetLineKey(entry.address)) return true;
+    return pinsAgree(bar.coordinates, entry.coordinates);
+}
+
 // Curated bar shape (see data/bars/<city>.json): identity, location, socials.
 // Presentation keys (palette, favicon colours) are produced by other tools.
 function buildCuratedBar(snapshot) {
@@ -85,13 +126,19 @@ function planBarPromotions(store, curatedBars) {
         }
         const existing = (curatedBars && curatedBars[bar.city]) || [];
         const nameKey = normalizeBarNameKey(bar.name);
+        const pending = pendingByCity[bar.city] || [];
         const alreadyCurated = existing.some((entry) => normalizeBarNameKey(entry && entry.name) === nameKey)
-            || (pendingByCity[bar.city] || []).includes(nameKey);
+            || pending.some((entry) => normalizeBarNameKey(entry.name) === nameKey);
         if (alreadyCurated) {
             skipped.push({ city: bar.city, name: bar.name, why: 'already in data/bars' });
             continue;
         }
-        pendingByCity[bar.city] = (pendingByCity[bar.city] || []).concat(nameKey);
+        const sameDoor = existing.find((entry) => samePlace(bar, entry)) || pending.find((entry) => samePlace(bar, entry));
+        if (sameDoor) {
+            skipped.push({ city: bar.city, name: bar.name, why: `same address/pin as curated "${sameDoor.name}"` });
+            continue;
+        }
+        pendingByCity[bar.city] = pending.concat(bar);
         additions.push({ city: bar.city, bar });
     }
     return { additions, skipped };
@@ -204,7 +251,7 @@ function main(argv) {
     return 0;
 }
 
-module.exports = { planBarPromotions, buildCuratedBar, writeAdditions, normalizeBarNameKey };
+module.exports = { planBarPromotions, buildCuratedBar, writeAdditions, normalizeBarNameKey, samePlace };
 
 if (require.main === module) {
     process.exitCode = main(process.argv.slice(2));

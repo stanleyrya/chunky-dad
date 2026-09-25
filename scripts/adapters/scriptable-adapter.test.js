@@ -11637,3 +11637,28 @@ test('fetchData on the phone: an adapter built without a politeness block fetche
   assert.equal(adapter.getFetchPoliteness(), null);
   assert.equal(adapter.config.userAgent, 'chunky-dad-scraper/1.0 (+https://chunky.dad)');
 });
+
+// One record, one destination (ai-web applyOneDestinationGuard): a record
+// assembled from two listings sits in the Withheld pile with a chip that
+// names the listings — the same "flag, don't drop" shelf the span-past and
+// junk-title withholds use, and the same predicate filterEventsForExecution
+// enforces.
+test('write-policy: a _chimeraWithheld record sits in the withheld pile with its reason on the chip', () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'Bearracuda | Seattle - Red Light District',
+    _action: 'new',
+    _chimeraWithheld: {
+      page: 'https://massive.example/',
+      reason: 'fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking"',
+      destinations: []
+    }
+  };
+  assert.deepEqual(adapter.classifyEventForResultsSection(event), {
+    section: 'withheld',
+    reason: '🧬 assembled from two listings — fields come from different listings: title → card 4 "Bearracuda"; ticketUrl → card 3 "Looking"'
+  });
+  const { SharedCore: Core } = require('../shared-core');
+  assert.equal(Core.filterEventsForExecution([event]).length, 0, 'the pile and the gate agree');
+  assert.equal(adapter.classifyEventForResultsSection({ title: 'Looking', _action: 'new' }).section, 'actionable');
+});
