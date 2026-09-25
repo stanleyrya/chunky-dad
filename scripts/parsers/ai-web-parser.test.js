@@ -10105,6 +10105,92 @@ test('siteRole: without a configured city an ambiguous multi-city curated name s
   assert.equal(uniqueData.pageSiteRoleReason, 'curated bar "Eagle LA"');
 });
 
+test('siteRole: the parser config override applies on the parser\'s own hosts only — a third-party host the crawl reached falls through to page facts', () => {
+  const parser = createEagleLaParser({ la: [EAGLE_LA_CURATED_BAR] });
+  const config = { name: 'Atlanta Eagle', siteRole: 'venue', urls: ['https://atlantaeagle.com/events/'] };
+
+  // Own host (www-folded): the declaration is about this site.
+  const own = { url: 'https://www.atlantaeagle.com/events/pride-kickoff/', html: '<html><body>hi</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(own, config), 'venue');
+  assert.equal(own.pageSiteRoleReason, 'parser config siteRole');
+
+  // Run 20260925-053031: joininghearts.org (a charity) reached from the Atlanta
+  // Eagle crawl was stamped venue and extracted bar "Joining Hearts" for a
+  // party the title placed at The Heretic. Off-host → page-derived rungs only.
+  const charity = {
+    url: 'https://joininghearts.org/',
+    html: '<html><head><meta property="og:site_name" content="Joining Hearts" /></head><body>Fall Back in Love — The Heretic</body></html>'
+  };
+  assert.equal(parser.resolvePageSiteRole(charity, config), '');
+  assert.equal(charity.pageSiteRoleReason, '');
+
+  // Off-host pages still get every page-derived rung: a Squarespace shell
+  // that IS a curated bar's site (its brand matches) resolves venue on its own.
+  const shell = { url: 'https://sturgeon-pineapple.squarespace.com/', html: EAGLE_LA_SITE_HTML };
+  assert.equal(parser.resolvePageSiteRole(shell, config), 'venue');
+  assert.equal(shell.pageSiteRoleReason, 'curated bar "Eagle LA"');
+
+  // A config with no urls has nothing to scope by: the override applies everywhere (unchanged).
+  const unscoped = { url: 'https://promoter.example/events', html: '<html><body>hi</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(unscoped, { siteRole: 'venue' }), 'venue');
+});
+
+test('siteRole: a page on a curated bar\'s own website host resolves venue with the curated name — no og:site_name, JSON-LD or parser knob needed', () => {
+  const parser = createEagleLaParser({
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas', website: 'https://www.thedallaseagle.com', address: '525 S Riverfront Blvd, Dallas, TX 75207' }],
+    nyc: [{ name: 'Rockbar', city: 'nyc', website: 'https://www.rockbarnyc.com' }]
+  });
+  // An event page with no metadata at all (the cached corpus: 9 of 35 Dallas
+  // Eagle pages carried neither og:site_name nor a venue-typed JSON-LD node).
+  const eventPage = { url: 'https://thedallaseagle.com/event/bear-night/', html: '<html><body>BEAR NIGHT — Saturday</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(eventPage, {}), 'venue');
+  assert.equal(eventPage.pageSiteRoleReason, 'curated website of "Dallas Eagle" (dallas)');
+  assert.equal(parser.getPageVenueName(eventPage), 'Dallas Eagle', 'the curated name, not the host label "thedallaseagle"');
+
+  // A brand spelling that never matched the curated name ("RockbarNYC" vs
+  // "Rockbar") is bypassed: the host itself is the curated pointer.
+  const rockbar = { url: 'https://www.rockbarnyc.com/calendar', html: '<html><head><meta property="og:site_name" content="RockbarNYC" /></head><body></body></html>' };
+  assert.equal(parser.resolvePageSiteRole(rockbar, {}), 'venue');
+  assert.equal(rockbar.pageSiteRoleReason, 'curated website of "Rockbar" (nyc)');
+  assert.equal(parser.getPageVenueName(rockbar), 'Rockbar');
+
+  // Ranks BELOW the curated-brand rung (the reason stays the brand's when both hold).
+  const branded = { url: 'https://www.rockbarnyc.com/', html: '<html><head><meta property="og:site_name" content="Rockbar" /></head><body></body></html>' };
+  assert.equal(parser.resolvePageSiteRole(branded, {}), 'venue');
+  assert.equal(branded.pageSiteRoleReason, 'curated bar "Rockbar"');
+
+  // Nobody claims the host → unchanged (undetermined).
+  const unclaimed = { url: 'https://promoter.example/events', html: '<html><body>hi</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(unclaimed, {}), '');
+});
+
+test('siteRole: curated-website rung fails closed on a cross-city claim set and keeps the page\'s own name for sister venues on one site', () => {
+  const ambiguous = createEagleLaParser({
+    la: [{ name: 'Eagle', city: 'la', website: 'https://eagle.example' }],
+    sf: [{ name: 'Eagle', city: 'sf', website: 'https://eagle.example' }]
+  });
+  const ambiguousData = { url: 'https://eagle.example/events', html: '<html><body>hi</body></html>' };
+  assert.equal(ambiguous.resolvePageSiteRole(ambiguousData, {}), '');
+
+  const sisters = createEagleLaParser({
+    nyc: [
+      { name: '3 Dollar Bill', city: 'nyc', website: 'https://www.3dollarbillbk.com' },
+      { name: 'The Yard at 9 Bob Note', city: 'nyc', website: 'https://www.3dollarbillbk.com' }
+    ]
+  });
+  const sisterData = { url: 'https://www.3dollarbillbk.com/rsvp', html: '<html><head><meta property="og:site_name" content="3 Dollar Bill Brooklyn" /></head><body></body></html>' };
+  assert.equal(sisters.resolvePageSiteRole(sisterData, {}), 'venue');
+  assert.equal(sisterData.pageSiteRoleReason, 'curated website of "3 Dollar Bill", "The Yard at 9 Bob Note" (nyc)');
+  assert.equal(sisters.getPageVenueName(sisterData), '3 Dollar Bill Brooklyn', 'two claimants: the page\'s own og:site_name stands');
+
+  // A promoter whose registry website shares no host is untouched: the
+  // promoter rung still resolves organizer.
+  const promoterParser = new AiWebParser({ normalizeUrl });
+  promoterParser.core = new SharedCore({}, { eventSchema: EventSchema, bars: { la: [EAGLE_LA_CURATED_BAR] }, promoters: [{ name: 'Bearracuda', website: 'https://bearracuda.com' }] });
+  const promoterData = { url: 'https://bearracuda.com/events', html: '<html><body>hi</body></html>' };
+  assert.equal(promoterParser.resolvePageSiteRole(promoterData, {}), 'organizer');
+});
+
 test('curated-bar venue chain: BarDataNormalizer canonicalizes the kept bar and adopts curated coordinates + address for an unpinned event', () => {
   const { BarDataNormalizer } = require('../normalizers');
   const core = new SharedCore({}, { eventSchema: EventSchema, bars: { la: [EAGLE_LA_CURATED_BAR] } });

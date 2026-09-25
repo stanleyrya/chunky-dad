@@ -26484,13 +26484,36 @@ TEXT:
         return null;
     }
 
+    // Does the parser config's `siteRole` override apply to THIS page? A
+    // declaration is about the site the parser was pointed at, so it applies
+    // to pages on the hosts its own `urls` name (www-folded) — and to every
+    // page when the config names no urls at all (nothing to scope by). It
+    // never travels to a third-party host the crawl wandered onto: run
+    // 20260925-053031 stamped joininghearts.org (a charity), spankguys.uk (a
+    // promoter), georgiaaquarium.org, facebook.com, checkout.square.site and
+    // two Squarespace shells 'venue' through the Atlanta Eagle / Eagle
+    // Manchester / Lone Star knobs, and the joininghearts.org page then
+    // extracted bar "Joining Hearts" for a party the title itself placed at
+    // The Heretic. Same host rule parserConfigDeclaresVenueHost applies.
+    parserConfigRoleAppliesToPage(parserConfig, pageUrl) {
+        const urls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = urls.map(url => this.getVenueSiteHostKey(url)).filter(Boolean);
+        if (configuredHosts.length === 0) return true;
+        const pageHost = this.getVenueSiteHostKey(pageUrl);
+        return Boolean(pageHost) && configuredHosts.includes(pageHost);
+    }
+
     // Resolve who this SITE is, hard facts in precedence order:
-    //   1) parser config override `siteRole: "venue" | "organizer"`;
+    //   1) parser config override `siteRole: "venue" | "organizer"` — on the
+    //      parser's own hosts only (parserConfigRoleAppliesToPage);
     //   2) the page's own JSON-LD @type being venue-ish (NightClub/BarOrPub/
     //      EventVenue/MusicVenue) → venue;
     //   3) a derived page brand name that IS a curated bar for the parser's
     //      configured city (or a unique cross-city curated hit when no city
     //      is configured) → venue;
+    //   3b) the page's HOST is the `website` host of one or more curated bars
+    //      curated in ONE city → venue (the curated corpus's own pointer, the
+    //      venue twin of the promoter-registry rung below);
     //   4) segment-derived facts when segments are provided (multi-event
     //      pages): a JSON-LD Organization/PerformingGroup whose listings sit
     //      at MULTIPLE distinct street addresses → organizer; a single
@@ -26500,7 +26523,8 @@ TEXT:
     // The result is cached on htmlData so every downstream copy inherits it.
     resolvePageSiteRole(htmlData, parserConfig = {}, segments = null) {
         const configRole = this.normalizeSiteRoleValue(parserConfig && parserConfig.siteRole);
-        if (configRole) {
+        if (configRole && this.parserConfigRoleAppliesToPage(parserConfig,
+            htmlData && typeof htmlData === 'object' && typeof htmlData.url === 'string' ? htmlData.url : '')) {
             if (htmlData && typeof htmlData === 'object' && Object.isExtensible(htmlData)) {
                 htmlData.pageSiteRole = configRole;
                 htmlData.pageSiteRoleReason = 'parser config siteRole';
@@ -26527,6 +26551,37 @@ TEXT:
             if (curatedBar && typeof curatedBar.name === 'string' && curatedBar.name.trim()) {
                 htmlData.pageSiteRole = 'venue';
                 htmlData.pageSiteRoleReason = `curated bar "${curatedBar.name}"`;
+            }
+        }
+        // Curated-website rung: still undetermined, and the page's HOST is
+        // the `website` host of one or more curated bars all curated in ONE
+        // city (findCuratedCityByWebsiteHost fails closed on a cross-city
+        // claim set). The curated corpus itself says whose site this is —
+        // the same pointer the venue-site identity pass trusts — so a
+        // venue's event pages resolve without og:site_name or JSON-LD, and
+        // without a per-parser knob (cached corpus 2026-09-25: massive.club
+        // and precinctdtla.com stayed undetermined on every page; Rockbar's
+        // brand "RockbarNYC" and Camp Out's "Camp Out Poconos" never matched
+        // their curated names).
+        if (htmlData.pageSiteRole === '' && !htmlData.pageSiteRoleCuratedWebsiteChecked
+            && Object.isExtensible(htmlData)) {
+            htmlData.pageSiteRoleCuratedWebsiteChecked = true;
+            const websiteMatch = this.core && typeof this.core.findCuratedCityByWebsiteHost === 'function'
+                && typeof htmlData.url === 'string'
+                ? this.core.findCuratedCityByWebsiteHost(htmlData.url)
+                : null;
+            if (websiteMatch && websiteMatch.city && Array.isArray(websiteMatch.bars) && websiteMatch.bars.length > 0) {
+                htmlData.pageSiteRole = 'venue';
+                htmlData.pageSiteRoleReason = `curated website of "${websiteMatch.bars.map(bar => bar.name).join('", "')}" (${websiteMatch.city})`;
+                // One claimant → the venue's display name is its curated
+                // name, not the host label ("thedallaseagle") or a brand
+                // spelling ("RockbarNYC") the host-derived fallbacks would
+                // hand the KNOWN VENUE steering line. Sister venues on one
+                // site keep the page's own derivation (nothing to choose by).
+                if (websiteMatch.bars.length === 1 && typeof htmlData.pageVenueName !== 'string'
+                    && typeof websiteMatch.bars[0].name === 'string' && websiteMatch.bars[0].name.trim()) {
+                    htmlData.pageVenueName = websiteMatch.bars[0].name.trim();
+                }
             }
         }
         // Promoter-registry rung: still undetermined, and the page's HOST is
