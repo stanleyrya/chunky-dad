@@ -945,6 +945,10 @@ class AiWebParser {
         // stale page's verdicts can never leak into the next page's prompts.
         // Never persisted: this is a per-parse determination, not an OCR fact.
         this._repeatedSegmentChrome = null;
+        // Per-PAGE record of the page's own navigation/facet lines (see
+        // notePageChromeLines) — the same scoping rule as the repeated-image
+        // chrome above: a per-parse determination, never persisted.
+        this._pageChromeLines = null;
         // Non-image static-asset extensions (fonts/stylesheets/scripts + image
         // formats not in supportedImageExtensions). Together with that list
         // these mark a URL as a FILE, never an event page — see
@@ -2238,6 +2242,7 @@ class AiWebParser {
     // are still "one event scraped twice", folded by dedup as before.
     buildPageDestinationCards(html, sourceUrl = '') {
         const source = String(html || '');
+        this.notePageChromeLines(source, sourceUrl);
         const memo = this._pageDestinationCardsMemo;
         if (memo && memo.html === source && memo.sourceUrl === sourceUrl) return memo.cards;
         const cards = this.computePageDestinationCards(source, sourceUrl);
@@ -2248,6 +2253,9 @@ class AiWebParser {
     computePageDestinationCards(html, sourceUrl = '') {
         const source = String(html || '');
         if (!source) return [];
+        // A card is labelled by its own content, not by the page's
+        // navigation or its category facet.
+        this.notePageChromeLines(source, sourceUrl);
         const opens = this.findCardShapedOpenTags(source);
         if (opens.length === 0) return [];
         const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
@@ -3046,6 +3054,12 @@ class AiWebParser {
             // (akbarsilverlake.com/upcoming-events, run 20260925-110542 —
             // the one-destination map labelled every card by weekday).
             if (this.isBareWeekdayLine(line)) continue;
+            // A card's title is not its chrome: the page's own navigation
+            // back to the collection this page belongs to, a breadcrumb
+            // crumb, a category facet repeated across the page's cards.
+            // Recognized by SHAPE from the page's markup (see
+            // computePageChromeLineKeys), never by wording.
+            if (this.isPageChromeLine(line)) continue;
             if (/^https?:\/\//i.test(line)) continue;
             // First candidate decides: a plausible title is short; a long first
             // line is prose/description, so no hint is derived at all.
@@ -3059,6 +3073,234 @@ class AiWebParser {
     isBareWeekdayLine(line) {
         const text = this.normalizeWhitespace(String(line || ''));
         return /^(?:sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(?:day|sday|nesday|rsday|urday)?[.,]?$/i.test(text);
+    }
+
+    // ── A CARD'S TITLE IS NOT ITS CHROME ────────────────────────────────
+    // A window (and a card in the one-destination map) must be named by the
+    // card's OWN content. Squarespace event-detail pages open with
+    // "Back to All Events" and www.massbearsandcubs.org/events prints a
+    // "?category=Events" facet above every card's heading, so the derived
+    // listing title was the page's furniture: cosmetic in the log, but that
+    // title feeds applyCardStatedDateOverFlyerDate, the one-destination card
+    // map and the repetition/chrome gates.
+    //
+    // Chrome is recognized by SHAPE, from the page's own markup and its own
+    // URL — never by wording keyed to a site:
+    //
+    //   1. A link back to the collection this page belongs to: an anchor
+    //      whose target is a strict ANCESTOR path of the page's own URL on
+    //      the same host ("/events" on "/events/batthouse-disco-6sfb4").
+    //      One occurrence is enough — a card never links its own parent
+    //      listing as its name. The site root is deliberately NOT an
+    //      ancestor here: a header logo linking "/" carries the venue's
+    //      name, which is a real title on venue pages.
+    //   2. A breadcrumb crumb: an anchor UP this page's own path. Rule 1
+    //      already covers every crumb with a path of its own; inside a
+    //      <nav> element or role="navigation" the site ROOT counts too
+    //      ("Home" in a breadcrumb trail). Containment alone is never
+    //      enough — a site menu listing the venue's club nights is a list
+    //      of real event titles.
+    //   3. A category/section facet repeated across the page's cards: an
+    //      anchor whose target is this page or its collection with a FILTER
+    //      query ("?category=Events", "/events?tag=Club+Cafe") and whose
+    //      text appears that way at least
+    //      segmentImageChromeMinSegments times. The repetition is
+    //      counted over the FACET ANCHORS, never over bare repeated text:
+    //      a weekly party's name repeats across a year of cards too
+    //      ("Bears, Brews & Boys" appears nine times on that same page),
+    //      and dropping it would cost real titles. Count parties, not rows.
+    //
+    // Bare weekday/month lines are handled separately by isBareWeekdayLine
+    // and the date-signal skips above.
+    //
+    // Per-PAGE, keyed to the page being parsed exactly like
+    // _repeatedSegmentChrome: written by notePageChromeLines (from segment
+    // construction and from the destination-card map, both of which hold
+    // the page's html AND its url), read line-at-a-time by
+    // deriveSegmentListingTitle, which has neither. Never persisted, and
+    // fail-open: with nothing noted, no line is chrome.
+    notePageChromeLines(html, sourceUrl = '') {
+        const source = String(html || '');
+        if (!source) return;
+        const noted = this._pageChromeLines;
+        if (noted && noted.html === source && noted.sourceUrl === sourceUrl) return;
+        this._pageChromeLines = { html: source, sourceUrl, keys: this.computePageChromeLineKeys(source, sourceUrl) };
+    }
+
+    isPageChromeLine(line) {
+        const noted = this._pageChromeLines;
+        if (!noted || !noted.keys || noted.keys.size === 0) return false;
+        const key = this.normalizeWhitespace(this.decodeBasicEntities(String(line || ''))).toLowerCase();
+        return Boolean(key) && noted.keys.has(key);
+    }
+
+    computePageChromeLineKeys(html, sourceUrl = '') {
+        const source = String(html || '');
+        const keys = new Set();
+        const page = this.parseUrlHostAndPath(sourceUrl);
+        if (!source || !page.host) return keys;
+        const navRanges = this.findNavigationElementRanges(source);
+        const insideNav = (position) => navRanges.some(range => position >= range.start && position < range.end);
+        const facetCounts = new Map();
+        const subjects = this.collectPageSubjectKeys(source);
+        const titleMax = this.extractionLimits.multiEventTitleMaxChars;
+        const pattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            const href = (match[1].match(/\bhref\s*=\s*["']([^"']*)["']/i) || [])[1];
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(match[2].replace(/<[^>]+>/g, ' ')));
+            if (!text || text.length > titleMax) continue;
+            // A dated line is already skipped by the date rules and is never
+            // page furniture on its own; leave it to them.
+            if (this.hasMultiEventDateSignal(text)) continue;
+            const target = this.resolveHrefHostAndPath(href, page);
+            if (!target || target.host !== page.host) continue;
+            const key = text.toLowerCase();
+            // The site ROOT counts as a crumb only inside a navigation
+            // element: a header logo linking "/" carries the venue's name,
+            // which is a real title on venue pages.
+            const rootCrumb = target.path === '' && page.path !== '' && insideNav(match.index);
+            const toAncestor = rootCrumb || this.isAncestorSectionPath(target.path, page.path);
+            // Anything else is a link ACROSS the site, never up it — a menu
+            // of the venue's club nights (www.eaglelondon.com lists "Horse
+            // Meat Disco", "Bear Bash" and "Athena" in its <nav>) is a list
+            // of real event titles, and calling a nav link chrome on
+            // containment alone would erase them.
+            if (!toAncestor && target.path !== page.path) continue;
+            // A QUERY makes it a FILTER of the collection, not the
+            // collection: judged by repetition below.
+            if (/\?/.test(String(href || ''))) {
+                facetCounts.set(key, (facetCounts.get(key) || 0) + 1);
+                continue;
+            }
+            // A bare link to this page itself is the page naming itself,
+            // which on a detail page IS the event.
+            if (!toAncestor) continue;
+            // The page's own SUBJECT is never its chrome. On a ticketing
+            // sub-page the parent path IS the event
+            // (sickening.events/e/goldiloxx-chicago/tickets links up to
+            // /e/goldiloxx-chicago as "GOLDILOXX Chicago"), so the ancestor
+            // shape alone would delete the real title. A crumb never
+            // doubles as the page's <h1> or the lead of its <title>/
+            // og:title. Deliberately NOT applied to the facet count above:
+            // a listing page whose section heading is <h1>Events</h1> is
+            // exactly the page whose cards all carry an "Events" facet, and
+            // the heading corroborates the label instead of rescuing it.
+            if (!subjects.has(key)) keys.add(key);
+        }
+        for (const [key, count] of facetCounts) {
+            if (count >= this.segmentImageChromeMinSegments) keys.add(key);
+        }
+        return keys;
+    }
+
+    // What this page says it is ABOUT: its <h1> text, and the leading part
+    // of its <title> / og:title (sites suffix those with the site name
+    // behind a | / — / · separator). Lowercased keys.
+    collectPageSubjectKeys(html) {
+        const source = String(html || '');
+        const keys = new Set();
+        const add = (value) => {
+            const key = this.normalizeWhitespace(this.decodeBasicEntities(String(value || ''))).toLowerCase();
+            if (key) keys.add(key);
+        };
+        const headingPattern = /<h1\b[^>]*>([\s\S]*?)<\/h1>/gi;
+        let heading;
+        while ((heading = headingPattern.exec(source)) !== null) add(heading[1].replace(/<[^>]+>/g, ' '));
+        const titles = [
+            (source.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || [])[1],
+            this.extractOgMetaContent(source, 'og:title')
+        ];
+        for (const title of titles) {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(String(title || '')));
+            if (!text) continue;
+            add(text);
+            add(text.split(/\s[|\u2013\u2014\u00b7]\s|\s-\s/)[0]);
+        }
+        return keys;
+    }
+
+    // <nav> elements and role="navigation" containers, as [start, end) spans.
+    findNavigationElementRanges(html) {
+        const source = String(html || '');
+        const ranges = [];
+        const navPattern = /<nav\b[^>]*>/gi;
+        let open;
+        while ((open = navPattern.exec(source)) !== null) {
+            const end = this.findElementCloseIndex(source, 'nav', open.index);
+            if (end > open.index) ranges.push({ start: open.index, end });
+        }
+        const rolePattern = /<([a-z][a-z0-9]*)\b[^>]*\brole\s*=\s*["']navigation["'][^>]*>/gi;
+        while ((open = rolePattern.exec(source)) !== null) {
+            const end = this.findElementCloseIndex(source, open[1].toLowerCase(), open.index);
+            if (end > open.index) ranges.push({ start: open.index, end });
+        }
+        return ranges;
+    }
+
+    // Host + path of a URL, without the URL API (iOS JavaScriptCore has
+    // none). Path is lowercased, query/fragment dropped, trailing slash
+    // stripped; '' means the site root.
+    parseUrlHostAndPath(url) {
+        const value = String(url || '').trim();
+        const match = value.match(/^(?:https?:)?\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return { host: '', path: '' };
+        return { host: match[1].toLowerCase(), path: this.normalizeChromePath(match[2]) };
+    }
+
+    normalizeChromePath(path) {
+        const value = String(path || '').toLowerCase();
+        const trimmed = value.replace(/\/+$/, '');
+        return trimmed === '/' ? '' : trimmed;
+    }
+
+    // Where an href points, relative to the page it was found on.
+    resolveHrefHostAndPath(href, page) {
+        const value = String(href || '').trim();
+        if (!value) return null;
+        if (/^(?:javascript|mailto|tel|sms|data):/i.test(value)) return null;
+        if (value.startsWith('#')) return null;
+        if (/^(?:https?:)?\/\//i.test(value)) return this.parseUrlHostAndPath(value);
+        if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return null;
+        if (value.startsWith('?')) return { host: page.host, path: page.path };
+        if (value.startsWith('/')) return { host: page.host, path: this.normalizeChromePath(value.split(/[?#]/)[0]) };
+        const base = page.path.replace(/\/[^/]*$/, '');
+        return { host: page.host, path: this.normalizeChromePath(`${base}/${value.split(/[?#]/)[0]}`) };
+    }
+
+    // Is `targetPath` the listing/collection `pagePath` belongs to: a strict
+    // ancestor with at least one path segment of its own.
+    isAncestorSectionPath(targetPath, pagePath) {
+        const target = String(targetPath || '');
+        const page = String(pagePath || '');
+        if (!target || target === page) return false;
+        return page.startsWith(`${target}/`);
+    }
+
+    // The window starts at the card's own content: leading chrome lines are
+    // dropped so neither the model's prompt nor the segment's first line is
+    // the page's navigation. Interior chrome (a facet printed BELOW the date
+    // tag) stays in the window as context — it can no longer be mistaken for
+    // the title, and dropping it would rewrite windows for no gain.
+    trimLeadingChromeLines(lines) {
+        const source = Array.isArray(lines) ? lines : [];
+        let start = 0;
+        while (start < source.length && this.isPageChromeLine(source[start])) start++;
+        // Never empty a window: a window that is nothing BUT chrome keeps
+        // its lines and is judged by the gates that already exist.
+        return start === 0 || start >= source.length ? source : source.slice(start);
+    }
+
+    // Every tier's construction tail: note the page's chrome, open each
+    // window at its card's own content, then attach image hints.
+    finalizeMultiEventSegments(html, segments, sourceUrl = '', ocrResults = []) {
+        this.notePageChromeLines(html, sourceUrl);
+        for (const segment of (Array.isArray(segments) ? segments : [])) {
+            if (!segment || !Array.isArray(segment.lines)) continue;
+            const trimmed = this.trimLeadingChromeLines(segment.lines);
+            if (trimmed !== segment.lines) segment.lines = trimmed;
+        }
+        return this.attachSequentialImageHintsToSegments(html, segments, sourceUrl, ocrResults);
     }
 
     // The name span of a listing line that carries BOTH the event name and its
@@ -3351,6 +3593,10 @@ class AiWebParser {
     // evicts the previous page's result; differing arguments (including an
     // ocrResults array that changed identity or length) recompute as before.
     buildMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
+        // Noted on the memo path too: the segments are cached, the page's
+        // chrome must still be the CURRENT page's when a later caller
+        // derives a listing title (both notes are themselves memoized).
+        this.notePageChromeLines(html, sourceUrl);
         const ocrResultsLength = Array.isArray(ocrResults) ? ocrResults.length : 0;
         const memo = this._multiEventSegmentsMemo;
         if (memo
@@ -3366,6 +3612,10 @@ class AiWebParser {
     }
 
     computeMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
+        // The page's own chrome first: every tier below derives listing
+        // titles (the coverage audit's card resolver does it before any
+        // window is finalized), and a title is never the page's navigation.
+        this.notePageChromeLines(html, sourceUrl);
         // A listing that marks up one JSON-LD Event per card element is
         // already segmented by its author: each card is one window, with
         // its own text, links and images (see buildJsonLdCardSegments).
@@ -3376,7 +3626,7 @@ class AiWebParser {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
             const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
-            return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
+            return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
@@ -3384,7 +3634,7 @@ class AiWebParser {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
             const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
-            return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
+            return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
 
         return this.buildTextTierSegments(html, sourceUrl, ocrResults);
@@ -3395,7 +3645,7 @@ class AiWebParser {
     // (see splitDayProgrammeSegments).
     buildTextTierSegments(html, sourceUrl = '', ocrResults = []) {
         const textSegments = this.splitDayProgrammeSegments(this.buildFlatTextMultiEventSegments(html), html);
-        return this.attachSequentialImageHintsToSegments(html, textSegments, sourceUrl, ocrResults);
+        return this.finalizeMultiEventSegments(html, textSegments, sourceUrl, ocrResults);
     }
 
     // Tier selection by COVERAGE of the page's dated content, not by "the
@@ -4472,7 +4722,7 @@ class AiWebParser {
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
         }
-        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
+        return this.finalizeMultiEventSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
 
     buildStructuredMultiEventSegments(html) {

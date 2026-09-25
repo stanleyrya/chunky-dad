@@ -20609,3 +20609,196 @@ test('structured ladder: listing prose yields to every structured source (an Eve
   assert.equal(result.extractionSummary && result.extractionSummary.source, 'jsonld', 'the Event nodes are the structured source, not the prose');
   assert.deepEqual(result.events.map(e => e.title).sort(), ['Bear Night', 'Club Chub']);
 });
+
+// ---------------------------------------------------------------------------
+// A CARD'S TITLE IS NOT ITS CHROME. After the card resolver shipped, a
+// Squarespace event-DETAIL page opened its window at the page's
+// "Back to All Events" backlink, so the card's derived listing title was that
+// nav line; www.massbearsandcubs.org/events labelled every card "Events" —
+// the "?category=Events" facet printed above each heading. Cosmetic in the
+// log, load-bearing downstream (applyCardStatedDateOverFlyerDate, the
+// one-destination card map, the repetition/chrome gates). Chrome is
+// recognized by SHAPE — an ancestor-path link, a nav/breadcrumb crumb, a
+// repeated same-page facet — never by wording.
+// ---------------------------------------------------------------------------
+test('a link back to the collection this page belongs to is never the card title', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/bathhouse-disco';
+  const html = `<html><body>
+    <div class="events-item-wrapper">
+      <a href="/events" class="eventitem-backlink">Back to All Events</a>
+      <article class="eventitem">
+        <h1 class="eventitem-title">Bathhouse Disco</h1>
+        <time class="event-date" datetime="2026-09-25">Friday, September 25, 2026</time>
+        <time class="event-time-localized-start">9:00 PM</time>
+      </article>
+    </div>
+  </body></html>`;
+  parser.notePageChromeLines(html, sourceUrl);
+  assert.equal(parser.isPageChromeLine('Back to All Events'), true);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['Back to All Events', 'Bathhouse Disco', 'Friday, September 25, 2026', '9:00 PM'] }),
+    'Bathhouse Disco'
+  );
+  // The window opens at the card's own content, not at the navigation.
+  assert.deepEqual(
+    parser.trimLeadingChromeLines(['Back to All Events', 'Bathhouse Disco', 'Friday, September 25, 2026']),
+    ['Bathhouse Disco', 'Friday, September 25, 2026']
+  );
+  // The card in the one-destination map is labelled by the event, too.
+  const cards = parser.buildPageDestinationCards(html, sourceUrl);
+  assert.deepEqual(cards.map(card => card.title), ['Bathhouse Disco']);
+});
+
+test('a breadcrumb crumb inside a nav element is never the card title', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/whats-on/bear-night';
+  const html = `<html><body>
+    <nav aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <a href="/whats-on">What's On</a>
+    </nav>
+    <div class="card">
+      <h2>Bear Night</h2>
+      <p>Friday, October 3, 2026</p>
+    </div>
+  </body></html>`;
+  parser.notePageChromeLines(html, sourceUrl);
+  assert.equal(parser.isPageChromeLine('Home'), true, 'a nav crumb pointing elsewhere on this host is chrome');
+  assert.equal(parser.isPageChromeLine("What's On"), true, 'the collection crumb is chrome twice over');
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['Home', "What's On", 'Bear Night', 'Friday, October 3, 2026'] }),
+    'Bear Night'
+  );
+});
+
+test('a category facet repeated across the page\'s cards is never the card title', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://club.example/events';
+  const card = (name, day) => `<article class="eventlist-event">
+      <div class="eventlist-cats"><a href="?category=Events">Events</a></div>
+      <h1 class="eventlist-title"><a href="/events/${name.toLowerCase().replace(/\W+/g, '-')}">${name}</a></h1>
+      <time class="event-date" datetime="2026-10-0${day}">Saturday, October ${day}, 2026</time>
+    </article>`;
+  const html = `<html><body><div class="eventlist">
+      ${card('Alley Bears', 3)}${card('Monthly Trivia', 4)}${card('Bear Tea', 5)}
+    </div></body></html>`;
+  parser.notePageChromeLines(html, sourceUrl);
+  assert.equal(parser.isPageChromeLine('Events'), true);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['Oct', 'Events', 'Alley Bears', 'Saturday, October 3, 2026'] }),
+    'Alley Bears'
+  );
+  assert.deepEqual(
+    parser.buildPageDestinationCards(html, sourceUrl).map(destination => destination.title),
+    ['Alley Bears', 'Monthly Trivia', 'Bear Tea']
+  );
+});
+
+test('a bare weekday line is still never the card title, chrome map or not', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://akbar.example/upcoming-events';
+  parser.notePageChromeLines('<html><body><div class="event"><h2>BEARS IN SPACE!!</h2></div></body></html>', sourceUrl);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['06', 'Sep', 'Sun', 'BEARS IN SPACE!!'] }),
+    'BEARS IN SPACE!!'
+  );
+});
+
+test('a real title that looks like a section name is kept', () => {
+  const parser = createParser();
+  // (a) The page naming itself. A detail page whose own heading links back to
+  //     itself is not a facet — the self-link carries no query, so it states
+  //     the event, not a filter.
+  const selfUrl = 'https://club.example/events/parties';
+  const selfHtml = `<html><body>
+      <div class="event">
+        <h1><a href="/events/parties">Parties</a></h1>
+        <time datetime="2026-10-03">Saturday, October 3, 2026</time>
+      </div>
+    </body></html>`;
+  parser.notePageChromeLines(selfHtml, selfUrl);
+  assert.equal(parser.isPageChromeLine('Parties'), false);
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Parties', 'Saturday, October 3, 2026'] }), 'Parties');
+
+  // (b) Below the repetition floor. Two facet anchors are not a page's
+  //     furniture — count parties, not rows.
+  const twiceUrl = 'https://club.example/events';
+  const twiceHtml = `<html><body>
+      <article class="event"><a href="?category=Events">Events</a><h2>Events</h2><time datetime="2026-10-03">Oct 3, 2026</time></article>
+      <article class="event"><a href="?category=Events">Events</a><h2>Bear Tea</h2><time datetime="2026-10-04">Oct 4, 2026</time></article>
+    </body></html>`;
+  parser.notePageChromeLines(twiceHtml, twiceUrl);
+  assert.equal(parser.isPageChromeLine('Events'), false);
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Events', 'Oct 3, 2026'] }), 'Events');
+
+  // (c) A FILTER of the collection is not the collection. The venue's tag
+  //     link on its own event page — "/events?tag=Club+Cafe" — names a real
+  //     place, and one of them is not a repeated facet.
+  const tagUrl = 'https://mbc.example/events/bear-tea';
+  const tagHtml = `<html><body>
+      <a href="/events" class="backlink">Back to All Events</a>
+      <article class="event">
+        <h1>Bear Tea</h1>
+        <time datetime="2026-10-18">Sunday, October 18, 2026</time>
+        <div class="event-tags"><a href="/events?tag=Club+Cafe">Club Cafe</a></div>
+      </article>
+    </body></html>`;
+  parser.notePageChromeLines(tagHtml, tagUrl);
+  assert.equal(parser.isPageChromeLine('Back to All Events'), true);
+  assert.equal(parser.isPageChromeLine('Club Cafe'), false);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['Sunday, October 18, 2026', 'Club Cafe', '209 Columbus Avenue'] }),
+    'Club Cafe'
+  );
+
+  // (d) On a ticketing sub-page the parent path IS the event, and the link
+  //     up to it carries the event's own name. The page's subject is never
+  //     its chrome.
+  const ticketsUrl = 'https://tickets.example/e/goldiloxx-chicago/tickets';
+  const ticketsHtml = `<html><head><title>GOLDILOXX Chicago | Interactive Nightlife at Jackhammer</title></head><body>
+      <a href="/e/goldiloxx-chicago">GOLDILOXX Chicago</a>
+      <h1>GOLDILOXX Chicago</h1>
+      <p>Sep 19, 2026 at 9:00 PM</p>
+    </body></html>`;
+  parser.notePageChromeLines(ticketsHtml, ticketsUrl);
+  assert.equal(parser.isPageChromeLine('GOLDILOXX Chicago'), false);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['GOLDILOXX Chicago', 'Sep 19, 2026 at 9:00 PM'] }),
+    'GOLDILOXX Chicago'
+  );
+
+  // (e) A site menu that lists the venue's club nights is a list of real
+  //     titles — nav containment alone never makes a line chrome.
+  const menuUrl = 'https://eagle.example/event-details/horse-meat-disco-2026-09-20';
+  const menuHtml = `<html><body>
+      <nav><a href="/">Home</a><a href="/horse-meat-disco">Horse Meat Disco</a><a href="/bear-bash">Bear Bash</a></nav>
+      <div class="event"><h1>Horse Meat Disco</h1><p>Sun 20 Sept</p></div>
+    </body></html>`;
+  parser.notePageChromeLines(menuHtml, menuUrl);
+  assert.equal(parser.isPageChromeLine('Home'), true, 'the site root inside a nav is a crumb');
+  assert.equal(parser.isPageChromeLine('Horse Meat Disco'), false);
+  assert.equal(parser.isPageChromeLine('Bear Bash'), false);
+
+  // (f) A sibling link is not an ancestor: "Previous"/"Next" pagination on a
+  //     Squarespace detail page points at other EVENTS, and those windows
+  //     keep whatever they derive today.
+  const detailUrl = 'https://club.example/events/bathhouse-disco';
+  const detailHtml = `<html><body>
+      <a href="/events" class="backlink">Back to All Events</a>
+      <article class="event"><h1>Bathhouse Disco</h1><time datetime="2026-09-25">Friday, September 25, 2026</time></article>
+      <section id="itemPagination"><a href="/events/voltaje"><div>Previous</div><div>September 24</div><h2>Voltaje</h2></a></section>
+    </body></html>`;
+  parser.notePageChromeLines(detailHtml, detailUrl);
+  assert.equal(parser.isPageChromeLine('Previous'), false, 'a sibling event link is not the page\'s own collection');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Previous', 'September 24', 'Voltaje'] }), 'Previous');
+});
+
+test('page chrome is scoped to the page it was read from', () => {
+  const parser = createParser();
+  parser.notePageChromeLines('<html><body><a href="/events" class="backlink">Back to All Events</a></body></html>', 'https://venue.example/events/one');
+  assert.equal(parser.isPageChromeLine('Back to All Events'), true);
+  // A different page: its own markup decides, and nothing carries over.
+  parser.notePageChromeLines('<html><body><h1>Back to All Events</h1></body></html>', 'https://other.example/events/two');
+  assert.equal(parser.isPageChromeLine('Back to All Events'), false);
+});
