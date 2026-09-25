@@ -22094,7 +22094,19 @@ class SharedCore {
         // "260 Meserole St" and "260 Meserole Dr" (LORAX XCX, one scrape's
         // slip on the street type) are one door; "1354 Harrison" and "398
         // 12th" are two.
-        const streetsAgree = this.areSameStreetLine(shapeA.address, shapeB.address);
+        // Two numbered doors whose PINS sit within one building of each
+        // other are one place — 3 Dollar Bill (260 Meserole) and its yard
+        // "9 Bob Note" (270 Meserole) are 28 m apart, one complex under
+        // two names and two numbers (Bear Tea, replay 2026-09-25). Only a
+        // pin both records state can vouch; no pins, no vouching.
+        const pinsTouch = (() => {
+            const a = shapeA.coordinates;
+            const b = shapeB.coordinates;
+            if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(b.lat)) return false;
+            const km = this.coordinatePairDistanceKm(`${a.lat}, ${a.lng}`, `${b.lat}, ${b.lng}`);
+            return km !== null && km <= CURATED_BAR_SAME_PLACE_KM * 2;
+        })();
+        const streetsAgree = this.areSameStreetLine(shapeA.address, shapeB.address) || pinsTouch;
         const streetsDiffer = !streetsAgree && this.areContradictingStreetLines(shapeA.address, shapeB.address);
         // Bars and streets check each other: two bar names at ONE numbered
         // street line are one door under two names — a party name in the
@@ -22218,11 +22230,18 @@ class SharedCore {
         // refused 40 pairs on "place", most of them one event under two
         // bar spellings). The doors that can contradict are curated ones
         // (below), numbered street lines, nights and destinations.
-        const place = !sharedPage && this.haveContradictingPlaceEvidence(shapeA, shapeB, eventA, eventB, { barsNeverContradict: true });
-        if (place) return 'place';
         const curatedA = sharedPage ? null : this.getCuratedBarForIdentity(eventA, shapeA, eventB);
         const curatedB = curatedA ? this.getCuratedBarForIdentity(eventB, shapeB, eventA) : null;
-        if (curatedA && curatedB && this.normalizeBarNameKey(curatedA.name) !== this.normalizeBarNameKey(curatedB.name)) {
+        // Two curated doors within one building of each other are one
+        // complex (3 Dollar Bill, 260 Meserole, and The Yard at 9 Bob Note,
+        // 270 — 28 m): the doors' own pins settle the place, whatever the
+        // two street lines say.
+        const curatedKm = curatedA && curatedB && typeof curatedA.coordinates === 'string' && typeof curatedB.coordinates === 'string'
+            ? this.coordinatePairDistanceKm(curatedA.coordinates, curatedB.coordinates) : null;
+        const oneComplex = curatedKm !== null && curatedKm <= CURATED_BAR_SAME_PLACE_KM * 2;
+        const place = !sharedPage && !oneComplex && this.haveContradictingPlaceEvidence(shapeA, shapeB, eventA, eventB, { barsNeverContradict: true });
+        if (place) return 'place';
+        if (curatedA && curatedB && !oneComplex && this.normalizeBarNameKey(curatedA.name) !== this.normalizeBarNameKey(curatedB.name)) {
             return `curated bars ("${curatedA.name}" vs "${curatedB.name}")`;
         }
         if (!options.ignoreStatedDays && this.haveContradictingStatedDays(eventA, eventB)) return 'stated days';

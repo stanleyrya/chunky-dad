@@ -25005,7 +25005,11 @@ test('contradiction gate: controls that must still fold — stub + detail page, 
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Locker Room', address: '79 WARRENTON ST' }, { bar: 'Legacy', address: '79 Warrenton Street, Boston, MA 02116' }), false, 'a party name in the venue slot at the venue\'s own door');
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'The Eagle Bar', address: '15 Bloom St, Manchester M1 3HZ, UK' }, { bar: 'The Black Eagle', address: '15 Bloom St, Manchester M1 3HZ, UK' }), false);
   assert.equal(core.haveContradictingPlaceEvidence({ bar: '3 Dollar Bill', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), false);
-  assert.equal(core.haveContradictingPlaceEvidence({ bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), true, 'two rooms, two doors');
+  assert.equal(core.haveContradictingPlaceEvidence({ bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206' }, { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA' }), true, 'two rooms, two doors — with no pins to say otherwise');
+  // …but the pins say the two doors are 28 m apart: one complex.
+  assert.equal(core.haveContradictingPlaceEvidence(
+    { bar: '9 Bob Note', address: '270 Meserole St Brooklyn, NY, 11206', coordinates: { lat: 40.708456, lng: -73.9377301 } },
+    { bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206, USA', coordinates: { lat: 40.7084144, lng: -73.9380583 } }), false, 'pins within one building vouch for one place');
   assert.equal(core.haveContradictingPlaceEvidence({ bar: 'Delfin Beach Resort', address: 'Calle Rodolfo Gomez 111, PV' }, { bar: 'CC Slaughters', address: 'LÁZARO CÁRDENAS 254, PV MX' }), true);
   // A listing parked in ticketUrl above its own event page is not a second ticket.
   assert.equal(core.haveContradictingPlaceEvidence({}, {}, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea' }, { ticketUrl: 'https://www.3dollarbillbk.com/rsvp' }), false);
@@ -25102,6 +25106,15 @@ test('contradiction gate: a vendor venue page in ticketUrl names no event; the d
   // by its door, never a namesake found by name.
   const hysteria = { title: 'Hysteria', bar: 'Eagle Bar', address: '398 12th st', city: 'sf' };
   assert.equal(core.getCuratedBarForIdentity(hysteria, core.buildIdentityComparisonShape(hysteria)).name, 'SF Eagle');
+  // Two curated doors within one building are one complex: 3 Dollar Bill
+  // (260 Meserole) and The Yard at 9 Bob Note (270), 28 m apart.
+  const twoDoors = createGateCore({ nyc: [
+    { name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206', coordinates: '40.7084144, -73.9380583' },
+    { name: 'The Yard at 9 Bob Note', address: '270 Meserole St, Brooklyn, NY 11206', coordinates: '40.708456, -73.9377301' }
+  ] });
+  assert.equal(twoDoors.getIdentityContradiction(
+    { title: 'Bear Tea', bar: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY 11206', city: 'nyc' },
+    { title: 'Goldiloxx: Bear Tea', bar: 'The Yard at 9 Bob Note', address: '270 Meserole St, Brooklyn, NY 11206', city: 'nyc' }), null);
   // A street that matches no curated door refuses the name too.
   const elsewhere = { title: 'x', bar: 'SF Eagle', address: '1 Unknown Rd, San Francisco', city: 'sf' };
   assert.equal(core.getCuratedBarForIdentity(elsewhere, core.buildIdentityComparisonShape(elsewhere)), null);
