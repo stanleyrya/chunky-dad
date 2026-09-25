@@ -22146,8 +22146,19 @@ class SharedCore {
         const ticketB = ticketKey(eventB && eventB.ticketUrl);
         const hostOf = (key) => key.split('/')[0];
         const hubAbove = (shorter, longer) => longer.startsWith(`${shorter}/`);
+        // …and a vendor reaches one event by several routes: "dice.fm/event/
+        // l878lw-qts-brooklyn-…" from the page's JSON-LD, "dice.fm/partner/
+        // tickets/event/l878lw-qts-brooklyn-…" from its button (QTS:
+        // Brooklyn, replay 2026-09-25). One route's path ending in the
+        // other's, whole segments, is the same event down a longer hall.
+        const pathOf = (key) => key.slice(key.indexOf('/'));
+        const sameLeafRoute = (a, b) => {
+            const shorter = pathOf(a).length <= pathOf(b).length ? pathOf(a) : pathOf(b);
+            const longer = shorter === pathOf(a) ? pathOf(b) : pathOf(a);
+            return shorter.split('/').filter(Boolean).length >= 2 && longer.endsWith(shorter);
+        };
         if (ticketA && ticketB && ticketA !== ticketB && hostOf(ticketA) === hostOf(ticketB)
-            && !hubAbove(ticketA, ticketB) && !hubAbove(ticketB, ticketA)) return true;
+            && !hubAbove(ticketA, ticketB) && !hubAbove(ticketB, ticketA) && !sameLeafRoute(ticketA, ticketB)) return true;
         return false;
     }
 

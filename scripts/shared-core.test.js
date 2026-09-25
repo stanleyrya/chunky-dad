@@ -25092,6 +25092,12 @@ test('contradiction gate: a vendor venue page in ticketUrl names no event; the d
   assert.equal(core.getIdentityContradiction(own, listed), null);
   // Two dice EVENT pages on one night are still two events.
   assert.ok(core.getIdentityContradiction(own, { ...listed, ticketUrl: 'https://dice.fm/event/abcdef-other-party-26th-sep-cmon-everybody-new-york-tickets' }));
+  // …but one event reached by two routes ("/event/<slug>" from JSON-LD,
+  // "/partner/tickets/event/<slug>?dice_id=…" from the button — QTS:
+  // Brooklyn) is one event: the leaf names it.
+  assert.equal(core.getIdentityContradiction(
+    { ...own, ticketUrl: 'https://dice.fm/event/l878lw-qts-brooklyn-17th-oct-3-dollar-bill-new-york-tickets' },
+    { ...listed, ticketUrl: 'https://dice.fm/partner/tickets/event/l878lw-qts-brooklyn-17th-oct-3-dollar-bill-new-york-tickets?dice_id=10206258&dice_channel=web' }), null);
   // Hysteria at 398 12th St with "Eagle Bar" in the bar slot is the SF Eagle
   // by its door, never a namesake found by name.
   const hysteria = { title: 'Hysteria', bar: 'Eagle Bar', address: '398 12th st', city: 'sf' };
