@@ -585,30 +585,18 @@ class SharedCore {
         ];
 
         // URL-to-source labels for dedup/key reconstruction ONLY — never parser
-        // dispatch. Existing calendar events created by the deleted site-specific
-        // parsers carry keys whose ${source} segment was derived from these URL
-        // patterns; keeping the labels lets computed keys for those events still
-        // match (see buildComputedKeyForExistingEvent / findEventByKey).
+        // dispatch. A ${source} key segment is filled only by a configured
+        // keyTemplate (none is configured; the default key is
+        // title|date|venue). The per-site labels the deleted site-specific
+        // parsers once wrote (bearracuda / chunk / linktree / redeyetickets)
+        // were retired 2026-09-25: none of the 330 pipe-delimited keys in
+        // data/calendars/*.ics carries a source segment, so no calendar event
+        // could still match through them. Only the adapter's own scheme
+        // remains — a shape, not a site.
         this.urlSourceMappings = [
             {
                 pattern: /^scriptable-input:\/\//i,
                 source: 'scriptable-input'
-            },
-            {
-                pattern: /bearracuda\.com/i,
-                source: 'bearracuda'
-            },
-            {
-                pattern: /chunk-party\.com/i,
-                source: 'chunk'
-            },
-            {
-                pattern: /linktr\.ee/i,
-                source: 'linktree'
-            },
-            {
-                pattern: /redeyetickets\.com/i,
-                source: 'redeyetickets'
             }
         ];
 

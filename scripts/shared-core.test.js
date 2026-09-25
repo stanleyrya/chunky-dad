@@ -5333,12 +5333,14 @@ test('detectParserFromUrl (the parser:"auto" resolver) maps scheme URLs and fall
   assert.equal(core.detectParserFromUrl(''), 'ai-web');
 });
 
-test('detectSourceFromUrl keeps legacy source labels for dedup keys (never dispatch)', () => {
+test('detectSourceFromUrl: only the adapter scheme names a source — site URLs name none (never dispatch)', () => {
   const core = createCore();
-  assert.equal(core.detectSourceFromUrl('https://bearracuda.com/events/portland'), 'bearracuda');
-  assert.equal(core.detectSourceFromUrl('https://www.chunk-party.com'), 'chunk');
-  assert.equal(core.detectSourceFromUrl('https://linktr.ee/cubhouse'), 'linktree');
-  assert.equal(core.detectSourceFromUrl('https://redeyetickets.com/e/1'), 'redeyetickets');
+  // Site-keyed labels retired 2026-09-25 (no keyTemplate is configured and no
+  // calendar key carries a source segment): a site URL names no source now.
+  assert.equal(core.detectSourceFromUrl('https://bearracuda.com/events/portland'), null);
+  assert.equal(core.detectSourceFromUrl('https://www.chunk-party.com'), null);
+  assert.equal(core.detectSourceFromUrl('https://linktr.ee/cubhouse'), null);
+  assert.equal(core.detectSourceFromUrl('https://redeyetickets.com/e/1'), null);
   assert.equal(core.detectSourceFromUrl('scriptable-input://event'), 'scriptable-input');
   assert.equal(core.detectSourceFromUrl('https://www.eventbrite.com/o/some-org-123'), null);
   assert.equal(core.detectSourceFromUrl(''), null);

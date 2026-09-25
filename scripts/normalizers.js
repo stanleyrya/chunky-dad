@@ -891,8 +891,11 @@ class LocationNormalizer extends BaseNormalizer {
         const hasAddressPattern = fullAddressPatterns.some(pattern => pattern.test(cleanAddress));
         if (!hasAddressPattern) return false;
 
+        // A bare place name (letters and spaces only, no digits) is a city or
+        // neighbourhood, never a street address. Shape rule only — the old
+        // hand-kept list of city names ("new york|nyc|...|sitges") was a strict
+        // subset of this pattern, so no name is ever hand-kept here.
         const cityOnlyPatterns = [
-            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs|sitges)$/i,
             /^[a-z\s]{3,25}$/i
         ];
 
