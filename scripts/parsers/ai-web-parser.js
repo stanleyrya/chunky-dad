@@ -1091,6 +1091,16 @@ class AiWebParser {
             // image harvest, prompt sections, verbatim evidence gate) so the
             // HTML-oriented machinery sees real lines instead of an opaque blob.
             let jsonApiPayload = this.detectJsonApiPayload(htmlData && htmlData.html ? htmlData.html : '');
+            // A feed of ARTICLES (a WordPress posts endpoint) is not a feed
+            // of events: each row is a page of prose. It becomes those pages
+            // — one <article> each — so the readers below read what a
+            // visitor reads, and the listing-prose reader finds the
+            // roundups among them (see renderArticleFeedPayloadAsHtml).
+            const articleFeedHtml = jsonApiPayload !== null ? this.renderArticleFeedPayloadAsHtml(jsonApiPayload, sourceUrl) : '';
+            if (articleFeedHtml) {
+                htmlData = { ...htmlData, html: articleFeedHtml };
+                jsonApiPayload = null;
+            }
             if (jsonApiPayload !== null) {
                 // A feed that says it has more (links.next, a hasNext flag)
                 // is read to the horizon, not to its page size; and a feed
@@ -1290,8 +1300,14 @@ class AiWebParser {
             // A month grid outranks the page's own JSON-LD when it lists
             // more: a MEC listing page marks up its featured/upcoming subset
             // (thedallaseagle.com/events/: 13 nodes, 153 grid occurrences).
+            // An article that LISTS events (see collectListingProseEvents)
+            // outranks whatever structured data the article page marks up
+            // about itself (a WebPage/Article node is not its events).
+            const listingProseEvents = jsonApiPayload === null ? this.collectListingProseEvents(html, sourceUrl, cityConfig) : [];
             const structuredSource = squarespaceEvents.length > 0
                 ? 'squarespace'
+                : (listingProseEvents.length > 0
+                    ? 'listing-prose'
                 : (eventOnEvents.length > 0 && eventOnEvents.length >= completeJsonLdEvents.length
                     ? 'eventon'
                 : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
@@ -1302,9 +1318,11 @@ class AiWebParser {
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
-                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)))))));
+                            : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
+                : (structuredSource === 'listing-prose'
+                    ? listingProseEvents
                 : (structuredSource === 'eventon'
                     ? eventOnEvents
                 : (structuredSource === 'wix'
@@ -1315,7 +1333,7 @@ class AiWebParser {
                         ? completeJsonLdEvents
                         : (structuredSource === 'json-api'
                             ? completeJsonApiEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))));
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -7881,6 +7899,262 @@ class AiWebParser {
             console.log(`🤖 AI Web: MEC monthly skin failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing with the list skin`);
             return '';
         }
+    }
+
+    // ── Listing prose: an article that lists events one sentence each ────
+    // A magazine's monthly roundup ("Bear nights and events in the USA &
+    // Canada this July!", bearworldmag.com) is dozens of events written as
+    // one paragraph each, under a heading per city:
+    //   <h3>New York City</h3>
+    //   <p><strong>Rockstrap</strong> at Rockbar NYC on July 3rd (<a>link</a>)</p>
+    //   <p>Bears 4 Bareburger at Bareburger on July 2nd, July 9th and
+    //      July 16th (<a>link</a>)</p>
+    //   <p>Bearcumunion in Ottawa on July 3rd (<a>link</a>)</p>
+    //   <p>Bear Week Provincetown from July 11th through July 18th (<a>link</a>)</p>
+    // The card splitter sees three segments where there are a hundred
+    // events. This reads the SENTENCE SHAPE — a date phrase (one date, a
+    // list of dates, or a from/through range) somewhere in the sentence,
+    // "at <venue>" and/or "in <city>" around it, and the nearest heading
+    // above as the city when the line names none — and yields one row per
+    // date. Nothing is keyed on the site: the shape is how English lists an
+    // event, and the page's own date context supplies the year (a July
+    // roundup posted in July). Returns [] where fewer than three
+    // paragraphs read as listing lines, so an article that merely mentions
+    // one party never becomes a listing.
+    parseListingProseLine(text) {
+        const Core = this.core && this.core.constructor;
+        const monthWord = '(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)';
+        const weekday = '(?:(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\\.?,?\\s+)?';
+        // "June June 26th" — a doubled month is a typo, not two dates.
+        const dateWord = `${weekday}${monthWord}\\.?\\s+(?:${monthWord}\\.?\\s+)?\\d{1,2}(?:st|nd|rd|th)?`;
+        const joiner = '(?:\\s*,\\s*(?:and\\s+)?|\\s+(?:and|&)\\s+)';
+        const rangeJoin = '\\s*(?:through|thru|until|till|to|[-–—])\\s*';
+        const rangePattern = new RegExp(`\\b(?:from\\s+)?(${dateWord})${rangeJoin}((?:${dateWord})|\\d{1,2}(?:st|nd|rd|th)?)\\b`, 'i');
+        const listPattern = new RegExp(`\\b(${dateWord}(?:${joiner}${dateWord})*)\\b`, 'i');
+        const source = String(text || '').replace(/\s+/g, ' ').trim();
+        // A listing line is one short sentence; running prose that happens
+        // to hold a date is the article talking.
+        if (!source || source.length > 220 || source.split(' ').length > 28 || /[.!?]\s+[A-Z]/.test(source)) return null;
+        const dayOf = (value) => {
+            const stripped = String(value || '').replace(/^(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\.?,?\s+/i, '');
+            const parts = stripped.match(new RegExp(`^(${monthWord})\\.?\\s+(?:${monthWord}\\.?\\s+)?(\\d{1,2})`, 'i'));
+            return parts ? { month: parts[1], day: parts[2] } : null;
+        };
+        let match = rangePattern.exec(source);
+        let dates = [];
+        let range = null;
+        if (match) {
+            const from = dayOf(match[1]);
+            const to = /^\d/.test(match[2]) ? (from ? { month: from.month, day: match[2].replace(/\D/g, '') } : null) : dayOf(match[2]);
+            if (from && to) range = { from: `${from.month} ${from.day}`, to: `${to.month} ${to.day}` };
+        }
+        if (!range) {
+            match = listPattern.exec(source);
+            if (!match) return null;
+            dates = match[1].split(new RegExp(joiner, 'i')).map(dayOf).filter(Boolean).map((part) => `${part.month} ${part.day}`);
+            if (dates.length === 0) return null;
+        }
+        // Lift the date phrase out; a clause the writer hung on the date
+        // (", full schedule on their website") goes with it.
+        const before = source.slice(0, match.index).replace(/\s+(?:on|from)\s*$/i, '');
+        // "Dates: September 17–20" — a label before the date is not a party.
+        if (/:\s*$/.test(before)) return null;
+        let after = source.slice(match.index + match[0].length);
+        // "(from 1pm–7pm)" / "at 9pm" after the date states the clock.
+        let time = '';
+        const clock = after.match(/\b(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)(?:\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?))?/i);
+        if (clock && Core && typeof Core.parseInlineTimeText === 'function') {
+            const parsedClock = Core.parseInlineTimeText(clock[2] ? `${clock[1]} - ${clock[2]}` : clock[1]);
+            if (parsedClock && parsedClock.start) time = parsedClock.start;
+        }
+        after = (/^\s*,/.test(after) ? '' : after).replace(/\([^)]*\)/g, ' ').replace(/\b(?:from|at)?\s*\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?(?:\s*(?:-|–|—|to)\s*\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?/gi, ' ');
+        // "June 5th Bear Night at Tryangles Bar on June 5th" — the writer
+        // said the date twice; every copy comes out.
+        const repeatPattern = new RegExp(`\\s*(?:\\bon\\s+)?${dateWord}(?:${joiner}${dateWord})*`, 'gi');
+        const rest = `${before} ${after}`.replace(repeatPattern, ' ').replace(/\(\s*\)/g, ' ').replace(/\s+/g, ' ').replace(/^[\s,.:;–—-]+|[\s,.:;–—-]+$/g, '').trim();
+        if (!rest) return null;
+        // "<party> at <venue>[ in <city>]" — the FIRST "at" splits (a party
+        // named "Bears in Space" keeps its "in"), the venue's LAST "in" names
+        // the city. Without an "at", the last "in" names the city.
+        let title = rest;
+        let venue = '';
+        let city = '';
+        const atSplit = /^(.+?)\s+(?:at|@)\s*(.+)$/i.exec(rest);
+        if (atSplit) {
+            title = atSplit[1];
+            venue = atSplit[2];
+            const inSplit = /^(.+)\s+in\s+(.+)$/i.exec(venue);
+            if (inSplit) { venue = inSplit[1]; city = inSplit[2]; }
+        } else {
+            const inSplit = /^(.+)\s+in\s+(.+)$/i.exec(rest);
+            if (inSplit) { title = inSplit[1]; city = inSplit[2]; }
+        }
+        const tidy = (value) => String(value || '').replace(/^(?:the\s+)?(?=\S)/i, (m) => m).replace(/[\s,.:;–—-]+$/g, '').trim();
+        title = tidy(title);
+        venue = tidy(venue);
+        city = tidy(city);
+        if (!title || title.length < 2) return null;
+        return { title, venue, city, dates, range, time };
+    }
+
+    // A JSON payload that is a list of ARTICLES — WordPress's
+    // /wp-json/wp/v2/posts shape: rows with `content.rendered`, `link` and
+    // `date` — rendered as one page of <article> elements, each stamped
+    // with its own URL and publication date. Answers '' for anything else
+    // (an event feed keeps its JSON-API route).
+    renderArticleFeedPayloadAsHtml(payload, sourceUrl) {
+        const rows = Array.isArray(payload) ? payload
+            : (payload && typeof payload === 'object' && Array.isArray(payload.items) ? payload.items : null);
+        if (!rows || rows.length === 0) return '';
+        const isArticle = (row) => row && typeof row === 'object'
+            && row.content && typeof row.content === 'object' && typeof row.content.rendered === 'string'
+            && typeof row.link === 'string' && /^https?:\/\//i.test(row.link);
+        const articles = rows.filter(isArticle);
+        if (articles.length === 0 || articles.length * 2 < rows.length) return '';
+        const attr = (value) => String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const parts = articles.map((row) => {
+            const title = row.title && typeof row.title === 'object' ? String(row.title.rendered || '') : String(row.title || '');
+            const published = String(row.date || row.date_gmt || row.published || '').slice(0, 10);
+            return `<article data-source-url="${attr(row.link)}" data-published="${attr(published)}">\n<h1>${title}</h1>\n${row.content.rendered}\n</article>`;
+        });
+        console.log(`📰 ARTICLE FEED: ${sourceUrl} is ${articles.length} article(s), read as pages`);
+        return parts.join('\n');
+    }
+
+    collectListingProseEvents(html, sourceUrl, cityConfig = null) {
+        const source = String(html || '');
+        if (!source) return [];
+        const Core = this.core && this.core.constructor;
+        if (!Core || typeof Core.parseInlineDateText !== 'function') return [];
+        const articles = [...source.matchAll(/<article\b([^>]*)>([\s\S]*?)<\/article>/gi)];
+        const metaPublished = (source.match(/<meta\b[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i)
+            || source.match(/<meta\b[^>]*content=["']([^"']+)["'][^>]*property=["']article:published_time["']/i) || [])[1] || '';
+        const units = articles.length > 0
+            ? articles.map((match) => ({
+                html: match[2],
+                url: this.decodeEntitiesFully((match[1].match(/data-source-url=["']([^"']+)["']/i) || [])[1] || '') || sourceUrl,
+                published: (match[1].match(/data-published=["']([^"']+)["']/i) || [])[1] || metaPublished
+            }))
+            : [{ html: (source.match(/<main\b[\s\S]*?<\/main>/i) || [source])[0], url: sourceUrl, published: metaPublished }];
+        const events = [];
+        for (const unit of units) {
+            events.push(...this.collectListingProseEventsFromArticle(unit.html, unit.url, unit.published, cityConfig));
+        }
+        return events;
+    }
+
+    collectListingProseEventsFromArticle(body, sourceUrl, published, cityConfig = null) {
+        const Core = this.core && this.core.constructor;
+        const decode = (text) => this.decodeEntitiesFully(String(text || '')).replace(/\s+/g, ' ').trim();
+        const blocks = [...String(body || '').matchAll(/<(h[1-4]|p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi)];
+        const rows = [];
+        let heading = '';
+        for (const block of blocks) {
+            const tag = block[1].toLowerCase();
+            const inner = block[2];
+            if (tag[0] === 'h') {
+                // A heading names a place when it reads like one: a few
+                // words, no digits, no sentence punctuation ("New York
+                // City", "Massachusetts", "DC" — not "What's On Tap for
+                // 2026:"). Any other heading names nothing.
+                const text = decode(inner.replace(/<[^>]+>/g, ' '));
+                heading = text.split(/\s+/).length <= 4 && !/[\d:;!?()]/.test(text) ? text : '';
+                continue;
+            }
+            const link = (inner.match(/<a\b[^>]*href=["']([^"']+)["']/i) || [])[1] || '';
+            const text = decode(inner.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' ').replace(/<[^>]+>/g, ' '));
+            const line = this.parseListingProseLine(text);
+            if (!line) continue;
+            rows.push({ ...line, link: link ? this.normalizeUrl(this.decodeEntitiesFully(link), sourceUrl) : '', heading });
+        }
+        if (rows.length < 3) return [];
+        // The year is the article's: a roundup published July 1st lists
+        // July nights; one published December 29th lists January's.
+        const publishedMs = /^\d{4}-\d{2}-\d{2}/.test(String(published || '')) ? Date.parse(String(published).slice(0, 10) + 'T12:00:00Z') : NaN;
+        let anchor = {};
+        if (Number.isFinite(publishedMs)) anchor = { anchorMs: publishedMs };
+        else {
+            const pageDate = this.derivePageDateContext(body);
+            if (pageDate && Number.isFinite(pageDate.year)) anchor = { anchorMs: Date.UTC(pageDate.year, (pageDate.month || 1) - 1, 15) };
+        }
+        const now = new Date();
+        const localMidnight = (parsed, timezone, dayOffset = 0, time = '') => {
+            const at = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day + dayOffset));
+            const ymd = at.toISOString().slice(0, 10);
+            const hhmm = /^\d{2}:\d{2}$/.test(time) ? time : '00:00';
+            return (timezone && this.convertLocalDateTimeToUtc(`${ymd} ${hhmm}:00`, timezone))
+                || new Date(at.getTime() + (Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3))) * 60 * 1000);
+        };
+        const zoneFor = (cityKey, placeText) => {
+            if (cityKey) return this.getTimezoneForCity(cityKey, cityConfig) || '';
+            // A heading that IS a tz-database city ("Oslo", "Toronto",
+            // "Berlin") names its clock. Nothing looser: "Georgia" is a US
+            // state here and a country to the database, "New Jersey" holds
+            // the island of Jersey — a windowed or country-clock reading
+            // crosses an ocean, so an unrecognized heading keeps no zone.
+            if (!placeText || !this.core || typeof this.core.getIanaZonesByExemplarCity !== 'function'
+                || typeof this.core.foldPlaceName !== 'function') return '';
+            const zones = this.core.getIanaZonesByExemplarCity();
+            const matches = zones && typeof zones.get === 'function' ? zones.get(this.core.foldPlaceName(placeText)) : null;
+            return Array.isArray(matches) && matches.length === 1 ? matches[0] : '';
+        };
+        // A schedule under a heading that names no place ("What's On Tap
+        // for 2026:") is placed by the article itself — its title names the
+        // city ("Urban Bear NYC marks 18 years…").
+        const articleTitle = decode(((String(body || '').match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i) || [])[1] || '').replace(/<[^>]+>/g, ' '));
+        const titleCityKey = cityConfig && articleTitle ? this.findCityKeyInText(articleTitle, cityConfig) : '';
+        const events = [];
+        for (const row of rows) {
+            const cityText = row.city || row.heading || (titleCityKey ? articleTitle : '');
+            // The heading IS the place: "DC" names dc outright even though a
+            // two-letter alias is too short to be found inside running text.
+            const exact = cityConfig && cityText ? this.findCityConfigEntry(cityText, cityConfig) : null;
+            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig) : '');
+            const timezone = zoneFor(cityKey, cityText);
+            const make = (startParsed, endParsed) => {
+                const event = {
+                    title: row.title,
+                    description: '',
+                    startDate: localMidnight(startParsed, timezone, 0, row.time),
+                    // "July 11th through July 18th" ends when the 18th does.
+                    endDate: endParsed ? localMidnight(endParsed, timezone, 1) : null,
+                    // No url: a hundred rows sharing the article's address
+                    // would read as one event scraped a hundred times, and
+                    // an aggregator is never linked anyway. The line's own
+                    // link (below) is the record's page.
+                    source: 'listing-prose'
+                };
+                if (timezone) event.timezone = timezone;
+                if (row.venue) event.bar = row.venue;
+                // A city no calendar covers stays as written: the normalizer
+                // parks it on _unrecognizedCity and the curated rungs get
+                // their chance (a Massachusetts venue we curate names its city).
+                if (cityKey) event.city = cityKey;
+                else if (cityText) event.city = cityText;
+                // The line's one link is the party's own page or ticket page
+                // — the discovery this reader exists for.
+                if (row.link) event.ticketUrl = row.link;
+                return event;
+            };
+            const parse = (value) => Core.parseInlineDateText(value, now, anchor);
+            if (row.range) {
+                const from = parse(row.range.from);
+                let to = parse(row.range.to);
+                if (from && to && Date.UTC(to.year, to.month - 1, to.day) < Date.UTC(from.year, from.month - 1, from.day)) {
+                    to = { ...to, year: to.year + 1 };
+                }
+                if (from) events.push(make(from, to));
+                continue;
+            }
+            for (const dateText of row.dates) {
+                const parsed = parse(dateText);
+                if (parsed) events.push(make(parsed, null));
+            }
+        }
+        if (events.length > 0) {
+            console.log(`📰 LISTING PROSE: ${sourceUrl} lists ${rows.length} event line(s) under ${new Set(rows.map((row) => row.heading)).size} heading(s) → ${events.length} dated event(s)`);
+        }
+        return events;
     }
 
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {

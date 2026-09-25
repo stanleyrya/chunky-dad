@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "source": "Bear World Magazine",
+  "slug": "bear-world-magazine",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-10-08",
+  "recon": {
+    "date": "2026-09-24",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://bearworldmag.com/wp-json/wp/v2/posts?categories=10&per_page=10&_fields=id,date,modified,link,title,content"
+    ],
+    "doors": [
+      {
+        "url": "https://bearworldmag.com/wp-json/wp/v2/posts?categories=10&per_page=10&_fields=id,date,modified,link,title,content",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 10,
+        "truthFlag": "X-WP-Total 513 posts in category 10 (events); newest first",
+        "note": "WordPress 7.0.6 REST posts endpoint, open, robots.txt disallows nothing. One request answers the ten newest posts of the site's own 'events' category (id 10) with their bodies (552 KB). Three of the ten are listings the listing-prose reader takes apart: 'Bear nights and events in the USA & Canada this July!' (2026-07-01; 106 lines under 28 city headings → 129 dated nights, July 2026), 'Bear nights and parties in your city this month!' (2026-06-02; 82 lines under 25 headings → 104 nights, June 2026), 'Urban Bear NYC marks 18 years…' (2026-09-02; 8 schedule lines, Sep 17–20 2026). Every date in every listing is before the recon date. The other seven posts are recaps and announcements in prose (URGE Miami Nov 27–30 in sentences, Bear Ball XL recap, MAD.BEAR recap, Harbour City Bears 'Wk1 of September: Saturday 5th September 2026 : Polly's' day-first schedule, BEEFMINCE Sitges h3 schedule, Bareburger feature, Bears On The River recap) — shapes the reader does not claim."
+      },
+      {
+        "url": "https://bearworldmag.com/category/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 10,
+        "truthFlag": "paged archive (page/2/ …)",
+        "note": "The human archive of the same category: ten post cards per page, newest first, the same ten posts as the feed on the recon date. Confirms the feed's order and that no newer listing exists."
+      },
+      {
+        "url": "https://bearworldmag.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Disallow: (empty); Sitemap: wp-sitemap.xml",
+        "note": "Allows everything."
+      },
+      {
+        "url": "https://bearworldmag.com/wp-json/wp/v2/categories?per_page=100",
+        "kind": "json",
+        "role": "other",
+        "rowsReturned": 100,
+        "truthFlag": null,
+        "note": "Category directory: 'events' is id 10 (513 posts); 'chub-events' (4788) is a small sibling. No events plugin (wp-json/wp/v2/types lists post, page, media, … only)."
+      }
+    ],
+    "notes": "Recon 2026-09-24 from one cached read per door (home, robots, sitemap index, types, categories, the posts feed, the category archive, the June/July roundups, the AU/NZ/Asia festival calendar). Monthly roundups appeared for June and July 2026 and none since; the AU/NZ/Asia 'Calendar of Bear Events' (2026-04-26) is a festival list in prose. The source is worth one request per run: the day a new roundup is posted, its hundred nights arrive with the venue and the party's own link each."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two doors agree nothing upcoming is listed on 2026-09-24: the posts feed's ten newest 'events' posts hold three listings whose every date is past (latest 2026-09-20), and the category archive shows the same ten posts newest-first. Past listings are counted (241 dated lines), not enumerated.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": null,
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {},
+  "events": [],
+  "traps": [
+    {
+      "id": "past-roundup-july-2026",
+      "kind": "past-event",
+      "label": "Rockstrap at Rockbar NYC on July 3rd (link) — a line of the July 2026 roundup",
+      "why": "The roundups list the month they were posted for (June and July 2026); every night in them is before the recon date. The global config keeps past events (config.allowPastEvents: true), so the lines are extracted and folded into what the calendar already holds — they are not upcoming events and are not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://bearworldmag.com/bear-nights-and-events-in-canada-usa-in-july-2026/",
+        "quote": "<p class=\"wp-block-paragraph\"><strong>Rockstrap</strong> at Rockbar NYC on July 3rd (<a href=\"https://www.rockbarnyc.com/calendar"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "prose-announcement-urge-miami",
+      "kind": "announcement",
+      "label": "URGE Miami Festival returns November 27th through the 30th with three daytime events and four nighttime experiences.",
+      "why": "An announcement in paragraphs: the dates sit inside sentences of thirty words with no party-at-venue line, so the listing-prose reader (which needs three short listing lines) claims nothing, and the article is a festival the curated festivals file covers. Day-first schedules ('Wk1 of September: Saturday 5th September 2026 : Polly's Marrickville') and h3 'DATE – PARTY' schedules (BEEFMINCE Sitges) are festival schedules in the same sense.",
+      "evidence": {
+        "url": "https://bearworldmag.com/urge-miami-festival-returns-this-coming-thanksgiving-weekend/",
+        "quote": "URGE Miami Festival returns November 27th through the 30th with three daytime events and four nighttime experiences."
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    "Whether the magazine resumes monthly roundups (June and July 2026 only so far); recheck the feed's newest titles on the recheck date."
+  ]
+}
