@@ -24638,6 +24638,180 @@ test('calendar merge: the listing the event was scraped off never shallows its o
   assert.equal(decision.reason, 'same-site deeper URL beats its parent path (listing/front door)');
 });
 
+// ── The venue's contact is fill-only (run 20260924-055217, Goldiloxx: Bear Tea) ──
+// The same run's `clobbered 3 fields (instagram, website, key)`: the stored
+// instagram was the PROMOTER's handle (goldiloxx__, from the event's own
+// page); the scrape carried the VENUE's (3dollarbillbk — the venue parser's
+// static metadata, the same value the curated-bar fill would have written),
+// merged "clobber", so the ladder was never asked. A curated bar's contact
+// fields (instagram, facebook, website, googleMaps) describe the venue: they
+// fill an event's blank and never replace what the event says about itself.
+const THREE_DOLLAR_BILL_BAR = {
+  name: '3 Dollar Bill', city: 'nyc', address: '260 Meserole St, Brooklyn, NY 11206',
+  coordinates: '40.7084144, -73.9380583', website: 'https://www.3dollarbillbk.com',
+  instagram: 'https://www.instagram.com/3dollarbillbk', facebook: 'https://www.facebook.com/3dollarbillbk',
+  googleMaps: 'https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc'
+};
+const VENUE_HANDLE = 'https://www.instagram.com/3dollarbillbk';
+const PROMOTER_HANDLE = 'https://www.instagram.com/goldiloxx__';
+
+function createBearTeaCore() {
+  return new SharedCore(
+    { ...CITIES, nyc: { timezone: 'America/New_York', patterns: ['nyc', 'new york'] } },
+    { eventSchema: EventSchema, bars: { nyc: [THREE_DOLLAR_BILL_BAR] } }
+  );
+}
+
+async function mergeBearTea(core, scrapedOverrides = {}, options = {}) {
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com');
+  Object.assign(scraped, scrapedOverrides);
+  if (options.storedInstagram !== undefined) {
+    existing.notes = existing.notes.split('\n').filter(line => !line.startsWith('instagram:'))
+      .concat(options.storedInstagram ? [`instagram: ${options.storedInstagram}`] : []).join('\n');
+  }
+  if (options.storedLines) existing.notes = `${existing.notes}\n${options.storedLines.join('\n')}`;
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  try {
+    const merged = await core.createFinalEventObject(existing, scraped, {
+      httpAdapter: buildArbitrationAdapter({}),
+      globalConfig: options.arbitration ? { merge: { arbitration: options.arbitration } } : undefined
+    });
+    return { merged, lines, decision: (field) => merged._mergeDecisions.find(d => d.field === field) };
+  } finally {
+    restore();
+  }
+}
+
+test('calendar merge: a venue parser\'s static instagram never clobbers the stored promoter handle (Goldiloxx: Bear Tea)', async () => {
+  const core = createBearTeaCore();
+  const { merged, lines, decision } = await mergeBearTea(core);
+  assert.equal(merged.instagram, PROMOTER_HANDLE, 'the promoter handle the event stated for itself stays');
+  assert.equal(core.parseNotesIntoFields(merged.notes).instagram, PROMOTER_HANDLE);
+  assert.equal(decision('instagram').source, 'deterministic');
+  assert.match(decision('instagram').reason, /the venue's own instagram \(the venue parser's own static metadata \("3 Dollar Bill", whose site 3dollarbillbk\.com is a curated bar's\)\) fills a blank, never replaces/);
+  assert.ok(lines.some(line => line.startsWith('🔒 MERGE: "Bear Tea" field=instagram resolved deterministically — the venue\'s own instagram')),
+    `decided by the ladder: ${JSON.stringify(lines.filter(l => l.includes('instagram')))}`);
+  assert.ok(!lines.some(line => /clobbered .*instagram/.test(line)), 'instagram is not in the clobber summary');
+  // The website guard from the run's other clobber is untouched — its own rung still speaks.
+  assert.equal(merged.website, BEAR_TEA_PAGE);
+  assert.equal(decision('website').reason, 'same-host deeper URL beats domain root');
+});
+
+test('calendar merge: the same venue handle still FILLS a calendar event that has no instagram', async () => {
+  const core = createBearTeaCore();
+  const { merged, decision } = await mergeBearTea(core, {}, { storedInstagram: '' });
+  assert.equal(merged.instagram, VENUE_HANDLE, 'a blank takes the venue handle — that is the fill');
+  assert.equal(decision('instagram'), undefined, 'no conflict, nothing to decide');
+});
+
+test('calendar merge: a curated-bar-filled instagram (_curatedVenueFields) never wins under clobber, fills a blank', async () => {
+  const core = createBearTeaCore();
+  const curatedFill = { _staticFields: {}, _curatedVenueFields: { instagram: '3 Dollar Bill', gmaps: '3 Dollar Bill' } };
+  const kept = await mergeBearTea(core, curatedFill);
+  assert.equal(kept.merged.instagram, PROMOTER_HANDLE);
+  assert.equal(kept.decision('instagram').reason,
+    'the venue\'s own instagram (filled from curated bar "3 Dollar Bill") fills a blank, never replaces what the event says about itself');
+  assert.ok(!kept.lines.some(line => /clobbered .*instagram/.test(line)));
+  const filled = await mergeBearTea(core, curatedFill, { storedInstagram: '' });
+  assert.equal(filled.merged.instagram, VENUE_HANDLE);
+});
+
+test('calendar merge: without provenance, a curated bar\'s own handle is still recognised as the venue\'s (identity rung)', async () => {
+  const core = createBearTeaCore();
+  // No static stamp, no curated stamp — a replayed record, or the venue's
+  // footer handle read off the page — but the value IS the curated bar's.
+  const { merged, decision } = await mergeBearTea(core, { _staticFields: {}, bar: '3 Dollar Bill' });
+  assert.equal(merged.instagram, PROMOTER_HANDLE);
+  assert.equal(decision('instagram').reason,
+    'the venue\'s own instagram (curated bar "3 Dollar Bill"\'s own instagram) fills a blank, never replaces what the event says about itself');
+});
+
+test('calendar merge: a page-stated instagram that is nobody\'s venue merges exactly as before', async () => {
+  const core = createBearTeaCore();
+  const pageHandle = 'https://www.instagram.com/some_guest_dj';
+  // clobber (the parser config's word) still clobbers…
+  const clobbered = await mergeBearTea(core, { _staticFields: {}, instagram: pageHandle });
+  assert.equal(clobbered.merged.instagram, pageHandle, 'no venue provenance → the configured strategy applies');
+  assert.ok(clobbered.lines.some(line => /clobbered .*instagram/.test(line)));
+  // …and "ai" still reaches the authority ladder with its own reasons.
+  const arbitrated = await mergeBearTea(core, {
+    _staticFields: {}, instagram: pageHandle,
+    _fieldPriorities: { ...core.getResolvedFieldPriorities({}), website: { priority: ['static'], merge: 'clobber' } }
+  }, { arbitration: 'deterministic' });
+  assert.equal(arbitrated.merged.instagram, PROMOTER_HANDLE);
+  assert.equal(arbitrated.decision('instagram').reason, 'contested Instagram (equal authority) — calendar kept, flagged');
+});
+
+test('calendar merge: a PROMOTER parser\'s static instagram keeps its registry authority (its site is nobody\'s bar)', async () => {
+  const core = createBearTeaCore();
+  const { merged, decision } = await mergeBearTea(core, {
+    _staticFields: { website: 'https://goldiloxx.example', instagram: PROMOTER_HANDLE },
+    website: 'https://goldiloxx.example', instagram: PROMOTER_HANDLE, _parserConfig: { name: 'Goldiloxx' },
+    _fieldPriorities: { ...core.getResolvedFieldPriorities({}), website: { priority: ['static'], merge: 'clobber' } }
+  }, { storedInstagram: VENUE_HANDLE, arbitration: 'deterministic' });
+  assert.equal(merged.instagram, PROMOTER_HANDLE, 'the promoter\'s registry handle replaces the stored venue handle');
+  assert.equal(decision('instagram').reason, "the promoter's own Instagram (registry) beats the venue's");
+});
+
+test('calendar merge: the venue\'s website and facebook are fill-only the same way; gmaps by the ladder', async () => {
+  const core = createBearTeaCore();
+  // website: the stored promoter root vs the venue parser's static root —
+  // two bare roots on different hosts, which no depth rung decides.
+  const site = await mergeBearTea(core, {}, { storedLines: [] });
+  const { scraped, existing } = buildBearTeaPair(core, 'https://www.3dollarbillbk.com');
+  existing.notes = existing.notes.replace(`website: ${BEAR_TEA_PAGE}`, 'website: https://goldiloxx.example');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let merged;
+  try { merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) }); } finally { restore(); }
+  assert.equal(merged.website, 'https://goldiloxx.example', 'the venue root never replaces the stored promoter root');
+  assert.match(merged._mergeDecisions.find(d => d.field === 'website').reason, /the venue's own website \(the venue parser's own static metadata/);
+  assert.ok(!lines.some(line => /clobbered .*website/.test(line)));
+  assert.equal(site.merged.website, BEAR_TEA_PAGE);
+
+  // facebook: the curated bar's own page (identity rung), merged clobber.
+  const fbPriorities = { ...core.getResolvedFieldPriorities({}), facebook: { priority: ['static'], merge: 'clobber' } };
+  const fbKept = await mergeBearTea(core, { facebook: THREE_DOLLAR_BILL_BAR.facebook, bar: '3 Dollar Bill', _fieldPriorities: fbPriorities },
+    { storedLines: ['facebook: https://www.facebook.com/goldiloxxnyc'] });
+  assert.equal(fbKept.merged.facebook, 'https://www.facebook.com/goldiloxxnyc');
+  assert.equal(fbKept.decision('facebook').reason,
+    'the venue\'s own facebook (curated bar "3 Dollar Bill"\'s own facebook) fills a blank, never replaces what the event says about itself');
+  const fbFilled = await mergeBearTea(core, { facebook: THREE_DOLLAR_BILL_BAR.facebook, bar: '3 Dollar Bill', _fieldPriorities: fbPriorities });
+  assert.equal(fbFilled.merged.facebook, THREE_DOLLAR_BILL_BAR.facebook, 'a blank facebook takes the venue page');
+
+  // gmaps never enters the merge loop (derived — STEP 4 rebuilds it from the
+  // merged bar/address, where the curated place link is adopted by design);
+  // the ladder itself still answers the same way for a curated-filled value.
+  const context = { cityKey: 'nyc', barNames: ['3 Dollar Bill'], sideLabels: { a: 'calendar', b: 'scraped' },
+    records: { a: {}, b: { gmaps: THREE_DOLLAR_BILL_BAR.googleMaps, _curatedVenueFields: { gmaps: '3 Dollar Bill' } } } };
+  assert.deepEqual(core.resolveConflictDeterministically('gmaps', 'https://www.google.com/maps/place/?q=place_id:ChIJpromoterPin', THREE_DOLLAR_BILL_BAR.googleMaps, context),
+    { winner: 'a', reason: 'the venue\'s own gmaps (filled from curated bar "3 Dollar Bill") fills a blank, never replaces what the event says about itself' });
+});
+
+test('calendar merge: an aggregator record still never wins a venue contact field, filled or not', async () => {
+  const core = createBearTeaCore();
+  const { merged, lines } = await mergeBearTea(core, { _staticFields: {}, _parserConfig: { name: 'Listing Site', siteRole: 'aggregator' }, instagram: 'https://www.instagram.com/listing_site' });
+  assert.equal(merged.instagram, PROMOTER_HANDLE);
+  assert.ok(lines.some(line => line.startsWith('🧭 AGGREGATOR:')), `aggregator rule first: ${JSON.stringify(lines.filter(l => l.includes('AGGREGATOR')))}`);
+});
+
+test('scrapedContactValueIsVenues / socialHandleKey: provenance and identity, nothing by name', () => {
+  const core = createBearTeaCore();
+  assert.equal(core.socialHandleKey('https://www.instagram.com/3DollarBillBK/'), '3dollarbillbk');
+  assert.equal(core.socialHandleKey('@3dollarbillbk'), '3dollarbillbk');
+  assert.equal(core.socialHandleKey('https://fb.com/3dollarbillbk?ref=x'), '3dollarbillbk');
+  assert.equal(core.socialHandleKey('https://www.3dollarbillbk.com/'), '3dollarbillbk.com');
+  assert.equal(core.scrapedContactValueIsVenues('instagram', { instagram: VENUE_HANDLE, _curatedVenueFields: { instagram: 'Anywhere' } }), 'filled from curated bar "Anywhere"');
+  assert.equal(core.scrapedContactValueIsVenues('instagram', { instagram: PROMOTER_HANDLE, _staticFields: { website: 'https://goldiloxx.example', instagram: PROMOTER_HANDLE } }), '',
+    'a promoter parser\'s static handle is the organizer\'s');
+  assert.equal(core.scrapedContactValueIsVenues('instagram', { instagram: VENUE_HANDLE, _venueSitePageHost: '3dollarbillbk.com' }), 'curated bar "3 Dollar Bill"\'s own instagram',
+    'the site the record was scraped off names the bar');
+  assert.equal(core.scrapedContactValueIsVenues('instagram', { instagram: 'https://www.instagram.com/some_guest_dj', bar: '3 Dollar Bill', city: 'nyc' }), '');
+  assert.equal(core.scrapedContactValueIsVenues('title', { title: '3 Dollar Bill', _curatedVenueFields: { title: 'x' } }), '', 'contact fields only');
+  assert.equal(core.scrapedContactValueIsVenues('instagram', { _curatedVenueFields: { instagram: 'x' } }), '', 'an empty value is nobody\'s');
+});
+
 test('calendar merge: a genuinely different same-site deep link still replaces a stale one', async () => {
   const core = createCore();
   // The venue rescheduled Bear Tea and its page moved to the new slug.

@@ -4483,3 +4483,52 @@ test('a placeholder venue ("Check instagram…") is replaced by the title\'s own
   assert.equal(uncorroborated.bar, 'Location TBA', 'a title tail nothing else on the record names is not a venue');
   assert.equal(uncorroborated.location, null, 'the TBA path still clears fake location data');
 });
+
+// ---------------------------------------------------------------------------
+// Curated-venue provenance (run 20260924-055217, Goldiloxx: Bear Tea): every
+// field the normalizers copy off a curated bar record is stamped in
+// _curatedVenueFields (field → curated bar name) so the calendar merge can
+// tell a venue-filled instagram from a page-stated one. Underscore field:
+// never serialized into notes. A value the event already carries is never
+// replaced and never stamped.
+// ---------------------------------------------------------------------------
+const THREE_DOLLAR_BILL_CURATED = {
+  name: '3 Dollar Bill',
+  city: 'nyc',
+  address: '260 Meserole St, Brooklyn, NY 11206',
+  coordinates: '40.7084144, -73.9380583',
+  website: 'https://www.3dollarbillbk.com',
+  instagram: 'https://www.instagram.com/3dollarbillbk',
+  facebook: 'https://www.facebook.com/3dollarbillbk',
+  googleMaps: 'https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc'
+};
+
+test('curated-venue provenance: the BarDataNormalizer rung stamps every field it fills from the curated bar, and only those', () => {
+  const core = createCuratedPinCore([THREE_DOLLAR_BILL_CURATED]);
+  const normalizer = new BarDataNormalizer(core);
+  const filled = { title: 'Bear Tea', city: 'nyc', bar: '3 Dollar Bill' };
+  captureConsoleLog(() => normalizer.normalize(filled));
+  assert.equal(filled.instagram, THREE_DOLLAR_BILL_CURATED.instagram, 'a blank instagram takes the venue handle');
+  assert.equal(filled.gmaps, THREE_DOLLAR_BILL_CURATED.googleMaps);
+  assert.deepEqual(filled._curatedVenueFields, {
+    address: '3 Dollar Bill', location: '3 Dollar Bill', gmaps: '3 Dollar Bill', instagram: '3 Dollar Bill'
+  }, 'each copied field is stamped with the curated bar it came from');
+  assert.ok(!/_curatedVenueFields/.test(core.formatEventNotes(filled)), 'provenance never reaches the notes');
+
+  const promoter = { title: 'Bear Tea', city: 'nyc', bar: '3 Dollar Bill', instagram: 'https://www.instagram.com/goldiloxx__' };
+  captureConsoleLog(() => normalizer.normalize(promoter));
+  assert.equal(promoter.instagram, 'https://www.instagram.com/goldiloxx__', 'the event\'s own handle is never replaced');
+  assert.ok(!Object.prototype.hasOwnProperty.call(promoter._curatedVenueFields || {}, 'instagram'),
+    'a value the event already carried is not stamped as the venue\'s');
+});
+
+test('curated-venue provenance: the site-identity venue fill stamps the same way', () => {
+  const normalizer = new LocationNormalizer(createCuratedPinCore([THREE_DOLLAR_BILL_CURATED]));
+  const event = { title: 'Bear Tea', city: 'unknown', website: 'https://www.3dollarbillbk.com' };
+  captureConsoleLog(() => normalizer.backfillCityFromIdentitySignals(event));
+  assert.equal(event.bar, '3 Dollar Bill');
+  assert.equal(event.instagram, THREE_DOLLAR_BILL_CURATED.instagram);
+  assert.deepEqual(event._curatedVenueFields, {
+    address: '3 Dollar Bill', location: '3 Dollar Bill', gmaps: '3 Dollar Bill', instagram: '3 Dollar Bill'
+  });
+});

@@ -19,6 +19,24 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+// Provenance for a field COPIED from a curated bar record (data/bars): the
+// value describes the VENUE, not this event. `_curatedVenueFields` maps the
+// filled field name to the curated bar's name; the calendar merge reads it
+// (SharedCore.scrapedContactValueIsVenues) so a venue's handle/link fills a
+// blank calendar field and never replaces what the event already says about
+// itself. Underscore field: never serialized into notes, never merged as a
+// field of its own. Pure and additive — it records, it never chooses.
+function markCuratedVenueField(event, fieldName, curatedBar) {
+    if (!event || typeof event !== 'object' || !fieldName) return;
+    if (!event._curatedVenueFields || typeof event._curatedVenueFields !== 'object') {
+        event._curatedVenueFields = {};
+    }
+    const barName = curatedBar && typeof curatedBar.name === 'string' && curatedBar.name.trim()
+        ? curatedBar.name.trim()
+        : 'curated bar';
+    event._curatedVenueFields[fieldName] = barName;
+}
+
 class NormalizerPipeline {
     constructor(core) {
         this.core = core;
@@ -495,6 +513,7 @@ class BarDataNormalizer extends BaseNormalizer {
             if (matchedBar.address && !event.address) {
                 event.address = matchedBar.address;
                 event.addressSource = 'curated';
+                markCuratedVenueField(event, 'address', matchedBar);
                 modified = true;
             }
 
@@ -513,6 +532,7 @@ class BarDataNormalizer extends BaseNormalizer {
             if (matchedBar.coordinates && !event.location) {
                 event.location = matchedBar.coordinates;
                 event.pinSource = 'curated';
+                markCuratedVenueField(event, 'location', matchedBar);
                 modified = true;
             } else if (!event.location) {
                 // Curated bar with an address but no coordinates: hand the
@@ -524,12 +544,18 @@ class BarDataNormalizer extends BaseNormalizer {
             // Prefer the bar's Google Maps link if missing in event
             if (matchedBar.googleMaps && !event.gmaps) {
                 event.gmaps = matchedBar.googleMaps;
+                markCuratedVenueField(event, 'gmaps', matchedBar);
                 modified = true;
             }
 
-            // Prefer the bar's Instagram link if missing in event
+            // Prefer the bar's Instagram link if missing in event. The
+            // venue's handle describes the VENUE — it fills the blank and
+            // is stamped as such (markCuratedVenueField) so the calendar
+            // merge never lets it replace the handle the event already
+            // carries for itself (a promoter's, the flyer's).
             if (matchedBar.instagram && !event.instagram) {
                 event.instagram = matchedBar.instagram;
+                markCuratedVenueField(event, 'instagram', matchedBar);
                 modified = true;
             }
 
@@ -1355,6 +1381,7 @@ class LocationNormalizer extends BaseNormalizer {
         if (!existingAddress && curatedAddress) {
             event.address = curatedAddress;
             event.addressSource = 'curated';
+            markCuratedVenueField(event, 'address', curated);
             filled.push('address');
         }
         const curatedPin = typeof curated.coordinates === 'string' ? curated.coordinates.trim() : '';
@@ -1362,6 +1389,7 @@ class LocationNormalizer extends BaseNormalizer {
         if (!hasPin && this.isCoordinatePairString(curatedPin)) {
             event.location = curatedPin;
             event.pinSource = 'curated';
+            markCuratedVenueField(event, 'location', curated);
             filled.push('location');
         } else if (!hasPin) {
             // Same handoff the BarDataNormalizer rung makes: this curated
@@ -1372,11 +1400,13 @@ class LocationNormalizer extends BaseNormalizer {
         const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
         if (!event.gmaps && curatedMaps) {
             event.gmaps = curatedMaps;
+            markCuratedVenueField(event, 'gmaps', curated);
             filled.push('gmaps');
         }
         const curatedInstagram = typeof curated.instagram === 'string' ? curated.instagram.trim() : '';
         if (!event.instagram && curatedInstagram) {
             event.instagram = curatedInstagram;
+            markCuratedVenueField(event, 'instagram', curated);
             filled.push('instagram');
         }
         console.log(`🗺️ LocationNormalizer: Filled ${filled.join(', ')} for "${title}" from curated bar "${curated.name}" — the same site-identity match that gave the city (${hostKey})`);

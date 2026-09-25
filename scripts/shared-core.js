@@ -245,6 +245,10 @@ const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']
 // Fields that hold a link to a PAGE (not an asset): two spellings of one page
 // are one value — see isSameLinkTarget.
 const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']);
+// The contact fields a curated bar record carries about ITSELF (data/bars:
+// instagram, facebook, website, googleMaps). On an event they describe the
+// venue, never the party — see scrapedContactValueIsVenues.
+const VENUE_CONTACT_MERGE_FIELDS = new Set(['instagram', 'facebook', 'website', 'url', 'gmaps']);
 // Fields the CONFIGURED listing owns: what the event is CALLED, what it LOOKS
 // LIKE, and when it ENDS. A crawl/enrich page (a ticket page, a discovered
 // detail page) may fill these when the listing left them blank, but it never
@@ -3991,6 +3995,93 @@ class SharedCore {
         return { city: cities[0], bars: claimants.map(claimant => claimant.bar) };
     }
 
+    // Identity key for a social handle: instagram.com/<handle>,
+    // facebook.com/<handle>, "@handle" or a bare handle all fold to the
+    // lowercase handle; any other URL keys by TARGET (getUrlDedupeKey — the
+    // same key isSameLinkTarget compares: scheme/www/slash/tracking-param
+    // spelling dropped, a meaningful query kept, so two place_id maps links
+    // stay two links).
+    socialHandleKey(value) {
+        const text = String(value === null || value === undefined ? '' : value).trim();
+        if (!text) return '';
+        const social = text.match(/^(?:https?:\/\/)?(?:www\.)?(?:instagram|facebook|fb)\.com\/([^/?#]+)/i);
+        if (social) return social[1].toLowerCase().replace(/^@/, '');
+        if (/^https?:\/\//i.test(text)) {
+            return this.getUrlDedupeKey(text).replace(/^https?:\/\//i, '').replace(/^www\./, '').replace(/\/+$/, '');
+        }
+        return text.replace(/^@/, '').replace(/\/+$/, '').toLowerCase();
+    }
+
+    // WHOSE contact is this? '' when the scraped value is the EVENT's own
+    // (a page-stated link, a promoter registry's handle, an aggregator's
+    // copy — every one of them arbitrates exactly as before); otherwise the
+    // reason the value describes the VENUE, which makes it FILL-ONLY at
+    // merge (see the curated-venue rung in resolveConflictDeterministically):
+    //   1. provenance — the normalizers copied it off the curated bar record
+    //      (_curatedVenueFields, stamped by BarDataNormalizer's rung and
+    //      LocationNormalizer.fillVenueFromCuratedSiteIdentity);
+    //   2. provenance — a VENUE parser's static metadata stamped it
+    //      (_staticFields), the parser identifying itself as the venue by a
+    //      static website the curated corpus attributes to a bar. A promoter
+    //      parser's static handle (its website is nobody's bar) is the
+    //      organizer's and keeps its registry authority;
+    //   3. identity — the value IS a curated bar's own instagram / facebook /
+    //      website / googleMaps: the bar either record names in the merge
+    //      city, or a bar claiming the site the record was scraped off
+    //      (_venueSitePageHost). Provenance can be lost on a replayed record;
+    //      the curated corpus itself still knows its own handles.
+    // Doctrine: a curated bar's contact fields describe the venue — they fill
+    // an event's blank, they never replace what the event says about itself
+    // ("structured data enriches, never bypasses"; "curated data beats
+    // derived, fail closed"). Nothing here is venue-, host- or field-value-
+    // specific: data/bars and the record's own stamps are the only inputs.
+    scrapedContactValueIsVenues(fieldName, scraped, context = null) {
+        if (!VENUE_CONTACT_MERGE_FIELDS.has(fieldName) || !scraped || typeof scraped !== 'object') return '';
+        const value = scraped[fieldName];
+        if (this.isEmptyArbitrationValue(value)) return '';
+        const curatedFields = scraped._curatedVenueFields && typeof scraped._curatedVenueFields === 'object'
+            ? scraped._curatedVenueFields
+            : {};
+        if (Object.prototype.hasOwnProperty.call(curatedFields, fieldName)) {
+            return `filled from curated bar "${curatedFields[fieldName]}"`;
+        }
+        const staticFields = scraped._staticFields && typeof scraped._staticFields === 'object'
+            ? scraped._staticFields
+            : {};
+        const staticKey = fieldName === 'url' ? 'website' : fieldName;
+        if (Object.prototype.hasOwnProperty.call(staticFields, staticKey)
+            && typeof staticFields.website === 'string'
+            && this.isCuratedVenueSiteUrl(staticFields.website)) {
+            const parserName = scraped._parserConfig && typeof scraped._parserConfig.name === 'string'
+                ? scraped._parserConfig.name
+                : 'venue parser';
+            return `the venue parser's own static metadata ("${parserName}", whose site ${this.getWebsiteHostKey(staticFields.website)} is a curated bar's)`;
+        }
+        const curatedKey = { instagram: 'instagram', facebook: 'facebook', website: 'website', url: 'website', gmaps: 'googleMaps' }[fieldName];
+        const valueKey = this.socialHandleKey(value);
+        if (!curatedKey || !valueKey) return '';
+        const candidates = [];
+        const cityKey = context && context.cityKey ? context.cityKey : (scraped.city || '');
+        const cityBars = this.getCuratedCityBars(cityKey);
+        const barNames = context && Array.isArray(context.barNames) ? context.barNames : [scraped.bar];
+        if (cityBars) {
+            for (const barName of barNames) {
+                const curated = this.findCuratedBarByName(cityBars, barName);
+                if (curated && !candidates.includes(curated)) candidates.push(curated);
+            }
+        }
+        for (const claimant of this.getCuratedBarsClaimingWebsiteHost(scraped._venueSitePageHost || '')) {
+            if (claimant && claimant.bar && !candidates.includes(claimant.bar)) candidates.push(claimant.bar);
+        }
+        for (const curated of candidates) {
+            const curatedValue = curated && typeof curated[curatedKey] === 'string' ? curated[curatedKey] : '';
+            if (curatedValue && this.socialHandleKey(curatedValue) === valueKey) {
+                return `curated bar "${curated.name}"'s own ${curatedKey}`;
+            }
+        }
+        return '';
+    }
+
     // The bar-name identity key shared by curated matching (above) and the
     // new-venue-candidate dedup key: lowercase, drop a leading "the ", strip
     // non-alphanumerics — so "The Eagle" / "EAGLE!" collapse to one venue.
@@ -5067,6 +5158,41 @@ class SharedCore {
 
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
+        // THE VENUE'S CONTACT NEVER REPLACES THE EVENT'S. Calendar merges
+        // only: a scraped instagram / facebook / website / gmaps that
+        // describes the VENUE (copied off the curated bar record, stamped by
+        // a venue parser's static metadata, or simply a curated bar's own
+        // handle — scrapedContactValueIsVenues) fills a blank and never
+        // wins against a stored non-empty value, whatever the strategy. Run
+        // 20260924-055217 (Goldiloxx: Bear Tea at 3 Dollar Bill): the stored
+        // instagram was the PROMOTER's handle (goldiloxx__, from the event's
+        // own page), the scrape carried the venue's (3dollarbillbk, the
+        // venue parser's static metadata) and clobbered it — the authority
+        // rung at the bottom would even have read that static handle as a
+        // "promoter registry". Consulted at two points below: after the
+        // same-site depth rungs (which say more precisely why a venue root
+        // or listing loses to the stored event page, and keep their stable
+        // reason lines) and before every cross-host / authority rung; and
+        // directly for pairs that are not both URLs (bare handles). Same-
+        // link spellings are no change (the rung below); a stored asset
+        // file (a .jpg written as website) is not a value worth keeping and
+        // stays with the asset rung; an empty stored value never reaches
+        // the ladder.
+        const venueContactDecision = () => {
+            if (!VENUE_CONTACT_MERGE_FIELDS.has(fieldName) || !context || !context.sideLabels
+                || context.sideLabels.a !== 'calendar' || context.sideLabels.b !== 'scraped'
+                || !context.records || !context.records.b) return null;
+            if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return null;
+            if (this.isSameLinkTarget(valueA, valueB) || this.socialHandleKey(valueA) === this.socialHandleKey(valueB)) return null;
+            if (urlA && urlPartsEndInAssetExtension(urlA)) return null;
+            const venueReason = this.scrapedContactValueIsVenues(fieldName, context.records.b, context);
+            if (!venueReason) return null;
+            return { winner: 'a', reason: `the venue's own ${fieldName} (${venueReason}) fills a blank, never replaces what the event says about itself` };
+        };
+        if (!(urlA && urlB)) {
+            const venueDecision = venueContactDecision();
+            if (venueDecision) return venueDecision;
+        }
         // SAME PAGE, TWO SPELLINGS. Before any ranking rung: a link field
         // whose two candidates differ only in scheme/www/trailing slash/case
         // is not a disagreement at all. Keeping the existing spelling is the
@@ -5146,6 +5272,11 @@ class SharedCore {
                     return { winner: 'a', reason: 'same-site deeper URL beats its parent path (listing/front door)' };
                 }
             }
+            // The venue's contact is fill-only (see venueContactDecision
+            // above) — decided here, once the same-site depth rungs have
+            // had their say and before any cross-host or authority rung.
+            const venueDecision = venueContactDecision();
+            if (venueDecision) return venueDecision;
             // Cross-host website/url rungs. Rung 1: a bare homepage never
             // beats an event-specific page even ACROSS hosts — the deeper URL
             // is the one that describes THIS event. Rung 2: both pathed —
@@ -14101,6 +14232,32 @@ class SharedCore {
             if (fieldName === 'website'
                 && typeof calendarValue === 'string' && typeof scraperValue === 'string'
                 && this.isSameSiteParentPathOf(scraperValue, calendarValue)) {
+                queueArbitrationConflict(fieldName, calendarValue, scraperValue);
+                continue;
+            }
+
+            // THE VENUE'S CONTACT IS FILL-ONLY, under EVERY strategy. The
+            // same bypass shape as the two guards above, for the rest of a
+            // curated bar's contact fields: the normalizers fill a blank
+            // instagram/gmaps from the curated bar record, and a venue
+            // parser stamps the venue's handle as static metadata merged
+            // "clobber" — so the stored PROMOTER handle (goldiloxx__ on
+            // Goldiloxx: Bear Tea, from the event's own page) was replaced
+            // by the venue's (3dollarbillbk) without the ladder ever being
+            // asked (run 20260924-055217, "clobbered 3 fields (instagram,
+            // website, key)"). A blank calendar field still takes the
+            // venue's value below (that is the fill); a stored value is
+            // routed through the ladder, whose curated-venue rung keeps it
+            // and logs the stable 🔒 line — never decided inline, so every
+            // strategy reaches the same answer by the same rung. Provenance-
+            // based (scrapedContactValueIsVenues): a page-stated or
+            // registry handle is the event's own and merges exactly as
+            // before. gmaps never enters this loop (derived, STEP 4).
+            if (VENUE_CONTACT_MERGE_FIELDS.has(fieldName)
+                && !this.isEmptyArbitrationValue(calendarValue)
+                && !this.isEmptyArbitrationValue(scraperValue)
+                && !this.mergeValuesEqualForTracking(scraperValue, calendarValue)
+                && this.scrapedContactValueIsVenues(fieldName, scraperObject, mergeContext)) {
                 queueArbitrationConflict(fieldName, calendarValue, scraperValue);
                 continue;
             }
