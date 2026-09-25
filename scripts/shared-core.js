@@ -22024,7 +22024,17 @@ class SharedCore {
         // One street word leading another ("Motzstr" / "Motzstrasse") is
         // one street abbreviated.
         const sameWord = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
-        return !namesA.some(tokenA => namesB.some(tokenB => sameWord(tokenA, tokenB)));
+        if (namesA.some(tokenA => namesB.some(tokenB => sameWord(tokenA, tokenB)))) return false;
+        // The words run together ("619 EPINE" for "619 E Pine St" — a flyer
+        // OCR read, massive.club replay 2026-09-24): the lines compared with
+        // their spaces removed, one leading the other, are one street.
+        // (The raw line, not the expanded tokens: "E" reads "east" once
+        // tokenized, and "EPINE" never will.)
+        const run = (address) => this.foldDiacritics(String(address || '').split(',')[0]).toLowerCase().replace(/[^a-z]+/g, '');
+        const runA = run(addressA);
+        const runB = run(addressB);
+        if (runA.length >= 4 && runB.length >= 4 && (runA.startsWith(runB) || runB.startsWith(runA))) return false;
+        return true;
     }
 
     // TRUE when both records state a place/ticket fact and the facts differ:
@@ -22057,10 +22067,21 @@ class SharedCore {
         const namedInPlaceText = (bar, shape) => bar.length >= 4
             && (this.normalizeIdentityText(shape.address).includes(bar)
                 || this.normalizeIdentityText(shape.locationText).includes(bar));
+        // …and a bar that IS the other record's title — or its first words —
+        // is the party name read as a venue ("Looking" as the bar of
+        // "Looking for Party Monsters", massive.club's Oct 16 card read
+        // twice, run 20260924 replay): the record misnames its own venue,
+        // it does not name a second one.
+        const namedAsTitle = (bar, shape) => bar.length >= 4
+            && (Array.isArray(shape.names) ? shape.names : []).some((name) => {
+                const folded = this.normalizeIdentityText(name);
+                return folded === bar || folded.startsWith(bar);
+            });
         const sameBarSpelledTwice = barA === barB
             || (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))
             || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar)
-            || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA);
+            || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA)
+            || namedAsTitle(barA, shapeB) || namedAsTitle(barB, shapeA);
         const barsDiffer = Boolean(barA && barB && !sameBarSpelledTwice);
         // The street LINE only ("722 East Burnside Street"): the locality
         // and region spellings after it vary between records of one place.

@@ -25052,3 +25052,18 @@ test('contradiction gate: a shared slug names no title once the records contradi
   const vetoed = core.resolveConflictDeterministically('title', a.title, contradicting.title, { records: { a, b: contradicting }, sideLabels: { a: 'calendar', b: 'scraped' } });
   assert.equal(vetoed, null, `a carried-off link names nothing: ${vetoed && vetoed.reason}`);
 });
+
+test('contradiction gate: a bar that is the other record\'s title is the party name read as a venue, not a second bar', async () => {
+  const core = createGateCore();
+  // massive.club's Oct 16 card read twice (replay 2026-09-24): the JSON-LD
+  // card says Massive; the flat window's extraction put the party name in
+  // the venue slot. One event, one door.
+  const card = { title: 'Looking', startDate: new Date('2026-10-17T05:00:00.000Z'), bar: 'Massive', address: '619 E Pine St', city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/205790', source: 'ai-web' };
+  const misread = { title: 'Looking for Party Monsters', startDate: new Date('2026-10-17T05:00:00.000Z'), bar: 'Looking', address: '619 EPINE', city: 'seattle', timezone: 'America/Los_Angeles', ticketUrl: 'https://tixr.com/e/205790', source: 'ai-web' };
+  assert.equal(core.getIdentityContradiction(card, misread), null);
+  const out = await core.deduplicateEvents([card, misread], null);
+  assert.equal(out.length, 1, `the shared ticket link still folds them: ${out.map(e => e.title).join(' | ')}`);
+  // A genuinely different bar under a similar title still contradicts.
+  const elsewhere = { ...misread, bar: 'Neighbours', address: '1509 Broadway' };
+  assert.ok(core.getIdentityContradiction(card, elsewhere));
+});
