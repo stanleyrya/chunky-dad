@@ -305,10 +305,28 @@ function buildEntry(event, range, rawBlock, warnings) {
     }
     const missing = [];
     if (!descKeys.key) missing.push('key (derived from summary)');
-    if (!descKeys.typicalTiming && !dated) missing.push('typicalTiming (undated entry will render blank)');
+    // typicalTiming is what the main page shows once nextDates have passed
+    // (getAvailableBearEvents degrades a stale entry to the undated display),
+    // so a dated entry without it renders a blank date line the week after
+    // it ends — not only an undated one.
+    if (!descKeys.typicalTiming) {
+        missing.push(dated
+            ? 'typicalTiming (renders blank once these dates pass)'
+            : 'typicalTiming (undated entry will render blank)');
+    }
     if (!entry.website) missing.push('website');
     if (missing.length > 0) {
         warnings.push(`"${name}": missing ${missing.join(', ')}`);
+    }
+    // A festival is an all-day date range with the curated description keys.
+    // A TIMED VEVENT carrying none of them is a party record that landed in
+    // the festivals calendar (2026-09-25: "Bear Week Provincetown" and "Bear
+    // Pride Chicago" both read "bar: Venue TBA / timezone / uid / favicon" —
+    // the scraper's notes shape — dated 2026-08-28 21:00, replacing the
+    // seed's all-day ranges). It still converts (curated data beats derived,
+    // the calendar is the database) but is called out by name.
+    if (rawBlock && !rawBlock.allDay && !descKeys.key && !descKeys.category) {
+        warnings.push(`"${name}": timed VEVENT with no festival keys (key/category/typicalTiming) — looks like a party record, not a festival umbrella; nextDates ${entry.nextDates ? `${entry.nextDates.start}..${entry.nextDates.end}` : 'undated'} come from its clock times`);
     }
     return entry;
 }

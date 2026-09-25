@@ -72,7 +72,8 @@ function parsePin(value) {
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-const SAME_PLACE_KM = 0.025;
+// The runtime's own "same door" radius (shared-core findCuratedBarByPlace).
+const { CURATED_BAR_SAME_PLACE_KM: SAME_PLACE_KM } = require('../scripts/shared-core');
 
 function pinsAgree(valueA, valueB) {
     const a = parsePin(valueA);

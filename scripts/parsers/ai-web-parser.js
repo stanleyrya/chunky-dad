@@ -76,6 +76,16 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
+// Page-identity scans (JSON-LD, meta tags, brand names, footer text) read at
+// most this many characters of the raw HTML — a bound on scanning an
+// enormous document, not a content window.
+const HTML_SCAN_MAX_CHARS = 500000;
+// The smallest HTML budget an extraction prompt is ever built with, whatever
+// aiConfig.maxHtmlChars says.
+const PROMPT_HTML_MIN_CHARS = 500;
+// A month/day with no year that fell more than this long ago names NEXT
+// year's date (a listing never advertises last month's party).
+const MONTH_DAY_YEAR_ROLLOVER_GRACE_MS = 31 * 24 * 60 * 60 * 1000;
 // Class/data-attribute word parts that mark a repeated element as a candidate
 // event card. Shared by hasContainerStructureHint and getMultiEventStructureSignature
 // so the gate and the signature it guards always agree.
@@ -211,6 +221,9 @@ const DAY_PHRASE_TITLE_GAP_MAX = 25;
 // expectations document.
 const JSON_API_FEED_HORIZON_DAYS = 90;
 const JSON_API_FEED_MAX_PAGES = 6;
+// Feed RRULE expansion starts this far behind "now" so a night already under
+// way is still an occurrence.
+const JSON_API_FEED_WINDOW_PAST_MS = 24 * 60 * 60 * 1000;
 // A Wix Events list widget ships only its FIRST page inside the page's warmup
 // blob; the rest is fetched by the widget itself. Same page budget as the JSON
 // feeds above, and the same 90-day horizon.
@@ -3101,7 +3114,7 @@ class AiWebParser {
             const now = new Date();
             year = now.getFullYear();
             const candidate = new Date(Date.UTC(year, month - 1, day));
-            if (candidate.getTime() < now.getTime() - 31 * 24 * 60 * 60 * 1000) year += 1;
+            if (candidate.getTime() < now.getTime() - MONTH_DAY_YEAR_ROLLOVER_GRACE_MS) year += 1;
         }
         const pad = (value) => String(value).padStart(2, '0');
         return `${year}-${pad(month)}-${pad(day)}`;
@@ -7761,7 +7774,7 @@ class AiWebParser {
         if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
         const Core = this.core && this.core.constructor;
         if (!Core || typeof Core.expandRruleOccurrencesInWindow !== 'function') return [event];
-        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
         // The rule names LOCAL weekdays ("3rd Saturday" of Toronto, not of
         // UTC) — anchor the expansion on the entry's own wall clock.
@@ -12919,7 +12932,7 @@ class AiWebParser {
             : null;
         if (!expander) return [event];
         const now = Date.now();
-        const windowStart = new Date(now - 24 * 60 * 60 * 1000);
+        const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
         let occurrences = null;
         try {
@@ -14347,7 +14360,7 @@ class AiWebParser {
             const requestedNames = requested.map(entry => entry.eventKey);
 
             const aiConfig = this.getAiConfig(parserConfig);
-            const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+            const maxHtmlChars = Math.max(PROMPT_HTML_MIN_CHARS, Number(aiConfig.maxHtmlChars));
             const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
             // One targeted request: first content snippet only. dataFlags carry
             // jsonLd (true for this page) so the two-pass extractor skips its
@@ -17104,7 +17117,7 @@ class AiWebParser {
     }
 
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
+        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -18133,7 +18146,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return false;
         if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
-        const result = this.extractJsonLdParts(String(html).slice(0, 500000))
+        const result = this.extractJsonLdParts(String(html).slice(0, HTML_SCAN_MAX_CHARS))
             .some(part => this.containsEventType(part));
         if (Object.isExtensible(htmlData)) {
             htmlData.hasEventTypedJsonLd = result;
@@ -18445,7 +18458,7 @@ class AiWebParser {
 
     async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields, httpAdapter = null) {
         const promptFields = Array.isArray(fields) ? fields : [];
-        const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+        const maxHtmlChars = Math.max(PROMPT_HTML_MIN_CHARS, Number(aiConfig.maxHtmlChars));
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
         const validationState = { validatedFields: new Set() };
@@ -18654,7 +18667,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, 500000));
+        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, HTML_SCAN_MAX_CHARS));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -22324,7 +22337,7 @@ TEXT:
             if (!agrees(year)) return null;
         } else {
             let first = now.getUTCFullYear();
-            if (Date.UTC(first, card.month - 1, card.day) < now.getTime() - 31 * 24 * 60 * 60 * 1000) first += 1;
+            if (Date.UTC(first, card.month - 1, card.day) < now.getTime() - MONTH_DAY_YEAR_ROLLOVER_GRACE_MS) first += 1;
             year = [first, first + 1, first - 1].find(agrees);
             if (!Number.isFinite(year)) return null;
         }
@@ -24498,7 +24511,7 @@ TEXT:
     }
 
     extractPageBrandNames(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const names = new Set();
         const addName = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -24567,7 +24580,7 @@ TEXT:
     }
 
     extractPageSiteTaglines(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const taglines = new Set();
         const addTagline = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -24698,7 +24711,7 @@ TEXT:
     // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
     // entity-decoded and whitespace-collapsed. '' when absent.
     extractOgMetaContent(html, keyName) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const metaRegex = /<meta\b[^>]*>/gi;
         let match;
         while ((match = metaRegex.exec(source)) !== null) {
@@ -24719,7 +24732,7 @@ TEXT:
     // above answers only the first, so the rest were invisible. Same decoding, so
     // list[0] always equals extractOgMetaContent's answer.
     extractOgMetaContentAll(html, keyName) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const metaRegex = /<meta\b[^>]*>/gi;
         const values = [];
         let match;
@@ -24743,7 +24756,7 @@ TEXT:
     // skip-empty rule, so filtering the result to one key always equals
     // extractOgMetaContentAll's answer for that key.
     extractOgMetaEntriesAll(html, keyNames) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const wanted = new Set(keyNames);
         const metaRegex = /<meta\b[^>]*>/gi;
         const entries = [];
@@ -26484,13 +26497,36 @@ TEXT:
         return null;
     }
 
+    // Does the parser config's `siteRole` override apply to THIS page? A
+    // declaration is about the site the parser was pointed at, so it applies
+    // to pages on the hosts its own `urls` name (www-folded) — and to every
+    // page when the config names no urls at all (nothing to scope by). It
+    // never travels to a third-party host the crawl wandered onto: run
+    // 20260925-053031 stamped joininghearts.org (a charity), spankguys.uk (a
+    // promoter), georgiaaquarium.org, facebook.com, checkout.square.site and
+    // two Squarespace shells 'venue' through the Atlanta Eagle / Eagle
+    // Manchester / Lone Star knobs, and the joininghearts.org page then
+    // extracted bar "Joining Hearts" for a party the title itself placed at
+    // The Heretic. Same host rule parserConfigDeclaresVenueHost applies.
+    parserConfigRoleAppliesToPage(parserConfig, pageUrl) {
+        const urls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = urls.map(url => this.getVenueSiteHostKey(url)).filter(Boolean);
+        if (configuredHosts.length === 0) return true;
+        const pageHost = this.getVenueSiteHostKey(pageUrl);
+        return Boolean(pageHost) && configuredHosts.includes(pageHost);
+    }
+
     // Resolve who this SITE is, hard facts in precedence order:
-    //   1) parser config override `siteRole: "venue" | "organizer"`;
+    //   1) parser config override `siteRole: "venue" | "organizer"` — on the
+    //      parser's own hosts only (parserConfigRoleAppliesToPage);
     //   2) the page's own JSON-LD @type being venue-ish (NightClub/BarOrPub/
     //      EventVenue/MusicVenue) → venue;
     //   3) a derived page brand name that IS a curated bar for the parser's
     //      configured city (or a unique cross-city curated hit when no city
     //      is configured) → venue;
+    //   3b) the page's HOST is the `website` host of one or more curated bars
+    //      curated in ONE city → venue (the curated corpus's own pointer, the
+    //      venue twin of the promoter-registry rung below);
     //   4) segment-derived facts when segments are provided (multi-event
     //      pages): a JSON-LD Organization/PerformingGroup whose listings sit
     //      at MULTIPLE distinct street addresses → organizer; a single
@@ -26500,7 +26536,8 @@ TEXT:
     // The result is cached on htmlData so every downstream copy inherits it.
     resolvePageSiteRole(htmlData, parserConfig = {}, segments = null) {
         const configRole = this.normalizeSiteRoleValue(parserConfig && parserConfig.siteRole);
-        if (configRole) {
+        if (configRole && this.parserConfigRoleAppliesToPage(parserConfig,
+            htmlData && typeof htmlData === 'object' && typeof htmlData.url === 'string' ? htmlData.url : '')) {
             if (htmlData && typeof htmlData === 'object' && Object.isExtensible(htmlData)) {
                 htmlData.pageSiteRole = configRole;
                 htmlData.pageSiteRoleReason = 'parser config siteRole';
@@ -26527,6 +26564,37 @@ TEXT:
             if (curatedBar && typeof curatedBar.name === 'string' && curatedBar.name.trim()) {
                 htmlData.pageSiteRole = 'venue';
                 htmlData.pageSiteRoleReason = `curated bar "${curatedBar.name}"`;
+            }
+        }
+        // Curated-website rung: still undetermined, and the page's HOST is
+        // the `website` host of one or more curated bars all curated in ONE
+        // city (findCuratedCityByWebsiteHost fails closed on a cross-city
+        // claim set). The curated corpus itself says whose site this is —
+        // the same pointer the venue-site identity pass trusts — so a
+        // venue's event pages resolve without og:site_name or JSON-LD, and
+        // without a per-parser knob (cached corpus 2026-09-25: massive.club
+        // and precinctdtla.com stayed undetermined on every page; Rockbar's
+        // brand "RockbarNYC" and Camp Out's "Camp Out Poconos" never matched
+        // their curated names).
+        if (htmlData.pageSiteRole === '' && !htmlData.pageSiteRoleCuratedWebsiteChecked
+            && Object.isExtensible(htmlData)) {
+            htmlData.pageSiteRoleCuratedWebsiteChecked = true;
+            const websiteMatch = this.core && typeof this.core.findCuratedCityByWebsiteHost === 'function'
+                && typeof htmlData.url === 'string'
+                ? this.core.findCuratedCityByWebsiteHost(htmlData.url)
+                : null;
+            if (websiteMatch && websiteMatch.city && Array.isArray(websiteMatch.bars) && websiteMatch.bars.length > 0) {
+                htmlData.pageSiteRole = 'venue';
+                htmlData.pageSiteRoleReason = `curated website of "${websiteMatch.bars.map(bar => bar.name).join('", "')}" (${websiteMatch.city})`;
+                // One claimant → the venue's display name is its curated
+                // name, not the host label ("thedallaseagle") or a brand
+                // spelling ("RockbarNYC") the host-derived fallbacks would
+                // hand the KNOWN VENUE steering line. Sister venues on one
+                // site keep the page's own derivation (nothing to choose by).
+                if (websiteMatch.bars.length === 1 && typeof htmlData.pageVenueName !== 'string'
+                    && typeof websiteMatch.bars[0].name === 'string' && websiteMatch.bars[0].name.trim()) {
+                    htmlData.pageVenueName = websiteMatch.bars[0].name.trim();
+                }
             }
         }
         // Promoter-registry rung: still undetermined, and the page's HOST is
@@ -27908,7 +27976,7 @@ TEXT:
     }
 
     extractJsonLdSiteSignals(html) {
-        const source = String(html || '').slice(0, 500000);
+        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
         const signals = { venueType: '', venueName: '', organizationTypeFound: false };
         const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
         const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
@@ -27978,7 +28046,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
+        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');

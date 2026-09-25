@@ -4532,3 +4532,22 @@ test('curated-venue provenance: the site-identity venue fill stamps the same way
     address: '3 Dollar Bill', location: '3 Dollar Bill', gmaps: '3 Dollar Bill', instagram: '3 Dollar Bill'
   });
 });
+
+test('isFullAddress: bare place names are rejected by shape — the retired hand-kept city list was a strict subset', () => {
+  const normalizer = new LocationNormalizer();
+  // Every name the old list spelled out is letters and spaces (3–25 chars):
+  // the shape rule alone rejects them all, so no city is hand-kept in code.
+  const retiredList = ['new york', 'nyc', 'los angeles', 'san francisco', 'chicago', 'atlanta', 'miami', 'seattle',
+    'portland', 'denver', 'las vegas', 'vegas', 'boston', 'philadelphia', 'austin', 'dallas', 'houston', 'phoenix',
+    'toronto', 'london', 'berlin', 'palm springs', 'sitges'];
+  for (const name of retiredList) {
+    assert.ok(/^[a-z\s]{3,25}$/i.test(name), `${name} matches the shape rule`);
+    assert.equal(normalizer.isFullAddress(name), false, `${name} is not a full address`);
+    assert.equal(normalizer.isFullAddress(name.toUpperCase()), false);
+  }
+  // Names the list never knew are rejected the same way — and a real street
+  // address still passes.
+  assert.equal(normalizer.isFullAddress('Torremolinos'), false);
+  assert.equal(normalizer.isFullAddress('Mexico City'), false);
+  assert.equal(normalizer.isFullAddress('4356 Sunset Blvd, Los Angeles, CA 90029'), true);
+});
