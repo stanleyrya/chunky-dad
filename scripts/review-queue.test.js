@@ -118,6 +118,43 @@ test('buildDeck: new events and field-changing merges are cards; housekeeping, n
   assert.equal(deck.cards[0].proposal.source, 'Furball');
 });
 
+test('buildDeck: a big-drift merge is always a card and carries its facts for the owner (withheld from every automatic write until decided)', () => {
+  const drifted = mergeEvent({
+    title: 'TKVR | Nolid',
+    _analysis: { action: 'merge', reason: 'Key match found' },
+    _bigDriftWithheld: {
+      fields: [{ field: 'title', from: 'BEEFMINCE Brief Encounter', to: 'TKVR | Nolid', kind: 'rename' }],
+      reason: 'title renamed (no shared word)',
+      rename: true,
+      matchedBy: 'Key match found',
+      agree: ['same night (2030-10-03)', 'same bar (Royal Vauxhall Tavern)'],
+      sourcePageUrl: 'https://sickening.events/e/treasure-trail',
+      calendarUrl: 'https://beefmince.co.uk/'
+    }
+  });
+  const deck = deckOf(runPayload({ analyzedEvents: [drifted, mergeEvent()] }));
+  assert.deepEqual(deck.cards.map((card) => [card.kind, card.proposal.title]), [['merge', 'TKVR | Nolid'], ['merge', 'BEEFMINCE x RVT']]);
+  const card = deck.cards[0];
+  assert.deepEqual(card.proposal.changes.title, { from: 'BEEFMINCE Brief Encounter', to: 'TKVR | Nolid' }, 'the from → to row is the ordinary merge row');
+  assert.deepEqual(card.display.bigDrift, {
+    reason: 'title renamed (no shared word)',
+    rename: true,
+    fields: [{ field: 'title', from: 'BEEFMINCE Brief Encounter', to: 'TKVR | Nolid', kind: 'rename' }],
+    matchedBy: 'Key match found',
+    agree: ['same night (2030-10-03)', 'same bar (Royal Vauxhall Tavern)'],
+    sourcePageUrl: 'https://sickening.events/e/treasure-trail',
+    calendarUrl: 'https://beefmince.co.uk/'
+  });
+  assert.equal(deck.cards[1].display.bigDrift, null, 'an ordinary merge carries no drift block');
+  // The same card once the owner approved it: decided, and the phone writes it on the review path.
+  const store = rq.emptyDecisionStore();
+  store.decisions.push({ key: card.key, kind: 'merge', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', reason: null, snapshot: card.proposal });
+  const after = deckOf(runPayload({ analyzedEvents: [drifted] }), store);
+  assert.equal(after.cards.length, 0);
+  assert.equal(after.decided.length, 1);
+  assert.equal(after.decided[0].pendingExecute, true, 'waiting for "Execute on phone"');
+});
+
 test('buildDeck: a stored decision moves the card to decided; a merge proposing a different value comes back', () => {
   const first = deckOf(runPayload({ analyzedEvents: [newEvent(), mergeEvent()] }));
   let store = rq.emptyDecisionStore();

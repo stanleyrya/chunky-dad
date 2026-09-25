@@ -79,6 +79,16 @@ const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-s
 // an exact geocode of the same street address lands on the same placemark.
 const CURATED_BAR_SAME_PLACE_KM = 0.025;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
+// Ticket links are followed/kept only for events that started less than
+// this long ago — a page still selling last night's tickets is not a lead.
+const TICKET_LINK_PAST_EVENT_GRACE_MS = 24 * 60 * 60 * 1000;
+// A JavaScript shell or a confirmation gate is a SMALL document; anything
+// longer than this is content and is never read as either.
+const SHELL_PAGE_MAX_CHARS = 60000;
+// Decode cap for the one-line AI answers (field trim, short name): a part
+// range or a short name is ~10 tokens, and a model that ignores the format
+// must stay cheap.
+const SHORT_ANSWER_NUM_PREDICT = 200;
 
 // Provenance stamps that positively corroborate a bar name / street address
 // for the BUILT gmaps link (owner ask 2026-08-14: a bare coordinate query is
@@ -245,6 +255,10 @@ const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']
 // Fields that hold a link to a PAGE (not an asset): two spellings of one page
 // are one value — see isSameLinkTarget.
 const LINK_IDENTITY_MERGE_FIELDS = new Set(['website', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps']);
+// The contact fields a curated bar record carries about ITSELF (data/bars:
+// instagram, facebook, website, googleMaps). On an event they describe the
+// venue, never the party — see scrapedContactValueIsVenues.
+const VENUE_CONTACT_MERGE_FIELDS = new Set(['instagram', 'facebook', 'website', 'url', 'gmaps']);
 // Fields the CONFIGURED listing owns: what the event is CALLED, what it LOOKS
 // LIKE, and when it ENDS. A crawl/enrich page (a ticket page, a discovered
 // detail page) may fill these when the listing left them blank, but it never
@@ -575,30 +589,18 @@ class SharedCore {
         ];
 
         // URL-to-source labels for dedup/key reconstruction ONLY — never parser
-        // dispatch. Existing calendar events created by the deleted site-specific
-        // parsers carry keys whose ${source} segment was derived from these URL
-        // patterns; keeping the labels lets computed keys for those events still
-        // match (see buildComputedKeyForExistingEvent / findEventByKey).
+        // dispatch. A ${source} key segment is filled only by a configured
+        // keyTemplate (none is configured; the default key is
+        // title|date|venue). The per-site labels the deleted site-specific
+        // parsers once wrote (bearracuda / chunk / linktree / redeyetickets)
+        // were retired 2026-09-25: none of the 330 pipe-delimited keys in
+        // data/calendars/*.ics carries a source segment, so no calendar event
+        // could still match through them. Only the adapter's own scheme
+        // remains — a shape, not a site.
         this.urlSourceMappings = [
             {
                 pattern: /^scriptable-input:\/\//i,
                 source: 'scriptable-input'
-            },
-            {
-                pattern: /bearracuda\.com/i,
-                source: 'bearracuda'
-            },
-            {
-                pattern: /chunk-party\.com/i,
-                source: 'chunk'
-            },
-            {
-                pattern: /linktr\.ee/i,
-                source: 'linktree'
-            },
-            {
-                pattern: /redeyetickets\.com/i,
-                source: 'redeyetickets'
             }
         ];
 
@@ -1636,9 +1638,11 @@ class SharedCore {
 
     isOwnerReviewCandidate(event) {
         if (!event || typeof event !== 'object') return false;
-        if (SharedCore.filterEventsForExecution([event]).length !== 1) return false;
+        if (SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length !== 1) return false;
         if (event._action === 'new') return true;
-        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event));
+        // A big-drift merge is ALWAYS a card — it is withheld from every
+        // automatic write precisely so the owner sees its data.
+        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event)) || Boolean(event._bigDriftWithheld);
         return false;
     }
 
@@ -1683,6 +1687,166 @@ class SharedCore {
     // (normalizers.js stays free of a SharedCore import).
     isPlaceholderVenueText(value) {
         return SharedCore.isPlaceholderVenueText(value);
+    }
+
+    // ---------------------------------------------------------------------
+    // BIG DRIFT — a merge that rewrites the saved event's identity is not
+    // applied by any automatic path; it becomes a deck card that shows the
+    // data (owner 2026-09-25: "present data for me to make a decision when
+    // it's really unclear"). Judged on the FINAL analyzed record against
+    // the calendar record it would overwrite, after every notes/title pass
+    // (the same place the merge no-op gate judges). Five identity-bearing
+    // dimensions: title, start day, venue, event link, pin.
+    //
+    //   drift  = the title is RENAMED (the two names share no distinctive
+    //            word: "Treasure Trail" → "TKVR | Nolid", run
+    //            20260924-055217), OR the title changes together with any
+    //            other dimension, OR three or more dimensions change.
+    //
+    // NOT drift, by construction: another spelling of the same title
+    // (case, emoji, whitespace, a cover tail, a venue tail — the "same
+    // title, another spelling" fold), a placeholder venue giving way to a
+    // named one ("Check instagram for this week's location." → Eagle NYC),
+    // a venue respelled at the same street door (Precinct DTLA → Precinct
+    // LA at 357 S Broadway), a same-site deeper link replacing its listing
+    // or root, a pin that moves within 150 m, and a blank filled in.
+    // Aggregator-sourced merges never change stored fields, so they never
+    // reach this. Returns null (no drift) or the facts block the deck card
+    // shows: { fields, reason, matchedBy, agree, sourcePageUrl, calendarUrl }.
+    // ---------------------------------------------------------------------
+    static getBigDriftPinRadiusKm() {
+        return 0.15;
+    }
+
+    // The "same title, another spelling" fold (resolveCalendarMergeByAuthority):
+    // venue tail and cover tail dropped, diacritics and entities folded,
+    // everything but letters and digits removed.
+    foldTitleForDrift(title, bar) {
+        const bare = this.stripCoverPartsFromTitle(this.stripVenueSuffixFromTitle(String(title || ''), bar)).title;
+        return this.normalizeIdentityText(this.foldDiacritics(this.decodeBasicHtmlEntities(bare)));
+    }
+
+    // Do two titles name the same party in different words? TRUE when they
+    // share a distinctive title token (getCrossSourceTitleTokens: venue,
+    // city, cadence and stop words already dropped; generic party
+    // vocabulary dropped here) or one token leads the other ("xposure" /
+    // "xposures"), or areTitlesSimilar's containment rung says so. FALSE is
+    // a rename.
+    titlesShareIdentity(titleA, titleB, bar) {
+        if (this.areTitlesSimilar(titleA, titleB)) return true;
+        const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bear', 'bears', 'presents',
+            'annual', 'tickets', 'dance', 'social', 'happy', 'hour', 'club', 'edition', 'show', 'special', 'live', 'closing',
+            'opening', 'official', 'afterparty', 'after']);
+        const barKey = this.normalizeBarNameKey(bar);
+        const tokens = (title) => this.getCrossSourceTitleTokens(title, barKey ? [barKey] : [])
+            .filter(token => token.length >= 3 && !generic.has(token) && !/^\d+$/.test(token));
+        const a = tokens(titleA);
+        const b = tokens(titleB);
+        if (a.length === 0 || b.length === 0) return false;
+        const leads = (x, y) => x.length >= 5 && y.length >= 5 && (x.startsWith(y) || y.startsWith(x));
+        return a.some(x => b.some(y => x === y || leads(x, y)));
+    }
+
+    assessMergeDrift(event) {
+        if (!event || typeof event !== 'object' || event._action !== 'merge') return null;
+        const calendar = event._original && event._original.calendar && typeof event._original.calendar === 'object'
+            ? event._original.calendar
+            : null;
+        const existing = event._existingEvent && typeof event._existingEvent === 'object' ? event._existingEvent : calendar;
+        if (!calendar || !existing) return null;
+        const text = (value) => String(value || '').trim();
+        const timezone = event.timezone || calendar.timezone || this.getCityTimezone(event.city) || null;
+        const fields = [];
+        const agree = [];
+
+        // 1. Title — beyond the spelling fold. A rename shares no word.
+        const savedTitle = text(existing.title || calendar.title);
+        const newTitle = text(event.title);
+        let rename = false;
+        if (savedTitle && newTitle && savedTitle !== newTitle
+            && this.foldTitleForDrift(savedTitle, calendar.bar || event.bar) !== this.foldTitleForDrift(newTitle, event.bar || calendar.bar)) {
+            rename = !this.titlesShareIdentity(savedTitle, newTitle, event.bar || calendar.bar);
+            fields.push({ field: 'title', from: savedTitle, to: newTitle, kind: rename ? 'rename' : 'reword' });
+        }
+
+        // 2. Start day — the local calendar day, not the clock.
+        const savedDay = this.normalizeEventDateLocal(existing.startDate || calendar.startDate, timezone) || '';
+        const newDay = this.normalizeEventDateLocal(event.startDate, timezone) || '';
+        if (savedDay && newDay && savedDay !== newDay) {
+            fields.push({ field: 'startDay', from: savedDay, to: newDay });
+        } else if (savedDay && savedDay === newDay) {
+            agree.push(`same night (${savedDay})`);
+        }
+
+        // 3. Venue — two named bars that are not one bar at one door. A
+        // placeholder, a blank, a contained spelling, or the same street
+        // line is the same place.
+        const savedBar = text(calendar.bar);
+        const newBar = text(event.bar);
+        const savedBarKey = SharedCore.isPlaceholderVenueText(savedBar) ? '' : this.normalizeBarNameKey(savedBar);
+        const newBarKey = SharedCore.isPlaceholderVenueText(newBar) ? '' : this.normalizeBarNameKey(newBar);
+        const sameStreet = this.areSameStreetLine(calendar.address, event.address);
+        if (savedBarKey && newBarKey) {
+            const sameBar = savedBarKey === newBarKey
+                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)));
+            if (sameBar) agree.push(`same bar (${newBar})`);
+            else if (sameStreet) agree.push(`same street (${text(event.address).split(',')[0]})`);
+            else fields.push({ field: 'bar', from: savedBar, to: newBar });
+        } else if (sameStreet) {
+            agree.push(`same street (${text(event.address).split(',')[0]})`);
+        }
+
+        // 4. Event link — url and website are one field; a same-site deeper
+        // page replacing its listing/root, or the same page respelled, is
+        // the same link.
+        const savedLink = text(calendar.website || existing.url || calendar.url);
+        const newLink = text(event.website || event.url);
+        if (savedLink && newLink) {
+            const sameLink = this.canonicalMergeUrl(savedLink) === this.canonicalMergeUrl(newLink)
+                || this.isSameSiteParentPathOf(savedLink, newLink)
+                || this.isSameSiteParentPathOf(newLink, savedLink);
+            if (sameLink) agree.push(`same event page (${this.canonicalMergeUrl(newLink) || newLink})`);
+            else fields.push({ field: 'url', from: savedLink, to: newLink });
+        }
+        const savedTicket = this.normalizeTicketUrlForIdentity(calendar.ticketUrl);
+        if (savedTicket && savedTicket === this.normalizeTicketUrlForIdentity(event.ticketUrl)) {
+            agree.push(`same ticket page (${savedTicket})`);
+        }
+
+        // 5. Pin — moved beyond the small radius. Added or removed is a fill.
+        const km = this.coordinatePairDistanceKm(existing.location || calendar.location, event.location);
+        if (km !== null) {
+            if (km > SharedCore.getBigDriftPinRadiusKm()) {
+                fields.push({ field: 'location', from: text(existing.location || calendar.location), to: text(event.location), km: Math.round(km * 1000) / 1000 });
+            } else {
+                agree.push(`same pin (${Math.round(km * 1000)} m apart)`);
+            }
+        }
+
+        const titleDrift = fields.find(entry => entry.field === 'title');
+        const big = rename || (titleDrift && fields.length >= 2) || fields.length >= 3;
+        if (!big) return null;
+        const labels = { title: 'title', startDay: 'start day', bar: 'venue', url: 'event link', location: 'pin' };
+        const names = fields.map(entry => labels[entry.field] || entry.field);
+        const listed = names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+        const reason = rename && fields.length === 1
+            ? 'title renamed (no shared word)'
+            : `${listed} changed${rename ? ' (title renamed)' : ''}`;
+        const scraper = event._original && event._original.scraper && typeof event._original.scraper === 'object' ? event._original.scraper : {};
+        return {
+            fields,
+            reason,
+            rename,
+            matchedBy: text(event._analysis && event._analysis.reason) || 'unknown',
+            agree,
+            sourcePageUrl: text(scraper._sourcePageUrl || event._sourcePageUrl || scraper.url || scraper.website),
+            calendarUrl: savedLink
+        };
+    }
+
+    // The gate's predicate: stamped big drift with no owner approval.
+    static isBigDriftWithheld(event) {
+        return Boolean(event && typeof event === 'object' && event._bigDriftWithheld && !event._ownerReviewApproved);
     }
 
     // "<Party> at <Venue>" — the listing convention of every aggregator row
@@ -1950,7 +2114,9 @@ class SharedCore {
         const store = this.rekeyOwnerDecisions(Array.isArray(decisions) ? decisions : []);
         for (const event of Array.isArray(analyzedEvents) ? analyzedEvents : []) {
             if (!event || typeof event !== 'object') continue;
-            if (SharedCore.filterEventsForExecution([event]).length !== 1) {
+            // The deck's view: a big-drift merge is a card, so it reaches the
+            // decision lookup below (approved → writes; otherwise withheld).
+            if (SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length !== 1) {
                 counts.withheld++;
                 continue;
             }
@@ -3991,6 +4157,93 @@ class SharedCore {
         return { city: cities[0], bars: claimants.map(claimant => claimant.bar) };
     }
 
+    // Identity key for a social handle: instagram.com/<handle>,
+    // facebook.com/<handle>, "@handle" or a bare handle all fold to the
+    // lowercase handle; any other URL keys by TARGET (getUrlDedupeKey — the
+    // same key isSameLinkTarget compares: scheme/www/slash/tracking-param
+    // spelling dropped, a meaningful query kept, so two place_id maps links
+    // stay two links).
+    socialHandleKey(value) {
+        const text = String(value === null || value === undefined ? '' : value).trim();
+        if (!text) return '';
+        const social = text.match(/^(?:https?:\/\/)?(?:www\.)?(?:instagram|facebook|fb)\.com\/([^/?#]+)/i);
+        if (social) return social[1].toLowerCase().replace(/^@/, '');
+        if (/^https?:\/\//i.test(text)) {
+            return this.getUrlDedupeKey(text).replace(/^https?:\/\//i, '').replace(/^www\./, '').replace(/\/+$/, '');
+        }
+        return text.replace(/^@/, '').replace(/\/+$/, '').toLowerCase();
+    }
+
+    // WHOSE contact is this? '' when the scraped value is the EVENT's own
+    // (a page-stated link, a promoter registry's handle, an aggregator's
+    // copy — every one of them arbitrates exactly as before); otherwise the
+    // reason the value describes the VENUE, which makes it FILL-ONLY at
+    // merge (see the curated-venue rung in resolveConflictDeterministically):
+    //   1. provenance — the normalizers copied it off the curated bar record
+    //      (_curatedVenueFields, stamped by BarDataNormalizer's rung and
+    //      LocationNormalizer.fillVenueFromCuratedSiteIdentity);
+    //   2. provenance — a VENUE parser's static metadata stamped it
+    //      (_staticFields), the parser identifying itself as the venue by a
+    //      static website the curated corpus attributes to a bar. A promoter
+    //      parser's static handle (its website is nobody's bar) is the
+    //      organizer's and keeps its registry authority;
+    //   3. identity — the value IS a curated bar's own instagram / facebook /
+    //      website / googleMaps: the bar either record names in the merge
+    //      city, or a bar claiming the site the record was scraped off
+    //      (_venueSitePageHost). Provenance can be lost on a replayed record;
+    //      the curated corpus itself still knows its own handles.
+    // Doctrine: a curated bar's contact fields describe the venue — they fill
+    // an event's blank, they never replace what the event says about itself
+    // ("structured data enriches, never bypasses"; "curated data beats
+    // derived, fail closed"). Nothing here is venue-, host- or field-value-
+    // specific: data/bars and the record's own stamps are the only inputs.
+    scrapedContactValueIsVenues(fieldName, scraped, context = null) {
+        if (!VENUE_CONTACT_MERGE_FIELDS.has(fieldName) || !scraped || typeof scraped !== 'object') return '';
+        const value = scraped[fieldName];
+        if (this.isEmptyArbitrationValue(value)) return '';
+        const curatedFields = scraped._curatedVenueFields && typeof scraped._curatedVenueFields === 'object'
+            ? scraped._curatedVenueFields
+            : {};
+        if (Object.prototype.hasOwnProperty.call(curatedFields, fieldName)) {
+            return `filled from curated bar "${curatedFields[fieldName]}"`;
+        }
+        const staticFields = scraped._staticFields && typeof scraped._staticFields === 'object'
+            ? scraped._staticFields
+            : {};
+        const staticKey = fieldName === 'url' ? 'website' : fieldName;
+        if (Object.prototype.hasOwnProperty.call(staticFields, staticKey)
+            && typeof staticFields.website === 'string'
+            && this.isCuratedVenueSiteUrl(staticFields.website)) {
+            const parserName = scraped._parserConfig && typeof scraped._parserConfig.name === 'string'
+                ? scraped._parserConfig.name
+                : 'venue parser';
+            return `the venue parser's own static metadata ("${parserName}", whose site ${this.getWebsiteHostKey(staticFields.website)} is a curated bar's)`;
+        }
+        const curatedKey = { instagram: 'instagram', facebook: 'facebook', website: 'website', url: 'website', gmaps: 'googleMaps' }[fieldName];
+        const valueKey = this.socialHandleKey(value);
+        if (!curatedKey || !valueKey) return '';
+        const candidates = [];
+        const cityKey = context && context.cityKey ? context.cityKey : (scraped.city || '');
+        const cityBars = this.getCuratedCityBars(cityKey);
+        const barNames = context && Array.isArray(context.barNames) ? context.barNames : [scraped.bar];
+        if (cityBars) {
+            for (const barName of barNames) {
+                const curated = this.findCuratedBarByName(cityBars, barName);
+                if (curated && !candidates.includes(curated)) candidates.push(curated);
+            }
+        }
+        for (const claimant of this.getCuratedBarsClaimingWebsiteHost(scraped._venueSitePageHost || '')) {
+            if (claimant && claimant.bar && !candidates.includes(claimant.bar)) candidates.push(claimant.bar);
+        }
+        for (const curated of candidates) {
+            const curatedValue = curated && typeof curated[curatedKey] === 'string' ? curated[curatedKey] : '';
+            if (curatedValue && this.socialHandleKey(curatedValue) === valueKey) {
+                return `curated bar "${curated.name}"'s own ${curatedKey}`;
+            }
+        }
+        return '';
+    }
+
     // The bar-name identity key shared by curated matching (above) and the
     // new-venue-candidate dedup key: lowercase, drop a leading "the ", strip
     // non-alphanumerics — so "The Eagle" / "EAGLE!" collapse to one venue.
@@ -5067,6 +5320,41 @@ class SharedCore {
 
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
+        // THE VENUE'S CONTACT NEVER REPLACES THE EVENT'S. Calendar merges
+        // only: a scraped instagram / facebook / website / gmaps that
+        // describes the VENUE (copied off the curated bar record, stamped by
+        // a venue parser's static metadata, or simply a curated bar's own
+        // handle — scrapedContactValueIsVenues) fills a blank and never
+        // wins against a stored non-empty value, whatever the strategy. Run
+        // 20260924-055217 (Goldiloxx: Bear Tea at 3 Dollar Bill): the stored
+        // instagram was the PROMOTER's handle (goldiloxx__, from the event's
+        // own page), the scrape carried the venue's (3dollarbillbk, the
+        // venue parser's static metadata) and clobbered it — the authority
+        // rung at the bottom would even have read that static handle as a
+        // "promoter registry". Consulted at two points below: after the
+        // same-site depth rungs (which say more precisely why a venue root
+        // or listing loses to the stored event page, and keep their stable
+        // reason lines) and before every cross-host / authority rung; and
+        // directly for pairs that are not both URLs (bare handles). Same-
+        // link spellings are no change (the rung below); a stored asset
+        // file (a .jpg written as website) is not a value worth keeping and
+        // stays with the asset rung; an empty stored value never reaches
+        // the ladder.
+        const venueContactDecision = () => {
+            if (!VENUE_CONTACT_MERGE_FIELDS.has(fieldName) || !context || !context.sideLabels
+                || context.sideLabels.a !== 'calendar' || context.sideLabels.b !== 'scraped'
+                || !context.records || !context.records.b) return null;
+            if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return null;
+            if (this.isSameLinkTarget(valueA, valueB) || this.socialHandleKey(valueA) === this.socialHandleKey(valueB)) return null;
+            if (urlA && urlPartsEndInAssetExtension(urlA)) return null;
+            const venueReason = this.scrapedContactValueIsVenues(fieldName, context.records.b, context);
+            if (!venueReason) return null;
+            return { winner: 'a', reason: `the venue's own ${fieldName} (${venueReason}) fills a blank, never replaces what the event says about itself` };
+        };
+        if (!(urlA && urlB)) {
+            const venueDecision = venueContactDecision();
+            if (venueDecision) return venueDecision;
+        }
         // SAME PAGE, TWO SPELLINGS. Before any ranking rung: a link field
         // whose two candidates differ only in scheme/www/trailing slash/case
         // is not a disagreement at all. Keeping the existing spelling is the
@@ -5146,6 +5434,11 @@ class SharedCore {
                     return { winner: 'a', reason: 'same-site deeper URL beats its parent path (listing/front door)' };
                 }
             }
+            // The venue's contact is fill-only (see venueContactDecision
+            // above) — decided here, once the same-site depth rungs have
+            // had their say and before any cross-host or authority rung.
+            const venueDecision = venueContactDecision();
+            if (venueDecision) return venueDecision;
             // Cross-host website/url rungs. Rung 1: a bare homepage never
             // beats an event-specific page even ACROSS hosts — the deeper URL
             // is the one that describes THIS event. Rung 2: both pathed —
@@ -9171,7 +9464,7 @@ class SharedCore {
                         const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim().split('#')[0] : '';
                         if (!ticketUrl || !/^https?:\/\//i.test(ticketUrl)) continue;
                         const startMs = SharedCore.toEpochMillis(event.startDate);
-                        if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) continue;
+                        if (Number.isFinite(startMs) && (Date.now() - startMs) > TICKET_LINK_PAST_EVENT_GRACE_MS) continue;
                         const normalized = this.normalizeUrl(ticketUrl, ticketUrl);
                         if (!normalized || seenTicketLinks.has(normalized) || this.hasProcessedUrl(processedUrls, normalized)) continue;
                         if (this.getUrlDedupeKey(normalized) === this.getUrlDedupeKey(url)) continue;
@@ -9515,7 +9808,7 @@ class SharedCore {
             const startMs = event && event.startDate instanceof Date
                 ? event.startDate.getTime()
                 : Date.parse(String((event && event.startDate) || ''));
-            if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) {
+            if (Number.isFinite(startMs) && (Date.now() - startMs) > TICKET_LINK_PAST_EVENT_GRACE_MS) {
                 console.log(`🗂️ SharedCore: Skipping ticket link for past event "${event.title || 'unknown'}" (started ${new Date(startMs).toISOString().slice(0, 10)}): ${ticketUrl}`);
                 continue;
             }
@@ -11805,7 +12098,7 @@ class SharedCore {
         const prompt = this.buildFieldTrimPrompt({ eventTitle: title, entries: overlong });
         // A part range is ~10 tokens; the old text-echo answers ran to ~300.
         // Capping the decode keeps a model that ignores the format cheap.
-        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
+        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || SHORT_ANSWER_NUM_PREDICT, SHORT_ANSWER_NUM_PREDICT) };
         const rawResponse = await this.callAiGenerate(trimAiConfig, prompt, 'field-trim', httpAdapter);
 
         let parsed = null;
@@ -12149,7 +12442,7 @@ class SharedCore {
 
         const maxChars = aiConfig.shortNameDeriveMaxChars;
         const prompt = this.buildShortNamePrompt({ eventTitle: title, maxChars });
-        const shortNameAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
+        const shortNameAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || SHORT_ANSWER_NUM_PREDICT, SHORT_ANSWER_NUM_PREDICT) };
 
         let rawResponse = null;
         try {
@@ -14105,6 +14398,32 @@ class SharedCore {
                 continue;
             }
 
+            // THE VENUE'S CONTACT IS FILL-ONLY, under EVERY strategy. The
+            // same bypass shape as the two guards above, for the rest of a
+            // curated bar's contact fields: the normalizers fill a blank
+            // instagram/gmaps from the curated bar record, and a venue
+            // parser stamps the venue's handle as static metadata merged
+            // "clobber" — so the stored PROMOTER handle (goldiloxx__ on
+            // Goldiloxx: Bear Tea, from the event's own page) was replaced
+            // by the venue's (3dollarbillbk) without the ladder ever being
+            // asked (run 20260924-055217, "clobbered 3 fields (instagram,
+            // website, key)"). A blank calendar field still takes the
+            // venue's value below (that is the fill); a stored value is
+            // routed through the ladder, whose curated-venue rung keeps it
+            // and logs the stable 🔒 line — never decided inline, so every
+            // strategy reaches the same answer by the same rung. Provenance-
+            // based (scrapedContactValueIsVenues): a page-stated or
+            // registry handle is the event's own and merges exactly as
+            // before. gmaps never enters this loop (derived, STEP 4).
+            if (VENUE_CONTACT_MERGE_FIELDS.has(fieldName)
+                && !this.isEmptyArbitrationValue(calendarValue)
+                && !this.isEmptyArbitrationValue(scraperValue)
+                && !this.mergeValuesEqualForTracking(scraperValue, calendarValue)
+                && this.scrapedContactValueIsVenues(fieldName, scraperObject, mergeContext)) {
+                queueArbitrationConflict(fieldName, calendarValue, scraperValue);
+                continue;
+            }
+
             // Dates are calendar-critical: a genuinely different startDate/endDate is
             // arbitrated even when a parser config says clobber — silently overwriting
             // a differing calendar date is how good ends get destroyed. A failed
@@ -15056,7 +15375,7 @@ class SharedCore {
     // it — a JSON body or JSON-LD is content, not a shell.
     looksLikeSpaShell(html) {
         const source = typeof html === 'string' ? html : '';
-        if (!source || source.length > 60000) return false;
+        if (!source || source.length > SHELL_PAGE_MAX_CHARS) return false;
         if (source.trim()[0] === '{' || source.trim()[0] === '[') return false;
         if (!/<script\b[^>]*\ssrc\s*=/i.test(source)) return false;
         // Structured data that describes EVENTS means the page has content
@@ -15553,7 +15872,7 @@ class SharedCore {
     // Returns { action, fields } or null.
     detectConfirmationGate(html, pageUrl) {
         const source = String(html || '');
-        if (!source || source.length > 60000 || !/<form\b/i.test(source)) return null;
+        if (!source || source.length > SHELL_PAGE_MAX_CHARS || !/<form\b/i.test(source)) return null;
         const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
         const body = bodyMatch ? bodyMatch[1] : source;
         const visible = this.decodeBasicHtmlEntities(body
@@ -17578,10 +17897,23 @@ class SharedCore {
     // text ("View Event →") is not an event name, so the record stays fully
     // visible in results (flag, don't drop) but never reaches a write — see
     // getEventSanityFlags rule 8 and the 🚫 JUNK TITLE log at the stamp site.
-    static filterEventsForExecution(analyzedEvents) {
+    // options.offeringToOwner: the deck's own view — a big-drift merge is
+    // withheld from every AUTOMATIC write, but it is exactly what the deck
+    // exists to show, so the card builders (isOwnerReviewCandidate,
+    // applyOwnerDecisions) look through that one withhold. Nothing else
+    // is relaxed.
+    static filterEventsForExecution(analyzedEvents, options = {}) {
         if (!Array.isArray(analyzedEvents)) return [];
+        const offeringToOwner = Boolean(options && options.offeringToOwner);
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
+            // BIG DRIFT (assessMergeDrift, stamped in buildAnalyzedCalendarEvent):
+            // a merge that renames the saved event or moves its identity
+            // never auto-applies — the phone's normal flow, the headless
+            // orchestrator and the saved-run execute all withhold it. Only
+            // the deck's approval (_ownerReviewApproved, stamped by
+            // applyOwnerDecisions on the reviewed-run path) lets it write.
+            (offeringToOwner || !SharedCore.isBigDriftWithheld(event)) &&
             // Fully-past spans are display-only: nothing left to attend, so
             // the write is withheld at analysis (buildAnalyzedCalendarEvent
             // stamps _pastSpanWithheld + the span-fully-past review flag)
@@ -17670,6 +18002,7 @@ class SharedCore {
             '_announcementOnlyWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
+            '_bigDriftWithheld',
             '_titleFromListing',
             '_mergeNoOp',
             '_duplicateOfKept',
@@ -17716,6 +18049,10 @@ class SharedCore {
                 return `WITHHELD (rejected by owner${reason ? ` — ${reason}` : ''})`;
             }
             return 'WITHHELD (awaiting owner review)';
+        }
+        if (SharedCore.isBigDriftWithheld(event)) {
+            const reason = String(event._bigDriftWithheld.reason || '').trim();
+            return `WITHHELD (big drift — ${reason || 'identity changed'}; decide on the deck)`;
         }
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (event._slotYield) return `WITHHELD (${event._slotYield.cadence} night yields the slot to "${event._slotYield.to}")`;
@@ -20505,6 +20842,17 @@ class SharedCore {
                 analyzedEvent._mergeNoOp = changedBeyondNotes.length === 0 && notesIdentical;
                 if (analyzedEvent._mergeNoOp) {
                     console.log(`⏸️ MERGE: "${analyzedEvent.title || 'Unknown'}" produced no field changes — write skipped`);
+                } else {
+                    // BIG DRIFT — judged here, on the final payload, for the
+                    // same reason the no-op gate is: every later pass has run.
+                    // The stamp is what filterEventsForExecution withholds
+                    // and what the deck card shows (assessMergeDrift).
+                    const drift = this.assessMergeDrift(analyzedEvent);
+                    if (drift) {
+                        analyzedEvent._bigDriftWithheld = drift;
+                        const savedTitle = String((analyzedEvent._existingEvent && analyzedEvent._existingEvent.title) || analyzedEvent._original.calendar.title || 'Unknown');
+                        console.log(`🧭 BIG DRIFT: "${savedTitle}" → "${analyzedEvent.title || 'Unknown'}" — ${drift.reason}; matched by ${drift.matchedBy}; agrees on ${drift.agree.length > 0 ? drift.agree.join(', ') : 'nothing'} — withheld from every automatic write; decide on the deck`);
+                    }
                 }
             } else if (SharedCore.isOverrideCreate(analyzedEvent)) {
                 // Same gate for a single-night OVERRIDE of a saved series: it
@@ -24877,6 +25225,9 @@ if (typeof module !== 'undefined' && module.exports) {
         NetworkResilience,
         SharedCore,
         PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS,
+        // "Same door" radius for curated pins — one number for the runtime
+        // (findCuratedBarByPlace) and the bar-approval tool.
+        CURATED_BAR_SAME_PLACE_KM,
         // Pure title date-segment detector, shared with the ai-web parser's
         // extraction-time strip (one implementation, defined upstream here).
         detectTitleDateSegment: SharedCore.detectTitleDateSegment

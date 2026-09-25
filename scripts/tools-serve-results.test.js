@@ -801,6 +801,34 @@ test('renderReviewCard (update): stacked calendar-has → would-become rows in t
   assert.ok(added.includes('<span class="none">(no end listed)</span>'), 'an end being dropped says so');
 });
 
+test('renderReviewCard (big drift): a warn badge and a facts block — what moves, the matching rung, what still agrees, both pages', () => {
+  const ctx = buildReviewCtx();
+  const entry = { kind: 'merge', key: 'k', proposal: {
+    title: 'TKVR | Nolid', existingTitle: 'Treasure Trail', startDate: '2030-10-11T02:00:00.000Z', timezone: 'America/New_York', city: 'nyc',
+    changes: { title: { from: 'Treasure Trail', to: 'TKVR | Nolid' } }
+  }, display: { parserName: 'Bearracuda', analysisReason: 'Key match found', bigDrift: {
+    reason: 'title renamed (no shared word)', rename: true,
+    fields: [{ field: 'title', from: 'Treasure Trail', to: 'TKVR | Nolid', kind: 'rename' }, { field: 'location', from: '1, 1', to: '1.1, 1', km: 11.1 }],
+    matchedBy: 'Key match found',
+    agree: ['same night (2030-10-10)', 'same bar (Massive)', 'same ticket page (sickening.events/e/x/tickets)'],
+    sourcePageUrl: 'https://sickening.events/e/bearracuda-treasure-trail-october',
+    calendarUrl: 'https://bearracuda.com/events/ttoct/'
+  } } };
+  const html = renderReviewCard(entry, ctx);
+  assert.ok(html.includes('<span class="badge warn drift">🧭 big drift — title renamed (no shared word) · withheld until you decide</span>'), 'the badge');
+  assert.ok(html.includes('<span class="was">Treasure Trail</span>') && html.includes('<span class="now">TKVR | Nolid</span>'), 'the ordinary from → to row stays');
+  assert.ok(html.includes('<div class="drift-head">🧭 Big drift — nothing is written until you decide</div>'));
+  assert.ok(html.includes('<span class="fact-k">moves</span><span class="fact-v warn">title (renamed — no shared word) · pin (moved 11.1 km)</span>'));
+  assert.ok(html.includes('<span class="fact-k">matched as one event by</span><span class="fact-v">Key match found</span>'));
+  assert.ok(html.includes('<span class="fact-k">still agrees on</span><span class="fact-v">same night (2030-10-10) · same bar (Massive) · same ticket page (sickening.events/e/x/tickets)</span>'));
+  assert.ok(html.includes('<span class="fact-k">scraped from</span>') && html.includes('href="https://sickening.events/e/bearracuda-treasure-trail-october"'));
+  assert.ok(html.includes('<span class="fact-k">calendar link</span>') && html.includes('href="https://bearracuda.com/events/ttoct/"'));
+  const plain = renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' } }, ctx);
+  assert.ok(!plain.includes('big drift') && !plain.includes('class="drift"'), 'an ordinary merge card is unchanged');
+  const nothing = renderReviewCard({ ...entry, display: { bigDrift: { reason: 'title and venue changed', fields: [], matchedBy: '', agree: [], sourcePageUrl: '', calendarUrl: '' } } }, ctx);
+  assert.ok(nothing.includes('<span class="fact-v"><span class="none">nothing</span></span>') && nothing.includes('<span class="fact-v">unknown</span>'), 'degrades without facts');
+});
+
 test('renderReviewCard (override): the series night it replaces, and the changes against it', () => {
   const ctx = buildReviewCtx();
   const html = renderReviewCard({ kind: 'override', key: 'k', proposal: {
