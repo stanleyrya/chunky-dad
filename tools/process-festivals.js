@@ -224,6 +224,80 @@ function isEstimated(descKeys) {
 }
 
 // ---------------------------------------------------------------------------
+// Scraper-record refusal
+//
+// The festivals calendar is a CURATED dataset — the database data/festivals.json
+// is generated from, hand-authored by the owner. A festival umbrella is an
+// ALL-DAY date range whose DESCRIPTION carries the curated keys (key, category,
+// cityKey, typicalTiming, recurring).
+//
+// In August 2026 two of them stopped being that. "Bear Week Provincetown" and
+// "Bear Pride Chicago" came back as TIMED VEVENTs at 2026-08-28 21:00, SEQUENCE
+// bumped, LAST-MODIFIED 2026-08-23, with every curated key replaced by the
+// SCRAPER's notes shape:
+//
+//     bar: Venue TBA\ntimezone: America/New_York
+//     uid: festival-bear-week-provincetown@chunky.dad
+//     favicon: https://img.evbuc.com/...\nwebsite: https://www.eventbrite.com/o/...
+//
+// Converting those clock times into nextDates published 2026-08-28..29 as Bear
+// Week (a blank date line on the main page once it passed) and rolled Chicago's
+// YEARLY rule to a derived 2027-08-28. A party record is not an official
+// festival date, so it is REFUSED here rather than converted: the entry keeps
+// the dates data/festivals.json already carries, and the run says so loudly.
+// ---------------------------------------------------------------------------
+
+// Notes keys only the scraper writes (see SharedEventSchema's notes block).
+// `bar` is in the list because a festival umbrella has no single venue — a
+// curated entry names a `location`, never a bar.
+const SCRAPER_NOTES_KEYS = ['uid', 'favicon', 'bar'];
+
+// Curated keys that make a VEVENT a festival umbrella rather than a party.
+const FESTIVAL_DESCRIPTION_KEYS = ['key', 'category', 'cityKey', 'typicalTiming', 'recurring', 'estimated'];
+
+// Every "key: value" line of a DESCRIPTION, keys lowercased — the raw view
+// parseDescriptionKeys only exposes through its curated allow-list.
+function parseAnyDescriptionKeys(descriptionText) {
+    const result = {};
+    if (!descriptionText) return result;
+    const cleaned = unescapeIcsText(String(descriptionText).replace(/\r/g, ''));
+    for (const rawLine of cleaned.split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const colonIndex = line.indexOf(':');
+        if (colonIndex <= 0) continue;
+        const key = line.substring(0, colonIndex).trim().toLowerCase();
+        const value = line.substring(colonIndex + 1).trim();
+        if (key && value && !(key in result)) result[key] = value;
+    }
+    return result;
+}
+
+// Why this VEVENT is not an official festival date — '' when it is one.
+// Two independent tells, either one is enough:
+//   1. the DESCRIPTION carries the scraper's notes keys (uid/favicon/bar);
+//   2. it is TIMED (clock times, not VALUE=DATE) and carries none of the
+//      curated festival keys — an annual umbrella is always all-day.
+function describeScraperRecordRefusal(event, rawBlock, descKeys) {
+    const rawKeys = parseAnyDescriptionKeys(event && event.unprocessedDescription);
+    const scraperKeys = SCRAPER_NOTES_KEYS.filter(key => key in rawKeys);
+    if (scraperKeys.length > 0) {
+        return `its description is the scraper's notes block (${scraperKeys.map(k => `${k}:`).join(' ')}), not a curated festival entry`;
+    }
+    const curatedKeys = FESTIVAL_DESCRIPTION_KEYS.filter(key => descKeys && descKeys[key]);
+    if (rawBlock && rawBlock.allDay === false && curatedKeys.length === 0) {
+        return `it is a TIMED VEVENT (${rawBlock.dtstartRaw || 'no DTSTART'}) with none of the curated festival keys — an annual umbrella is always all-day`;
+    }
+    return '';
+}
+
+// The key a refused VEVENT would have claimed, so its previous entry can be
+// kept: the same derivation buildEntry uses.
+function entryKeyForEvent(event, descKeys) {
+    return (descKeys && descKeys.key) || slugify((event && event.name) || '');
+}
+
+// ---------------------------------------------------------------------------
 // Occurrence (nextDates) computation
 // ---------------------------------------------------------------------------
 
@@ -319,25 +393,42 @@ function buildEntry(event, range, rawBlock, warnings) {
         warnings.push(`"${name}": missing ${missing.join(', ')}`);
     }
     // A festival is an all-day date range with the curated description keys.
-    // A TIMED VEVENT carrying none of them is a party record that landed in
-    // the festivals calendar (2026-09-25: "Bear Week Provincetown" and "Bear
-    // Pride Chicago" both read "bar: Venue TBA / timezone / uid / favicon" —
-    // the scraper's notes shape — dated 2026-08-28 21:00, replacing the
-    // seed's all-day ranges). It still converts (curated data beats derived,
-    // the calendar is the database) but is called out by name.
+    // The clear party records never reach here at all — describeScraperRecordRefusal
+    // refuses them in convertEvents. This is the residue: a timed VEVENT that
+    // carries SOME curated key (so it is not refused) but not the two that
+    // identify it. It converts, and is called out by name.
     if (rawBlock && !rawBlock.allDay && !descKeys.key && !descKeys.category) {
         warnings.push(`"${name}": timed VEVENT with no festival keys (key/category/typicalTiming) — looks like a party record, not a festival umbrella; nextDates ${entry.nextDates ? `${entry.nextDates.start}..${entry.nextDates.end}` : 'undated'} come from its clock times`);
     }
     return entry;
 }
 
-function convertEvents(events, rawBlocks, todayStr, cutoffStr) {
+function convertEvents(events, rawBlocks, todayStr, cutoffStr, previousEntries = []) {
     const warnings = [];
     const candidates = [];
 
+    // REFUSE scraper records before anything else reads their dates. A refused
+    // VEVENT contributes nothing — no entry, no occurrence, no RRULE expansion —
+    // and the key it would have claimed is remembered so the previous curated
+    // entry can be kept instead of being overwritten by a party's clock times.
+    const refusedKeys = new Map();
+    const keptEvents = [];
+    for (const event of events) {
+        const raw = findRawBlock(rawBlocks, event);
+        const descKeys = parseDescriptionKeys(event.unprocessedDescription);
+        const refusal = describeScraperRecordRefusal(event, raw, descKeys);
+        if (!refusal) {
+            keptEvents.push(event);
+            continue;
+        }
+        const key = entryKeyForEvent(event, descKeys);
+        warnings.push(`REFUSED "${event.name || key}" (key "${key}"): ${refusal}. This is a scraped party record sitting in the curated festivals calendar, NOT an official festival date — it contributes no dates. Fix the VEVENT in the chunky-dad-festivals calendar.`);
+        if (!refusedKeys.has(key)) refusedKeys.set(key, event.name || key);
+    }
+
     // Group by UID so recurrence overrides can pair with their base series
     const groups = new Map();
-    for (const event of events) {
+    for (const event of keptEvents) {
         const groupKey = event.uid || `__no_uid_${groups.size}`;
         if (!groups.has(groupKey)) groups.set(groupKey, []);
         groups.get(groupKey).push(event);
@@ -438,6 +529,20 @@ function convertEvents(events, rawBlocks, todayStr, cutoffStr) {
         }
     }
 
+    // A refused VEVENT was this key's only source, so the dataset would simply
+    // lose the festival. Curated data beats derived: keep the entry
+    // data/festivals.json already carries, untouched, and say so.
+    for (const [key, name] of refusedKeys) {
+        if (byKey.has(key)) continue;
+        const previous = previousEntries.find(entry => entry && entry.key === key) || null;
+        if (previous) {
+            byKey.set(key, previous);
+            warnings.push(`"${name}": keeping the previous data/festivals.json entry (${previous.nextDates ? `${previous.nextDates.start}..${previous.nextDates.end}` : 'undated'}) — the calendar's VEVENT was refused`);
+        } else {
+            warnings.push(`"${name}": refused, and data/festivals.json carries no previous entry for key "${key}" — the festival is not in the dataset at all`);
+        }
+    }
+
     // Order: dated entries chronological by nextDates.start, then undated
     // alphabetical by name (matches the curated file's ordering).
     const entries = Array.from(byKey.values());
@@ -516,6 +621,19 @@ async function loadIcsText(useFetch) {
     return null;
 }
 
+// The entries data/festivals.json already carries ([] when it is missing or
+// unreadable — a broken curated file must not crash the converter).
+function readPreviousEntries() {
+    try {
+        if (!fs.existsSync(JSON_PATH)) return [];
+        const parsed = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
+        return Array.isArray(parsed && parsed.festivals) ? parsed.festivals : [];
+    } catch (error) {
+        console.warn(`⚠️  Festivals: could not read the previous ${JSON_PATH} (${error.message}); refused entries cannot keep their dates`);
+        return [];
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -557,7 +675,10 @@ async function main() {
     const cutoffStr = fmtPlainDate(addDays(plainDateFromLocal(now), -UPCOMING_GRACE_DAYS));
 
     const rawBlocks = parseRawVevents(icsText);
-    const { entries, warnings } = convertEvents(events, rawBlocks, todayStr, cutoffStr);
+    // The dataset as it stands is the fallback for any VEVENT the converter
+    // refuses (a scraped party record in the curated calendar).
+    const previousEntries = readPreviousEntries();
+    const { entries, warnings } = convertEvents(events, rawBlocks, todayStr, cutoffStr, previousEntries);
 
     for (const warning of warnings) {
         console.warn(`⚠️  Festivals: ${warning}`);
@@ -581,9 +702,28 @@ async function main() {
     console.log(`Festivals: ${entries.length} entries (${datedCount} dated, ${undatedCount} estimated/undated) written`);
 }
 
-main().catch(error => {
-    // Fail closed: never let an unexpected error surface as a bad write, but
-    // do fail the step so CI notices the converter itself is broken.
-    console.error('✗ Festivals conversion failed:', error);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch(error => {
+        // Fail closed: never let an unexpected error surface as a bad write, but
+        // do fail the step so CI notices the converter itself is broken.
+        console.error('✗ Festivals conversion failed:', error);
+        process.exit(1);
+    });
+}
+
+// Required (not run) by scripts/process-festivals.test.js — the conversion is
+// pure, so the tests drive it with ICS text instead of the real calendar.
+module.exports = {
+    parseRawVevents,
+    parseDescriptionKeys,
+    parseAnyDescriptionKeys,
+    describeScraperRecordRefusal,
+    entryKeyForEvent,
+    convertEvents,
+    serializeFestivals,
+    fmtPlainDate,
+    plainDateFromLocal,
+    addDays,
+    CalendarCore,
+    UPCOMING_GRACE_DAYS
+};

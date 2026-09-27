@@ -14,7 +14,13 @@
     "name": "CCBC Resort Hotel",
     "city": "palm-springs",
     "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-    "coordinates": "33.7796835, -116.4689784"
+    "coordinates": "33.7796835, -116.4689784",
+    "website": "https://www.ccbcresorthotel.com",
+    "faviconBg": "#fefefe",
+    "faviconFg": "#989a9b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:96:0 #929292:1:0 #e0e0e0:1:0"
   },
   {
     "name": "Casa Oliver",

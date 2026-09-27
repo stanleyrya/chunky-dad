@@ -4607,8 +4607,40 @@ class ScriptableAdapter {
     return calendarEvent;
   }
 
+  // Is this calendar title one of the CITY calendars in the configured city
+  // list? The phone holds 49 calendars — city calendars, personal ones, and
+  // curated datasets that are somebody else's database: "chunky-dad-festivals"
+  // is the source data/festivals.json is generated from
+  // (tools/process-festivals.js), and in August 2026 its "Bear Week
+  // Provincetown" and "Bear Pride Chicago" umbrellas came back carrying the
+  // scraper's own notes shape (`bar: Venue TBA / timezone / uid / favicon`),
+  // timed at 21:00 in place of their all-day ranges. Whatever wrote them, no
+  // scraper write may ever reach a calendar that is not a configured city
+  // calendar, so the answer is derived from the cities config and nothing else
+  // — never a name pattern, never a prefix.
+  isConfiguredCityCalendar(calendarName) {
+    const name = String(calendarName || "").trim();
+    if (!name) return false;
+    const cities =
+      this.cities && typeof this.cities === "object" ? this.cities : {};
+    // A config that names no calendars at all is not describing calendar
+    // targets — unscoped, exactly as SharedCore.citiesConfigNamesCalendars says.
+    if (!SharedCore.citiesConfigNamesCalendars(cities)) return true;
+    return Object.values(cities).some(
+      (cityConfig) => cityConfig && cityConfig.calendar === name,
+    );
+  }
+
   async getOrCreateCalendar(calendarName) {
     try {
+      // Fail closed BEFORE the lookup: a target that is not a configured city
+      // calendar is refused loudly, so a curated dataset calendar can never be
+      // resolved into a write target even if one somehow got named.
+      if (!this.isConfiguredCityCalendar(calendarName)) {
+        const errorMsg = `Calendar "${calendarName}" is not a configured city calendar — the scraper only ever reads and writes the city calendars named in the cities config, never a curated dataset calendar (chunky-dad-festivals) or any other calendar on this phone.`;
+        console.log(`📱 Scriptable: ✗ ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
       // Try to find existing calendar
       const calendars = await Calendar.forEvents();
       let calendar = calendars.find((cal) => cal.title === calendarName);

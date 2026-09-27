@@ -16,7 +16,13 @@
     "name": "Atlanta Eagle",
     "city": "atlanta",
     "address": "1492 Piedmont Avenue Northeast, Atlanta",
-    "coordinates": "33.7961866, -84.3711336"
+    "coordinates": "33.7961866, -84.3711336",
+    "website": "https://atlantaeagle.com",
+    "faviconBg": "#6c6b6f",
+    "faviconFg": "#3c3b3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:81:0 #706f73:7:1 #d4d4d5:3:0"
   },
   {
     "name": "Woofs Atlanta",

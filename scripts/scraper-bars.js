@@ -32,7 +32,8 @@ const scraperBars = {
       "name": "Atlanta Eagle",
       "city": "atlanta",
       "address": "1492 Piedmont Avenue Northeast, Atlanta",
-      "coordinates": "33.7961866, -84.3711336"
+      "coordinates": "33.7961866, -84.3711336",
+      "website": "https://atlantaeagle.com"
     },
     {
       "name": "Woofs Atlanta",
@@ -126,6 +127,7 @@ const scraperBars = {
       "city": "chicago",
       "address": "5025 N Clark St, Chicago, IL 60640",
       "coordinates": "41.9732343, -87.6678243",
+      "website": "https://meetinghousetavern.com",
       "instagram": "https://www.instagram.com/meetinghousetavernchi",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJndazcVjTD4gRimEFGWVA_AU",
       "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
@@ -136,6 +138,7 @@ const scraperBars = {
       "city": "chicago",
       "address": "4923 N Clark St 1st floor, Chicago, IL 60640",
       "coordinates": "41.9724308, -87.6676099",
+      "website": "https://thesofotap.com",
       "instagram": "https://www.instagram.com/thesofotap",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
@@ -146,6 +149,7 @@ const scraperBars = {
       "city": "chicago",
       "address": "6406 N Clark St, Chicago, IL 60626",
       "coordinates": "41.9984139, -87.6710111",
+      "website": "https://jackhammerchicago.com",
       "instagram": "https://www.instagram.com/?hl=en",
       "facebook": "https://www.facebook.com/chijackhammer/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
@@ -251,6 +255,7 @@ const scraperBars = {
       "city": "fort-lauderdale",
       "address": "2209 Wilton Dr, Wilton Manors, FL 33305",
       "coordinates": "26.156486, -80.138547",
+      "website": "https://eaglebarwm.com",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "facebook": "https://www.facebook.com/EagleBarWM/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
@@ -368,11 +373,11 @@ const scraperBars = {
       "address": "357 South Broadway, Los Angeles, California, 90013",
       "coordinates": "34.0498149, -118.2493321",
       "website": "https://precinctdtla.com",
-      "favicon": "https://linktr.ee/precinctdtla",
       "instagram": "https://www.instagram.com/precinctdtla",
       "facebook": "https://www.facebook.com/precinctdtla",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI",
       "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct",
+      "favicon": "https://linktr.ee/precinctdtla",
       "faviconBg": "#23252b",
       "faviconFg": "#86878c",
       "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z"
@@ -382,6 +387,7 @@ const scraperBars = {
       "city": "la",
       "address": "4356 Sunset Blvd, Los Angeles, CA 90029",
       "coordinates": "34.0956924, -118.2842979",
+      "website": "https://akbarsilverlake.com",
       "facebook": "https://www.facebook.com/Akbarsilverlake",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOwpNUEzHwoARAPHUIkcyjdM",
       "gayCities": "https://losangeles.gaycities.com/bars/359-akbar",
@@ -442,6 +448,7 @@ const scraperBars = {
       "city": "london",
       "address": "77 Wardour St, London, England W1D 6QA",
       "coordinates": "51.512343, -0.1331208",
+      "website": "https://www.dukeofwellingtonsoho.co.uk",
       "instagram": "https://www.instagram.com/dukeofwellington_soho",
       "facebook": "https://www.facebook.com/Duke.Of.Welly",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
@@ -464,6 +471,7 @@ const scraperBars = {
       "city": "london",
       "address": "349 Kennington Lane, London, England SE11 5QY",
       "coordinates": "51.4862598, -0.1193404",
+      "website": "https://www.eaglelondon.com",
       "instagram": "https://www.instagram.com/eagleldn",
       "facebook": "https://www.facebook.com/EagleLDN",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
@@ -482,7 +490,8 @@ const scraperBars = {
       "name": "The Eagle Bar",
       "city": "manchester",
       "address": "15 Bloom Street, Manchester, England",
-      "coordinates": "53.4776882, -2.2368676"
+      "coordinates": "53.4776882, -2.2368676",
+      "website": "https://www.eaglemanchester.com"
     }
   ],
   "montreal": [
@@ -661,13 +670,15 @@ const scraperBars = {
       "name": "C'mon Everybody",
       "city": "nyc",
       "address": "325 Franklin Avenue, New York, New York, 11216",
-      "coordinates": "40.6882793, -73.9569264"
+      "coordinates": "40.6882793, -73.9569264",
+      "website": "https://www.cmoneverybody.com"
     },
     {
       "name": "Red Eye NY",
       "city": "nyc",
       "address": "355 West 41st Street, New York NY 10036",
-      "coordinates": "40.7577763, -73.9925418"
+      "coordinates": "40.7577763, -73.9925418",
+      "website": "https://redeyeny.com"
     },
     {
       "name": "Julius'",
@@ -688,10 +699,10 @@ const scraperBars = {
       "coordinates": "40.6944617, -73.9025245"
     },
     {
-      "name": "Bareburger",
+      "name": "Bareburger Hell's Kitchen",
       "city": "nyc",
-      "address": "2233 Broadway, New York, New York",
-      "coordinates": "40.7844043, -73.9799172"
+      "address": "366 W 46th St, New York, NY 10036",
+      "coordinates": "40.7605691, -73.9903480"
     }
   ],
   "palm-springs": [
@@ -710,7 +721,8 @@ const scraperBars = {
       "name": "CCBC Resort Hotel",
       "city": "palm-springs",
       "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-      "coordinates": "33.7796835, -116.4689784"
+      "coordinates": "33.7796835, -116.4689784",
+      "website": "https://www.ccbcresorthotel.com"
     },
     {
       "name": "Casa Oliver",
@@ -932,6 +944,7 @@ const scraperBars = {
       "city": "seattle",
       "address": "9630 16th Ave SW, Seattle, WA 98106",
       "coordinates": "47.5165235, -122.3548059",
+      "website": "https://www.thelumberyardbar.com",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
       "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
       "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
@@ -941,6 +954,7 @@ const scraperBars = {
       "city": "seattle",
       "address": "1533 13th Ave, Seattle, WA 98122",
       "coordinates": "47.6150778, -122.3157208",
+      "website": "https://cuffcomplex.com",
       "facebook": "https://www.facebook.com/thecuffcomplex",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
       "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
@@ -1014,6 +1028,7 @@ const scraperBars = {
       "city": "sf",
       "address": "398 12th Street, San Francisco, CA 94103",
       "coordinates": "37.7699927, -122.4134077",
+      "website": "https://www.sf-eagle.com",
       "instagram": "https://www.instagram.com/sfeaglebar",
       "facebook": "https://www.facebook.com/SFEagleBar",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
@@ -1025,6 +1040,7 @@ const scraperBars = {
       "city": "sf",
       "address": "1347 Folsom St, San Francisco, CA 94103",
       "coordinates": "37.773088, -122.412193",
+      "website": "https://powerhousebar.com",
       "instagram": "https://www.instagram.com/sfpowerhouse",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
@@ -1045,6 +1061,7 @@ const scraperBars = {
       "city": "sf",
       "address": "1354 Harrison St, San Francisco, CA 94103",
       "coordinates": "37.7721717, -122.410901",
+      "website": "https://www.lonestarsf.com",
       "facebook": "https://www.facebook.com/lonestarsf",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
@@ -1086,7 +1103,8 @@ const scraperBars = {
       "name": "Mr. S Leather",
       "city": "sf",
       "address": "385 8th Street, San Francisco",
-      "coordinates": "37.7743246, -122.4086188"
+      "coordinates": "37.7743246, -122.4086188",
+      "website": "https://www.mr-s-leather.com"
     }
   ],
   "sitges": [

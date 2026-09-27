@@ -4,21 +4,34 @@
     "city": "sf",
     "address": "398 12th Street, San Francisco, CA 94103",
     "coordinates": "37.7699927, -122.4134077",
+    "website": "https://www.sf-eagle.com",
     "instagram": "https://www.instagram.com/sfeaglebar",
     "facebook": "https://www.facebook.com/SFEagleBar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/304619-sf-eagle",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:62:0 #616375:10:3 #d5d5d5:8:0 #435287:4:9",
+    "accent": "#435287"
   },
   {
     "name": "Powerhouse",
     "city": "sf",
     "address": "1347 Folsom St, San Francisco, CA 94103",
     "coordinates": "37.773088, -122.412193",
+    "website": "https://powerhousebar.com",
     "instagram": "https://www.instagram.com/sfpowerhouse",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z",
+    "faviconBg": "#131719",
+    "faviconFg": "#14181b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:51:0 #131719:42:1 #dbdcdc:2:0"
   },
   {
     "name": "Hole in the Wall Saloon",
@@ -35,10 +48,17 @@
     "city": "sf",
     "address": "1354 Harrison St, San Francisco, CA 94103",
     "coordinates": "37.7721717, -122.410901",
+    "website": "https://www.lonestarsf.com",
     "facebook": "https://www.facebook.com/lonestarsf",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:73:0 #c51a20:13:20 #612826:9:8 #922223:2:15 #3e080a:2:8",
+    "accent": "#c51a20"
   },
   {
     "name": "440 Castro",
@@ -80,6 +100,12 @@
     "name": "Mr. S Leather",
     "city": "sf",
     "address": "385 8th Street, San Francisco",
-    "coordinates": "37.7743246, -122.4086188"
+    "coordinates": "37.7743246, -122.4086188",
+    "website": "https://www.mr-s-leather.com",
+    "faviconBg": "#e3e3e3",
+    "faviconFg": "#353535",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:47:0 #545454:13:0 #727272:9:0"
   }
 ]
