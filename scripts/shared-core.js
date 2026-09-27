@@ -78,6 +78,10 @@ const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-s
 // A pin this close to a curated bar's pin IS that bar's door (findCuratedBarByPlace):
 // an exact geocode of the same street address lands on the same placemark.
 const CURATED_BAR_SAME_PLACE_KM = 0.025;
+// Consecutive connection-level failures on one host, with no success this run,
+// before the rest of that host's queue is skipped (see noteHostReachability).
+// Three is enough to tell "this host is down" from one flaky request.
+const UNREACHABLE_HOST_FAILURE_THRESHOLD = 3;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
 // Ticket links are followed/kept only for events that started less than
 // this long ago — a page still selling last night's tickets is not a lead.
@@ -9064,6 +9068,11 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Skipping URL on bot-walled host (${Number(deadEndHostEntry.misses) || 0} distinct 401/403 URL(s), zero successful fetches): ${url}`);
                     continue;
                 }
+                const unreachable = this.getUnreachableHostSkip(url);
+                if (unreachable) {
+                    await displayAdapter.logInfo(`SYSTEM: Skipping URL on a host that is not answering this run (${unreachable.failures} consecutive connection failures, zero successful fetches): ${url}`);
+                    continue;
+                }
             }
 
             const politeGate = currentDepth === 0 && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
@@ -9137,6 +9146,9 @@ class SharedCore {
                     if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
                 }
                 const { pageClassification, parseResult, urlParserName } = crawlParse;
+                // The host answered: a site that comes back up mid-run is
+                // crawled again (see noteHostReachability).
+                this.noteHostReached(url);
 
                 // Every crawled page's classification, not only the roots':
                 // the aggregator-pointer pass needs to know what the page an
@@ -9615,6 +9627,7 @@ class SharedCore {
             } catch (error) {
                 // A door chain that threw leaves no window open behind it.
                 if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
+                this.noteHostReachability(url, error);
                 const message = error?.message || 'Unknown error';
                 // A refusal by the politeness gate (the host is parked after a
                 // 429/403, its per-run budget is spent, or robots.txt forbids
@@ -10242,6 +10255,47 @@ class SharedCore {
 
     // Record that a page on this host fetched successfully. Writes are rare
     // by design so unchanged runs do not dirty the store: a new host is
+    // A host that stops answering mid-run is not crawled for the rest of it.
+    // "fetch failed" is a CONNECTION-level failure — no HTTP status, so the
+    // dead-end machinery (which learns 401/403 walls) never sees it and a 503
+    // is deliberately never learned because it is transient. But a host that
+    // refuses every connection is not transient within one run: run
+    // 20260927-125246 spent 57 attempts on whereto.party's city pages, every
+    // one "fetch failed", after its directory page was served from cache.
+    // Per-run only, never persisted, and one successful fetch clears it — a
+    // site that comes back up in the same run is crawled again. Deliberately
+    // NOT a politeness park: the gate handles 429/403 from a host that IS
+    // answering; this is the case where nothing answers at all.
+    noteHostReachability(url, error) {
+        const host = FetchPoliteness.hostKeyOf(url);
+        if (!host) return;
+        if (!this.hostReachability) this.hostReachability = new Map();
+        const entry = this.hostReachability.get(host) || { failures: 0, succeeded: false };
+        // Only a connection-level failure counts. Anything carrying an HTTP
+        // status is the host answering, however unhappily.
+        const message = String((error && error.message) || '');
+        const statusless = !(error && (error.statusCode || error.status))
+            && /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ETIMEDOUT|socket hang up|network|dns/i.test(message);
+        if (!statusless) { entry.succeeded = true; entry.failures = 0; }
+        else entry.failures += 1;
+        this.hostReachability.set(host, entry);
+    }
+
+    noteHostReached(url) {
+        const host = FetchPoliteness.hostKeyOf(url);
+        if (!host) return;
+        if (!this.hostReachability) this.hostReachability = new Map();
+        this.hostReachability.set(host, { failures: 0, succeeded: true });
+    }
+
+    getUnreachableHostSkip(url, threshold = UNREACHABLE_HOST_FAILURE_THRESHOLD) {
+        const host = FetchPoliteness.hostKeyOf(url);
+        if (!host || !this.hostReachability) return null;
+        const entry = this.hostReachability.get(host);
+        if (!entry || entry.succeeded || entry.failures < threshold) return null;
+        return { host, failures: entry.failures };
+    }
+
     // recorded once, a bot-walled host self-heals immediately, and an
     // established entry only refreshes after a full retry window.
     recordDeadEndHostSuccess(context, url, nowMs = Date.now()) {
@@ -22837,6 +22891,18 @@ class SharedCore {
             && /\d/.test(segments[0]) && /[a-z]/i.test(segments[0])) return null;
         const leaf = segments[segments.length - 1];
         const idMatch = leaf.match(/(?:^|-|_)(\d{5,})$/);
+        // …and some vendors put the id FIRST and describe the event after it
+        // ("dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london").
+        // That slug is rewritten when the venue of a "Venue TBA" night is
+        // announced — same id, new words — so without reading the leading id
+        // the two spellings looked like two events and the announcement was
+        // refused (BEEFMINCE: SPOOKMINCE, run 20260927-125246). An opaque
+        // token carries BOTH letters and digits, which is what separates an
+        // id from a date ("2026-09-12-bear-tea") or a word ("treasure-trail").
+        const leadingIdMatch = idMatch ? null : leaf.match(/^([a-z0-9]{5,16})-[a-z0-9]/i);
+        const leadingId = leadingIdMatch && /\d/.test(leadingIdMatch[1]) && /[a-z]/i.test(leadingIdMatch[1])
+            ? leadingIdMatch[1].toLowerCase()
+            : '';
         return {
             host,
             segments: segments.map(segment => segment.toLowerCase()),
@@ -22844,7 +22910,7 @@ class SharedCore {
             key: `${host}/${segments.join('/')}`.toLowerCase(),
             // The platform's event id, when the leaf ends in one ("…/e/207002",
             // "…/events/treasure-trail-207002"): a slug rewrite keeps it.
-            id: idMatch ? idMatch[1] : '',
+            id: idMatch ? idMatch[1] : leadingId,
             // The leaf minus a trailing number: a MEC install renumbers one
             // event's slug per month ("karaoke-19", "karaoke-20").
             stem: leaf.toLowerCase().replace(/[-_]?\d+$/, '')

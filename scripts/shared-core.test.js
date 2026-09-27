@@ -25832,3 +25832,43 @@ test('crawl: a page parse stamps its site role onto the events it produced', asy
   });
   assert.equal(parseResult.events[0]._pageSiteRole, 'venue');
 });
+
+test('identity destinations: a vendor slug rewritten around the same LEADING id is one event (a venue-TBA night whose venue is announced)', () => {
+  const core = createGateCore(GATE_BARS);
+  // BEEFMINCE: SPOOKMINCE, run 20260927-125246 — dice rewrote the slug when
+  // the venue was announced; the two spellings were refused as two events.
+  const tba = { title: 'BEEFMINCE: SPOOKMINCE', bar: 'Venue TBA', city: 'london', timezone: 'Europe/London', startDate: new Date('2026-10-31T21:00:00.000Z'), ticketUrl: 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets' };
+  const named = { title: 'SPOOKMINCE', bar: 'Unlocked Shoreditch', city: 'london', timezone: 'Europe/London', startDate: new Date('2026-10-31T21:00:00.000Z'), ticketUrl: 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets' };
+  assert.equal(core.getContradictingDestinations(tba, named), null);
+  // A different id on the same vendor is still two events.
+  assert.ok(core.getContradictingDestinations(tba, { ...named, ticketUrl: 'https://dice.fm/event/zzz9zz-other-party-31st-oct-unlocked-shoreditch-london-tickets' }));
+  // An id carries BOTH letters and digits, so a date or a word is not one.
+  const idOf = (url) => (core.parseIdentityDestination(url) || {}).id;
+  assert.equal(idOf('https://dice.fm/event/v3x3n7-spookmince-31st-oct-london-tickets'), 'v3x3n7');
+  assert.equal(idOf('https://x.example/rsvp/2026/9/12/bear-tea'), '');
+  assert.equal(idOf('https://x.example/e/treasure-trail'), '');
+  assert.equal(idOf('https://x.example/events/treasure-trail-207002'), '207002', 'the trailing-number rule still wins');
+});
+
+test('crawl: a host that answers nothing this run is dropped from the queue after three connection failures, and comes back on a success', () => {
+  const core = createCore();
+  const connectionError = (message) => new Error(message);
+  const statusError = (message, statusCode) => { const error = new Error(message); error.statusCode = statusCode; return error; };
+  const url = (path) => `https://down.example${path}`;
+  assert.equal(core.getUnreachableHostSkip(url('/a')), null, 'nothing known yet');
+  core.noteHostReachability(url('/a'), connectionError('HTTP request failed for x: fetch failed'));
+  core.noteHostReachability(url('/b'), connectionError('getaddrinfo ENOTFOUND down.example'));
+  assert.equal(core.getUnreachableHostSkip(url('/c')), null, 'two is still maybe-flaky');
+  core.noteHostReachability(url('/c'), connectionError('connect ECONNREFUSED'));
+  assert.deepEqual(core.getUnreachableHostSkip(url('/d')), { host: 'down.example', failures: 3 });
+  // A site that comes back up mid-run is crawled again.
+  core.noteHostReached(url('/d'));
+  assert.equal(core.getUnreachableHostSkip(url('/e')), null);
+  // A host that ANSWERS, however unhappily, is never counted — 503s are
+  // transient by doctrine and 403s are the dead-end machinery's job.
+  for (let i = 0; i < 5; i++) core.noteHostReachability('https://slow.example/a', statusError('HTTP 503: busy', 503));
+  assert.equal(core.getUnreachableHostSkip('https://slow.example/b'), null);
+  // Per-host, never global.
+  core.noteHostReachability('https://other.example/a', connectionError('fetch failed'));
+  assert.equal(core.getUnreachableHostSkip('https://other.example/b'), null);
+});
