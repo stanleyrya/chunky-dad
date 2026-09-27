@@ -33,7 +33,9 @@ const scraperBars = {
       "city": "atlanta",
       "address": "1492 Piedmont Avenue Northeast, Atlanta",
       "coordinates": "33.7961866, -84.3711336",
-      "website": "https://atlantaeagle.com"
+      "website": "https://atlantaeagle.com",
+      "faviconBg": "#6c6b6f",
+      "faviconFg": "#3c3b3f"
     },
     {
       "name": "Woofs Atlanta",
@@ -131,7 +133,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/meetinghousetavernchi",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJndazcVjTD4gRimEFGWVA_AU",
       "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z",
+      "faviconBg": "#ce5417",
+      "faviconFg": "#edc4a2"
     },
     {
       "name": "The SoFo Tap",
@@ -142,7 +146,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/thesofotap",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z",
+      "faviconBg": "#000000",
+      "faviconFg": "#000000"
     },
     {
       "name": "Jackhammer",
@@ -154,7 +160,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/chijackhammer/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
       "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z",
+      "faviconBg": "#0b0b0b",
+      "faviconFg": "#f6f6f6"
     },
     {
       "name": "Touché",
@@ -260,7 +268,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/EagleBarWM/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
       "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
-      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
+      "faviconBg": "#ededed",
+      "faviconFg": "#161314"
     },
     {
       "name": "Gym Sports Bar",
@@ -453,7 +463,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/Duke.Of.Welly",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
       "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z",
+      "faviconBg": "#522838",
+      "faviconFg": "#d8ca8e"
     },
     {
       "name": "Kings Arms",
@@ -476,7 +488,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/EagleLDN",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
       "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
+      "faviconBg": "#060606",
+      "faviconFg": "#787878"
     },
     {
       "name": "Westminster Pier",
@@ -491,7 +505,9 @@ const scraperBars = {
       "city": "manchester",
       "address": "15 Bloom Street, Manchester, England",
       "coordinates": "53.4776882, -2.2368676",
-      "website": "https://www.eaglemanchester.com"
+      "website": "https://www.eaglemanchester.com",
+      "faviconBg": "#131315",
+      "faviconFg": "#a7a7a8"
     }
   ],
   "montreal": [
@@ -671,14 +687,18 @@ const scraperBars = {
       "city": "nyc",
       "address": "325 Franklin Avenue, New York, New York, 11216",
       "coordinates": "40.6882793, -73.9569264",
-      "website": "https://www.cmoneverybody.com"
+      "website": "https://www.cmoneverybody.com",
+      "faviconBg": "#f9f7f3",
+      "faviconFg": "#ac7f71"
     },
     {
       "name": "Red Eye NY",
       "city": "nyc",
       "address": "355 West 41st Street, New York NY 10036",
       "coordinates": "40.7577763, -73.9925418",
-      "website": "https://redeyeny.com"
+      "website": "https://redeyeny.com",
+      "faviconBg": "#fee0e1",
+      "faviconFg": "#f24d51"
     },
     {
       "name": "Julius'",
@@ -703,6 +723,12 @@ const scraperBars = {
       "city": "nyc",
       "address": "366 W 46th St, New York, NY 10036",
       "coordinates": "40.7605691, -73.9903480"
+    },
+    {
+      "name": "Bareburger",
+      "city": "nyc",
+      "address": "2233 Broadway, New York, New York",
+      "coordinates": "40.7844043, -73.9799172"
     }
   ],
   "palm-springs": [
@@ -722,7 +748,9 @@ const scraperBars = {
       "city": "palm-springs",
       "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
       "coordinates": "33.7796835, -116.4689784",
-      "website": "https://www.ccbcresorthotel.com"
+      "website": "https://www.ccbcresorthotel.com",
+      "faviconBg": "#fefefe",
+      "faviconFg": "#989a9b"
     },
     {
       "name": "Casa Oliver",
@@ -947,7 +975,9 @@ const scraperBars = {
       "website": "https://www.thelumberyardbar.com",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
       "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
+      "faviconBg": "#5d3d25",
+      "faviconFg": "#e9e8e6"
     },
     {
       "name": "The Cuff Complex",
@@ -958,7 +988,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/thecuffcomplex",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
       "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
+      "faviconBg": "#474747",
+      "faviconFg": "#767676"
     },
     {
       "name": "Seattle Eagle",
@@ -1033,7 +1065,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/SFEagleBar",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/304619-sf-eagle",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z",
+      "faviconBg": "#5f6477",
+      "faviconFg": "#e1e1e1"
     },
     {
       "name": "Powerhouse",
@@ -1044,7 +1078,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/sfpowerhouse",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z",
+      "faviconBg": "#131719",
+      "faviconFg": "#14181b"
     },
     {
       "name": "Hole in the Wall Saloon",
@@ -1065,7 +1101,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/lonestarsf",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z",
+      "faviconBg": "#020000",
+      "faviconFg": "#931d20"
     },
     {
       "name": "440 Castro",
@@ -1104,7 +1142,9 @@ const scraperBars = {
       "city": "sf",
       "address": "385 8th Street, San Francisco",
       "coordinates": "37.7743246, -122.4086188",
-      "website": "https://www.mr-s-leather.com"
+      "website": "https://www.mr-s-leather.com",
+      "faviconBg": "#e3e3e3",
+      "faviconFg": "#353535"
     }
   ],
   "sitges": [

@@ -200,5 +200,11 @@
     "city": "nyc",
     "address": "366 W 46th St, New York, NY 10036",
     "coordinates": "40.7605691, -73.9903480"
+  },
+  {
+    "name": "Bareburger",
+    "city": "nyc",
+    "address": "2233 Broadway, New York, New York",
+    "coordinates": "40.7844043, -73.9799172"
   }
 ]
