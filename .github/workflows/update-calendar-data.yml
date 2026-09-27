@@ -6,6 +6,12 @@ on:
     - cron: '0 */2 * * *'
   workflow_dispatch: # Allow manual triggering
   push:
+    # main only: these jobs COMMIT generated assets (images, favicons,
+    # calendars, city activity) back to the branch they run on. Without a
+    # branch filter they fired on every PR branch, committed there, and then
+    # collided with main's own copies of the same generated files — which is
+    # what made PR #1830 conflict twice with no source-code overlap.
+    branches: [ main ]
     paths:
       - 'js/city-config.js'
       - '.github/workflows/update-calendar-data.yml'
