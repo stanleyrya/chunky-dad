@@ -20802,3 +20802,27 @@ test('page chrome is scoped to the page it was read from', () => {
   parser.notePageChromeLines('<html><body><h1>Back to All Events</h1></body></html>', 'https://other.example/events/two');
   assert.equal(parser.isPageChromeLine('Back to All Events'), false);
 });
+
+test('page site role resolved on a working copy is published back to the caller\'s page object', () => {
+  const parser = createParser();
+  // What SharedCore holds, and stamps the page's events from.
+  const caller = { url: 'https://venue.example/events', html: '<html></html>' };
+  parser.pageSiteRoleCallerHtmlData = caller;
+  // A JSON-API page is parsed through a linearized copy; without the
+  // publish the role would be cached there and reach nothing.
+  const working = { ...caller, html: 'name: Bear Night\nvenue: Venue' };
+  assert.equal(parser.resolvePageSiteRole(working, { siteRole: 'venue', urls: ['https://venue.example/'] }), 'venue');
+  assert.equal(caller.pageSiteRole, 'venue');
+  assert.equal(caller.pageSiteRoleReason, 'parser config siteRole');
+  // Never downgrades what the caller already carries; same object is a no-op.
+  assert.equal(parser.publishPageSiteRoleToCaller({ pageSiteRole: '' }, caller), '');
+  assert.equal(caller.pageSiteRole, 'venue');
+  assert.equal(parser.publishPageSiteRoleToCaller(caller, caller), '');
+  // An off-host page of the same venue parser resolves nothing from the
+  // config, so nothing is published (#1828's host scoping).
+  const offHostCaller = { url: 'https://charity.example/gala' };
+  parser.pageSiteRoleCallerHtmlData = offHostCaller;
+  assert.equal(parser.resolvePageSiteRole({ ...offHostCaller, html: '<html></html>' },
+    { siteRole: 'venue', urls: ['https://venue.example/'] }), '');
+  assert.equal(offHostCaller.pageSiteRole, undefined);
+});

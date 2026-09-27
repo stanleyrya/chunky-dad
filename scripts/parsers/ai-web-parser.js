@@ -1106,6 +1106,13 @@ class AiWebParser {
         var ocrResults = [];
         try {
             this.aiPromptHistory = [];
+            // The object the CALLER holds. A page is parsed through COPIES of
+            // it (a linearized JSON payload, an html-augmented twin, the
+            // per-segment spreads), so a page-level determination resolved on
+            // a copy would be cached on the copy and reach nothing. It is
+            // published back here, where the caller stamps it onto the events
+            // that came off this page (SharedCore.stampPageSiteRoleOnEvents).
+            this.pageSiteRoleCallerHtmlData = htmlData;
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
 
             // JSON-API pathway: some parser targets are raw JSON endpoints
@@ -27201,6 +27208,23 @@ TEXT:
     //      (footer/contact) → venue.
     // Anything else stays '' (undetermined — no steering context injected).
     // The result is cached on htmlData so every downstream copy inherits it.
+    // Copy a page-level determination from the working copy back onto the
+    // object the caller passed in, so a role resolved while parsing a
+    // linearized or augmented copy still reaches the events extracted from
+    // that page. Never downgrades a role the caller's object already carries,
+    // and a same-object call is a no-op.
+    publishPageSiteRoleToCaller(workingHtmlData, callerHtmlData) {
+        if (!workingHtmlData || !callerHtmlData || workingHtmlData === callerHtmlData) return '';
+        if (typeof callerHtmlData !== 'object' || !Object.isExtensible(callerHtmlData)) return '';
+        const role = this.normalizeSiteRoleValue(workingHtmlData.pageSiteRole);
+        if (!role || callerHtmlData.pageSiteRole === role) return '';
+        callerHtmlData.pageSiteRole = role;
+        if (typeof workingHtmlData.pageSiteRoleReason === 'string' && !callerHtmlData.pageSiteRoleReason) {
+            callerHtmlData.pageSiteRoleReason = workingHtmlData.pageSiteRoleReason;
+        }
+        return role;
+    }
+
     resolvePageSiteRole(htmlData, parserConfig = {}, segments = null) {
         const configRole = this.normalizeSiteRoleValue(parserConfig && parserConfig.siteRole);
         if (configRole && this.parserConfigRoleAppliesToPage(parserConfig,
@@ -27210,6 +27234,7 @@ TEXT:
                 htmlData.pageSiteRoleReason = 'parser config siteRole';
                 if (configRole === 'venue') this.getPageVenueName(htmlData);
             }
+            this.publishPageSiteRoleToCaller(htmlData, this.pageSiteRoleCallerHtmlData);
             return configRole;
         }
         if (!htmlData || typeof htmlData !== 'object') return '';
@@ -27296,6 +27321,7 @@ TEXT:
         // html (meta tags, JSON-LD) is still present — segment copies replace
         // html with segment text and could no longer derive it.
         if (htmlData.pageSiteRole === 'venue') this.getPageVenueName(htmlData);
+        this.publishPageSiteRoleToCaller(htmlData, this.pageSiteRoleCallerHtmlData);
         return this.getPageSiteRole(htmlData);
     }
 
