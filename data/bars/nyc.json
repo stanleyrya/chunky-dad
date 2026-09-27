@@ -159,10 +159,10 @@
     "website": "https://www.cmoneverybody.com",
     "faviconBg": "#f9f7f3",
     "faviconFg": "#ac7f71",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#fffefe:60:0 #e7d8bb:11:4 #cfac8a:10:6 #d93d39:4:19 #504fb7:1:16",
-    "accent": "#d93d39"
+    "accent": "#d93d39",
+    "faviconPlate": "#ffffff"
   },
   {
     "name": "Red Eye NY",
@@ -172,10 +172,10 @@
     "website": "https://redeyeny.com",
     "faviconBg": "#fee0e1",
     "faviconFg": "#f24d51",
-    "faviconPlate": "#fffdfd",
     "paletteSource": "favicon",
     "palette": "#fef0f1:67:2 #fcbbbd:19:8 #ef4242:9:21 #f58283:6:14",
-    "accent": "#ef4242"
+    "accent": "#ef4242",
+    "faviconPlate": "#fffdfd"
   },
   {
     "name": "Julius'",

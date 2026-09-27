@@ -18,9 +18,9 @@
     "website": "https://www.ccbcresorthotel.com",
     "faviconBg": "#fefefe",
     "faviconFg": "#989a9b",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
-    "palette": "#ffffff:96:0 #929292:1:0 #e0e0e0:1:0"
+    "palette": "#ffffff:96:0 #929292:1:0 #e0e0e0:1:0",
+    "faviconPlate": "#ffffff"
   },
   {
     "name": "Casa Oliver",
