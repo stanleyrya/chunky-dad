@@ -1,5 +1,15 @@
 [
   {
+    "slug": "furball-dc-66b348c1",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0d0e11:42:1 #5a3234:12:6 #b19ea0:11:2 #cb2b3a:7:20",
+    "accent": "#cb2b3a"
+  },
+  {
     "slug": "megawoof-5e604137",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",

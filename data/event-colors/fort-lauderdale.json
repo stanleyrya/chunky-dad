@@ -330,6 +330,16 @@
     "accent": "#fd7dac"
   },
   {
+    "slug": "daddy-pop-75ac1a81",
+    "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-12-25/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#070510:35:3 #d29679:16:8 #a3745b:15:7 #6c4b3b:11:5 #f5c072:4:11",
+    "accent": "#d29679"
+  },
+  {
     "slug": "daddy-pop-7978927b",
     "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
     "faviconBg": "#ededed",
@@ -348,6 +358,16 @@
     "paletteSource": "flyer",
     "palette": "#d6e1e6:29:1 #7294a5:20:5 #527b8e:16:5 #646c43:12:6 #8cc3ee:6:8",
     "accent": "#8cc3ee"
+  },
+  {
+    "slug": "flw-leather-night-55e3cfe4",
+    "url": "https://eaglebarwm.com/event/flw-chili-cook-off-3/",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ec3f48:25:21 #faf7f9:25:0 #3b2b2d:14:2 #843233:8:11 #2e49f5:5:25",
+    "accent": "#ec3f48"
   },
   {
     "slug": "honey-pot-206931fd",

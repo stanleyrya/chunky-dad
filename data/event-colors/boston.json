@@ -90,6 +90,16 @@
     "accent": "#d56c3b"
   },
   {
+    "slug": "bear-communitea-hanky-code-2b4beebb",
+    "url": "https://www.massbearsandcubs.org/events/bear-communitea-hanky-code-2026-10-04",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
     "slug": "bear-pride-trivia-0b40f02d",
     "url": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3",
     "faviconBg": "#533531",
@@ -230,6 +240,16 @@
     "accent": "#ee8034"
   },
   {
+    "slug": "bears-brews-boys-71f5f729",
+    "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3-exe4j-32h44-7enkh-kxa5h",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:41:0 #3b272a:28:3 #885545:8:7 #ee8034:7:16 #fde6b6:6:7",
+    "accent": "#ee8034"
+  },
+  {
     "slug": "bears-brews-boys-7d5995be",
     "url": "https://www.massbearsandcubs.org/events/bears-brews-boys-smd42-eb7p7-872me-9w83d-x943p-yecy3",
     "faviconBg": "#533531",
@@ -268,6 +288,16 @@
     "paletteSource": "flyer",
     "palette": "#020101:27:1 #130401:20:3 #db8c64:13:11 #a35b3a:12:10 #f4cb5b:5:14",
     "accent": "#db8c64"
+  },
+  {
+    "slug": "furball-boston-16693caa",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#a4715e:17:7 #ed9354:17:13 #5f5347:16:2 #fcf393:5:12",
+    "accent": "#ed9354"
   },
   {
     "slug": "furball-boston-328cb05d",

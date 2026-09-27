@@ -10,6 +10,16 @@
     "accent": "#f2592a"
   },
   {
+    "slug": "bear-trap-00e56e09",
+    "url": "https://www.lonestarsf.com/new-events-1/2026/10/2/bear-trap",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#f7f7f7:31:0 #cd2c1a:14:20 #a3a3a3:13:0",
+    "accent": "#cd2c1a"
+  },
+  {
     "slug": "bearracuda-folsom-street-horse-meat-disco-6bcb20fd",
     "url": "https://bearracuda.com/events/flsm/",
     "faviconBg": "#ff1901",
@@ -227,6 +237,16 @@
     "accent": "#bb2c9c"
   },
   {
+    "slug": "disco-bear-73394f99",
+    "url": "https://www.lonestarsf.com/new-events-1/2026/10/3/disco-bear",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#cab9cc:24:3 #d4906d:17:10 #f89733:15:16 #73aa9c:11:6 #9d7249:10:8",
+    "accent": "#f89733"
+  },
+  {
     "slug": "disco-daddy-folsom-54c64957",
     "url": "https://www.sf-eagle.com/events/disco-daddy-folsom/",
     "faviconBg": "#5f6477",
@@ -310,6 +330,36 @@
     "paletteSource": "flyer",
     "palette": "#130b1c:24:4 #03010b:19:4 #34223b:14:5 #bd5e4a:12:13 #752b32:10:10",
     "accent": "#bd5e4a"
+  },
+  {
+    "slug": "queer-leather-happy-hour-37f0d3a3",
+    "url": "https://www.sf-eagle.com/events/queer-leather-happy-hour-10001131/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0c0c0a:54:0 #20201e:13:0 #393936:11:0 #8b0c13:2:16",
+    "accent": "#8b0c13"
+  },
+  {
+    "slug": "queer-leather-happy-hour-553a558e",
+    "url": "https://www.sf-eagle.com/events/queer-leather-happy-hour/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0c0c0a:54:0 #20201e:13:0 #393936:11:0 #8b0c13:2:16",
+    "accent": "#8b0c13"
+  },
+  {
+    "slug": "queer-leather-happy-hour-5ae89664",
+    "url": "https://www.sf-eagle.com/events/queer-leather-happy-hour-10001132/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0c0c0a:54:0 #20201e:13:0 #393936:11:0 #8b0c13:2:16",
+    "accent": "#8b0c13"
   },
   {
     "slug": "sf-flsm-6bcb20fd",

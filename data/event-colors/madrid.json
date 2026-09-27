@@ -10,6 +10,16 @@
     "accent": "#cb2026"
   },
   {
+    "slug": "macho-party-1de2bda2",
+    "url": "https://madbear.org/en",
+    "faviconBg": "#d12a26",
+    "faviconFg": "#dc6a25",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0b:73:0 #1f2022:17:0 #e30404:5:24",
+    "accent": "#e30404"
+  },
+  {
     "slug": "madbear-party-2026-madrid-620cefcf",
     "paletteSource": "flyer",
     "palette": "#0b0303:20:2 #5d130d:20:11 #320905:19:7 #8c2b23:19:13 #d73027:10:20",

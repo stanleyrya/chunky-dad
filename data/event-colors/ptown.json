@@ -16,6 +16,16 @@
     "accent": "#db7442"
   },
   {
+    "slug": "furball-provincetown-59b3a5be",
+    "url": "https://redroom.club/shows/387797",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:24:0 #1b161a:21:1 #1a3d6b:14:9 #ec4d14:10:20 #1a45ec:2:25",
+    "accent": "#ec4d14"
+  },
+  {
     "slug": "furball-ptown-2d335fcd",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",

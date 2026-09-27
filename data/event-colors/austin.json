@@ -1,5 +1,15 @@
 [
   {
+    "slug": "club-chub-austin-horror-story-coven-601fbd6d",
+    "url": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b8150e:46:19 #020202:16:0 #fbfaf6:8:1 #741512:7:13 #8e6867:4:5",
+    "accent": "#b8150e"
+  },
+  {
     "slug": "furball-austin-57e360df",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",
@@ -8,5 +18,15 @@
     "paletteSource": "flyer",
     "palette": "#080714:52:3 #ebd4d2:11:3 #12143b:10:7 #643c3b:9:6 #f2463f:7:21",
     "accent": "#f2463f"
+  },
+  {
+    "slug": "megawoof-america-austin-debut-halloween-special-587f53a0",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#140d3b:25:8 #9a8593:18:3 #2d2254:14:9 #e2563a:8:18 #9c3f41:5:12",
+    "accent": "#e2563a"
   }
 ]

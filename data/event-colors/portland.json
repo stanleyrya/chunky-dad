@@ -60,6 +60,16 @@
     "accent": "#cd6a4c"
   },
   {
+    "slug": "bearracuda-portland-november-14th-341898d4",
+    "url": "https://bearracuda.com/events/portlandbdat/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "favicon",
+    "palette": "#ff3c00:72:24 #fffefe:27:0 #ff9f81:1:12",
+    "accent": "#ff3c00"
+  },
+  {
     "slug": "bearracuda-portland-nye-0de4cad8",
     "url": "https://bearracuda.com/events/portlandnye/",
     "faviconBg": "#ff1901",
@@ -217,6 +227,36 @@
     "paletteSource": "flyer",
     "palette": "#2cb3f4:38:14 #f4f543:15:19 #ddd9d5:11:1 #6dca4c:7:19 #f55bbd:7:21",
     "accent": "#2cb3f4"
+  },
+  {
+    "slug": "leather-scotch-and-cigar-social-101ef05a",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0c:22:0 #3b3334:19:1 #5c514f:16:1 #cca49b:8:5",
+    "accent": "#cca49b"
+  },
+  {
+    "slug": "leather-scotch-and-cigar-social-12bb9259",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0c:22:0 #3b3334:19:1 #5c514f:16:1 #cca49b:8:5",
+    "accent": "#cca49b"
+  },
+  {
+    "slug": "leather-scotch-and-cigar-social-1ff247e8",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0c:22:0 #3b3334:19:1 #5c514f:16:1 #cca49b:8:5",
+    "accent": "#cca49b"
   },
   {
     "slug": "nova-box-12aa4185",

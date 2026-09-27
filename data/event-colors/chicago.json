@@ -225,6 +225,16 @@
     "accent": "#ea2837"
   },
   {
+    "slug": "flex-0530ef42",
+    "url": "https://jackhammerchicago.com",
+    "faviconBg": "#0b0b0b",
+    "faviconFg": "#f6f6f6",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#cbb29d:34:4 #b29a85:28:4 #946d52:12:6 #644533:10:5 #e63a38:2:21",
+    "accent": "#e63a38"
+  },
+  {
     "slug": "furball-chicago-market-days-4ca14ebb",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",
@@ -573,6 +583,16 @@
     "paletteSource": "flyer",
     "palette": "#000000:47:0 #ced2d3:12:1 #3a2424:10:3 #945443:9:9 #fdce1e:3:17",
     "accent": "#fdce1e"
+  },
+  {
+    "slug": "patio-beef-tailgate-2557cd12",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#111b25:24:2 #966b41:13:8 #6e4324:13:7 #d89648:12:12 #dcccac:12:5",
+    "accent": "#d89648"
   },
   {
     "slug": "treasure-trail-chicago-2519d1b9",

@@ -39,6 +39,16 @@
     "accent": "#f4a27b"
   },
   {
+    "slug": "furball-x-lynx-noir-nola-063f2052",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a060a:39:1 #231513:17:2 #3a2422:15:3 #5b3b3c:12:5 #845a4d:8:6",
+    "accent": "#845a4d"
+  },
+  {
     "slug": "horse-meat-disco-southern-decadence-32901797",
     "paletteSource": "flyer",
     "palette": "#c4c4c4:59:0 #2b2b2b:11:0 #1b1b1b:9:0"
