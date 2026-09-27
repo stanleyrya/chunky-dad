@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790106363/saas/logos/image_1790106358056_1l0kdiwtf.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790106363/saas/logos/image_1790106358056_1l0kdiwtf.webp",
+  "type": "event",
+  "filename": "2026-10-09_flex_f303bb2.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "432791",
+  "eventInfo": {
+    "name": "FLEX",
+    "startDate": "2026-10-09T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-27T22:06:38.405Z",
+  "etag": "\"13d66b0570d74cdd9e99b94227c7305b\"",
+  "lastModified": "Wed, 23 Sep 2026 01:15:13 GMT",
+  "flyerOptimized": 1
+}

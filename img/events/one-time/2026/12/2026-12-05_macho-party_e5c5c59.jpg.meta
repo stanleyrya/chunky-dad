@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg",
+  "type": "event",
+  "filename": "2026-12-05_macho-party_e5c5c59.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "183443",
+  "eventInfo": {
+    "name": "MACHO PARTY",
+    "startDate": "2026-12-05T00:59:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-09-27T22:06:40.689Z",
+  "etag": "\"a6e3a146177e84d2788254dce97ade02\"",
+  "lastModified": "Wed, 23 Sep 2026 05:19:08 GMT",
+  "flyerOptimized": 1
+}
