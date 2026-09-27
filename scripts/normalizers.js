@@ -900,8 +900,21 @@ class LocationNormalizer extends BaseNormalizer {
             return false;
         }
 
+        // A neighbourhood LABEL sitting where the street address belongs, in
+        // front of a "City, ST 12345" tail. Three shapes, and not one place
+        // name kept by hand — the LA-specific "DTLA" token that used to open
+        // the first pattern is gone, replaced by the shape it was standing in
+        // for: an ALL-CAPS initialism naming a neighbourhood (DTLA, SOMA,
+        // WEHO, NOHO, RINO). Case SENSITIVE on purpose — an /i version would
+        // swallow any 3-6 letter leading word and flip real addresses
+        // ("Ripple, Portland, OR 97217" reaches the full-address test today
+        // because "Ripple" contains "pl"), while an all-caps run is what an
+        // initialism actually looks like. Verified against every address-
+        // shaped string in runs 20260924-055217 / 20260925-110542 and the
+        // 1,702 cached page files: identical isFullAddress output throughout.
         const partialAddressPatterns = [
-            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^(Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^[A-Z]{3,6}(?![A-Za-z])\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/,
             /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
         ];
 

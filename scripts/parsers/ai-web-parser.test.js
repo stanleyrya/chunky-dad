@@ -20803,6 +20803,190 @@ test('page chrome is scoped to the page it was read from', () => {
   assert.equal(parser.isPageChromeLine('Back to All Events'), false);
 });
 
+// ---------------------------------------------------------------------------
+// A DETAIL PAGE'S LINK IS NOT ITS COLLECTION, AND ITS TITLE IS NOT THE PAGE
+// TITLE.  Same chrome rule as the lines above, read from the other end: an
+// anchor up this page's own path is navigation, and a single-event page's own
+// destination is its own URL.  The page's <title>/og:title suffix is the site
+// naming itself, never part of the event's name.
+// ---------------------------------------------------------------------------
+const DETAIL_PAGE_URL = 'https://venue.example/events/bathhouse-disco';
+const DETAIL_PAGE_HTML = `<html><head>
+    <title>Bathhouse Disco &mdash; The Cuff Complex</title>
+    <meta property="og:site_name" content="The Cuff Complex"/>
+    <meta property="og:title" content="Bathhouse Disco &mdash; The Cuff Complex"/>
+  </head><body>
+    <a href="/events" class="eventitem-backlink">Back to All Events</a>
+    <article class="eventitem">
+      <h1 class="eventitem-title">Bathhouse Disco</h1>
+      <time class="event-date" datetime="2026-09-25">Friday, September 25, 2026</time>
+      <a href="http://maps.google.com/?q=1533+13th+Ave">1533 13th Ave</a>
+    </article>
+  </body></html>`;
+
+test('a detail page card links the event, not the collection it sits in', () => {
+  const parser = createParser();
+  const segment = {
+    html: `<a href="/events" class="eventitem-backlink">Back to All Events</a>
+      <h1>Bathhouse Disco</h1><time datetime="2026-09-25">Friday, September 25, 2026</time>
+      <a href="http://maps.google.com/?q=1533+13th+Ave">1533 13th Ave</a>`,
+    lines: ['Bathhouse Disco', 'Friday, September 25, 2026', '1533 13th Ave']
+  };
+  parser.notePageChromeLines(DETAIL_PAGE_HTML, DETAIL_PAGE_URL);
+  // The collection is navigation: an anchor up this page's own path.
+  assert.equal(parser.isPageChromeLinkUrl('https://venue.example/events', DETAIL_PAGE_URL), true);
+  assert.equal(parser.isPageChromeLinkUrl('https://venue.example/events/voltaje', DETAIL_PAGE_URL), false,
+    'a sibling event page is a link ACROSS the site, never up it');
+  assert.equal(parser.isPageChromeLinkUrl('https://venue.example/', DETAIL_PAGE_URL), false,
+    'the site root is not a strict ancestor — withholding it promotes whatever comes next');
+  // …and the page IS this event, so the window's destination is the page.
+  const lines = parser.extractMultiEventSegmentResourceLines(segment.html, DETAIL_PAGE_URL, [], [], null, segment);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_LINK_URL')),
+    [`SEGMENT_LINK_URL: ${DETAIL_PAGE_URL}`],
+    'neither the collection nor the venue map pin is the card\'s destination');
+});
+
+test('only the window that IS the page\'s subject takes the page\'s own url', () => {
+  const parser = createParser();
+  parser.notePageChromeLines(DETAIL_PAGE_HTML, DETAIL_PAGE_URL);
+  // The "Previous" rail on the same page is a DIFFERENT event: it keeps its
+  // own link and never borrows this page's url.
+  const rail = {
+    html: '<a href="/events/voltaje"><div>Previous</div><h2>Voltaje</h2></a>',
+    lines: ['Previous', 'Voltaje']
+  };
+  assert.deepEqual(
+    parser.extractMultiEventSegmentResourceLines(rail.html, DETAIL_PAGE_URL, [], [], null, rail)
+      .filter(line => line.startsWith('SEGMENT_LINK_URL')),
+    ['SEGMENT_LINK_URL: https://venue.example/events/voltaje']
+  );
+  // A link-less rail window gains nothing either.
+  const bare = { html: '<div><div>Next</div></div>', lines: ['Next'] };
+  assert.deepEqual(
+    parser.extractMultiEventSegmentResourceLines(bare.html, DETAIL_PAGE_URL, [], [], null, bare)
+      .filter(line => line.startsWith('SEGMENT_LINK_URL')),
+    []
+  );
+});
+
+test('a listing page\'s cards are untouched by the detail-page link rule', () => {
+  const parser = createParser();
+  const listingUrl = 'https://venue.example/events';
+  const html = `<html><head><title>Events &mdash; The Cuff Complex</title>
+      <meta property="og:site_name" content="The Cuff Complex"/></head><body>
+      <nav><a href="/">Home</a></nav>
+      <article class="card"><h2><a href="/events/bathhouse-disco">Bathhouse Disco</a></h2>
+        <time datetime="2026-09-25">Friday, September 25, 2026</time></article>
+    </body></html>`;
+  parser.notePageChromeLines(html, listingUrl);
+  // Nothing above /events but the site root, so this is no member page and
+  // no card may claim the listing's own url.
+  assert.equal(parser.getPageOwnDestinationUrl(listingUrl), '');
+  const card = {
+    html: '<h2><a href="/events/bathhouse-disco">Bathhouse Disco</a></h2><time datetime="2026-09-25">Friday, September 25, 2026</time>',
+    lines: ['Bathhouse Disco', 'Friday, September 25, 2026']
+  };
+  assert.deepEqual(
+    parser.extractMultiEventSegmentResourceLines(card.html, listingUrl, [], [], null, card)
+      .filter(line => line.startsWith('SEGMENT_LINK_URL')),
+    ['SEGMENT_LINK_URL: https://venue.example/events/bathhouse-disco']
+  );
+});
+
+test('a ticketing sub-page whose PARENT is the event keeps the parent as its link', () => {
+  const parser = createParser();
+  // sickening.events/e/<slug>/tickets: the ancestor anchor carries the
+  // event's own name, so it is the event's page, not a crumb — and this page
+  // never claims a destination of its own.
+  const ticketsUrl = 'https://tickets.example/e/goldiloxx-chicago/tickets';
+  const html = `<html><head><title>GOLDILOXX Chicago | Interactive Nightlife</title>
+      <meta property="og:site_name" content="Interactive Nightlife"/></head><body>
+      <a href="/e/goldiloxx-chicago">GOLDILOXX Chicago</a>
+      <h1>GOLDILOXX Chicago</h1><p>Sep 19, 2026 at 9:00 PM</p>
+    </body></html>`;
+  parser.notePageChromeLines(html, ticketsUrl);
+  assert.equal(parser.isPageChromeLinkUrl('https://tickets.example/e/goldiloxx-chicago', ticketsUrl), false);
+  assert.equal(parser.getPageOwnDestinationUrl(ticketsUrl), '',
+    'the event lives at the parent path; this page has no destination of its own to claim');
+  const segment = {
+    html: '<a href="/e/goldiloxx-chicago">GOLDILOXX Chicago</a><h1>GOLDILOXX Chicago</h1><p>Sep 19, 2026 at 9:00 PM</p>',
+    lines: ['GOLDILOXX Chicago', 'Sep 19, 2026 at 9:00 PM']
+  };
+  assert.deepEqual(
+    parser.extractMultiEventSegmentResourceLines(segment.html, ticketsUrl, [], [], null, segment)
+      .filter(line => line.startsWith('SEGMENT_LINK_URL')),
+    ['SEGMENT_LINK_URL: https://tickets.example/e/goldiloxx-chicago']
+  );
+});
+
+test('the page\'s own name is dropped off the end of a window\'s title', () => {
+  const parser = createParser();
+  const eagleUrl = 'https://www.sf-eagle.example/events/adonis/';
+  const eagleHtml = `<html><head><title>Adonis &middot; SF Eagle</title>
+      <meta property="og:site_name" content="SF Eagle"/>
+      <meta property="og:title" content="Adonis &middot; SF Eagle"/></head><body>
+      <a href="/events/">&larr; All events</a>
+      <h1>Adonis</h1><p>Friday, October 2</p>
+    </body></html>`;
+  parser.notePageChromeLines(eagleHtml, eagleUrl);
+  const segment = { lines: ['Adonis · SF Eagle', '← All events', 'Friday, October 2', 'Adonis'] };
+  // Segmentation still sees the page's own string — a window's identity is
+  // never rewritten — but what the model is TOLD the event is called is not.
+  assert.equal(parser.deriveSegmentListingTitle(segment), 'Adonis · SF Eagle');
+  assert.equal(parser.deriveSegmentEventName(segment, eagleUrl), 'Adonis');
+  // Every separator the sites use, and the LAST one wins.
+  const each = [
+    ['Adonis · SF Eagle', 'Adonis'],
+    ['Adonis | SF Eagle', 'Adonis'],
+    ['Adonis – SF Eagle', 'Adonis'],
+    ['Adonis — SF Eagle', 'Adonis'],
+    ['Adonis - SF Eagle', 'Adonis'],
+    ['Pride Day Play – Atlanta Pride 2026 · SF Eagle', 'Pride Day Play – Atlanta Pride 2026']
+  ];
+  for (const [before, after] of each) {
+    assert.equal(parser.stripPageSiteNameTail(before, eagleUrl), after, before);
+  }
+});
+
+test('a tail that is part of the event\'s own name is never dropped', () => {
+  const parser = createParser();
+  const eagleUrl = 'https://www.sf-eagle.example/events/adonis/';
+  parser.notePageChromeLines(`<html><head><title>Adonis &middot; SF Eagle</title>
+      <meta property="og:site_name" content="SF Eagle"/></head><body><h1>Adonis</h1></body></html>`, eagleUrl);
+  // A real event name that carries a separator: the tail is not this page's
+  // site name, so nothing is dropped.
+  assert.equal(parser.stripPageSiteNameTail('Folsom Saturday: Cell Blok - Boot Camp', eagleUrl),
+    'Folsom Saturday: Cell Blok - Boot Camp');
+  assert.equal(parser.stripPageSiteNameTail('Bear Tea - Meet MA Bear 2027!', eagleUrl),
+    'Bear Tea - Meet MA Bear 2027!');
+  // An UNSPACED hyphen is one word, never a title/site split.
+  assert.equal(parser.stripPageSiteNameTail('Bark-Cade', eagleUrl), 'Bark-Cade');
+  // Nothing left in front of the separator: the line is the site name alone.
+  assert.equal(parser.stripPageSiteNameTail('· SF Eagle', eagleUrl), '· SF Eagle');
+  // A page that never names itself strips nothing at all.
+  const bare = createParser();
+  bare.notePageChromeLines('<html><head><title>Adonis · SF Eagle</title></head><body><h1>Adonis</h1></body></html>',
+    'https://www.sf-eagle.example/events/adonis/');
+  assert.equal(bare.stripPageSiteNameTail('Adonis · SF Eagle', 'https://www.sf-eagle.example/events/adonis/'),
+    'Adonis · SF Eagle', 'one title alone never proves what the site is called');
+  // …and the rule is scoped to the page it was read from.
+  assert.equal(parser.stripPageSiteNameTail('Adonis · SF Eagle', 'https://other.example/events/adonis/'),
+    'Adonis · SF Eagle');
+});
+
+test('two of the page\'s own titles sharing a tail name the site', () => {
+  const parser = createParser();
+  const url = 'https://club.example/events/bear-night';
+  // No og:site_name; <title> and og:title lead with different text and end
+  // with the same segment — that shared tail is the site naming itself.
+  const html = `<html><head>
+      <title>Bear Night at the Club | Club Example</title>
+      <meta property="og:title" content="Bear Night | Club Example"/>
+    </head><body><h1>Bear Night</h1></body></html>`;
+  parser.notePageChromeLines(html, url);
+  assert.equal(parser.stripPageSiteNameTail('Bear Night | Club Example', url), 'Bear Night');
+});
+
 test('page site role resolved on a working copy is published back to the caller\'s page object', () => {
   const parser = createParser();
   // What SharedCore holds, and stamps the page's events from.

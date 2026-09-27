@@ -11394,6 +11394,64 @@ class SharedCore {
         return matched;
     }
 
+    // Prompt exemplars for "a named bear party brand or series", read off the
+    // curated registry instead of a list kept by hand in the prompt text.
+    //
+    // WHICH entries: the ones carrying a curated `bearAffinity` ("always" or
+    // "usually") — the registry's own statement that the owner judged this
+    // brand's relationship to the bear calendar. "usually" is INCLUDED
+    // deliberately: Bearracuda is "usually", and it is the one exemplar the
+    // cached corpus shows events actually leaning on. Of 2,177 cached
+    // uncurated bear-check prompts, the events whose OWN title/description
+    // names a current exemplar are 17 for Bearracuda and ZERO for Furball,
+    // MegaWoof, CHUNK and Bear Happy Hour — and all 17 are the
+    // Treasure Trail family, which sits right on the verdict boundary
+    // (6 bear / 10 not_bear / 1 unsure) precisely because a sub-brand reads
+    // as a generic party name until the model is told it is a Bearracuda
+    // party. Filtering to "always" alone would drop the only load-bearing
+    // exemplar in the corpus.
+    //
+    // WHICH ORDER: the registry's own order, capped. Registry order is the
+    // owner's curation order and an appended promoter — the normal way the
+    // file grows — never disturbs the first N, so the prompt text (and with
+    // it every cached AI response, which is keyed on the prompt) stays put.
+    // Sorting alphabetically was measured and rejected: it returns "Bear
+    // Happy Hour, Bear it MTL, Bearracuda, Bears 4 Bareburger, Bears Sitges
+    // Club" — ALL FIVE opening with the word "bear", which teaches the
+    // opposite of the point (CHUNK and Megawoof carry no bear word at all).
+    //
+    // The cap also keeps a curated-but-not-bear brand out: Horse Meat Disco
+    // is "usually" (15 cached prompts judge it) and sits at index 19 of the
+    // curated-affinity set, well past the cut — offering it as an exemplar of
+    // a BEAR brand would push the model toward "bear" on exactly the events
+    // the owner marked "judge each one".
+    //
+    // `name` only, never shortName/shorterName: curated short names carry
+    // soft hyphens for display wrapping ("MEGA\u00adWOOF") that must never
+    // reach a model. Empty registry -> empty list, and the caller drops the
+    // parenthetical entirely rather than falling back to a hardcoded list.
+    // Cached against the registry array's identity, like the other indexes.
+    getBearBrandExemplars(limit = 5) {
+        const cap = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Math.floor(Number(limit)) : 5;
+        if (this._bearBrandExemplars && this._bearBrandExemplars.source === this.promoters
+            && this._bearBrandExemplars.cap === cap) {
+            return this._bearBrandExemplars.names;
+        }
+        const list = Array.isArray(this.promoters) ? this.promoters : [];
+        const names = [];
+        for (const entry of list) {
+            if (names.length >= cap) break;
+            if (!entry || typeof entry.name !== 'string') continue;
+            const affinity = typeof entry.bearAffinity === 'string' ? entry.bearAffinity.trim().toLowerCase() : '';
+            if (affinity !== 'always' && affinity !== 'usually') continue;
+            const name = entry.name.replace(/[\u00ad\u200b]/g, '').trim();
+            if (!name || names.includes(name)) continue;
+            names.push(name);
+        }
+        this._bearBrandExemplars = { source: this.promoters, cap, names };
+        return names;
+    }
+
     // Registry-derived brand phrases that themselves carry bear vocabulary:
     // "Bearracuda", "MEGA-WOOF", "Club Chub", "Bears Sitges Week". Derived
     // from the curated promoter registry, never a hardcoded list — a brand
@@ -11684,6 +11742,12 @@ class SharedCore {
             ].join('\n');
         }
 
+        // Exemplars come from the curated promoter registry, never a list
+        // typed into the prompt. No registry -> no parenthetical; the
+        // sentence still names the concept.
+        const exemplars = this.getBearBrandExemplars(5);
+        const brandExemplars = exemplars.length ? ` (${exemplars.join(', ')}, ...)` : '';
+
         return [
             'You are curating a calendar for the gay bear community. Decide whether the event below is aimed at the bear community.',
             '',
@@ -11693,7 +11757,7 @@ class SharedCore {
             '',
             "Bear bars, leather bars and Eagle bars run a full weekly calendar for their whole mixed queer clientele: trivia, karaoke, retro and pop dance nights, drag, bingo, beer busts, underwear nights, pup and pet nights, wig nights, art nights, charity and sports fundraisers. Those are the venue's events, not the bear community's events. \"This is a well-known bear venue\" is NEVER a reason to answer \"bear\". A bear venue RAISES the bar: it means you must say what in THIS event, beyond the venue, is aimed at bears — and if you cannot quote it from the event's own title or description, it is not there.",
             '',
-            'Bear evidence looks like: bear/cub/chub/otter/musclebear/hairy/burly vocabulary aimed at the crowd; a named bear party brand or series (Bearracuda, Furball, MegaWoof, CHUNK, Bear Happy Hour, ...); a bear club, bear run, bear night or bear week; explicit body-type targeting (big men, hairy men, husky, thick); an announced bear crowd.',
+            `Bear evidence looks like: bear/cub/chub/otter/musclebear/hairy/burly vocabulary aimed at the crowd; a named bear party brand or series${brandExemplars}; a bear club, bear run, bear night or bear week; explicit body-type targeting (big men, hairy men, husky, thick); an announced bear crowd.`,
             '',
             ...eventBlock,
             ...outputContract,

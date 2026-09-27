@@ -3075,6 +3075,20 @@ class AiWebParser {
         return '';
     }
 
+    // The EVENT's name for a window: the page's own listing title with the
+    // site naming itself dropped off the end (see stripPageSiteNameTail).
+    //
+    // Deliberately a SEPARATE step on top of deriveSegmentListingTitle rather
+    // than a change inside it: that function's output is also a window's
+    // IDENTITY during segmentation — the coverage audit keys one listing per
+    // card by it — so shortening it there merges a detail page's two windows
+    // (its <title> echo and its <h1>) into one and the page loses a window.
+    // Segmentation keeps the page's own strings; what the model is TOLD the
+    // event is called is the event's name.
+    deriveSegmentEventName(segment, sourceUrl = null) {
+        return this.stripPageSiteNameTail(this.deriveSegmentListingTitle(segment), sourceUrl);
+    }
+
     // A line that is nothing but a weekday name — "Sun", "Sunday", "Sat.",
     // "Mon," — the way listing cards print a date tag one token per line.
     isBareWeekdayLine(line) {
@@ -3126,12 +3140,29 @@ class AiWebParser {
     // the page's html AND its url), read line-at-a-time by
     // deriveSegmentListingTitle, which has neither. Never persisted, and
     // fail-open: with nothing noted, no line is chrome.
+    //
+    // The same note carries what the page's own MARKUP says about its links
+    // and its name, all read in one anchor walk: which targets are
+    // navigation up this page's path (isPageChromeLinkUrl), whether the page
+    // is a member of a collection (getPageOwnDestinationUrl), what the page
+    // is about (isPageSubjectText) and what the site calls itself
+    // (stripPageSiteNameTail).
     notePageChromeLines(html, sourceUrl = '') {
         const source = String(html || '');
         if (!source) return;
         const noted = this._pageChromeLines;
         if (noted && noted.html === source && noted.sourceUrl === sourceUrl) return;
-        this._pageChromeLines = { html: source, sourceUrl, keys: this.computePageChromeLineKeys(source, sourceUrl) };
+        const chrome = this.computePageChrome(source, sourceUrl);
+        this._pageChromeLines = {
+            html: source,
+            sourceUrl,
+            keys: chrome.lineKeys,
+            navUpTargets: chrome.navUpTargets,
+            subjectUpTargets: chrome.subjectUpTargets,
+            memberPage: chrome.memberPage,
+            subjects: chrome.subjects,
+            siteNames: this.collectPageSiteNameKeys(source)
+        };
     }
 
     isPageChromeLine(line) {
@@ -3141,11 +3172,67 @@ class AiWebParser {
         return Boolean(key) && noted.keys.has(key);
     }
 
+    // ── A DETAIL PAGE'S LINK IS NOT ITS COLLECTION ──────────────────────
+    // The SAME rule as the chrome LINES above, read from the other end: on
+    // the page the crawl is parsing, an anchor whose target is a strict
+    // ANCESTOR of this page's own path on the same host is navigation back
+    // up the site — never this card's destination. The previous wave trimmed
+    // those anchors' TEXT out of the window; their href stayed, so a
+    // single-event page's window still offered the model
+    // SEGMENT_LINK_URL: https://cuffcomplex.com/events — the collection —
+    // and records scraped from a detail page pointed at the listing.
+    //
+    // Same escape hatch as the line rule: an ancestor anchor whose text is
+    // the page's own SUBJECT is the event's page, not a crumb
+    // (sickening.events/e/goldiloxx-chicago/tickets links up to
+    // /e/goldiloxx-chicago as "GOLDILOXX Chicago"), so that target is
+    // rescued and stays a candidate.
+    //
+    // Keyed to the page being parsed, exactly like the line keys, and
+    // fail-open: with nothing noted for THIS url, no link is navigation.
+    isPageChromeLinkUrl(url, sourceUrl = '') {
+        const noted = this._pageChromeLines;
+        if (!noted || noted.sourceUrl !== sourceUrl) return false;
+        if (!noted.navUpTargets || noted.navUpTargets.size === 0) return false;
+        const target = this.parseUrlHostAndPath(url);
+        if (!target.host) return false;
+        const key = `${target.host}${target.path}`;
+        if (noted.subjectUpTargets && noted.subjectUpTargets.has(key)) return false;
+        return noted.navUpTargets.has(key);
+    }
+
+    // A page that links UP to a collection it belongs to is a MEMBER page of
+    // that collection — a single-event/detail page. Its own destination is
+    // its own URL; there is no deeper page to point at. '' for a collection
+    // page (nothing above it but the site root) and whenever no chrome is
+    // noted for this url.
+    getPageOwnDestinationUrl(sourceUrl = '') {
+        const noted = this._pageChromeLines;
+        if (!noted || noted.sourceUrl !== sourceUrl || !noted.memberPage) return '';
+        return String(sourceUrl || '');
+    }
+
+    // Is this text what the page says it is ABOUT (its <h1>, its
+    // <title>/og:title or that title's lead)? Keyed to the noted page.
+    isPageSubjectText(text, sourceUrl = '') {
+        const noted = this._pageChromeLines;
+        if (!noted || noted.sourceUrl !== sourceUrl || !noted.subjects) return false;
+        const key = this.normalizeWhitespace(this.decodeBasicEntities(String(text || ''))).toLowerCase();
+        return Boolean(key) && noted.subjects.has(key);
+    }
+
     computePageChromeLineKeys(html, sourceUrl = '') {
+        return this.computePageChrome(html, sourceUrl).lineKeys;
+    }
+
+    computePageChrome(html, sourceUrl = '') {
         const source = String(html || '');
         const keys = new Set();
+        const navUpTargets = new Set();
+        const subjectUpTargets = new Set();
         const page = this.parseUrlHostAndPath(sourceUrl);
-        if (!source || !page.host) return keys;
+        const empty = { lineKeys: keys, navUpTargets, subjectUpTargets, memberPage: false, subjects: new Set() };
+        if (!source || !page.host) return empty;
         const navRanges = this.findNavigationElementRanges(source);
         const insideNav = (position) => navRanges.some(range => position >= range.start && position < range.end);
         const facetCounts = new Map();
@@ -3156,11 +3243,28 @@ class AiWebParser {
         while ((match = pattern.exec(source)) !== null) {
             const href = (match[1].match(/\bhref\s*=\s*["']([^"']*)["']/i) || [])[1];
             const text = this.normalizeWhitespace(this.decodeBasicEntities(match[2].replace(/<[^>]+>/g, ' ')));
+            // LINK classification first, over EVERY anchor: an anchor up the
+            // site is navigation whether or not its text could have been a
+            // title (the text skips below are about titles, not destinations).
+            // The site ROOT is deliberately NOT included here (the line rule
+            // counts it as a crumb inside a <nav>): it is not a strict
+            // ancestor of anything, and on Wix event-detail pages the header
+            // logo's "/" was the only link the window had — withholding it
+            // promoted the SIBLING collection (/eventlist) in its place,
+            // which is the very mistake this rule exists to stop.
+            const linkTarget = this.resolveHrefHostAndPath(href, page);
+            if (linkTarget && linkTarget.host === page.host) {
+                if (this.isAncestorSectionPath(linkTarget.path, page.path)) {
+                    const targetKey = `${linkTarget.host}${linkTarget.path}`;
+                    if (text && subjects.has(text.toLowerCase())) subjectUpTargets.add(targetKey);
+                    else navUpTargets.add(targetKey);
+                }
+            }
             if (!text || text.length > titleMax) continue;
             // A dated line is already skipped by the date rules and is never
             // page furniture on its own; leave it to them.
             if (this.hasMultiEventDateSignal(text)) continue;
-            const target = this.resolveHrefHostAndPath(href, page);
+            const target = linkTarget;
             if (!target || target.host !== page.host) continue;
             const key = text.toLowerCase();
             // The site ROOT counts as a crumb only inside a navigation
@@ -3198,7 +3302,13 @@ class AiWebParser {
         for (const [key, count] of facetCounts) {
             if (count >= this.segmentImageChromeMinSegments) keys.add(key);
         }
-        return keys;
+        // A member page of a collection it links back UP to — a detail page.
+        // NOT when an ancestor anchor was rescued as the page's own subject:
+        // there the parent path IS the event
+        // (sickening.events/e/goldiloxx-chicago/tickets), the event's page is
+        // that parent and this page has no destination of its own to claim.
+        const memberPage = navUpTargets.size > 0 && subjectUpTargets.size === 0;
+        return { lineKeys: keys, navUpTargets, subjectUpTargets, memberPage, subjects };
     }
 
     // What this page says it is ABOUT: its <h1> text, and the leading part
@@ -3225,6 +3335,88 @@ class AiWebParser {
             add(text.split(/\s[|\u2013\u2014\u00b7]\s|\s-\s/)[0]);
         }
         return keys;
+    }
+
+    // \u2500\u2500 A WINDOW'S TITLE IS NOT THE PAGE TITLE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // A single-event page's <title>/og:title is "<event> \u00b7 <site name>", and
+    // a detail-page window opens on exactly that string:
+    // www.sf-eagle.com/events/adonis/ derived "Adonis \u00b7 SF Eagle" as the
+    // page's own listing title for the night. The event's name is the part
+    // BEFORE the separator; the tail is the site naming itself.
+    //
+    // What counts as the site's name is page-derived and corroborated, never
+    // wording:
+    //   1. <meta property="og:site_name"> \u2014 the page saying who it is;
+    //   2. the trailing separator segment SHARED by two of the page's own
+    //      titles (<title>, og:title, twitter:title) that lead with
+    //      different text \u2014 one title alone proves nothing, because an event
+    //      really named "X \u00b7 Y" would look identical.
+    // Lowercased keys; an empty set strips nothing.
+    collectPageSiteNameKeys(html) {
+        const source = String(html || '');
+        const keys = new Set();
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
+        const siteName = clean(this.extractOgMetaContent(source, 'og:site_name'));
+        if (siteName) keys.add(siteName.toLowerCase());
+        const titles = [
+            clean((source.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || [])[1]),
+            clean(this.extractOgMetaContent(source, 'og:title')),
+            clean(this.extractOgMetaContent(source, 'twitter:title'))
+        ].filter(Boolean);
+        const tails = new Map();
+        for (const title of titles) {
+            const split = this.splitTitleSiteNameTail(title);
+            if (!split) continue;
+            const tailKey = split.tail.toLowerCase();
+            const leads = tails.get(tailKey) || new Set();
+            leads.add(split.lead.toLowerCase());
+            tails.set(tailKey, leads);
+        }
+        for (const [tailKey, leads] of tails) {
+            if (leads.size >= 2) keys.add(tailKey);
+        }
+        return keys;
+    }
+
+    // "<lead><sep><tail>" on the LAST separator, both halves non-empty.
+    // Separators: \u00b7 | \u2013 \u2014 and a spaced hyphen (an unspaced "Bark-Cade" is
+    // one word, never a title/site split).
+    splitTitleSiteNameTail(title) {
+        const text = this.normalizeWhitespace(String(title || ''));
+        if (!text) return null;
+        const match = text.match(/^(.*\S)\s*(?:[|\u00b7\u2013\u2014]|\s-)\s+(\S.*)$/);
+        if (!match) return null;
+        const lead = this.normalizeWhitespace(match[1]);
+        const tail = this.normalizeWhitespace(match[2]);
+        if (!lead || !tail) return null;
+        // Greedy lead: the LAST separator wins, so "Folsom Saturday: Cell
+        // Blok \u00b7 SF Eagle" keeps everything before " \u00b7 ".
+        return { lead, tail };
+    }
+
+    // Drop a trailing "<sep><site name>" from a derived listing title when
+    // the page itself says that tail is the site's name. Returns a
+    // CONTIGUOUS PREFIX of the input (the extraction gate drops any value
+    // that is not verbatim in the source), and returns the title untouched
+    // whenever nothing corroborates the tail \u2014 never drop a tail that is
+    // part of the event's own name.
+    // `sourceUrl` null means "whatever page is noted" — the same fail-open
+    // scoping isPageChromeLine uses, for the callers that hold a segment but
+    // not the page's url.
+    stripPageSiteNameTail(title, sourceUrl = null) {
+        const text = String(title || '');
+        const noted = this._pageChromeLines;
+        if (!noted) return text;
+        if (sourceUrl !== null && noted.sourceUrl !== sourceUrl) return text;
+        const siteNames = noted.siteNames;
+        if (!siteNames || siteNames.size === 0) return text;
+        const split = this.splitTitleSiteNameTail(text);
+        if (!split) return text;
+        if (!siteNames.has(split.tail.toLowerCase())) return text;
+        // Contiguity: the returned lead must be a prefix of the original
+        // string, so the hint stays verbatim page text.
+        const index = text.indexOf(split.lead);
+        return index === 0 ? split.lead : text;
     }
 
     // <nav> elements and role="navigation" containers, as [start, end) spans.
@@ -3521,6 +3713,11 @@ class AiWebParser {
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = [], pageDateContext = null) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
+        // THIS page's chrome, again: the windows are built one at a time with
+        // a whole extraction pass between them, and the link/title rules
+        // below are scoped to the noted page (memoized — re-noting the same
+        // html+url is a no-op).
+        this.notePageChromeLines(htmlData && typeof htmlData.html === 'string' ? htmlData.html : '', sourceUrl);
 
         // Extract OCR results specific to this segment
         const segmentOcrResults = ocrResults && ocrResults.length > 0
@@ -3532,7 +3729,8 @@ class AiWebParser {
             sourceUrl,
             segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : [],
             segmentOcrResults,
-            segment && segment.ocrExcludedUrlKeys instanceof Set ? segment.ocrExcludedUrlKeys : null
+            segment && segment.ocrExcludedUrlKeys instanceof Set ? segment.ocrExcludedUrlKeys : null,
+            segment
         );
         // Month/year anchor for day-only headings — '' whenever the page has
         // no unambiguous date context or the segment states its own month,
@@ -3572,7 +3770,7 @@ class AiWebParser {
             aiEvent: null,
             aiExtraction: null,
             ocrResults: segmentOcrResults,
-            segmentListingTitle: this.deriveSegmentListingTitle(segment),
+            segmentListingTitle: this.deriveSegmentEventName(segment, sourceUrl),
             segmentDateContext: segmentDateContextLine,
             // The card's own lines and the page's date anchor, for the
             // printed-date fallback (see readCardPrintedDate).
@@ -6018,7 +6216,10 @@ class AiWebParser {
         const resourceLines = this.extractMultiEventSegmentResourceLines(
             segment && typeof segment.html === 'string' ? segment.html : '',
             sourceUrl,
-            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
+            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : [],
+            [],
+            null,
+            segment
         );
         const imageUrls = resourceLines
             .filter(line => /^SEGMENT_IMAGE(?:_HINT)?_URL:/i.test(line))
@@ -6886,7 +7087,7 @@ class AiWebParser {
         return match ? match.index : -1;
     }
 
-    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = [], ocrResults = [], excludedUrlKeys = null) {
+    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = [], ocrResults = [], excludedUrlKeys = null, segment = null) {
         const source = String(html || '');
         const lines = [];
         const seen = new Set();
@@ -6951,6 +7152,32 @@ class AiWebParser {
         }
 
         let linkCount = 0;
+        // A SINGLE-EVENT PAGE'S OWN DESTINATION IS ITS OWN URL. When the page
+        // belongs to a collection it links back up to
+        // (getPageOwnDestinationUrl) and this window is the page's own
+        // SUBJECT — its <h1>, its <title>/og:title or that title's lead —
+        // the page IS this event and nothing on it outranks it as the
+        // event's page. Decided BEFORE the candidates below: with the
+        // collection link withheld, the next URL the reader meets in a
+        // Squarespace detail window is the venue's map pin
+        // (maps.google.com/?q=1533), and promoting that would trade one
+        // wrong destination for another.
+        //
+        // Only the subject window: a "Previous"/"Next" rail on the same page
+        // is about a DIFFERENT event, and handing it this page's url would
+        // build exactly the chimera the one-destination guard exists to
+        // catch.
+        if (segment) {
+            const ownPageUrl = this.getPageOwnDestinationUrl(sourceUrl);
+            if (ownPageUrl && this.isPageSubjectText(this.deriveSegmentListingTitle(segment), sourceUrl)) {
+                const beforeCount = lines.length;
+                addLine('SEGMENT_LINK_URL', ownPageUrl);
+                if (lines.length > beforeCount) {
+                    linkCount++;
+                    console.log(`🔗 LINKS: Segment link ← ${ownPageUrl} — this window is the page's own subject and the page is one event's page, so its destination is itself`);
+                }
+            }
+        }
         // Only VISIBLE links may stand in as the segment's link: an anchor
         // whose entire content is whitespace / zero-width characters is
         // invisible to the reader and, on hand-laid pages, is usually an
@@ -6983,6 +7210,15 @@ class AiWebParser {
             // into the footer, and its only link was Google's
             // calendar/r?cid=webcal%3A… — shipped as that night's url).
             if (this.isCalendarExportUrl(normalized)) continue;
+            // Navigation back UP this page's own path is never this card's
+            // destination (see isPageChromeLinkUrl). A Squarespace detail
+            // page keeps its "back to the listing" anchor inside the window's
+            // HTML, and that anchor used to become the card's
+            // SEGMENT_LINK_URL — the collection, not the event.
+            if (this.isPageChromeLinkUrl(normalized, sourceUrl)) {
+                console.log(`🔗 LINKS: Segment link ${normalized} withheld from the prompt — it points up ${sourceUrl}'s own path, so it is this page's navigation, not the card's destination`);
+                continue;
+            }
             const beforeCount = lines.length;
             addLine('SEGMENT_LINK_URL', normalized);
             if (lines.length > beforeCount) linkCount++;
