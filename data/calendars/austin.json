@@ -5,6 +5,121 @@
   },
   "events": [
     {
+      "name": "CLUB CHUB: AUSTIN HORROR STORY: COVEN",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 30.2684429,
+        "lng": -97.745511
+      },
+      "startDate": "2026-10-24T21:00:00",
+      "endDate": "2026-10-25T02:00:00",
+      "unprocessedDescription": "description: Something wicked—and wonderfully chubby—is coming \rto Austin. Club Chub presents AUSTIN HORROR STORY\\: COVEN on Saturday, October 24 at The Iron Bear.\nbar: THE IRON BEAR AUSTIN\naddress: 301 W 6th St, Austin, TX 78701, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\npinSource: page\naddressSource: page\nwebsite: https://www.clubchubusa.com/event-details/austin-horror-story-coven\ngmaps: https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-austin-horror-story-coven|2026-10-25|the iron bear austin\nimageSource: page\nbarSource: uncorroborated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
+      "uid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "THE IRON BEAR AUSTIN",
+      "image": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "Something wicked—and wonderfully chubby—is coming to Austin. Club Chub presents AUSTIN HORROR STORY: COVEN on Saturday, October 24 at The Iron Bear.",
+      "cadence": null,
+      "address": "301 W 6th St, Austin, TX 78701, USA",
+      "website": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-austin-horror-story-coven-601fbd6d"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIAL",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 30.3306335,
+        "lng": -97.6672143
+      },
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIA\rL\nbar: The Austin Eagle\naddress: 8201 Cross Park Drive, #Ste B2, Austin, TX 78754\nticketUrl: https://www.eventbrite.com/e/megawoof-america-austin-debut-halloween-special-tickets-2002082264949\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194118302%2F185013722403%2F1%2Foriginal.20260922-165419?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662aeadc64e5bdca43144ce0\nimageSource: jsonld\ncover: $11.58-$16.84\ntimezone: America/Chicago\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194118302%2F185013722403%2F1%2Foriginal.20260922-165419?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662aeadc64e5bdca43144ce0\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143\npinSource: geocoded-exact\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-america-austin-debut-halloween-special|2026-10-31|the austin eagle\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "656F4D75-AE56-400F-8AD6-A499471AE110",
+      "uid": "656F4D75-AE56-400F-8AD6-A499471AE110",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Austin Eagle",
+      "cover": "$11.58-$16.84",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194118302%2F185013722403%2F1%2Foriginal.20260922-165419?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662aeadc64e5bdca43144ce0",
+      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194118302%2F185013722403%2F1%2Foriginal.20260922-165419?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662aeadc64e5bdca43144ce0",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIAL",
+      "cadence": null,
+      "address": "8201 Cross Park Drive, #Ste B2, Austin, TX 78754",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-austin-debut-halloween-special-tickets-2002082264949",
+      "shortName": "MEGA­WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-austin-debut-halloween-special-tickets-2002082264949",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-austin-debut-halloween-special-587f53a0"
+    },
+    {
       "name": "FURBALL Austin",
       "day": "Saturday",
       "time": "10PM",

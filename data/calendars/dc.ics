@@ -6,36 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dc
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260214T020000Z
-DTEND:20260214T080000Z
-DTSTAMP:20260916T121050Z
-UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
-CREATED:20260121T135638Z
-DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
- kend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwes
- t\, Washington\, DC 20001\ntimezone: America/New_York\nticketUrl: https://w
- ww.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-19810480530
- 55\ncover: $11.58 - $22.10 (as of 2/8)\nimage: https://img.evbuc.com/https%
- 3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.2
- 0260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&
- q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortNa
- me: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: 
- https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/sear
- ch/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztq
- pgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant
-LAST-MODIFIED:20260208T200152Z
-LOCATION:38.9162081\, -77.0213011
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260927T010000Z
 DTEND:20260927T070000Z
-DTSTAMP:20260916T121050Z
+DTSTAMP:20260927T220619Z
 UID:787E9181-C677-4679-8CF8-BB945E9E1202
 CREATED:20260820T174238Z
 DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
@@ -59,6 +32,66 @@ LOCATION:38.9171577\, -77.0268211
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:TWISTED BEAR Washington\, D.C. Debut
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T020000Z
+DTEND:20261004T040000Z
+DTSTAMP:20260927T220619Z
+UID:F8F7EF8B-A718-4C26-A1BF-621C554CBDB4
+CREATED:20260927T214754Z
+DESCRIPTION:description: 🚨 FURBALL IS BACK IN DC 🚨 SATURDAY OCT 3 — our I
+ CON debut. 🔥 DJ CONNER CURNICK 🔥 UNDERWEAR • JOCKS • GEAR 🔥 CLOTHES CHEC
+ K New venue. Big room. Full FURBALL energy. DC — we’re coming for you. 🎟️ 
+ Tickets\\: FURBALL.NYC #FurballDC#FurballDC #Furball#Furball #WashingtonDC#
+ WashingtonDC #GayDC#GayDC #DCNightlife#DCNightlife WEB. www.furball.nyc IG\
+ \: @furballnyc\nbar: Icon DC\naddress: ２００１ 11TH Street NW\, Washington\, D
+ C 20001\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furbal
+ l-dc-icon-debut-2025\ncover: $10-$15\ntimezone: America/New_York\naddressSo
+ urce: page\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com
+ /maps/search/?api=1&query=38.9171577%2C-77.0268211\npinSource: geocoded-exa
+ ct\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavi
+ con: https://linktr.ee/furballnyc\nkey: furball-dc|2026-10-04|icon dc\nimag
+ e: https://static.wixstatic.com/media/238fae_596f48d08bd8492eb4d623cb51cc33
+ bb~mv2.jpg/v1/fill/w_600\,h_750\,al_c\,q_85\,usm_0.66_1.00_0.01\,enc_avif\,
+ quality_auto/Updated.jpg\nimageVertical: https://static.wixstatic.com/media
+ /238fae_596f48d08bd8492eb4d623cb51cc33bb~mv2.jpg/v1/fill/w_600\,h_750\,al_c
+ \,q_85\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/Updated.jpg\nimageSource
+ : page\nbearSource: keyword
+LAST-MODIFIED:20260927T214754Z
+LOCATION:38.9171577\, -77.0268211
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL DC
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260214T020000Z
+DTEND:20260214T080000Z
+DTSTAMP:20260927T220619Z
+UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
+CREATED:20260121T135638Z
+DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
+ kend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwes
+ t\, Washington\, DC 20001\ntimezone: America/New_York\nticketUrl: https://w
+ ww.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-19810480530
+ 55\ncover: $11.58 - $22.10 (as of 2/8)\nimage: https://img.evbuc.com/https%
+ 3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.2
+ 0260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&
+ q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortNa
+ me: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: 
+ https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztq
+ pgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant
+LAST-MODIFIED:20260208T200152Z
+LOCATION:38.9162081\, -77.0213011
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

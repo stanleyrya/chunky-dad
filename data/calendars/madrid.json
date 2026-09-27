@@ -5,6 +5,53 @@
   },
   "events": [
     {
+      "name": "MACHO PARTY",
+      "day": "Saturday",
+      "time": "12:59AM-7AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-05T00:59:00",
+      "endDate": "2026-12-05T07:00:00",
+      "unprocessedDescription": "bar: Changó\naddress: Madrid\nwebsite: https://madbear.org/en\n\rticketUrl: https://site.fourvenues.com/es/matrix-events/events/macho-party--04-12-2026-0U83\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg\nimageSource: json-api\ntimezone: Europe/Madrid\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Chang%C3%B3%2C%20Madrid\nkey: macho-party|2026-12-04|changó\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "7F7555CA-D6F6-436B-A7A2-AFD193AAE60D",
+      "uid": "7F7555CA-D6F6-436B-A7A2-AFD193AAE60D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Changó",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg",
+      "cadence": null,
+      "address": "Madrid",
+      "website": "https://madbear.org/en",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Chang%C3%B3%2C%20Madrid",
+      "ticketUrl": "https://site.fourvenues.com/es/matrix-events/events/macho-party--04-12-2026-0U83",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://madbear.org/en",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Chang%C3%B3%2C%20Madrid",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://site.fourvenues.com/es/matrix-events/events/macho-party--04-12-2026-0U83",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "macho-party-1de2bda2"
+    },
+    {
       "name": "MADBEAR PARTY 2026 - MADRID",
       "day": "Thursday",
       "time": "11:45AM-6AM",

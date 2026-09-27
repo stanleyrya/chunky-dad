@@ -6,9 +6,31 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-madrid
 X-WR-TIMEZONE:Europe/Madrid
 BEGIN:VEVENT
+DTSTART:20261204T235900Z
+DTEND:20261205T060000Z
+DTSTAMP:20260927T220619Z
+UID:7F7555CA-D6F6-436B-A7A2-AFD193AAE60D
+CREATED:20260927T214727Z
+DESCRIPTION:bar: Changó\naddress: Madrid\nwebsite: https://madbear.org/en\n
+ ticketUrl: https://site.fourvenues.com/es/matrix-events/events/macho-party-
+ -04-12-2026-0U83\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v
+ 1/object/public/event-images/4f5742321ef5f184.jpg\nimageSource: json-api\nt
+ imezone: Europe/Madrid\nimageVertical: https://acqvlhciredwtlbpisso.supabas
+ e.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg\naddressSou
+ rce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Chang%C3%
+ B3%2C%20Madrid\nkey: macho-party|2026-12-04|changó\nbearSource: ai
+LAST-MODIFIED:20260927T214727Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MACHO PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261203T104500Z
 DTEND:20261209T050000Z
-DTSTAMP:20260919T180740Z
+DTSTAMP:20260927T220619Z
 UID:61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6
 CREATED:20260919T161240Z
 DESCRIPTION:bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett

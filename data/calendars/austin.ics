@@ -6,8 +6,68 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-austin
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20261025T020000Z
+DTEND:20261025T070000Z
+DTSTAMP:20260927T220619Z
+UID:7A8C19B1-A286-4369-967F-2A8E8A79472B
+CREATED:20260927T214732Z
+DESCRIPTION:description: Something wicked—and wonderfully chubby—is coming 
+ to Austin. Club Chub presents AUSTIN HORROR STORY\\: COVEN on Saturday\, Oc
+ tober 24 at The Iron Bear.\nbar: THE IRON BEAR AUSTIN\naddress: 301 W 6th S
+ t\, Austin\, TX 78701\, USA\ntimezone: America/Chicago\nimage: https://stat
+ ic.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\nima
+ geVertical: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26b
+ f404854e91e~mv2.jpg\npinSource: page\naddressSource: page\nwebsite: https:/
+ /www.clubchubusa.com/event-details/austin-horror-story-coven\ngmaps: https:
+ //www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511\nshortNam
+ e: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: 
+ https://www.clubchubusa.com\nkey: club-chub-austin-horror-story-coven|2026-
+ 10-25|the iron bear austin\nimageSource: page\nbarSource: uncorroborated\nb
+ earSource: keyword
+LAST-MODIFIED:20260927T214732Z
+LOCATION:30.2684429\, -97.745511
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CLUB CHUB: AUSTIN HORROR STORY: COVEN
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T020000Z
+DTEND:20261031T070000Z
+DTSTAMP:20260927T220619Z
+UID:656F4D75-AE56-400F-8AD6-A499471AE110
+CREATED:20260927T214731Z
+DESCRIPTION:description: MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIA
+ L\nbar: The Austin Eagle\naddress: 8201 Cross Park Drive\, #Ste B2\, Austin
+ \, TX 78754\nticketUrl: https://www.eventbrite.com/e/megawoof-america-austi
+ n-debut-halloween-special-tickets-2002082264949\nimage: https://img.evbuc.c
+ om/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194118302%2F185013722403%2F1%2Fo
+ riginal.20260922-165419?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompre
+ ss&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662aeadc64e5bdca43144ce0\nimag
+ eSource: jsonld\ncover: $11.58-$16.84\ntimezone: America/Chicago\nimageVert
+ ical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11941183
+ 02%2F185013722403%2F1%2Foriginal.20260922-165419?crop=focalpoint&fit=crop&w
+ =940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e5797977662ae
+ adc64e5bdca43144ce0\naddressSource: page\nwebsite: https://linktr.ee/megawo
+ of_america\ngmaps: https://www.google.com/maps/search/?api=1&query=30.33063
+ 35%2C-97.6672143\npinSource: geocoded-exact\nshortName: MEGA­WOOF\ninstagra
+ m: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/m
+ egawoof_america\nkey: megawoof-america-austin-debut-halloween-special|2026-
+ 10-31|the austin eagle\nbearSource: keyword
+LAST-MODIFIED:20260927T214732Z
+LOCATION:30.3306335\, -97.6672143
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIAL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260830T030000Z
-DTSTAMP:20260824T214542Z
+DTSTAMP:20260927T220619Z
 UID:CD68B5C8-D91F-4546-8068-0B62927CBC45
 CREATED:20260712T000122Z
 DESCRIPTION:description: Jock / Fetish / Gear Party\nbar: Austin Eagle\nadd

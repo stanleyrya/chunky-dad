@@ -5,65 +5,6 @@
   },
   "events": [
     {
-      "name": "MEGAWOOF",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 38.9162081,
-        "lng": -77.0213011
-      },
-      "startDate": "2026-02-13T21:00:00",
-      "endDate": "2026-02-14T03:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee\rkend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwest, Washington, DC 20001\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055\ncover: $11.58 - $22.10 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
-      "uid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Uproar Lounge & Restaurant",
-      "cover": "$11.58 - $22.10 (as of 2/8)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba",
-      "tea": "MEGAWOOF AMERICA - S.VALENTINE + President Day Weekend",
-      "cadence": null,
-      "address": "639 Florida Avenue Northwest, Washington, DC 20001",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-5e604137"
-    },
-    {
       "name": "TWISTED BEAR Washington, D.C. Debut",
       "day": "Saturday",
       "time": "9PM-3AM",
@@ -129,6 +70,126 @@
         }
       ],
       "slug": "twisted-bear-washington-dc-debut-12f06752"
+    },
+    {
+      "name": "FURBALL DC",
+      "day": "Saturday",
+      "time": "10PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 38.9171577,
+        "lng": -77.0268211
+      },
+      "startDate": "2026-10-03T22:00:00",
+      "endDate": "2026-10-04T00:00:00",
+      "unprocessedDescription": "description: 🚨 FURBALL IS BACK IN DC 🚨 SATURDAY OCT 3 — our I\rCON debut. 🔥 DJ CONNER CURNICK 🔥 UNDERWEAR • JOCKS • GEAR 🔥 CLOTHES CHECK New venue. Big room. Full FURBALL energy. DC — we’re coming for you. 🎟️ Tickets\\: FURBALL.NYC #FurballDC#FurballDC #Furball#Furball #WashingtonDC#WashingtonDC #GayDC#GayDC #DCNightlife#DCNightlife WEB. www.furball.nyc IG\\: @furballnyc\nbar: Icon DC\naddress: ２００１ 11TH Street NW, Washington, DC 20001\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dc-icon-debut-2025\ncover: $10-$15\ntimezone: America/New_York\naddressSource: page\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211\npinSource: geocoded-exact\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-dc|2026-10-04|icon dc\nimage: https://static.wixstatic.com/media/238fae_596f48d08bd8492eb4d623cb51cc33bb~mv2.jpg/v1/fill/w_600,h_750,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Updated.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_596f48d08bd8492eb4d623cb51cc33bb~mv2.jpg/v1/fill/w_600,h_750,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Updated.jpg\nimageSource: page\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F8F7EF8B-A718-4C26-A1BF-621C554CBDB4",
+      "uid": "F8F7EF8B-A718-4C26-A1BF-621C554CBDB4",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Icon DC",
+      "cover": "$10-$15",
+      "image": "https://static.wixstatic.com/media/238fae_596f48d08bd8492eb4d623cb51cc33bb~mv2.jpg/v1/fill/w_600,h_750,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Updated.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_596f48d08bd8492eb4d623cb51cc33bb~mv2.jpg/v1/fill/w_600,h_750,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Updated.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "🚨 FURBALL IS BACK IN DC 🚨 SATURDAY OCT 3 — our ICON debut. 🔥 DJ CONNER CURNICK 🔥 UNDERWEAR • JOCKS • GEAR 🔥 CLOTHES CHECK New venue. Big room. Full FURBALL energy. DC — we’re coming for you. 🎟️ Tickets: FURBALL.NYC #FurballDC#FurballDC #Furball#Furball #WashingtonDC#WashingtonDC #GayDC#GayDC #DCNightlife#DCNightlife WEB. www.furball.nyc IG: @furballnyc",
+      "cadence": null,
+      "address": "２００１ 11TH Street NW, Washington, DC 20001",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dc-icon-debut-2025",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dc-icon-debut-2025",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-dc-66b348c1"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 38.9162081,
+        "lng": -77.0213011
+      },
+      "startDate": "2026-02-13T21:00:00",
+      "endDate": "2026-02-14T03:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee\rkend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwest, Washington, DC 20001\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055\ncover: $11.58 - $22.10 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
+      "uid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Uproar Lounge & Restaurant",
+      "cover": "$11.58 - $22.10 (as of 2/8)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba",
+      "tea": "MEGAWOOF AMERICA - S.VALENTINE + President Day Weekend",
+      "cadence": null,
+      "address": "639 Florida Avenue Northwest, Washington, DC 20001",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-5e604137"
     }
   ]
 }
