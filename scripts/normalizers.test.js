@@ -4551,3 +4551,26 @@ test('isFullAddress: bare place names are rejected by shape — the retired hand
   assert.equal(normalizer.isFullAddress('Mexico City'), false);
   assert.equal(normalizer.isFullAddress('4356 Sunset Blvd, Los Angeles, CA 90029'), true);
 });
+
+test('isFullAddress: neighbourhood initialisms are rejected by shape — the retired "DTLA" token was one instance of it', () => {
+  const normalizer = new LocationNormalizer();
+  // The token that used to be typed into the pattern, plus the neighbourhood
+  // initialisms no hand-kept list ever mentioned. All the same shape: an
+  // ALL-CAPS run standing where the street number belongs.
+  for (const label of ['DTLA, Los Angeles, CA 90013', 'DTLA Los Angeles, CA 90013',
+    'SOMA, San Francisco, CA 94103', 'WEHO, Los Angeles, CA 90069',
+    'NOHO, Los Angeles, CA 91601', 'RINO, Denver, CO 80216', 'LES, New York, NY 10002']) {
+    assert.equal(normalizer.isFullAddress(label), false, `${label} is not a full address`);
+  }
+  // The generic neighbourhood vocabulary that kept the token company still works.
+  assert.equal(normalizer.isFullAddress('Downtown Los Angeles, CA 90013'), false);
+  assert.equal(normalizer.isFullAddress('Arts District, Los Angeles, CA 90013'), false);
+  // A street address with the SAME city tail is untouched, in either case.
+  assert.equal(normalizer.isFullAddress('357 S Broadway, Los Angeles, CA 90013'), true);
+  assert.equal(normalizer.isFullAddress('525 S RIVERFRONT BLVD, DALLAS, TX 75207'), true);
+  // Case matters here on purpose: an /i version of the initialism rule would
+  // swallow any 3-6 letter leading word and flip real venue addresses, e.g.
+  // "Ripple, Portland, OR 97217" (it reaches the full-address test because
+  // "Ripple" contains "pl").
+  assert.equal(normalizer.isFullAddress('Ripple, Portland, OR 97217'), true);
+});

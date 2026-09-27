@@ -5734,6 +5734,59 @@ test('bear keyword tier: a description-only hit that NAMES a registry brand keep
   assert.equal(bare.textNamesBearBrand('Bearracuda is the biggest bear dance party'), '');
 });
 
+test('bear-check prompt: the brand exemplars come from the registry, not from the prompt text', () => {
+  const core = createBearTierCore();
+  const event = { title: 'Beer Bust', bar: 'SF Eagle', city: 'san-francisco', description: 'Sunday beer bust on the patio.' };
+  const prompt = core.buildBearCheckPrompt(event, { name: 'SF Eagle' }, 'parser: sf-eagle');
+
+  // Entries with a CURATED bearAffinity ("always" or "usually") — the registry
+  // saying the owner judged this brand's relationship to the bear calendar.
+  const affine = REAL_PROMOTERS.filter(e => ['always', 'usually'].includes(String(e.bearAffinity || '').toLowerCase()));
+  const expected = affine.slice(0, 5).map(e => e.name);
+  assert.deepEqual(core.getBearBrandExemplars(5), expected);
+  assert.ok(prompt.includes(`a named bear party brand or series (${expected.join(', ')}, ...)`), prompt);
+
+  // An entry with NO curated affinity is not offered as an exemplar.
+  const uncurated = REAL_PROMOTERS.filter(e => !['always', 'usually'].includes(String(e.bearAffinity || '').toLowerCase())).map(e => e.name);
+  assert.ok(uncurated.length > 0, 'the registry still has affinity-less entries to exclude');
+  for (const name of uncurated) assert.ok(!core.getBearBrandExemplars(5).includes(name), name);
+
+  // Bearracuda is the one exemplar the cached corpus shows events leaning on
+  // (17 of 2,177 uncurated bear-check prompts name it in their OWN text, all
+  // of them the boundary-sitting Treasure Trail family; Furball, MegaWoof,
+  // CHUNK and Bear Happy Hour score zero). It is "usually", so an
+  // "always"-only filter would have dropped it — it must survive.
+  assert.ok(core.getBearBrandExemplars(5).includes('Bearracuda'));
+
+  // Horse Meat Disco is curated "usually" but is NOT a bear brand; the cap
+  // keeps it out, and it must stay out.
+  assert.ok(!core.getBearBrandExemplars(5).includes('Horse Meat Disco'));
+
+  // Capped, so the prompt (and with it every prompt-keyed AI cache entry) does
+  // not move every time a promoter is added.
+  assert.equal(core.getBearBrandExemplars(5).length, 5);
+  assert.ok(affine.length > 5, 'the cap is doing real work');
+
+  // No soft hyphens from curated display names ever reach the model.
+  assert.ok(!/[\u00ad\u200b]/.test(prompt), 'prompt carries no soft hyphens');
+
+  // Derived, never hardcoded: an empty registry drops the parenthetical
+  // entirely instead of falling back to a list typed into the prompt.
+  const bare = new SharedCore(CITIES, { eventSchema: EventSchema, promoters: [] });
+  assert.deepEqual(bare.getBearBrandExemplars(5), []);
+  const barePrompt = bare.buildBearCheckPrompt(event, { name: 'SF Eagle' }, 'parser: sf-eagle');
+  assert.ok(barePrompt.includes('a named bear party brand or series;'), barePrompt);
+  assert.ok(!/\(.*, \.\.\.\)/.test(barePrompt.split('\n').find(l => l.startsWith('Bear evidence looks like'))));
+
+  // Registry ORDER, not alphabetical: sorting alphabetically returns four
+  // names out of five opening with the word "bear", which teaches the opposite
+  // of the point (CHUNK and Megawoof carry no bear word at all).
+  const alphabetical = [...affine].map(e => e.name).sort((a, b) => a.localeCompare(b, 'en')).slice(0, 5);
+  assert.notDeepEqual(expected, alphabetical);
+  assert.ok(alphabetical.every(n => /^bear/i.test(n)), alphabetical.join(', '));
+  assert.ok(expected.some(n => !/bear/i.test(n)), expected.join(', '));
+});
+
 test('bear keyword tier: a deferred description-only hit is judged by the AI, and never dropped when the AI is unavailable', async () => {
   const petNight = {
     title: 'Pet Night',
