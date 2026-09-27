@@ -2,12 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-25",
+ "generatedAt": "2026-09-27",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-09-25",
-    "2026-09-26",
     "2026-09-27",
     "2026-09-29",
     "2026-09-30",
@@ -68,7 +66,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-09-26",
     "2026-09-27",
     "2026-10-01",
     "2026-10-02",
@@ -123,7 +120,6 @@ window.CITY_ACTIVITY = {
   },
   "toronto": {
    "dates": [
-    "2026-09-26",
     "2026-10-10",
     "2026-10-18",
     "2026-10-31",
@@ -137,7 +133,6 @@ window.CITY_ACTIVITY = {
   },
   "london": {
    "dates": [
-    "2026-09-26",
     "2026-10-17",
     "2026-11-21",
     "2026-12-31",
@@ -148,7 +143,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-09-25",
     "2026-09-27",
     "2026-09-30",
     "2026-10-02",
@@ -192,7 +186,6 @@ window.CITY_ACTIVITY = {
   },
   "palm-springs": {
    "dates": [
-    "2026-09-25",
     "2026-10-15"
    ],
    "recurring": 0,
@@ -211,9 +204,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": "2027-03-28"
   },
   "dc": {
-   "dates": [
-    "2026-09-26"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -240,8 +231,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-09-25",
-    "2026-09-26",
     "2026-09-27",
     "2026-10-17"
    ],
@@ -267,7 +256,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-09-26",
     "2026-10-09",
     "2026-10-10",
     "2026-10-15",
@@ -369,8 +357,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-09-25",
-    "2026-09-26",
     "2026-10-02",
     "2026-10-03",
     "2026-10-09",
@@ -450,9 +436,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "birmingham": {
-   "dates": [
-    "2026-09-26"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
