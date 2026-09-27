@@ -4,6 +4,11 @@
     "city": "manchester",
     "address": "15 Bloom Street, Manchester, England",
     "coordinates": "53.4776882, -2.2368676",
-    "website": "https://www.eaglemanchester.com"
+    "website": "https://www.eaglemanchester.com",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "favicon",
+    "palette": "#111113:81:0 #868686:4:0 #ffffff:3:0"
   }
 ]

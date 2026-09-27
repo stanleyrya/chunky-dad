@@ -9,7 +9,12 @@
     "facebook": "https://www.facebook.com/EagleBarWM/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
     "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
-    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
+    "faviconBg": "#ededed",
+    "faviconFg": "#161314",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:43:0 #010101:34:0 #130b0c:10:1"
   },
   {
     "name": "Gym Sports Bar",

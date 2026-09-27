@@ -156,14 +156,26 @@
     "city": "nyc",
     "address": "325 Franklin Avenue, New York, New York, 11216",
     "coordinates": "40.6882793, -73.9569264",
-    "website": "https://www.cmoneverybody.com"
+    "website": "https://www.cmoneverybody.com",
+    "faviconBg": "#f9f7f3",
+    "faviconFg": "#ac7f71",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fffefe:60:0 #e7d8bb:11:4 #cfac8a:10:6 #d93d39:4:19 #504fb7:1:16",
+    "accent": "#d93d39"
   },
   {
     "name": "Red Eye NY",
     "city": "nyc",
     "address": "355 West 41st Street, New York NY 10036",
     "coordinates": "40.7577763, -73.9925418",
-    "website": "https://redeyeny.com"
+    "website": "https://redeyeny.com",
+    "faviconBg": "#fee0e1",
+    "faviconFg": "#f24d51",
+    "faviconPlate": "#fffdfd",
+    "paletteSource": "favicon",
+    "palette": "#fef0f1:67:2 #fcbbbd:19:8 #ef4242:9:21 #f58283:6:14",
+    "accent": "#ef4242"
   },
   {
     "name": "Julius'",
