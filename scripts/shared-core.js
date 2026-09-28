@@ -5560,6 +5560,23 @@ class SharedCore {
         if (LINK_IDENTITY_MERGE_FIELDS.has(fieldName) && this.isSameLinkTarget(valueA, valueB)) {
             return { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' };
         }
+        // Hub rung: a page 3+ differently titled events of the batch share
+        // (stampBatchHubLinks — the stamp rides on the scraped record) is
+        // never one event's link. Against any other link it loses, on either
+        // side: it does not replace a stored link, and a stored copy of it
+        // yields to the event's own. Both hubs, or neither, fall through.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl')
+            && context && context.records && urlA && urlB) {
+            const stamped = [context.records.a, context.records.b];
+            const hubA = stamped.some(record => this.isBatchHubLink(record, valueA));
+            const hubB = stamped.some(record => this.isBatchHubLink(record, valueB));
+            if (hubA !== hubB) {
+                return {
+                    winner: hubA ? 'b' : 'a',
+                    reason: 'a page shared by 3+ differently titled events of this run is a hub (pass page or listing), never one event\'s link'
+                };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -7766,8 +7783,96 @@ class SharedCore {
         return !curatedHosts.includes(parts.host);
     }
 
+    // ── A PAGE SHARED BY MANY EVENTS IS NOT ONE EVENT'S LINK ─────────────
+    // A link that three or more DIFFERENTLY TITLED events of one batch
+    // point at — as website, url or ticketUrl — is a hub: a festival's pass
+    // page ("Get Your Dog Tag" under every card of the week), a listing, a
+    // shop. It names every event on it, so it names none: it is never
+    // presented as one event's ticket page and never replaces the link an
+    // event already has (beefdip.com/planned-events, run 20260927-155245:
+    // MAD.BEAR RED BALL's merge proposed website https://beefdip.com/ →
+    // https://beefdip.com/tags/, the pass page eighteen records shared).
+    //
+    // The batch twin of deduplicateEvents' fan-in rules (3+ records on one
+    // event page / one ticket link are no IDENTITY) — those count rows
+    // because they only decline a match; this one takes a link away, so it
+    // counts PARTIES: three nights of one party share that party's page and
+    // that is not a hub. Two more fences: the events must not all start at
+    // the same instant (three differently titled fragments of ONE event
+    // page share its real ticket link and its start), and a bare root, a
+    // parser's static stamp and the promoter's own curated identity are
+    // front doors the identity ladder already ranks — never hubs.
+    //
+    // Stamped on the records (`_hubLinkKeys`, underscore — internal, never
+    // notes) so the calendar merge and the final build, which see one
+    // record at a time, inherit the batch's finding — the same carry
+    // _ticketUrlFanIn uses.
+    getHubLinkKey(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!/^https?:\/\//i.test(raw)) return '';
+        const parts = this.getUrlRuleParts(raw);
+        if (!parts || (parts.segments.length === 0 && !parts.hasQuery)) return '';
+        return this.getUrlDedupeKey(raw).replace(/^https?:\/\//i, '');
+    }
+
+    isBatchHubLink(event, value) {
+        const keys = event && Array.isArray(event._hubLinkKeys) ? event._hubLinkKeys : null;
+        if (!keys || keys.length === 0) return false;
+        const key = this.getHubLinkKey(value);
+        return Boolean(key) && keys.includes(key);
+    }
+
+    stampBatchHubLinks(events) {
+        const hubs = new Map();
+        if (!Array.isArray(events) || events.length < 3) return hubs;
+        const holders = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+            const promoterEntry = this.getCuratedPromoterIdentityEntry(event);
+            const curatedKeys = promoterEntry
+                ? [this.getPromoterEntryIdentityWebsite(promoterEntry), promoterEntry.favicon].map(url => this.getHubLinkKey(url)).filter(Boolean)
+                : [];
+            const seen = new Set();
+            for (const field of ['website', 'url', 'ticketUrl']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (!value) continue;
+                const staticValue = staticFields[field === 'url' ? 'website' : field] || staticFields[field];
+                if (typeof staticValue === 'string' && staticValue.trim() === value) continue;
+                const key = this.getHubLinkKey(value);
+                if (!key || seen.has(key) || curatedKeys.includes(key)) continue;
+                seen.add(key);
+                if (!holders.has(key)) holders.set(key, []);
+                holders.get(key).push(event);
+            }
+        }
+        for (const [key, group] of holders) {
+            if (group.length < 3) continue;
+            const parties = [];
+            for (const event of group) {
+                const title = typeof event.title === 'string' ? event.title.trim() : '';
+                if (!title) continue;
+                if (!parties.some(known => this.areTitlesSimilar(known, title))) parties.push(title);
+            }
+            if (parties.length < 3) continue;
+            const starts = new Set(group.map(event => this.toEpochMillis(event.startDate)).filter(millis => millis !== null));
+            if (starts.size < 2) continue;
+            hubs.set(key, parties.length);
+            for (const event of group) {
+                if (!Object.isExtensible(event)) continue;
+                if (!Array.isArray(event._hubLinkKeys)) event._hubLinkKeys = [];
+                if (!event._hubLinkKeys.includes(key)) event._hubLinkKeys.push(key);
+            }
+        }
+        if (hubs.size > 0) {
+            console.log(`🔗 LINKS: ${hubs.size} link(s) shared by 3+ differently titled events of this batch are hubs (a pass page or a listing), never one event's link: ${[...hubs].map(([key, count]) => `${key} (${count} parties)`).join(', ')}`);
+        }
+        return hubs;
+    }
+
     canonicalizeIdentityLinks(events) {
         if (!Array.isArray(events) || events.length === 0) return;
+        this.stampBatchHubLinks(events);
         for (const event of events) {
             if (!event || typeof event !== 'object') continue;
             // Alias fold backstop: normalization already folded url→website
@@ -7785,6 +7890,28 @@ class SharedCore {
             // curated registry instead of a self-referential machine URL
             // being parked into ticketUrl as a "platform link" below.
             this.clearNonIdentityLinkFields(event, event.title || 'event');
+
+            // The batch's hub pages (stampBatchHubLinks). As a ticket link a
+            // hub is dropped — unless the page itself labelled it this
+            // event's ticket page (markTicketRoleUrl). As a website it is a
+            // front door: cleared when a curated identity can stand in (the
+            // blank rung below fills it), kept otherwise — an event with
+            // only a listing to its name keeps the listing, and the stamp
+            // keeps it from replacing a stored link at the merge.
+            const hubTicketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (hubTicketUrl && this.isBatchHubLink(event, hubTicketUrl) && !this.isTicketRoleUrl(event, hubTicketUrl)) {
+                delete event.ticketUrl;
+                console.log(`🔗 LINKS: dropped ticketUrl ${hubTicketUrl} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a pass page or listing, not this event's ticket page`);
+            }
+            const hubWebsite = typeof event.website === 'string' ? event.website.trim() : '';
+            if (hubWebsite && this.isBatchHubLink(event, hubWebsite)
+                && !(event._staticFields && Object.prototype.hasOwnProperty.call(event._staticFields, 'website'))) {
+                const hubPromoterEntry = this.getCuratedPromoterIdentityEntry(event);
+                if (hubPromoterEntry && this.getPromoterEntryIdentityWebsite(hubPromoterEntry)) {
+                    delete event.website;
+                    console.log(`🔗 LINKS: cleared website ${hubWebsite} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a hub page is a front door, not this event's page`);
+                }
+            }
 
             const website = typeof event.website === 'string' ? event.website.trim() : '';
             const staticFields = event._staticFields && typeof event._staticFields === 'object'
@@ -20397,6 +20524,12 @@ class SharedCore {
             if (event._seriesInfo && !analyzedEvent._seriesInfo) {
                 analyzedEvent._seriesInfo = event._seriesInfo;
             }
+            // The batch's hub finding (stampBatchHubLinks) rides the same way,
+            // so the final LINKS pass below can see that a ticket link the
+            // calendar still holds is the run's pass page.
+            if (Array.isArray(event._hubLinkKeys) && !analyzedEvent._hubLinkKeys) {
+                analyzedEvent._hubLinkKeys = event._hubLinkKeys.slice();
+            }
             // Slot precedence (analyzeEventAction): a night that yields its
             // slot is withheld (filterEventsForExecution); a party that takes
             // a saved night's slot carries whose, and sheds that night's
@@ -20662,6 +20795,20 @@ class SharedCore {
                         this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
                             `ticketUrl dropped at final build — the same site's ${shape}, not a ticket link`);
                     }
+                }
+            }
+
+            // A hub is never presented as one event's ticket page, whichever
+            // side of the merge brought it (stampBatchHubLinks): the calendar
+            // may still hold the pass page an earlier run wrote there.
+            {
+                const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                if (ticketUrl && this.isBatchHubLink(analyzedEvent, ticketUrl) && !this.isTicketRoleUrl(analyzedEvent, ticketUrl)) {
+                    delete analyzedEvent.ticketUrl;
+                    notesNeedRebuild = true;
+                    console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — a hub page 3+ differently titled events of this run share, not this event's ticket page`);
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                        'ticketUrl dropped at final build — a hub page shared by 3+ differently titled events of the run');
                 }
             }
 
