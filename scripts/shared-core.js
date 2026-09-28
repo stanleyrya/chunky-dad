@@ -1488,27 +1488,219 @@ class SharedCore {
             : `${field}=${SharedCore.normalizeOwnerReviewValue(changes[field] && changes[field].to)}`).join(';');
     }
 
+    // ---------------------------------------------------------------------
+    // THE PARTY BEHIND THE TITLE (owner, 2026-09-27: thirteen "Jockstrap
+    // Wednesday" nights from Thotyssey were proposed as NEW bear events while
+    // the store already held his not-bear verdict on Eagle NYC's own listing
+    // of that party, "🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH
+    // COVER"). A venue decorates the name of a weekly party with what changes
+    // from night to night; an aggregator prints the name alone. The verdict
+    // is about the party, so its identity folds what is not the name:
+    //   - emoji, case, punctuation (getCrossSourceTitleTokens),
+    //   - a venue tail (stripVenueSuffixFromTitle),
+    //   - a cover tail (stripCoverPartsFromTitle),
+    //   - a per-night performer tail: a WHOLE segment after the name (between
+    //     spaced separators, or opened by an emoji) that a music/DJ marker
+    //     introduces — a music emoji or the word "DJ" — or that the verdict
+    //     store itself proves per-night (getBearVerdictStoreIndex).
+    // The name itself (the leading segment) is never folded, and a tail that
+    // carries bear vocabulary stays in the key: "… | 🎧 BEAR EDITION" says
+    // what the night IS, not who plays it.
+    // getBearVerdictTitleKey is deliberately left alone — it also keys the
+    // owner's review decisions and the calendar link memory.
+    // ---------------------------------------------------------------------
+    static getBearVerdictMusicMarkerPattern() {
+        // headphones, notes, microphones, level slider, control knobs, score, discs
+        return /[\u{1F3A7}\u{1F3B5}\u{1F3B6}\u{1F3A4}\u{1F399}\u{1F39A}\u{1F39B}\u{1F3BC}\u{1F4BF}\u{1F4C0}]/u;
+    }
+
+    // How many stored verdicts of one party at one venue must differ only in
+    // one emoji-opened segment before that emoji is read as a per-night
+    // marker there.
+    static getBearVerdictLearnedMarkerMinEntries() {
+        return 3;
+    }
+
+    // A title as its segments, in order: [{ marker, text }]. A segment starts
+    // at a spaced separator (| • · – — -) or at an emoji followed by words;
+    // `marker` is the emoji run that opens it ('' for plain words). An emoji
+    // with no words after it is decoration and opens nothing.
+    splitBearVerdictTitleSegments(title) {
+        const text = String(title || '').trim();
+        const segments = [];
+        if (!text) return segments;
+        const pictographRun = /((?:[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+)/u;
+        for (const part of text.split(/\s+[|•·–—]\s+|\s+-\s+/)) {
+            const pieces = part.split(pictographRun);
+            const lead = pieces[0].trim();
+            if (lead) segments.push({ marker: '', text: lead });
+            for (let i = 1; i < pieces.length; i += 2) {
+                const words = String(pieces[i + 1] || '').trim();
+                if (!words || !/[\p{L}\p{N}]/u.test(words)) continue;
+                segments.push({ marker: pieces[i], text: words });
+            }
+        }
+        return segments;
+    }
+
+    // Is this tail segment the night's performer? `learnedMarkers` is the set
+    // of emoji the verdict store proved per-night for this party at this
+    // venue (may be empty).
+    isBearVerdictPerformerSegment(segment, learnedMarkers = null) {
+        if (!segment || !segment.text) return false;
+        const marker = String(segment.marker || '');
+        const music = SharedCore.getBearVerdictMusicMarkerPattern().test(marker);
+        const djWord = /^dj(?:s|['’]s)?(?=\s|$)/i.test(segment.text);
+        const learned = Boolean(marker) && learnedMarkers instanceof Set
+            && [...learnedMarkers].some(known => marker.includes(known));
+        if (!music && !djWord && !learned) return false;
+        return this.matchBearKeywords(segment.text).length === 0;
+    }
+
+    // The party key: getBearVerdictTitleKey of the title minus its cover,
+    // venue and performer tails. Equal to getBearVerdictTitleKey whenever the
+    // title carries none of them.
+    getBearVerdictPartyKey(title, barNames = [], learnedMarkers = null) {
+        const names = (Array.isArray(barNames) ? barNames : [barNames]);
+        const stripVenue = (value) => names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(value || ''));
+        const coverFree = this.stripCoverPartsFromTitle(stripVenue(title)).title;
+        const segments = this.splitBearVerdictTitleSegments(coverFree);
+        const kept = segments.filter((segment, index) => index === 0 || !this.isBearVerdictPerformerSegment(segment, learnedMarkers));
+        const bare = kept.length > 0 && kept.length < segments.length
+            ? kept.map(segment => segment.text).join(' | ')
+            : coverFree;
+        return this.getBearVerdictTitleKey(bare, names);
+    }
+
+    // The name a title leads with, as a key (its first segment's tokens).
+    getBearVerdictLeadKey(title, barNames = []) {
+        const names = (Array.isArray(barNames) ? barNames : [barNames]);
+        const stripVenue = (value) => names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(value || ''));
+        const segments = this.splitBearVerdictTitleSegments(this.stripCoverPartsFromTitle(stripVenue(title)).title);
+        return segments.length > 0 ? this.getBearVerdictTitleKey(segments[0].text, names) : '';
+    }
+
+    // What the verdict store says about itself, computed once per store:
+    //   learned  lead key → [{ entry, markers }] — at one venue, N or more
+    //            verdicts (all the same way) that share a leading name and
+    //            differ ONLY in the words after one emoji prove that emoji
+    //            opens a per-night segment of THAT party at THAT venue
+    //            (N = getBearVerdictLearnedMarkerMinEntries). Emoji only: a
+    //            word that opens several tails ("FLW – LEATHER NIGHT",
+    //            "FLW – LEATHER FAMILY SOCIAL") names different events.
+    //   keys     entry → { title key, party key }
+    getBearVerdictStoreIndex() {
+        const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
+        const signature = store.map(entry => (entry && typeof entry === 'object'
+            ? `${entry.verdict}\u0001${entry.title}\u0001${entry.venue}\u0001${entry.city}`
+            : '')).join('\u0002');
+        const cached = this._bearVerdictStoreIndex;
+        if (cached && cached.store === store && cached.signature === signature) return cached;
+        const usable = store.filter(entry => entry && typeof entry === 'object'
+            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+        const groups = new Map();
+        for (const entry of usable) {
+            const names = [entry.venue];
+            const segments = this.splitBearVerdictTitleSegments(
+                this.stripCoverPartsFromTitle(names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(entry.title || ''))).title
+            );
+            if (segments.length !== 2 || !segments[1].marker) continue;
+            const leadKey = this.getBearVerdictTitleKey(segments[0].text, names);
+            const place = this.normalizeBarNameKey(entry.venue) || `city:${String(entry.city || '').trim().toLowerCase()}`;
+            if (!leadKey || place === 'city:' || place === 'city:unknown') continue;
+            const marker = (segments[1].marker.match(/[\p{Extended_Pictographic}]/u) || [''])[0];
+            if (!marker) continue;
+            const groupKey = `${place}\u0001${leadKey}\u0001${marker}`;
+            if (!groups.has(groupKey)) groups.set(groupKey, { leadKey, marker, entries: [], tails: new Set(), verdicts: new Set() });
+            const group = groups.get(groupKey);
+            group.entries.push(entry);
+            group.tails.add(this.getCrossSourceTitleTokens(segments[1].text).join(' '));
+            group.verdicts.add(entry.verdict);
+        }
+        const learned = new Map();
+        const minEntries = SharedCore.getBearVerdictLearnedMarkerMinEntries();
+        for (const group of groups.values()) {
+            if (group.tails.size < minEntries || group.verdicts.size !== 1) continue;
+            if (!learned.has(group.leadKey)) learned.set(group.leadKey, []);
+            learned.get(group.leadKey).push({ entry: group.entries[0], marker: group.marker });
+        }
+        const index = { store, signature, learned, keys: new Map() };
+        this._bearVerdictStoreIndex = index;
+        return index;
+    }
+
+    // The emoji the store proved per-night for this record's party at this
+    // record's venue (empty Set when it proved none).
+    getBearVerdictLearnedMarkers(record, index = this.getBearVerdictStoreIndex()) {
+        const markers = new Set();
+        if (!record || index.learned.size === 0) return markers;
+        const leadKey = this.getBearVerdictLeadKey(record.title || record.name, [record.bar || record.venue]);
+        for (const proof of index.learned.get(leadKey) || []) {
+            if (this.bearVerdictPlaceMatches(record, proof.entry)) markers.add(proof.marker);
+        }
+        return markers;
+    }
+
     // The owner's stored manual verdict for this event, or null. Fail-closed
-    // twice over: the title token identity must be EQUAL (see
-    // getBearVerdictTitleKey) AND the stored snapshot must positively match
+    // twice over: the title identity must be EQUAL — the title tokens
+    // (getBearVerdictTitleKey), else the party behind them
+    // (getBearVerdictPartyKey) — AND the stored snapshot must positively match
     // the event's venue identity (areIdentityPlacesSimilar — no fuzzy
     // cross-venue hits, and an event without venue data never matches).
     // Dates are deliberately NOT compared: the verdict is about the party at
     // that venue, which recurs.
     findStoredBearVerdict(event) {
+        const match = this.findStoredBearVerdictMatch(event);
+        return match ? match.entry : null;
+    }
+
+    // { entry, matchedBy: 'title' | 'party' } or null. A verdict on the exact
+    // title always speaks first (so a tap on the plain name can overrule the
+    // decorated one). Party matches that DISAGREE (one spelling judged bear,
+    // another not) decide nothing — the owner told them apart himself.
+    findStoredBearVerdictMatch(event) {
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
         if (!eventKey) return null;
-        for (const entry of store) {
-            if (!entry || typeof entry !== 'object') continue;
-            if (entry.verdict !== 'bear' && entry.verdict !== 'not_bear') continue;
-            const entryKey = this.getBearVerdictTitleKey(entry.title, [entry.venue]);
+        const index = this.getBearVerdictStoreIndex();
+        const keysOf = (entry) => {
+            let keys = index.keys.get(entry);
+            if (!keys) {
+                keys = { title: this.getBearVerdictTitleKey(entry.title, [entry.venue]), party: null };
+                index.keys.set(entry, keys);
+            }
+            return keys;
+        };
+        const usable = store.filter(entry => entry && typeof entry === 'object'
+            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+        for (const entry of usable) {
+            const entryKey = keysOf(entry).title;
             if (!entryKey || entryKey !== eventKey) continue;
             if (!this.bearVerdictPlaceMatches(event, entry)) continue;
-            return entry;
+            return { entry, matchedBy: 'title' };
         }
-        return null;
+        const partyKey = this.getBearVerdictPartyKey(event.title || event.name, [event.bar],
+            this.getBearVerdictLearnedMarkers(event, index));
+        if (!partyKey) return null;
+        const hits = [];
+        for (const entry of usable) {
+            const keys = keysOf(entry);
+            if (keys.party === null) {
+                keys.party = this.getBearVerdictPartyKey(entry.title, [entry.venue],
+                    this.getBearVerdictLearnedMarkers({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }, index));
+            }
+            if (!keys.party || keys.party !== partyKey) continue;
+            if (!this.bearVerdictPlaceMatches(event, entry)) continue;
+            hits.push(entry);
+        }
+        if (hits.length === 0) return null;
+        if (new Set(hits.map(entry => entry.verdict)).size > 1) {
+            console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the verdict store holds this party both ways (${hits.map(entry => `${entry.verdict} "${entry.title}"`).join(', ')}); no stored verdict applied`);
+            return null;
+        }
+        const newest = hits.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits[0]);
+        return { entry: newest, matchedBy: 'party' };
     }
 
     // Place half of the verdict-store identity. Venue identity when either
@@ -11315,12 +11507,16 @@ class SharedCore {
         // manual-override-on-calendar-record path: the owner already judged
         // this party at this venue, and the AI re-litigating it every run is
         // how MEAT RACK kept getting re-dropped (run 20260812-002001).
-        const storedVerdict = this.findStoredBearVerdict(event);
+        const storedMatch = this.findStoredBearVerdictMatch(event);
+        const storedVerdict = storedMatch ? storedMatch.entry : null;
         if (storedVerdict) {
             const stamp = String(storedVerdict.stampedAt || '').slice(0, 10);
+            // A verdict reached through the party fold names the title it
+            // was given on, so the drop reason shows whose verdict this is.
+            const sameParty = storedMatch.matchedBy === 'party' ? ` — same party as "${storedVerdict.title}"` : '';
             return {
                 result: storedVerdict.verdict,
-                provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}`,
+                provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}${sameParty}`,
                 manualStore: true,
                 storedVerdictEntry: storedVerdict
             };

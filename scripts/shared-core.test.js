@@ -19812,6 +19812,147 @@ test('bear verdict store identity: fail-closed venue identity and exact title-to
 });
 
 // ---------------------------------------------------------------------------
+// THE PARTY BEHIND THE TITLE (owner note 2026-09-27). Eagle NYC lists its
+// weekly party as "🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH
+// COVER" — the owner marked those not bear on 2026-09-20 — and Thotyssey
+// lists the same party as "Jockstrap Wednesday". Run 20260927-155245
+// proposed thirteen of Thotyssey's nights as NEW bear events: the verdict's
+// title identity did not see through the performer and the cover.
+// ---------------------------------------------------------------------------
+
+const EAGLE_NYC_PLACE = { address: '554 W 28th St, New York, NY 10001, USA', location: '40.751694, -74.004306', city: 'nyc' };
+
+function eagleNycVerdict(title, overrides = {}) {
+  return { verdict: 'not_bear', stampedAt: '2026-09-20T14:44:19.000Z', title, venue: 'Eagle NYC', ...EAGLE_NYC_PLACE, ...overrides };
+}
+
+function eagleNycEvent(title, overrides = {}) {
+  return { title, bar: 'Eagle NYC', startDate: new Date('2026-10-01T02:00:00.000Z'), timezone: 'America/New_York', ...EAGLE_NYC_PLACE, ...overrides };
+}
+
+const JOCKSTRAP_DECORATED = [
+  '🩲 JOCKSTRAP WEDNESDAY 🎧 IPOK 💰 20 CASH COVER',
+  '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH COVER',
+  '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SAM GEE | $20 CASH COVER'
+];
+
+test('bear verdict party fold: a verdict on the decorated title covers the plain one, and the plain one covers the decorated', () => {
+  const core = createCore();
+  core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title));
+  for (const title of ['Jockstrap Wednesday', 'JOCKSTRAP WEDNESDAY!', 'Jockstrap Wednesday at The Eagle NYC',
+    '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SOMEONE NEW | $20 CASH COVER', 'JOCKSTRAP WEDNESDAY | $20 CASH COVER', 'Jockstrap Wednesday - DJ Someone New']) {
+    const match = core.findStoredBearVerdictMatch(eagleNycEvent(title));
+    assert.ok(match, `"${title}" is the party the owner judged`);
+    assert.equal(match.entry.verdict, 'not_bear');
+    assert.equal(match.matchedBy, 'party');
+    assert.equal(core.findStoredBearVerdict(eagleNycEvent(title)), match.entry);
+  }
+  // An exact title still matches as it always did.
+  assert.equal(core.findStoredBearVerdictMatch(eagleNycEvent(JOCKSTRAP_DECORATED[1])).matchedBy, 'title');
+
+  const plain = createCore();
+  plain.bearVerdicts = [eagleNycVerdict('Jockstrap Wednesday', { verdict: 'bear' })];
+  for (const title of JOCKSTRAP_DECORATED) {
+    const match = plain.findStoredBearVerdictMatch(eagleNycEvent(title));
+    assert.ok(match, `the plain verdict covers "${title}"`);
+    assert.equal(match.entry.verdict, 'bear');
+    assert.equal(match.matchedBy, 'party');
+  }
+});
+
+test('bear verdict party fold: never spreads to another party at the venue, to another venue, or over a tail that says what the night is', () => {
+  const core = createCore();
+  core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title));
+  for (const title of ['Bear Happy Hour', '🐻 BEAR HAPPY HOUR | NO COVER', 'Jock Night: Bears Edition', 'JOCKSTRAP HAPPY HOUR 💰10 DONATION',
+    'Jockstrap Wednesday: Bears Edition', 'Jockstrap Wednesday - Bears Edition',
+    '🩲 JOCKSTRAP WEDNESDAY | 🎧 BEAR EDITION | $20 CASH COVER', '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ PAPA BEAR | $20 CASH COVER']) {
+    assert.equal(core.findStoredBearVerdict(eagleNycEvent(title)), null, `"${title}" is not the party that was judged`);
+  }
+  assert.equal(core.findStoredBearVerdict({ title: 'Jockstrap Wednesday', bar: 'Rockbar', address: '185 Christopher St, New York, NY', city: 'nyc' }), null,
+    'the same name at another venue is another party');
+  assert.equal(core.findStoredBearVerdict({ title: 'Jockstrap Wednesday' }), null, 'no place, no match');
+
+  // The name itself is never folded: a title that LEADS with a DJ word or
+  // a music emoji keeps every word.
+  assert.equal(core.getBearVerdictPartyKey('DJ GIRLFRIENDS', ['Massive']), core.getBearVerdictTitleKey('DJ GIRLFRIENDS', ['Massive']));
+  assert.equal(core.getBearVerdictPartyKey('🎧 HEADPHONE DISCO', ['Massive']), core.getBearVerdictTitleKey('🎧 HEADPHONE DISCO', ['Massive']));
+  assert.equal(core.getBearVerdictPartyKey('Dolly and the DJ', []), core.getBearVerdictTitleKey('Dolly and the DJ', []));
+  // A title with no tail keys exactly as before; decoration emoji open nothing.
+  for (const title of ['MEAT RACK', 'The PORKCHOP BALL 🐷🪓', '💎🪦 GraveSTONED 🪦💎', 'Press Play - Troye Sivan Edition', 'FLW – LEATHER NIGHT']) {
+    assert.equal(core.getBearVerdictPartyKey(title, ['3 Dollar Bill']), core.getBearVerdictTitleKey(title, ['3 Dollar Bill']), title);
+  }
+});
+
+test('bear verdict party fold: the exact title speaks first, and a party judged both ways decides nothing', () => {
+  const core = createCore();
+  core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title))
+    .concat([eagleNycVerdict('Jockstrap Wednesday', { verdict: 'bear', stampedAt: '2026-09-28T00:00:00.000Z' })]);
+  const plain = core.findStoredBearVerdictMatch(eagleNycEvent('Jockstrap Wednesday'));
+  assert.equal(plain.matchedBy, 'title');
+  assert.equal(plain.entry.verdict, 'bear', 'a tap on the plain name overrules the fold');
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent(JOCKSTRAP_DECORATED[1])).verdict, 'not_bear', 'each decorated title keeps its own verdict');
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SOMEONE NEW | $20 CASH COVER')), null,
+    'the owner told the spellings apart himself — an unseen one is judged afresh');
+
+  // Agreeing party matches: the newest stamp is the one reported.
+  const agreeing = createCore();
+  agreeing.bearVerdicts = [
+    eagleNycVerdict(JOCKSTRAP_DECORATED[1], { stampedAt: '2026-09-20T00:00:00.000Z' }),
+    eagleNycVerdict(JOCKSTRAP_DECORATED[2], { stampedAt: '2026-09-22T00:00:00.000Z' })
+  ];
+  assert.equal(agreeing.findStoredBearVerdict(eagleNycEvent('Jockstrap Wednesday')).stampedAt, '2026-09-22T00:00:00.000Z');
+});
+
+test('bear verdict party fold: an emoji the store shows changing night after night opens a per-night tail — words never do', () => {
+  const hosts = ['🎭 HOSTED BY ANITA', '🎭 HOSTED BY BIANCA', '🎭 HOSTED BY CARLA'];
+  const core = createCore();
+  core.bearVerdicts = hosts.map((tail) => eagleNycVerdict(`TRIVIA SHOWDOWN | ${tail}`));
+  const unseen = core.findStoredBearVerdictMatch(eagleNycEvent('TRIVIA SHOWDOWN | 🎭 HOSTED BY DELIA'));
+  assert.ok(unseen, 'three verdicts differing only after 🎭 prove the segment is per-night');
+  assert.equal(unseen.matchedBy, 'party');
+  assert.ok(core.findStoredBearVerdict(eagleNycEvent('Trivia Showdown')), 'and the bare name is the same party');
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent('TRIVIA SHOWDOWN | 🎭 BEAR NIGHT')), null, 'a tail with bear vocabulary is never folded');
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent('KARAOKE | 🎭 HOSTED BY DELIA')), null, 'proven for that party only');
+  assert.equal(core.findStoredBearVerdict({ title: 'TRIVIA SHOWDOWN | 🎭 HOSTED BY DELIA', bar: 'Rockbar', address: '185 Christopher St, New York, NY', city: 'nyc' }), null,
+    'and at that venue only');
+
+  const two = createCore();
+  two.bearVerdicts = hosts.slice(0, 2).map((tail) => eagleNycVerdict(`TRIVIA SHOWDOWN | ${tail}`));
+  assert.equal(two.findStoredBearVerdict(eagleNycEvent('TRIVIA SHOWDOWN | 🎭 HOSTED BY DELIA')), null, 'two verdicts prove nothing');
+
+  const mixed = createCore();
+  mixed.bearVerdicts = hosts.map((tail, index) => eagleNycVerdict(`TRIVIA SHOWDOWN | ${tail}`, { verdict: index === 0 ? 'bear' : 'not_bear' }));
+  assert.equal(mixed.findStoredBearVerdict(eagleNycEvent('TRIVIA SHOWDOWN | 🎭 HOSTED BY DELIA')), null, 'judged both ways, the tail is what tells them apart');
+
+  // Fort Lauderdale Leather Week: twenty verdicts share the lead "FLW" and
+  // differ in the words after the dash. Those are twenty different events.
+  const week = createCore();
+  week.bearVerdicts = ['FLW – LEATHER NIGHT', 'FLW – LEATHER FAMILY SOCIAL', 'FLW – HARNESS PARTY', 'FLW – VICTORY PARTY', 'FLW – CLOSING PARTY']
+    .map((title) => eagleNycVerdict(title));
+  assert.equal(week.findStoredBearVerdict(eagleNycEvent('FLW – CUB CRAWL')), null);
+  assert.equal(week.findStoredBearVerdict(eagleNycEvent('FLW – OPENING PARTY')), null);
+  assert.equal(week.findStoredBearVerdict(eagleNycEvent('FLW')), null);
+});
+
+test('bear verdict party fold: the bear check drops the aggregator\'s plain title on the owner\'s verdict and names whose verdict it is; review keys are untouched', async () => {
+  const core = createCore();
+  core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title));
+  const drops = [];
+  // "jock" is a title keyword — without the store the keyword tier keeps it.
+  const kept = await core.filterBearEvents([eagleNycEvent('Jockstrap Wednesday', { description: 'A DJ spins a clothing-optional weeknight at The Eagle NYC.' })],
+    bearCheckConfig('enforce', { alwaysBear: true }), null, drops);
+  assert.equal(kept.length, 0);
+  assert.equal(drops.length, 1);
+  assert.match(drops[0].reason, /^manual store: not_bear \(verdict stamped 2026-09-20\) — same party as "🩲 JOCKSTRAP WEDNESDAY/);
+
+  // getBearVerdictTitleKey also keys the owner's review decisions and the
+  // calendar link memory: it says what it always said.
+  assert.equal(core.getBearVerdictTitleKey(JOCKSTRAP_DECORATED[1], ['Eagle NYC']), 'jockstrap dj mitch ferrino 20 cash cover');
+  assert.equal(core.getBearVerdictPartyKey(JOCKSTRAP_DECORATED[1], ['Eagle NYC']), 'jockstrap');
+  assert.equal(core.getOwnerReviewKey(eagleNycEvent(JOCKSTRAP_DECORATED[1])), 'event|jockstrap dj mitch ferrino 20 cash cover|eaglenyc|2026-09-30');
+});
+
+// ---------------------------------------------------------------------------
 // CROSS-BUCKET DUPLICATE FOLD (wave 5). Run 20260812-001632: scraped
 // "Treasure Trail" was bear-DROPPED while the identity-matching
 // manual-override calendar row "Treasure Trail Seattle" stayed KEPT — the
