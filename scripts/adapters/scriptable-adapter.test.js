@@ -11759,3 +11759,53 @@ test('calendar target: an unrecognized city routes to the unknown name, which is
     console.log = originalLog;
   }
 });
+
+test('executeReviewedSavedRun confirms BEFORE the snapshot step, so a crash there still leaves the owner informed and the log shows how far it got', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const freshPlan = [reviewedNew('Approved Party')];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  core.prepareEventsForCalendar = async (events) => events.map((event) => ({ ...freshPlan[0], _savedRunSourceIndex: event._savedRunSourceIndex }));
+  const order = [];
+  adapter.runPostRunHousekeeping = async () => { order.push('housekeeping'); };
+  adapter.postSavedRunExecutionNotification = async (title, message) => { order.push('notification'); captured.notification = { title, message }; return true; };
+  adapter.writeCalendarSnapshots = async () => { order.push('snapshots'); return []; };
+  adapter.appendLogSummary = async (results, options) => { order.push(options && options.preUi ? 'log:start' : 'log:after-snapshots'); };
+  adapter.presentSavedRunExecutionNotice = async (title, message) => { order.push('alert'); captured.notices.push({ title, message }); };
+  const decisions = [{ key: core.getOwnerReviewKey(freshPlan[0]), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }];
+  const results = buildReviewedRunResults(freshPlan.map((event) => ({ ...event, _action: 'new' })));
+  await adapter.executeReviewedSavedRun(results, decisions);
+  assert.deepEqual(order.filter((step) => step !== 'log:start'), ['housekeeping', 'notification', 'snapshots', 'log:after-snapshots', 'alert']);
+  assert.equal(captured.notification.title, 'Calendar Updated');
+  assert.match(captured.notification.message, /Created 1/);
+  assert.equal(captured.notices[0].message, captured.notification.message, 'the alert repeats what the notification already said');
+
+  // The snapshot step dying (a thrown error here; on the device, the app
+  // being killed) happens after the notification went out.
+  const crashed = buildAdapter();
+  const crashCaptured = { notices: [] };
+  const crashCore = instrumentReviewedRunAdapter(crashed, freshPlan, crashCaptured);
+  crashCore.prepareEventsForCalendar = async (events) => events.map((event) => ({ ...freshPlan[0], _savedRunSourceIndex: event._savedRunSourceIndex }));
+  const crashOrder = [];
+  crashed.postSavedRunExecutionNotification = async () => { crashOrder.push('notification'); return true; };
+  crashed.writeCalendarSnapshots = async () => { crashOrder.push('snapshots'); throw new Error('killed'); };
+  await crashed.executeReviewedSavedRun(buildReviewedRunResults(freshPlan.map((event) => ({ ...event, _action: 'new' }))), decisions);
+  assert.deepEqual(crashOrder, ['notification', 'snapshots']);
+});
+
+test('postSavedRunExecutionNotification schedules a local notification and never throws without the API', async () => {
+  const adapter = buildAdapter();
+  const original = global.Notification;
+  try {
+    delete global.Notification;
+    assert.equal(await adapter.postSavedRunExecutionNotification('Calendar Updated', 'x'), false);
+    const scheduled = [];
+    global.Notification = class { async schedule() { scheduled.push({ title: this.title, body: this.body, thread: this.threadIdentifier }); } };
+    assert.equal(await adapter.postSavedRunExecutionNotification('Calendar Updated', '➕ Created 36\n🔄 Updated 5'), true);
+    assert.deepEqual(scheduled, [{ title: 'Calendar Updated', body: '➕ Created 36\n🔄 Updated 5', thread: 'chunky-dad-review-execute' }]);
+    global.Notification = class { async schedule() { throw new Error('denied'); } };
+    assert.equal(await adapter.postSavedRunExecutionNotification('t', 'm'), false);
+  } finally {
+    if (original === undefined) delete global.Notification; else global.Notification = original;
+  }
+});
