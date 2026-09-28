@@ -82,6 +82,11 @@ const CURATED_BAR_SAME_PLACE_KM = 0.025;
 // before the rest of that host's queue is skipped (see noteHostReachability).
 // Three is enough to tell "this host is down" from one flaky request.
 const UNREACHABLE_HOST_FAILURE_THRESHOLD = 3;
+// Links of one path shape on one host the site answered "not found" for,
+// before an untried link of the same shape is presumed gone too (see
+// getGoneShapePresumption — which also demands that none ever answered).
+const DEAD_SHAPE_MIN_SIBLINGS = 5;
+const DEAD_SHAPE_RECENT_DAYS = 14;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
 // Ticket links are followed/kept only for events that started less than
 // this long ago — a page still selling last night's tickets is not a lead.
@@ -5577,6 +5582,18 @@ class SharedCore {
                 };
             }
         }
+        // Dead-link rung: a link the site answers "not found" for
+        // (stampKnownDeadLinks) loses to any other link, on either side — a
+        // stored copy of it yields, and it never replaces a stored link.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl')
+            && context && context.records && urlA && urlB) {
+            const stamped = [context.records.a, context.records.b];
+            const deadA = stamped.some(record => this.isKnownDeadLink(record, valueA));
+            const deadB = stamped.some(record => this.isKnownDeadLink(record, valueB));
+            if (deadA !== deadB) {
+                return { winner: deadA ? 'b' : 'a', reason: 'the site answers "not found" for the other link (404/410 learned by the crawl)' };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -7870,9 +7887,129 @@ class SharedCore {
         return hubs;
     }
 
+    // ── A link the site itself answers "not found" for is not a link ─────
+    // A venue's own cards can publish permalinks that do not exist:
+    // precinctdtla.com prints `/10-11-26/bulkgoods-la-7/` on every calendar
+    // card (itemprop url AND the JSON-LD url) and answers its own "Page not
+    // found" for each — 28 of them learned as dead ends by 2026-09-27, and
+    // every Precinct event on the calendar linked to one. The dead-end store
+    // already records what the origin STATED (404/410, one strike, retried
+    // after the usual window); a link it holds that way is dropped, and the
+    // page the event was read from stands in. A 401/403 is a wall, not an
+    // absence — the page exists for a visitor — so it is never dropped.
+    // Stamped on the record (`_deadLinkKeys`) so the merge and the final
+    // build, and a saved run replayed on the phone, inherit the finding
+    // without needing the store.
+    isStatedGoneEntry(context, entry) {
+        if (!entry) return false;
+        const status = Number(entry.lastStatus);
+        if (status !== 404 && status !== 410) return false;
+        const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = (Number(context.retryDays) || 0) * 24 * 60 * 60 * 1000;
+        return Number.isFinite(lastSeenMs) && (retryMs <= 0 || (Date.now() - lastSeenMs) < retryMs);
+    }
+
+    getDeadLinkKnowledge() {
+        const context = this.deadEndRunContext || this.deadLinkKnowledge || null;
+        return context && context.store ? context : null;
+    }
+
+    isOriginStatedGoneUrl(url) {
+        const context = this.getDeadLinkKnowledge();
+        if (!context || !url) return false;
+        const { entry } = this.findDeadEndUrlEntry(context, url);
+        if (this.isStatedGoneEntry(context, entry)) return true;
+        return Boolean(this.getGoneShapePresumption(url));
+    }
+
+    // A link the crawl never tried can still be known gone — by its SHAPE.
+    // The venue publishes one permalink per card and the crawl reads only
+    // some of them: precinctdtla.com had 26 learned gone, and the ten
+    // upcoming bear nights' own links, same shape, had never been tried.
+    // Presumed gone only when ALL of this holds:
+    //   - the store holds DEAD_SHAPE_MIN_SIBLINGS or more links of that
+    //     shape on that host the site answered 404/410 for;
+    //   - the shape has two segments or more (a top-level page is its own
+    //     kind of thing);
+    //   - the crawl ENGAGED the shape lately: it found one gone this run,
+    //     or the newest of those answers is under DEAD_SHAPE_RECENT_DAYS
+    //     old (the store is the crawl's own record of what it tried);
+    //   - no page of that shape answered this run, from network or cache.
+    // A site whose old event pages expire while new ones live ("/events/
+    // <slug>") always has a page of the shape answering, so it never
+    // qualifies.
+    getGoneShapePresumption(url) {
+        const context = this.getDeadLinkKnowledge();
+        if (!context || !url) return null;
+        const shape = this.getUrlPathShape(url);
+        if (!shape || shape.split('/').length < 3) return null;
+        const evidence = (this.pathShapeEvidence && this.pathShapeEvidence.get(shape)) || { answered: 0, gone: 0 };
+        if (evidence.answered > 0) return null;
+        if (!context.goneShapeCounts) {
+            const counts = new Map();
+            const hostsKey = typeof this.getDeadEndHostsStoreKey === 'function' ? this.getDeadEndHostsStoreKey() : '';
+            for (const [key, entry] of Object.entries(context.store)) {
+                if (key === hostsKey || !this.isStatedGoneEntry(context, entry)) continue;
+                const entryShape = this.getUrlPathShape(key);
+                if (!entryShape) continue;
+                const known = counts.get(entryShape) || { siblings: 0, newestMs: 0 };
+                known.siblings += 1;
+                known.newestMs = Math.max(known.newestMs, Date.parse(entry.lastSeen) || 0);
+                counts.set(entryShape, known);
+            }
+            context.goneShapeCounts = counts;
+        }
+        const known = context.goneShapeCounts.get(shape);
+        if (!known || known.siblings < DEAD_SHAPE_MIN_SIBLINGS) return null;
+        const engagedLately = evidence.gone > 0
+            || (Date.now() - known.newestMs) < DEAD_SHAPE_RECENT_DAYS * 24 * 60 * 60 * 1000;
+        return engagedLately ? { shape, siblings: known.siblings } : null;
+    }
+
+    isKnownDeadLink(event, value) {
+        const key = this.getHubLinkKey(value);
+        if (!key) return false;
+        const keys = event && Array.isArray(event._deadLinkKeys) ? event._deadLinkKeys : null;
+        return Boolean(keys && keys.includes(key));
+    }
+
+    stampKnownDeadLinks(events) {
+        const found = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object' || !Object.isExtensible(event)) continue;
+            for (const field of ['website', 'url', 'ticketUrl']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (!value || !this.isOriginStatedGoneUrl(value)) continue;
+                const key = this.getHubLinkKey(value);
+                if (!key) continue;
+                if (!Array.isArray(event._deadLinkKeys)) event._deadLinkKeys = [];
+                if (!event._deadLinkKeys.includes(key)) event._deadLinkKeys.push(key);
+                found.set(key, (found.get(key) || 0) + 1);
+            }
+        }
+        if (found.size > 0) {
+            console.log(`🔗 LINKS: ${found.size} link(s) the site itself answers "not found" for (404/410, learned by the crawl) — never saved as an event's link: ${[...found.keys()].slice(0, 5).join(', ')}${found.size > 5 ? `, … (+${found.size - 5})` : ''}`);
+        }
+        return found;
+    }
+
+    // The page an event was read from, when it can stand in for a link of
+    // its own: a real page (not a feed or an API door), not itself gone.
+    getStandInSourcePage(event) {
+        const source = typeof (event && event._sourcePageUrl) === 'string' ? event._sourcePageUrl.trim() : '';
+        if (!/^https?:\/\//i.test(source)) return '';
+        if (this.isOriginStatedGoneUrl(source) || this.isKnownDeadLink(event, source)) return '';
+        // A feed, an API door, a file or a search listing is where the data
+        // came from, not a page a visitor can open about the event.
+        if (this.isStaticAssetUrl(source) || this.isApiEndpointUrl(source) || this.isSearchListingUrl(source)
+            || /\.(?:ics|json|xml|rss)(?:$|[?#])/i.test(source)) return '';
+        return source;
+    }
+
     canonicalizeIdentityLinks(events) {
         if (!Array.isArray(events) || events.length === 0) return;
         this.stampBatchHubLinks(events);
+        this.stampKnownDeadLinks(events);
         for (const event of events) {
             if (!event || typeof event !== 'object') continue;
             // Alias fold backstop: normalization already folded url→website
@@ -7911,6 +8048,20 @@ class SharedCore {
                     delete event.website;
                     console.log(`🔗 LINKS: cleared website ${hubWebsite} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a hub page is a front door, not this event's page`);
                 }
+            }
+
+            // Links the site answers "not found" for (stampKnownDeadLinks).
+            const deadTicketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (deadTicketUrl && this.isKnownDeadLink(event, deadTicketUrl)) {
+                delete event.ticketUrl;
+                console.log(`🔗 LINKS: dropped ticketUrl ${deadTicketUrl} for "${event.title || 'event'}" — the site answers "not found" for it`);
+            }
+            const deadWebsite = typeof event.website === 'string' ? event.website.trim() : '';
+            if (deadWebsite && this.isKnownDeadLink(event, deadWebsite)) {
+                const standIn = this.getStandInSourcePage(event);
+                if (standIn && !this.isSameLinkTarget(standIn, deadWebsite)) event.website = standIn;
+                else delete event.website;
+                console.log(`🔗 LINKS: dropped website ${deadWebsite} for "${event.title || 'event'}" — the site answers "not found" for it${standIn ? `; the page it was read from stands in (${standIn})` : ''}`);
             }
 
             const website = typeof event.website === 'string' ? event.website.trim() : '';
@@ -9380,6 +9531,7 @@ class SharedCore {
                 const deadEndEntry = this.getSkippableDeadEndEntry(url, discoveryOnly);
                 if (deadEndEntry) {
                     await displayAdapter.logInfo(`SYSTEM: Skipping known dead-end URL (${Number(deadEndEntry.misses) || 0} prior misses): ${url}`);
+                    if ([404, 410].includes(Number(deadEndEntry.lastStatus))) this.notePathShapeEvidence(url, 'gone');
                     continue;
                 }
                 const deadEndHostEntry = this.getSkippableDeadEndHostEntry(url, discoveryOnly);
@@ -10605,6 +10757,36 @@ class SharedCore {
         if (!host) return;
         if (!this.hostReachability) this.hostReachability = new Map();
         this.hostReachability.set(host, { failures: 0, succeeded: true });
+        this.notePathShapeEvidence(url, 'answered');
+    }
+
+    // ── Path shapes: what kind of page answered, what kind never does ────
+    // "precinctdtla.com/10-11-26/bulkgoods-la-7" has the shape "#/*" — a
+    // segment carrying digits, then a slug. Evidence is kept per run: which
+    // shapes of a host ANSWERED (a page was read, from the network or the
+    // cache) and which the crawl ENGAGED and found gone (a 404/410 this
+    // run, or a skip of a link already learned gone).
+    getUrlPathShape(url) {
+        const parts = this.getUrlRuleParts(String(url || ''));
+        if (!parts || !Array.isArray(parts.segments) || parts.segments.length === 0) return '';
+        const host = FetchPoliteness.hostKeyOf(url);
+        if (!host) return '';
+        const last = parts.segments.length - 1;
+        const shape = parts.segments.map((segment, index) => {
+            if (index === last) return '*';
+            return /\d/.test(segment) ? '#' : String(segment).toLowerCase();
+        }).join('/');
+        return `${host}/${shape}`;
+    }
+
+    notePathShapeEvidence(url, kind) {
+        const shape = this.getUrlPathShape(url);
+        if (!shape) return;
+        if (!this.pathShapeEvidence) this.pathShapeEvidence = new Map();
+        const entry = this.pathShapeEvidence.get(shape) || { answered: 0, gone: 0 };
+        if (kind === 'answered') entry.answered += 1;
+        else if (kind === 'gone') entry.gone += 1;
+        this.pathShapeEvidence.set(shape, entry);
     }
 
     getUnreachableHostSkip(url, threshold = UNREACHABLE_HOST_FAILURE_THRESHOLD) {
@@ -10813,6 +10995,7 @@ class SharedCore {
             // Configured root URLs are never dead-ended
             return;
         }
+        if ([404, 410].includes(Number(statusCode))) this.notePathShapeEvidence(url, 'gone');
         const { wasNew } = this.recordDeadEndUrlMiss(context, url, statusCode, nowMs);
         // Bot-wall statuses additionally feed the host-level stats: a host
         // whose pages ONLY ever 401/403 (and never once fetched) is a
@@ -10948,6 +11131,10 @@ class SharedCore {
 
     async finalizeDeadEndRun(displayAdapter, results, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
+        // The crawl is over, but the calendar analysis that follows still
+        // judges LINKS by what the crawl learned (isOriginStatedGoneUrl): a
+        // saved event may hold a permalink the site answers 404 for.
+        if (context && context.store) this.deadLinkKnowledge = context;
         this.deadEndRunContext = null;
         if (!context) {
             return;
@@ -20530,6 +20717,20 @@ class SharedCore {
             if (Array.isArray(event._hubLinkKeys) && !analyzedEvent._hubLinkKeys) {
                 analyzedEvent._hubLinkKeys = event._hubLinkKeys.slice();
             }
+            // …and the dead-link finding (stampKnownDeadLinks). The calendar
+            // may hold the dead permalink an earlier run wrote; stamp those
+            // too, so a saved copy is recognised whichever side carries it.
+            {
+                const deadKeys = new Set(Array.isArray(event._deadLinkKeys) ? event._deadLinkKeys : []);
+                for (const field of ['website', 'url', 'ticketUrl']) {
+                    const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                    if (value && this.isOriginStatedGoneUrl(value)) {
+                        const key = this.getHubLinkKey(value);
+                        if (key) deadKeys.add(key);
+                    }
+                }
+                if (deadKeys.size > 0) analyzedEvent._deadLinkKeys = [...deadKeys];
+            }
             // Slot precedence (analyzeEventAction): a night that yields its
             // slot is withheld (filterEventsForExecution); a party that takes
             // a saved night's slot carries whose, and sheds that night's
@@ -20796,6 +20997,24 @@ class SharedCore {
                             `ticketUrl dropped at final build — the same site's ${shape}, not a ticket link`);
                     }
                 }
+            }
+
+            // A link the site answers "not found" for is never written,
+            // whichever side of the merge brought it: the calendar may hold
+            // the dead permalink an earlier run saved.
+            for (const field of ['ticketUrl', 'website']) {
+                const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                if (!value || !this.isKnownDeadLink(analyzedEvent, value)) continue;
+                const standIn = field === 'website' ? this.getStandInSourcePage(event) : '';
+                if (standIn && !this.isSameLinkTarget(standIn, value)) analyzedEvent[field] = standIn;
+                else delete analyzedEvent[field];
+                if (field === 'website' && 'url' in analyzedEvent) {
+                    if (analyzedEvent.website) analyzedEvent.url = analyzedEvent.website; else delete analyzedEvent.url;
+                }
+                notesNeedRebuild = true;
+                console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — the site answers "not found" for it; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
+                this.recordDeterministicFieldRewrite(analyzedEvent, field,
+                    `${field} replaced at final build — the site answers "not found" (404/410) for the saved link`);
             }
 
             // A hub is never presented as one event's ticket page, whichever

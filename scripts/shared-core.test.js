@@ -26210,3 +26210,90 @@ test('crawl: a host that answers nothing this run is dropped from the queue afte
   core.noteHostReachability('https://other.example/a', connectionError('fetch failed'));
   assert.equal(core.getUnreachableHostSkip('https://other.example/b'), null);
 });
+
+test('links: a link the site itself answers "not found" for is never saved — the page the event was read from stands in', () => {
+  const core = createCore();
+  const now = Date.now();
+  // What the crawl learned: the venue's own permalinks 404 (one strike,
+  // origin-stated); a ticket wall answers 403; an inferred miss has no status.
+  core.deadEndRunContext = {
+    enabled: true, retryDays: 14, minMisses: 2, store: {
+      'https://venue.example/10-11-26/bulkgoods-la-7': { firstSeen: new Date(now - 86400000).toISOString(), lastSeen: new Date(now - 3600000).toISOString(), misses: 1, lastStatus: 404 },
+      'https://tickets.example/e/123': { firstSeen: new Date(now - 86400000).toISOString(), lastSeen: new Date(now - 3600000).toISOString(), misses: 1, lastStatus: 403 },
+      'https://venue.example/flaky': { firstSeen: new Date(now - 86400000).toISOString(), lastSeen: new Date(now - 3600000).toISOString(), misses: 3 },
+      'https://venue.example/old-gone': { firstSeen: new Date(now - 90 * 86400000).toISOString(), lastSeen: new Date(now - 60 * 86400000).toISOString(), misses: 1, lastStatus: 404 }
+    }
+  };
+  assert.equal(core.isOriginStatedGoneUrl('https://venue.example/10-11-26/bulkgoods-la-7/'), true);
+  assert.equal(core.isOriginStatedGoneUrl('https://tickets.example/e/123'), false, 'a wall is not an absence — the page exists for a visitor');
+  assert.equal(core.isOriginStatedGoneUrl('https://venue.example/flaky'), false, 'an inferred miss states nothing');
+  assert.equal(core.isOriginStatedGoneUrl('https://venue.example/old-gone'), false, 'past the retry window the link gets another chance');
+  assert.equal(core.isOriginStatedGoneUrl('https://venue.example/calendar/'), false);
+
+  const dead = { title: 'BulkGoods: LA', startDate: new Date(now + 14 * 86400000), website: 'https://venue.example/10-11-26/bulkgoods-la-7/', ticketUrl: 'https://tickets.example/e/123', _sourcePageUrl: 'https://venue.example/calendar/' };
+  const fromFeed = { title: 'Feed Night', startDate: new Date(now + 15 * 86400000), website: 'https://venue.example/10-11-26/bulkgoods-la-7/', _sourcePageUrl: 'https://venue.example/wp-json/events.json' };
+  const fine = { title: 'Other Night', startDate: new Date(now + 16 * 86400000), website: 'https://venue.example/events/other-night/', _sourcePageUrl: 'https://venue.example/calendar/' };
+  core.canonicalizeIdentityLinks([dead, fromFeed, fine]);
+  assert.equal(dead.website, 'https://venue.example/calendar/', 'the listing it was read from stands in');
+  assert.equal(dead.ticketUrl, 'https://tickets.example/e/123', 'the 403 ticket link stays');
+  assert.equal(fromFeed.website, undefined, 'a feed is not a page a visitor can open — no link beats a dead one');
+  assert.equal(fine.website, 'https://venue.example/events/other-night/');
+  assert.deepEqual(dead._deadLinkKeys, ['venue.example/10-11-26/bulkgoods-la-7']);
+
+  // The merge: a saved copy of the dead link yields, and a dead link never
+  // replaces a stored one — with the stamp alone, no store (the phone).
+  core.deadEndRunContext = null;
+  const records = { a: { title: 'BulkGoods: LA' }, b: { title: 'BulkGoods: LA', _deadLinkKeys: ['venue.example/10-11-26/bulkgoods-la-7'] } };
+  const context = { records, sideLabels: { a: 'calendar', b: 'scraped' } };
+  const savedDead = core.resolveConflictDeterministically('website', 'https://venue.example/10-11-26/bulkgoods-la-7/', 'https://venue.example/calendar/', context);
+  assert.equal(savedDead.winner, 'b');
+  assert.match(savedDead.reason, /not found/);
+  const scrapedDead = core.resolveConflictDeterministically('website', 'https://venue.example/events/real-page/', 'https://venue.example/10-11-26/bulkgoods-la-7/', context);
+  assert.equal(scrapedDead.winner, 'a');
+  // Without a store and without a stamp nothing is assumed dead.
+  assert.equal(core.isOriginStatedGoneUrl('https://venue.example/10-11-26/bulkgoods-la-7/'), false);
+  assert.equal(core.isKnownDeadLink({ title: 'x' }, 'https://venue.example/10-11-26/bulkgoods-la-7/'), false);
+});
+
+test('links: an untried link is presumed gone only by its SHAPE — five siblings the site answered 404 for, the shape engaged this run, and none of it ever answering', () => {
+  const now = Date.now();
+  const gone = (path) => [`https://venue.example${path}`, { firstSeen: new Date(now - 86400000).toISOString(), lastSeen: new Date(now - 3600000).toISOString(), misses: 1, lastStatus: 404 }];
+  const store = Object.fromEntries([
+    gone('/1-6-26/tendie-tuesday-3'), gone('/1-7-26/happy-hour-burgers'), gone('/9-2-26/gay-ass-bingo-27'),
+    gone('/9-20-26/club-chub-22'), gone('/9-27-26/machete-8'),
+    gone('/events/old-one'), gone('/events/old-two'), gone('/events/old-three'), gone('/events/old-four'), gone('/events/old-five')
+  ]);
+  const build = () => { const core = createCore(); core.deadEndRunContext = { enabled: true, retryDays: 30, minMisses: 2, store }; return core; };
+  const untried = 'https://venue.example/10-11-26/bulkgoods-la-7/';
+
+  // Five dead siblings the crawl has not touched in weeks prove nothing
+  // about today: the shape must have been engaged lately.
+  const stale = createCore();
+  stale.deadEndRunContext = { enabled: true, retryDays: 30, minMisses: 2, store: Object.fromEntries(Object.entries(store).map(([key, entry]) => [key, { ...entry, lastSeen: new Date(now - 20 * 86400000).toISOString() }])) };
+  assert.equal(stale.isOriginStatedGoneUrl(untried), false);
+  // …answers from the last days are that engagement, run or no run.
+  assert.equal(build().isOriginStatedGoneUrl(untried), true);
+
+  // The Precinct shape: engaged this run, found gone, never answered.
+  const precinct = build();
+  precinct.notePathShapeEvidence('https://venue.example/9-27-26/machete-8', 'gone');
+  precinct.noteHostReached('https://venue.example/calendar/');
+  assert.deepEqual(precinct.getGoneShapePresumption(untried), { shape: 'venue.example/#/*', siblings: 5 });
+  assert.equal(precinct.isOriginStatedGoneUrl(untried), true);
+  assert.equal(precinct.isOriginStatedGoneUrl('https://venue.example/calendar/'), false, 'a top-level page is its own kind of thing');
+  assert.equal(precinct.isOriginStatedGoneUrl('https://other.example/10-11-26/bulkgoods-la-7/'), false, 'per host');
+
+  // A site whose old event pages expire while new ones live: a page of the
+  // shape answered this run, so nothing of that shape is presumed.
+  const living = build();
+  living.notePathShapeEvidence('https://venue.example/events/old-one', 'gone');
+  living.noteHostReached('https://venue.example/events/this-saturday');
+  assert.equal(living.isOriginStatedGoneUrl('https://venue.example/events/next-saturday'), false);
+  assert.equal(living.isOriginStatedGoneUrl('https://venue.example/events/old-one'), true, 'what the site stated about that very link still stands');
+
+  // Four siblings are not five.
+  const few = createCore();
+  few.deadEndRunContext = { enabled: true, retryDays: 30, minMisses: 2, store: Object.fromEntries(Object.entries(store).slice(0, 4)) };
+  few.notePathShapeEvidence('https://venue.example/1-6-26/tendie-tuesday-3', 'gone');
+  assert.equal(few.isOriginStatedGoneUrl(untried), false);
+});
