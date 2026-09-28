@@ -618,6 +618,130 @@ test('buildDeck: pending nights of one party are one series card; a night decide
   assert.deepEqual(differs.cards[0].prior.drift, ['image']);
 });
 
+// ---------------------------------------------------------------------------
+// One party, many nights (owner note 2026-09-27 on "Jockstrap Wednesday",
+// thirteen Wednesdays from one source): the series card says its rhythm, the
+// decision store keeps one decision per night, and one note on N nights
+// reads as one note.
+// ---------------------------------------------------------------------------
+
+test('describeSeriesCadence: three or more nights a week apart are "every <weekday>"; anything else lists its dates', () => {
+  const weekly = rq.describeSeriesCadence(['2026-10-14', '2026-09-30', '2026-10-07']);
+  assert.deepEqual(weekly, { text: 'every Wednesday', stepDays: 7, weekday: 'Wednesday', from: '2026-09-30', to: '2026-10-14', nights: 3 });
+  assert.equal(rq.describeSeriesCadence(['2026-09-30', '2026-10-14', '2026-10-28']).text, 'every other Wednesday');
+  // Across the end of daylight saving (2026-11-01) the local days are still 7 apart.
+  assert.equal(rq.describeSeriesCadence(['2026-10-24', '2026-10-31', '2026-11-07', '2026-11-14']).text, 'every Saturday');
+  assert.equal(rq.describeSeriesCadence(['2026-09-30', '2026-10-07']), null, 'two nights are not a rhythm');
+  assert.equal(rq.describeSeriesCadence(['2026-09-30', '2026-10-07', '2026-10-21']), null, 'a skipped week: the dates are listed');
+  assert.equal(rq.describeSeriesCadence(['2026-10-02', '2026-11-06', '2026-12-04']), null, 'first Fridays are not a fixed step');
+  assert.equal(rq.describeSeriesCadence(['2026-09-30', '2026-09-30', '2026-10-07', 'junk', '']), null, 'repeats and junk are not nights');
+  assert.equal(rq.describeSeriesCadence(null), null);
+});
+
+test('buildDeck: a series card says its rhythm; another party and a merge never join it; a night decided alone leaves the group; one swipe stores one decision per night', () => {
+  const night = (days) => newEvent({
+    title: 'Jockstrap Wednesday', bar: 'Eagle NYC', address: '554 W 28th St, New York, NY 10001', source: 'ai-web',
+    startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000),
+    url: '', image: 'https://cdn.example/jockstrap-' + days + '.jpg', _parserConfig: { name: 'Thotyssey', parser: 'ai-web', dryRun: false }
+  });
+  const nights = [0, 7, 14, 21].map(night);
+  const other = newEvent({ title: 'Bear Happy Hour', bar: 'Eagle NYC', address: '554 W 28th St, New York, NY 10001' });
+  const merge = mergeEvent({ title: 'Jockstrap Wednesday: Finals', bar: 'Eagle NYC',
+    _existingEvent: { title: 'Jockstrap Wednesday', identifier: 'J', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600000), location: '40.75, -74.0', notes: 'bar: Eagle NYC' },
+    _original: { scraper: {}, calendar: { title: 'Jockstrap Wednesday', startDate: iso(FUTURE), notes: 'bar: Eagle NYC' } } });
+  const payload = runPayload({ analyzedEvents: nights.concat([other, merge]) });
+  const deck = deckOf(payload);
+  const series = deck.cards.filter((card) => card.series);
+  assert.equal(series.length, 4, 'the four nights, nothing else');
+  assert.ok(series.every((card) => card.kind === 'new' && card.proposal.title === 'Jockstrap Wednesday'));
+  assert.equal(series[0].series.size, 4);
+  assert.deepEqual(series[0].series.cadence, { text: 'every Thursday', stepDays: 7, weekday: 'Thursday', from: '2030-10-03', to: '2030-10-24', nights: 4 });
+  assert.deepEqual(series[0].series.nights.map((entry) => entry.day), ['2030-10-03', '2030-10-10', '2030-10-17', '2030-10-24']);
+  assert.deepEqual(series[0].series.differs, ['image'], 'each night has its own flyer here, so a decision does not carry over by itself');
+  assert.equal(deck.cards.find((card) => card.proposal.title === 'Bear Happy Hour').series, undefined, 'another party at the same venue is its own card');
+  assert.equal(deck.cards.find((card) => card.kind === 'merge').series, undefined, 'a merge keeps its own card and its own diff');
+
+  // The owner unfolds the card ("one at a time") and decides the second night alone.
+  const alone = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: series[1].key, kind: 'new', verdict: 'approve', runId: deck.runId, snapshot: series[1].proposal }));
+  const rest = deckOf(payload, alone).cards.filter((card) => card.series);
+  assert.deepEqual(rest.map((card) => card.key.split('|')[3]), ['2030-10-03', '2030-10-17', '2030-10-24'], 'the decided night left the group');
+  assert.equal(rest[0].series.size, 3);
+  assert.equal(rest[0].series.cadence, null, 'no longer a week apart — the nights are listed');
+
+  // One swipe on the folded card = what the page does: one POST per night,
+  // each under that night's own key, the note on every one of them.
+  const reason = { mode: 'fix', tags: [], text: 'same for every night' };
+  let store = alone;
+  for (const card of rest) store = rq.upsertDecision(store, rq.buildDecision({ key: card.key, kind: card.kind, verdict: 'reject', runId: deck.runId, snapshot: card.proposal, reason }));
+  assert.deepEqual(store.decisions.map((decision) => decision.key).sort(), series.map((card) => card.key).sort(), 'one decision per night, keyed as ever');
+  for (const decision of store.decisions) {
+    assert.deepEqual(Object.keys(decision).sort(), ['key', 'kind', 'reason', 'runId', 'snapshot', 'stampedAt', 'verdict'], 'the store shape the phone reads is unchanged');
+  }
+  assert.deepEqual(store.decisions.filter((decision) => decision.verdict === 'reject').map((decision) => decision.reason.text), Array(3).fill('same for every night'));
+  const after = deckOf(payload, store);
+  assert.equal(after.cards.filter((card) => card.proposal.title === 'Jockstrap Wednesday').length, 0);
+  const decided = after.decided.filter((entry) => entry.proposal.title === 'Jockstrap Wednesday');
+  assert.equal(decided.length, 4);
+  assert.ok(decided.every((entry) => !entry.via && entry.decision.key === entry.key), 'every night stands on its own decision');
+});
+
+test('formatRejectionsText: one note on the nights of one party is one line naming the nights; a different note, a merge, or a lone night keeps its own line', () => {
+  const snapshot = (day, overrides = {}) => ({ kind: 'new', title: 'Jockstrap Wednesday', startDate: `${day}T02:00:00.000Z`, bar: 'Eagle NYC', city: 'nyc', source: 'Thotyssey', ...overrides });
+  const note = { mode: 'fix', tags: [], text: 'Should we just create a recurring event?' };
+  let store = rq.emptyDecisionStore();
+  for (const day of ['2026-09-30', '2026-10-07', '2026-10-14']) {
+    const next = new Date(Date.parse(`${day}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+    store = rq.upsertDecision(store, rq.buildDecision({ key: `event|jockstrap|eaglenyc|${day}`, kind: 'new', verdict: 'reject', snapshot: snapshot(next), reason: note }));
+  }
+  store = rq.upsertDecision(store, rq.buildDecision({ key: 'event|jockstrap|eaglenyc|2026-10-21', kind: 'new', verdict: 'reject', snapshot: snapshot('2026-10-22'), reason: { mode: 'fix', tags: ['bad image'], text: '' } }));
+  for (const day of ['2026-10-03', '2026-11-07']) {
+    store = rq.upsertDecision(store, rq.buildDecision({ key: `event|woof|sfeagle|${day}`, kind: 'new', verdict: 'reject', snapshot: snapshot(day, { title: 'WOOF!', bar: 'SF Eagle', source: 'SF Eagle' }), reason: { tags: ['not bear'] } }));
+  }
+  for (const day of ['2026-10-02', '2026-10-09']) {
+    store = rq.upsertDecision(store, rq.buildDecision({ key: `event|fuzzy|nowhere|${day}`, kind: 'merge', verdict: 'reject', snapshot: snapshot(day, { kind: 'merge', title: 'Fuzzy', bar: 'Nowhere', changes: { title: { from: 'Fuzzy at Nowhere', to: 'Fuzzy' } } }), reason: { tags: ['wrong title'] } }));
+  }
+  const lines = rq.formatRejectionsText(store).split('\n');
+  assert.deepEqual(lines, [
+    '- [NEEDS FIX] NEW Jockstrap Wednesday — 3 nights (every Wednesday, 2026-09-30 … 2026-10-14) @ Eagle NYC [Thotyssey] — Should we just create a recurring event?',
+    '- [NEEDS FIX] NEW Jockstrap Wednesday — 2026-10-22 @ Eagle NYC [Thotyssey] {bad image}',
+    '- [REJECTED] MERGE Fuzzy — 2026-10-02 @ Nowhere [Thotyssey] {wrong title} (title: Fuzzy at Nowhere → Fuzzy)',
+    '- [REJECTED] MERGE Fuzzy — 2026-10-09 @ Nowhere [Thotyssey] {wrong title} (title: Fuzzy at Nowhere → Fuzzy)',
+    '- [NOT BEAR] NEW WOOF! — 2 nights (2026-10-03, 2026-11-07) @ SF Eagle [SF Eagle] {not bear}'
+  ]);
+});
+
+test('bear verdicts on the deck: a dropped twin is decided by the verdict on the decorated title and names it; an undo clears what covers it, an exact verdict first', () => {
+  const place = { address: '554 W 28th St, New York, NY 10001, USA', location: '40.751694, -74.004306', city: 'nyc' };
+  const decorated = ['🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH COVER', '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SAM GEE | $20 CASH COVER', '🩲 JOCKSTRAP WEDNESDAY 🎧 IPOK 💰 20 CASH COVER'];
+  const verdicts = decorated.map((title, index) => ({ verdict: 'not_bear', stampedAt: `2026-09-2${index}T14:44:19.000Z`, title, venue: 'Eagle NYC', ...place }))
+    .concat([{ verdict: 'not_bear', stampedAt: '2026-09-20T17:57:59.000Z', title: 'JOCKSTRAP HAPPY HOUR 💰10 DONATION', venue: 'Eagle NYC', ...place }]);
+  const event = { title: 'Jockstrap Wednesday', startDate: iso(FUTURE), endDate: iso(FUTURE + 4 * 3600000), bar: 'Eagle NYC', timezone: 'America/New_York', source: 'ai-web', ...place };
+  const payload = runPayload({ bearDroppedEvents: [{ title: event.title, startDate: event.startDate, venue: event.bar, reason: 'manual store: not_bear (verdict stamped 2026-09-22) — same party as "🩲 JOCKSTRAP WEDNESDAY 🎧 IPOK 💰 20 CASH COVER"', host: 'tockify.com', event }] });
+  assert.equal(deckOf(payload).cards.filter((card) => card.kind === 'dropped').length, 1, 'without the store it is a card');
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: verdicts });
+  assert.equal(deck.cards.length, 0);
+  const decided = deck.decided.find((entry) => entry.kind === 'dropped');
+  assert.equal(decided.display.bearVerdict, 'not_bear');
+  assert.equal(decided.display.bearVerdictOn, decorated[2], 'the newest verdict on the party, by the title it was given on');
+
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const undone = rq.clearBearVerdict(verdicts, core, rq.buildBearIdentity(event));
+  assert.equal(undone.removed, true);
+  assert.deepEqual(undone.removedTitles, decorated);
+  assert.deepEqual(undone.verdicts.map((entry) => entry.title), ['JOCKSTRAP HAPPY HOUR 💰10 DONATION'], 'another party at the venue keeps its verdict');
+  assert.equal(deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: undone.verdicts }).cards.length, 1, 'the card is back, and stays back');
+
+  // A 🐻 tapped on the plain title is its own entry; undoing it removes that entry only.
+  const tapped = rq.upsertBearVerdict(verdicts, core, rq.buildBearIdentity(event), 'bear');
+  assert.equal(tapped.verdicts.length, 5);
+  const overruled = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: tapped.verdicts }).decided.find((entry) => entry.kind === 'dropped');
+  assert.equal(overruled.display.bearVerdict, 'bear', 'the exact title speaks first');
+  assert.equal(overruled.display.bearVerdictOn, '');
+  const back = rq.clearBearVerdict(tapped.verdicts, core, rq.buildBearIdentity(event));
+  assert.deepEqual(back.removedTitles, ['Jockstrap Wednesday']);
+  assert.equal(back.verdicts.length, 4);
+});
+
 test('buildDeck: merges saying the same thing about sibling nights fold into one series card; a different change stays apart', () => {
   const night = (days, title) => mergeEvent({
     title, bar: 'Nowhere', startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000),

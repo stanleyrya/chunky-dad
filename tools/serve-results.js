@@ -788,7 +788,7 @@ function renderReviewBearRow(display = {}, proposal = {}) {
         state = '🐻 bear (no check recorded)';
     }
     const storedText = stored
-        ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}</span>`
+        ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}${display.bearVerdictOn ? ` — on the same party, listed as “${escapeHtmlText(display.bearVerdictOn)}”` : ''}</span>`
         : '';
     return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div></div>`;
 }
@@ -1307,6 +1307,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     }).join('');
     return '<details class="night-compare"><summary>compare the ' + item.cards.length + ' nights</summary><div class="night-table"><table>' + head + rows + '</table></div></details>';
   }
+  // The rhythm of the nights ON THIS CARD (the server's own function, so
+  // the card and the fix queue say the same thing): "every Wednesday".
+  var describeSeriesCadence = ${reviewQueue.describeSeriesCadence.toString()};
+  function dayOf(key) { return String(key || '').split('|')[3] || ''; }
+  function cadenceText(keys) {
+    var cadence = describeSeriesCadence(keys.map(dayOf));
+    return cadence ? cadence.text : '';
+  }
   function seriesStrip(item) {
     if (!item.series || item.cards.length < 2) return '';
     var differs = (item.series.differs || []).filter(function (key) {
@@ -1319,7 +1327,8 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var note = labels.length
       ? 'Each night is saved as its own event. Per night: <b>' + escapeHtml(labels.join(', ')) + '</b> — the card below shows the first night.'
       : 'Each night is saved as its own event. The nights are identical apart from the date.';
-    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
+    var rhythm = cadenceText(item.cards.map(function (c) { return c.key; }));
+    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '') + '</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
       + '<div class="series-note">' + note + '</div><div class="nights">'
       + item.cards.map(function (c) { return nightChip(c, differs); }).join('') + '</div>' + seriesCompare(item, differs) + '</div>';
   }
@@ -1365,6 +1374,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       } else if (item.series) {
         var strip = el.querySelector('.series');
         if (strip && strip.querySelectorAll('.nights .chip').length !== item.cards.length) { strip.outerHTML = seriesStrip(item); bindSplit(el, item); }
+        // Nights coming back one by one (an undo): the card was drawn when
+        // only the first had returned, so it has no strip yet.
+        if (!strip && item.cards.length > 1) {
+          var heading = el.querySelector('h2');
+          if (heading) { heading.insertAdjacentHTML('beforebegin', seriesStrip(item)); bindSplit(el, item); }
+        }
       }
       el.className = 'card' + (i === 1 ? ' behind' : i === 2 ? ' behind2' : '');
       el.style.zIndex = String(3 - i); // the top card paints last
@@ -1434,29 +1449,63 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     document.getElementById('waiting-count').textContent = '(' + (rows.length + gone.length) + ')';
     ul.innerHTML = '';
     function noteOf(reason) { return reason ? [(reason.tags || []).join(', '), reason.text].filter(Boolean).join(' — ') : ''; }
-    rows.slice().reverse().forEach(function (d) {
+    // One note swiped onto a folded series is stored once per night and is
+    // still one note: NEW nights of one party (same title, place) carrying
+    // the same words are one row, and its button acts on every night.
+    function foldNotes(list) {
+      var out = [], seen = {};
+      list.forEach(function (d) {
+        var parts = String(d.key || '').split('|');
+        var party = d.kind === 'new' && parts.length === 4 && parts[0] === 'event' ? parts.slice(0, 3).join('|') + '|' + (d.title || '') + '|' + noteOf(d.reason) : '';
+        if (party && seen[party]) { seen[party].members.push(d); return; }
+        var row = { first: d, members: [d] };
+        if (party) seen[party] = row;
+        out.push(row);
+      });
+      return out;
+    }
+    function nightsOf(row) {
+      if (row.members.length === 1) {
+        var key = row.first.key;
+        return key && key.split('|').length === 4 ? ' · ' + escapeHtml(dayOf(key)) : '';
+      }
+      var days = row.members.map(function (d) { return dayOf(d.key); }).sort();
+      var rhythm = cadenceText(row.members.map(function (d) { return d.key; }));
+      return ' · ' + row.members.length + ' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '') + ' · ' + escapeHtml(days[0]) + ' → ' + escapeHtml(days[days.length - 1]);
+    }
+    foldNotes(rows.slice().reverse()).forEach(function (row) {
+      var d = row.first;
       var li = document.createElement('li');
-      var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
-      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + '</span></div>'
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + nightsOf(row) + '</span></div>'
         + (noteOf(d.reason) ? '<div class="r">' + escapeHtml(noteOf(d.reason)) + '</div>' : '')
         + '<div class="status">unchanged since you sent it back' + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</div></div>';
       var btn = document.createElement('button');
-      btn.type = 'button'; btn.textContent = 'Bring back';
-      btn.onclick = function () { undoDecision(d); };
+      btn.type = 'button'; btn.textContent = row.members.length > 1 ? 'Bring back ' + row.members.length : 'Bring back';
+      btn.onclick = function () {
+        var chain = Promise.resolve();
+        row.members.forEach(function (member) { chain = chain.then(function () { return undoDecision(member); }); });
+      };
       li.appendChild(btn);
       ul.appendChild(li);
     });
-    gone.forEach(function (g) {
+    foldNotes(gone.map(function (g) { return { key: g.key, kind: g.kind || 'new', title: g.title, reason: g.reason, bar: g.bar, seriesPresent: g.seriesPresent }; })).forEach(function (row) {
+      var g = row.first;
       var li = document.createElement('li');
-      var day = g.key && g.key.split('|').length === 4 ? ' · ' + escapeHtml(g.key.split('|')[3]) : '';
-      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(g.title || g.key) + ' <span class="r">' + escapeHtml(g.bar || '') + day + '</span></div>'
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(g.title || g.key) + ' <span class="r">' + escapeHtml(g.bar || '') + nightsOf(row) + '</span></div>'
         + (noteOf(g.reason) ? '<div class="r">' + escapeHtml(noteOf(g.reason)) + '</div>' : '')
         + '<div class="status">' + (g.seriesPresent
-          ? 'this night is not in this run — other nights of the party are on the deck'
+          ? (row.members.length > 1 ? 'these nights are' : 'this night is') + ' not in this run — other nights of the party are on the deck'
           : 'not in this run under this title, place and day — a fix that changed one of those brings it back as a new card') + '</div></div>';
       var btn = document.createElement('button');
-      btn.type = 'button'; btn.textContent = 'Drop note';
-      btn.onclick = function () { post({ key: g.key, verdict: 'clear' }).then(function () { clearedGone[g.key] = true; toast('Note dropped'); render(); }).catch(function (error) { toast('Failed: ' + error.message); }); };
+      btn.type = 'button'; btn.textContent = row.members.length > 1 ? 'Drop note (' + row.members.length + ')' : 'Drop note';
+      btn.onclick = function () {
+        var chain = Promise.resolve();
+        row.members.forEach(function (member) {
+          chain = chain.then(function () { return post({ key: member.key, verdict: 'clear' }).then(function () { clearedGone[member.key] = true; }); });
+        });
+        chain.then(function () { toast(row.members.length > 1 ? 'Note dropped from ' + row.members.length + ' nights' : 'Note dropped'); render(); })
+          .catch(function (error) { toast('Failed: ' + error.message); render(); });
+      };
       li.appendChild(btn);
       ul.appendChild(li);
     });
@@ -1532,11 +1581,13 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
     flyOut(el, direction);
     removeFromQueue(item);
-    render();
     var card = item.cards[0];
     var records = [];
     var entry = { item: item, records: records };
+    // Before the render: it is what enables the Undo button (the first
+    // decision of a page load used to leave it disabled).
     history.push(entry);
+    render();
     var left = item.cards.slice();
     var chain = Promise.resolve();
     item.cards.forEach(function (c) {
@@ -1546,7 +1597,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
-      renderDecided(); renderExecute();
+      renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' nights back on the stack)' : ''));
       if (records.length === 0) history = history.filter(function (h) { return h !== entry; });
@@ -2210,7 +2261,8 @@ async function handleRequest(state, req, res) {
             if (verdict === 'clear') {
                 const cleared = reviewQueue.clearBearVerdict(current, core, body.event || {});
                 reviewQueue.saveBearVerdicts(verdictsPath, cleared.verdicts);
-                console.log(`Review: cleared bear verdict for "${(body.event && body.event.title) || '?'}"${cleared.removed ? '' : ' (none stored)'}`);
+                const clearedTitles = Array.isArray(cleared.removedTitles) ? cleared.removedTitles : [];
+                console.log(`Review: cleared bear verdict for "${(body.event && body.event.title) || '?'}"${cleared.removed ? (clearedTitles.length > 0 ? ` — removed ${clearedTitles.map((title) => `"${title}"`).join(', ')}` : '') : ' (none stored)'}`);
                 return sendJson(res, 200, { ok: true, removed: cleared.removed, verdicts: cleared.verdicts.length });
             }
             const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict);

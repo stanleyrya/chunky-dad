@@ -1191,6 +1191,55 @@ test('a folded series says what differs per night, ships each night\'s values, a
   for (const source of scripts) assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
 });
 
+test('the series strip names the rhythm of the nights on the card, the Waiting list folds one note on N nights into one row, and the page runs the server\'s own cadence function', () => {
+  const base = reviewRunFixture('20300101-051500').analyzedEvents[0];
+  const nights = [0, 7, 14].map((days) => ({
+    ...base, title: 'Jockstrap Wednesday', bar: 'Eagle NYC', address: '554 W 28th St',
+    startDate: new Date(Date.UTC(2030, 5, 6 + days, 2)).toISOString(), endDate: new Date(Date.UTC(2030, 5, 6 + days, 6)).toISOString(), url: ''
+  }));
+  const payload = { ...reviewRunFixture('20300101-051500'), analyzedEvents: nights };
+  const deck = reviewQueue.buildDeck(payload, reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  assert.equal(deck.cards[0].series.cadence.text, 'every Wednesday');
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(html.includes('"cadence":{"text":"every Wednesday","stepDays":7,"weekday":"Wednesday","from":"2030-06-05","to":"2030-06-19","nights":3}'), 'the rhythm rides on the card payload');
+  for (const piece of ['var describeSeriesCadence = function describeSeriesCadence(days) {', "' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '')", 'function foldNotes(list) {', "'Bring back ' + row.members.length", "'Drop note (' + row.members.length + ')'"]) {
+    assert.ok(html.includes(piece), piece);
+  }
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  for (const source of scripts) assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
+  // The function as the page carries it, run the way the page runs it.
+  const shipped = /var describeSeriesCadence = (function describeSeriesCadence\(days\) \{[\s\S]*?\n\});\n/.exec(scripts.join('\n'));
+  assert.ok(shipped, 'the cadence function is inlined whole');
+  const inPage = require('node:vm').runInNewContext(`(${shipped[1]})`);
+  assert.equal(inPage(deck.cards.map((card) => card.key.split('|')[3])).text, 'every Wednesday');
+  assert.equal(inPage(deck.cards.slice(1).map((card) => card.key.split('|')[3])), null, 'two nights left on the card: no rhythm claimed');
+
+  // One note swiped onto the folded card: three stored decisions, three decided entries, all waiting.
+  let store = reviewQueue.emptyDecisionStore();
+  for (const card of deck.cards) {
+    store = reviewQueue.upsertDecision(store, reviewQueue.buildDecision({ key: card.key, kind: 'new', verdict: 'reject', snapshot: card.proposal, reason: { mode: 'fix', tags: [], text: 'same for every night' } }));
+  }
+  const waiting = reviewQueue.buildDeck(payload, store, { now: 0, curatedBars: {} });
+  assert.equal(waiting.counts.waiting, 3);
+  assert.equal(waiting.cards.length, 0);
+  assert.doesNotThrow(() => renderReviewPage(waiting, { runs: [], scriptName: 'display-saved-run' }));
+});
+
+test('renderReviewCard: a verdict that reached the card through the party fold names the title it was given on', () => {
+  const ctx = buildReviewCtx();
+  const proposal = {
+    kind: 'dropped', title: 'Jockstrap Wednesday', startDate: '2026-10-01T02:00:00.000Z', endDate: '2026-10-01T08:00:00.000Z', timezone: 'America/New_York',
+    bar: 'Eagle NYC', address: '554 W 28th St', city: 'nyc', location: '', source: 'ai-web', url: '', ticketUrl: '', image: '', cover: '', description: '',
+    dropReason: 'manual store: not_bear (verdict stamped 2026-09-20)', occurrences: 13, changes: {}
+  };
+  const folded = renderReviewCard({ kind: 'dropped', key: 'dropped|jockstrap|eaglenyc', proposal,
+    display: { bearVerdict: 'not_bear', bearVerdictStampedAt: '2026-09-20T14:44:19.000Z', bearVerdictOn: '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ <MITCH> | $20 CASH COVER' } }, ctx);
+  assert.ok(folded.includes('you said: 🚫 not bear (2026-09-20) — on the same party, listed as “🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ &lt;MITCH&gt; | $20 CASH COVER”'), folded.match(/bear-stored[^<]*/));
+  const exact = renderReviewCard({ kind: 'dropped', key: 'dropped|jockstrap|eaglenyc', proposal,
+    display: { bearVerdict: 'not_bear', bearVerdictStampedAt: '2026-09-20T14:44:19.000Z', bearVerdictOn: '' } }, ctx);
+  assert.ok(exact.includes('you said: 🚫 not bear (2026-09-20)</span>'), 'a verdict on this very title says nothing more');
+});
+
 test('the review page offers the three left-swipe answers, a one-tap Not bear, and the Waiting section — and its scripts parse', () => {
   const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
   deck.waitingGone = [{ key: 'event|gone|bar|2030-01-05', kind: 'new', title: 'Gone Party', startDate: null, bar: 'Bar', reason: { tags: ['wrong date'], text: '', mode: 'fix' }, stampedAt: '2030-01-01T00:00:00.000Z', seriesPresent: false }];
