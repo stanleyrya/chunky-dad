@@ -20227,6 +20227,150 @@ test('canonicalizeIdentityLinks: registry identity fills an EMPTY website (ladde
   assert.equal(noMatch.website, undefined, 'no promoter, no page site → empty is correct');
 });
 
+// A PAGE SHARED BY MANY EVENTS IS NOT ONE EVENT'S LINK (run 20260927-155245,
+// beefdip.com/planned-events: "Get Your Dog Tag" — the festival's pass page —
+// sits under every card of the week; MAD.BEAR RED BALL's merge proposed
+// website https://beefdip.com/ → https://beefdip.com/tags/).
+const HUB_REGISTRY = [
+  { name: 'BeefDip', shortName: 'BEEF-DIP', website: 'https://beefdip.com', urlPatterns: ['beefdip.com'], bearAffinity: 'always' }
+];
+const HUB_PASS_PAGE = 'https://beefdip.com/tags/';
+const hubEvent = (title, startDate, fields = {}) => ({
+  title, startDate, city: 'pv', timezone: 'America/Mexico_City', _promoter: 'BeefDip', ...fields
+});
+function captureHubLogs(run) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try { run(); } finally { console.log = originalLog; }
+  return lines;
+}
+
+test('hub links: a page 3+ differently titled events point at is dropped as a ticket link and yields the website to the curated identity', () => {
+  const core = createRegistryCore(HUB_REGISTRY);
+  const wetAndWild = hubEvent('WET & WILD – POOL & BEACH PARTY', '2027-01-30T18:00:00.000Z', { ticketUrl: HUB_PASS_PAGE });
+  const redBall = hubEvent('MAD.BEAR RED BALL', '2027-01-27T04:00:00.000Z', { website: HUB_PASS_PAGE });
+  // The same page under another spelling (scheme, no trailing slash), as `url`.
+  const hydrate = hubEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', { url: 'http://www.beefdip.com/tags' });
+  const events = [wetAndWild, redBall, hydrate];
+  const lines = captureHubLogs(() => core.canonicalizeIdentityLinks(events));
+
+  assert.ok(events.every(event => Array.isArray(event._hubLinkKeys) && event._hubLinkKeys.includes('beefdip.com/tags')),
+    'each record carries the batch finding');
+  assert.equal(wetAndWild.ticketUrl, undefined, 'the pass page is not this event\'s ticket page');
+  assert.equal(wetAndWild.website, 'https://beefdip.com');
+  assert.equal(redBall.website, 'https://beefdip.com', 'a hub is a front door: the curated identity stands in');
+  assert.equal(hydrate.website, 'https://beefdip.com');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: 1 link(s) shared by 3+ differently titled events') && line.includes('beefdip.com/tags (3 parties)')),
+    lines.join('\n'));
+  assert.ok(lines.some(line => line.startsWith(`🔗 LINKS: dropped ticketUrl ${HUB_PASS_PAGE} for "WET & WILD`)), lines.join('\n'));
+});
+
+test('hub links (control): a link shared by the nights of ONE party, a bare root, a static stamp and three fragments of one event are not hubs', () => {
+  const core = createRegistryCore(HUB_REGISTRY);
+  // Two nights of the same party (and a third spelling of it) on its own page.
+  const ownPage = 'https://beefdip.com/tidal-wave/';
+  const nights = [
+    hubEvent('TIDAL WAVE', '2027-01-28T18:00:00.000Z', { website: ownPage, ticketUrl: 'https://tickets.example/e/tidal-wave' }),
+    hubEvent('TIDAL WAVE', '2027-01-29T18:00:00.000Z', { website: ownPage, ticketUrl: 'https://tickets.example/e/tidal-wave' }),
+    hubEvent('TIDAL WAVE – FUNDRAISER POOL PARTY', '2027-01-30T18:00:00.000Z', { website: ownPage, ticketUrl: 'https://tickets.example/e/tidal-wave' })
+  ];
+  core.canonicalizeIdentityLinks(nights);
+  assert.ok(nights.every(event => event.website === ownPage), 'one party\'s page on every one of its nights');
+  assert.ok(nights.every(event => event.ticketUrl === 'https://tickets.example/e/tidal-wave'));
+  assert.ok(nights.every(event => event._hubLinkKeys === undefined));
+
+  // Three parties, one front door and one parser stamp: the identity ladder's business.
+  const stamped = 'https://beefdip.com/planned-events/';
+  const fronts = [
+    hubEvent('WHITE PARTY', '2027-01-28T04:00:00.000Z', { website: 'https://beefdip.com/', ticketUrl: 'https://tickets.example/' }),
+    hubEvent('THE BLACK BALL', '2027-01-31T04:00:00.000Z', { website: 'https://beefdip.com/', ticketUrl: 'https://tickets.example/' }),
+    hubEvent('BEARAOKE', '2027-01-27T03:00:00.000Z', { website: 'https://beefdip.com/', ticketUrl: 'https://tickets.example/' })
+  ];
+  const parserStamped = ['FOAM', 'SPLASH', 'SWEAT'].map((title, index) =>
+    hubEvent(title, `2027-01-2${index + 5}T18:00:00.000Z`, { website: stamped, _staticFields: { website: stamped } }));
+  assert.equal(core.stampBatchHubLinks(fronts.concat(parserStamped)).size, 0);
+
+  // One event page read as three differently titled records: its own ticket
+  // link, one start — not a pass page.
+  const own = 'https://tickets.example/e/goldiloxx-chicago';
+  const fragments = ['GOLDILOXX Chicago', 'DOORS AT NINE', 'Jackhammer Presents'].map(title =>
+    ({ title, startDate: '2027-01-29T03:00:00.000Z', city: 'chicago', ticketUrl: own }));
+  core.canonicalizeIdentityLinks(fragments);
+  assert.ok(fragments.every(event => event.ticketUrl === own));
+
+  // Two parties on a link are not three.
+  const pair = [
+    hubEvent('WHITE PARTY', '2027-01-28T04:00:00.000Z', { ticketUrl: HUB_PASS_PAGE }),
+    hubEvent('THE BLACK BALL', '2027-01-31T04:00:00.000Z', { ticketUrl: HUB_PASS_PAGE }),
+    hubEvent('The Black Ball', '2027-02-01T04:00:00.000Z', { ticketUrl: HUB_PASS_PAGE })
+  ];
+  core.canonicalizeIdentityLinks(pair);
+  assert.ok(pair.every(event => event.ticketUrl === HUB_PASS_PAGE));
+});
+
+test('hub links: a page the source itself labelled the event\'s ticket page is kept, and an event with no curated identity keeps its listing', () => {
+  const core = createRegistryCore(HUB_REGISTRY);
+  const labelled = { title: 'WEEKEND OPENER', startDate: '2027-01-28T04:00:00.000Z', city: 'pv', ticketUrl: 'https://tickets.example/e/weekend-pass' };
+  core.markTicketRoleUrl(labelled, labelled.ticketUrl, 'JSON-LD offer');
+  const others = ['POOL PARTY', 'CLOSING NIGHT'].map((title, index) =>
+    ({ title, startDate: `2027-01-${29 + index}T04:00:00.000Z`, city: 'pv', ticketUrl: 'https://tickets.example/e/weekend-pass', website: 'https://venue.example/whats-on/' }));
+  labelled.website = 'https://venue.example/whats-on/';
+  core.canonicalizeIdentityLinks([labelled, ...others]);
+  assert.equal(labelled.ticketUrl, 'https://tickets.example/e/weekend-pass', 'the page said this event is sold there');
+  assert.ok(others.every(event => event.ticketUrl === undefined));
+  assert.ok([labelled, ...others].every(event => event.website === 'https://venue.example/whats-on/'),
+    'no curated identity to stand in: the listing stays as the only link the event has');
+  assert.ok(others.every(event => event._hubLinkKeys.includes('venue.example/whats-on')), 'but it is stamped, so it never replaces a stored link');
+});
+
+test('hub links: at the merge a hub never replaces the stored link, and a stored hub yields to the event\'s own', () => {
+  const core = createRegistryCore(HUB_REGISTRY);
+  const scraped = { title: 'MAD.BEAR RED BALL', _hubLinkKeys: ['beefdip.com/tags'] };
+  const context = { records: { a: { title: 'MAD.BEAR RED BALL' }, b: scraped }, sideLabels: { a: 'calendar', b: 'scraped' } };
+
+  const keepsStored = core.resolveConflictDeterministically('website', 'https://beefdip.com/', HUB_PASS_PAGE, context);
+  assert.equal(keepsStored.winner, 'a', 'website https://beefdip.com/ → https://beefdip.com/tags/ is no longer proposed');
+  assert.match(keepsStored.reason, /hub/);
+  assert.equal(core.resolveConflictDeterministically('ticketUrl', 'https://tickets.example/e/red-ball', HUB_PASS_PAGE, context).winner, 'a');
+
+  const replacesStored = core.resolveConflictDeterministically('website', 'http://beefdip.com/tags/', 'https://beefdip.com', context);
+  assert.equal(replacesStored.winner, 'b', 'a stored copy of the pass page yields to the identity link');
+
+  // Control: without the batch's finding the old rung still decides.
+  const unstamped = { records: { a: {}, b: { title: 'MAD.BEAR RED BALL' } }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  assert.deepEqual(core.resolveConflictDeterministically('website', 'https://beefdip.com/', 'https://beefdip.com/red-ball/', unstamped),
+    { winner: 'b', reason: 'same-host deeper URL beats domain root' });
+});
+
+test('hub links: the final build drops a pass page the calendar still holds as the event\'s ticket link', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'MAD.BEAR RED BALL',
+    startDate: new Date('2027-01-27T04:00:00.000Z'),
+    city: 'pv',
+    website: 'https://beefdip.com',
+    ticketUrl: HUB_PASS_PAGE,
+    _hubLinkKeys: ['beefdip.com/tags']
+  };
+  const control = { ...event, title: 'BEARAOKE', _hubLinkKeys: undefined };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  let untouched;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+    untouched = await core.buildAnalyzedCalendarEvent(control, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.ticketUrl, undefined);
+  assert.equal(analyzed.website, 'https://beefdip.com');
+  assert.ok(!/tags/.test(analyzed.notes), `notes carry no pass page: ${analyzed.notes}`);
+  assert.ok(lines.some(line => line.startsWith(`🔗 LINKS: dropped ticketUrl ${HUB_PASS_PAGE} for "MAD.BEAR RED BALL" — a hub page`)), lines.join('\n'));
+  assert.equal(untouched.ticketUrl, HUB_PASS_PAGE, 'no batch finding, no drop');
+});
+
 // A CO-PROMOTER'S FRONT DOOR IS NOT THIS EVENT'S LINK (run 20260913-012112).
 // furball.nyc's UNDERBEAR 9/18 card names the weekend's co-promoter in its
 // text; the model read "theurbanbear.com" and the record shipped it as the
