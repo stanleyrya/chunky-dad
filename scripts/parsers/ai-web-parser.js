@@ -4084,7 +4084,10 @@ class AiWebParser {
                 .map(line => this.normalizeWhitespace(line))
                 .filter(Boolean);
             if (lines.length === 0) continue;
-            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml });
+            // `_jsonLdCard`: the author marked this element up as ONE event.
+            // Everything inside it — every picture — is that event's (see
+            // getCardOwnArtworkReason).
+            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml, _jsonLdCard: true });
         }
         return segments.length === cards.length ? segments : [];
     }
@@ -16074,6 +16077,87 @@ class AiWebParser {
         return segments;
     }
 
+    // ── A CARD'S ARTWORK IS NOT A SECOND LISTING ─────────────────────────
+    // The fused-listing split below exists for a listing with NO title of
+    // its own that rides a neighbor's window. It released every extra
+    // text-bearing flyer it found, including the card's OWN artwork:
+    // www.massive.club/calendar (run 20260927-155245) prints each poster
+    // twice per card — the JSON-LD `image` and the card's poster-art
+    // background, two renditions of one flyer that OCR read a few characters
+    // apart ("DJ'S MATT STANDS" / "DJ MATT STANDS &"), so they did not
+    // consolidate as duplicates. The card reads "Bearracuda | Seattle - Red
+    // Light District", Nov 7 9:00 pm, tixr.com/e/207003; the second
+    // rendition was released into a flyer-only window — no title, no date
+    // line, no link — and the model named it from the artwork's tagline:
+    // "FINAL PARTY" (flyer line "FINAL PARTY 2OF26"). One night, two
+    // records, and nothing for dedup to fold them by (owner note: "Wrong
+    // name. Shouldn't it be bearracuda or red light district?"). Same run:
+    // beefdip.com "Furball Gear Night" (bar "Joe Fiore's", wrong year) and
+    // whereto.party/in/tokyo "FRONTIER" (a day early, bar "KINGDOM").
+    //
+    // The name the PAGE gives an event outranks words read off its artwork,
+    // so a flyer is the card's own — never a listing of its own, to be
+    // named from its artwork — when the page says so:
+    //   1. the window is one JSON-LD Event card: its author marked the
+    //      element up as ONE event, so nothing inside it is a neighbor;
+    //   2. the flyer carries the card's own name — every word of the
+    //      listing title is on it.
+    // A window whose "title" is the site or the page naming itself (a
+    // homepage hero reading "EAGLE MANCHESTER") names no event, so rule 2
+    // cannot speak for it, and a flyer naming something else is released
+    // exactly as before. Page-derived only: nothing here knows a site, a
+    // party or a tagline. Returns the reason, '' to release.
+    getCardOwnArtworkReason(segment, ocrResult, sourceUrl = '') {
+        if (!segment || typeof segment !== 'object' || !ocrResult) return '';
+        if (segment._jsonLdCard === true) {
+            return 'the window is one JSON-LD Event card, marked up by the page as a single event';
+        }
+        const eventName = this.getSegmentOwnEventName(segment, sourceUrl);
+        if (!eventName) return '';
+        const nameWords = this.getListingNameWords(eventName);
+        if (nameWords.length === 0) return '';
+        const flyerWords = new Set(this.getListingNameWords(
+            `${String(ocrResult.text || '')} ${String(ocrResult.eventSummary || '')}`));
+        if (!nameWords.every(word => flyerWords.has(word))) return '';
+        return `the flyer carries the card's own name "${eventName}"`;
+    }
+
+    // The name a window gives ITS EVENT: the page's listing title (site-name
+    // tail dropped), or '' when that title is the site's own name or — on a
+    // collection page — what the page says it is about. Those name the
+    // page, not an event on it.
+    getSegmentOwnEventName(segment, sourceUrl = '') {
+        const eventName = this.normalizeWhitespace(this.deriveSegmentEventName(segment, sourceUrl));
+        if (!eventName) return '';
+        const noted = this._pageChromeLines;
+        if (noted && noted.sourceUrl === sourceUrl) {
+            const key = this.normalizeWhitespace(this.decodeBasicEntities(eventName)).toLowerCase();
+            if (noted.siteNames && noted.siteNames.has(key)) return '';
+            if (!noted.memberPage && noted.subjects && noted.subjects.has(key)) return '';
+        }
+        return eventName;
+    }
+
+    // The words of a name, for "does this text carry that name": folded,
+    // lowercased, split on anything that is not a letter or digit, function
+    // words and single characters dropped. Deliberately NOT
+    // getCrossSourceTitleTokens — that one drops city and cadence words to
+    // compare two SOURCES' titles, and here "Bearracuda Portland" on a card
+    // must not be satisfied by a "Bearracuda Seattle" flyer.
+    getListingNameWords(text) {
+        // Entities the decoder leaves encoded on purpose (&amp;) are
+        // punctuation here, never the word "amp".
+        const folded = this.foldDiacritics(
+            this.decodeBasicEntities(String(text || '')).replace(/&#?[0-9a-z]+;/gi, ' '));
+        const stopwords = new Set(['a', 'an', 'and', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
+        const words = [];
+        for (const word of folded.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)) {
+            if (word.length < 2 || stopwords.has(word)) continue;
+            if (!words.includes(word)) words.push(word);
+        }
+        return words;
+    }
+
     // Fused-listing split: a listing whose HTML text has no title line rides
     // its neighbor's window (South Seattle Bear Social inside "Dolly and the
     // DJ", run 20260820 — Dolly's description was literally the bear
@@ -16082,7 +16166,8 @@ class AiWebParser {
     // whose text best matches its own listing title and releases the others
     // into flyer-only segments — EXCEPT a flyer whose identity another
     // window also claims (its listing exists elsewhere on the page;
-    // splitting it out would extract the same event twice).
+    // splitting it out would extract the same event twice), and a flyer
+    // that is the card's own artwork (getCardOwnArtworkReason).
     collectFusedFlyerTopUpSegments(segments, ocrResults, sourceUrl = '') {
         const sourceSegments = Array.isArray(segments) ? segments : [];
         const ocrList = Array.isArray(ocrResults) ? ocrResults : [];
@@ -16139,10 +16224,21 @@ class AiWebParser {
             mine.forEach((entry, mineIndex) => {
                 if (mineIndex === keepIndex) return;
                 if (entry.owners.length > 1) return; // listed elsewhere — splitting would duplicate it
+                // The card names the event: a flyer that is the card's own
+                // artwork is never a second listing. Its words are set
+                // aside exactly as a released flyer's are — the window goes
+                // on reading the one flyer that best matches its title, so
+                // what the model is shown for the card does not change —
+                // but no window is opened for it.
+                const ownArtworkReason = this.getCardOwnArtworkReason(info.segment, entry.ocrResult, sourceUrl);
                 if (!(info.segment.ocrExcludedUrlKeys instanceof Set)) {
                     info.segment.ocrExcludedUrlKeys = new Set();
                 }
                 info.segment.ocrExcludedUrlKeys.add(entry.key);
+                if (ownArtworkReason) {
+                    console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: window ${index + 1} holds ${mine.length} text-bearing flyers — ${entry.ocrResult.url} is the card's own artwork (${ownArtworkReason}), not a second listing; no segment opened for it`);
+                    return;
+                }
                 extras.push({ lines: [], html: '', imageHintUrls: [entry.ocrResult.url], _flyerOnlySegment: true });
                 console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: window ${index + 1} holds ${mine.length} distinct text-bearing flyers — giving ${entry.ocrResult.url} its own segment (fused-listing split)`);
             });

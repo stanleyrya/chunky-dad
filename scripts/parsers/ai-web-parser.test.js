@@ -16689,6 +16689,137 @@ test('a segment fused around two distinct flyers spawns a flyer-only segment for
   assert.equal(none.length, 0, 'a flyer with its own segment elsewhere never spawns a duplicate');
 });
 
+// ── A card's artwork is not a second listing (owner note, run 20260927-155245:
+// `NEW FINAL PARTY — 2026-11-07 @ Massive` — "Wrong name. Shouldn't it be
+// bearracuda or red light district?"). www.massive.club/calendar prints each
+// poster twice per card; the second rendition was released into a window of
+// its own and named from the flyer's tagline. ─────────────────────────────
+const massiveCard = ({ name, wide, tall, ticket, month, day, time, fullDate }) => `<div role="listitem" class="event-item w-dyn-item"><div class="schema w-embed w-script"><script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Event","name":${JSON.stringify(name)},"image":"${wide}","startDate":"${fullDate}","offers":{"@type":"Offer","url":"${ticket}"}}
+</script></div><div class="ticket-links grid"><div class="event-card grid"><div class="date-info grid"><div class="month grid">Sat</div><div class="month grid">${month}</div><div class="month day grid">${day}</div><div class="month day time">${time}</div></div><div style="background-image:url(&quot;${tall}&quot;)" class="poster-art grid"><div class="buy-hover grid"><a href="${ticket}" target="_blank" class="tix-link w-inline-block"><div class="button short grid">get TICKETS</div></a></div></div></div><div class="pinktext cal"><div class="infotext black">${name}</div><div class="infotext hide">${fullDate} ${time}</div></div></div></div>`;
+
+test('a JSON-LD card that prints its poster twice is ONE event, named by the card — no window for the second rendition ("FINAL PARTY")', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.massive.example/calendar';
+  const cdn = 'https://cdn.massive.example/659447a9';
+  const bearWide = `${cdn}/6aa85bca476140f678240d72_wide.webp`;
+  const bearTall = `${cdn}/6aa85bca476140f678240d6d_tall.webp`;
+  const hellWide = `${cdn}/6ab6c04660e95da32d0e6d66_wide.webp`;
+  const hellTall = `${cdn}/6ab6c04660e95da32d0e6d62_tall.webp`;
+  const html = `<html><head><title>Calendar | Massive</title></head><body><div role="list" class="event-grid w-dyn-items">${
+    massiveCard({ name: 'Hell On Earth | Massive Halloween Weekend', wide: hellWide, tall: hellTall, ticket: 'https://tixr.example/e/208606', month: 'Oct', day: 30, time: '9:00 pm', fullDate: 'Oct 30, 2026' })}${
+    massiveCard({ name: 'Bearracuda | Seattle - Red Light District', wide: bearWide, tall: bearTall, ticket: 'https://tixr.example/e/207003', month: 'Nov', day: 7, time: '9:00 pm', fullDate: 'Nov 7, 2026' })}</div></body></html>`;
+  // Two renditions of one poster, read a few characters apart — exactly why
+  // they did not consolidate as duplicates. The Halloween pair is the hard
+  // one: the stylized headline was not read at all on one rendition, so no
+  // word of the card's name is on it.
+  const ocrResults = [
+    { url: hellWide, imageClassification: 'multi-event-flyer', text: 'FRIDAY OCTOBER 30 ONLY FIRE ESTOC COUSIN CHRIS\nSATURDAY OCTOBER 31 JACOB MEEHAN PROSUMER\n10/30-31\nHOSTS THIS GIRL PUPUSA 9PM' },
+    { url: hellTall, imageClassification: 'event-flyer', text: 'FRIDAY OCTOBER 30 ONLY FIRE ESTOC COUSIN CHRIS\nSATURDAY OCTOBER 31 JACOB MEEHAN PROSUMER\nHELL ON EARTH\n10/30-31\nHOSTS THIS GIRL PUPUSA 9PM' },
+    { url: bearWide, imageClassification: 'event-flyer', text: "BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7\nDJ'S MATT STANDS & FREDDY, KING OF PANTS\nFINAL PARTY 2OF26\nMASSIVE 619EPINE\nADVANCE TICKETS AT BEARRACUDA.COM" },
+    { url: bearTall, imageClassification: 'event-flyer', text: 'BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7\nDJ MATT STANDS &\nFREDDY, KING OF PANTS\nFINAL PARTY 2OF26\nMASSIVE 619EPINE\nADVANCE TICKETS AT BEARRACUDA.COM' }
+  ];
+  const seen = [];
+  parser.extractSingleEvent = async (segmentHtmlData) => {
+    const ownOcr = Array.isArray(segmentHtmlData.ocrResults) ? segmentHtmlData.ocrResults : [];
+    seen.push({ listingTitle: segmentHtmlData.segmentListingTitle, cardLines: segmentHtmlData.segmentCardLines.length, ocr: ownOcr.map(o => o.url) });
+    // The model's habit on a window with no card text: the loudest tagline.
+    const flyerTagline = ownOcr.length > 0 && /FINAL PARTY/.test(ownOcr[0].text) ? 'FINAL PARTY' : 'ON EARTH';
+    return { title: segmentHtmlData.segmentListingTitle || flyerTagline, startDate: '2026-11-08T05:00:00.000Z' };
+  };
+  const events = await parser.extractEventsFromMultiEventPage(
+    { url: sourceUrl, html }, { name: 'massive.example' }, null, ['title', 'startDate'], ocrResults, null);
+
+  assert.deepEqual(events.map(e => e.title),
+    ['Hell On Earth | Massive Halloween Weekend', 'Bearracuda | Seattle - Red Light District'],
+    'one event per card, each under the name the card gives it');
+  assert.equal(events.some(e => /FINAL PARTY|^ON EARTH$/.test(e.title)), false, 'no event is named from its artwork');
+  assert.ok(seen.every(window => window.cardLines > 0 && window.listingTitle), 'every window extracted is a card with its own title');
+  // What each card is shown does not change: the one flyer that best matches
+  // its title, exactly as before.
+  assert.deepEqual(seen.map(window => window.ocr), [[hellTall], [bearWide]]);
+});
+
+test('a flyer that carries the card\'s own name is the card\'s artwork; a flyer naming something else is still released', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://whereto.example/in/tokyo';
+  const lineupUrl = 'https://cdn.whereto.example/media/events/386ce9ec.jpeg';
+  const posterUrl = 'https://cdn.whereto.example/media/events/8d22bf7a.jpeg';
+  const triviaUrl = 'https://cdn.whereto.example/media/events/trivia.jpeg';
+  const ocrResults = [
+    { url: lineupUrl, imageClassification: 'event-flyer', text: 'GOGO\nDAISUKE\nDIO\nG-A-Y TOKYO\nNEW CIRCUIT PARTY\nFRONTIER\nSAT, NOV 14, 2026\n@G-A-Y TOKYO 21:00-5:00' },
+    { url: posterUrl, imageClassification: 'event-flyer', text: 'G-A-Y\nTOKYO\nNEW CIRCUIT PARTY\nFRONTIER\nSAT, NOV 14, 2026\n@kingdom\nKINGDOM' },
+    { url: triviaUrl, imageClassification: 'event-flyer', text: 'TACO TRIVIA TUESDAY 7pm' }
+  ];
+  const card = () => ({ lines: ['New Circuit Party: Frontier', 'Tokyo · TOM Building', 'Sat, 14 November 2026 · 21:00 – 05:00'], html: '', imageHintUrls: [lineupUrl, posterUrl] });
+  const other = () => ({ lines: ['Trivia Taco Tuesday', '7pm weekly'], html: '', imageHintUrls: [triviaUrl] });
+
+  const frontier = card();
+  assert.deepEqual(parser.collectFusedFlyerTopUpSegments([frontier, other()], ocrResults, sourceUrl), [],
+    'both posters print "New Circuit Party: Frontier" — no second window (it shipped as "FRONTIER" @ KINGDOM, a day early)');
+  // A flyer whose headline IS the card's title is untouched: it is still the
+  // window's flyer, and the window still reads exactly one.
+  assert.deepEqual(parser.filterOcrResultsForSegment(ocrResults, frontier, sourceUrl).map(o => o.url), [lineupUrl]);
+
+  // A brand is not a name: every word counts, the city included.
+  const portland = { lines: ['Bearracuda Portland', 'Sat, Nov 14'], html: '', imageHintUrls: [lineupUrl, posterUrl] };
+  const brandOcr = [
+    { url: lineupUrl, imageClassification: 'event-flyer', text: 'BEARRACUDA PORTLAND\nSATURDAY NOVEMBER 14' },
+    { url: posterUrl, imageClassification: 'event-flyer', text: 'BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7' },
+    ocrResults[2]
+  ];
+  const released = parser.collectFusedFlyerTopUpSegments([portland, other()], brandOcr, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[posterUrl]],
+    'the Seattle flyer does not carry "Bearracuda Portland" — a neighbor riding the window, released as before');
+});
+
+test('a card with NO title of its own still gives its extra flyer a window — the flyer is the only name there is', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://bar.example/events';
+  const bingoUrl = 'https://static.bar.example/media/bingo.jpg';
+  const honkyUrl = 'https://static.bar.example/media/honky.jpg';
+  const triviaUrl = 'https://static.bar.example/media/trivia.jpg';
+  const ocrResults = [
+    { url: bingoUrl, imageClassification: 'event-flyer', text: 'GAY BINGO\n2nd & 4th Thursdays 7pm' },
+    { url: honkyUrl, imageClassification: 'event-flyer', text: 'RAT CITY HONKY TONK\nFirst Fridays 9pm' },
+    { url: triviaUrl, imageClassification: 'event-flyer', text: 'TACO TRIVIA TUESDAY 7pm' }
+  ];
+  const untitled = { lines: ['Oct 16, 2026 10:00 PM', 'https://bar.example/tickets'], html: '', imageHintUrls: [bingoUrl, honkyUrl] };
+  const other = { lines: ['Trivia Taco Tuesday', '7pm weekly'], html: '', imageHintUrls: [triviaUrl] };
+  assert.equal(parser.getSegmentOwnEventName(untitled, sourceUrl), '', 'the window names no event');
+  const released = parser.collectFusedFlyerTopUpSegments([untitled, other], ocrResults, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[honkyUrl]]);
+  assert.ok(released.every(segment => segment._flyerOnlySegment === true && segment.lines.length === 0));
+});
+
+test('a window titled by the site naming itself names no event: a flyer printing the venue\'s name is still released', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.eagle.example/';
+  const html = '<html><head><title>Eagle Bar Manchester United Kingdom</title><meta property="og:site_name" content="Eagle Manchester"/></head>'
+    + '<body><h1>EAGLE MANCHESTER</h1><p>MANCHESTERS MEN ONLY MEMBERS BAR</p></body></html>';
+  parser.notePageChromeLines(html, sourceUrl);
+  const heroUrl = 'https://static.eagle.example/media/ca9846.png';
+  const partyUrl = 'https://static.eagle.example/media/09ec66.png';
+  const ocrResults = [
+    { url: heroUrl, imageClassification: 'event-flyer', text: 'EAGLE MANCHESTER\nMEN ONLY MEMBERS BAR\nOPEN 7 DAYS' },
+    { url: partyUrl, imageClassification: 'event-flyer', text: "ULTIMATE 00'S NIGHT\nFIRST SATURDAY OF FEB | APR | JUN\n11PM UNTIL LATE\nEAGLE MANCHESTER | 15 BLOOM STREET" }
+  ];
+  const hero = { lines: ['EAGLE MANCHESTER', 'MANCHESTERS MEN ONLY MEMBERS BAR', 'Apply For Membership'], html: '', imageHintUrls: [heroUrl, partyUrl] };
+  assert.equal(parser.deriveSegmentListingTitle(hero), 'EAGLE MANCHESTER');
+  assert.equal(parser.getSegmentOwnEventName(hero, sourceUrl), '', 'the site\'s own name is not an event\'s name');
+  const released = parser.collectFusedFlyerTopUpSegments([hero], ocrResults, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[partyUrl]],
+    'the party printed on the homepage keeps its own window');
+});
+
+test('getListingNameWords: every word of a name counts, folded, function words dropped', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.getListingNameWords('Bearracuda | Seattle - Red Light District'),
+    ['bearracuda', 'seattle', 'red', 'light', 'district']);
+  assert.deepEqual(parser.getListingNameWords('La Pescadería &amp; the DJ'), ['la', 'pescaderia', 'dj']);
+  assert.deepEqual(parser.getListingNameWords(' · '), []);
+});
+
 test('getCachedOcrTextForImage: verdict store first, then disk cache, on-demand OCR only when an adapter rides along', async () => {
   const parser = createParser();
   // This run's verdict store answers without touching disk or network.
