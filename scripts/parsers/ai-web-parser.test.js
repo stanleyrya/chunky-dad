@@ -13445,6 +13445,112 @@ test('repeated anchors need their own listing identity before they can segment a
     'repeated naked anchors leave a schedule page\'s segmentation exactly as it was');
 });
 
+// bearitmtl.com/events/ (The Events Calendar) ships its media templates in
+// the page: <a href="{{ data.link }}"> and five more. Resolved against the
+// page they read /events/%7B%7B%20data.link%20%7D%7D — the braces encoded, so
+// the placeholder rule, which looked for literal braces, let all six through.
+test('an unrendered template placeholder is not an address, encoded or not', () => {
+  const parser = createParser();
+  const source = 'https://www.bearitmtl.com/events/';
+  for (const url of [
+    'https://www.bearitmtl.com/events/%7B%7B%20data.link%20%7D%7D',
+    'https://www.bearitmtl.com/events/%7b%7b%20data.editLink%20%7d%7d',
+    'https://www.bearitmtl.com/events/{{ data.url }}',
+    'https://www.bearitmtl.com/?s={search_term_string}'
+  ]) {
+    assert.deepEqual(parser.validateEventUrl(url, source, {}), { valid: false, reason: 'template-url' }, url);
+  }
+  assert.equal(parser.validateEventUrl('https://www.bearitmtl.com/event/players/', source, {}).valid, true);
+});
+
+// ── A page under its other spelling is not a new page ─────────────────────
+// Eventbrite organizer pages, trimmed from the real documents (2026-09-29).
+// The parser was configured with the bare-id address /o/25444337255; the page
+// declares itself as /o/xposure-events-llc-25444337255 (rel=canonical, the
+// JSON-LD ProfilePage's own entity, organizer.profilePageUrl) and the crawl
+// fetched it a second time under that spelling — and Bears of London a third
+// time under eventbrite.co.uk — on every cache refresh.
+const ORGANIZER_ALIAS_PAGE_HTML = `
+  <html><head>
+    <title data-next-head="">Xposure Events, LLC</title>
+    <link rel="canonical" href="https://www.eventbrite.com/o/xposure-events-llc-25444337255" data-next-head=""/>
+    <script type="application/ld+json" data-next-head="">{"@context":"https://schema.org","@type":"ProfilePage","mainEntity":{"@type":"Organization","name":"Xposure Events, LLC","url":"https://www.eventbrite.com/o/xposure-events-llc-25444337255","description":"Xposure Events, LLC","sameAs":["https://www.facebook.com/westernxposurebears"]}}</script>
+  </head><body>
+    <a href="https://www.eventbrite.com/e/western-xposure-fall-2026-tickets-1975198341410">Western Xposure: Fall 2026</a>
+    <a href="https://www.eventbrite.com/e/western-xposures-xxl-tickets-1975198449734">Western Xposure's XXL</a>
+    <a href="https://www.eventbrite.com/o/xposure-events-llc-25444337255">Xposure Events, LLC</a>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"organizer":{"id":"25444337255","name":"Xposure Events, LLC","socials":{"facebook":"https://www.facebook.com/westernxposurebears"},"profilePageUrl":"https://www.eventbrite.co.uk/o/xposure-events-llc-25444337255"},"upcomingEvents":[{"name":"Western X-Mas: Holiday Bear Retreat 2026","url":"https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953","start_date":"2026-12-24","start_time":"10:00:00","id":"1999502215953"}],"hasMoreUpcoming":false,"upcomingEventsTotal":3}}}</script>
+  </body></html>
+`;
+
+test('a page configured by its bare id never crawls the slugged spelling it declares as itself', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let links;
+  try {
+    links = parser.extractAdditionalUrls(ORGANIZER_ALIAS_PAGE_HTML, 'https://www.eventbrite.com/o/25444337255', {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(!links.some(link => /\/o\/xposure-events-llc-25444337255/.test(link)),
+    `the page's own address under its slug — on .com or .co.uk — is not a page to crawl, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-xposure-fall-2026-tickets-1975198341410'));
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-xposures-xxl-tickets-1975198449734'));
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953'),
+    'the events it lists are pages of their own and are all still followed');
+  assert.ok(logs.some(line => /Self-(?:canonical|alias) link skipped/.test(line) && line.includes('25444337255')),
+    'and the skip is logged');
+});
+
+test('a page configured by its slug never crawls its bare-id spelling either', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <link rel="canonical" href="https://www.eventbrite.com/o/megawoof-america-18118978189" data-next-head=""/>
+    </head><body>
+      <a href="https://www.eventbrite.com/o/18118978189">Megawoof America</a>
+      <a href="https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053">MEGAWOOF Chicago</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://www.eventbrite.com/o/megawoof-america-18118978189', {});
+  assert.ok(!links.includes('https://www.eventbrite.com/o/18118978189'), `got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053'));
+});
+
+test('the id rule needs the page\'s own word: undeclared, a look-alike address is still crawled', () => {
+  const parser = createParser();
+  // No canonical, no og:url: nothing on the page says the slugged address is
+  // this document, so it stays in the queue (one fetch, never a lost page).
+  const undeclared = `
+    <html><body>
+      <a href="https://tickets.example/o/some-organizer-25444337255">Organizer</a>
+    </body></html>
+  `;
+  const kept = parser.extractAdditionalUrls(undeclared, 'https://tickets.example/o/25444337255', {});
+  assert.ok(kept.includes('https://tickets.example/o/some-organizer-25444337255'), `got: ${JSON.stringify(kept)}`);
+
+  // A canonical that names a DIFFERENT identifier, a different section, or a
+  // short number (a page of a list, a year) declares nothing about this page.
+  const elsewhere = `
+    <html><head><link rel="canonical" href="https://tickets.example/o/another-organizer-77777777777" /></head><body>
+      <a href="https://tickets.example/o/another-organizer-77777777777">Another organizer</a>
+      <a href="https://tickets.example/e/party-25444337255">An event that happens to share the number</a>
+      <a href="https://tickets.example/o/some-organizer-25444337255?start_date=2026-10-08">This organizer, one date</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(elsewhere, 'https://tickets.example/o/25444337255', {});
+  assert.ok(links.includes('https://tickets.example/o/another-organizer-77777777777'), 'another identifier is another page');
+  assert.ok(links.includes('https://tickets.example/e/party-25444337255'), 'another section is another page');
+
+  assert.equal(parser.getUrlIdAliasKey('https://www.eventbrite.com/o/25444337255'), 'eventbrite|o|25444337255');
+  assert.equal(parser.getUrlIdAliasKey('https://www.eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913/'), 'eventbrite|o|64998384913');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/page/2'), '', 'a page number is not an identifier');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/new-year-2027'), '', 'neither is a year');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/beer-bust/'), '');
+});
+
 // ── Self-canonical links are not new pages ────────────────────────────────
 // Run 20260806-124046 (Eagle LA): the listing links only parameterized
 // occurrence URLs (/events/b-bar/?occurrence=2026-08-06, …), and every one of
@@ -21422,4 +21528,78 @@ test('page site role resolved on a working copy is published back to the caller\
   assert.equal(parser.resolvePageSiteRole({ ...offHostCaller, html: '<html></html>' },
     { siteRole: 'venue', urls: ['https://venue.example/'] }), '');
   assert.equal(offHostCaller.pageSiteRole, undefined);
+});
+
+test('a one-line row keeps the flyer its own markup carries behind an image-optimizer address', () => {
+  // whereto.party/in/tokyo, run 20260929-091555 (card trimmed): the flyer is
+  // printed as a Next.js optimizer address, the card's one text line is its
+  // date, and the record's image is the decoded CDN address.
+  const parser = createParser();
+  const flyer = 'https://cdn.whereto.party/media/events/f4d3bb3a-80f0-409a-ac40-948955b94711.png';
+  const neighbour = 'https://cdn.whereto.party/media/events/41100759-a824-4028-b60c-be241a328718.jpeg';
+  const card = {
+    lines: ['Sat, 3 October 2026 · 22:00'],
+    _compactListingRow: true,
+    html: '<img alt="[EAGLE TOKYO BLUE] RYUGU flyer" loading="lazy" decoding="async" data-nimg="fill" '
+      + 'srcSet="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=640&amp;q=75 640w, '
+      + '/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75 1920w" '
+      + 'src="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75"/>'
+      + '<div class="p-4"><h3 class="display text-lg">[EAGLE TOKYO BLUE] RYUGU</h3>'
+      + '<span class="truncate">Tokyo  ·  EAGLE TOKYO BLUE</span>'
+      + '<time dateTime="2026-10-03T22:00:00">Sat, 3 October 2026 · 22:00</time></div>'
+  };
+  const sourceUrl = 'https://whereto.party/in/tokyo';
+  assert.equal(card.html.includes(flyer), false, 'the literal address is nowhere in the card');
+  assert.equal(parser.segmentMarkupCarriesImage(card, flyer, sourceUrl), true);
+  // The neighbour card's flyer is still not this row's.
+  assert.equal(parser.segmentMarkupCarriesImage(card, neighbour, sourceUrl), false);
+  // A ticker row with no markup of its own owns nothing (furball.nyc).
+  assert.equal(parser.segmentMarkupCarriesImage({ lines: ['10/3 FURBALL DC - ICON'], html: '<li>10/3 FURBALL DC - ICON</li>', _compactListingRow: true },
+    'https://static.wixstatic.com/media/six-party-flyer.jpg', 'https://www.furball.nyc/'), false);
+  // A literal address in the row's markup counts as before.
+  assert.equal(parser.segmentMarkupCarriesImage({ html: `<img src="${flyer}">` }, flyer, sourceUrl), true);
+});
+
+// massbearsandcubs.org/events?format=json, run 20260929-091555 (rows trimmed).
+test('Squarespace: a name with no street line on the template\'s own marker takes no pin, and an event starts on the second', () => {
+  const parser = createParser();
+  const marker = { markerLat: 40.7207559, markerLng: -74.0007613 };
+  const rows = [
+    { id: 'a', title: 'Bear Tea /Club Cafe', startDate: 1797800400580, endDate: 1797822000580, fullUrl: '/events/bear-tea-club-cafe',
+      location: { ...marker, mapLat: 42.3486155, mapLng: -71.0723826, addressTitle: 'Club Cafe', addressLine1: '209 Columbus Avenue', addressLine2: 'Boston, MA, 02116' } },
+    { id: 'b', title: 'Alley Bears - Gear Night!', startDate: 1798336800132, endDate: 1798347600132, fullUrl: '/events/alley-bears',
+      location: { ...marker, mapLat: 42.3581324, mapLng: -71.0588204, addressTitle: 'The Alley Bar', addressLine1: '14 Pi Alley', addressLine2: 'Boston, MA, 02108' } },
+    { id: 'c', title: 'Monthly Membership Meetings', startDate: 1796256000686, endDate: 1796261400686, fullUrl: '/events/monthly-membership-meetings',
+      location: { ...marker, mapZoom: 12, mapLat: 40.7207559, mapLng: -74.0007613, addressTitle: 'Online/Virtual', addressLine1: '', addressLine2: '', addressCountry: '' } }
+  ];
+  const templateMarker = parser.findSquarespaceTemplateMarker(rows);
+  assert.equal(templateMarker, '40.72076,-74.00076');
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let built;
+  try {
+    built = rows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.massbearsandcubs.example/events', { templateMarker }));
+  } finally { console.log = original; }
+  assert.equal(built[0].location, '42.3486155, -71.0723826');
+  assert.equal(built[1].location, '42.3581324, -71.0588204');
+  assert.equal(built[2].bar, 'Online/Virtual');
+  assert.equal(built[2].location, undefined, 'the untouched map is not a place');
+  assert.equal(built[2].address, '');
+  assert.ok(lines.some(line => line.startsWith('🟦 SQUARESPACE: "Monthly Membership Meetings" carries the template\'s own marker')), lines.join('\n'));
+  assert.equal(built[2].startDate.toISOString(), '2026-12-03T00:00:00.000Z', 'not …00.686Z');
+  assert.equal(built[2].endDate.toISOString(), '2026-12-03T01:30:00.000Z');
+  assert.equal(built[0].startDate.toISOString(), '2026-12-20T21:00:00.000Z');
+
+  // One row proves nothing, and a site that sets map and marker together teaches no template marker.
+  assert.equal(parser.findSquarespaceTemplateMarker(rows.slice(0, 1)), '');
+  const together = [
+    { location: { markerLat: 47.6150949, markerLng: -122.3158456, mapLat: 47.6150949, mapLng: -122.3158456, addressTitle: 'The Cuff', addressLine1: '1533 13th Ave' } },
+    { location: { markerLat: 47.6150949, markerLng: -122.3158456, mapLat: 47.6150949, mapLng: -122.3158456, addressTitle: 'The Cuff', addressLine1: '1533 13th Ave' } }
+  ];
+  assert.equal(parser.findSquarespaceTemplateMarker(together), '');
+  // Without a learned marker, or with a street line beneath the name, the pin stands as before.
+  assert.equal(parser.buildEventFromSquarespaceItem(rows[2], 'https://www.massbearsandcubs.example/events').location, '40.7207559, -74.0007613');
+  const withLine = { ...rows[2], location: { ...rows[2].location, addressTitle: 'Office', addressLine1: '459 Broadway', addressLine2: 'New York, NY' } };
+  assert.equal(parser.buildEventFromSquarespaceItem(withLine, 'https://www.massbearsandcubs.example/events', { templateMarker }).location, '40.7207559, -74.0007613');
 });

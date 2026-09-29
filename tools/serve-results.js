@@ -50,6 +50,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
+const zlib = require('zlib');
 const { spawn } = require('child_process');
 
 const reviewQueue = require('./review-queue');
@@ -182,8 +183,20 @@ function rewriteBridgeHtml(html, registries = {}) {
 
     // 3) Append the shim script: later function declarations override the
     //    originals for every subsequent onclick dispatch.
+    // The Withheld header carries one "💾 <calendar> (N)" batch button per
+    // calendar in a flex row that cannot wrap: eight calendars made the
+    // whole page 1041px wide on a 390px phone (2026-09-29), so every card
+    // scrolled sideways. And the run's errors were its faintest text:
+    // rgb(255,107,107) on rgb(255,240,240), 2.5:1 — the same red, darkened
+    // to 5.9:1. Server-side overrides only — the phone's own sheet is
+    // rendered by the adapter and is not touched from here.
     const shim = `
 <!-- ${BRIDGE_SHIM_MARKER} -->
+<style>
+.section-header { flex-wrap: wrap; row-gap: 6px; column-gap: 6px; }
+.section-header .section-title { flex: 1 1 8em; }
+.error-item { color: #b3261e; overflow-wrap: anywhere; }
+</style>
 <script>
 (function () {
     window.__serverBridgeData = {
@@ -284,21 +297,36 @@ function formatSnapshotAge(ageMs) {
 // v2: published-calendar snapshot freshness per consulted city, e.g.
 // "calendar snapshot: seattle 34m old · nyc unavailable". Empty string when
 // the run consulted no published calendars (pre-v2 runs, or no events).
+//
+// A full run consults every city (33 on 2026-09-29) and all but one or two
+// were fetched by the same run, so they read the same: named one by one the
+// line was eleven rows of a sticky bar on the phone. Cities that say the
+// same thing are counted ("31 cities 1.1h old") once SNAPSHOT_FOLD_MIN of
+// them agree; the ones that differ — the stale one, the unavailable one —
+// keep their names, because those are the ones worth reading.
+const SNAPSHOT_FOLD_MIN = 4;
 function formatCalendarSnapshotLabel(snapshots, nowMs = Date.now()) {
     if (!snapshots || typeof snapshots !== 'object') return '';
-    const segments = [];
+    const entries = [];
     for (const city of Object.keys(snapshots).sort()) {
         const snapshot = snapshots[city];
         if (!snapshot || typeof snapshot !== 'object') continue;
         if (snapshot.status === 'ok' && snapshot.fetchedAt) {
             const fetchedMs = Date.parse(snapshot.fetchedAt);
             const age = Number.isFinite(fetchedMs) ? formatSnapshotAge(nowMs - fetchedMs) : null;
-            segments.push(`${city} ${age ? `${age} old` : 'fresh'}${snapshot.source === 'phone' ? ' (phone)' : ''}`);
+            entries.push({ city, state: `${age ? `${age} old` : 'fresh'}${snapshot.source === 'phone' ? ' (phone)' : ''}` });
         } else {
-            segments.push(`${city} unavailable`);
+            entries.push({ city, state: 'unavailable' });
         }
     }
-    return segments.length > 0 ? `calendar snapshot: ${segments.join(' · ')}` : '';
+    if (entries.length === 0) return '';
+    const sizes = new Map();
+    for (const entry of entries) sizes.set(entry.state, (sizes.get(entry.state) || 0) + 1);
+    const folded = [...sizes.keys()].filter((state) => sizes.get(state) >= SNAPSHOT_FOLD_MIN)
+        .sort((a, b) => sizes.get(b) - sizes.get(a) || a.localeCompare(b));
+    const segments = folded.map((state) => `${sizes.get(state)} cities ${state}`)
+        .concat(entries.filter((entry) => !folded.includes(entry.state)).map((entry) => `${entry.city} ${entry.state}`));
+    return `calendar snapshot: ${segments.join(' · ')}`;
 }
 
 // Small server header bar injected right after <body>. Idempotent: a page
@@ -321,13 +349,19 @@ function injectHeaderBar(html, info = {}) {
     const snapshotSpan = snapshotLabel
         ? `\n    <span style="opacity:0.85;">${escapeHtmlText(snapshotLabel)}</span>`
         : '';
+    // Two rows: the links stay in reach while the page scrolls (sticky),
+    // the run facts are read once and scroll away with the page. As one
+    // sticky block the bar stood 350px tall on a 390px-wide phone — 41% of
+    // the screen, on every one of the page's ~335 screens.
     const bar = `
-<div id="${HEADER_BAR_MARKER}" style="position:sticky; top:0; z-index:9999; display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:8px 14px; background:#1c1c1e; color:#f2f2f7; font:13px -apple-system, sans-serif; border-bottom:2px solid #ff6b35;">
+<div id="${HEADER_BAR_MARKER}" style="position:sticky; top:0; z-index:9999; display:flex; gap:6px 16px; align-items:center; flex-wrap:wrap; padding:8px 14px; padding-top:calc(8px + env(safe-area-inset-top)); background:#1c1c1e; color:#f2f2f7; font:13px -apple-system, sans-serif; border-bottom:2px solid #ff6b35;">
     <span style="font-weight:700;">chunky.dad scraper server</span>
-    <span>${runLabel}${parserLabel}</span>${snapshotSpan}
     <a href="/run-form" style="color:#ffd60a; font-weight:600; text-decoration:none;">▶ Run scraper</a>
     <a href="/review" style="color:#ffd60a; font-weight:600; text-decoration:none;">🃏 Review${reviewCount}</a>
     <a href="/log" style="color:#ffd60a; text-decoration:none;">Log</a>
+</div>
+<div id="chunky-server-run-info" style="display:flex; gap:4px 14px; flex-wrap:wrap; padding:6px 14px; background:#1c1c1e; color:#f2f2f7; font:12px -apple-system, sans-serif;">
+    <span>${runLabel}${parserLabel}</span>${snapshotSpan}
     <span style="opacity:0.7;">ICS links belong to this render — after a new run, reload before saving events.</span>
 </div>`;
     const bodyMatch = out.match(/<body[^>]*>/i);
@@ -482,15 +516,27 @@ function reviewDateParts(iso, timezone) {
 // card: an end renders only when it is strictly after the start (never a
 // fabricated "9 PM – 9 PM"), an end on another day names that day, and an
 // event with no timezone shows UTC and says so.
-function formatReviewDateLine(startIso, endIso, timezone) {
+//
+// `options.endDefaulted`: the page stated no end and the end on the record
+// is the pipeline's one default (shared-core ONE END CONTRACT). Printed as
+// a closing time it read "12:00 AM – 3:00 AM" on a party whose page names
+// no hours at all; the line says what is true — none listed — and what the
+// calendar will be given.
+function formatReviewDateLine(startIso, endIso, timezone, options = {}) {
     const start = reviewDateParts(startIso, timezone);
     if (!start) return '';
     const end = reviewDateParts(endIso, timezone);
-    const hasRealEnd = Boolean(end && end.ms > start.ms);
+    const hasEnd = Boolean(end && end.ms > start.ms);
+    const hasRealEnd = hasEnd && options.endDefaulted !== true;
     let line = `${start.dayYear} · ${start.time}`;
     if (hasRealEnd) line += end.dayKey === start.dayKey ? ` – ${end.time}` : ` – ${end.day} ${end.time}`;
     if (start.zone) line += ` ${start.zone}`;
-    if (!hasRealEnd) line += ' (no end listed)';
+    if (!hasRealEnd) {
+        const hours = hasEnd ? (end.ms - start.ms) / 3600000 : 0;
+        line += hasEnd
+            ? ` (no end listed — saved with the ${Number.isInteger(hours) ? hours : hours.toFixed(1)} h default)`
+            : ' (no end listed)';
+    }
     if (!timezone) line += ' — no timezone on the event';
     return line;
 }
@@ -672,9 +718,20 @@ const REVIEW_NOTES_LABELS = {
 function reviewVisibleText(value) {
     return String(value == null ? '' : value).replace(/\u00ad/g, '·').replace(/[\u200b\u200c\u200d\ufeff]/g, '⁞');
 }
+// `url` and `website` are one field under two names (the stored url, and
+// the notes line that mirrors it): a link change that is already a stored
+// row is not printed a second time as "Website" with the same two values
+// (14 of the 20 update cards of 2026-09-29 carried both).
+function isSameReviewLink(a, b) {
+    const fold = (value) => reviewUrlLabel(value).replace(/\/+$/, '').toLowerCase();
+    return fold(a) === fold(b);
+}
 function renderReviewNotesChangeRows(display = {}, shown = {}) {
+    const storedUrl = shown && typeof shown === 'object' && shown.url && typeof shown.url === 'object' ? shown.url : null;
     const list = (Array.isArray(display.notesChanges) ? display.notesChanges : [])
-        .filter((change) => !(change && shown && typeof shown === 'object' && shown[change.key]));
+        .filter((change) => !(change && shown && typeof shown === 'object' && shown[change.key]))
+        .filter((change) => !(change && change.key === 'website' && storedUrl
+            && isSameReviewLink(change.from, storedUrl.from) && isSameReviewLink(change.to, storedUrl.to)));
     if (list.length === 0) return '';
     const none = '<span class="none">∅</span>';
     const cell = (value) => {
@@ -872,8 +929,9 @@ function renderReviewCard(entry, ctx = {}) {
     const isMerge = entry.kind === 'merge' || isOverride;
     const isDropped = entry.kind === 'dropped';
     const tz = proposal.timezone || null;
-    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz);
-    const utcLine = formatReviewUtcLine(proposal.startDate, proposal.endDate);
+    const endDefaulted = display.endDefaulted === true;
+    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz, { endDefaulted });
+    const utcLine = formatReviewUtcLine(proposal.startDate, endDefaulted ? null : proposal.endDate);
     const changes = isMerge && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
     const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title && !changes.title
         ? `<div class="line muted">${isOverride ? 'series' : 'calendar title'}: ${escapeHtmlText(proposal.existingTitle)}</div>`
@@ -1022,14 +1080,24 @@ html, body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 -ap
 html, body, button, a, .controls, .sheet, .top { touch-action:manipulation; }
 select, textarea, input { font-size:16px; }
 a { color:var(--accent); }
-.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--bg); border-bottom:1px solid var(--line); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:8px 14px; padding-top:calc(8px + env(safe-area-inset-top)); background:var(--bg); border-bottom:1px solid var(--line); }
+/* Every row of the header is a row the card does not get: on a phone the
+   Results link shares the first row with the run picker instead of taking
+   a row of its own under the pills, and the age line and pills follow. */
+@media (max-width: 700px) { .top .top-age { flex-basis:100%; } }
+@media (min-width: 701px) { .top > a { order:9; } }
 .top h1 { font-size:17px; margin:0; }
 .top select { font:inherit; font-size:16px; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
 .pills { display:flex; gap:6px; flex-wrap:wrap; }
 .pill { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer; }
 .pill.on { border-color:var(--accent); color:var(--ink); font-weight:600; }
 .pill b { color:var(--ink); }
-.stage { position:relative; max-width:560px; margin:14px auto 0; padding:0 14px; height:min(68vh, 640px); }
+/* The stack's height is what the screen has left once the header, the
+   buttons and the hint line are on it (fitStage in the page script sets
+   --stage-h). A fixed 68vh put the Approve / Not yet row below the fold on
+   any screen shorter than ~770px — iPhone Safari with its toolbars showing
+   is 664px — and the flyer, sized in vh, took the card with it. */
+.stage { position:relative; max-width:560px; margin:14px auto 0; padding:0 14px; height:var(--stage-h, min(68vh, 640px)); }
 .card { position:absolute; inset:0 14px; background:var(--card); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; transition:transform .25s ease, opacity .25s ease; will-change:transform; }
 .card.dragging { transition:none; }
 .card.behind { opacity:.85; pointer-events:none; }
@@ -1041,9 +1109,9 @@ a { color:var(--accent); }
 .card-body { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 18px; }
 .thumb { margin:-14px -16px 12px; background:#0d0c0b; display:flex; justify-content:center; position:relative; cursor:zoom-in; }
 .card { -webkit-touch-callout:none; }
-.thumb img { display:block; max-width:100%; width:auto; height:auto; max-height:40vh; object-fit:contain; }
-.thumb.portrait img { max-height:46vh; }
-.thumb.landscape img { width:100%; max-height:32vh; }
+.thumb img { display:block; max-width:100%; width:auto; height:auto; max-height:40vh; max-height:calc(var(--stage-h, 68vh) * 0.59); object-fit:contain; }
+.thumb.portrait img { max-height:46vh; max-height:calc(var(--stage-h, 68vh) * 0.68); }
+.thumb.landscape img { width:100%; max-height:32vh; max-height:calc(var(--stage-h, 68vh) * 0.47); }
 .thumb.placeholder img { filter:grayscale(1); opacity:.5; }
 .thumb-badge { position:absolute; left:10px; bottom:10px; font-size:11px; background:rgba(0,0,0,.65); color:#fff; padding:2px 8px; border-radius:999px; }
 .kind-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
@@ -1055,7 +1123,7 @@ a { color:var(--accent); }
 .route a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
 .chgs { margin:10px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
 .chgs-head { display:flex; justify-content:space-between; padding:5px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg); }
-.chg { display:grid; grid-template-columns:76px 1fr; gap:3px 10px; padding:8px 10px; border-top:1px solid var(--line); font-size:14px; }
+.chg { display:grid; grid-template-columns:84px 1fr; gap:3px 10px; padding:8px 10px; border-top:1px solid var(--line); font-size:14px; }
 .chg-k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding-top:2px; }
 .chg-v { word-break:break-word; }
 .chg .was { color:var(--muted); }
@@ -1157,7 +1225,10 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .decided button { font:inherit; font-size:13px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:3px 8px; cursor:pointer; }
 .sheet { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-end; z-index:20; }
 .sheet.open { display:flex; }
-.sheet .panel { width:100%; max-width:560px; margin:0 auto; background:var(--card); border-radius:18px 18px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
+/* The panel is 607px tall and the keyboard leaves ~330–510px: it scrolls
+   inside whatever is visible (fitSheet pins .sheet to the visual viewport),
+   so "Needs a fix" is never off the top of the screen with no way back. */
+.sheet .panel { width:100%; max-width:560px; max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; margin:0 auto; background:var(--card); border-radius:18px 18px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
 .sheet h3 { margin:0 0 10px; font-size:16px; }
 .sheet textarea { width:100%; min-height:72px; font:inherit; font-size:16px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-top:10px; }
 .sheet .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
@@ -1171,9 +1242,9 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 <div class="top">
   <h1>🃏 Review</h1>
   <select id="run-select" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-  <span class="muted" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span>
-  <div class="pills" id="filters"></div>
   <a href="/" style="margin-left:auto; font-size:13px;">Results</a>
+  <span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span>
+  <div class="pills" id="filters"></div>
 </div>
 ${missingCalendarNotice}
 <div class="stage" id="stage"></div>
@@ -1213,14 +1284,24 @@ ${missingCalendarNotice}
 <div class="lightbox" id="lightbox" onclick="closeFlyer()"><img alt=""></div>
 <div class="toast" id="toast"></div>
 <script>
+// A tap is a touch AND, a few milliseconds later, the click the browser
+// makes up for it — aimed at whatever is under the finger by then. The
+// flyer opened on the touch and that click landed on the lightbox it had
+// just opened, which closes on a click: the flyer flashed and was gone.
+// The lightbox ignores a close that arrives with the tap that opened it.
+var flyerOpenedAt = 0;
 function openFlyer(el) {
   var img = el && el.querySelector ? el.querySelector('img') : null;
   if (!img || !img.src) return;
   var box = document.getElementById('lightbox');
   box.querySelector('img').src = img.src;
   box.classList.add('open');
+  flyerOpenedAt = Date.now();
 }
-function closeFlyer() { document.getElementById('lightbox').classList.remove('open'); }
+function closeFlyer() {
+  if (Date.now() - flyerOpenedAt < 400) return;
+  document.getElementById('lightbox').classList.remove('open');
+}
 function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
 </script>
 <script>
@@ -1233,6 +1314,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var filter = 'all';
   var pending = null; // stack item awaiting the reject sheet
   var solo = {}; // series the owner chose to decide night by night
+  var lastTouchAt = 0; // when a finger last touched a card (see attachDrag)
   var clearedGone = {}; // waiting notes dropped on this page load
   var stage = document.getElementById('stage');
   var toastEl = document.getElementById('toast');
@@ -1410,8 +1492,17 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
     var el = document.getElementById('execute');
     var last = deck.lastExecution;
+    // The phone's own tally of the approvals it was handed (the run file's
+    // executions[].ownerReview): what its checks held back and what it sent
+    // back for another look were in the payload and never on the page —
+    // 2026-09-27 read "41 written" for 56 approvals, 14 of them withheld.
+    var review = last && last.ownerReview && typeof last.ownerReview === 'object' ? last.ownerReview : null;
+    var held = review ? [
+      Number(review.withheld) > 0 ? review.withheld + ' approved but withheld by the checks on the phone' : '',
+      Number(review.awaiting) > 0 ? review.awaiting + ' back for review' : ''
+    ].filter(Boolean).join(', ') : '';
     var lastLine = last && last.at
-      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + '.</small>'
+      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + (held ? ' · ' + escapeHtml(held) : '') + '.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
       el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + lastLine;
@@ -1446,7 +1537,6 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var rows = decided.filter(function (d) { return d.rejectionMode === 'fix' && !d.via; });
     var gone = (deck.waitingGone || []).filter(function (g) { return !clearedGone[g.key]; });
     wrap.hidden = rows.length + gone.length === 0;
-    document.getElementById('waiting-count').textContent = '(' + (rows.length + gone.length) + ')';
     ul.innerHTML = '';
     function noteOf(reason) { return reason ? [(reason.tags || []).join(', '), reason.text].filter(Boolean).join(' — ') : ''; }
     // One note swiped onto a folded series is stored once per night and is
@@ -1473,7 +1563,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       var rhythm = cadenceText(row.members.map(function (d) { return d.key; }));
       return ' · ' + row.members.length + ' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '') + ' · ' + escapeHtml(days[0]) + ' → ' + escapeHtml(days[days.length - 1]);
     }
-    foldNotes(rows.slice().reverse()).forEach(function (row) {
+    // Counted as listed: one note on twelve nights is one row, so the
+    // heading said "(26)" over eleven rows. The nights ride along.
+    var waitingRows = foldNotes(rows.slice().reverse());
+    var goneRows = foldNotes(gone.map(function (g) { return { key: g.key, kind: g.kind || 'new', title: g.title, reason: g.reason, bar: g.bar, seriesPresent: g.seriesPresent }; }));
+    var listed = waitingRows.length + goneRows.length;
+    var nightsWaiting = rows.length + gone.length;
+    document.getElementById('waiting-count').textContent = '(' + listed + (nightsWaiting !== listed ? ' · ' + nightsWaiting + ' nights' : '') + ')';
+    waitingRows.forEach(function (row) {
       var d = row.first;
       var li = document.createElement('li');
       li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + nightsOf(row) + '</span></div>'
@@ -1488,7 +1585,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       li.appendChild(btn);
       ul.appendChild(li);
     });
-    foldNotes(gone.map(function (g) { return { key: g.key, kind: g.kind || 'new', title: g.title, reason: g.reason, bar: g.bar, seriesPresent: g.seriesPresent }; })).forEach(function (row) {
+    goneRows.forEach(function (row) {
       var g = row.first;
       var li = document.createElement('li');
       li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(g.title || g.key) + ' <span class="r">' + escapeHtml(g.bar || '') + nightsOf(row) + '</span></div>'
@@ -1510,7 +1607,21 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       ul.appendChild(li);
     });
   }
-  function render() { renderFilters(); renderStage(); renderExecute(); renderWaiting(); renderDecided(); }
+  // What is left of the screen for the stack: its height minus the header
+  // (which wraps to more rows on a narrow phone), the button row and the
+  // hint line. Re-measured whenever the screen changes — a rotated phone,
+  // Safari's toolbars sliding away, the filter pills wrapping.
+  function fitStage() {
+    var header = document.querySelector('.top');
+    var controls = document.querySelector('.controls');
+    var hint = document.querySelector('.meta');
+    if (!header || !controls || !hint || !window.innerHeight) return;
+    var room = Math.floor(window.innerHeight - header.offsetHeight - controls.offsetHeight - hint.offsetHeight - 14);
+    document.documentElement.style.setProperty('--stage-h', Math.max(280, Math.min(640, room)) + 'px');
+  }
+  window.addEventListener('resize', fitStage);
+  window.addEventListener('orientationchange', fitStage);
+  function render() { renderFilters(); renderStage(); renderExecute(); renderWaiting(); renderDecided(); fitStage(); }
   function escapeHtml(text) {
     return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -1520,7 +1631,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; }); });
   }
   function post(body) { return postTo('/review/decide', body); }
-  function postBear(card, verdict) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key }); }
+  function postBear(card, verdict, restore) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined }); }
   function topItem() { return items()[0] || null; }
   function removeFromQueue(item) {
     var keys = {};
@@ -1560,16 +1671,22 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     // own key, so the kept card waits there until it changes. "Not an
     // event" confirms the drop and keeps the note for the fix queue.
     var droppedNote = card.kind === 'dropped' && verdict === 'reject' && reason && (reason.mode === 'fix' || reason.mode === 'never') && card.fixTarget ? reason.mode : '';
+    // What this swipe overwrote (the server hands it back): an undo puts
+    // it back instead of leaving the key empty — a card on its second look
+    // keeps the decision, and the note, it came back with.
+    var replaced = { decision: null, bear: null };
+    function keepDecision(result) { replaced.decision = result && result.replaced ? result.replaced : null; return result; }
+    function keepBear(result) { replaced.bear = result && result.replaced ? result.replaced : null; return result; }
     var request = droppedNote
-      ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(function () {
-          return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason });
+      ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
+          return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
         })
       : card.kind === 'dropped'
-      ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear')
-      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })
-          .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(function () { return result; }) : result; });
+      ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
+      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null }).then(keepDecision)
+          .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
     return request.then(function () {
-      var record = { id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
+      var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -1631,13 +1748,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     // Covered by another night's decision: nothing stored under this key —
     // the card comes back to be decided alone (that decision then wins).
     if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
+    var was = record.replaced || {};
     var request = record.kind === 'dropped'
-      ? postBear(record, 'clear').then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear' }) : result; })
-      : post({ key: record.key, verdict: 'clear' })
-          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear').then(function () { return result; }) : result; });
-    return request.then(function () {
+      ? postBear(record, 'clear', was.bear).then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear', restore: was.decision || undefined }) : result; })
+      : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
+          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
+    return request.then(function (result) {
       requeue(record);
-      toast('Undone');
+      toast(result && result.restored ? 'Undone — your earlier decision is back' : 'Undone');
       render();
     }).catch(function (error) { toast('Undo failed: ' + error.message); });
   }
@@ -1664,16 +1782,32 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     sheet.classList.add('open');
+    sheet.querySelector('.panel').scrollTop = 0;
+    fitSheet();
     setTimeout(function () { document.getElementById('sheet-text').focus(); }, 50);
   }
-  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); pending = null; render(); }
+  // iOS lays a fixed element out against the whole screen and draws the
+  // keyboard over its lower half. The visual viewport is the part still
+  // showing: the open sheet is pinned to it, and the panel scrolls inside.
+  function fitSheet() {
+    var view = window.visualViewport;
+    if (!view || !sheet.classList.contains('open')) { sheet.style.top = ''; sheet.style.bottom = ''; sheet.style.height = ''; return; }
+    sheet.style.top = Math.round(view.offsetTop) + 'px';
+    sheet.style.bottom = 'auto';
+    sheet.style.height = Math.round(view.height) + 'px';
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitSheet);
+    window.visualViewport.addEventListener('scroll', fitSheet);
+  }
+  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); fitSheet(); pending = null; render(); }
   document.getElementById('sheet-cancel').onclick = closeSheet;
   function answerSheet(mode) {
     if (!pending) return closeSheet();
     var tags = Array.prototype.map.call(sheetTags.querySelectorAll('.chip.on'), function (el) { return el.getAttribute('data-tag'); });
     var text = document.getElementById('sheet-text').value.trim();
     var card = pending;
-    sheet.classList.remove('open'); pending = null;
+    sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
@@ -1735,8 +1869,18 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (okStamp) okStamp.style.opacity = 0;
       if (noStamp) noStamp.style.opacity = 0;
     }
-    function begin(x, y, target) {
-      if (target && target.closest && target.closest('a, button, select, textarea, input, summary')) return false;
+    // A FINGER may start a swipe anywhere on the card, links included: the
+    // route line, the chips and the change rows are links, and with the
+    // card scrolled to its change table 14% of it (up to 24%) was a place
+    // where a swipe simply did nothing (2026-09-29, 27 cards). A touch
+    // that does not move is still the browser's own tap on that link; one
+    // that travels far enough to decide never becomes a click. A MOUSE
+    // keeps the old rule — a press on a link is the start of a click or of
+    // the browser's link drag, and the card follows the pointer, so the
+    // release would land on the same link.
+    function begin(x, y, target, finger) {
+      var skip = finger ? 'select, textarea, input' : 'a, button, select, textarea, input, summary';
+      if (target && target.closest && target.closest(skip)) return false;
       active = true; moved = false; lockedH = false; lockedV = false;
       startX = x; startY = y; dx = 0; dy = 0;
       el.classList.add('dragging');
@@ -1756,6 +1900,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     }
     function tap(target) {
       if (!target || !target.closest) return;
+      if (target.closest('a, button, summary')) return; // the browser's own tap
       if (target.closest('.thumb')) { openFlyer(target.closest('.thumb')); return; }
       var desc = target.closest('.desc, .desc-more');
       if (desc) { toggleDesc(el.querySelector('.desc')); }
@@ -1774,19 +1919,24 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       reset();
       if (!cancelled && !moved && !lockedV) tap(target);
     }
+    // The same made-up mouse events (mousedown, mouseup) follow every
+    // touch: handled as a second tap they toggled the description open and
+    // shut again in one go. A mouse press right after a touch is not a mouse.
     el.addEventListener('touchstart', function (e) {
       var t = e.touches[0]; if (!t) return;
-      begin(t.clientX, t.clientY, e.target);
+      lastTouchAt = Date.now();
+      begin(t.clientX, t.clientY, e.target, true);
     }, { passive: true });
     el.addEventListener('touchmove', function (e) {
       var t = e.touches[0]; if (!t) return;
       move(t.clientX, t.clientY, e);
     }, { passive: false });
-    el.addEventListener('touchend', function (e) { end(e.target, false); });
-    el.addEventListener('touchcancel', function (e) { end(e.target, true); });
+    el.addEventListener('touchend', function (e) { lastTouchAt = Date.now(); end(e.target, false); });
+    el.addEventListener('touchcancel', function (e) { lastTouchAt = Date.now(); end(e.target, true); });
     el.addEventListener('mousedown', function (e) {
       if (e.button !== 0) return;
-      if (!begin(e.clientX, e.clientY, e.target)) return;
+      if (Date.now() - lastTouchAt < 800) return;
+      if (!begin(e.clientX, e.clientY, e.target, false)) return;
       var onMove = function (ev) { move(ev.clientX, ev.clientY, ev); };
       var onUp = function (ev) {
         document.removeEventListener('mousemove', onMove);
@@ -2017,9 +2167,31 @@ function countReviewPending() {
     }
 }
 
+// Transport compression. The results page of a full run is 23.7 MB of
+// HTML and the deck 2.7 MB (run 20260929-091555), read on a phone over the
+// tailnet; both are markup that repeats itself, so gzip takes them to
+// 0.9 MB and 0.2 MB for ~55 ms of CPU. Only when the client asks for it
+// (handleRequest notes the request's Accept-Encoding on the response), and
+// never for a body too small to gain.
+const GZIP_MIN_BYTES = 1024;
+function requestAcceptsGzip(req) {
+    const header = req && req.headers ? req.headers['accept-encoding'] : '';
+    return /(^|[\s,])gzip(\s*;\s*q=(0\.\d*[1-9]\d*|1(\.0*)?))?\s*(,|$)/i.test(String(header || ''));
+}
+
+function sendBody(res, status, contentType, body) {
+    const text = String(body == null ? '' : body);
+    if (res && res.chunkyAcceptsGzip === true && Buffer.byteLength(text) >= GZIP_MIN_BYTES) {
+        const packed = zlib.gzipSync(text);
+        res.writeHead(status, { 'Content-Type': contentType, 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding', 'Content-Length': packed.length });
+        return res.end(packed);
+    }
+    res.writeHead(status, { 'Content-Type': contentType });
+    return res.end(text);
+}
+
 function sendJson(res, status, value) {
-    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify(value));
+    return sendBody(res, status, 'application/json; charset=utf-8', JSON.stringify(value));
 }
 
 function readRequestBody(req) {
@@ -2035,13 +2207,11 @@ function readRequestBody(req) {
 }
 
 function sendHtml(res, status, html) {
-    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(html);
+    return sendBody(res, status, 'text/html; charset=utf-8', html);
 }
 
 function sendText(res, status, text) {
-    res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(text);
+    return sendBody(res, status, 'text/plain; charset=utf-8', text);
 }
 
 // Spawn the pipeline child (RUN side of the run/render split). stdout+stderr
@@ -2076,6 +2246,7 @@ function startRun(state, parserName, extraEnv = {}) {
 
 async function handleRequest(state, req, res) {
     const { pathname, query } = parseRequestUrl(req.url);
+    res.chunkyAcceptsGzip = requestAcceptsGzip(req);
 
     if (pathname === '/' && req.method === 'GET') {
         const saved = loadLatestRun();
@@ -2092,6 +2263,13 @@ async function handleRequest(state, req, res) {
             console.error(`Render failed: ${error.stack || error}`);
             return sendText(res, 500, `Render failed: ${error.message}`);
         }
+    }
+
+    // Browsers ask for it on every page; a 404 is a console error on each
+    // load of the deck and the results page.
+    if (pathname === '/favicon.ico') {
+        res.writeHead(204, {});
+        return res.end();
     }
 
     if (pathname === '/run-form' && req.method === 'GET') {
@@ -2222,15 +2400,24 @@ async function handleRequest(state, req, res) {
             if (body && body.verdict === 'clear') {
                 const key = typeof body.key === 'string' ? body.key.trim() : '';
                 if (!key) return sendJson(res, 400, { ok: false, error: 'clear needs a key' });
+                // The undo of a swipe that overwrote an earlier decision
+                // puts that decision back (reviewQueue.restoreDecision).
+                const restored = body.restore ? reviewQueue.restoreDecision(store, key, body.restore) : { restored: false };
+                if (restored.restored) {
+                    store = reviewQueue.saveDecisions(decisionsPath, restored.store);
+                    console.log(`Review: undone ${key} — the ${body.restore.verdict} of ${String(body.restore.stampedAt || '').slice(0, 10) || 'earlier'} is back`);
+                    return sendJson(res, 200, { ok: true, removed: true, restored: true, decisions: store.decisions.length });
+                }
                 const cleared = reviewQueue.clearDecision(store, key);
                 store = reviewQueue.saveDecisions(decisionsPath, cleared.store);
                 console.log(`Review: cleared decision ${key}${cleared.removed ? '' : ' (was not stored)'}`);
-                return sendJson(res, 200, { ok: true, removed: cleared.removed, decisions: store.decisions.length });
+                return sendJson(res, 200, { ok: true, removed: cleared.removed, restored: false, decisions: store.decisions.length });
             }
             const decision = reviewQueue.buildDecision(body);
+            const replaced = store.decisions.find((entry) => entry.key === decision.key) || null;
             store = reviewQueue.saveDecisions(decisionsPath, reviewQueue.upsertDecision(store, decision));
             console.log(`Review: ${decision.verdict} ${decision.kind} ${decision.key}${decision.reason ? ` — ${[decision.reason.tags.join(', '), decision.reason.text].filter(Boolean).join(' / ')}` : ''}`);
-            return sendJson(res, 200, { ok: true, decision, decisions: store.decisions.length });
+            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length });
         } catch (error) {
             const status = /must be|needs a/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });
@@ -2259,6 +2446,12 @@ async function handleRequest(state, req, res) {
             const core = new SharedCore(cities, { eventSchema: EventSchema });
             const current = reviewQueue.loadBearVerdicts(verdictsPath);
             if (verdict === 'clear') {
+                const restored = body.restore ? reviewQueue.restoreBearVerdict(current, core, body.restore) : { restored: false };
+                if (restored.restored) {
+                    reviewQueue.saveBearVerdicts(verdictsPath, restored.verdicts);
+                    console.log(`Review: undone — the ${body.restore.verdict} verdict of ${String(body.restore.stampedAt || '').slice(0, 10) || 'earlier'} on "${body.restore.title}" is back`);
+                    return sendJson(res, 200, { ok: true, removed: true, restored: true, verdicts: restored.verdicts.length });
+                }
                 const cleared = reviewQueue.clearBearVerdict(current, core, body.event || {});
                 reviewQueue.saveBearVerdicts(verdictsPath, cleared.verdicts);
                 const clearedTitles = Array.isArray(cleared.removedTitles) ? cleared.removedTitles : [];
@@ -2276,7 +2469,7 @@ async function handleRequest(state, req, res) {
                     console.log(`Review: bear verdict also cleared ${cleared.removed.length} "not bear" rejection(s): ${cleared.removed.join(', ')}`);
                 }
             }
-            return sendJson(res, 200, { ok: true, entry: result.entry, verdicts: result.verdicts.length });
+            return sendJson(res, 200, { ok: true, entry: result.entry, replaced: result.replaced || null, verdicts: result.verdicts.length });
         } catch (error) {
             const status = /must be|no title identity/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });
@@ -2339,6 +2532,7 @@ module.exports = {
     BRIDGE_SHIM_MARKER,
     HEADER_BAR_MARKER,
     parseRequestUrl,
+    requestAcceptsGzip,
     createRunLock,
     listParserNames,
     escapeHtmlText,

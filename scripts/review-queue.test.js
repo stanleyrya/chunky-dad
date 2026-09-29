@@ -879,3 +879,61 @@ test('planBarPromotions: an approval at a curated bar\'s address or pin is a ren
   assert.deepEqual(pinOnly.additions, []);
   assert.equal(pinOnly.skipped[0].why, 'same address/pin as curated "Legacy"');
 });
+
+// ---------------------------------------------------------------------------
+// UI review 2026-09-29: the card must be able to tell a stated end from the
+// one default the pipeline writes (SPRING at Camp Out read "12:00 AM –
+// 3:00 AM" off a page that names no hours).
+// ---------------------------------------------------------------------------
+test('buildDeck: a defaulted end rides on the card as display.endDefaulted; a stated end does not', () => {
+  const payload = {
+    summary: { runId: '20300101-051500' }, config: { cities: CITIES }, parserResults: [], bearDroppedEvents: [],
+    analyzedEvents: [
+      newEvent({ title: 'SPRING', endDate: iso(FUTURE + 3 * 3600 * 1000), _endDateDefaulted: true }),
+      newEvent({ title: 'FURBALL NYC' })
+    ]
+  };
+  const deck = rq.buildDeck(payload, rq.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const byTitle = Object.fromEntries(deck.cards.map((card) => [card.proposal.title, card]));
+  assert.equal(byTitle.SPRING.display.endDefaulted, true);
+  assert.equal(byTitle['FURBALL NYC'].display.endDefaulted, false);
+  assert.ok(!('endDefaulted' in byTitle.SPRING.proposal), 'display only — the decision snapshot is unchanged, so no stored decision stops covering its card');
+});
+
+test('an undo restores the decision the swipe replaced — the note a card came back with is not thrown away', () => {
+  // HYDRATE POOL PARTY (2026-09-29): sent back on 09-27 with a note, back on the deck with a new flyer.
+  const note = rq.buildDecision({ key: 'event|hydrate pool party|hoteldelfin|2027-01-31', kind: 'new', verdict: 'reject', runId: '20260927-155245',
+    snapshot: { title: 'HYDRATE POOL PARTY' }, reason: { mode: 'fix', tags: [], text: 'The image seems to be “wet and wild” not hydrate' } }, { now: new Date('2026-09-27T21:40:00.000Z') });
+  let store = rq.upsertDecision(rq.emptyDecisionStore(), note);
+  // A slip of the thumb: approved…
+  const slip = rq.buildDecision({ key: note.key, kind: 'new', verdict: 'approve', runId: '20260929-091555', snapshot: { title: 'HYDRATE POOL PARTY' } }, { now: new Date('2026-09-29T15:00:00.000Z') });
+  store = rq.upsertDecision(store, slip);
+  assert.equal(store.decisions.length, 1);
+  assert.equal(store.decisions[0].verdict, 'approve', 'one decision per key: the note is overwritten');
+  // …and undone.
+  const undone = rq.restoreDecision(store, note.key, note);
+  assert.equal(undone.restored, true);
+  assert.deepEqual(undone.store.decisions, [note], 'the note is back as it was stored, stamp and all');
+  assert.ok(rq.formatRejectionsText(undone.store).includes('[NEEDS FIX] NEW HYDRATE POOL PARTY'), 'and back in the fix queue');
+
+  // Refused: another key's decision, or something that is not a decision.
+  assert.equal(rq.restoreDecision(store, note.key, { ...note, key: 'event|other|bar|2027-01-31' }).restored, false);
+  assert.equal(rq.restoreDecision(store, note.key, { key: note.key, verdict: 'maybe' }).restored, false);
+  assert.equal(rq.restoreDecision(store, note.key, null).restored, false);
+  assert.deepEqual(rq.restoreDecision(store, note.key, null).store.decisions, store.decisions, 'a refusal leaves the store as it is');
+});
+
+test('bear verdicts: the upsert hands back the verdict it overwrote, and an undo restores it verbatim', () => {
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const party = { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', location: '', city: 'nyc' };
+  const first = rq.upsertBearVerdict([], core, party, 'bear', { now: new Date('2026-09-20T14:00:00.000Z') });
+  assert.equal(first.replaced, null, 'nothing to overwrite');
+  const slip = rq.upsertBearVerdict(first.verdicts, core, party, 'not_bear', { now: new Date('2026-09-29T15:00:00.000Z') });
+  assert.deepEqual(slip.replaced, first.entry);
+  assert.equal(slip.verdicts.length, 1);
+  const undone = rq.restoreBearVerdict(slip.verdicts, core, slip.replaced);
+  assert.equal(undone.restored, true);
+  assert.deepEqual(undone.verdicts, [first.entry], 'the 🐻 of 09-20 is back, with its own stamp');
+  assert.equal(rq.restoreBearVerdict(slip.verdicts, core, { verdict: 'perhaps', title: 'FURBALL NYC' }).restored, false);
+  assert.equal(rq.restoreBearVerdict(slip.verdicts, core, { verdict: 'bear', title: '' }).restored, false, 'no title identity, nothing to restore');
+});

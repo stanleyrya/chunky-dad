@@ -43,7 +43,19 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// 'outage-aware-2026-09': until then a connection failure was learned like a
+// page that yields nothing, and a failure note read back from the cache
+// counted as the second strike — a two-minute outage put 57 pages of one
+// host away for the 30-day window. Those entries carry no mark of their own
+// (a statusless miss is a statusless miss), so every inferred dead end gets
+// its one retry.
+const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
+// The one retry a capability bump grants is spread out: no more than this
+// many forgiven URLs are asked for on one host in one run; the rest stay
+// skipped and take their turn on a later run. A bump forgives every inferred
+// dead end at once (58 on one host in the store of 2026-09-29), and a site
+// should not meet all of them in the same two minutes.
+const DEAD_END_CAPABILITY_RETRIES_PER_HOST = 20;
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -3776,10 +3788,20 @@ class SharedCore {
             const isKnownVenueIdentity = titleIsOwnBar
                 || (curatedTitleMatch && (!ownBarKey || ownBarKey === titleBarKey));
             if (isKnownVenueIdentity) {
-                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description) : '';
+                // "@" is "at" before the fold drops it.
+                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description.replace(/@/g, ' at ')) : '';
                 const foldedTitle = foldForCompare(title);
+                // A copy that only ever says "<Party> at <Venue>" names the
+                // PLACE, not the party: the venue after "at" is where, and
+                // the words before it are what. beefdip.com/planned-events,
+                // run 20260929-091555: the card "DRAG BRUNCH + ROOFTOP POOL
+                // / Sunday, Jan 31 • 11AM / 1PM • The Tryst Hotel" lost its
+                // heading, the row's venue slot became the title, and its
+                // copy "Drag Brunch + Rooftop Pool at The Tryst Hotel"
+                // counted as restating the name. The name is restated only
+                // where it stands somewhere other than after "at".
                 const descriptionRestatesTitle = Boolean(foldedDescription) && Boolean(foldedTitle)
-                    && foldedDescription.includes(foldedTitle);
+                    && SharedCore.textNamesPhraseBeyondLocative(foldedDescription, foldedTitle);
                 if (!descriptionRestatesTitle) {
                     flags.push({
                         code: 'junk-title',
@@ -4038,6 +4060,28 @@ class SharedCore {
         return fused;
     }
 
+    // An address with each of its lines said once: a comma segment that
+    // repeats an earlier one word for word AND carries a digit (a street
+    // line, a postcode line) is dropped, the first stays. "118 Curtain Rd,
+    // London EC2A 3AY, London EC2A 3AY" → "118 Curtain Rd, London EC2A 3AY".
+    // Digit-free repeats stand ("New York, New York" is a city and a
+    // state). Returns the value unchanged when nothing repeats.
+    collapseRepeatedAddressLines(value) {
+        if (typeof value !== 'string') return value;
+        const segments = value.split(',').map(segment => segment.trim()).filter(Boolean);
+        if (segments.length < 2) return value;
+        const fold = (segment) => this.foldDiacritics(segment).replace(/[^a-z0-9]+/g, ' ').trim();
+        const seen = new Set();
+        const kept = [];
+        for (const segment of segments) {
+            const key = fold(segment);
+            if (key && /\d/.test(key) && seen.has(key)) continue;
+            seen.add(key);
+            kept.push(segment);
+        }
+        return kept.length === segments.length ? value : kept.join(', ');
+    }
+
     // Parse an address candidate for the same-address merge rung. Returns
     // null unless the value leads with a house number (incl. hyphenated
     // Queens style) — a candidate without one is never comparable here.
@@ -4269,6 +4313,43 @@ class SharedCore {
             }
         }
         if (containedIn.length > 0) return { genericStem: true, containedIn };
+        return matches[0];
+    }
+
+    // Cross-city lookup by DOOR, for an event whose city is unknown and
+    // whose venue name is not a curated name in full: the page gave a venue
+    // name AND a numbered street line, and one curated bar answers to both —
+    // its street line is the event's (areSameStreetLine) and one name holds
+    // the other ("Precinct" / "Precinct LA"). bearracuda.com/events/la7, run
+    // 20260929-091555: venue "Precinct", address "357 S. Broadway", no city
+    // on the page — the name alone is not the curated name, and the street
+    // line alone exists in a hundred towns. Together they are one door.
+    // Fail closed:
+    //   { city, bar }              — every curated bar answering to both is
+    //                                in one city
+    //   { ambiguousCities: [...] } — doors in more than one city answer
+    //   null                       — no name, no numbered street line, no
+    //                                match, or bars data missing
+    findCuratedBarCityByDoor(barName, address) {
+        const nameKey = this.normalizeBarNameKey(barName);
+        if (!nameKey || nameKey.length < 4 || !this.bars || typeof this.bars !== 'object') return null;
+        if (!this.parseAddressForComparison(typeof address === 'string' ? address : '')) return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || typeof bar.address !== 'string') continue;
+                const curatedKey = this.normalizeBarNameKey(bar.name);
+                if (!curatedKey || curatedKey.length < 4) continue;
+                if (!curatedKey.includes(nameKey) && !nameKey.includes(curatedKey)) continue;
+                if (!this.areSameStreetLine(address, bar.address)) continue;
+                matches.push({ city: cityKey, bar });
+            }
+        }
+        if (matches.length === 0) return null;
+        const cities = [...new Set(matches.map(match => match.city))];
+        if (cities.length > 1) return { ambiguousCities: cities };
         return matches[0];
     }
 
@@ -5594,6 +5675,17 @@ class SharedCore {
                 return { winner: deadA ? 'b' : 'a', reason: 'the site answers "not found" for the other link (404/410 learned by the crawl)' };
             }
         }
+        // Cut-picture rung: a link that is the head of a picture's address
+        // (isCutPictureAddress) is a file address cut at a space, never a
+        // page — it loses to any other link, on either side.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl') && urlA && urlB) {
+            const records = context && context.records ? [context.records.a, context.records.b] : [];
+            const cutA = this.isCutPictureAddress(valueA, records);
+            const cutB = this.isCutPictureAddress(valueB, records);
+            if (cutA !== cutB) {
+                return { winner: cutA ? 'b' : 'a', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -6414,6 +6506,23 @@ class SharedCore {
                 // them (keeping the more complete, city-bearing form).
                 const citySuffixTwin = this.resolveCitySuffixedAddressTwin(valueA, valueB, context);
                 if (citySuffixTwin) return citySuffixTwin;
+                // Said-twice twin rung: one candidate IS the other with a
+                // line said twice (collapseRepeatedAddressLines) — the
+                // calendar's "118 Curtain Rd, London EC2A 3AY, London EC2A
+                // 3AY" beside the scrape's clean form. The clean form wins
+                // on either side; a pin belongs to the address, not to its
+                // spelling, so the evidence rung below has nothing to add.
+                {
+                    const foldTwin = value => this.normalizeAddressTokens(value).join(' ');
+                    const onceA = this.collapseRepeatedAddressLines(String(valueA));
+                    const onceB = this.collapseRepeatedAddressLines(String(valueB));
+                    if (onceA !== String(valueA) && onceB === String(valueB) && foldTwin(onceA) === foldTwin(valueB)) {
+                        return { winner: 'b', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                    if (onceB !== String(valueB) && onceA === String(valueA) && foldTwin(onceB) === foldTwin(valueA)) {
+                        return { winner: 'a', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                }
                 // Rung 3 (evidence). Case-only twins are NOT a street
                 // mismatch — they fall through untouched so the case-only
                 // rule below keeps deciding them; empty candidates belong to
@@ -7966,6 +8075,62 @@ class SharedCore {
         return engagedLately ? { shape, siblings: known.siblings } : null;
     }
 
+    // ── The head of a picture's address is not a link ───────────────────
+    // A picture whose filename carries an unencoded space
+    // (".../uploads/2026/01/2026-01-25 Welcome Party.webp") was once cut at
+    // the space into a "page" link (".../uploads/2026/01/2026-01-25"). The
+    // cut itself is gone (#1835), but the calendar still holds what earlier
+    // runs saved, and a deeper same-site link beats a front door in every
+    // merge: run 20260929-091555 kept
+    // https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 as FOAM POOL
+    // PARTY's website. Judged against the pictures themselves: the link,
+    // followed by a space, begins the address of a picture this run has
+    // seen (on any record — the cut head was handed to a NEIGHBOUR card) or
+    // that either record of the merge carries.
+    notePictureAddresses(events) {
+        if (!this.runPictureAddresses) this.runPictureAddresses = new Set();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(event[field]);
+                if (key) this.runPictureAddresses.add(key);
+            }
+        }
+        return this.runPictureAddresses;
+    }
+
+    // Comparable form of a picture (or link) address: scheme and "www."
+    // dropped, query and fragment dropped, percent-encoding decoded,
+    // lowercase. '' when it is not an http(s) address.
+    static getPictureAddressKey(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        const match = raw.match(/^https?:\/\/(?:www\.)?([^?#]+)/i);
+        if (!match) return '';
+        let address = match[1];
+        try { address = decodeURIComponent(address); } catch (_) { /* keep the raw spelling */ }
+        return address.toLowerCase();
+    }
+
+    isCutPictureAddress(url, records = []) {
+        const head = SharedCore.getPictureAddressKey(url).replace(/\/+$/, '');
+        // A folder or a front door heads every file below it; only a
+        // would-be file name (something after the last slash) can be a cut.
+        if (!head || !head.includes('/') || head.endsWith('/')) return false;
+        const pictures = new Set(this.runPictureAddresses || []);
+        for (const record of Array.isArray(records) ? records : []) {
+            if (!record || typeof record !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(record[field]);
+                if (key) pictures.add(key);
+            }
+        }
+        const cutHead = `${head} `;
+        for (const picture of pictures) {
+            if (picture.startsWith(cutHead)) return true;
+        }
+        return false;
+    }
+
     isKnownDeadLink(event, value) {
         const key = this.getHubLinkKey(value);
         if (!key) return false;
@@ -9143,6 +9308,10 @@ class SharedCore {
         return DEAD_END_CAPABILITY;
     }
 
+    static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
+        return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+    }
+
     static isPermanentlyGoneHttpStatus(statusCode) {
         return statusCode === 410 || statusCode === 404;
     }
@@ -9156,6 +9325,42 @@ class SharedCore {
     // shape callers already branch on. One list, never a second classifier.
     static isRetryableHttpStatus(statusCode) {
         return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+    }
+
+    // What a platform says when NOTHING answered: no HTTP status, because no
+    // HTTP exchange took place. Node's fetch says exactly "fetch failed" for
+    // every one of them (dead DNS, refused or reset connection, the Mac
+    // asleep or off the network) and keeps the reason in error.cause, which
+    // the adapters' rewrap drops — so the two words are the whole signal.
+    // isRetryableFailure's browser wording ("failed to fetch") never matched
+    // it, and on 2026-09-27 a two-minute outage was therefore written into
+    // the no-retry failure cache as 59 PERMANENT failures: two configured
+    // roots (bearbrum.com, an Eventbrite organizer page) stayed silent for
+    // the three-day cache life, and 57 city pages of one aggregator were
+    // learned as dead ends for thirty. Static + pure: the classifier below
+    // and the adapters' failure-note check read this one definition.
+    static isTransportFailureMessage(message) {
+        const text = typeof message === 'string' ? message : '';
+        if (!text) return false;
+        return /\bfetch failed\b|\bECONNREFUSED\b|\bECONNRESET\b|\bENOTFOUND\b|\bEAI_AGAIN\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bETIMEDOUT\b|\bEPIPE\b|\bUND_ERR_[A-Z_]+\b|socket hang up|other side closed/i.test(text);
+    }
+
+    // A failure note is a statement about the PAGE: the status the server
+    // answered with, or a reason that will be just as true tomorrow. A note
+    // that records a transport failure is a statement about the network at
+    // that minute and is never honoured — it reads as a cache miss, so notes
+    // written before the classifier knew the wording heal on the next run
+    // instead of waiting out their cache life.
+    static isTransportFailureNote(cached) {
+        if (!cached || typeof cached !== 'object') return false;
+        if (Number.isFinite(cached.statusCode)) return false;
+        const failure = cached.failure && typeof cached.failure === 'object' ? cached.failure : null;
+        if (!failure) return false;
+        const message = typeof failure.error === 'string'
+            ? failure.error
+            : (failure.error && typeof failure.error.message === 'string' ? failure.error.message : '');
+        if (/\bHTTP\s+\d{3}\b/i.test(message)) return false;
+        return SharedCore.isTransportFailureMessage(message);
     }
 
     isRetryableFailure(error) {
@@ -9209,6 +9414,10 @@ class SharedCore {
             /could not connect to the server/i,
             /data connection is not currently allowed/i
         ];
+        // ---- The wording Node produces (see isTransportFailureMessage) ----
+        if (SharedCore.isTransportFailureMessage(message)) {
+            return true;
+        }
         return retryablePatterns.some(pattern => pattern.test(message));
     }
 
@@ -9484,6 +9693,16 @@ class SharedCore {
                 const owner = this.findOtherParserOwningUrl(url, mainConfig, parserConfig);
                 if (owner) {
                     await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own source ("${owner}") — not crawled from here`);
+                    continue;
+                }
+                // The same goes for THIS source's other configured pages: a
+                // root reached through a link is read as that link's child
+                // (enrich-only under an event page: its own event dropped as
+                // a "sibling"), marked processed, and skipped when its turn
+                // comes. It is read in its turn, as a root.
+                if (this.isConfiguredParserUrlForCrawl(url, parserConfig)
+                    && !this.hasProcessedUrl(processedUrls, url)) {
+                    await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own turn — it is one of this source's configured pages`);
                     continue;
                 }
             }
@@ -9855,10 +10074,26 @@ class SharedCore {
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
                 let adaptiveFollowBlocked = feedRead;
+                // Links a single-event ROOT follows as discovery, never as
+                // enrich-only children (keys, see the adaptive branch below).
+                let frontDoorSiblingKeys = null;
                 if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
+                    // A configured root that reads as ONE event is still the
+                    // source's front door (see selectFrontDoorSiblingLinks):
+                    // the site's other pages it links are read as a listing's
+                    // links would be, not as this event's enrichment.
+                    if (currentDepth === 0 && !enrichContext && !discoveryOnly && pageClassification === 'event-page') {
+                        const siblingLinks = this.selectFrontDoorSiblingLinks(url, additionalLinks, parserConfig);
+                        if (siblingLinks.length > 0) {
+                            frontDoorSiblingKeys = new Set(siblingLinks.map(link => this.getUrlDedupeKey(link)).filter(Boolean));
+                            const offSite = linksToConsider.filter(link => !frontDoorSiblingKeys.has(this.getUrlDedupeKey(link)));
+                            linksToConsider = offSite.concat(siblingLinks);
+                            await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a configured page that reads as one event — reading the ${siblingLinks.length} other page(s) of its own site it links as pages of their own (${siblingLinks.slice(0, 3).join(', ')}${siblingLinks.length > 3 ? ', …' : ''}): a site that gives each party a page names the next one there`);
+                        }
+                    }
                     if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
@@ -10036,6 +10271,9 @@ class SharedCore {
                             const parentTitle = pageEventsForEnrich[0].title || 'event';
                             for (const enqueueUrl of enqueueUrls) {
                                 const enqueueKey = this.getUrlDedupeKey(enqueueUrl);
+                                // The front door's sibling pages announce
+                                // parties of their own: ordinary discovery.
+                                if (enqueueKey && frontDoorSiblingKeys && frontDoorSiblingKeys.has(enqueueKey)) continue;
                                 if (enqueueKey) {
                                     childEnrichOnlyByUrl[enqueueKey] = {
                                         parentEvents: pageEventsForEnrich,
@@ -10124,12 +10362,17 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
-                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)) {
+                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)
+                    && !(error && error.cachedFailure === true)) {
                     // Statusless transport failure from the HTTP adapter
                     // (dead DNS, refused connection — the adapters' fetch
                     // wrapper is the only source of this marker, so parser/
                     // extraction errors can't land here). Staged, two-strike,
                     // and only committed when the run had successful fetches.
+                    // A REPLAYED failure note is not a strike: nothing was
+                    // attempted, so it confirms nothing (the second strike
+                    // against whereto.party's city pages, run 20260927-
+                    // 125246, was the first strike read back from the cache).
                     this.recordDeadEndNetworkFailure({ url, currentDepth });
                 }
                 try {
@@ -10299,6 +10542,54 @@ class SharedCore {
             push(ticketUrl);
         }
         return selected;
+    }
+
+    // A configured root that reads as ONE event. The owner configured it as
+    // the place a source announces its parties; when the site gives each
+    // party a page of its own, the root is simply whichever party is on the
+    // front page today, and the site's menu is its list of the others.
+    // gruntparty.monster, run 20260929-091555: the home page was the Folsom
+    // party (Sept 26, over), the menu read "FOLSOM · Halloween", and
+    // /grunt-halloween — Oct 24 at The Stud — was never opened, because an
+    // event page follows only event-shaped and ticket links. 0 upcoming.
+    // So the links a single-event ROOT makes to other pages of its OWN site
+    // (same registrable domain) are followed once, as discovery: each is
+    // classified and read like any discovered page, and what it yields is
+    // its own event, not enrichment for the root's. Exactly what a root that
+    // reads as a listing already does with its links — a calendar that lists
+    // one night this week and three the next changes nothing about which
+    // pages get read. That includes the site's own event-shaped links: read
+    // as enrichment, the next party's page was "a sibling of the root's
+    // event" and its event was dropped. Off-site links keep the event-page
+    // rule (event-shaped and ticket links, enrich-only). Bounded by the
+    // page's own link budget (maxAdditionalUrls) and the dead-end store,
+    // which learns the pages that yield nothing exactly as it does for a
+    // listing's links.
+    selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
+        const links = Array.isArray(additionalLinks) ? additionalLinks : [];
+        const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
+        if (!pageDomain || links.length === 0) return [];
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const taken = new Set();
+        const siblings = [];
+        for (const link of links) {
+            const withoutFragment = String(link || '').split('#')[0];
+            const normalized = this.normalizeUrl(withoutFragment, pageUrl || withoutFragment);
+            if (!normalized) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || taken.has(key)) continue;
+            if (this.getRegistrableDomainFromUrl(normalized) !== pageDomain) continue;
+            // The source's other configured pages get their own turn.
+            if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
+            if (this.isApiEndpointUrl(normalized)) continue;
+            // A query selects a view of a page (?ical=1, ?eventDisplay=past);
+            // a site's menu names pages. bearitmtl.com/events/ on a week
+            // with one party: 5 of its 15 links were such views.
+            if (normalized.indexOf('?') >= 0) continue;
+            taken.add(key);
+            siblings.push(normalized);
+        }
+        return siblings;
     }
 
     // ------------------------------------------------------------------
@@ -10647,7 +10938,14 @@ class SharedCore {
             learnedHosts: [],
             recoveredHosts: [],
             hostSkippedCount: 0,
-            hostSkippedSamples: []
+            hostSkippedSamples: [],
+            // Capability retries granted this run (see
+            // isDeadEndRetryDeferred): per host, and the store entries
+            // themselves so the enqueue filter and its processing-time twin
+            // (which may spell the URL differently) count one entry once.
+            capabilityRetriesByHost: {},
+            capabilityRetryEntries: [],
+            capabilityRetryDeferredCount: 0
         };
     }
 
@@ -10903,6 +11201,33 @@ class SharedCore {
         return (Number(entry.misses) || 0) >= minMisses;
     }
 
+    // The retry isConfirmedDeadEndEntry grants to an entry confirmed under an
+    // older capability is rationed per host (DEAD_END_CAPABILITY_RETRIES_
+    // PER_HOST). True = this URL's retry waits for a later run and the URL is
+    // skipped like a confirmed dead end; its entry is left untouched, so it
+    // is still owed its retry. Only entries that WERE confirmed (enough
+    // misses, no status from the origin) are rationed — an entry still short
+    // of its misses was never suppressed and is not a retry.
+    isDeadEndRetryDeferred(context, entry, url) {
+        if (!context || !entry || !url) return false;
+        if (Number.isFinite(Number(entry.lastStatus))) return false;
+        if (entry.capability === DEAD_END_CAPABILITY) return false;
+        const minMisses = Number.isFinite(Number(context.minMisses)) ? Number(context.minMisses) : 2;
+        if ((Number(entry.misses) || 0) < minMisses) return false;
+        if (!context.capabilityRetriesByHost) context.capabilityRetriesByHost = {};
+        if (!Array.isArray(context.capabilityRetryEntries)) context.capabilityRetryEntries = [];
+        if (context.capabilityRetryEntries.includes(entry)) return false;
+        const hostKey = this.getDeadEndHostKey(url) || url;
+        const granted = Number(context.capabilityRetriesByHost[hostKey]) || 0;
+        if (granted >= DEAD_END_CAPABILITY_RETRIES_PER_HOST) {
+            context.capabilityRetryDeferredCount = (Number(context.capabilityRetryDeferredCount) || 0) + 1;
+            return true;
+        }
+        context.capabilityRetriesByHost[hostKey] = granted + 1;
+        context.capabilityRetryEntries.push(entry);
+        return false;
+    }
+
     filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
         const list = Array.isArray(urls) ? urls : [];
@@ -10914,8 +11239,8 @@ class SharedCore {
         for (const url of list) {
             const { entry } = this.findDeadEndUrlEntry(context, url);
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
-            if (entry && this.isConfirmedDeadEndEntry(context, entry)
-                && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+            if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+                && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
                 context.skippedCount += 1;
                 if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                     context.skippedSamples.push(url);
@@ -10949,8 +11274,8 @@ class SharedCore {
         const { entry } = this.findDeadEndUrlEntry(context, url);
         const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
-        if (entry && this.isConfirmedDeadEndEntry(context, entry)
-            && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+        if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+            && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
             context.skippedCount += 1;
             if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                 context.skippedSamples.push(url);
@@ -11144,12 +11469,31 @@ class SharedCore {
             // proved the network works (see recordDeadEndNetworkFailure).
             if (context.pendingNetworkFailures.length > 0) {
                 if (context.successfulFetchCount > 0) {
+                    // A connection that fails says nothing about a PATH on a
+                    // host that serves pages: a page that is gone answers
+                    // 404/410, and those are learned on their own. A host
+                    // with a success on record is having an outage — its
+                    // pages are tried again next run. Only a host that has
+                    // never answered (a dead domain) is learned this way.
+                    const hosts = this.getDeadEndHostStore(context);
                     const committed = [];
+                    const outageHosts = [];
+                    let outageCount = 0;
                     for (const url of context.pendingNetworkFailures) {
                         const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
                         if (committed.includes(dedupeKey)) continue; // one miss per URL per run
                         committed.push(dedupeKey);
+                        const hostKey = this.getDeadEndHostKey(url);
+                        const hostEntry = hosts && hostKey ? hosts[hostKey] : null;
+                        if (hostEntry && Number(hostEntry.successes) > 0) {
+                            outageCount += 1;
+                            if (!outageHosts.includes(hostKey)) outageHosts.push(hostKey);
+                            continue;
+                        }
                         this.recordDeadEndUrlMiss(context, url, null, nowMs);
+                    }
+                    if (outageCount > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Not learning ${outageCount} network-failure URL(s) on ${outageHosts.length} host(s) that have answered before (${outageHosts.slice(0, 5).join(', ')}${outageHosts.length > 5 ? ', …' : ''}) — a host that serves pages is having an outage, its pages are not dead`);
                     }
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: Not learning ${context.pendingNetworkFailures.length} network-failure URL(s) — this run had zero successful fetches, so the network itself is suspect`);
@@ -11172,6 +11516,11 @@ class SharedCore {
             }
             if (context.learnedHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+            }
+            const retriedHosts = Object.keys(context.capabilityRetriesByHost || {});
+            if (retriedHosts.length > 0 || context.capabilityRetryDeferredCount > 0) {
+                const retried = retriedHosts.reduce((sum, host) => sum + (Number(context.capabilityRetriesByHost[host]) || 0), 0);
+                await displayAdapter.logInfo(`SYSTEM: Dead ends learned before "${DEAD_END_CAPABILITY}": ${retried} asked for again on ${retriedHosts.length} host(s) (at most ${DEAD_END_CAPABILITY_RETRIES_PER_HOST} per host per run), ${context.capabilityRetryDeferredCount || 0} wait for a later run`);
             }
             if (context.recoveredHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Removed bot-wall flag from ${context.recoveredHosts.length} recovered host(s): ${context.recoveredHosts.join(', ')}`);
@@ -15256,8 +15605,11 @@ class SharedCore {
         // is FLAGGED for review — never silently applied or dropped.
         if (deferredCoordinateDecision) {
             const { scraperValue, calendarValue } = deferredCoordinateDecision;
+            // A line said twice and then said once is the same address
+            // respelled, not a venue that moved (collapseRepeatedAddressLines).
             const normalizeAddressForComparison = (value) =>
-                String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+                this.collapseRepeatedAddressLines(String(value === null || value === undefined ? '' : value))
+                    .replace(/\s+/g, ' ').trim().toLowerCase();
             const calendarAddress = normalizeAddressForComparison(calendarObject.address);
             const finalAddress = normalizeAddressForComparison(
                 Object.prototype.hasOwnProperty.call(mergedObject, 'address') ? mergedObject.address : calendarObject.address
@@ -18653,6 +19005,9 @@ class SharedCore {
             // dataset (chunky-dad-festivals) or somebody's personal calendar.
             !event?._noCityCalendarWithheld &&
             event?._announcementOnlyWithheld !== true &&
+            // The same blank-fill on every night of a saved series is a
+            // fact about the series (withholdSeriesLevelOverrideFills).
+            !event?._seriesLevelFillWithheld &&
             // One record, one destination: a record assembled from two
             // listings (stamp site: the ai-web parser's
             // applyOneDestinationGuard) is never written — and never
@@ -18682,6 +19037,21 @@ class SharedCore {
             // guard.
             !SharedCore.isCuratedFestivalUmbrella(event) &&
             !SharedCore.hasJunkTitleSanityFlag(event));
+    }
+
+    // Does `text` carry `phrase` anywhere other than right after "at"?
+    // Both already folded (lowercase, single spaces). "massive returns" names
+    // Massive; "drag brunch at the tryst hotel" only places something there.
+    static textNamesPhraseBeyondLocative(text, phrase) {
+        const haystack = ` ${String(text || '').trim()} `;
+        const needle = ` ${String(phrase || '').trim()} `;
+        if (needle.trim() === '') return false;
+        let index = haystack.indexOf(needle);
+        while (index !== -1) {
+            if (!haystack.slice(0, index).endsWith(' at')) return true;
+            index = haystack.indexOf(needle, index + 1);
+        }
+        return false;
     }
 
     // True when the stamped sanity flags include the junk-title code — the
@@ -18732,6 +19102,7 @@ class SharedCore {
             '_unresolvedCityWithheld',
             '_noCityCalendarWithheld',
             '_announcementOnlyWithheld',
+            '_seriesLevelFillWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
             '_bigDriftWithheld',
@@ -18775,6 +19146,10 @@ class SharedCore {
             return `WITHHELD (city${city ? ` "${city}"` : ''} has no configured city calendar — a scraped event is never written to a non-city calendar)`;
         }
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
+        if (event._seriesLevelFillWithheld) {
+            const fields = Array.isArray(event._seriesLevelFillWithheld.fields) ? event._seriesLevelFillWithheld.fields.join(', ') : '';
+            return `WITHHELD (series-level fact — the same ${fields || 'value'} on ${event._seriesLevelFillWithheld.nights} nights of the saved series; edit the series, not its nights)`;
+        }
         if (event._chimeraWithheld) {
             const reason = String(event._chimeraWithheld.reason || '').trim();
             return `WITHHELD (assembled from two listings${reason ? ` — ${reason}` : ''})`;
@@ -20113,6 +20488,10 @@ class SharedCore {
         // Per-run calendar-stickiness tally (report-only observation phase).
         this.resetCalendarStickinessStats();
 
+        // The run's pictures, for the cut-picture link check (a saved link
+        // that is the head of a picture's address — isCutPictureAddress).
+        this.notePictureAddresses(events);
+
         // Curated festival awareness: one drift line per festival per pass,
         // and a batch pre-pass mapping source hosts whose pages produced an
         // umbrella match — sibling records from the same source inherit the
@@ -20383,6 +20762,11 @@ class SharedCore {
             }
         }
 
+        // What a source says identically about every night of a saved
+        // series is a fact about the SERIES, never a reason to detach its
+        // nights one by one (see withholdSeriesLevelOverrideFills).
+        this.withholdSeriesLevelOverrideFills(analyzedEvents);
+
         // Same-venue overlap surfacing (report-only, never throws): stamp
         // colliding cards + one ⚔️ OVERLAP line per pair. Actions, merges and
         // writes are untouched — the owner resolves double-booked slots.
@@ -20395,6 +20779,107 @@ class SharedCore {
         this.logCalendarStickinessSummary();
 
         return analyzedEvents;
+    }
+
+    // SERIES-LEVEL FILLS NEVER DETACH A NIGHT.
+    //
+    // An override exists for what ONE night states that its series does not:
+    // this week's venue, a guest's flyer, a moved start (resolveSeriesAuthority:
+    // "per-night facts are exactly what an override is for"). Run
+    // 20260929-091555 proposed eight overrides that state nothing of the
+    // kind: Gathr's row for the owner's weekly "Bear Happy Hour" series adds
+    // the same picture and the same "Free" to five Thursdays, Thotyssey's
+    // row for his monthly "FUZZY" adds one picture to three Fridays. Every
+    // saved field of those nights stays as it is; the only difference is a
+    // blank filled with a value the source repeats on every night it lists.
+    // Writing them detaches the nights from the series (a later edit of the
+    // series no longer reaches them) to say one thing N times — and the
+    // scraper never writes a series, so the fact has no automatic home.
+    //
+    // Judged on the finished plan, per saved series (overrideUid):
+    //   - the night changes no stored field and no notes line the series
+    //     night already carries — it only ADDS lines (getOverrideNightFills);
+    //   - two or more nights of that series in this plan add exactly the
+    //     same lines.
+    // Those nights are withheld from every write and from the deck, each
+    // stamped with the fields and the night count, and one line per series
+    // names what the series could gain. A single night, a night that
+    // changes anything, and a night whose additions are its own (a flyer
+    // per night, this week's address) are untouched.
+    withholdSeriesLevelOverrideFills(analyzedEvents) {
+        if (!Array.isArray(analyzedEvents) || analyzedEvents.length < 2) return [];
+        const bySeries = new Map();
+        for (const event of analyzedEvents) {
+            if (!event || typeof event !== 'object' || event._mergeNoOp === true) continue;
+            if (!SharedCore.isOverrideCreate(event)) continue;
+            const seriesUid = this.normalizeOverrideUid(event.overrideUid);
+            if (!seriesUid) continue;
+            const fills = this.getOverrideNightFills(event);
+            if (!fills || !fills.signature) continue;
+            // Nights are grouped by WHAT they add: a night whose additions
+            // differ from the others' (its own flyer, its own address) is
+            // the source speaking about that night and stands alone; a
+            // night that changes something never enters a group at all.
+            const groupKey = `${seriesUid}\n${fills.signature}`;
+            if (!bySeries.has(groupKey)) bySeries.set(groupKey, []);
+            bySeries.get(groupKey).push({ event, fills });
+        }
+        const withheld = [];
+        for (const nights of bySeries.values()) {
+            if (nights.length < 2) continue;
+            const fields = nights[0].fills.keys;
+            for (const night of nights) {
+                night.event._seriesLevelFillWithheld = { fields, nights: nights.length };
+                withheld.push(night.event);
+            }
+            const seriesTitle = String((nights[0].event._original.calendar && nights[0].event._original.calendar.title) || nights[0].event.title || 'Unknown');
+            const source = String((nights[0].event._parserConfig && nights[0].event._parserConfig.name) || 'the source');
+            console.log(`🔁 SERIES FILL: "${seriesTitle}" — ${source} adds the same ${fields.join(', ')} to ${nights.length} nights of the saved series and changes nothing else; a fact about the series, not about a night — ${nights.length} override(s) withheld (the series itself is edited through the Event Builder / ICS)`);
+        }
+        return withheld;
+    }
+
+    // What an override would ADD to the series night it replaces, when
+    // adding is ALL it does: { keys, signature } — the added notes fields
+    // (canonical keys, sorted) and their values as one comparable string.
+    // null when the night changes a stored field (title, start, end, pin,
+    // link), changes or removes a notes line the series night carries, or
+    // carries a bear verdict or review flag of its own — that night states
+    // something of its own. Run bookkeeping, the override
+    // identity and an automatic bear stamp are not additions (the same
+    // exclusions notesProjectionsMatch applies to an override).
+    getOverrideNightFills(event) {
+        const seriesNight = event && event._original && event._original.calendar;
+        if (!seriesNight || typeof seriesNight !== 'object') return null;
+        const storedChanges = this.computeCalendarWriteChanges(event, seriesNight, seriesNight)
+            .filter(field => field !== 'notes');
+        if (storedChanges.length > 0) return null;
+        const saved = this.parseNotesIntoFields(seriesNight.notes || '');
+        const proposed = this.parseNotesIntoFields(event.notes || '');
+        const isBookkeeping = (key, value) => REGENERATED_NOTES_KEYS.has(key)
+            || key === 'overrideUid' || key === 'overrideRecurrenceId'
+            || (key === 'bearSource' && !this.isManualBearSource(value));
+        const textOf = (value) => (value === null || value === undefined ? '' : String(value).trim());
+        const added = [];
+        for (const key of Object.keys(proposed)) {
+            const value = textOf(proposed[key]);
+            if (!value || isBookkeeping(key, value)) continue;
+            // The owner's own verdict on a night always lands on that night.
+            if (key === 'bearSource' || key === 'bearReview') return null;
+            const savedValue = textOf(saved[key]);
+            if (!savedValue) { added.push([key, value]); continue; }
+            if (!SharedCore.notesValuesEquivalent(savedValue, value)) return null;
+        }
+        for (const key of Object.keys(saved)) {
+            const savedValue = textOf(saved[key]);
+            if (!savedValue || isBookkeeping(key, savedValue)) continue;
+            if (!textOf(proposed[key])) return null;
+        }
+        added.sort((a, b) => a[0].localeCompare(b[0]));
+        return {
+            keys: added.map(entry => entry[0]),
+            signature: added.map(entry => `${entry[0]}: ${entry[1]}`).join('\n')
+        };
     }
 
     // A late bear-override event (a drop rescued by a stored calendar verdict,
@@ -21025,6 +21510,24 @@ class SharedCore {
                     `${field} replaced at final build — the site answers "not found" (404/410) for the saved link`);
             }
 
+            // …and neither is the head of a picture's address
+            // (isCutPictureAddress), which the calendar may hold from a run
+            // that cut a picture's address at the space in its filename.
+            for (const field of ['ticketUrl', 'website']) {
+                const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                if (!value || !this.isCutPictureAddress(value, [analyzedEvent, event, analyzedEvent._original && analyzedEvent._original.calendar])) continue;
+                const standIn = field === 'website' ? this.getStandInSourcePage(event) : '';
+                if (standIn && !this.isSameLinkTarget(standIn, value)) analyzedEvent[field] = standIn;
+                else delete analyzedEvent[field];
+                if (field === 'website' && 'url' in analyzedEvent) {
+                    if (analyzedEvent.website) analyzedEvent.url = analyzedEvent.website; else delete analyzedEvent.url;
+                }
+                notesNeedRebuild = true;
+                console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — it is the head of a picture's address, cut at a space in the filename: a file, not a page; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
+                this.recordDeterministicFieldRewrite(analyzedEvent, field,
+                    `${field} replaced at final build — the saved link is the head of a picture's address, not a page`);
+            }
+
             // A hub is never presented as one event's ticket page, whichever
             // side of the merge brought it (stampBatchHubLinks): the calendar
             // may still hold the pass page an earlier run wrote there.
@@ -21349,9 +21852,23 @@ class SharedCore {
                     && !this.isCoordinatePair(analyzedEvent.location);
                 const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
                 const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
-                if ((oneLineRow || placeless) && noTime && noTicket) {
+                // …and for a name and a date with NOTHING of their own, on a
+                // venue's own site: the place is the site's identity (filled
+                // from the curated venue, not read off the row), and the row
+                // gave no picture, no words beyond its own name and no page.
+                // campoutpoconos.com/accommodations, run 20260929-091555:
+                // the cabin rate table's "SPRING | April 23 – May 21 •
+                // Weekday $150 | Weekend $285" reached the deck as a party
+                // called SPRING at Camp Out — the venue backfill had given
+                // it an address and a pin, so it no longer read as placeless.
+                // A venue's real all-day events carry a flyer, a blurb or a
+                // page of their own and are untouched.
+                const nameAndDateOnly = Boolean(segment && typeof segment === 'object')
+                    && this.isNameAndDateOnlyRecord(analyzedEvent);
+                if ((oneLineRow || placeless || nameAndDateOnly) && noTime && noTicket) {
                     analyzedEvent._announcementOnlyWithheld = true;
-                    const shape = oneLineRow ? 'a one-line listing row' : 'a dated record with no place';
+                    const shape = oneLineRow ? 'a one-line listing row'
+                        : (placeless ? 'a dated record with no place' : 'a name and a date with no picture, no words and no page of their own, placed only by the site it was read from');
                     console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is ${shape} with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
                 }
             }
@@ -21687,6 +22204,23 @@ class SharedCore {
 
             return analyzedEvent;
         }
+    }
+
+    // A record that is a name and a date and nothing else (see the
+    // announcement withhold): its place is the site's own identity
+    // (barSource venue-site / venue-site-identity — never a line the row
+    // stated), it carries no picture in any slot, no description beyond its
+    // own title, and no page of its own (no link, or a bare front door).
+    isNameAndDateOnlyRecord(event) {
+        if (!event || typeof event !== 'object') return false;
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        if (barSource !== 'venue-site' && barSource !== 'venue-site-identity') return false;
+        const hasText = (value) => typeof value === 'string' && value.trim() !== '';
+        if (hasText(event.image) || hasText(event.imageVertical) || hasText(event.imageHorizontal)) return false;
+        const fold = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
+        const description = hasText(event.description) ? fold(event.description) : '';
+        if (description && description !== fold(event.title || '')) return false;
+        return !this.getEventPageUrlIdentity(event);
     }
 
     // Analyze events against existing calendar events and determine actions

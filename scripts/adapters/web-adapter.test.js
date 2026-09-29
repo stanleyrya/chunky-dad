@@ -493,6 +493,60 @@ test('shared root: cache writes are temp-file-then-rename in the same dir, devic
   }
 });
 
+// 2026-09-27: two minutes without a network wrote this exact record over
+// bearbrum.com's cached root page, and the next four runs replayed it as a
+// permanent failure. Nothing answered, so nothing is known about the page.
+test('shared root: a cached CONNECTION failure is a cache MISS; a cached 404 is still replayed', async () => {
+  const root = makeSharedRootFixture();
+  try {
+    await withSharedRootEnv(root, async () => {
+      const adapter = makeAdapter({ pageCache: { enabled: true, ttlDays: 3 } });
+      const outageUrl = 'https://www.bearbrum.com/';
+      const outageParts = adapter.getPageCachePathParts(outageUrl);
+      const outageDir = path.join(root, 'storage', 'pages', outageParts.hostDir);
+      fs.mkdirSync(outageDir, { recursive: true });
+      fs.writeFileSync(path.join(outageDir, outageParts.fileName), JSON.stringify({
+        url: outageUrl,
+        fetchedAt: '2026-09-27T15:13:08.626Z',
+        statusCode: null,
+        headers: {},
+        fetchState: 'failed',
+        failure: {
+          nonRetryable: true,
+          context: 'root-page',
+          error: 'HTTP request failed for https://www.bearbrum.com/: fetch failed'
+        }
+      }, null, 2));
+      const cached = await adapter.readCachedPage(outageUrl, adapter.getPageCacheConfig());
+      assert.equal(cached, null, 'the page is asked for again');
+
+      const goneUrl = 'https://precinctdtla.com/9-30-26/sissy-4/';
+      const goneParts = adapter.getPageCachePathParts(goneUrl);
+      const goneDir = path.join(root, 'storage', 'pages', goneParts.hostDir);
+      fs.mkdirSync(goneDir, { recursive: true });
+      fs.writeFileSync(path.join(goneDir, goneParts.fileName), JSON.stringify({
+        url: goneUrl,
+        fetchedAt: '2026-09-27T17:25:11.000Z',
+        statusCode: 404,
+        headers: {},
+        fetchState: 'failed',
+        failure: {
+          nonRetryable: true,
+          context: 'crawl-page',
+          error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: '
+        }
+      }, null, 2));
+      await assert.rejects(
+        adapter.readCachedPage(goneUrl, adapter.getPageCacheConfig()),
+        (error) => error.cachedFailure === true && error.statusCode === 404,
+        'what the server answered is still remembered'
+      );
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('shared root: dataless iCloud stub (0-byte placeholder) is a cache MISS, never a crash', async () => {
   const root = makeSharedRootFixture();
   try {

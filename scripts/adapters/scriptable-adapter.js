@@ -1285,6 +1285,20 @@ class ScriptableAdapter {
         cached.failure &&
         cached.failure.nonRetryable === true
       ) {
+        // A note that records "nothing answered" is about the network that
+        // minute, not about the page: a miss, so the page is asked for again
+        // (SharedCore.isTransportFailureNote). The Mac writes into this same
+        // tree, so its notes are read here too.
+        if (
+          typeof SharedCore !== "undefined" &&
+          typeof SharedCore.isTransportFailureNote === "function" &&
+          SharedCore.isTransportFailureNote(cached)
+        ) {
+          console.log(
+            `📱 Scriptable: Ignoring a cached connection failure for ${normalizedUrl} (noted ${cached.fetchedAt || "earlier"}) — nothing answered then, asking again`,
+          );
+          return null;
+        }
         const failureMessage =
           typeof cached.failure.error === "string"
             ? cached.failure.error

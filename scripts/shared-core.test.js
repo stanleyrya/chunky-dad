@@ -8183,6 +8183,96 @@ test('adaptive crawl: aggregator and multi-event pages follow links; event pages
   assert.equal(parsedConfigs['https://www.eventbrite.com/e/party-1'].urlDiscoveryDepth, undefined);
 });
 
+// gruntparty.monster, run 20260929-091555. The promoter gives each party a
+// page; the home page is whichever party is next (it read: "FOLSOM SATURDAY,
+// SEPT 26 … At THE STUD (1123 FOLSOM STREET, SF, CA)") and the menu lists the
+// others (<a href="/">FOLSOM</a> <a href="/grunt-halloween">Halloween</a>).
+// The home page is one event, so the crawl stopped there: the Halloween page
+// ("OCT 24 at THE STUD … 9pm-2am") was never opened and the source read 0
+// upcoming for as long as the front page showed a party that was over.
+test('adaptive crawl: a configured root that reads as one event still opens the other pages of its own site', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /gruntparty\.example\/(?:brooklyn|grunt-halloween)?$/i, classification: 'event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://gruntparty.example/': {
+      events: [{ title: 'GRUNT PARTY SF', startDate: soon(-3), bar: 'The Stud' }],
+      additionalLinks: [
+        'https://gruntparty.example/?format=ical',      // a query selects a view of a page, the menu names pages
+        'https://illustrator.example/portfolio',        // off the site, not event-shaped: the event-page rule stands
+        'https://gruntparty.example/grunt-halloween',   // the site's own next page
+        'https://gruntparty.example/grunt-halloween#page',
+        'https://gruntparty.example/brooklyn',          // a configured root: it gets its own turn
+        'https://bird-tan-mt6p.squarespace.example/'    // the builder's internal host is not this site
+      ]
+    },
+    'https://gruntparty.example/brooklyn': {
+      events: [{ title: 'GRUNT: BROOKLYN', startDate: soon(-10), bar: "C'mon Everybody" }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/grunt-halloween']
+    },
+    'https://gruntparty.example/grunt-halloween': {
+      events: [{ title: 'GRUNT Halloween', startDate: soon(25), bar: 'The Stud' }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/cart-of-things']
+    },
+    'https://gruntparty.example/cart-of-things': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'One Page Per Party', urls: ['https://gruntparty.example/', 'https://gruntparty.example/brooklyn'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.equal(fetched.filter(url => url === 'https://gruntparty.example/grunt-halloween').length, 1,
+    'the page the menu names is opened, once, though two roots link it');
+  assert.ok(display.logs.some(line => line.includes('Leaving https://gruntparty.example/brooklyn to its own turn')),
+    'a configured page linked from another is read in its own turn, as a root');
+  assert.ok(!display.logs.some(line => line.includes('Skipping duplicate URL') && line.includes('/brooklyn')),
+    'and is not consumed on the way as somebody\'s child');
+  assert.equal(result.totalEvents, 3, 'three pages, three parties');
+  assert.ok(!fetched.includes('https://illustrator.example/portfolio'), 'off-site links keep the event-page rule');
+  assert.ok(!fetched.includes('https://bird-tan-mt6p.squarespace.example/'), 'another registrable domain is not the site');
+  assert.ok(!fetched.some(url => url.includes('?format=ical')), 'a view of a page is not a page of the site');
+  assert.ok(!fetched.includes('https://gruntparty.example/cart-of-things'),
+    'one hop: the page reached this way is an ordinary event page and follows only event-shaped links');
+  const titles = (result.events || []).map(event => event.title);
+  assert.ok(titles.some(title => /halloween/i.test(title)),
+    `the sibling page's party is an event of its own, not enrichment dropped as a "sibling" (got: ${titles.join(' | ')})`);
+  assert.ok(display.logs.some(line => line.includes('reads as one event') && line.includes('gruntparty.example/grunt-halloween')),
+    'and the log says why the page was opened');
+});
+
+test('adaptive crawl: only a CONFIGURED root opens its site — an event page found on the way does not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venue\.example\/event\//i, classification: 'event-page' },
+      { pattern: /venue\.example\/calendar/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://venue.example/calendar': { additionalLinks: ['https://venue.example/event/bear-night'] },
+    'https://venue.example/event/bear-night': {
+      events: [{ title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) }],
+      additionalLinks: ['https://venue.example/private-hire', 'https://venue.example/menu']
+    },
+    'https://venue.example/private-hire': {},
+    'https://venue.example/menu': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue Calendar', urls: ['https://venue.example/calendar'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/event/bear-night'));
+  assert.ok(!fetched.includes('https://venue.example/private-hire') && !fetched.includes('https://venue.example/menu'),
+    'an event page reached through the listing keeps following nothing but event and ticket links');
+});
+
 test('adaptive crawl: ad and unknown pages follow nothing', async () => {
   const core = new SharedCore(CITIES, {
     eventSchema: EventSchema,
@@ -8907,6 +8997,181 @@ test('dead-end store: network failures are NOT learned when the run had zero suc
   await core2.finalizeDeadEndRun(display2, results2);
   const key = core2.getUrlDedupeKey(IQOS_URL);
   assert.equal(results2.deadEndStore[key]?.misses, 1, 'network is up, so the failure is trustworthy');
+});
+
+// ---------------------------------------------------------------------------
+// An outage is not a dead end (2026-09-27, 10:11–10:13: the Mac lost the
+// network for two minutes mid-run). Node's fetch says "fetch failed" and
+// nothing else, the classifier only knew the browser's "failed to fetch", so
+// every one of the 59 failures was written into the no-retry failure cache —
+// the real records, verbatim:
+//   { url: "https://www.bearbrum.com/", statusCode: null, fetchState:
+//     "failed", failure: { nonRetryable: true, context: "root-page", error:
+//     "HTTP request failed for https://www.bearbrum.com/: fetch failed" } }
+// Two configured roots (Bear Brum, Xposure Events' organizer page) read 0
+// for four runs, and 57 whereto.party city pages were confirmed dead by the
+// NEXT run replaying those notes: 3 of 60 cities read since.
+// ---------------------------------------------------------------------------
+
+const OUTAGE_ROOT_URL = 'https://www.bearbrum.com/';
+const OUTAGE_NOTE = {
+  url: OUTAGE_ROOT_URL,
+  fetchedAt: '2026-09-27T15:13:08.626Z',
+  statusCode: null,
+  headers: {},
+  fetchState: 'failed',
+  failure: {
+    nonRetryable: true,
+    context: 'root-page',
+    error: `HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`
+  }
+};
+
+test('outage: Node\'s "fetch failed" is a transport failure — retryable, never a failure note', async () => {
+  const core = createCore();
+  const outage = new Error(`HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`);
+  assert.equal(core.isRetryableFailure(outage), true, 'nothing answered: the next run asks again');
+  for (const wording of [
+    'HTTP request failed for https://a.example/: connect ECONNREFUSED 203.0.113.7:443',
+    'HTTP request failed for https://a.example/: getaddrinfo ENOTFOUND a.example',
+    'HTTP request failed for https://a.example/: other side closed',
+    'HTTP request failed for https://a.example/: UND_ERR_CONNECT_TIMEOUT'
+  ]) {
+    assert.equal(core.isRetryableFailure(new Error(wording)), true, wording);
+  }
+
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+  await core.saveNonRetryableFailureNote(httpAdapter, OUTAGE_ROOT_URL, outage, 'root-page');
+  assert.deepEqual(saved, [], 'an outage writes nothing into the no-retry cache');
+
+  // What the server ANSWERED is still a fact about the page.
+  const gone = new Error('HTTP request failed for https://a.example/x: HTTP 404: Not Found');
+  assert.equal(core.isRetryableFailure(gone), false);
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', gone, 'crawl-page');
+  assert.deepEqual(saved, ['https://a.example/x'], 'a 404 is still noted');
+  const empty = new Error('HTTP request failed for https://a.example/y: Empty response from https://a.example/y');
+  assert.equal(core.isRetryableFailure(empty), false, 'an empty answer is an answer');
+});
+
+test('outage: a note that records "nothing answered" is recognised, a note with a status is not', () => {
+  assert.equal(SharedCore.isTransportFailureNote(OUTAGE_NOTE), true, 'the real note from 2026-09-27');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    statusCode: 404,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+  }), false, 'a stated status is the page speaking');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: HTTP 403: Forbidden' }
+  }), false, 'a status kept only in the message still counts');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: Empty response from https://a.example/x' }
+  }), false, 'a reason that is about the page stays a note');
+  assert.equal(SharedCore.isTransportFailureNote(null), false);
+  assert.equal(SharedCore.isTransportFailureNote({ fetchState: 'downloaded', html: '<p>fetch failed</p>' }), false, 'a page is not a note');
+});
+
+test('outage: a replayed failure note is never the second strike', async () => {
+  const cityUrl = 'https://dead-domain.example/in/sydney';
+  const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);
+  replayed.cachedFailure = true;
+  replayed.retryable = false;
+  const pages = { 'https://hub.example/': { additionalLinks: [cityUrl] } };
+  const harness = createCrawlHarness(pages);
+  const realFetch = harness.httpAdapter.fetchData;
+  harness.httpAdapter.fetchData = async (url) => {
+    if (url === cityUrl) throw replayed;
+    return realFetch(url);
+  };
+  const core = deadEndCore();
+  const key = core.getUrlDedupeKey(cityUrl);
+  const store = { [key]: { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T15:13:08.649Z', misses: 1, capability: SharedCore.DEAD_END_CAPABILITY } };
+  const results = await core.processEvents(deadEndConfig({ store }), harness.httpAdapter, createDisplayAdapterStub(), harness.parsers);
+  assert.equal(results.deadEndStore[key].misses, 1, 'reading the note back attempted nothing and confirms nothing');
+});
+
+test('outage: a connection failure on a host that has answered before is not learned', async () => {
+  const cityUrl = 'https://whereto.party/in/sydney';
+  const deadUrl = 'https://www.iqosvape.com/';
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  core.deadEndRunContext = core.createDeadEndRunContext({
+    deadEndStore: {
+      '::hosts': {
+        'whereto.party': { firstSeen: '2026-09-23T21:11:32.875Z', lastSeen: '2026-09-23T21:11:32.875Z', successes: 1, lastSuccess: '2026-09-23T21:11:32.875Z' }
+      }
+    }
+  });
+  core.deadEndRunContext.successfulFetchCount = 1;
+  core.recordDeadEndNetworkFailure({ url: cityUrl, currentDepth: 1 });
+  core.recordDeadEndNetworkFailure({ url: deadUrl, currentDepth: 1 });
+  const results = {};
+  await core.finalizeDeadEndRun(display, results);
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(cityUrl)], undefined,
+    'the host serves pages: this was its outage, the page is asked for again next run');
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(deadUrl)]?.misses, 1,
+    'a host that never answered is still learned, two-strike as before');
+  assert.ok(display.logs.some(line => line.includes('Not learning 1 network-failure URL(s)') && line.includes('whereto.party')),
+    'and the log says which host was out');
+});
+
+test('outage: dead ends confirmed before the crawler told an outage from a dead page get their one retry', () => {
+  const core = deadEndCore();
+  const context = core.createDeadEndRunContext({ deadEndStore: {} });
+  const learnedInTheOutage = { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T17:48:04.231Z', misses: 2, capability: 'machine-door-2026-09' };
+  assert.equal(core.isConfirmedDeadEndEntry(context, learnedInTheOutage), false, 'the real whereto.party entry is retried once');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { ...learnedInTheOutage, capability: SharedCore.DEAD_END_CAPABILITY }), true,
+    'and re-confirms under the current stamp if it misses again');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { firstSeen: '2026-09-27T15:25:11.000Z', lastSeen: '2026-09-27T15:25:11.000Z', misses: 1, lastStatus: 404 }), true,
+    'a page the origin called gone needs no second opinion');
+});
+
+test('outage: the one retry is rationed per host — 58 forgiven pages of one site are not all asked for in one run', () => {
+  const core = deadEndCore();
+  const cap = SharedCore.DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+  const young = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const store = {};
+  const cityUrls = [];
+  for (let index = 0; index < 58; index += 1) {
+    const url = `https://whereto.party/in/city-${index}`;
+    cityUrls.push(url);
+    store[core.getUrlDedupeKey(url)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  }
+  const otherHost = 'https://venue.example/events/old-page';
+  store[core.getUrlDedupeKey(otherHost)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  const gone = 'https://whereto.party/in/gone';
+  store[core.getUrlDedupeKey(gone)] = { firstSeen: young, lastSeen: young, misses: 1, lastStatus: 404 };
+  const current = 'https://whereto.party/in/barren';
+  store[core.getUrlDedupeKey(current)] = { firstSeen: young, lastSeen: young, misses: 2, capability: SharedCore.DEAD_END_CAPABILITY };
+  const before = JSON.stringify(store);
+
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const allowed = core.filterKnownDeadEndUrls([...cityUrls, otherHost, gone, current]);
+  const allowedCities = allowed.filter(url => url.startsWith('https://whereto.party/in/city-'));
+  assert.equal(allowedCities.length, cap, `only ${cap} of the 58 forgiven pages are asked for this run`);
+  assert.deepEqual(allowedCities, cityUrls.slice(0, cap), 'in the order the site listed them');
+  assert.ok(allowed.includes(otherHost), 'another host has its own ration');
+  assert.ok(!allowed.includes(gone), 'a page the origin called gone stays skipped');
+  assert.ok(!allowed.includes(current), 'a dead end confirmed under the current capability stays skipped');
+  assert.equal(core.deadEndRunContext.capabilityRetryDeferredCount, 58 - cap);
+  assert.equal(JSON.stringify(store), before, 'a deferred entry is untouched: it is still owed its retry');
+
+  // The processing-time twin sees the same entries: a granted one is not
+  // counted twice, a deferred one is skipped there too.
+  assert.equal(core.getSkippableDeadEndEntry(cityUrls[0]), null, 'granted at enqueue → fetched');
+  assert.ok(core.getSkippableDeadEndEntry(cityUrls[57]), 'deferred at enqueue → skipped at fetch time');
+  assert.equal(core.deadEndRunContext.capabilityRetriesByHost['whereto.party'], cap);
+
+  // Next run: the pages retried last run were re-stamped or recovered; the
+  // rest take their turn.
+  for (const url of cityUrls.slice(0, cap)) delete store[core.getUrlDedupeKey(url)];
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const nextRun = core.filterKnownDeadEndUrls(cityUrls);
+  assert.deepEqual(nextRun, [...cityUrls.slice(0, cap), ...cityUrls.slice(cap, 2 * cap)],
+    'recovered pages are ordinary pages again, and the next ration of forgiven ones goes out');
+  core.deadEndRunContext = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -26344,4 +26609,283 @@ test('links: an untried link is presumed gone only by its SHAPE — five sibling
   few.deadEndRunContext = { enabled: true, retryDays: 30, minMisses: 2, store: Object.fromEntries(Object.entries(store).slice(0, 4)) };
   few.notePathShapeEvidence('https://venue.example/1-6-26/tendie-tuesday-3', 'gone');
   assert.equal(few.isOriginStatedGoneUrl(untried), false);
+});
+
+// ---------------------------------------------------------------------------
+// Series-level fills never detach a night (run 20260929-091555: Gathr's row
+// for the owner's weekly "Bear Happy Hour" series proposed five overrides
+// that add one picture and "Free" and change nothing; Thotyssey's FUZZY row
+// three more). Shapes below are the run's own records, trimmed.
+// ---------------------------------------------------------------------------
+async function buildSeriesFillNights(core, nights) {
+  const SERIES_NOTES = [
+    'Bar: Check instagram for this week’s location.',
+    'Tea: Popular happy hour that changes location every week in Manhattan.',
+    'Instagram: https://www.instagram.com/bearhappyhournyc',
+    'Shorter: BHH',
+    'Web: https://linktr.ee/bearhappyhour'
+  ].join('\n');
+  const first = Date.now() + 14 * 24 * 60 * 60 * 1000;
+  const built = [];
+  const original = console.log;
+  console.log = () => {};
+  try {
+    for (let i = 0; i < nights.length; i++) {
+      const start = new Date(first + i * 7 * 24 * 60 * 60 * 1000);
+      const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+      const seriesNight = { title: 'Bear Happy Hour', identifier: 'cal:6thhos5ct3pllq5kmvsp7infd8@google.com', startDate: start, endDate: end, location: '', notes: SERIES_NOTES };
+      const scraped = {
+        title: 'Bear Happy Hour',
+        description: 'Popular happy hour that changes location every week in Manhattan.',
+        startDate: start,
+        endDate: end,
+        city: 'dallas',
+        image: 'https://i.imgur.com/eiEbgvg.jpeg',
+        imageSource: 'json-api',
+        cover: 'Free',
+        instagram: 'https://www.instagram.com/bearhappyhournyc',
+        website: 'https://linktr.ee/bearhappyhour',
+        source: 'ai-web',
+        _parserConfig: { name: 'Gathr', siteRole: 'aggregator' },
+        ...nights[i]
+      };
+      built.push(await core.buildAnalyzedCalendarEvent(scraped, {
+        action: 'new',
+        reason: 'Recurring source match found - creating override',
+        sourceEvent: seriesNight,
+        existingKey: '6thhos5ct3pllq5kmvsp7infd8@google.com',
+        overrideIdentity: { overrideUid: '6thhos5ct3pllq5kmvsp7infd8@google.com', overrideRecurrenceId: start.toISOString() }
+      }, {}, {}));
+    }
+  } finally { console.log = original; }
+  return built;
+}
+
+test('series-level fills: the same picture and cover on every night of a saved series detach no night', async () => {
+  const core = createCore();
+  const nights = await buildSeriesFillNights(core, [{}, {}, {}, {}, {}]);
+  for (const night of nights) {
+    assert.equal(SharedCore.isOverrideCreate(night), true);
+    assert.equal(night._mergeNoOp, false, 'precondition: each night adds lines, so the no-op gate lets it through');
+    assert.deepEqual(core.getOverrideNightFills(night).keys, ['cover', 'image']);
+  }
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let withheld;
+  try { withheld = core.withholdSeriesLevelOverrideFills(nights); } finally { console.log = original; }
+  assert.equal(withheld.length, 5);
+  assert.deepEqual(nights[0]._seriesLevelFillWithheld, { fields: ['cover', 'image'], nights: 5 });
+  assert.equal(lines.filter(line => line.startsWith('🔁 SERIES FILL: "Bear Happy Hour" — Gathr adds the same cover, image to 5 nights')).length, 1, lines.join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution(nights), [], 'never written');
+  assert.equal(core.isOwnerReviewCandidate(nights[0]), false, 'and never a card');
+  assert.equal(SharedCore.describeExecutionDisposition(nights[0]),
+    'WITHHELD (series-level fact — the same cover, image on 5 nights of the saved series; edit the series, not its nights)');
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_seriesLevelFillWithheld'), 'a re-analysis starts clean');
+});
+
+test('series-level fills: a night with a fact of its own, a lone night, a flyer per night and an owner verdict all stay proposals', async () => {
+  const core = createCore();
+  const quiet = (fn) => { const original = console.log; console.log = () => {}; try { return fn(); } finally { console.log = original; } };
+
+  // This week's venue is what an override is for: that night stays, the
+  // nights that only repeat the series picture do not.
+  const withVenue = await buildSeriesFillNights(core, [{}, { bar: 'Rawhide', address: '500 8th Ave, New York, NY 10018' }, {}]);
+  assert.ok(core.getOverrideNightFills(withVenue[1]).keys.includes('address'), 'that night adds its own address');
+  quiet(() => core.withholdSeriesLevelOverrideFills(withVenue));
+  assert.equal(Boolean(withVenue[1]._seriesLevelFillWithheld), false);
+  assert.equal(SharedCore.filterEventsForExecution([withVenue[1]]).length, 1);
+  assert.equal(Boolean(withVenue[0]._seriesLevelFillWithheld), true);
+  assert.equal(Boolean(withVenue[2]._seriesLevelFillWithheld), true);
+
+  // One night alone cannot show that the value is the series'.
+  const lone = await buildSeriesFillNights(core, [{}]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(lone)), []);
+  assert.equal(SharedCore.filterEventsForExecution(lone).length, 1);
+
+  // A flyer per night is the source speaking per night.
+  const perNight = await buildSeriesFillNights(core, [
+    { image: 'https://i.imgur.com/october-1.jpeg' },
+    { image: 'https://i.imgur.com/october-8.jpeg' }
+  ]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(perNight)), []);
+
+  // The owner's verdict on a night always lands on that night.
+  const verdicts = await buildSeriesFillNights(core, [
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true },
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true }
+  ]);
+  assert.equal(core.getOverrideNightFills(verdicts[0]), null);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(verdicts)), []);
+});
+
+// A rate table's season row is a name and a date with nothing of its own
+// (campoutpoconos.com/accommodations, run 20260929-091555 — the record as
+// the run built it, trimmed).
+test('a name and a date with no picture, no words and no page of their own, placed only by the site, is withheld as an announcement', async () => {
+  const core = createFestivalCore([]);
+  const seasonRow = {
+    title: 'SPRING',
+    description: 'SPRING',
+    startDate: '2027-04-23T04:00:00.000Z',
+    endDate: '2027-04-23T07:00:00.000Z',
+    _endDateDefaulted: true,
+    bar: 'Camp Out',
+    barSource: 'venue-site-identity',
+    address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301',
+    addressSource: 'curated',
+    location: '41.0219799, -75.1167816',
+    pinSource: 'curated',
+    website: 'https://campoutpoconos.com',
+    url: 'https://campoutpoconos.com',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true,
+    _sourcePageUrl: 'https://campoutpoconos.com/accommodations/',
+    _multiEventSegment: { index: 14, total: 17, lineCount: 3, text: 'SPRING | April 23 – May 21 • Weekday $40 | Weekend $70 • Additional Guest: Weekday $40 | Weekend $50' }
+  };
+  // The same venue's real theme weekend: all-day too, but it has a flyer and a blurb.
+  const themeWeekend = {
+    ...seasonRow,
+    title: 'LEATHER BEARS',
+    description: 'Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp.',
+    image: 'https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg',
+    startDate: '2026-10-09T04:00:00.000Z',
+    endDate: '2026-10-12T03:59:00.000Z',
+    _multiEventSegment: { index: 2, total: 9, lineCount: 4 }
+  };
+  // A row that names its own page is an event with a page, however bare.
+  const withPage = { ...seasonRow, title: 'CALF B&B EVENT', description: 'CALF B&B EVENT', website: 'https://eaglela.com/events/calf-bb-event/', url: 'https://eaglela.com/events/calf-bb-event/' };
+  // A place the row itself stated is not the site's identity.
+  const statedPlace = { ...seasonRow, title: 'Bear Camp Opening', description: 'Bear Camp Opening', barSource: 'page-adjacent' };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([seasonRow, themeWeekend, withPage, statedPlace], buildFestivalPrepAdapter(), {});
+  } finally { console.log = original; }
+  const byTitle = (title) => analyzed.find(e => e.title === title);
+  assert.equal(byTitle('SPRING')._announcementOnlyWithheld, true);
+  assert.ok(lines.some(line => line.startsWith('📣 ANNOUNCEMENT: "SPRING" is a name and a date with no picture, no words and no page of their own')), lines.filter(l => l.includes('ANNOUNCEMENT')).join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution([byTitle('SPRING')]), []);
+  assert.equal(core.isOwnerReviewCandidate(byTitle('SPRING')), false, 'never a card');
+  assert.ok(!byTitle('LEATHER BEARS')._announcementOnlyWithheld, 'a flyer and a blurb are the event\'s own');
+  assert.ok(!byTitle('CALF B&B EVENT')._announcementOnlyWithheld, 'a page of its own');
+  assert.ok(!byTitle('Bear Camp Opening')._announcementOnlyWithheld, 'a place the row stated');
+});
+
+// beefdip.com/planned-events, run 20260929-091555: the row "Sunday, Jan 31 •
+// 11AM / 1PM • The Tryst Hotel" of the DRAG BRUNCH + ROOFTOP POOL card became
+// a record titled "The Tryst Hotel", and its copy — "Drag Brunch + Rooftop
+// Pool at The Tryst Hotel" — counted as the party restating its own name.
+test('sanity: a copy that only places something AT the venue does not restate a venue-named title', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, {
+    title: 'The Tryst Hotel',
+    bar: 'The Tryst Hotel',
+    description: 'Drag Brunch + Rooftop Pool at The Tryst Hotel'
+  }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Hotel Delfin',
+    bar: 'Hotel Delfin',
+    description: 'Pool party @ Hotel Delfin, all day.'
+  }), ['junk-title']);
+  // The name standing anywhere else is the party naming itself.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'MASSIVE',
+    bar: 'MASSIVE',
+    description: 'Saturdays at MASSIVE. MASSIVE returns to the warehouse with dirty grooves all night long.'
+  }), []);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('drag brunch rooftop pool at the tryst hotel', 'the tryst hotel'), false);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('the tryst hotel presents drag brunch', 'the tryst hotel'), true);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('great party', 'the tryst hotel'), false);
+});
+
+// beefdip.com/planned-events: WELCOME PARTY's flyer is
+// ".../uploads/2026/01/2026-01-25 Welcome Party.webp"; an earlier run cut it
+// at the space and saved the head as FOAM POOL PARTY's website, and run
+// 20260929-091555 kept it ("same-host deeper URL beats domain root").
+test('the head of a picture\'s address is a file, not a page: it loses every link merge', () => {
+  const core = createCore();
+  const cut = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25';
+  const welcomeFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp';
+  const foamFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp';
+  // Nothing known about the run's pictures: nothing is presumed.
+  assert.equal(core.isCutPictureAddress(cut), false);
+  // The neighbour card's flyer is a picture of this run.
+  core.notePictureAddresses([{ title: 'WELCOME PARTY', image: welcomeFlyer }, { title: 'FOAM POOL PARTY', image: foamFlyer }]);
+  assert.equal(core.isCutPictureAddress(cut), true);
+  assert.equal(core.isCutPictureAddress('http://www.beefdip.com/wp-content/uploads/2026/01/2026-01-25'), true, 'scheme and www are spelling');
+  // A page, a front door, the pictures' folder and a shorter head that ends
+  // inside a word are not cut picture addresses.
+  for (const page of ['https://beefdip.com/planned-events/', 'https://beefdip.com', 'https://beefdip.com/wp-content/uploads/2026/01/',
+    'https://beefdip.com/wp-content/uploads/2026/01/2026-01', 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome']) {
+    assert.equal(core.isCutPictureAddress(page), page.endsWith('Welcome'), page);
+  }
+  const records = { a: { title: 'FOAM POOL PARTY' }, b: { title: 'FOAM POOL PARTY', image: foamFlyer } };
+  assert.deepEqual(core.resolveConflictDeterministically('website', cut, 'https://beefdip.com',
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }),
+    { winner: 'b', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' });
+  assert.equal(core.resolveConflictDeterministically('website', 'https://beefdip.com', cut,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }).winner, 'a', 'and it never replaces a saved link');
+  // A picture carried only by a record of the merge counts too.
+  const fresh = createCore();
+  assert.equal(fresh.isCutPictureAddress(cut, [{ imageVertical: welcomeFlyer }]), true);
+});
+
+// BEEFMINCE SPOOKMINCE, run 20260929-091555: the calendar holds the doubled
+// address an earlier run saved and the pin geocoded from it; the scrape now
+// brings the clean form and (its geocode unanswered) the page's maps-link pin.
+test('an address said once replaces the same address said twice, and the saved pin stays where it is', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '51.5251192, -0.0798044',
+    notes: [
+      'bar: UNLOCKED (Shoreditch)',
+      'address: 118 Curtain Rd, London EC2A 3AY, London EC2A 3AY',
+      'timezone: Europe/London',
+      'website: https://beefmince.com/events',
+      'pinSource: geocoded-exact',
+      'addressSource: page',
+      'key: spookmince|2026-10-31|unlocked (shoreditch)'
+    ].join('\n')
+  };
+  const scraped = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'UNLOCKED (Shoreditch)',
+    address: '118 Curtain Rd, London EC2A 3AY',
+    addressSource: 'page',
+    location: '51.52608,-0.079068',
+    pinSource: 'maps-link',
+    city: 'london',
+    timezone: 'Europe/London',
+    website: 'https://beefmince.com/events',
+    source: 'ai-web',
+    _parserConfig: { name: 'BEEFMINCE' },
+    _fieldPriorities: {
+      address: { priority: ['ai-web'], merge: 'ai' },
+      location: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let merged;
+  try {
+    merged = (await core.prepareEventsForCalendar([scraped], buildPrepCalendarAdapter([calendarRecord]), {}))[0];
+  } finally { console.log = original; }
+  assert.equal(merged._action, 'merge');
+  assert.equal(merged.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.equal(merged.location, '51.5251192, -0.0798044', 'a respelled address is not a venue that moved');
+  assert.ok(lines.some(line => line.includes('field=address resolved deterministically — the same address with a line said twice on the other side — said once')),
+    lines.filter(line => line.includes('address')).join('\n'));
 });

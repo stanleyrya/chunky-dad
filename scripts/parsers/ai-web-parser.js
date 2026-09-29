@@ -1225,8 +1225,9 @@ class AiWebParser {
             // Squarespace event collections, the same way: the listing page
             // has a JSON twin at its own URL (see collectSquarespaceCollectionEvents).
             const squarespaceRows = await this.collectSquarespaceCollectionEvents(effectiveHtmlData, parserConfig, httpAdapter);
+            const squarespaceTemplateMarker = this.findSquarespaceTemplateMarker(squarespaceRows);
             const squarespaceEvents = squarespaceRows
-                .map(row => this.buildEventFromSquarespaceItem(row, sourceUrl))
+                .map(row => this.buildEventFromSquarespaceItem(row, sourceUrl, { templateMarker: squarespaceTemplateMarker }))
                 .filter(Boolean);
             if (squarespaceRows.length > 0) {
                 console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
@@ -2102,8 +2103,10 @@ class AiWebParser {
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (event) {
                     // A one-line listing row owns no artwork: any picture it
-                    // acquired came from the page around it.
-                    if (segment && segment._compactListingRow && event.image && !(typeof segment.html === 'string' && segment.html.includes(String(event.image)))) {
+                    // acquired came from the page around it — unless the
+                    // row's own markup carries that picture, however the
+                    // page spells its address (segmentMarkupCarriesImage).
+                    if (segment && segment._compactListingRow && event.image && !this.segmentMarkupCarriesImage(segment, event.image, sourceUrl)) {
                         console.log(`🖼️ AI Web: Dropped "${event.title || 'event'}" image — a one-line listing row has no artwork of its own (the picture belongs to the page's cards): ${event.image}`);
                         delete event.image;
                         delete event.imageSource;
@@ -6614,6 +6617,28 @@ class AiWebParser {
         };
     }
 
+    // Does this segment's OWN markup carry the picture? A literal search for
+    // the picture's address misses every card whose page spells it another
+    // way: behind an image-optimizer wrapper
+    // (src="/_next/image?url=https%3A%2F%2Fcdn…%2Fflyer.png&amp;w=1920"),
+    // percent- or entity-encoded, or at another rendition size. whereto.party,
+    // run 20260929-091555: every card prints its flyer that way, its one
+    // text line ("Sat, 3 October 2026 · 22:00") made each card a one-line
+    // row, and 19 records lost the flyer their own card carries.
+    // Judged on the addresses the segment's markup yields through the same
+    // reader that offered the picture (extractOrderedImageUrlsFromHtml),
+    // compared at rendition-neutral identity (stripSizeParams).
+    segmentMarkupCarriesImage(segment, imageUrl, sourceUrl = '') {
+        const html = segment && typeof segment.html === 'string' ? segment.html : '';
+        const image = String(imageUrl || '').trim();
+        if (!html || !image) return false;
+        if (html.includes(image)) return true;
+        const wanted = this.stripSizeParams(image);
+        if (!wanted) return false;
+        return this.extractOrderedImageUrlsFromHtml(html, sourceUrl)
+            .some(url => url === image || this.stripSizeParams(url) === wanted);
+    }
+
     attachSequentialImageHintsToSegments(html, segments, sourceUrl = '', ocrResults = []) {
         // A one-line listing row ("10/3 FURBALL DC - ICON") states no artwork
         // of its own; the page's pictures belong to its cards. Pairing one
@@ -9342,14 +9367,44 @@ class AiWebParser {
         return rows;
     }
 
-    buildEventFromSquarespaceItem(item, sourceUrl) {
+    // The template's own marker, learned from the collection itself: the
+    // marker coordinate that rows keep while their MAP pin points somewhere
+    // else (massbearsandcubs.org, run 20260929-091555: 38 of 50 rows carry
+    // marker 40.7207559, -74.0007613 beside a Boston map pin). A row whose
+    // map pin IS that marker never had its map set. '' when fewer than two
+    // rows show the pattern — one row proves nothing.
+    findSquarespaceTemplateMarker(rows) {
+        const counts = new Map();
+        const keyOf = (lat, lng) => (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && (Number(lat) !== 0 || Number(lng) !== 0)
+            ? `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`
+            : '');
+        for (const row of Array.isArray(rows) ? rows : []) {
+            const location = row && row.location && typeof row.location === 'object' ? row.location : null;
+            if (!location) continue;
+            const marker = keyOf(location.markerLat, location.markerLng);
+            const map = keyOf(location.mapLat, location.mapLng);
+            if (!marker || !map || marker === map) continue;
+            counts.set(marker, (counts.get(marker) || 0) + 1);
+        }
+        let best = '';
+        for (const [marker, count] of counts) {
+            if (count >= 2 && count > (counts.get(best) || 0)) best = marker;
+        }
+        return best;
+    }
+
+    buildEventFromSquarespaceItem(item, sourceUrl, options = {}) {
         if (!item || typeof item !== 'object') return null;
-        const startDate = new Date(Number(item.startDate));
+        // The platform stamps its epoch values with the milliseconds of the
+        // moment the item was saved (1796256000686 — 7:00:00.686 PM); an
+        // event starts on the second.
+        const wholeSecond = (value) => Math.floor(Number(value) / 1000) * 1000;
+        const startDate = new Date(wholeSecond(item.startDate));
         if (Number.isNaN(startDate.getTime())) return null;
         const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const title = clean(item.title);
         if (!title) return null;
-        const endCandidate = typeof item.endDate === 'number' ? new Date(item.endDate) : null;
+        const endCandidate = typeof item.endDate === 'number' ? new Date(wholeSecond(item.endDate)) : null;
         const endDate = endCandidate && !Number.isNaN(endCandidate.getTime()) && endCandidate.getTime() > startDate.getTime()
             ? endCandidate
             : null;
@@ -9396,10 +9451,24 @@ class AiWebParser {
         // 20260913-152123) carried only 40.7207559, -74.0007613 — Squarespace's
         // own New York default — and geocoded to 443–459 Broadway while its
         // flyer says 60 Rowes Wharf, Boston.
+        // …and so is a location with a name and no street line whose map pin
+        // IS the template's marker (findSquarespaceTemplateMarker): the
+        // monthly meetings at "Online/Virtual" carried that pin, were
+        // reverse-geocoded to "459, Broadway, Little Italy, Lower
+        // Manhattan" and shipped with that address (run 20260929-091555).
+        // A street line beneath the name is the editor stating a place, and
+        // keeps its pin whatever it equals.
         const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
         const statesPlace = Boolean(clean(location.addressTitle) || addressParts.length > 0);
-        const lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
-        const lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
+        let lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
+        let lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
+        const templateMarker = options && typeof options.templateMarker === 'string' ? options.templateMarker : '';
+        if (templateMarker && addressParts.length === 0 && Number.isFinite(lat) && Number.isFinite(lng)
+            && `${lat.toFixed(5)},${lng.toFixed(5)}` === templateMarker) {
+            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng}) and no street line — an untouched map, not a place; no pin taken`);
+            lat = undefined;
+            lng = undefined;
+        }
         if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
             event.location = `${lat}, ${lng}`;
         }
@@ -10782,10 +10851,14 @@ class AiWebParser {
      * parameter or host.
      *
      * FAIL CLOSED: only a declared canonical that resolves to the SAME host+path
-     * as the page we actually fetched is suppressed. A canonical pointing at a
-     * different path or host may be a genuinely different resource (a slug
-     * alias, a section index), so it stays in the crawl queue and costs us at
-     * most one redundant fetch — never a lost page.
+     * as the page we actually fetched is suppressed — or one that carries the
+     * fetched address's own identifier (getUrlIdAliasKey: an Eventbrite
+     * organizer configured as /o/25444337255 declares /o/xposure-events-llc-
+     * 25444337255, and was fetched a second time under that spelling and a
+     * third under eventbrite.co.uk, every refresh). A canonical pointing at
+     * any other path or host may be a genuinely different resource (a section
+     * index, page one of a paged list), so it stays in the crawl queue and
+     * costs us at most one redundant fetch — never a lost page.
      *
      * Returns the suppressed URLs (for tests/callers); the crawl-visible effect
      * is the mutation of `urls`.
@@ -10797,6 +10870,8 @@ class AiWebParser {
 
         const sourceKey = this.getUrlPathIdentityKey(sourceUrl);
         if (!sourceKey) return suppressed;
+        const sourceAlias = this.getUrlIdAliasKey(sourceUrl);
+        let aliasDeclared = false;
 
         const seen = new Set();
         for (const rawDeclared of this.extractSelfDeclaredCanonicalUrls(html)) {
@@ -10807,8 +10882,14 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
+            const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
+            // The declared address carries the fetched address's own
+            // identifier (see getUrlIdAliasKey): the same document under its
+            // other spelling.
+            const sameId = Boolean(sourceAlias) && this.getUrlIdAliasKey(resolved) === sourceAlias;
             // Not the page we fetched → not a self-reference → leave it alone.
-            if (this.getUrlPathIdentityKey(resolved) !== sourceKey) continue;
+            if (!samePath && !sameId) continue;
+            if (sameId) aliasDeclared = true;
 
             const key = this.getUrlDedupeKey(resolved);
             if (!key || seen.has(key)) continue;
@@ -10819,10 +10900,61 @@ class AiWebParser {
             suppressed.push(entry.url);
         }
 
+        // Once the page has declared itself under that identifier, every
+        // other spelling of it among the links is this document too: the
+        // bare-id form, the slugged form, the same path on the platform's
+        // other national domain.
+        const aliases = [];
+        if (aliasDeclared) {
+            for (const [key, entry] of Array.from(urls.entries())) {
+                if (!entry || !entry.url || this.getUrlIdAliasKey(entry.url) !== sourceAlias) continue;
+                // A query that survived tracking-parameter stripping selects
+                // something (a date, an occurrence): a page of its own.
+                if (/\?/.test(String(entry.url).split('#')[0])) continue;
+                urls.delete(key);
+                aliases.push(entry.url);
+            }
+        }
+
         if (suppressed.length > 0) {
             console.log(`🤖 AI Web: Self-canonical link skipped for ${sourceUrl}: ${suppressed.join(', ')} — the page's own canonical/og:url is this same document, not a new page to crawl`);
         }
-        return suppressed;
+        if (aliases.length > 0) {
+            console.log(`🤖 AI Web: Self-alias link skipped for ${sourceUrl}: ${aliases.join(', ')} — the page declares itself under the same identifier; another spelling of its address is this same document`);
+        }
+        return suppressed.concat(aliases);
+    }
+
+    /**
+     * Platforms address one document two ways: by its identifier alone and
+     * by a readable slug that ENDS in that identifier —
+     *   eventbrite.com/o/25444337255
+     *   eventbrite.com/o/xposure-events-llc-25444337255   (its rel=canonical)
+     *   eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913
+     * The slug is decoration, the number is the address. The key is
+     * "<site name>|<parent path>|<identifier>": the registrable domain's own
+     * label (so a platform's national domains agree), everything before the
+     * last path segment, and the run of six or more digits the last segment
+     * consists of or ends in after a hyphen. '' when the last segment carries
+     * no such identifier — most URLs — so nothing is ever matched on a guess.
+     * Never used alone: suppressSelfCanonicalUrls only trusts it after the
+     * page itself declared an address with the same key.
+     * Pure string work: iOS JavaScriptCore has no URL global.
+     */
+    getUrlIdAliasKey(url) {
+        const text = String(url || '').trim();
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        const domain = this.getRegistrableDomainFromUrl(text);
+        const siteName = String(domain || '').split('.')[0];
+        if (!siteName) return '';
+        const segments = String(match[2] || '').split('/').filter(Boolean);
+        if (segments.length === 0) return '';
+        const last = segments[segments.length - 1].toLowerCase();
+        const id = last.match(/^(?:.*-)?(\d{6,})$/);
+        if (!id) return '';
+        const parent = segments.slice(0, -1).join('/').toLowerCase();
+        return `${siteName}|${parent}|${id[1]}`;
     }
 
     getDefaultMaxAdditionalUrls() {
@@ -17461,8 +17593,11 @@ class AiWebParser {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
         }
-        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages
-        if (/\{[^}]+\}/.test(url)) {
+        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages.
+        // The braces arrive percent-encoded when the placeholder sat in an
+        // href the browser never rendered (bearitmtl.com/events/ links
+        // "/events/%7B%7B%20data.link%20%7D%7D" six times over).
+        if (/\{[^}]+\}/.test(String(url).replace(/%7B/gi, '{').replace(/%7D/gi, '}'))) {
             return { valid: false, reason: 'template-url' };
         }
 

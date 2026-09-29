@@ -264,6 +264,9 @@ class BasicDataNormalizer extends BaseNormalizer {
         // Cover shape gate: prose never ships as a cover (see dropProseCover).
         event = this.dropProseCover(event);
 
+        // An address says each of its lines once (see collapseRepeatedAddressLines).
+        event = this.collapseRepeatedAddressLines(event);
+
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
     }
@@ -290,6 +293,26 @@ class BasicDataNormalizer extends BaseNormalizer {
         if (/^\d{1,4}(?:[.,]\d{1,2})?(?:\s*[-–—/]\s*\d{1,4}(?:[.,]\d{1,2})?)?$/.test(coverText)) return event;
         console.log(`🧹 NORMALIZE: dropped cover "${coverText}" for "${event.title || 'unknown'}" — neither a price nor a free-admission phrase (age restrictions and ticket-availability prose are not a cover)`);
         delete event.cover;
+        return event;
+    }
+
+    // A feed that publishes the street line and the locality as separate
+    // fields, where the street line already ends in the locality, comes out
+    // saying it twice: dice.fm's SPOOKMINCE, run 20260929-091555 — "118
+    // Curtain Rd, London EC2A 3AY, London EC2A 3AY" — and the doubled form
+    // then returns 0 geocode results for its first two query variants.
+    // A comma segment that repeats an earlier one word for word AND carries
+    // a digit (a street line, a postcode line) is dropped; the first stays.
+    // Digit-free repeats are left alone: "New York, New York" is a city and
+    // a state. The rule itself lives in SharedCore.collapseRepeatedAddressLines
+    // (the address merge uses it too).
+    collapseRepeatedAddressLines(event) {
+        if (!event || typeof event !== 'object' || typeof event.address !== 'string') return event;
+        if (!this.core || typeof this.core.collapseRepeatedAddressLines !== 'function') return event;
+        const collapsed = this.core.collapseRepeatedAddressLines(event.address);
+        if (collapsed === event.address) return event;
+        console.log(`🧹 NORMALIZE: address "${event.address}" → "${collapsed}" for "${event.title || 'unknown'}" — a line said twice is said once`);
+        event.address = collapsed;
         return event;
     }
 
@@ -1193,6 +1216,9 @@ class LocationNormalizer extends BaseNormalizer {
     // inside another curated bar's name key, e.g. "Eagle" ⊂ "Dallas Eagle")
     // is never backfilled either. A present city that differs is NEVER
     // overwritten.
+    // When the name decides nothing, the DOOR is asked: the venue name and
+    // the event's numbered street line together answer to the curated bars
+    // of exactly one city (_citySource 'curated-door').
     // Provenance is stamped via the existing _citySource convention
     // (underscore fields stay out of serialized output).
     backfillCityFromCuratedBar(event) {
@@ -1201,7 +1227,23 @@ class LocationNormalizer extends BaseNormalizer {
         if (currentCity && currentCity !== 'unknown') return event;
         const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (!barName) return event;
-        const result = this.core.findCuratedBarCityByName(barName);
+        let result = this.core.findCuratedBarCityByName(barName);
+        // The name alone decided nothing (not a curated name in full, a
+        // family stem, or curated in several cities): the DOOR may — the
+        // venue name together with the numbered street line the page gave
+        // (SharedCore.findCuratedBarCityByDoor).
+        // A stem name is decided the same way: GRUNT's Halloween page
+        // (2026-09-29) says "at the The Stud 1123 FOLSOM" — a name three
+        // other curated bars contain, and that bar's own street line.
+        let byDoor = false;
+        if ((!result || result.ambiguousCities || result.genericStem)
+            && typeof this.core.findCuratedBarCityByDoor === 'function') {
+            const door = this.core.findCuratedBarCityByDoor(barName, event.address);
+            if (door && !door.ambiguousCities) {
+                result = door;
+                byDoor = true;
+            }
+        }
         if (!result) return event;
         const title = event.title || 'unknown';
         // The page NAMED a city we do not cover ("seoul", parked on
@@ -1242,9 +1284,62 @@ class LocationNormalizer extends BaseNormalizer {
             return event;
         }
         event.city = result.city;
-        event._citySource = 'curated-bar';
-        console.log(`🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        event._citySource = byDoor ? 'curated-door' : 'curated-bar';
+        console.log(byDoor
+            ? `🗺️ LocationNormalizer: Backfilled city "${result.city}" for "${title}" from the curated door of "${result.bar.name}" — venue "${barName}" at "${String(event.address || '').trim()}" is that bar's name and street line`
+            : `🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        if (byDoor) this.fillVenueFromCuratedDoor(event, result.bar, title);
         return event;
+    }
+
+    // The door that gave the city names the VENUE too, by name and street
+    // line both — so the record takes the curated record's own spelling of
+    // them: the bar's curated name ("Precinct" → "Precinct LA"), its full
+    // address in place of the bare street line (the same line, by the match
+    // itself), and — fill-only — its pin, maps link and handle. Same stamps
+    // BarDataNormalizer uses for the same values.
+    fillVenueFromCuratedDoor(event, curated, title) {
+        if (!event || !curated || typeof curated !== 'object') return false;
+        const filled = [];
+        const curatedName = typeof curated.name === 'string' ? curated.name.trim() : '';
+        if (curatedName && event.bar !== curatedName) {
+            event.bar = curatedName;
+            event.barSource = 'curated';
+            filled.push('bar');
+        }
+        const curatedAddress = typeof curated.address === 'string' ? curated.address.trim() : '';
+        if (curatedAddress && event.address !== curatedAddress) {
+            event.address = curatedAddress;
+            event.addressSource = 'curated';
+            markCuratedVenueField(event, 'address', curated);
+            filled.push('address');
+        }
+        const curatedPin = typeof curated.coordinates === 'string' ? curated.coordinates.trim() : '';
+        const hasPin = typeof event.location === 'string' && event.location.trim();
+        if (!hasPin && this.isCoordinatePairString(curatedPin)) {
+            event.location = curatedPin;
+            event.pinSource = 'curated';
+            markCuratedVenueField(event, 'location', curated);
+            filled.push('location');
+        } else if (!hasPin) {
+            this.markCuratedAddressForGeocode(event, curated);
+        }
+        const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
+        if (!event.gmaps && curatedMaps) {
+            event.gmaps = curatedMaps;
+            markCuratedVenueField(event, 'gmaps', curated);
+            filled.push('gmaps');
+        }
+        const curatedInstagram = typeof curated.instagram === 'string' ? curated.instagram.trim() : '';
+        if (!event.instagram && curatedInstagram) {
+            event.instagram = curatedInstagram;
+            markCuratedVenueField(event, 'instagram', curated);
+            filled.push('instagram');
+        }
+        if (filled.length > 0) {
+            console.log(`🗺️ LocationNormalizer: Filled ${filled.join(', ')} for "${title}" from curated bar "${curatedName || 'curated bar'}" — the same door that gave the city`);
+        }
+        return filled.length > 0;
     }
 
     // Identity-signal city backfill — the rungs BELOW the curated-bar rung
