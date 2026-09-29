@@ -22543,6 +22543,33 @@ test('inline data: a date with no year takes the season the list states, or the 
   assert.equal(SharedCore.parseInlineDateText('Feb 30', now), null);
 });
 
+test('inline data: an anchored date takes its year from the anchor, whenever it is read', () => {
+  // bearworldmag.com's July roundup (article:published_time 2026-07-02) lists
+  // "on July 3rd". Read that week, a year and a half on, or in 2030, it is
+  // the same night.
+  const july = { anchorMs: Date.parse('2026-07-02T12:00:00Z') };
+  for (const readOn of ['2026-07-05', '2027-12-31', '2028-01-01', '2030-03-01']) {
+    assert.equal(SharedCore.parseInlineDateText('July 3', new Date(`${readOn}T12:00:00Z`), july).year, 2026, `read on ${readOn}`);
+  }
+  // Published December 29th, listing January: the next year, not the reader's.
+  const december = { anchorMs: Date.parse('2026-12-29T10:00:00Z') };
+  assert.equal(SharedCore.parseInlineDateText('January 3', new Date('2026-12-30T12:00:00Z'), december).year, 2027);
+  assert.equal(SharedCore.parseInlineDateText('January 3', new Date('2029-02-01T12:00:00Z'), december).year, 2027);
+  // An old December post read in January is not last month's party.
+  assert.equal(SharedCore.parseInlineDateText('December 20', new Date('2027-01-05T12:00:00Z'), { anchorMs: Date.parse('2024-12-10T12:00:00Z') }).year, 2024);
+  // The repeat's weekday still chooses among the anchor's years: Feb 5 is a
+  // Thursday in 2026 and a Friday in 2027.
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2030-03-01T12:00:00Z'), { anchorMs: Date.UTC(2026, 6, 1), weekdays: [4] }).year, 2026);
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2030-03-01T12:00:00Z'), { anchorMs: Date.UTC(2026, 6, 1), weekdays: [5] }).year, 2027);
+  // Today's years stay candidates: with Saturdays only, and an anchor in
+  // November 2026 read in January 2027, Feb 5 is still 2028's (the one
+  // Saturday among 2025–2028), as it was.
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2027-01-10T12:00:00Z'), { anchorMs: Date.UTC(2026, 10, 15), weekdays: [6] }).year, 2028);
+  // No anchor: nothing changes — the year nearest now, four months back, eight ahead.
+  assert.equal(SharedCore.parseInlineDateText('July 3', new Date('2028-12-07T12:00:00Z')).year, 2029);
+  assert.equal(SharedCore.parseInlineDateText('Oct 3', new Date('2028-12-07T12:00:00Z')).year, 2028);
+});
+
 test('inline data: a printed clock becomes start/end; words state no clock', () => {
   assert.deepEqual(SharedCore.parseInlineTimeText('10:00 PM - 4:00 AM'), { start: '22:00', end: '04:00' });
   assert.deepEqual(SharedCore.parseInlineTimeText('12:00 PM – 6:00 PM'), { start: '12:00', end: '18:00' });
