@@ -5641,6 +5641,17 @@ class SharedCore {
                 return { winner: deadA ? 'b' : 'a', reason: 'the site answers "not found" for the other link (404/410 learned by the crawl)' };
             }
         }
+        // Cut-picture rung: a link that is the head of a picture's address
+        // (isCutPictureAddress) is a file address cut at a space, never a
+        // page — it loses to any other link, on either side.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl') && urlA && urlB) {
+            const records = context && context.records ? [context.records.a, context.records.b] : [];
+            const cutA = this.isCutPictureAddress(valueA, records);
+            const cutB = this.isCutPictureAddress(valueB, records);
+            if (cutA !== cutB) {
+                return { winner: cutA ? 'b' : 'a', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -8011,6 +8022,62 @@ class SharedCore {
         const engagedLately = evidence.gone > 0
             || (Date.now() - known.newestMs) < DEAD_SHAPE_RECENT_DAYS * 24 * 60 * 60 * 1000;
         return engagedLately ? { shape, siblings: known.siblings } : null;
+    }
+
+    // ── The head of a picture's address is not a link ───────────────────
+    // A picture whose filename carries an unencoded space
+    // (".../uploads/2026/01/2026-01-25 Welcome Party.webp") was once cut at
+    // the space into a "page" link (".../uploads/2026/01/2026-01-25"). The
+    // cut itself is gone (#1835), but the calendar still holds what earlier
+    // runs saved, and a deeper same-site link beats a front door in every
+    // merge: run 20260929-091555 kept
+    // https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 as FOAM POOL
+    // PARTY's website. Judged against the pictures themselves: the link,
+    // followed by a space, begins the address of a picture this run has
+    // seen (on any record — the cut head was handed to a NEIGHBOUR card) or
+    // that either record of the merge carries.
+    notePictureAddresses(events) {
+        if (!this.runPictureAddresses) this.runPictureAddresses = new Set();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(event[field]);
+                if (key) this.runPictureAddresses.add(key);
+            }
+        }
+        return this.runPictureAddresses;
+    }
+
+    // Comparable form of a picture (or link) address: scheme and "www."
+    // dropped, query and fragment dropped, percent-encoding decoded,
+    // lowercase. '' when it is not an http(s) address.
+    static getPictureAddressKey(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        const match = raw.match(/^https?:\/\/(?:www\.)?([^?#]+)/i);
+        if (!match) return '';
+        let address = match[1];
+        try { address = decodeURIComponent(address); } catch (_) { /* keep the raw spelling */ }
+        return address.toLowerCase();
+    }
+
+    isCutPictureAddress(url, records = []) {
+        const head = SharedCore.getPictureAddressKey(url).replace(/\/+$/, '');
+        // A folder or a front door heads every file below it; only a
+        // would-be file name (something after the last slash) can be a cut.
+        if (!head || !head.includes('/') || head.endsWith('/')) return false;
+        const pictures = new Set(this.runPictureAddresses || []);
+        for (const record of Array.isArray(records) ? records : []) {
+            if (!record || typeof record !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(record[field]);
+                if (key) pictures.add(key);
+            }
+        }
+        const cutHead = `${head} `;
+        for (const picture of pictures) {
+            if (picture.startsWith(cutHead)) return true;
+        }
+        return false;
     }
 
     isKnownDeadLink(event, value) {
@@ -20175,6 +20242,10 @@ class SharedCore {
         // Per-run calendar-stickiness tally (report-only observation phase).
         this.resetCalendarStickinessStats();
 
+        // The run's pictures, for the cut-picture link check (a saved link
+        // that is the head of a picture's address — isCutPictureAddress).
+        this.notePictureAddresses(events);
+
         // Curated festival awareness: one drift line per festival per pass,
         // and a batch pre-pass mapping source hosts whose pages produced an
         // umbrella match — sibling records from the same source inherit the
@@ -21191,6 +21262,24 @@ class SharedCore {
                 console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — the site answers "not found" for it; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
                 this.recordDeterministicFieldRewrite(analyzedEvent, field,
                     `${field} replaced at final build — the site answers "not found" (404/410) for the saved link`);
+            }
+
+            // …and neither is the head of a picture's address
+            // (isCutPictureAddress), which the calendar may hold from a run
+            // that cut a picture's address at the space in its filename.
+            for (const field of ['ticketUrl', 'website']) {
+                const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                if (!value || !this.isCutPictureAddress(value, [analyzedEvent, event, analyzedEvent._original && analyzedEvent._original.calendar])) continue;
+                const standIn = field === 'website' ? this.getStandInSourcePage(event) : '';
+                if (standIn && !this.isSameLinkTarget(standIn, value)) analyzedEvent[field] = standIn;
+                else delete analyzedEvent[field];
+                if (field === 'website' && 'url' in analyzedEvent) {
+                    if (analyzedEvent.website) analyzedEvent.url = analyzedEvent.website; else delete analyzedEvent.url;
+                }
+                notesNeedRebuild = true;
+                console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — it is the head of a picture's address, cut at a space in the filename: a file, not a page; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
+                this.recordDeterministicFieldRewrite(analyzedEvent, field,
+                    `${field} replaced at final build — the saved link is the head of a picture's address, not a page`);
             }
 
             // A hub is never presented as one event's ticket page, whichever

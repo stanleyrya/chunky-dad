@@ -26489,3 +26489,35 @@ test('sanity: a copy that only places something AT the venue does not restate a 
   assert.equal(SharedCore.textNamesPhraseBeyondLocative('the tryst hotel presents drag brunch', 'the tryst hotel'), true);
   assert.equal(SharedCore.textNamesPhraseBeyondLocative('great party', 'the tryst hotel'), false);
 });
+
+// beefdip.com/planned-events: WELCOME PARTY's flyer is
+// ".../uploads/2026/01/2026-01-25 Welcome Party.webp"; an earlier run cut it
+// at the space and saved the head as FOAM POOL PARTY's website, and run
+// 20260929-091555 kept it ("same-host deeper URL beats domain root").
+test('the head of a picture\'s address is a file, not a page: it loses every link merge', () => {
+  const core = createCore();
+  const cut = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25';
+  const welcomeFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp';
+  const foamFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp';
+  // Nothing known about the run's pictures: nothing is presumed.
+  assert.equal(core.isCutPictureAddress(cut), false);
+  // The neighbour card's flyer is a picture of this run.
+  core.notePictureAddresses([{ title: 'WELCOME PARTY', image: welcomeFlyer }, { title: 'FOAM POOL PARTY', image: foamFlyer }]);
+  assert.equal(core.isCutPictureAddress(cut), true);
+  assert.equal(core.isCutPictureAddress('http://www.beefdip.com/wp-content/uploads/2026/01/2026-01-25'), true, 'scheme and www are spelling');
+  // A page, a front door, the pictures' folder and a shorter head that ends
+  // inside a word are not cut picture addresses.
+  for (const page of ['https://beefdip.com/planned-events/', 'https://beefdip.com', 'https://beefdip.com/wp-content/uploads/2026/01/',
+    'https://beefdip.com/wp-content/uploads/2026/01/2026-01', 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome']) {
+    assert.equal(core.isCutPictureAddress(page), page.endsWith('Welcome'), page);
+  }
+  const records = { a: { title: 'FOAM POOL PARTY' }, b: { title: 'FOAM POOL PARTY', image: foamFlyer } };
+  assert.deepEqual(core.resolveConflictDeterministically('website', cut, 'https://beefdip.com',
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }),
+    { winner: 'b', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' });
+  assert.equal(core.resolveConflictDeterministically('website', 'https://beefdip.com', cut,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }).winner, 'a', 'and it never replaces a saved link');
+  // A picture carried only by a record of the merge counts too.
+  const fresh = createCore();
+  assert.equal(fresh.isCutPictureAddress(cut, [{ imageVertical: welcomeFlyer }]), true);
+});
