@@ -2102,8 +2102,10 @@ class AiWebParser {
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (event) {
                     // A one-line listing row owns no artwork: any picture it
-                    // acquired came from the page around it.
-                    if (segment && segment._compactListingRow && event.image && !(typeof segment.html === 'string' && segment.html.includes(String(event.image)))) {
+                    // acquired came from the page around it — unless the
+                    // row's own markup carries that picture, however the
+                    // page spells its address (segmentMarkupCarriesImage).
+                    if (segment && segment._compactListingRow && event.image && !this.segmentMarkupCarriesImage(segment, event.image, sourceUrl)) {
                         console.log(`🖼️ AI Web: Dropped "${event.title || 'event'}" image — a one-line listing row has no artwork of its own (the picture belongs to the page's cards): ${event.image}`);
                         delete event.image;
                         delete event.imageSource;
@@ -6612,6 +6614,28 @@ class AiWebParser {
             imageUrls,
             resourceLines
         };
+    }
+
+    // Does this segment's OWN markup carry the picture? A literal search for
+    // the picture's address misses every card whose page spells it another
+    // way: behind an image-optimizer wrapper
+    // (src="/_next/image?url=https%3A%2F%2Fcdn…%2Fflyer.png&amp;w=1920"),
+    // percent- or entity-encoded, or at another rendition size. whereto.party,
+    // run 20260929-091555: every card prints its flyer that way, its one
+    // text line ("Sat, 3 October 2026 · 22:00") made each card a one-line
+    // row, and 19 records lost the flyer their own card carries.
+    // Judged on the addresses the segment's markup yields through the same
+    // reader that offered the picture (extractOrderedImageUrlsFromHtml),
+    // compared at rendition-neutral identity (stripSizeParams).
+    segmentMarkupCarriesImage(segment, imageUrl, sourceUrl = '') {
+        const html = segment && typeof segment.html === 'string' ? segment.html : '';
+        const image = String(imageUrl || '').trim();
+        if (!html || !image) return false;
+        if (html.includes(image)) return true;
+        const wanted = this.stripSizeParams(image);
+        if (!wanted) return false;
+        return this.extractOrderedImageUrlsFromHtml(html, sourceUrl)
+            .some(url => url === image || this.stripSizeParams(url) === wanted);
     }
 
     attachSequentialImageHintsToSegments(html, segments, sourceUrl = '', ocrResults = []) {

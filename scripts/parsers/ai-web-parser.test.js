@@ -21395,3 +21395,33 @@ test('page site role resolved on a working copy is published back to the caller\
     { siteRole: 'venue', urls: ['https://venue.example/'] }), '');
   assert.equal(offHostCaller.pageSiteRole, undefined);
 });
+
+test('a one-line row keeps the flyer its own markup carries behind an image-optimizer address', () => {
+  // whereto.party/in/tokyo, run 20260929-091555 (card trimmed): the flyer is
+  // printed as a Next.js optimizer address, the card's one text line is its
+  // date, and the record's image is the decoded CDN address.
+  const parser = createParser();
+  const flyer = 'https://cdn.whereto.party/media/events/f4d3bb3a-80f0-409a-ac40-948955b94711.png';
+  const neighbour = 'https://cdn.whereto.party/media/events/41100759-a824-4028-b60c-be241a328718.jpeg';
+  const card = {
+    lines: ['Sat, 3 October 2026 · 22:00'],
+    _compactListingRow: true,
+    html: '<img alt="[EAGLE TOKYO BLUE] RYUGU flyer" loading="lazy" decoding="async" data-nimg="fill" '
+      + 'srcSet="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=640&amp;q=75 640w, '
+      + '/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75 1920w" '
+      + 'src="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75"/>'
+      + '<div class="p-4"><h3 class="display text-lg">[EAGLE TOKYO BLUE] RYUGU</h3>'
+      + '<span class="truncate">Tokyo  ·  EAGLE TOKYO BLUE</span>'
+      + '<time dateTime="2026-10-03T22:00:00">Sat, 3 October 2026 · 22:00</time></div>'
+  };
+  const sourceUrl = 'https://whereto.party/in/tokyo';
+  assert.equal(card.html.includes(flyer), false, 'the literal address is nowhere in the card');
+  assert.equal(parser.segmentMarkupCarriesImage(card, flyer, sourceUrl), true);
+  // The neighbour card's flyer is still not this row's.
+  assert.equal(parser.segmentMarkupCarriesImage(card, neighbour, sourceUrl), false);
+  // A ticker row with no markup of its own owns nothing (furball.nyc).
+  assert.equal(parser.segmentMarkupCarriesImage({ lines: ['10/3 FURBALL DC - ICON'], html: '<li>10/3 FURBALL DC - ICON</li>', _compactListingRow: true },
+    'https://static.wixstatic.com/media/six-party-flyer.jpg', 'https://www.furball.nyc/'), false);
+  // A literal address in the row's markup counts as before.
+  assert.equal(parser.segmentMarkupCarriesImage({ html: `<img src="${flyer}">` }, flyer, sourceUrl), true);
+});
