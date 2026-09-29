@@ -21603,3 +21603,69 @@ test('Squarespace: a name with no street line on the template\'s own marker take
   const withLine = { ...rows[2], location: { ...rows[2].location, addressTitle: 'Office', addressLine1: '459 Broadway', addressLine2: 'New York, NY' } };
   assert.equal(parser.buildEventFromSquarespaceItem(withLine, 'https://www.massbearsandcubs.example/events', { templateMarker }).location, '40.7207559, -74.0007613');
 });
+
+// ---------------------------------------------------------------------------
+// Chrome rule 4: a label printed directly above a heading is not the card's
+// name (whereto.party, run 20260929-170047: "Up next" at ARQ Sydney was an
+// event of its own; the real card was "THICK 'N' JUICY Sydney").
+// ---------------------------------------------------------------------------
+test('a label printed directly above a card\'s heading is never the card title', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://listing.example/in/sydney';
+  const html = `<html><body>
+    <a href="/events/thick-n-juicy-sydney"><div>
+      <p class="eyebrow text-[10px] mb-2 text-brand">Up next</p><h3>THICK &#x27;N&#x27; JUICY Sydney - October Long Weekend</h3>
+      <div><span>Sydney  ·  ARQ Sydney</span></div>
+      <div><time dateTime="2037-10-02T21:00:00">Fri, 2 October 2037 · 21:00 – 04:00</time></div>
+    </div></a>
+    <a href="/events/duro"><div><h3>DURO ft. Jose Rendon</h3><span>Sydney · Universal</span></div></a>
+    <div><span>With DJ Casey Alva</span>
+      <h2>Hoe in the Dark</h2></div>
+    <div><small>Bear Night</small><h4>Monthly Social</h4></div>
+    <div><h3>Bear Night</h3></div>
+    <div><p>Saturday, October 3</p><h3>WOOF!</h3></div>
+    <div><p>Doors at <b>9</b></p><h3>Late Show</h3></div>
+    <div><p>🏊</p><h3>Pool</h3></div>
+    <p>Not above a heading</p><div>Something else</div>
+  </body></html>`;
+  parser.notePageChromeLines(html, sourceUrl);
+  assert.equal(parser.isPageChromeLine('Up next'), true);
+  assert.equal(parser.isPageChromeLine('with dj casey alva'), true, 'whatever the tag, whatever the heading level');
+  assert.equal(parser.isPageChromeLine('THICK \'N\' JUICY Sydney - October Long Weekend'), false, 'the heading is the name');
+  assert.equal(parser.isPageChromeLine('Bear Night'), false, 'a label that is a heading elsewhere on the page names something there');
+  assert.equal(parser.isPageChromeLine('Saturday, October 3'), false, 'a dated label is left to the date rules');
+  assert.equal(parser.isPageChromeLine('Doors at'), false, 'only a text-only element is read as a label');
+  assert.equal(parser.isPageChromeLine('🏊'), false, 'a label needs a letter or a digit');
+  assert.equal(parser.isPageChromeLine('Not above a heading'), false);
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['Up next', 'THICK \'N\' JUICY Sydney - October Long Weekend', 'Sydney · ARQ Sydney', 'Fri, 2 October 2037 · 21:00 – 04:00'] }),
+    'THICK \'N\' JUICY Sydney - October Long Weekend'
+  );
+  assert.deepEqual(
+    parser.trimLeadingChromeLines(['Up next', 'THICK \'N\' JUICY Sydney - October Long Weekend']),
+    ['THICK \'N\' JUICY Sydney - October Long Weekend'],
+    'the window opens at the card\'s own name'
+  );
+});
+
+test('a month word inside a name is not the card\'s date line', () => {
+  const parser = createParser();
+  for (const name of ['THICK \'N\' JUICY Sydney - October Long Weekend', 'March Madness Underwear Party', 'May Day Bear Picnic']) {
+    assert.equal(parser.isNameCarryingMonthWord(name), true, name);
+    assert.equal(parser.deriveSegmentListingTitle({ lines: [name, 'ARQ Sydney', 'Fri, 2 October 2037'] }), name);
+  }
+  for (const line of ['October', 'Sat · Oct', 'Every Friday in October', 'October 3', 'Bear Night October 2037', 'Saturday, October 3', 'Next Saturday']) {
+    assert.equal(parser.isNameCarryingMonthWord(line), false, line);
+  }
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Saturday, October 3, 2037', 'FUZZY', 'Nowhere Bar'] }), 'FUZZY', 'a date line is still skipped');
+});
+
+test('a label above a heading that is what the page is about stays a title', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://promoter.example/';
+  const html = `<html><head><title>Furball NYC | Promoter</title></head><body>
+    <div><p>Furball NYC</p><h2>This Saturday</h2></div>
+  </body></html>`;
+  parser.notePageChromeLines(html, sourceUrl);
+  assert.equal(parser.isPageChromeLine('Furball NYC'), false);
+});
