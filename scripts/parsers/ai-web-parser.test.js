@@ -13427,6 +13427,94 @@ test('repeated anchors need their own listing identity before they can segment a
     'repeated naked anchors leave a schedule page\'s segmentation exactly as it was');
 });
 
+// ── A page under its other spelling is not a new page ─────────────────────
+// Eventbrite organizer pages, trimmed from the real documents (2026-09-29).
+// The parser was configured with the bare-id address /o/25444337255; the page
+// declares itself as /o/xposure-events-llc-25444337255 (rel=canonical, the
+// JSON-LD ProfilePage's own entity, organizer.profilePageUrl) and the crawl
+// fetched it a second time under that spelling — and Bears of London a third
+// time under eventbrite.co.uk — on every cache refresh.
+const ORGANIZER_ALIAS_PAGE_HTML = `
+  <html><head>
+    <title data-next-head="">Xposure Events, LLC</title>
+    <link rel="canonical" href="https://www.eventbrite.com/o/xposure-events-llc-25444337255" data-next-head=""/>
+    <script type="application/ld+json" data-next-head="">{"@context":"https://schema.org","@type":"ProfilePage","mainEntity":{"@type":"Organization","name":"Xposure Events, LLC","url":"https://www.eventbrite.com/o/xposure-events-llc-25444337255","description":"Xposure Events, LLC","sameAs":["https://www.facebook.com/westernxposurebears"]}}</script>
+  </head><body>
+    <a href="https://www.eventbrite.com/e/western-xposure-fall-2026-tickets-1975198341410">Western Xposure: Fall 2026</a>
+    <a href="https://www.eventbrite.com/e/western-xposures-xxl-tickets-1975198449734">Western Xposure's XXL</a>
+    <a href="https://www.eventbrite.com/o/xposure-events-llc-25444337255">Xposure Events, LLC</a>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"organizer":{"id":"25444337255","name":"Xposure Events, LLC","socials":{"facebook":"https://www.facebook.com/westernxposurebears"},"profilePageUrl":"https://www.eventbrite.co.uk/o/xposure-events-llc-25444337255"},"upcomingEvents":[{"name":"Western X-Mas: Holiday Bear Retreat 2026","url":"https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953","start_date":"2026-12-24","start_time":"10:00:00","id":"1999502215953"}],"hasMoreUpcoming":false,"upcomingEventsTotal":3}}}</script>
+  </body></html>
+`;
+
+test('a page configured by its bare id never crawls the slugged spelling it declares as itself', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let links;
+  try {
+    links = parser.extractAdditionalUrls(ORGANIZER_ALIAS_PAGE_HTML, 'https://www.eventbrite.com/o/25444337255', {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(!links.some(link => /\/o\/xposure-events-llc-25444337255/.test(link)),
+    `the page's own address under its slug — on .com or .co.uk — is not a page to crawl, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-xposure-fall-2026-tickets-1975198341410'));
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-xposures-xxl-tickets-1975198449734'));
+  assert.ok(links.includes('https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953'),
+    'the events it lists are pages of their own and are all still followed');
+  assert.ok(logs.some(line => /Self-(?:canonical|alias) link skipped/.test(line) && line.includes('25444337255')),
+    'and the skip is logged');
+});
+
+test('a page configured by its slug never crawls its bare-id spelling either', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <link rel="canonical" href="https://www.eventbrite.com/o/megawoof-america-18118978189" data-next-head=""/>
+    </head><body>
+      <a href="https://www.eventbrite.com/o/18118978189">Megawoof America</a>
+      <a href="https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053">MEGAWOOF Chicago</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://www.eventbrite.com/o/megawoof-america-18118978189', {});
+  assert.ok(!links.includes('https://www.eventbrite.com/o/18118978189'), `got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053'));
+});
+
+test('the id rule needs the page\'s own word: undeclared, a look-alike address is still crawled', () => {
+  const parser = createParser();
+  // No canonical, no og:url: nothing on the page says the slugged address is
+  // this document, so it stays in the queue (one fetch, never a lost page).
+  const undeclared = `
+    <html><body>
+      <a href="https://tickets.example/o/some-organizer-25444337255">Organizer</a>
+    </body></html>
+  `;
+  const kept = parser.extractAdditionalUrls(undeclared, 'https://tickets.example/o/25444337255', {});
+  assert.ok(kept.includes('https://tickets.example/o/some-organizer-25444337255'), `got: ${JSON.stringify(kept)}`);
+
+  // A canonical that names a DIFFERENT identifier, a different section, or a
+  // short number (a page of a list, a year) declares nothing about this page.
+  const elsewhere = `
+    <html><head><link rel="canonical" href="https://tickets.example/o/another-organizer-77777777777" /></head><body>
+      <a href="https://tickets.example/o/another-organizer-77777777777">Another organizer</a>
+      <a href="https://tickets.example/e/party-25444337255">An event that happens to share the number</a>
+      <a href="https://tickets.example/o/some-organizer-25444337255?start_date=2026-10-08">This organizer, one date</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(elsewhere, 'https://tickets.example/o/25444337255', {});
+  assert.ok(links.includes('https://tickets.example/o/another-organizer-77777777777'), 'another identifier is another page');
+  assert.ok(links.includes('https://tickets.example/e/party-25444337255'), 'another section is another page');
+
+  assert.equal(parser.getUrlIdAliasKey('https://www.eventbrite.com/o/25444337255'), 'eventbrite|o|25444337255');
+  assert.equal(parser.getUrlIdAliasKey('https://www.eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913/'), 'eventbrite|o|64998384913');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/page/2'), '', 'a page number is not an identifier');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/new-year-2027'), '', 'neither is a year');
+  assert.equal(parser.getUrlIdAliasKey('https://venue.example/events/beer-bust/'), '');
+});
+
 // ── Self-canonical links are not new pages ────────────────────────────────
 // Run 20260806-124046 (Eagle LA): the listing links only parameterized
 // occurrence URLs (/events/b-bar/?occurrence=2026-08-06, …), and every one of

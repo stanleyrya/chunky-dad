@@ -10782,10 +10782,14 @@ class AiWebParser {
      * parameter or host.
      *
      * FAIL CLOSED: only a declared canonical that resolves to the SAME host+path
-     * as the page we actually fetched is suppressed. A canonical pointing at a
-     * different path or host may be a genuinely different resource (a slug
-     * alias, a section index), so it stays in the crawl queue and costs us at
-     * most one redundant fetch — never a lost page.
+     * as the page we actually fetched is suppressed — or one that carries the
+     * fetched address's own identifier (getUrlIdAliasKey: an Eventbrite
+     * organizer configured as /o/25444337255 declares /o/xposure-events-llc-
+     * 25444337255, and was fetched a second time under that spelling and a
+     * third under eventbrite.co.uk, every refresh). A canonical pointing at
+     * any other path or host may be a genuinely different resource (a section
+     * index, page one of a paged list), so it stays in the crawl queue and
+     * costs us at most one redundant fetch — never a lost page.
      *
      * Returns the suppressed URLs (for tests/callers); the crawl-visible effect
      * is the mutation of `urls`.
@@ -10797,6 +10801,8 @@ class AiWebParser {
 
         const sourceKey = this.getUrlPathIdentityKey(sourceUrl);
         if (!sourceKey) return suppressed;
+        const sourceAlias = this.getUrlIdAliasKey(sourceUrl);
+        let aliasDeclared = false;
 
         const seen = new Set();
         for (const rawDeclared of this.extractSelfDeclaredCanonicalUrls(html)) {
@@ -10807,8 +10813,14 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
+            const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
+            // The declared address carries the fetched address's own
+            // identifier (see getUrlIdAliasKey): the same document under its
+            // other spelling.
+            const sameId = Boolean(sourceAlias) && this.getUrlIdAliasKey(resolved) === sourceAlias;
             // Not the page we fetched → not a self-reference → leave it alone.
-            if (this.getUrlPathIdentityKey(resolved) !== sourceKey) continue;
+            if (!samePath && !sameId) continue;
+            if (sameId) aliasDeclared = true;
 
             const key = this.getUrlDedupeKey(resolved);
             if (!key || seen.has(key)) continue;
@@ -10819,10 +10831,61 @@ class AiWebParser {
             suppressed.push(entry.url);
         }
 
+        // Once the page has declared itself under that identifier, every
+        // other spelling of it among the links is this document too: the
+        // bare-id form, the slugged form, the same path on the platform's
+        // other national domain.
+        const aliases = [];
+        if (aliasDeclared) {
+            for (const [key, entry] of Array.from(urls.entries())) {
+                if (!entry || !entry.url || this.getUrlIdAliasKey(entry.url) !== sourceAlias) continue;
+                // A query that survived tracking-parameter stripping selects
+                // something (a date, an occurrence): a page of its own.
+                if (/\?/.test(String(entry.url).split('#')[0])) continue;
+                urls.delete(key);
+                aliases.push(entry.url);
+            }
+        }
+
         if (suppressed.length > 0) {
             console.log(`🤖 AI Web: Self-canonical link skipped for ${sourceUrl}: ${suppressed.join(', ')} — the page's own canonical/og:url is this same document, not a new page to crawl`);
         }
-        return suppressed;
+        if (aliases.length > 0) {
+            console.log(`🤖 AI Web: Self-alias link skipped for ${sourceUrl}: ${aliases.join(', ')} — the page declares itself under the same identifier; another spelling of its address is this same document`);
+        }
+        return suppressed.concat(aliases);
+    }
+
+    /**
+     * Platforms address one document two ways: by its identifier alone and
+     * by a readable slug that ENDS in that identifier —
+     *   eventbrite.com/o/25444337255
+     *   eventbrite.com/o/xposure-events-llc-25444337255   (its rel=canonical)
+     *   eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913
+     * The slug is decoration, the number is the address. The key is
+     * "<site name>|<parent path>|<identifier>": the registrable domain's own
+     * label (so a platform's national domains agree), everything before the
+     * last path segment, and the run of six or more digits the last segment
+     * consists of or ends in after a hyphen. '' when the last segment carries
+     * no such identifier — most URLs — so nothing is ever matched on a guess.
+     * Never used alone: suppressSelfCanonicalUrls only trusts it after the
+     * page itself declared an address with the same key.
+     * Pure string work: iOS JavaScriptCore has no URL global.
+     */
+    getUrlIdAliasKey(url) {
+        const text = String(url || '').trim();
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        const domain = this.getRegistrableDomainFromUrl(text);
+        const siteName = String(domain || '').split('.')[0];
+        if (!siteName) return '';
+        const segments = String(match[2] || '').split('/').filter(Boolean);
+        if (segments.length === 0) return '';
+        const last = segments[segments.length - 1].toLowerCase();
+        const id = last.match(/^(?:.*-)?(\d{6,})$/);
+        if (!id) return '';
+        const parent = segments.slice(0, -1).join('/').toLowerCase();
+        return `${siteName}|${parent}|${id[1]}`;
     }
 
     getDefaultMaxAdditionalUrls() {
