@@ -3422,8 +3422,14 @@ class AiWebParser {
                 // "own" listing title. Recover the name span instead; a line
                 // with no name span still falls through to the skip.
                 const span = this.deriveListingTitleSpanFromDatedLine(line);
-                if (!span) continue;
-                return span.length <= this.extractionLimits.multiEventTitleMaxChars ? span : '';
+                if (span) return span.length <= this.extractionLimits.multiEventTitleMaxChars ? span : '';
+                // A month WORD inside a name is not a date: "THICK 'N' JUICY
+                // Sydney - October Long Weekend" (whereto.party, run
+                // 20260929-170047) prints no day, no year and no time, and
+                // was skipped as the card's date line — the venue line under
+                // it became the listing title. Such a line is judged like
+                // any other candidate below.
+                if (!this.isNameCarryingMonthWord(line)) continue;
             }
             if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(line)) continue;
             // European time-only lines: "14:00h", "21h a 03h", "de 21 a 03h",
@@ -3470,6 +3476,19 @@ class AiWebParser {
         return this.stripPageSiteNameTail(this.deriveSegmentListingTitle(segment), sourceUrl);
     }
 
+    // A line whose only date signal is a month WORD, inside a name: no digit
+    // anywhere (so no day, no year, no clock time), and at least two words
+    // of its own left once month names, weekday names and the words a date
+    // line is built from are taken away. "October Long Weekend" names a
+    // party; "October", "Sat · Oct" and "Every Friday in October" do not.
+    isNameCarryingMonthWord(line) {
+        const text = this.normalizeWhitespace(String(line || ''));
+        if (!text || /\d/.test(text)) return false;
+        const dateWords = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|every|each|this|next|last|first|second|third|fourth|weekly|monthly|from|until|till|through|thru)$/;
+        const own = this.getListingNameWords(text).filter(word => !dateWords.test(word));
+        return own.length >= 2;
+    }
+
     // A line that is nothing but a weekday name — "Sun", "Sunday", "Sat.",
     // "Mon," — the way listing cards print a date tag one token per line.
     isBareWeekdayLine(line) {
@@ -3511,6 +3530,19 @@ class AiWebParser {
     //      a weekly party's name repeats across a year of cards too
     //      ("Bears, Brews & Boys" appears nine times on that same page),
     //      and dropping it would cost real titles. Count parties, not rows.
+    //
+    //   4. A LABEL printed directly above a heading: a text-only element
+    //      whose next sibling is the card's heading —
+    //      <p class="eyebrow">Up next</p><h3>THICK 'N' JUICY Sydney</h3>
+    //      (whereto.party, 43 of its cached pages, run 20260929-170047:
+    //      "Up next" became an event of its own at ARQ Sydney). The markup
+    //      states which of the two is the name: the heading. What sits
+    //      above it is a kicker — "Up next", "With DJ Casey Alva", "No
+    //      cover", "Bear Cave opens 8 pm", "Error 404" — and across the
+    //      790 pages cached on 2026-09-29 (98 distinct labels) not one was
+    //      the event's name. One occurrence is enough, as for rule 1. A
+    //      label that is ALSO a heading somewhere on the page, or what the
+    //      page says it is about, is kept: it names something there.
     //
     // Bare weekday/month lines are handled separately by isBareWeekdayLine
     // and the date-signal skips above.
@@ -3683,6 +3715,7 @@ class AiWebParser {
         for (const [key, count] of facetCounts) {
             if (count >= this.segmentImageChromeMinSegments) keys.add(key);
         }
+        for (const key of this.collectHeadingLabelKeys(source, subjects)) keys.add(key);
         // A member page of a collection it links back UP to — a detail page.
         // NOT when an ancestor anchor was rescued as the page's own subject:
         // there the parent path IS the event
@@ -3690,6 +3723,38 @@ class AiWebParser {
         // that parent and this page has no destination of its own to claim.
         const memberPage = navUpTargets.size > 0 && subjectUpTargets.size === 0;
         return { lineKeys: keys, navUpTargets, subjectUpTargets, memberPage, subjects };
+    }
+
+    // Rule 4 of the chrome lines: the labels printed directly above a
+    // heading. Text-only elements (no markup inside) whose closing tag is
+    // followed by nothing but whitespace and a heading's opening tag.
+    // Lowercased keys; dated labels are left to the date rules.
+    collectHeadingLabelKeys(html, subjects = new Set()) {
+        const source = String(html || '');
+        const labels = new Set();
+        if (!source) return labels;
+        const text = (value) => this.normalizeWhitespace(this.decodeBasicEntities(String(value || '').replace(/<[^>]+>/g, ' ')));
+        const headings = new Set();
+        const headingPattern = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+        let heading;
+        while ((heading = headingPattern.exec(source)) !== null) {
+            const key = text(heading[2]).toLowerCase();
+            if (key) headings.add(key);
+        }
+        const titleMax = this.extractionLimits.multiEventTitleMaxChars;
+        const pattern = /<(p|span|div|small|strong|em)\b[^>]*>([^<]+)<\/\1>\s*<h([1-6])\b[^>]*>([\s\S]*?)<\/h\3>/gi;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            const label = text(match[2]);
+            const key = label.toLowerCase();
+            if (!key || label.length > titleMax) continue;
+            if (!/[\p{L}\p{N}]/u.test(label)) continue;
+            if (!text(match[4])) continue;
+            if (this.hasMultiEventDateSignal(label)) continue;
+            if (headings.has(key) || subjects.has(key)) continue;
+            labels.add(key);
+        }
+        return labels;
     }
 
     // What this page says it is ABOUT: its <h1> text, and the leading part
