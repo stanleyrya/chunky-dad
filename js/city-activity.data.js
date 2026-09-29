@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-27",
+ "generatedAt": "2026-09-29",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-09-27",
     "2026-09-29",
     "2026-09-30",
     "2026-10-01",
@@ -71,7 +70,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-09-27",
     "2026-10-01",
     "2026-10-02",
     "2026-10-04",
@@ -149,7 +147,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-09-27",
     "2026-09-30",
     "2026-10-02",
     "2026-10-04",
@@ -242,7 +239,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-09-27",
     "2026-10-02",
     "2026-10-03",
     "2026-10-17",
@@ -250,7 +246,7 @@ window.CITY_ACTIVITY = {
     "2026-12-04"
    ],
    "recurring": 1,
-   "festivalUntil": "2026-09-27"
+   "festivalUntil": null
   },
   "portland": {
    "dates": [
@@ -275,7 +271,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-09-27",
     "2026-10-04",
     "2026-10-09",
     "2026-10-10",
@@ -446,7 +441,6 @@ window.CITY_ACTIVITY = {
   },
   "manchester": {
    "dates": [
-    "2026-09-27",
     "2026-10-02",
     "2026-10-10",
     "2026-11-14",
@@ -511,6 +505,96 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "tokyo": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "sydney": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "melbourne": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "brisbane": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "oslo": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "ottawa": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "salt-lake-city": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "orlando": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "edinburgh": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "prague": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "leipzig": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "cologne": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "brussels": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "seoul": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "singapore": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "taipei": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "gran-canaria": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "indianapolis": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "gettysburg": {
    "dates": [],
    "recurring": 0,
    "festivalUntil": null
