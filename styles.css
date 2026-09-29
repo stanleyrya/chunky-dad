@@ -6693,6 +6693,12 @@ html.dusk body {
     color: rgba(255, 255, 255, 0.9);
     font-variant-numeric: tabular-nums;
 }
+/* month cells too: the base `.calendar-day.month-day .day-number` sets the
+   light theme's #333 and outranks the rule above, which left every month
+   date #333 on the night ground — 1.5:1, all but invisible */
+.dusk .calendar-day.month-day .day-number {
+    color: rgba(255, 255, 255, 0.9);
+}
 /* today's column keeps the same hairline as everyone else — no blue edge */
 .dusk .calendar-day.current,
 .dusk .calendar-day.week-view.current {
