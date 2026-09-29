@@ -1255,3 +1255,250 @@ test('the review page offers the three left-swipe answers, a one-tap Not bear, a
     assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
   }
 });
+
+// ---------------------------------------------------------------------------
+// UI review 2026-09-29 (phone 390px, run 20260929-091555): defects measured
+// in real Chrome, each pinned here.
+// ---------------------------------------------------------------------------
+
+test('header bar: cities that read the same are counted, the odd ones keep their names, and only the link row is sticky', () => {
+  const nowMs = Date.parse('2026-09-29T15:25:00Z');
+  const fresh = '2026-09-29T14:15:00Z'; // 1.2h old
+  const snapshots = {};
+  for (const city of ['atlanta', 'austin', 'berlin', 'boston', 'dallas', 'nyc', 'sf']) snapshots[city] = { status: 'ok', fetchedAt: fresh };
+  snapshots.chicago = { status: 'ok', fetchedAt: '2026-09-27T22:00:00Z', source: 'phone' };
+  snapshots.unknown = { status: 'unavailable', fetchedAt: null };
+  assert.equal(formatCalendarSnapshotLabel(snapshots, nowMs), 'calendar snapshot: 7 cities 1.2h old · chicago 1.7d old (phone) · unknown unavailable');
+
+  // Three that agree are still three names: nothing to fold yet.
+  const few = { la: { status: 'ok', fetchedAt: fresh }, nyc: { status: 'ok', fetchedAt: fresh }, sf: { status: 'ok', fetchedAt: fresh } };
+  assert.equal(formatCalendarSnapshotLabel(few, nowMs), 'calendar snapshot: la 1.2h old · nyc 1.2h old · sf 1.2h old');
+
+  const injected = injectHeaderBar('<html><body><p>results</p></body></html>', { savedAt: '2026-09-29T14:15:55Z', calendarSnapshots: snapshots, reviewPending: 30 });
+  const sticky = /<div id="chunky-server-header-bar"[^>]*position:sticky[^>]*>([\s\S]*?)<\/div>/.exec(injected);
+  assert.ok(sticky, 'the link row is the sticky one');
+  assert.ok(sticky[1].includes('href="/run-form"') && sticky[1].includes('🃏 Review (30)') && sticky[1].includes('href="/log"'));
+  assert.ok(!sticky[1].includes('calendar snapshot') && !sticky[1].includes('ICS links') && !sticky[1].includes('Run saved'), 'run facts scroll away with the page');
+  const info = /<div id="chunky-server-run-info" style="([^"]*)">([\s\S]*?)<\/div>/.exec(injected);
+  assert.ok(info && !/sticky|fixed/.test(info[1]), 'the facts row is not pinned');
+  assert.ok(info[2].includes('Run saved 2026-09-29T14:15:55Z') && info[2].includes('calendar snapshot: ') && /ICS links/.test(info[2]));
+});
+
+test('rewriteBridgeHtml: a section header with many batch buttons wraps instead of widening the page', () => {
+  const out = rewriteBridgeHtml('<html><head><style>.section-header { display:flex; }</style></head><body><div class="section-header"></div></body></html>');
+  const override = /<style>\s*\.section-header \{ flex-wrap: wrap;[^}]*\}/.exec(out);
+  assert.ok(override, 'the override ships with the shim');
+  assert.ok(override.index > out.indexOf('.section-header { display:flex; }'), 'after the page\'s own rule, so it wins');
+  assert.equal(rewriteBridgeHtml(out), out, 'still idempotent');
+});
+
+test('transport: gzip only when the browser asks, never for a small body; and the favicon is not a console error', async () => {
+  const { requestAcceptsGzip } = require('../tools/serve-results');
+  assert.equal(requestAcceptsGzip({ headers: { 'accept-encoding': 'gzip, deflate, br' } }), true);
+  assert.equal(requestAcceptsGzip({ headers: { 'accept-encoding': 'deflate, GZIP;q=0.5' } }), true);
+  assert.equal(requestAcceptsGzip({ headers: { 'accept-encoding': 'br' } }), false);
+  assert.equal(requestAcceptsGzip({ headers: { 'accept-encoding': 'gzip;q=0' } }), false, 'q=0 is a refusal');
+  assert.equal(requestAcceptsGzip({ headers: {} }), false);
+  assert.equal(requestAcceptsGzip(null), false);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-gzip-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  try {
+    const state = createServerState();
+    const plain = await request(state, 'GET', '/review');
+    assert.equal(plain.headers['Content-Encoding'], undefined, 'no Accept-Encoding, no compression');
+
+    const packed = { status: null, headers: null, body: null, writeHead(status, headers) { this.status = status; this.headers = headers; }, end(chunk) { this.body = chunk; } };
+    const asked = fakeRequest('GET', '/review');
+    asked.headers = { 'accept-encoding': 'gzip, deflate' };
+    await handleRequest(state, asked, packed);
+    assert.equal(packed.status, 200);
+    assert.equal(packed.headers['Content-Encoding'], 'gzip');
+    assert.equal(packed.headers.Vary, 'Accept-Encoding');
+    assert.ok(Buffer.isBuffer(packed.body));
+    assert.equal(packed.headers['Content-Length'], packed.body.length);
+    const unpacked = require('node:zlib').gunzipSync(packed.body).toString('utf8');
+    assert.ok(unpacked.includes('FURBALL NYC') && unpacked.includes('window.__reviewDeck = {'), 'the same page, unpacked');
+    assert.ok(packed.body.length < Buffer.byteLength(unpacked) / 3, `${packed.body.length} of ${Buffer.byteLength(unpacked)} bytes`);
+
+    const small = { status: null, headers: null, body: null, writeHead(status, headers) { this.status = status; this.headers = headers; }, end(chunk) { this.body = chunk; } };
+    const missing = fakeRequest('GET', '/nope');
+    missing.headers = { 'accept-encoding': 'gzip' };
+    await handleRequest(state, missing, small);
+    assert.equal(small.status, 404);
+    assert.equal(small.headers['Content-Encoding'], undefined, 'a one-line answer travels as it is');
+
+    const icon = await request(state, 'GET', '/favicon.ico');
+    assert.equal(icon.status, 204);
+    assert.equal(icon.body, '');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('renderReviewCard (update): a link change is one row — the Website note that mirrors it is not printed again', () => {
+  const ctx = buildReviewCtx();
+  // BeefDip's PRE WELCOME PARTY as the deck of 2026-09-29 built it.
+  const entry = (notesChanges) => ({ kind: 'merge', key: 'k', proposal: {
+    kind: 'merge', title: 'PRE WELCOME PARTY', startDate: '2027-01-24T03:00:00.000Z', endDate: '2027-01-24T06:00:00.000Z', timezone: 'America/Mexico_City', city: 'nyc',
+    changes: { url: { from: 'http://beefdip.com/tags/', to: 'https://beefdip.com' } }
+  }, display: { notesChanges } });
+  const html = renderReviewCard(entry([
+    { key: 'website', from: 'http://beefdip.com/tags/', to: 'https://beefdip.com' },
+    { key: 'address', from: '', to: 'Zona Romántica' }
+  ]), ctx);
+  assert.equal((html.match(/class="chg[ "]/g) || []).length, 2, 'Event page + Address');
+  assert.ok(html.includes('<span class="chg-k">Event page</span>') && html.includes('>beefdip.com/tags/</a>') && html.includes('>beefdip.com</a>'));
+  assert.ok(!html.includes('<span class="chg-k">Website</span>'), 'same two links, already a row');
+  assert.ok(html.includes('<span class="chg-k">Address</span>'));
+
+  // A Website note that says something ELSE than the stored link is its own row.
+  const differs = renderReviewCard(entry([{ key: 'website', from: 'https://beefdip.com/tags/', to: 'https://beefdip.com/planned-events/' }]), ctx);
+  assert.ok(differs.includes('<span class="chg-k">Website</span>') && differs.includes('>beefdip.com/planned-events/</a>'));
+  // …and with no stored link change at all, the Website note is the only place the change shows.
+  const notesOnly = renderReviewCard({ ...entry([{ key: 'website', from: 'https://a.example/', to: 'https://b.example/' }]), proposal: { ...entry([]).proposal, changes: {} } }, ctx);
+  assert.ok(notesOnly.includes('<span class="chg-k">Website</span>'));
+});
+
+test('formatReviewDateLine / renderReviewCard: a defaulted end is named as a default, never printed as the closing time', () => {
+  assert.equal(formatReviewDateLine('2027-04-23T04:00:00.000Z', '2027-04-23T07:00:00.000Z', 'America/New_York', { endDefaulted: true }),
+    'Fri, Apr 23, 2027 · 12:00 AM EDT (no end listed — saved with the 3 h default)');
+  assert.equal(formatReviewDateLine('2027-04-23T04:00:00.000Z', '2027-04-23T07:00:00.000Z', 'America/New_York'),
+    'Fri, Apr 23, 2027 · 12:00 AM – 3:00 AM EDT', 'a stated end is untouched');
+  assert.equal(formatReviewDateLine('2027-04-23T04:00:00.000Z', null, 'America/New_York', { endDefaulted: true }),
+    'Fri, Apr 23, 2027 · 12:00 AM EDT (no end listed)', 'nothing to call a default');
+
+  const ctx = buildReviewCtx();
+  const proposal = { kind: 'new', title: 'SPRING', startDate: '2027-04-23T04:00:00.000Z', endDate: '2027-04-23T07:00:00.000Z', timezone: 'America/New_York', bar: 'Camp Out', city: 'nyc', changes: {} };
+  const defaulted = renderReviewCard({ kind: 'new', key: 'k', proposal, display: { endDefaulted: true } }, ctx);
+  assert.ok(defaulted.includes('📅 Fri, Apr 23, 2027 · 12:00 AM EDT (no end listed — saved with the 3 h default)'));
+  assert.ok(!defaulted.includes('3:00 AM') && !defaulted.includes('7:00 AM'), 'neither the zoned line nor the UTC line claims an end');
+  assert.ok(defaulted.includes('🌍 Fri, Apr 23 4:00 AM UTC'));
+  const stated = renderReviewCard({ kind: 'new', key: 'k', proposal, display: {} }, ctx);
+  assert.ok(stated.includes('12:00 AM – 3:00 AM EDT') && stated.includes('4:00 AM – 7:00 AM UTC'));
+});
+
+test('the review page fits the stack to the screen, lets the reject sheet scroll above the keyboard, counts Waiting as listed, and says what the phone held back', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  deck.lastExecution = { at: '2026-09-27T21:47:21.360Z', runId: '20260927-155245', via: 'owner-review', processed: 41, failed: 0, created: 36, updated: 5,
+    ownerReview: { approved: 40, rejected: 0, awaiting: 1, housekeeping: 1, withheld: 14 } };
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+
+  // The stack: sized from what the header, the buttons and the hint leave.
+  assert.ok(html.includes('height:var(--stage-h, min(68vh, 640px));'), 'the old height is the fallback, not the rule');
+  for (const piece of ['function fitStage() {', "window.innerHeight - header.offsetHeight - controls.offsetHeight - hint.offsetHeight", "setProperty('--stage-h'", "window.addEventListener('resize', fitStage);"]) assert.ok(html.includes(piece), piece);
+  assert.ok(/function render\(\) \{[^}]*fitStage\(\); \}/.test(html), 'measured after every render — the pills may have wrapped');
+  assert.ok(html.includes('max-height:calc(var(--stage-h, 68vh) * 0.59)'), 'the flyer takes its share of the card, not of the screen');
+  // The Results link shares the first row with the run picker.
+  assert.ok(html.indexOf('>Results</a>') < html.indexOf('id="filters"') && html.indexOf('>Results</a>') > html.indexOf('id="run-select"'));
+
+  // The sheet: scrolls inside the visible part of the screen.
+  assert.ok(/\.sheet \.panel \{[^}]*max-height:100%;[^}]*overflow-y:auto;/.test(html));
+  for (const piece of ['function fitSheet() {', 'var view = window.visualViewport;', "sheet.style.height = Math.round(view.height) + 'px';", "window.visualViewport.addEventListener('resize', fitSheet);"]) assert.ok(html.includes(piece), piece);
+
+  // Waiting: the heading counts the rows under it.
+  assert.ok(html.includes("var listed = waitingRows.length + goneRows.length;"));
+  assert.ok(!html.includes("textContent = '(' + (rows.length + gone.length) + ')'"), 'not the unfolded night count');
+
+  // Execute: withheld and sent-back approvals are on the line.
+  assert.ok(html.includes('"ownerReview":{"approved":40,"rejected":0,"awaiting":1,"housekeeping":1,"withheld":14}'));
+  assert.ok(html.includes("review.withheld + ' approved but withheld by the checks on the phone'") && html.includes("review.awaiting + ' back for review'"));
+
+  for (const source of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
+    assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
+  }
+});
+
+test('review routes: a swipe reports the decision it replaced, and its undo puts that decision back', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-undo-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    const card = deck.cards[0];
+    const decide = (body) => request(state, 'POST', '/review/decide', JSON.stringify(body));
+    const stored = () => JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8')).decisions;
+
+    const note = JSON.parse((await decide({ key: card.key, kind: card.kind, verdict: 'reject', runId: deck.runId, snapshot: card.proposal,
+      reason: { mode: 'fix', tags: [], text: 'Weird website link change' } })).body);
+    assert.equal(note.replaced, null, 'a first decision replaces nothing');
+    const noteAsStored = stored()[0];
+
+    const slip = JSON.parse((await decide({ key: card.key, kind: card.kind, verdict: 'approve', runId: deck.runId, snapshot: card.proposal })).body);
+    assert.deepEqual(slip.replaced, noteAsStored, 'the overwritten note rides back to the page');
+    assert.equal(stored()[0].verdict, 'approve');
+
+    const undone = JSON.parse((await decide({ key: card.key, verdict: 'clear', restore: slip.replaced })).body);
+    assert.equal(undone.restored, true);
+    assert.deepEqual(stored(), [noteAsStored], 'the note is back, untouched');
+    assert.ok((await request(state, 'GET', '/review/rejections')).body.includes('[NEEDS FIX] NEW FURBALL NYC'), 'and still in the fix queue');
+
+    // A restore for another key is refused: the clear stays a clear.
+    const refused = JSON.parse((await decide({ key: card.key, verdict: 'clear', restore: { ...noteAsStored, key: 'event|else|bar|2030-01-01' } })).body);
+    assert.equal(refused.restored, false);
+    assert.equal(refused.removed, true);
+    assert.deepEqual(stored(), []);
+
+    // Bear verdicts, the same way.
+    const party = { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', location: '', city: 'nyc' };
+    const bear = JSON.parse((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'bear', event: party }))).body);
+    assert.equal(bear.replaced, null);
+    const notBear = JSON.parse((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'not_bear', event: party }))).body);
+    assert.deepEqual(notBear.replaced, bear.entry);
+    const back = JSON.parse((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'clear', event: party, restore: notBear.replaced }))).body);
+    assert.equal(back.restored, true);
+    assert.deepEqual(JSON.parse(fs.readFileSync(reviewQueue.getBearVerdictsPath(dir), 'utf8')).verdicts, [bear.entry]);
+
+    // The page keeps what each swipe replaced and sends it with the undo.
+    const html = (await request(state, 'GET', '/review')).body;
+    for (const piece of ['var replaced = { decision: null, bear: null };', "post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })", "postBear(record, 'clear', was.bear)", "'Undone — your earlier decision is back'"]) assert.ok(html.includes(piece), piece);
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the review page: a finger may start its swipe on a link, a mouse may not', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(html.includes("var skip = finger ? 'select, textarea, input' : 'a, button, select, textarea, input, summary';"));
+  assert.ok(html.includes('begin(t.clientX, t.clientY, e.target, true);'), 'touchstart');
+  assert.ok(html.includes('if (!begin(e.clientX, e.clientY, e.target, false)) return;'), 'mousedown');
+  assert.ok(html.includes("if (target.closest('a, button, summary')) return; // the browser's own tap"), 'a still finger on a link is the link\'s tap, not the flyer\'s');
+  for (const source of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
+    assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
+  }
+});
+
+test('the review page: the click a browser makes up after a tap neither closes the flyer it opened nor toggles the description back', () => {
+  const deck = reviewQueue.buildDeck(reviewRunFixture('20300101-051500'), reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  // The lightbox functions as the page carries them, run against a stub of the two nodes they touch.
+  const classes = new Set();
+  const box = { classList: { add: (name) => classes.add(name), remove: (name) => classes.delete(name) }, querySelector: () => ({}) };
+  let now = 1000;
+  const context = require('node:vm').createContext({ document: { getElementById: () => box }, Date: { now: () => now } });
+  require('node:vm').runInContext(scripts[0], context);
+  const flyer = { querySelector: () => ({ src: 'https://cdn.example/flyer.jpg' }) };
+  context.openFlyer(flyer);
+  assert.ok(classes.has('open'));
+  now += 4; // the made-up click, milliseconds after the touch
+  context.closeFlyer();
+  assert.ok(classes.has('open'), 'the tap that opened the flyer does not close it');
+  now += 900; // the owner's next tap
+  context.closeFlyer();
+  assert.ok(!classes.has('open'));
+
+  assert.ok(html.includes('if (Date.now() - lastTouchAt < 800) return;'), 'a mouse press right after a touch is the touch\'s echo');
+  assert.ok(html.includes("el.addEventListener('touchend', function (e) { lastTouchAt = Date.now(); end(e.target, false); });"));
+});
