@@ -365,6 +365,21 @@ function clearNotBearRejections(store, core, event) {
     return { store: normalized, removed };
 }
 
+// AN UNDO PUTS BACK WHAT THE SWIPE REPLACED. A card back for a second look
+// already has a decision under its key — the approval of 2026-09-24, or a
+// "needs a fix" note — and the new swipe overwrites it (one decision per
+// key). Undoing that swipe by clearing the key threw the earlier decision
+// away with it: a slip of the thumb and its undo deleted the note the card
+// came back to answer, and with it the line in the fix queue. `previous` is
+// the decision the server handed back when the swipe was stored
+// (`replaced`); anything that is not a decision for this very key is
+// refused and the caller falls back to a plain clear.
+function restoreDecision(store, key, previous) {
+    const normalized = normalizeDecisionStore(store);
+    if (!isDecisionShaped(previous) || previous.key !== key) return { store: normalized, restored: false };
+    return { store: upsertDecision(normalized, previous), restored: true };
+}
+
 function clearDecision(store, key) {
     const normalized = normalizeDecisionStore(store);
     const before = normalized.decisions.length;
@@ -440,9 +455,21 @@ function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     const index = list.findIndex((existing) =>
         core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
         && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing));
+    // The verdict this one overwrites, handed back so an undo can restore it.
+    const replaced = index >= 0 ? list[index] : null;
     if (index >= 0) list[index] = entry;
     else list.push(entry);
-    return { verdicts: list, entry };
+    return { verdicts: list, entry, replaced };
+}
+
+// The undo of a verdict that overwrote an earlier one: the earlier entry
+// goes back as it was stored (its own stamp, its own spelling). See
+// restoreDecision. Refuses anything that is not a stored-verdict shape.
+function restoreBearVerdict(verdicts, core, previous) {
+    const valid = normalizeBearVerdicts([previous])[0];
+    if (!valid || !core.getBearVerdictTitleKey(valid.title, [valid.venue])) return { verdicts: normalizeBearVerdicts(verdicts), restored: false };
+    const result = upsertBearVerdict(verdicts, core, { title: valid.title, bar: valid.venue, address: valid.address, location: valid.location, city: valid.city }, valid.verdict);
+    return { verdicts: result.verdicts.map((entry) => (entry === result.entry ? valid : entry)), restored: true };
 }
 
 // An undo clears the verdict on this title. When there is none and the card
@@ -652,7 +679,12 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         facebook: typeof event.facebook === 'string' ? event.facebook : '',
         website: typeof event.website === 'string' ? event.website : '',
         shortName: typeof event.shortName === 'string' ? event.shortName : '',
-        notesOnlyAlso: Array.isArray(event._changes) && event._changes.includes('notes')
+        notesOnlyAlso: Array.isArray(event._changes) && event._changes.includes('notes'),
+        // The page stated no end: the end on this record is the one default
+        // the pipeline writes so the calendar accepts the event
+        // (SharedCore.applyDefaultEventEnd). The card says so instead of
+        // printing it as the party's closing time.
+        endDefaulted: event._endDateDefaulted === true
     };
 }
 
@@ -1258,6 +1290,7 @@ module.exports = {
     buildDecision,
     upsertDecision,
     clearDecision,
+    restoreDecision,
     clearNotBearRejections,
     loadCuratedBars,
     BEAR_VERDICTS_FILE_NAME,
@@ -1267,6 +1300,7 @@ module.exports = {
     saveBearVerdicts,
     buildBearIdentity,
     upsertBearVerdict,
+    restoreBearVerdict,
     clearBearVerdict,
     createDeckCore,
     buildBarProposal,
