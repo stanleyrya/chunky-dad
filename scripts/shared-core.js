@@ -4278,6 +4278,28 @@ class SharedCore {
         return matches[0];
     }
 
+    // A bar's name AND its door. A name that other curated names contain
+    // ("The Stud" inside "Le Stud", "STUDS", "Sanctuary Studios") proves
+    // nothing by itself — but an event that states that name together with
+    // the street line curated for it has named the venue twice, by two facts
+    // that do not depend on each other. Exactly one curated bar across all
+    // cities may answer; the street line is compared by areSameStreetLine
+    // (same house number, same street). Returns { city, bar } or null.
+    findCuratedBarByNameAndDoor(barName, address) {
+        if (!this.bars || typeof this.bars !== 'object') return null;
+        if (!this.normalizeBarNameKey(barName) || typeof address !== 'string' || !address.trim()) return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars) || cityBars.length === 0) continue;
+            const curatedBar = this.findCuratedBarByName(cityBars, barName);
+            if (!curatedBar || typeof curatedBar.address !== 'string') continue;
+            if (this.areSameStreetLine(address, curatedBar.address)) matches.push({ city: cityKey, bar: curatedBar });
+        }
+        const cities = [...new Set(matches.map(match => match.city))];
+        return cities.length === 1 ? matches[0] : null;
+    }
+
     // Registrable-host key for curated-website matching: the host of an
     // http(s) URL, lowercased, port and a leading "www." dropped. Regex only
     // (getHostFromUrl) — never `new URL`, which iOS JavaScriptCore lacks.

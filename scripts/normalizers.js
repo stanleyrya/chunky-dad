@@ -1238,6 +1238,22 @@ class LocationNormalizer extends BaseNormalizer {
         // that city onto Dallas Eagle events). The curated corpus itself flags
         // the stem — no word lists — so fail closed and leave city unknown.
         if (result.genericStem) {
+            // …unless the event states that bar's own DOOR as well (GRUNT's
+            // Halloween page, 2026-09-29: "at the The Stud 1123 FOLSOM" —
+            // the curated Stud is at 1123 Folsom Street; the page writes the
+            // city only as "SF", so the model's "san francisco" failed the
+            // verbatim gate and the event had no city at all). The name and
+            // the street line are two facts; together they are the venue.
+            const door = typeof this.core.findCuratedBarByNameAndDoor === 'function'
+                ? this.core.findCuratedBarByNameAndDoor(barName, typeof event.address === 'string' ? event.address : '')
+                : null;
+            const statedPlace = typeof event._unrecognizedCity === 'string' ? event._unrecognizedCity.trim() : '';
+            if (door && !statedPlace) {
+                event.city = door.city;
+                event._citySource = 'curated-bar-door';
+                console.log(`🗺️ LocationNormalizer: Backfilled city "${door.city}" from curated bar "${door.bar.name}" for "${title}" — the name is a stem other bars contain, but the event's own street line ("${event.address}") is that bar's door`);
+                return event;
+            }
             console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — bar "${barName}" is a generic name stem (contained in: ${result.containedIn.join(', ')})`);
             return event;
         }
