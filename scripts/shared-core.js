@@ -16347,9 +16347,17 @@ class SharedCore {
         const referenceMs = anchored ? options.anchorMs : now.getTime();
         const weekdays = Array.isArray(options.weekdays) && options.weekdays.length > 0 ? options.weekdays : null;
         const dayMs = 24 * 60 * 60 * 1000;
+        // The candidate years sit around the instant the date is measured
+        // from — the anchor's own years as well as today's. With today's
+        // alone, an anchored date could only land within a year of the day
+        // it was READ: a roundup published 2026-07-02, read in 2028, dated
+        // its July nights 2027.
+        const nowYear = now.getUTCFullYear();
+        const referenceYear = new Date(referenceMs).getUTCFullYear();
+        const candidateYears = [...new Set([referenceYear - 1, referenceYear, referenceYear + 1, nowYear - 1, nowYear, nowYear + 1])];
         const pick = (requireWeekday) => {
             let best = null;
-            for (const year of [now.getUTCFullYear() - 1, now.getUTCFullYear(), now.getUTCFullYear() + 1]) {
+            for (const year of candidateYears) {
                 const at = Date.UTC(year, month - 1, day);
                 if (new Date(at).getUTCDate() !== day) continue; // Feb 29 of a common year
                 if (requireWeekday && !weekdays.includes(new Date(at).getUTCDay())) continue;
