@@ -598,6 +598,26 @@ window.CITY_ACTIVITY = {
    "dates": [],
    "recurring": 0,
    "festivalUntil": null
+  },
+  "adelaide": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "perth": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "bali": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
+  },
+  "manila": {
+   "dates": [],
+   "recurring": 0,
+   "festivalUntil": null
   }
  }
 };
