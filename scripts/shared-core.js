@@ -18645,6 +18645,9 @@ class SharedCore {
             // dataset (chunky-dad-festivals) or somebody's personal calendar.
             !event?._noCityCalendarWithheld &&
             event?._announcementOnlyWithheld !== true &&
+            // The same blank-fill on every night of a saved series is a
+            // fact about the series (withholdSeriesLevelOverrideFills).
+            !event?._seriesLevelFillWithheld &&
             // One record, one destination: a record assembled from two
             // listings (stamp site: the ai-web parser's
             // applyOneDestinationGuard) is never written — and never
@@ -18724,6 +18727,7 @@ class SharedCore {
             '_unresolvedCityWithheld',
             '_noCityCalendarWithheld',
             '_announcementOnlyWithheld',
+            '_seriesLevelFillWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
             '_bigDriftWithheld',
@@ -18767,6 +18771,10 @@ class SharedCore {
             return `WITHHELD (city${city ? ` "${city}"` : ''} has no configured city calendar — a scraped event is never written to a non-city calendar)`;
         }
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
+        if (event._seriesLevelFillWithheld) {
+            const fields = Array.isArray(event._seriesLevelFillWithheld.fields) ? event._seriesLevelFillWithheld.fields.join(', ') : '';
+            return `WITHHELD (series-level fact — the same ${fields || 'value'} on ${event._seriesLevelFillWithheld.nights} nights of the saved series; edit the series, not its nights)`;
+        }
         if (event._chimeraWithheld) {
             const reason = String(event._chimeraWithheld.reason || '').trim();
             return `WITHHELD (assembled from two listings${reason ? ` — ${reason}` : ''})`;
@@ -20375,6 +20383,11 @@ class SharedCore {
             }
         }
 
+        // What a source says identically about every night of a saved
+        // series is a fact about the SERIES, never a reason to detach its
+        // nights one by one (see withholdSeriesLevelOverrideFills).
+        this.withholdSeriesLevelOverrideFills(analyzedEvents);
+
         // Same-venue overlap surfacing (report-only, never throws): stamp
         // colliding cards + one ⚔️ OVERLAP line per pair. Actions, merges and
         // writes are untouched — the owner resolves double-booked slots.
@@ -20387,6 +20400,107 @@ class SharedCore {
         this.logCalendarStickinessSummary();
 
         return analyzedEvents;
+    }
+
+    // SERIES-LEVEL FILLS NEVER DETACH A NIGHT.
+    //
+    // An override exists for what ONE night states that its series does not:
+    // this week's venue, a guest's flyer, a moved start (resolveSeriesAuthority:
+    // "per-night facts are exactly what an override is for"). Run
+    // 20260929-091555 proposed eight overrides that state nothing of the
+    // kind: Gathr's row for the owner's weekly "Bear Happy Hour" series adds
+    // the same picture and the same "Free" to five Thursdays, Thotyssey's
+    // row for his monthly "FUZZY" adds one picture to three Fridays. Every
+    // saved field of those nights stays as it is; the only difference is a
+    // blank filled with a value the source repeats on every night it lists.
+    // Writing them detaches the nights from the series (a later edit of the
+    // series no longer reaches them) to say one thing N times — and the
+    // scraper never writes a series, so the fact has no automatic home.
+    //
+    // Judged on the finished plan, per saved series (overrideUid):
+    //   - the night changes no stored field and no notes line the series
+    //     night already carries — it only ADDS lines (getOverrideNightFills);
+    //   - two or more nights of that series in this plan add exactly the
+    //     same lines.
+    // Those nights are withheld from every write and from the deck, each
+    // stamped with the fields and the night count, and one line per series
+    // names what the series could gain. A single night, a night that
+    // changes anything, and a night whose additions are its own (a flyer
+    // per night, this week's address) are untouched.
+    withholdSeriesLevelOverrideFills(analyzedEvents) {
+        if (!Array.isArray(analyzedEvents) || analyzedEvents.length < 2) return [];
+        const bySeries = new Map();
+        for (const event of analyzedEvents) {
+            if (!event || typeof event !== 'object' || event._mergeNoOp === true) continue;
+            if (!SharedCore.isOverrideCreate(event)) continue;
+            const seriesUid = this.normalizeOverrideUid(event.overrideUid);
+            if (!seriesUid) continue;
+            const fills = this.getOverrideNightFills(event);
+            if (!fills || !fills.signature) continue;
+            // Nights are grouped by WHAT they add: a night whose additions
+            // differ from the others' (its own flyer, its own address) is
+            // the source speaking about that night and stands alone; a
+            // night that changes something never enters a group at all.
+            const groupKey = `${seriesUid}\n${fills.signature}`;
+            if (!bySeries.has(groupKey)) bySeries.set(groupKey, []);
+            bySeries.get(groupKey).push({ event, fills });
+        }
+        const withheld = [];
+        for (const nights of bySeries.values()) {
+            if (nights.length < 2) continue;
+            const fields = nights[0].fills.keys;
+            for (const night of nights) {
+                night.event._seriesLevelFillWithheld = { fields, nights: nights.length };
+                withheld.push(night.event);
+            }
+            const seriesTitle = String((nights[0].event._original.calendar && nights[0].event._original.calendar.title) || nights[0].event.title || 'Unknown');
+            const source = String((nights[0].event._parserConfig && nights[0].event._parserConfig.name) || 'the source');
+            console.log(`🔁 SERIES FILL: "${seriesTitle}" — ${source} adds the same ${fields.join(', ')} to ${nights.length} nights of the saved series and changes nothing else; a fact about the series, not about a night — ${nights.length} override(s) withheld (the series itself is edited through the Event Builder / ICS)`);
+        }
+        return withheld;
+    }
+
+    // What an override would ADD to the series night it replaces, when
+    // adding is ALL it does: { keys, signature } — the added notes fields
+    // (canonical keys, sorted) and their values as one comparable string.
+    // null when the night changes a stored field (title, start, end, pin,
+    // link), changes or removes a notes line the series night carries, or
+    // carries a bear verdict or review flag of its own — that night states
+    // something of its own. Run bookkeeping, the override
+    // identity and an automatic bear stamp are not additions (the same
+    // exclusions notesProjectionsMatch applies to an override).
+    getOverrideNightFills(event) {
+        const seriesNight = event && event._original && event._original.calendar;
+        if (!seriesNight || typeof seriesNight !== 'object') return null;
+        const storedChanges = this.computeCalendarWriteChanges(event, seriesNight, seriesNight)
+            .filter(field => field !== 'notes');
+        if (storedChanges.length > 0) return null;
+        const saved = this.parseNotesIntoFields(seriesNight.notes || '');
+        const proposed = this.parseNotesIntoFields(event.notes || '');
+        const isBookkeeping = (key, value) => REGENERATED_NOTES_KEYS.has(key)
+            || key === 'overrideUid' || key === 'overrideRecurrenceId'
+            || (key === 'bearSource' && !this.isManualBearSource(value));
+        const textOf = (value) => (value === null || value === undefined ? '' : String(value).trim());
+        const added = [];
+        for (const key of Object.keys(proposed)) {
+            const value = textOf(proposed[key]);
+            if (!value || isBookkeeping(key, value)) continue;
+            // The owner's own verdict on a night always lands on that night.
+            if (key === 'bearSource' || key === 'bearReview') return null;
+            const savedValue = textOf(saved[key]);
+            if (!savedValue) { added.push([key, value]); continue; }
+            if (!SharedCore.notesValuesEquivalent(savedValue, value)) return null;
+        }
+        for (const key of Object.keys(saved)) {
+            const savedValue = textOf(saved[key]);
+            if (!savedValue || isBookkeeping(key, savedValue)) continue;
+            if (!textOf(proposed[key])) return null;
+        }
+        added.sort((a, b) => a[0].localeCompare(b[0]));
+        return {
+            keys: added.map(entry => entry[0]),
+            signature: added.map(entry => `${entry[0]}: ${entry[1]}`).join('\n')
+        };
     }
 
     // A late bear-override event (a drop rescued by a stored calendar verdict,

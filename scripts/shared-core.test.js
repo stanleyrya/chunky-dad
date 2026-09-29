@@ -26297,3 +26297,111 @@ test('links: an untried link is presumed gone only by its SHAPE — five sibling
   few.notePathShapeEvidence('https://venue.example/1-6-26/tendie-tuesday-3', 'gone');
   assert.equal(few.isOriginStatedGoneUrl(untried), false);
 });
+
+// ---------------------------------------------------------------------------
+// Series-level fills never detach a night (run 20260929-091555: Gathr's row
+// for the owner's weekly "Bear Happy Hour" series proposed five overrides
+// that add one picture and "Free" and change nothing; Thotyssey's FUZZY row
+// three more). Shapes below are the run's own records, trimmed.
+// ---------------------------------------------------------------------------
+async function buildSeriesFillNights(core, nights) {
+  const SERIES_NOTES = [
+    'Bar: Check instagram for this week’s location.',
+    'Tea: Popular happy hour that changes location every week in Manhattan.',
+    'Instagram: https://www.instagram.com/bearhappyhournyc',
+    'Shorter: BHH',
+    'Web: https://linktr.ee/bearhappyhour'
+  ].join('\n');
+  const first = Date.now() + 14 * 24 * 60 * 60 * 1000;
+  const built = [];
+  const original = console.log;
+  console.log = () => {};
+  try {
+    for (let i = 0; i < nights.length; i++) {
+      const start = new Date(first + i * 7 * 24 * 60 * 60 * 1000);
+      const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+      const seriesNight = { title: 'Bear Happy Hour', identifier: 'cal:6thhos5ct3pllq5kmvsp7infd8@google.com', startDate: start, endDate: end, location: '', notes: SERIES_NOTES };
+      const scraped = {
+        title: 'Bear Happy Hour',
+        description: 'Popular happy hour that changes location every week in Manhattan.',
+        startDate: start,
+        endDate: end,
+        city: 'dallas',
+        image: 'https://i.imgur.com/eiEbgvg.jpeg',
+        imageSource: 'json-api',
+        cover: 'Free',
+        instagram: 'https://www.instagram.com/bearhappyhournyc',
+        website: 'https://linktr.ee/bearhappyhour',
+        source: 'ai-web',
+        _parserConfig: { name: 'Gathr', siteRole: 'aggregator' },
+        ...nights[i]
+      };
+      built.push(await core.buildAnalyzedCalendarEvent(scraped, {
+        action: 'new',
+        reason: 'Recurring source match found - creating override',
+        sourceEvent: seriesNight,
+        existingKey: '6thhos5ct3pllq5kmvsp7infd8@google.com',
+        overrideIdentity: { overrideUid: '6thhos5ct3pllq5kmvsp7infd8@google.com', overrideRecurrenceId: start.toISOString() }
+      }, {}, {}));
+    }
+  } finally { console.log = original; }
+  return built;
+}
+
+test('series-level fills: the same picture and cover on every night of a saved series detach no night', async () => {
+  const core = createCore();
+  const nights = await buildSeriesFillNights(core, [{}, {}, {}, {}, {}]);
+  for (const night of nights) {
+    assert.equal(SharedCore.isOverrideCreate(night), true);
+    assert.equal(night._mergeNoOp, false, 'precondition: each night adds lines, so the no-op gate lets it through');
+    assert.deepEqual(core.getOverrideNightFills(night).keys, ['cover', 'image']);
+  }
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let withheld;
+  try { withheld = core.withholdSeriesLevelOverrideFills(nights); } finally { console.log = original; }
+  assert.equal(withheld.length, 5);
+  assert.deepEqual(nights[0]._seriesLevelFillWithheld, { fields: ['cover', 'image'], nights: 5 });
+  assert.equal(lines.filter(line => line.startsWith('🔁 SERIES FILL: "Bear Happy Hour" — Gathr adds the same cover, image to 5 nights')).length, 1, lines.join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution(nights), [], 'never written');
+  assert.equal(core.isOwnerReviewCandidate(nights[0]), false, 'and never a card');
+  assert.equal(SharedCore.describeExecutionDisposition(nights[0]),
+    'WITHHELD (series-level fact — the same cover, image on 5 nights of the saved series; edit the series, not its nights)');
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_seriesLevelFillWithheld'), 'a re-analysis starts clean');
+});
+
+test('series-level fills: a night with a fact of its own, a lone night, a flyer per night and an owner verdict all stay proposals', async () => {
+  const core = createCore();
+  const quiet = (fn) => { const original = console.log; console.log = () => {}; try { return fn(); } finally { console.log = original; } };
+
+  // This week's venue is what an override is for: that night stays, the
+  // nights that only repeat the series picture do not.
+  const withVenue = await buildSeriesFillNights(core, [{}, { bar: 'Rawhide', address: '500 8th Ave, New York, NY 10018' }, {}]);
+  assert.ok(core.getOverrideNightFills(withVenue[1]).keys.includes('address'), 'that night adds its own address');
+  quiet(() => core.withholdSeriesLevelOverrideFills(withVenue));
+  assert.equal(Boolean(withVenue[1]._seriesLevelFillWithheld), false);
+  assert.equal(SharedCore.filterEventsForExecution([withVenue[1]]).length, 1);
+  assert.equal(Boolean(withVenue[0]._seriesLevelFillWithheld), true);
+  assert.equal(Boolean(withVenue[2]._seriesLevelFillWithheld), true);
+
+  // One night alone cannot show that the value is the series'.
+  const lone = await buildSeriesFillNights(core, [{}]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(lone)), []);
+  assert.equal(SharedCore.filterEventsForExecution(lone).length, 1);
+
+  // A flyer per night is the source speaking per night.
+  const perNight = await buildSeriesFillNights(core, [
+    { image: 'https://i.imgur.com/october-1.jpeg' },
+    { image: 'https://i.imgur.com/october-8.jpeg' }
+  ]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(perNight)), []);
+
+  // The owner's verdict on a night always lands on that night.
+  const verdicts = await buildSeriesFillNights(core, [
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true },
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true }
+  ]);
+  assert.equal(core.getOverrideNightFills(verdicts[0]), null);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(verdicts)), []);
+});
