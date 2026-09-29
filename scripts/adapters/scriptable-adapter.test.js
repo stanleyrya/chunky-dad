@@ -11857,3 +11857,34 @@ test('page cache: a cached CONNECTION failure is a miss; a cached 404 is still r
     'what the server answered is still remembered'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Answers to lookups live a year, in a cache of their own (the phone twin of
+// the web adapter's answer cache).
+// ---------------------------------------------------------------------------
+test('answer cache on the phone: a lookup reads and writes storage/answers under its own life; a page keeps the page cache', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
+  adapter.runPolitely = async (url, options, operation) => operation();
+  const reads = [];
+  const writes = [];
+  adapter.readCachedPage = async (url, config) => { reads.push({ url, ttlDays: config.ttlDays, dir: config.storageDir || 'pages' }); return null; };
+  adapter.writeCachedPage = async (url, responseData, config) => { writes.push({ url, ttlDays: config.ttlDays, dir: config.storageDir || 'pages' }); };
+  global.Request = class {
+    constructor(url) { this.url = url; this.response = null; }
+    async loadString() { this.response = { statusCode: 200, headers: {} }; return '[{"lat":"37.77","lon":"-122.41"}]'; }
+  };
+  const lookup = 'https://geocoder.example/search?format=json&q=398+12th+St';
+  try {
+    await adapter.fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+    await adapter.fetchData('https://venue.example/events', {});
+  } finally {
+    delete global.Request;
+  }
+  const answers = adapter.getAnswerCacheConfig(365);
+  assert.equal(answers.enabled, true);
+  assert.ok(String(answers.storageDir).endsWith('answers'));
+  assert.deepEqual(reads.filter((read) => read.url === lookup).map((read) => [read.ttlDays, read.dir]), [[365, answers.storageDir], [3, 'pages']],
+    'the answer cache first, then the page cache an older build wrote to');
+  assert.deepEqual(writes.map((write) => [write.ttlDays, write.dir]), [[365, answers.storageDir], [3, 'pages']]);
+  assert.equal(adapter.getAnswerCacheConfig(0).enabled, false);
+});

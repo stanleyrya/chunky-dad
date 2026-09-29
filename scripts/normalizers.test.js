@@ -4742,3 +4742,87 @@ test('an address line said twice is said once; a city and a state of one name ar
   });
   assert.equal(verdict.winner, 'a', 'and the doubled form never replaces the clean one');
 });
+
+// ---------------------------------------------------------------------------
+// The geocoder is asked once (2026-09-29: 728 questions a run, about 420 of
+// them answered "nothing" run after run, the host's budget spent before the
+// new addresses got their turn).
+// ---------------------------------------------------------------------------
+function lookupHarness({ answers, store = {} } = {}) {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const asked = [];
+  const httpAdapter = {
+    getPageCacheConfig: () => ({ enabled: false, ttlDays: 3 }),
+    readCachedPage: async () => null,
+    fetchData: async (url, options) => {
+      asked.push({ url, cacheTtlDays: options && options.cacheTtlDays });
+      const body = typeof answers === 'function' ? answers(url) : answers;
+      return { html: JSON.stringify(body), statusCode: 200 };
+    }
+  };
+  return { core, normalizer, httpAdapter, asked };
+}
+const NOWHERE = 'https://nominatim.openstreetmap.org/search?format=json&q=Hacienda+La+Yerbabuena&limit=5&addressdetails=1';
+const ELSEWHERE = 'https://nominatim.openstreetmap.org/search?format=json&q=Wyndham+Westfield&limit=5&addressdetails=1';
+
+test('geocoder: "no match" is believed after two runs, not one, and is asked again once it gets an answer', async () => {
+  const store = {};
+  const options = { cacheTtlDays: 365 };
+  const first = lookupHarness({ answers: [], store });
+  assert.deepEqual(await first.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, first.httpAdapter), []);
+  assert.deepEqual(await first.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, first.httpAdapter), [], 'asked once per run');
+  assert.equal(first.asked.length, 1);
+  assert.equal(first.core.findDeadEndUrlEntry(first.core.deadEndRunContext, NOWHERE).entry.misses, 1);
+  assert.deepEqual(first.core.deadEndRunContext.learned, [], 'counted, not listed among the crawl pages');
+
+  const second = lookupHarness({ answers: [], store });
+  await second.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, second.httpAdapter);
+  assert.equal(second.asked.length, 1, 'one empty answer is not believed: asked again on the second run');
+  assert.equal(second.core.findDeadEndUrlEntry(second.core.deadEndRunContext, NOWHERE).entry.misses, 2);
+
+  const third = lookupHarness({ answers: [], store });
+  assert.deepEqual(await third.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, third.httpAdapter), []);
+  assert.equal(third.asked.length, 0, 'two empty answers on two runs: not asked again');
+  assert.equal(third.core.deadEndRunContext.knownEmptyLookups, 1);
+  await third.normalizer.fetchDataWithCacheAndRateLimit(ELSEWHERE, options, third.httpAdapter);
+  assert.equal(third.asked.length, 1, 'another question is its own question');
+
+  // Past the retry window the question is asked again; an answer clears it.
+  const entry = store[Object.keys(store).find((key) => key.includes('yerbabuena'))];
+  entry.lastSeen = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
+  const later = lookupHarness({ answers: [{ lat: '36.19', lon: '-5.92', display_name: 'Hacienda La Yerbabuena, Barbate' }], store });
+  const answer = await later.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, later.httpAdapter);
+  assert.equal(later.asked.length, 1);
+  assert.equal(answer[0].lat, '36.19');
+  assert.equal(later.core.findDeadEndUrlEntry(later.core.deadEndRunContext, NOWHERE).entry, null, 'answered: forgotten');
+});
+
+test('geocoder: every question is asked with a year\'s life, and the answer cache is read before the page cache', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  assert.equal(normalizer.getLookupAnswerTtlDays(), SharedCore.LOOKUP_ANSWER_TTL_DAYS);
+  assert.equal(SharedCore.LOOKUP_ANSWER_TTL_DAYS, 365);
+  const reads = [];
+  const httpAdapter = {
+    getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }),
+    getAnswerCacheConfig: (ttlDays) => ({ enabled: true, ttlDays, storageDir: '/answers' }),
+    readCachedPage: async (url, config) => { reads.push(config); return { html: '[{"lat":"1","lon":"2"}]' }; }
+  };
+  assert.deepEqual(await normalizer.checkPersistentCache(NOWHERE, httpAdapter), [{ lat: '1', lon: '2' }]);
+  assert.deepEqual(reads, [{ enabled: true, ttlDays: 365, storageDir: '/answers' }]);
+});
+
+test('city patterns: Lynnwood is Seattle, and Westfield is Indianapolis only when it says Indiana', () => {
+  const cities = require('./scraper-cities.js');
+  const config = cities.cities || cities.SCRAPER_CITIES || cities;
+  const core = new SharedCore(config, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  assert.equal(normalizer.matchCityInText('17420 Hwy 99, Lynnwood, WA 98037, USA'), 'seattle');
+  assert.equal(normalizer.matchCityInText('Westfield, IN'), 'indianapolis');
+  assert.equal(normalizer.matchCityInText('Wyndham Westfield, Westfield, Indiana'), 'indianapolis');
+  assert.equal(normalizer.matchCityInText('Westfield, NJ'), null);
+  assert.equal(normalizer.matchCityInText('Westfield, MA 01085'), null);
+});

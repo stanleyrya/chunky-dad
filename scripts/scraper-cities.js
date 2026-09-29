@@ -28,7 +28,8 @@ const scraperCities = {
     "calendar": "chunky-dad-seattle",
     "timezone": "America/Los_Angeles",
     "patterns": [
-      "seattle"
+      "seattle",
+      "lynnwood"
     ],
     "coordinates": {
       "lat": 47.6062,
@@ -793,7 +794,9 @@ const scraperCities = {
     "calendar": "chunky-dad-indianapolis",
     "timezone": "America/Indiana/Indianapolis",
     "patterns": [
-      "indianapolis"
+      "indianapolis",
+      "westfield, in",
+      "westfield, indiana"
     ],
     "coordinates": {
       "lat": 39.7684,
