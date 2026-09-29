@@ -50,6 +50,12 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // (a statusless miss is a statusless miss), so every inferred dead end gets
 // its one retry.
 const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
+// The one retry a capability bump grants is spread out: no more than this
+// many forgiven URLs are asked for on one host in one run; the rest stay
+// skipped and take their turn on a later run. A bump forgives every inferred
+// dead end at once (58 on one host in the store of 2026-09-29), and a site
+// should not meet all of them in the same two minutes.
+const DEAD_END_CAPABILITY_RETRIES_PER_HOST = 20;
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -9302,6 +9308,10 @@ class SharedCore {
         return DEAD_END_CAPABILITY;
     }
 
+    static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
+        return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+    }
+
     static isPermanentlyGoneHttpStatus(statusCode) {
         return statusCode === 410 || statusCode === 404;
     }
@@ -10928,7 +10938,14 @@ class SharedCore {
             learnedHosts: [],
             recoveredHosts: [],
             hostSkippedCount: 0,
-            hostSkippedSamples: []
+            hostSkippedSamples: [],
+            // Capability retries granted this run (see
+            // isDeadEndRetryDeferred): per host, and the store entries
+            // themselves so the enqueue filter and its processing-time twin
+            // (which may spell the URL differently) count one entry once.
+            capabilityRetriesByHost: {},
+            capabilityRetryEntries: [],
+            capabilityRetryDeferredCount: 0
         };
     }
 
@@ -11184,6 +11201,33 @@ class SharedCore {
         return (Number(entry.misses) || 0) >= minMisses;
     }
 
+    // The retry isConfirmedDeadEndEntry grants to an entry confirmed under an
+    // older capability is rationed per host (DEAD_END_CAPABILITY_RETRIES_
+    // PER_HOST). True = this URL's retry waits for a later run and the URL is
+    // skipped like a confirmed dead end; its entry is left untouched, so it
+    // is still owed its retry. Only entries that WERE confirmed (enough
+    // misses, no status from the origin) are rationed — an entry still short
+    // of its misses was never suppressed and is not a retry.
+    isDeadEndRetryDeferred(context, entry, url) {
+        if (!context || !entry || !url) return false;
+        if (Number.isFinite(Number(entry.lastStatus))) return false;
+        if (entry.capability === DEAD_END_CAPABILITY) return false;
+        const minMisses = Number.isFinite(Number(context.minMisses)) ? Number(context.minMisses) : 2;
+        if ((Number(entry.misses) || 0) < minMisses) return false;
+        if (!context.capabilityRetriesByHost) context.capabilityRetriesByHost = {};
+        if (!Array.isArray(context.capabilityRetryEntries)) context.capabilityRetryEntries = [];
+        if (context.capabilityRetryEntries.includes(entry)) return false;
+        const hostKey = this.getDeadEndHostKey(url) || url;
+        const granted = Number(context.capabilityRetriesByHost[hostKey]) || 0;
+        if (granted >= DEAD_END_CAPABILITY_RETRIES_PER_HOST) {
+            context.capabilityRetryDeferredCount = (Number(context.capabilityRetryDeferredCount) || 0) + 1;
+            return true;
+        }
+        context.capabilityRetriesByHost[hostKey] = granted + 1;
+        context.capabilityRetryEntries.push(entry);
+        return false;
+    }
+
     filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
         const list = Array.isArray(urls) ? urls : [];
@@ -11195,8 +11239,8 @@ class SharedCore {
         for (const url of list) {
             const { entry } = this.findDeadEndUrlEntry(context, url);
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
-            if (entry && this.isConfirmedDeadEndEntry(context, entry)
-                && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+            if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+                && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
                 context.skippedCount += 1;
                 if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                     context.skippedSamples.push(url);
@@ -11230,8 +11274,8 @@ class SharedCore {
         const { entry } = this.findDeadEndUrlEntry(context, url);
         const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
-        if (entry && this.isConfirmedDeadEndEntry(context, entry)
-            && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+        if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+            && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
             context.skippedCount += 1;
             if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                 context.skippedSamples.push(url);
@@ -11472,6 +11516,11 @@ class SharedCore {
             }
             if (context.learnedHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+            }
+            const retriedHosts = Object.keys(context.capabilityRetriesByHost || {});
+            if (retriedHosts.length > 0 || context.capabilityRetryDeferredCount > 0) {
+                const retried = retriedHosts.reduce((sum, host) => sum + (Number(context.capabilityRetriesByHost[host]) || 0), 0);
+                await displayAdapter.logInfo(`SYSTEM: Dead ends learned before "${DEAD_END_CAPABILITY}": ${retried} asked for again on ${retriedHosts.length} host(s) (at most ${DEAD_END_CAPABILITY_RETRIES_PER_HOST} per host per run), ${context.capabilityRetryDeferredCount || 0} wait for a later run`);
             }
             if (context.recoveredHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Removed bot-wall flag from ${context.recoveredHosts.length} recovered host(s): ${context.recoveredHosts.join(', ')}`);

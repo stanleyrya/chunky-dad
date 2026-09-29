@@ -9128,6 +9128,52 @@ test('outage: dead ends confirmed before the crawler told an outage from a dead 
     'a page the origin called gone needs no second opinion');
 });
 
+test('outage: the one retry is rationed per host — 58 forgiven pages of one site are not all asked for in one run', () => {
+  const core = deadEndCore();
+  const cap = SharedCore.DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+  const young = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const store = {};
+  const cityUrls = [];
+  for (let index = 0; index < 58; index += 1) {
+    const url = `https://whereto.party/in/city-${index}`;
+    cityUrls.push(url);
+    store[core.getUrlDedupeKey(url)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  }
+  const otherHost = 'https://venue.example/events/old-page';
+  store[core.getUrlDedupeKey(otherHost)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  const gone = 'https://whereto.party/in/gone';
+  store[core.getUrlDedupeKey(gone)] = { firstSeen: young, lastSeen: young, misses: 1, lastStatus: 404 };
+  const current = 'https://whereto.party/in/barren';
+  store[core.getUrlDedupeKey(current)] = { firstSeen: young, lastSeen: young, misses: 2, capability: SharedCore.DEAD_END_CAPABILITY };
+  const before = JSON.stringify(store);
+
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const allowed = core.filterKnownDeadEndUrls([...cityUrls, otherHost, gone, current]);
+  const allowedCities = allowed.filter(url => url.startsWith('https://whereto.party/in/city-'));
+  assert.equal(allowedCities.length, cap, `only ${cap} of the 58 forgiven pages are asked for this run`);
+  assert.deepEqual(allowedCities, cityUrls.slice(0, cap), 'in the order the site listed them');
+  assert.ok(allowed.includes(otherHost), 'another host has its own ration');
+  assert.ok(!allowed.includes(gone), 'a page the origin called gone stays skipped');
+  assert.ok(!allowed.includes(current), 'a dead end confirmed under the current capability stays skipped');
+  assert.equal(core.deadEndRunContext.capabilityRetryDeferredCount, 58 - cap);
+  assert.equal(JSON.stringify(store), before, 'a deferred entry is untouched: it is still owed its retry');
+
+  // The processing-time twin sees the same entries: a granted one is not
+  // counted twice, a deferred one is skipped there too.
+  assert.equal(core.getSkippableDeadEndEntry(cityUrls[0]), null, 'granted at enqueue → fetched');
+  assert.ok(core.getSkippableDeadEndEntry(cityUrls[57]), 'deferred at enqueue → skipped at fetch time');
+  assert.equal(core.deadEndRunContext.capabilityRetriesByHost['whereto.party'], cap);
+
+  // Next run: the pages retried last run were re-stamped or recovered; the
+  // rest take their turn.
+  for (const url of cityUrls.slice(0, cap)) delete store[core.getUrlDedupeKey(url)];
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const nextRun = core.filterKnownDeadEndUrls(cityUrls);
+  assert.deepEqual(nextRun, [...cityUrls.slice(0, cap), ...cityUrls.slice(cap, 2 * cap)],
+    'recovered pages are ordinary pages again, and the next ration of forgiven ones goes out');
+  core.deadEndRunContext = null;
+});
+
 // ---------------------------------------------------------------------------
 // Store keying: entries live under the URL dedupe key (www/tracking-param/
 // case variants share ONE entry — the phone store held eventim www-variant
