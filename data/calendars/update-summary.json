@@ -1,5 +1,11 @@
 {
   "cities": {
+    "adelaide": {
+      "name": "Adelaide",
+      "status": "success",
+      "dataLength": 200,
+      "eventCount": 0
+    },
     "amsterdam": {
       "name": "Amsterdam",
       "status": "success",
@@ -23,6 +29,12 @@
       "status": "success",
       "dataLength": 4515,
       "eventCount": 3
+    },
+    "bali": {
+      "name": "Bali",
+      "status": "success",
+      "dataLength": 191,
+      "eventCount": 0
     },
     "bangkok": {
       "name": "Bangkok",
@@ -198,6 +210,12 @@
       "dataLength": 8087,
       "eventCount": 6
     },
+    "manila": {
+      "name": "Manila",
+      "status": "success",
+      "dataLength": 191,
+      "eventCount": 0
+    },
     "melbourne": {
       "name": "Melbourne",
       "status": "success",
@@ -262,6 +280,12 @@
       "name": "Paris",
       "status": "success",
       "dataLength": 191,
+      "eventCount": 0
+    },
+    "perth": {
+      "name": "Perth",
+      "status": "success",
+      "dataLength": 194,
       "eventCount": 0
     },
     "philly": {
