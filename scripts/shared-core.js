@@ -4272,6 +4272,43 @@ class SharedCore {
         return matches[0];
     }
 
+    // Cross-city lookup by DOOR, for an event whose city is unknown and
+    // whose venue name is not a curated name in full: the page gave a venue
+    // name AND a numbered street line, and one curated bar answers to both —
+    // its street line is the event's (areSameStreetLine) and one name holds
+    // the other ("Precinct" / "Precinct LA"). bearracuda.com/events/la7, run
+    // 20260929-091555: venue "Precinct", address "357 S. Broadway", no city
+    // on the page — the name alone is not the curated name, and the street
+    // line alone exists in a hundred towns. Together they are one door.
+    // Fail closed:
+    //   { city, bar }              — every curated bar answering to both is
+    //                                in one city
+    //   { ambiguousCities: [...] } — doors in more than one city answer
+    //   null                       — no name, no numbered street line, no
+    //                                match, or bars data missing
+    findCuratedBarCityByDoor(barName, address) {
+        const nameKey = this.normalizeBarNameKey(barName);
+        if (!nameKey || nameKey.length < 4 || !this.bars || typeof this.bars !== 'object') return null;
+        if (!this.parseAddressForComparison(typeof address === 'string' ? address : '')) return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || typeof bar.address !== 'string') continue;
+                const curatedKey = this.normalizeBarNameKey(bar.name);
+                if (!curatedKey || curatedKey.length < 4) continue;
+                if (!curatedKey.includes(nameKey) && !nameKey.includes(curatedKey)) continue;
+                if (!this.areSameStreetLine(address, bar.address)) continue;
+                matches.push({ city: cityKey, bar });
+            }
+        }
+        if (matches.length === 0) return null;
+        const cities = [...new Set(matches.map(match => match.city))];
+        if (cities.length > 1) return { ambiguousCities: cities };
+        return matches[0];
+    }
+
     // Registrable-host key for curated-website matching: the host of an
     // http(s) URL, lowercased, port and a leading "www." dropped. Regex only
     // (getHostFromUrl) — never `new URL`, which iOS JavaScriptCore lacks.

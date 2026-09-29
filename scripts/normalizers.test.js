@@ -4574,3 +4574,82 @@ test('isFullAddress: neighbourhood initialisms are rejected by shape — the ret
   // "Ripple" contains "pl").
   assert.equal(normalizer.isFullAddress('Ripple, Portland, OR 97217'), true);
 });
+
+// ---------------------------------------------------------------------------
+// Curated DOOR city backfill (bearracuda.com/events/la7, run 20260929-091555:
+// venue "Precinct", address "357 S. Broadway", no city anywhere on the page —
+// the event shipped city "unknown" although Precinct LA is a curated bar).
+// ---------------------------------------------------------------------------
+const PRECINCT_LA_BAR = {
+  name: 'Precinct LA',
+  city: 'la',
+  address: '357 South Broadway, Los Angeles, California, 90013',
+  coordinates: '34.0498149, -118.2493321',
+  website: 'https://precinctdtla.com',
+  googleMaps: 'https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI'
+};
+const DOOR_CITIES = {
+  la: { timezone: 'America/Los_Angeles', patterns: ['los angeles', 'dtla'] },
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  denver: { timezone: 'America/Denver', patterns: ['denver'] }
+};
+function bearracudaLaRecord(overrides = {}) {
+  return {
+    title: 'BEARRACUDA: LA',
+    bar: 'Precinct',
+    address: '357 S. Broadway',
+    startDate: '2026-11-14T21:00:00.000Z',
+    endDate: '2026-11-15T02:00:00.000Z',
+    _timezoneUnresolved: true,
+    website: 'https://bearracuda.com/events/la7/',
+    _sourcePageUrl: 'https://bearracuda.com/events/la7/',
+    ...overrides
+  };
+}
+
+test('curated-door city backfill: a venue name and the street line the page gave answer to one curated bar', () => {
+  const bars = { la: [PRECINCT_LA_BAR], seattle: [MASSIVE_SEATTLE_BAR] };
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars });
+  const pipeline = new NormalizerPipeline(core);
+  pipeline.setCore(core);
+  let event;
+  const lines = captureConsoleLog(() => { event = pipeline.normalizeEvent(bearracudaLaRecord()); });
+  assert.equal(event.city, 'la');
+  assert.equal(event._citySource, 'curated-door');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.equal(event.startDate, '2026-11-15T05:00:00.000Z', '9pm wall clock anchored to Los Angeles (PST)');
+  assert.equal(event.location, '34.0498149, -118.2493321', 'the curated pin follows once the city is known');
+  assert.ok(lines.includes('🗺️ LocationNormalizer: Backfilled city "la" for "BEARRACUDA: LA" from the curated door of "Precinct LA" — venue "Precinct" at "357 S. Broadway" is that bar\'s name and street line'),
+    lines.filter(line => line.includes('LocationNormalizer')).join('\n'));
+});
+
+test('curated-door city backfill: a name without its street line, a street line under another name, and doors in two cities decide nothing', () => {
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars: { la: [PRECINCT_LA_BAR] } });
+  assert.deepEqual(core.findCuratedBarCityByDoor('Precinct', '357 S. Broadway'), { city: 'la', bar: PRECINCT_LA_BAR });
+  // Broadway is a street in a hundred towns: another number is another door.
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', '1428 Broadway'), null);
+  // The same street line under a name the curated bar does not answer to.
+  assert.equal(core.findCuratedBarCityByDoor('The Bradbury', '357 S. Broadway'), null);
+  // No numbered street line, no door.
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', 'Downtown'), null);
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', ''), null);
+  // A three-letter stem is not a name.
+  assert.equal(core.findCuratedBarCityByDoor('Pre', '357 S. Broadway'), null);
+  // Doors answering in two cities are ambiguous, and nothing is backfilled.
+  const twoCities = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars: {
+    la: [PRECINCT_LA_BAR],
+    denver: [{ name: 'Precinct Denver', city: 'denver', address: '357 S Broadway, Denver, CO 80209' }]
+  } });
+  assert.deepEqual(twoCities.findCuratedBarCityByDoor('Precinct', '357 S. Broadway'), { ambiguousCities: ['la', 'denver'] });
+  const normalizer = new LocationNormalizer(twoCities);
+  const event = bearracudaLaRecord();
+  captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'unknown');
+  assert.equal(event._citySource, undefined);
+
+  // A page that names another place keeps its veto (the namesake rule).
+  const single = new LocationNormalizer(core);
+  const elsewhere = bearracudaLaRecord({ city: 'seoul' });
+  captureConsoleLog(() => { single.normalize(elsewhere); });
+  assert.equal(elsewhere.city, 'unknown', 'the page said Seoul');
+});

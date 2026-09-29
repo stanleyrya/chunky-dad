@@ -1193,6 +1193,9 @@ class LocationNormalizer extends BaseNormalizer {
     // inside another curated bar's name key, e.g. "Eagle" ⊂ "Dallas Eagle")
     // is never backfilled either. A present city that differs is NEVER
     // overwritten.
+    // When the name decides nothing, the DOOR is asked: the venue name and
+    // the event's numbered street line together answer to the curated bars
+    // of exactly one city (_citySource 'curated-door').
     // Provenance is stamped via the existing _citySource convention
     // (underscore fields stay out of serialized output).
     backfillCityFromCuratedBar(event) {
@@ -1201,7 +1204,20 @@ class LocationNormalizer extends BaseNormalizer {
         if (currentCity && currentCity !== 'unknown') return event;
         const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (!barName) return event;
-        const result = this.core.findCuratedBarCityByName(barName);
+        let result = this.core.findCuratedBarCityByName(barName);
+        // The name alone decided nothing (not a curated name in full, a
+        // family stem, or curated in several cities): the DOOR may — the
+        // venue name together with the numbered street line the page gave
+        // (SharedCore.findCuratedBarCityByDoor).
+        let byDoor = false;
+        if ((!result || result.ambiguousCities || result.genericStem)
+            && typeof this.core.findCuratedBarCityByDoor === 'function') {
+            const door = this.core.findCuratedBarCityByDoor(barName, event.address);
+            if (door && !door.ambiguousCities) {
+                result = door;
+                byDoor = true;
+            }
+        }
         if (!result) return event;
         const title = event.title || 'unknown';
         // The page NAMED a city we do not cover ("seoul", parked on
@@ -1242,8 +1258,10 @@ class LocationNormalizer extends BaseNormalizer {
             return event;
         }
         event.city = result.city;
-        event._citySource = 'curated-bar';
-        console.log(`🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        event._citySource = byDoor ? 'curated-door' : 'curated-bar';
+        console.log(byDoor
+            ? `🗺️ LocationNormalizer: Backfilled city "${result.city}" for "${title}" from the curated door of "${result.bar.name}" — venue "${barName}" at "${String(event.address || '').trim()}" is that bar's name and street line`
+            : `🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
         return event;
     }
 
