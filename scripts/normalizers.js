@@ -264,6 +264,9 @@ class BasicDataNormalizer extends BaseNormalizer {
         // Cover shape gate: prose never ships as a cover (see dropProseCover).
         event = this.dropProseCover(event);
 
+        // An address says each of its lines once (see collapseRepeatedAddressLines).
+        event = this.collapseRepeatedAddressLines(event);
+
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
     }
@@ -290,6 +293,35 @@ class BasicDataNormalizer extends BaseNormalizer {
         if (/^\d{1,4}(?:[.,]\d{1,2})?(?:\s*[-–—/]\s*\d{1,4}(?:[.,]\d{1,2})?)?$/.test(coverText)) return event;
         console.log(`🧹 NORMALIZE: dropped cover "${coverText}" for "${event.title || 'unknown'}" — neither a price nor a free-admission phrase (age restrictions and ticket-availability prose are not a cover)`);
         delete event.cover;
+        return event;
+    }
+
+    // A feed that publishes the street line and the locality as separate
+    // fields, where the street line already ends in the locality, comes out
+    // saying it twice: dice.fm's SPOOKMINCE, run 20260929-091555 — "118
+    // Curtain Rd, London EC2A 3AY, London EC2A 3AY" — and the doubled form
+    // then returns 0 geocode results for its first two query variants.
+    // A comma segment that repeats an earlier one word for word AND carries
+    // a digit (a street line, a postcode line) is dropped; the first stays.
+    // Digit-free repeats are left alone: "New York, New York" is a city and
+    // a state.
+    collapseRepeatedAddressLines(event) {
+        if (!event || typeof event !== 'object' || typeof event.address !== 'string') return event;
+        const segments = event.address.split(',').map(segment => segment.trim()).filter(Boolean);
+        if (segments.length < 2) return event;
+        const fold = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
+        const seen = new Set();
+        const kept = [];
+        for (const segment of segments) {
+            const key = fold(segment);
+            if (key && /\d/.test(key) && seen.has(key)) continue;
+            seen.add(key);
+            kept.push(segment);
+        }
+        if (kept.length === segments.length) return event;
+        const collapsed = kept.join(', ');
+        console.log(`🧹 NORMALIZE: address "${event.address}" → "${collapsed}" for "${event.title || 'unknown'}" — a line said twice is said once`);
+        event.address = collapsed;
         return event;
     }
 

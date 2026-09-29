@@ -4653,3 +4653,25 @@ test('curated-door city backfill: a name without its street line, a street line 
   captureConsoleLog(() => { single.normalize(elsewhere); });
   assert.equal(elsewhere.city, 'unknown', 'the page said Seoul');
 });
+
+// dice.fm SPOOKMINCE (BEEFMINCE parser), run 20260929-091555: the feed's
+// street line already ends in the locality its locality field repeats.
+test('an address line said twice is said once; a city and a state of one name are not a repeat', () => {
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema });
+  const normalizer = new BasicDataNormalizer(core);
+  const spookmince = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY, London EC2A 3AY' };
+  const lines = captureConsoleLog(() => { normalizer.normalize(spookmince); });
+  assert.equal(spookmince.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.ok(lines.some(line => line.startsWith('🧹 NORMALIZE: address "118 Curtain Rd, London EC2A 3AY, London EC2A 3AY" → "118 Curtain Rd, London EC2A 3AY"')), lines.join('\n'));
+  const untouched = [
+    '185 Christopher St, New York, New York',
+    '357 South Broadway, Los Angeles, California, 90013',
+    '2209 Wilton Drive, Wilton Manors, FL 33305',
+    'Zona Romántica'
+  ];
+  for (const address of untouched) {
+    const event = { title: 'Party', address };
+    captureConsoleLog(() => { normalizer.normalize(event); });
+    assert.equal(event.address, address);
+  }
+});
