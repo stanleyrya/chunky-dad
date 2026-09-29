@@ -26564,3 +26564,282 @@ test('links: an untried link is presumed gone only by its SHAPE — five sibling
   few.notePathShapeEvidence('https://venue.example/1-6-26/tendie-tuesday-3', 'gone');
   assert.equal(few.isOriginStatedGoneUrl(untried), false);
 });
+
+// ---------------------------------------------------------------------------
+// Series-level fills never detach a night (run 20260929-091555: Gathr's row
+// for the owner's weekly "Bear Happy Hour" series proposed five overrides
+// that add one picture and "Free" and change nothing; Thotyssey's FUZZY row
+// three more). Shapes below are the run's own records, trimmed.
+// ---------------------------------------------------------------------------
+async function buildSeriesFillNights(core, nights) {
+  const SERIES_NOTES = [
+    'Bar: Check instagram for this week’s location.',
+    'Tea: Popular happy hour that changes location every week in Manhattan.',
+    'Instagram: https://www.instagram.com/bearhappyhournyc',
+    'Shorter: BHH',
+    'Web: https://linktr.ee/bearhappyhour'
+  ].join('\n');
+  const first = Date.now() + 14 * 24 * 60 * 60 * 1000;
+  const built = [];
+  const original = console.log;
+  console.log = () => {};
+  try {
+    for (let i = 0; i < nights.length; i++) {
+      const start = new Date(first + i * 7 * 24 * 60 * 60 * 1000);
+      const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+      const seriesNight = { title: 'Bear Happy Hour', identifier: 'cal:6thhos5ct3pllq5kmvsp7infd8@google.com', startDate: start, endDate: end, location: '', notes: SERIES_NOTES };
+      const scraped = {
+        title: 'Bear Happy Hour',
+        description: 'Popular happy hour that changes location every week in Manhattan.',
+        startDate: start,
+        endDate: end,
+        city: 'dallas',
+        image: 'https://i.imgur.com/eiEbgvg.jpeg',
+        imageSource: 'json-api',
+        cover: 'Free',
+        instagram: 'https://www.instagram.com/bearhappyhournyc',
+        website: 'https://linktr.ee/bearhappyhour',
+        source: 'ai-web',
+        _parserConfig: { name: 'Gathr', siteRole: 'aggregator' },
+        ...nights[i]
+      };
+      built.push(await core.buildAnalyzedCalendarEvent(scraped, {
+        action: 'new',
+        reason: 'Recurring source match found - creating override',
+        sourceEvent: seriesNight,
+        existingKey: '6thhos5ct3pllq5kmvsp7infd8@google.com',
+        overrideIdentity: { overrideUid: '6thhos5ct3pllq5kmvsp7infd8@google.com', overrideRecurrenceId: start.toISOString() }
+      }, {}, {}));
+    }
+  } finally { console.log = original; }
+  return built;
+}
+
+test('series-level fills: the same picture and cover on every night of a saved series detach no night', async () => {
+  const core = createCore();
+  const nights = await buildSeriesFillNights(core, [{}, {}, {}, {}, {}]);
+  for (const night of nights) {
+    assert.equal(SharedCore.isOverrideCreate(night), true);
+    assert.equal(night._mergeNoOp, false, 'precondition: each night adds lines, so the no-op gate lets it through');
+    assert.deepEqual(core.getOverrideNightFills(night).keys, ['cover', 'image']);
+  }
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let withheld;
+  try { withheld = core.withholdSeriesLevelOverrideFills(nights); } finally { console.log = original; }
+  assert.equal(withheld.length, 5);
+  assert.deepEqual(nights[0]._seriesLevelFillWithheld, { fields: ['cover', 'image'], nights: 5 });
+  assert.equal(lines.filter(line => line.startsWith('🔁 SERIES FILL: "Bear Happy Hour" — Gathr adds the same cover, image to 5 nights')).length, 1, lines.join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution(nights), [], 'never written');
+  assert.equal(core.isOwnerReviewCandidate(nights[0]), false, 'and never a card');
+  assert.equal(SharedCore.describeExecutionDisposition(nights[0]),
+    'WITHHELD (series-level fact — the same cover, image on 5 nights of the saved series; edit the series, not its nights)');
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_seriesLevelFillWithheld'), 'a re-analysis starts clean');
+});
+
+test('series-level fills: a night with a fact of its own, a lone night, a flyer per night and an owner verdict all stay proposals', async () => {
+  const core = createCore();
+  const quiet = (fn) => { const original = console.log; console.log = () => {}; try { return fn(); } finally { console.log = original; } };
+
+  // This week's venue is what an override is for: that night stays, the
+  // nights that only repeat the series picture do not.
+  const withVenue = await buildSeriesFillNights(core, [{}, { bar: 'Rawhide', address: '500 8th Ave, New York, NY 10018' }, {}]);
+  assert.ok(core.getOverrideNightFills(withVenue[1]).keys.includes('address'), 'that night adds its own address');
+  quiet(() => core.withholdSeriesLevelOverrideFills(withVenue));
+  assert.equal(Boolean(withVenue[1]._seriesLevelFillWithheld), false);
+  assert.equal(SharedCore.filterEventsForExecution([withVenue[1]]).length, 1);
+  assert.equal(Boolean(withVenue[0]._seriesLevelFillWithheld), true);
+  assert.equal(Boolean(withVenue[2]._seriesLevelFillWithheld), true);
+
+  // One night alone cannot show that the value is the series'.
+  const lone = await buildSeriesFillNights(core, [{}]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(lone)), []);
+  assert.equal(SharedCore.filterEventsForExecution(lone).length, 1);
+
+  // A flyer per night is the source speaking per night.
+  const perNight = await buildSeriesFillNights(core, [
+    { image: 'https://i.imgur.com/october-1.jpeg' },
+    { image: 'https://i.imgur.com/october-8.jpeg' }
+  ]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(perNight)), []);
+
+  // The owner's verdict on a night always lands on that night.
+  const verdicts = await buildSeriesFillNights(core, [
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true },
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true }
+  ]);
+  assert.equal(core.getOverrideNightFills(verdicts[0]), null);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(verdicts)), []);
+});
+
+// A rate table's season row is a name and a date with nothing of its own
+// (campoutpoconos.com/accommodations, run 20260929-091555 — the record as
+// the run built it, trimmed).
+test('a name and a date with no picture, no words and no page of their own, placed only by the site, is withheld as an announcement', async () => {
+  const core = createFestivalCore([]);
+  const seasonRow = {
+    title: 'SPRING',
+    description: 'SPRING',
+    startDate: '2027-04-23T04:00:00.000Z',
+    endDate: '2027-04-23T07:00:00.000Z',
+    _endDateDefaulted: true,
+    bar: 'Camp Out',
+    barSource: 'venue-site-identity',
+    address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301',
+    addressSource: 'curated',
+    location: '41.0219799, -75.1167816',
+    pinSource: 'curated',
+    website: 'https://campoutpoconos.com',
+    url: 'https://campoutpoconos.com',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true,
+    _sourcePageUrl: 'https://campoutpoconos.com/accommodations/',
+    _multiEventSegment: { index: 14, total: 17, lineCount: 3, text: 'SPRING | April 23 – May 21 • Weekday $40 | Weekend $70 • Additional Guest: Weekday $40 | Weekend $50' }
+  };
+  // The same venue's real theme weekend: all-day too, but it has a flyer and a blurb.
+  const themeWeekend = {
+    ...seasonRow,
+    title: 'LEATHER BEARS',
+    description: 'Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp.',
+    image: 'https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg',
+    startDate: '2026-10-09T04:00:00.000Z',
+    endDate: '2026-10-12T03:59:00.000Z',
+    _multiEventSegment: { index: 2, total: 9, lineCount: 4 }
+  };
+  // A row that names its own page is an event with a page, however bare.
+  const withPage = { ...seasonRow, title: 'CALF B&B EVENT', description: 'CALF B&B EVENT', website: 'https://eaglela.com/events/calf-bb-event/', url: 'https://eaglela.com/events/calf-bb-event/' };
+  // A place the row itself stated is not the site's identity.
+  const statedPlace = { ...seasonRow, title: 'Bear Camp Opening', description: 'Bear Camp Opening', barSource: 'page-adjacent' };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([seasonRow, themeWeekend, withPage, statedPlace], buildFestivalPrepAdapter(), {});
+  } finally { console.log = original; }
+  const byTitle = (title) => analyzed.find(e => e.title === title);
+  assert.equal(byTitle('SPRING')._announcementOnlyWithheld, true);
+  assert.ok(lines.some(line => line.startsWith('📣 ANNOUNCEMENT: "SPRING" is a name and a date with no picture, no words and no page of their own')), lines.filter(l => l.includes('ANNOUNCEMENT')).join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution([byTitle('SPRING')]), []);
+  assert.equal(core.isOwnerReviewCandidate(byTitle('SPRING')), false, 'never a card');
+  assert.ok(!byTitle('LEATHER BEARS')._announcementOnlyWithheld, 'a flyer and a blurb are the event\'s own');
+  assert.ok(!byTitle('CALF B&B EVENT')._announcementOnlyWithheld, 'a page of its own');
+  assert.ok(!byTitle('Bear Camp Opening')._announcementOnlyWithheld, 'a place the row stated');
+});
+
+// beefdip.com/planned-events, run 20260929-091555: the row "Sunday, Jan 31 •
+// 11AM / 1PM • The Tryst Hotel" of the DRAG BRUNCH + ROOFTOP POOL card became
+// a record titled "The Tryst Hotel", and its copy — "Drag Brunch + Rooftop
+// Pool at The Tryst Hotel" — counted as the party restating its own name.
+test('sanity: a copy that only places something AT the venue does not restate a venue-named title', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, {
+    title: 'The Tryst Hotel',
+    bar: 'The Tryst Hotel',
+    description: 'Drag Brunch + Rooftop Pool at The Tryst Hotel'
+  }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Hotel Delfin',
+    bar: 'Hotel Delfin',
+    description: 'Pool party @ Hotel Delfin, all day.'
+  }), ['junk-title']);
+  // The name standing anywhere else is the party naming itself.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'MASSIVE',
+    bar: 'MASSIVE',
+    description: 'Saturdays at MASSIVE. MASSIVE returns to the warehouse with dirty grooves all night long.'
+  }), []);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('drag brunch rooftop pool at the tryst hotel', 'the tryst hotel'), false);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('the tryst hotel presents drag brunch', 'the tryst hotel'), true);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('great party', 'the tryst hotel'), false);
+});
+
+// beefdip.com/planned-events: WELCOME PARTY's flyer is
+// ".../uploads/2026/01/2026-01-25 Welcome Party.webp"; an earlier run cut it
+// at the space and saved the head as FOAM POOL PARTY's website, and run
+// 20260929-091555 kept it ("same-host deeper URL beats domain root").
+test('the head of a picture\'s address is a file, not a page: it loses every link merge', () => {
+  const core = createCore();
+  const cut = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25';
+  const welcomeFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp';
+  const foamFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp';
+  // Nothing known about the run's pictures: nothing is presumed.
+  assert.equal(core.isCutPictureAddress(cut), false);
+  // The neighbour card's flyer is a picture of this run.
+  core.notePictureAddresses([{ title: 'WELCOME PARTY', image: welcomeFlyer }, { title: 'FOAM POOL PARTY', image: foamFlyer }]);
+  assert.equal(core.isCutPictureAddress(cut), true);
+  assert.equal(core.isCutPictureAddress('http://www.beefdip.com/wp-content/uploads/2026/01/2026-01-25'), true, 'scheme and www are spelling');
+  // A page, a front door, the pictures' folder and a shorter head that ends
+  // inside a word are not cut picture addresses.
+  for (const page of ['https://beefdip.com/planned-events/', 'https://beefdip.com', 'https://beefdip.com/wp-content/uploads/2026/01/',
+    'https://beefdip.com/wp-content/uploads/2026/01/2026-01', 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome']) {
+    assert.equal(core.isCutPictureAddress(page), page.endsWith('Welcome'), page);
+  }
+  const records = { a: { title: 'FOAM POOL PARTY' }, b: { title: 'FOAM POOL PARTY', image: foamFlyer } };
+  assert.deepEqual(core.resolveConflictDeterministically('website', cut, 'https://beefdip.com',
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }),
+    { winner: 'b', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' });
+  assert.equal(core.resolveConflictDeterministically('website', 'https://beefdip.com', cut,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }).winner, 'a', 'and it never replaces a saved link');
+  // A picture carried only by a record of the merge counts too.
+  const fresh = createCore();
+  assert.equal(fresh.isCutPictureAddress(cut, [{ imageVertical: welcomeFlyer }]), true);
+});
+
+// BEEFMINCE SPOOKMINCE, run 20260929-091555: the calendar holds the doubled
+// address an earlier run saved and the pin geocoded from it; the scrape now
+// brings the clean form and (its geocode unanswered) the page's maps-link pin.
+test('an address said once replaces the same address said twice, and the saved pin stays where it is', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '51.5251192, -0.0798044',
+    notes: [
+      'bar: UNLOCKED (Shoreditch)',
+      'address: 118 Curtain Rd, London EC2A 3AY, London EC2A 3AY',
+      'timezone: Europe/London',
+      'website: https://beefmince.com/events',
+      'pinSource: geocoded-exact',
+      'addressSource: page',
+      'key: spookmince|2026-10-31|unlocked (shoreditch)'
+    ].join('\n')
+  };
+  const scraped = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'UNLOCKED (Shoreditch)',
+    address: '118 Curtain Rd, London EC2A 3AY',
+    addressSource: 'page',
+    location: '51.52608,-0.079068',
+    pinSource: 'maps-link',
+    city: 'london',
+    timezone: 'Europe/London',
+    website: 'https://beefmince.com/events',
+    source: 'ai-web',
+    _parserConfig: { name: 'BEEFMINCE' },
+    _fieldPriorities: {
+      address: { priority: ['ai-web'], merge: 'ai' },
+      location: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let merged;
+  try {
+    merged = (await core.prepareEventsForCalendar([scraped], buildPrepCalendarAdapter([calendarRecord]), {}))[0];
+  } finally { console.log = original; }
+  assert.equal(merged._action, 'merge');
+  assert.equal(merged.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.equal(merged.location, '51.5251192, -0.0798044', 'a respelled address is not a venue that moved');
+  assert.ok(lines.some(line => line.includes('field=address resolved deterministically — the same address with a line said twice on the other side — said once')),
+    lines.filter(line => line.includes('address')).join('\n'));
+});

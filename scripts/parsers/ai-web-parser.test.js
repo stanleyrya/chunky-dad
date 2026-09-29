@@ -21529,3 +21529,77 @@ test('page site role resolved on a working copy is published back to the caller\
     { siteRole: 'venue', urls: ['https://venue.example/'] }), '');
   assert.equal(offHostCaller.pageSiteRole, undefined);
 });
+
+test('a one-line row keeps the flyer its own markup carries behind an image-optimizer address', () => {
+  // whereto.party/in/tokyo, run 20260929-091555 (card trimmed): the flyer is
+  // printed as a Next.js optimizer address, the card's one text line is its
+  // date, and the record's image is the decoded CDN address.
+  const parser = createParser();
+  const flyer = 'https://cdn.whereto.party/media/events/f4d3bb3a-80f0-409a-ac40-948955b94711.png';
+  const neighbour = 'https://cdn.whereto.party/media/events/41100759-a824-4028-b60c-be241a328718.jpeg';
+  const card = {
+    lines: ['Sat, 3 October 2026 · 22:00'],
+    _compactListingRow: true,
+    html: '<img alt="[EAGLE TOKYO BLUE] RYUGU flyer" loading="lazy" decoding="async" data-nimg="fill" '
+      + 'srcSet="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=640&amp;q=75 640w, '
+      + '/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75 1920w" '
+      + 'src="/_next/image?url=https%3A%2F%2Fcdn.whereto.party%2Fmedia%2Fevents%2Ff4d3bb3a-80f0-409a-ac40-948955b94711.png&amp;w=1920&amp;q=75"/>'
+      + '<div class="p-4"><h3 class="display text-lg">[EAGLE TOKYO BLUE] RYUGU</h3>'
+      + '<span class="truncate">Tokyo  ·  EAGLE TOKYO BLUE</span>'
+      + '<time dateTime="2026-10-03T22:00:00">Sat, 3 October 2026 · 22:00</time></div>'
+  };
+  const sourceUrl = 'https://whereto.party/in/tokyo';
+  assert.equal(card.html.includes(flyer), false, 'the literal address is nowhere in the card');
+  assert.equal(parser.segmentMarkupCarriesImage(card, flyer, sourceUrl), true);
+  // The neighbour card's flyer is still not this row's.
+  assert.equal(parser.segmentMarkupCarriesImage(card, neighbour, sourceUrl), false);
+  // A ticker row with no markup of its own owns nothing (furball.nyc).
+  assert.equal(parser.segmentMarkupCarriesImage({ lines: ['10/3 FURBALL DC - ICON'], html: '<li>10/3 FURBALL DC - ICON</li>', _compactListingRow: true },
+    'https://static.wixstatic.com/media/six-party-flyer.jpg', 'https://www.furball.nyc/'), false);
+  // A literal address in the row's markup counts as before.
+  assert.equal(parser.segmentMarkupCarriesImage({ html: `<img src="${flyer}">` }, flyer, sourceUrl), true);
+});
+
+// massbearsandcubs.org/events?format=json, run 20260929-091555 (rows trimmed).
+test('Squarespace: a name with no street line on the template\'s own marker takes no pin, and an event starts on the second', () => {
+  const parser = createParser();
+  const marker = { markerLat: 40.7207559, markerLng: -74.0007613 };
+  const rows = [
+    { id: 'a', title: 'Bear Tea /Club Cafe', startDate: 1797800400580, endDate: 1797822000580, fullUrl: '/events/bear-tea-club-cafe',
+      location: { ...marker, mapLat: 42.3486155, mapLng: -71.0723826, addressTitle: 'Club Cafe', addressLine1: '209 Columbus Avenue', addressLine2: 'Boston, MA, 02116' } },
+    { id: 'b', title: 'Alley Bears - Gear Night!', startDate: 1798336800132, endDate: 1798347600132, fullUrl: '/events/alley-bears',
+      location: { ...marker, mapLat: 42.3581324, mapLng: -71.0588204, addressTitle: 'The Alley Bar', addressLine1: '14 Pi Alley', addressLine2: 'Boston, MA, 02108' } },
+    { id: 'c', title: 'Monthly Membership Meetings', startDate: 1796256000686, endDate: 1796261400686, fullUrl: '/events/monthly-membership-meetings',
+      location: { ...marker, mapZoom: 12, mapLat: 40.7207559, mapLng: -74.0007613, addressTitle: 'Online/Virtual', addressLine1: '', addressLine2: '', addressCountry: '' } }
+  ];
+  const templateMarker = parser.findSquarespaceTemplateMarker(rows);
+  assert.equal(templateMarker, '40.72076,-74.00076');
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let built;
+  try {
+    built = rows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.massbearsandcubs.example/events', { templateMarker }));
+  } finally { console.log = original; }
+  assert.equal(built[0].location, '42.3486155, -71.0723826');
+  assert.equal(built[1].location, '42.3581324, -71.0588204');
+  assert.equal(built[2].bar, 'Online/Virtual');
+  assert.equal(built[2].location, undefined, 'the untouched map is not a place');
+  assert.equal(built[2].address, '');
+  assert.ok(lines.some(line => line.startsWith('🟦 SQUARESPACE: "Monthly Membership Meetings" carries the template\'s own marker')), lines.join('\n'));
+  assert.equal(built[2].startDate.toISOString(), '2026-12-03T00:00:00.000Z', 'not …00.686Z');
+  assert.equal(built[2].endDate.toISOString(), '2026-12-03T01:30:00.000Z');
+  assert.equal(built[0].startDate.toISOString(), '2026-12-20T21:00:00.000Z');
+
+  // One row proves nothing, and a site that sets map and marker together teaches no template marker.
+  assert.equal(parser.findSquarespaceTemplateMarker(rows.slice(0, 1)), '');
+  const together = [
+    { location: { markerLat: 47.6150949, markerLng: -122.3158456, mapLat: 47.6150949, mapLng: -122.3158456, addressTitle: 'The Cuff', addressLine1: '1533 13th Ave' } },
+    { location: { markerLat: 47.6150949, markerLng: -122.3158456, mapLat: 47.6150949, mapLng: -122.3158456, addressTitle: 'The Cuff', addressLine1: '1533 13th Ave' } }
+  ];
+  assert.equal(parser.findSquarespaceTemplateMarker(together), '');
+  // Without a learned marker, or with a street line beneath the name, the pin stands as before.
+  assert.equal(parser.buildEventFromSquarespaceItem(rows[2], 'https://www.massbearsandcubs.example/events').location, '40.7207559, -74.0007613');
+  const withLine = { ...rows[2], location: { ...rows[2].location, addressTitle: 'Office', addressLine1: '459 Broadway', addressLine2: 'New York, NY' } };
+  assert.equal(parser.buildEventFromSquarespaceItem(withLine, 'https://www.massbearsandcubs.example/events', { templateMarker }).location, '40.7207559, -74.0007613');
+});
