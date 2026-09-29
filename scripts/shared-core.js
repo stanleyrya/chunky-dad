@@ -15409,8 +15409,11 @@ class SharedCore {
         // is FLAGGED for review — never silently applied or dropped.
         if (deferredCoordinateDecision) {
             const { scraperValue, calendarValue } = deferredCoordinateDecision;
+            // A line said twice and then said once is the same address
+            // respelled, not a venue that moved (collapseRepeatedAddressLines).
             const normalizeAddressForComparison = (value) =>
-                String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+                this.collapseRepeatedAddressLines(String(value === null || value === undefined ? '' : value))
+                    .replace(/\s+/g, ' ').trim().toLowerCase();
             const calendarAddress = normalizeAddressForComparison(calendarObject.address);
             const finalAddress = normalizeAddressForComparison(
                 Object.prototype.hasOwnProperty.call(mergedObject, 'address') ? mergedObject.address : calendarObject.address

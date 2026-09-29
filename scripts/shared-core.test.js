@@ -26521,3 +26521,58 @@ test('the head of a picture\'s address is a file, not a page: it loses every lin
   const fresh = createCore();
   assert.equal(fresh.isCutPictureAddress(cut, [{ imageVertical: welcomeFlyer }]), true);
 });
+
+// BEEFMINCE SPOOKMINCE, run 20260929-091555: the calendar holds the doubled
+// address an earlier run saved and the pin geocoded from it; the scrape now
+// brings the clean form and (its geocode unanswered) the page's maps-link pin.
+test('an address said once replaces the same address said twice, and the saved pin stays where it is', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '51.5251192, -0.0798044',
+    notes: [
+      'bar: UNLOCKED (Shoreditch)',
+      'address: 118 Curtain Rd, London EC2A 3AY, London EC2A 3AY',
+      'timezone: Europe/London',
+      'website: https://beefmince.com/events',
+      'pinSource: geocoded-exact',
+      'addressSource: page',
+      'key: spookmince|2026-10-31|unlocked (shoreditch)'
+    ].join('\n')
+  };
+  const scraped = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'UNLOCKED (Shoreditch)',
+    address: '118 Curtain Rd, London EC2A 3AY',
+    addressSource: 'page',
+    location: '51.52608,-0.079068',
+    pinSource: 'maps-link',
+    city: 'london',
+    timezone: 'Europe/London',
+    website: 'https://beefmince.com/events',
+    source: 'ai-web',
+    _parserConfig: { name: 'BEEFMINCE' },
+    _fieldPriorities: {
+      address: { priority: ['ai-web'], merge: 'ai' },
+      location: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let merged;
+  try {
+    merged = (await core.prepareEventsForCalendar([scraped], buildPrepCalendarAdapter([calendarRecord]), {}))[0];
+  } finally { console.log = original; }
+  assert.equal(merged._action, 'merge');
+  assert.equal(merged.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.equal(merged.location, '51.5251192, -0.0798044', 'a respelled address is not a venue that moved');
+  assert.ok(lines.some(line => line.includes('field=address resolved deterministically — the same address with a line said twice on the other side — said once')),
+    lines.filter(line => line.includes('address')).join('\n'));
+});
