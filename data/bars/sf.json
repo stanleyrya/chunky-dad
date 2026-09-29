@@ -107,5 +107,11 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:47:0 #545454:13:0 #727272:9:0",
     "faviconPlate": "#ffffff"
+  },
+  {
+    "name": "Audio Nightclub",
+    "city": "sf",
+    "address": "316 11th Street, San Francisco",
+    "coordinates": "37.7713709, -122.4138077"
   }
 ]
