@@ -298,5 +298,22 @@
     "urlPatterns": [
       "lodgeny.com"
     ]
+  },
+  {
+    "name": "Bears of London",
+    "aliases": [
+      "Bears of London Network",
+      "Bears of London Meet-ups"
+    ],
+    "shortName": "BEARS OF LONDON",
+    "instagram": "https://www.instagram.com/bearsoflondon_network",
+    "facebook": "https://www.facebook.com/share/g/19hST5FKTP/",
+    "urlPatterns": [
+      "eventbrite.com/o/bears-of-london-meet-ups-64998384913",
+      "eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913",
+      "instagram.com/bearsoflondon_network",
+      "instagram.com/bearsoflondon_meetups"
+    ],
+    "bearAffinity": "always"
   }
 ]

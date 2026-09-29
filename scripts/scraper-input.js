@@ -642,6 +642,16 @@ const scraperConfig = {
       alwaysBear: true,
     },
     {
+      name: "Bears of London",
+      // Bears of London Network — a London social group (meet-ups, meals,
+      // trips) that announces on Instagram and in a Facebook group, both
+      // behind a login. Its Eventbrite organizer page is the one door that
+      // can be read: every ticketed meet-up lands there with its ticket page
+      // — the same door as Megawoof America and Xposure Events. A few events
+      // a year; zero upcoming is this source's normal state between them.
+      urls: ["https://www.eventbrite.com/o/64998384913"],
+    },
+    {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,
       // URL blocking, AI/OCR settings, and field merging are all automatic.
