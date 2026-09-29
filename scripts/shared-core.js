@@ -21455,9 +21455,23 @@ class SharedCore {
                     && !this.isCoordinatePair(analyzedEvent.location);
                 const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
                 const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
-                if ((oneLineRow || placeless) && noTime && noTicket) {
+                // …and for a name and a date with NOTHING of their own, on a
+                // venue's own site: the place is the site's identity (filled
+                // from the curated venue, not read off the row), and the row
+                // gave no picture, no words beyond its own name and no page.
+                // campoutpoconos.com/accommodations, run 20260929-091555:
+                // the cabin rate table's "SPRING | April 23 – May 21 •
+                // Weekday $150 | Weekend $285" reached the deck as a party
+                // called SPRING at Camp Out — the venue backfill had given
+                // it an address and a pin, so it no longer read as placeless.
+                // A venue's real all-day events carry a flyer, a blurb or a
+                // page of their own and are untouched.
+                const nameAndDateOnly = Boolean(segment && typeof segment === 'object')
+                    && this.isNameAndDateOnlyRecord(analyzedEvent);
+                if ((oneLineRow || placeless || nameAndDateOnly) && noTime && noTicket) {
                     analyzedEvent._announcementOnlyWithheld = true;
-                    const shape = oneLineRow ? 'a one-line listing row' : 'a dated record with no place';
+                    const shape = oneLineRow ? 'a one-line listing row'
+                        : (placeless ? 'a dated record with no place' : 'a name and a date with no picture, no words and no page of their own, placed only by the site it was read from');
                     console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is ${shape} with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
                 }
             }
@@ -21793,6 +21807,23 @@ class SharedCore {
 
             return analyzedEvent;
         }
+    }
+
+    // A record that is a name and a date and nothing else (see the
+    // announcement withhold): its place is the site's own identity
+    // (barSource venue-site / venue-site-identity — never a line the row
+    // stated), it carries no picture in any slot, no description beyond its
+    // own title, and no page of its own (no link, or a bare front door).
+    isNameAndDateOnlyRecord(event) {
+        if (!event || typeof event !== 'object') return false;
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        if (barSource !== 'venue-site' && barSource !== 'venue-site-identity') return false;
+        const hasText = (value) => typeof value === 'string' && value.trim() !== '';
+        if (hasText(event.image) || hasText(event.imageVertical) || hasText(event.imageHorizontal)) return false;
+        const fold = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
+        const description = hasText(event.description) ? fold(event.description) : '';
+        if (description && description !== fold(event.title || '')) return false;
+        return !this.getEventPageUrlIdentity(event);
     }
 
     // Analyze events against existing calendar events and determine actions

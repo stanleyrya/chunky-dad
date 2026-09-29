@@ -26405,3 +26405,60 @@ test('series-level fills: a night with a fact of its own, a lone night, a flyer 
   assert.equal(core.getOverrideNightFills(verdicts[0]), null);
   assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(verdicts)), []);
 });
+
+// A rate table's season row is a name and a date with nothing of its own
+// (campoutpoconos.com/accommodations, run 20260929-091555 — the record as
+// the run built it, trimmed).
+test('a name and a date with no picture, no words and no page of their own, placed only by the site, is withheld as an announcement', async () => {
+  const core = createFestivalCore([]);
+  const seasonRow = {
+    title: 'SPRING',
+    description: 'SPRING',
+    startDate: '2027-04-23T04:00:00.000Z',
+    endDate: '2027-04-23T07:00:00.000Z',
+    _endDateDefaulted: true,
+    bar: 'Camp Out',
+    barSource: 'venue-site-identity',
+    address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301',
+    addressSource: 'curated',
+    location: '41.0219799, -75.1167816',
+    pinSource: 'curated',
+    website: 'https://campoutpoconos.com',
+    url: 'https://campoutpoconos.com',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true,
+    _sourcePageUrl: 'https://campoutpoconos.com/accommodations/',
+    _multiEventSegment: { index: 14, total: 17, lineCount: 3, text: 'SPRING | April 23 – May 21 • Weekday $40 | Weekend $70 • Additional Guest: Weekday $40 | Weekend $50' }
+  };
+  // The same venue's real theme weekend: all-day too, but it has a flyer and a blurb.
+  const themeWeekend = {
+    ...seasonRow,
+    title: 'LEATHER BEARS',
+    description: 'Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp.',
+    image: 'https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg',
+    startDate: '2026-10-09T04:00:00.000Z',
+    endDate: '2026-10-12T03:59:00.000Z',
+    _multiEventSegment: { index: 2, total: 9, lineCount: 4 }
+  };
+  // A row that names its own page is an event with a page, however bare.
+  const withPage = { ...seasonRow, title: 'CALF B&B EVENT', description: 'CALF B&B EVENT', website: 'https://eaglela.com/events/calf-bb-event/', url: 'https://eaglela.com/events/calf-bb-event/' };
+  // A place the row itself stated is not the site's identity.
+  const statedPlace = { ...seasonRow, title: 'Bear Camp Opening', description: 'Bear Camp Opening', barSource: 'page-adjacent' };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([seasonRow, themeWeekend, withPage, statedPlace], buildFestivalPrepAdapter(), {});
+  } finally { console.log = original; }
+  const byTitle = (title) => analyzed.find(e => e.title === title);
+  assert.equal(byTitle('SPRING')._announcementOnlyWithheld, true);
+  assert.ok(lines.some(line => line.startsWith('📣 ANNOUNCEMENT: "SPRING" is a name and a date with no picture, no words and no page of their own')), lines.filter(l => l.includes('ANNOUNCEMENT')).join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution([byTitle('SPRING')]), []);
+  assert.equal(core.isOwnerReviewCandidate(byTitle('SPRING')), false, 'never a card');
+  assert.ok(!byTitle('LEATHER BEARS')._announcementOnlyWithheld, 'a flyer and a blurb are the event\'s own');
+  assert.ok(!byTitle('CALF B&B EVENT')._announcementOnlyWithheld, 'a page of its own');
+  assert.ok(!byTitle('Bear Camp Opening')._announcementOnlyWithheld, 'a place the row stated');
+});
