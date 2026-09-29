@@ -22,6 +22,13 @@ function createParser() {
   return parser;
 }
 
+// The parser's clock hook, pinned. A test whose fixture states its own dates
+// sets `parser.now = FROZEN_NOW`: year repair keeps a date only while it sits
+// inside [now - 45d, now + 210d], so under the real clock a fixture dated
+// 2026-07-17 is "repaired" to 2027 as soon as 2027-07-17 is within 210 days,
+// and one the page itself dates is dropped as archive 45 days after its night.
+const FROZEN_NOW = () => new Date(Date.UTC(2026, 6, 13, 12, 0, 0)); // 2026-07-13
+
 test('pairs nearby row-split event images to the matching multi-event segments', () => {
   const parser = createParser();
   parser.core = { getResolvedFieldPriorities: (config) => config?.fieldPriorities || {} };
@@ -275,6 +282,7 @@ test('city survives evidence validation when the page only uses a configured ali
 
 test('normalizeAiEvent falls back to the address to resolve the timezone', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = {
     nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] }
   };
@@ -295,6 +303,7 @@ test('normalizeAiEvent falls back to the address to resolve the timezone', () =>
 
 test('normalizeAiEvent flags wall-clock dates when no timezone can be resolved', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const aiEvent = {
     title: 'UNDERBEAR',
     startDate: '2026-07-17',
@@ -398,6 +407,7 @@ test('retry-only extraction (lowercase keys) survives date normalization', () =>
   // Reproduces the segment-3 failure: primary pass timed out, retry pass returned
   // perfect data under lowercase keys, and the event was dropped with startDate=null.
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const retryResponse = {
     title: 'FURBALL',
     startdate: '2026-07-17',
@@ -1318,6 +1328,7 @@ test("'404' flags standalone segments only, never hex asset IDs or pixel sizes",
 
 test('normalizeAiEvent rolls past-midnight end times to the next day', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
 
   // "Doors 9pm, party until 1am" — endDate arrives as the START's date because the
@@ -1349,6 +1360,7 @@ test('normalizeAiEvent rolls past-midnight end times to the next day', () => {
 
 test('normalizeAiEvent anchors an end time with NO end date to the start date', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
 
   // "Party Goes Until 2:00 am!" — the page never prints the next-day date, so the
@@ -1785,6 +1797,7 @@ test('normalizeAiEvent never treats edition years or short remainders as date se
 
 test('normalizeAiEvent title date-strip matches the PRINTED local date even when UTC rolls past midnight', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   // 21:00 in LA is 04:00 UTC the NEXT day — the comparison must use the
   // original extracted startDate string, not the rolled timestamp.
   const event = parser.normalizeAiEvent(
@@ -2399,8 +2412,6 @@ test('filterOcrResultsForSegment matches bare-asset OCR keys to transform-varian
 // weekday but no year, the model hallucinated one, and window repair landed on
 // the wrong weekday — e.g. "Sat, Aug 22" → 2025-08-22, a Friday)
 // ---------------------------------------------------------------------------
-
-const FROZEN_NOW = () => new Date(Date.UTC(2026, 6, 13, 12, 0, 0)); // 2026-07-13
 
 test('resolveWeekdayPinnedYear pins hallucinated years to the stated weekday', () => {
   const parser = createParser();
@@ -6403,6 +6414,7 @@ test('end-marker recovery: startDate is derived from the reassigned end (end 02:
 test('end-marker survival: the full GEAR NIGHT shape normalizes to a real event with the previous-evening date and positive duration', () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const evidenceContext = parser.buildAiEvidenceContextFromText(DALLAS_EAGLE_SEGMENT);
   const validationContext = { imageEvidenceUrls: new Set() };
 
@@ -6589,6 +6601,7 @@ test('title: a run of single letters is letter-spacing, not six words', () => {
 test('doors-vs-party: a start at a PAGE-PRINTED doors time is promoted to the party time', () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = {
     'new orleans': { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] }
   };
@@ -6636,6 +6649,7 @@ test('doors-vs-party: a start at a PAGE-PRINTED doors time is promoted to the pa
 test('doors-vs-party: a doors/party pair read only from flyer OCR promotes nothing', () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = {
     'new orleans': { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] }
   };
@@ -8239,12 +8253,15 @@ test('JSON-API price mapping: sold-out and closed tiers never widen the cover', 
   // Cubhouse's Halloween payload (cached 2026-09-10), verbatim shape: only
   // General Admission was still for sale — "Tonight Only" closed on Aug 29
   // and both cheaper tiers were sold out (quantity_sold === quantity_total).
-  // The run shipped "$15-$30".
+  // The run shipped "$15-$30". The two windows that were still open on the
+  // day of the run (they closed 2026-10-30 and -31) close in 2037 here: once
+  // every window has closed nothing is on sale and the full range is the
+  // right answer — the last assertion's case, not this one.
   const cubhouse = {
     ticketTypes: [
       { name: 'Tonight Only', price_cents: 1500, quantity_total: 30, quantity_sold: 30, sales_close_at: '2026-08-29 06:00:00+00' },
-      { name: 'Advance', price_cents: 2500, quantity_total: 30, quantity_sold: 30, sales_close_at: '2026-10-30 06:00:00+00' },
-      { name: 'General Admission', price_cents: 3000, quantity_total: 390, quantity_sold: 37, sales_close_at: '2026-10-31 06:00:00+00' }
+      { name: 'Advance', price_cents: 2500, quantity_total: 30, quantity_sold: 30, sales_close_at: '2037-10-30 06:00:00+00' },
+      { name: 'General Admission', price_cents: 3000, quantity_total: 390, quantity_sold: 37, sales_close_at: '2037-10-31 06:00:00+00' }
     ]
   };
   assert.equal(parser.formatJsonApiPriceCover(cubhouse), '$30',
@@ -12808,6 +12825,7 @@ function createMissBudgetHarness(cacheDir, options = {}) {
   const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
   parser.core = new SharedCore({}, { eventSchema: EventSchema });
   parser.core.aiResponseCache = parser.getAiResponseCache();
+  parser.now = FROZEN_NOW; // the cards print 2026 dates
   if (Number.isFinite(options.missBase)) parser.extractionLimits.multiEventMaxSegments = options.missBase;
   if (Number.isFinite(options.missCeiling)) parser.extractionLimits.multiEventMaxSegmentsDenseCeiling = options.missCeiling;
   const aiRequests = [];
@@ -17761,9 +17779,11 @@ test('the Elfsight widget is read only on the configured entry page', async () =
   const httpAdapter = {
     fetchData: async () => {
       fetches++;
+      // 2037: a one-off row whose day is more than a month behind is the
+      // widget's archive and is not read.
       return { html: elfsightBootPayload([
-        { name: 'MEGA BEAR BLAST!', visible: true, start: { date: '2026-09-20', time: '18:00' }, timeZone: 'America/New_York' },
-        { name: 'HIDDEN', visible: false, start: { date: '2026-09-21', time: '18:00' } }
+        { name: 'MEGA BEAR BLAST!', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' },
+        { name: 'HIDDEN', visible: false, start: { date: '2037-09-21', time: '18:00' } }
       ]) };
     }
   };
@@ -19107,6 +19127,12 @@ test('MEC full calendar on its list skin: the monthly skin is asked for once and
 
 test('a card\'s own date line beats a model date that names another day; an agreeing or absent card line changes nothing', () => {
   const parser = createParser();
+  // The reader takes its clock as a parameter and the guard passes none, so
+  // the card is read on the day the next test reads its cards. "SAT · NOV 07"
+  // names no year: the reader looks for a year near today in which Nov 7 is
+  // a Saturday, and after 2026 the next one is 2037.
+  const readCardPrintedDate = parser.readCardPrintedDate.bind(parser);
+  parser.readCardPrintedDate = (lines, pageDateContext) => readCardPrintedDate(lines, pageDateContext, new Date('2026-09-21T12:00:00Z'));
   const card = { segmentCardLines: ['SAT · NOV 07', 'WOOF!', '3 PM - 6 PM'], segmentPageDateContext: null };
   // The poster says "every first Saturday"; the model answered Nov 1.
   const wrong = { startDate: '2026-11-01', startTime: '15:00', endDate: '2026-11-01', endTime: '18:00' };
@@ -19312,6 +19338,7 @@ test('an off-quarter minute no page states is an OCR slip, not a start time', ()
 
 test('normalizeAiEvent ships the date with no time when the clock is an OCR slip, and flags what it refused', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const quiet = console.log; console.log = () => {};
   let event; let stated;
   try {
@@ -19455,6 +19482,7 @@ test('image pairing: a date heading + title cut off from its card is a header fr
 
 test('normalizeAiEvent: an end date that is "the next day" on an evening start with no end time is a night-party marker, not an end', () => {
   const parser = createParser();
+  parser.now = FROZEN_NOW;
   const cityConfig = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
   const base = { title: 'Bearracuda | Seattle - Red Light District', address: '619 E Pine St, Seattle, WA 98122', startDate: '2026-11-07', startTime: '22:00' };
 

@@ -69,6 +69,12 @@ const CITIES = {
 // Canned AI responses (per-field evidence+confidence format, exactly what the
 // local model returns in production). Every value is verbatim on the fixture
 // page so the evidence-validation gate keeps it.
+//
+// The fixture site's nights are in 2037 (Fridays, as in 2026; the same CDT/PDT
+// offsets). allowPastEvents below is not the only clock in the pipeline: a
+// page-stated date more than 45 days behind is dropped as the site's
+// archive, which is what happened to the San Francisco page once
+// September 11, 2026 was that far back.
 // ---------------------------------------------------------------------------
 
 // New Orleans event page: a clean extraction. The venue matches the ticketing
@@ -79,7 +85,7 @@ const NOLA_EXTRACTION = JSON.stringify({
   venue: { value: 'Oak Barrel Saloon', evidence: '🪩 Oak Barrel Saloon', confidence: 95 },
   addr: { value: '800 Bourbon St, New Orleans, LA, 70116', evidence: '800 Bourbon St, New Orleans, LA, 70116', confidence: 95 },
   city: { value: 'new orleans', evidence: 'New Orleans', confidence: 90 },
-  startDate: { value: '2026-09-04', evidence: 'Friday, September 4, 2026', confidence: 95 },
+  startDate: { value: '2037-09-04', evidence: 'Friday, September 4, 2037', confidence: 95 },
   startTime: { value: '21:00', evidence: 'Doors Open at 9:00 pm', confidence: 90 },
   endTime: { value: '02:00', evidence: 'Party Goes Until 2:00 am!', confidence: 90 },
   tickets: { value: TICKETS_URL, evidence: 'Get Tickets', confidence: 90 },
@@ -95,7 +101,7 @@ const SF_EXTRACTION = JSON.stringify({
   venue: { value: 'FIXTURE', evidence: 'Presented by FIXTURE', confidence: 60 },
   addr: { value: '1548 Polk St, San Francisco, CA 94109', evidence: '1548 Polk St, San Francisco, CA 94109', confidence: 95 },
   city: { value: 'san francisco', evidence: 'San Francisco', confidence: 90 },
-  startDate: { value: '2026-09-11', evidence: 'Friday, September 11, 2026', confidence: 95 },
+  startDate: { value: '2037-09-11', evidence: 'Friday, September 11, 2037', confidence: 95 },
   startTime: { value: '21:00', evidence: 'Doors Open at 9:00 pm', confidence: 90 },
   endTime: { value: '02:00', evidence: 'Party Goes Until 2:00 am!', confidence: 90 }
 });
@@ -284,8 +290,8 @@ test('golden pipeline: fixture promoter site crawls, extracts, geocodes, and ded
   assert.equal(nola.ticketUrl, TICKETS_URL);
   // 9pm CDT with "until 2:00 am" — the end must roll over to the NEXT day and
   // agree with the ticketing page's explicit offsets.
-  assert.equal(new Date(nola.startDate).toISOString(), '2026-09-05T02:00:00.000Z');
-  assert.equal(new Date(nola.endDate).toISOString(), '2026-09-05T07:00:00.000Z');
+  assert.equal(new Date(nola.startDate).toISOString(), '2037-09-05T02:00:00.000Z');
+  assert.equal(new Date(nola.endDate).toISOString(), '2037-09-05T07:00:00.000Z');
   // location is ALWAYS coordinates (stubbed geocoder), never address text
   assert.ok(core.isCoordinatePair(nola.location), `nola location must be coordinates, got "${nola.location}"`);
   assert.equal(nola.location, '29.9611, -90.0645');
@@ -298,8 +304,8 @@ test('golden pipeline: fixture promoter site crawls, extracts, geocodes, and ded
   assert.equal(sf.city, 'sf');
   assert.equal(sf.timezone, 'America/Los_Angeles');
   // 9pm PDT with "until 2:00 am" — rolled-over end on the next local day
-  assert.equal(new Date(sf.startDate).toISOString(), '2026-09-12T04:00:00.000Z');
-  assert.equal(new Date(sf.endDate).toISOString(), '2026-09-12T09:00:00.000Z');
+  assert.equal(new Date(sf.startDate).toISOString(), '2037-09-12T04:00:00.000Z');
+  assert.equal(new Date(sf.endDate).toISOString(), '2037-09-12T09:00:00.000Z');
   // Distance ranking must pick the candidate near the SF center, not Sacramento
   assert.ok(core.isCoordinatePair(sf.location), `sf location must be coordinates, got "${sf.location}"`);
   assert.equal(sf.location, '37.7935, -122.4217');
