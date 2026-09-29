@@ -17016,8 +17016,8 @@ test('merge no-op fail-closed: one real field change writes, and a verdict-line-
 test('merge no-op ordering: a post-merge sanity correction is stamped false, never left to stale _changes', async () => {
   const core = createCore();
   // Sat 9PM EDT -> Sun 4PM EDT: the 19h span rule 11 corrects to 7h.
-  const badStart = new Date('2026-08-30T01:00:00.000Z');
-  const badEnd = new Date('2026-08-30T20:00:00.000Z');
+  const badStart = new Date('2030-09-01T01:00:00.000Z');
+  const badEnd = new Date('2030-09-01T20:00:00.000Z');
   const scraped = () => ({
     title: 'GOLIDLOXX AUGUST',
     startDate: new Date(badStart),
@@ -17059,7 +17059,7 @@ test('merge no-op ordering: a post-merge sanity correction is stamped false, nev
   assert.equal(merged._action, 'merge');
   assert.ok(!merged._changes.includes('endDate'),
     'merge-time _changes cannot see the end correction — scraper and calendar carried the same wrong end');
-  assert.equal(new Date(merged.endDate).toISOString(), '2026-08-30T08:00:00.000Z',
+  assert.equal(new Date(merged.endDate).toISOString(), '2030-09-01T08:00:00.000Z',
     'the sanity pass corrected the end AFTER _changes was stamped');
   assert.ok((merged._sanityFlags || []).some(flag => flag.code === 'overnight-span-corrected'),
     'the correction is the one flagged on the card');
