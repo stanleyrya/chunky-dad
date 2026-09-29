@@ -10399,7 +10399,9 @@ class SharedCore {
     // as enrichment, the next party's page was "a sibling of the root's
     // event" and its event was dropped. Off-site links keep the event-page
     // rule (event-shaped and ticket links, enrich-only). Bounded by the
-    // page's own link budget (maxAdditionalUrls) and the dead-end store.
+    // page's own link budget (maxAdditionalUrls) and the dead-end store,
+    // which learns the pages that yield nothing exactly as it does for a
+    // listing's links.
     selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
         const links = Array.isArray(additionalLinks) ? additionalLinks : [];
         const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
@@ -10417,6 +10419,10 @@ class SharedCore {
             // The source's other configured pages get their own turn.
             if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
             if (this.isApiEndpointUrl(normalized)) continue;
+            // A query selects a view of a page (?ical=1, ?eventDisplay=past);
+            // a site's menu names pages. bearitmtl.com/events/ on a week
+            // with one party: 5 of its 15 links were such views.
+            if (normalized.indexOf('?') >= 0) continue;
             taken.add(key);
             siblings.push(normalized);
         }

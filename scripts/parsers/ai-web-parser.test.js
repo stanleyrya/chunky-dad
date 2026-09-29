@@ -13427,6 +13427,24 @@ test('repeated anchors need their own listing identity before they can segment a
     'repeated naked anchors leave a schedule page\'s segmentation exactly as it was');
 });
 
+// bearitmtl.com/events/ (The Events Calendar) ships its media templates in
+// the page: <a href="{{ data.link }}"> and five more. Resolved against the
+// page they read /events/%7B%7B%20data.link%20%7D%7D — the braces encoded, so
+// the placeholder rule, which looked for literal braces, let all six through.
+test('an unrendered template placeholder is not an address, encoded or not', () => {
+  const parser = createParser();
+  const source = 'https://www.bearitmtl.com/events/';
+  for (const url of [
+    'https://www.bearitmtl.com/events/%7B%7B%20data.link%20%7D%7D',
+    'https://www.bearitmtl.com/events/%7b%7b%20data.editLink%20%7d%7d',
+    'https://www.bearitmtl.com/events/{{ data.url }}',
+    'https://www.bearitmtl.com/?s={search_term_string}'
+  ]) {
+    assert.deepEqual(parser.validateEventUrl(url, source, {}), { valid: false, reason: 'template-url' }, url);
+  }
+  assert.equal(parser.validateEventUrl('https://www.bearitmtl.com/event/players/', source, {}).valid, true);
+});
+
 // ── A page under its other spelling is not a new page ─────────────────────
 // Eventbrite organizer pages, trimmed from the real documents (2026-09-29).
 // The parser was configured with the bare-id address /o/25444337255; the page

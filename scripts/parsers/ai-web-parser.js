@@ -17524,8 +17524,11 @@ class AiWebParser {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
         }
-        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages
-        if (/\{[^}]+\}/.test(url)) {
+        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages.
+        // The braces arrive percent-encoded when the placeholder sat in an
+        // href the browser never rendered (bearitmtl.com/events/ links
+        // "/events/%7B%7B%20data.link%20%7D%7D" six times over).
+        if (/\{[^}]+\}/.test(String(url).replace(/%7B/gi, '{').replace(/%7D/gi, '}'))) {
             return { valid: false, reason: 'template-url' };
         }
 

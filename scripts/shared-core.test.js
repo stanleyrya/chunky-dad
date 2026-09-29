@@ -8201,6 +8201,7 @@ test('adaptive crawl: a configured root that reads as one event still opens the 
     'https://gruntparty.example/': {
       events: [{ title: 'GRUNT PARTY SF', startDate: soon(-3), bar: 'The Stud' }],
       additionalLinks: [
+        'https://gruntparty.example/?format=ical',      // a query selects a view of a page, the menu names pages
         'https://illustrator.example/portfolio',        // off the site, not event-shaped: the event-page rule stands
         'https://gruntparty.example/grunt-halloween',   // the site's own next page
         'https://gruntparty.example/grunt-halloween#page',
@@ -8234,6 +8235,7 @@ test('adaptive crawl: a configured root that reads as one event still opens the 
   assert.equal(result.totalEvents, 3, 'three pages, three parties');
   assert.ok(!fetched.includes('https://illustrator.example/portfolio'), 'off-site links keep the event-page rule');
   assert.ok(!fetched.includes('https://bird-tan-mt6p.squarespace.example/'), 'another registrable domain is not the site');
+  assert.ok(!fetched.some(url => url.includes('?format=ical')), 'a view of a page is not a page of the site');
   assert.ok(!fetched.includes('https://gruntparty.example/cart-of-things'),
     'one hop: the page reached this way is an ordinary event page and follows only event-shaped links');
   const titles = (result.events || []).map(event => event.title);
