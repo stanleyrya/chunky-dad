@@ -8183,6 +8183,96 @@ test('adaptive crawl: aggregator and multi-event pages follow links; event pages
   assert.equal(parsedConfigs['https://www.eventbrite.com/e/party-1'].urlDiscoveryDepth, undefined);
 });
 
+// gruntparty.monster, run 20260929-091555. The promoter gives each party a
+// page; the home page is whichever party is next (it read: "FOLSOM SATURDAY,
+// SEPT 26 … At THE STUD (1123 FOLSOM STREET, SF, CA)") and the menu lists the
+// others (<a href="/">FOLSOM</a> <a href="/grunt-halloween">Halloween</a>).
+// The home page is one event, so the crawl stopped there: the Halloween page
+// ("OCT 24 at THE STUD … 9pm-2am") was never opened and the source read 0
+// upcoming for as long as the front page showed a party that was over.
+test('adaptive crawl: a configured root that reads as one event still opens the other pages of its own site', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /gruntparty\.example\/(?:brooklyn|grunt-halloween)?$/i, classification: 'event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://gruntparty.example/': {
+      events: [{ title: 'GRUNT PARTY SF', startDate: soon(-3), bar: 'The Stud' }],
+      additionalLinks: [
+        'https://gruntparty.example/?format=ical',      // a query selects a view of a page, the menu names pages
+        'https://illustrator.example/portfolio',        // off the site, not event-shaped: the event-page rule stands
+        'https://gruntparty.example/grunt-halloween',   // the site's own next page
+        'https://gruntparty.example/grunt-halloween#page',
+        'https://gruntparty.example/brooklyn',          // a configured root: it gets its own turn
+        'https://bird-tan-mt6p.squarespace.example/'    // the builder's internal host is not this site
+      ]
+    },
+    'https://gruntparty.example/brooklyn': {
+      events: [{ title: 'GRUNT: BROOKLYN', startDate: soon(-10), bar: "C'mon Everybody" }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/grunt-halloween']
+    },
+    'https://gruntparty.example/grunt-halloween': {
+      events: [{ title: 'GRUNT Halloween', startDate: soon(25), bar: 'The Stud' }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/cart-of-things']
+    },
+    'https://gruntparty.example/cart-of-things': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'One Page Per Party', urls: ['https://gruntparty.example/', 'https://gruntparty.example/brooklyn'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.equal(fetched.filter(url => url === 'https://gruntparty.example/grunt-halloween').length, 1,
+    'the page the menu names is opened, once, though two roots link it');
+  assert.ok(display.logs.some(line => line.includes('Leaving https://gruntparty.example/brooklyn to its own turn')),
+    'a configured page linked from another is read in its own turn, as a root');
+  assert.ok(!display.logs.some(line => line.includes('Skipping duplicate URL') && line.includes('/brooklyn')),
+    'and is not consumed on the way as somebody\'s child');
+  assert.equal(result.totalEvents, 3, 'three pages, three parties');
+  assert.ok(!fetched.includes('https://illustrator.example/portfolio'), 'off-site links keep the event-page rule');
+  assert.ok(!fetched.includes('https://bird-tan-mt6p.squarespace.example/'), 'another registrable domain is not the site');
+  assert.ok(!fetched.some(url => url.includes('?format=ical')), 'a view of a page is not a page of the site');
+  assert.ok(!fetched.includes('https://gruntparty.example/cart-of-things'),
+    'one hop: the page reached this way is an ordinary event page and follows only event-shaped links');
+  const titles = (result.events || []).map(event => event.title);
+  assert.ok(titles.some(title => /halloween/i.test(title)),
+    `the sibling page's party is an event of its own, not enrichment dropped as a "sibling" (got: ${titles.join(' | ')})`);
+  assert.ok(display.logs.some(line => line.includes('reads as one event') && line.includes('gruntparty.example/grunt-halloween')),
+    'and the log says why the page was opened');
+});
+
+test('adaptive crawl: only a CONFIGURED root opens its site — an event page found on the way does not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venue\.example\/event\//i, classification: 'event-page' },
+      { pattern: /venue\.example\/calendar/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://venue.example/calendar': { additionalLinks: ['https://venue.example/event/bear-night'] },
+    'https://venue.example/event/bear-night': {
+      events: [{ title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) }],
+      additionalLinks: ['https://venue.example/private-hire', 'https://venue.example/menu']
+    },
+    'https://venue.example/private-hire': {},
+    'https://venue.example/menu': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue Calendar', urls: ['https://venue.example/calendar'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/event/bear-night'));
+  assert.ok(!fetched.includes('https://venue.example/private-hire') && !fetched.includes('https://venue.example/menu'),
+    'an event page reached through the listing keeps following nothing but event and ticket links');
+});
+
 test('adaptive crawl: ad and unknown pages follow nothing', async () => {
   const core = new SharedCore(CITIES, {
     eventSchema: EventSchema,
@@ -8907,6 +8997,135 @@ test('dead-end store: network failures are NOT learned when the run had zero suc
   await core2.finalizeDeadEndRun(display2, results2);
   const key = core2.getUrlDedupeKey(IQOS_URL);
   assert.equal(results2.deadEndStore[key]?.misses, 1, 'network is up, so the failure is trustworthy');
+});
+
+// ---------------------------------------------------------------------------
+// An outage is not a dead end (2026-09-27, 10:11–10:13: the Mac lost the
+// network for two minutes mid-run). Node's fetch says "fetch failed" and
+// nothing else, the classifier only knew the browser's "failed to fetch", so
+// every one of the 59 failures was written into the no-retry failure cache —
+// the real records, verbatim:
+//   { url: "https://www.bearbrum.com/", statusCode: null, fetchState:
+//     "failed", failure: { nonRetryable: true, context: "root-page", error:
+//     "HTTP request failed for https://www.bearbrum.com/: fetch failed" } }
+// Two configured roots (Bear Brum, Xposure Events' organizer page) read 0
+// for four runs, and 57 whereto.party city pages were confirmed dead by the
+// NEXT run replaying those notes: 3 of 60 cities read since.
+// ---------------------------------------------------------------------------
+
+const OUTAGE_ROOT_URL = 'https://www.bearbrum.com/';
+const OUTAGE_NOTE = {
+  url: OUTAGE_ROOT_URL,
+  fetchedAt: '2026-09-27T15:13:08.626Z',
+  statusCode: null,
+  headers: {},
+  fetchState: 'failed',
+  failure: {
+    nonRetryable: true,
+    context: 'root-page',
+    error: `HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`
+  }
+};
+
+test('outage: Node\'s "fetch failed" is a transport failure — retryable, never a failure note', async () => {
+  const core = createCore();
+  const outage = new Error(`HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`);
+  assert.equal(core.isRetryableFailure(outage), true, 'nothing answered: the next run asks again');
+  for (const wording of [
+    'HTTP request failed for https://a.example/: connect ECONNREFUSED 203.0.113.7:443',
+    'HTTP request failed for https://a.example/: getaddrinfo ENOTFOUND a.example',
+    'HTTP request failed for https://a.example/: other side closed',
+    'HTTP request failed for https://a.example/: UND_ERR_CONNECT_TIMEOUT'
+  ]) {
+    assert.equal(core.isRetryableFailure(new Error(wording)), true, wording);
+  }
+
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+  await core.saveNonRetryableFailureNote(httpAdapter, OUTAGE_ROOT_URL, outage, 'root-page');
+  assert.deepEqual(saved, [], 'an outage writes nothing into the no-retry cache');
+
+  // What the server ANSWERED is still a fact about the page.
+  const gone = new Error('HTTP request failed for https://a.example/x: HTTP 404: Not Found');
+  assert.equal(core.isRetryableFailure(gone), false);
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', gone, 'crawl-page');
+  assert.deepEqual(saved, ['https://a.example/x'], 'a 404 is still noted');
+  const empty = new Error('HTTP request failed for https://a.example/y: Empty response from https://a.example/y');
+  assert.equal(core.isRetryableFailure(empty), false, 'an empty answer is an answer');
+});
+
+test('outage: a note that records "nothing answered" is recognised, a note with a status is not', () => {
+  assert.equal(SharedCore.isTransportFailureNote(OUTAGE_NOTE), true, 'the real note from 2026-09-27');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    statusCode: 404,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+  }), false, 'a stated status is the page speaking');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: HTTP 403: Forbidden' }
+  }), false, 'a status kept only in the message still counts');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: Empty response from https://a.example/x' }
+  }), false, 'a reason that is about the page stays a note');
+  assert.equal(SharedCore.isTransportFailureNote(null), false);
+  assert.equal(SharedCore.isTransportFailureNote({ fetchState: 'downloaded', html: '<p>fetch failed</p>' }), false, 'a page is not a note');
+});
+
+test('outage: a replayed failure note is never the second strike', async () => {
+  const cityUrl = 'https://dead-domain.example/in/sydney';
+  const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);
+  replayed.cachedFailure = true;
+  replayed.retryable = false;
+  const pages = { 'https://hub.example/': { additionalLinks: [cityUrl] } };
+  const harness = createCrawlHarness(pages);
+  const realFetch = harness.httpAdapter.fetchData;
+  harness.httpAdapter.fetchData = async (url) => {
+    if (url === cityUrl) throw replayed;
+    return realFetch(url);
+  };
+  const core = deadEndCore();
+  const key = core.getUrlDedupeKey(cityUrl);
+  const store = { [key]: { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T15:13:08.649Z', misses: 1, capability: SharedCore.DEAD_END_CAPABILITY } };
+  const results = await core.processEvents(deadEndConfig({ store }), harness.httpAdapter, createDisplayAdapterStub(), harness.parsers);
+  assert.equal(results.deadEndStore[key].misses, 1, 'reading the note back attempted nothing and confirms nothing');
+});
+
+test('outage: a connection failure on a host that has answered before is not learned', async () => {
+  const cityUrl = 'https://whereto.party/in/sydney';
+  const deadUrl = 'https://www.iqosvape.com/';
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  core.deadEndRunContext = core.createDeadEndRunContext({
+    deadEndStore: {
+      '::hosts': {
+        'whereto.party': { firstSeen: '2026-09-23T21:11:32.875Z', lastSeen: '2026-09-23T21:11:32.875Z', successes: 1, lastSuccess: '2026-09-23T21:11:32.875Z' }
+      }
+    }
+  });
+  core.deadEndRunContext.successfulFetchCount = 1;
+  core.recordDeadEndNetworkFailure({ url: cityUrl, currentDepth: 1 });
+  core.recordDeadEndNetworkFailure({ url: deadUrl, currentDepth: 1 });
+  const results = {};
+  await core.finalizeDeadEndRun(display, results);
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(cityUrl)], undefined,
+    'the host serves pages: this was its outage, the page is asked for again next run');
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(deadUrl)]?.misses, 1,
+    'a host that never answered is still learned, two-strike as before');
+  assert.ok(display.logs.some(line => line.includes('Not learning 1 network-failure URL(s)') && line.includes('whereto.party')),
+    'and the log says which host was out');
+});
+
+test('outage: dead ends confirmed before the crawler told an outage from a dead page get their one retry', () => {
+  const core = deadEndCore();
+  const context = core.createDeadEndRunContext({ deadEndStore: {} });
+  const learnedInTheOutage = { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T17:48:04.231Z', misses: 2, capability: 'machine-door-2026-09' };
+  assert.equal(core.isConfirmedDeadEndEntry(context, learnedInTheOutage), false, 'the real whereto.party entry is retried once');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { ...learnedInTheOutage, capability: SharedCore.DEAD_END_CAPABILITY }), true,
+    'and re-confirms under the current stamp if it misses again');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { firstSeen: '2026-09-27T15:25:11.000Z', lastSeen: '2026-09-27T15:25:11.000Z', misses: 1, lastStatus: 404 }), true,
+    'a page the origin called gone needs no second opinion');
 });
 
 // ---------------------------------------------------------------------------

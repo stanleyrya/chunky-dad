@@ -43,7 +43,13 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// 'outage-aware-2026-09': until then a connection failure was learned like a
+// page that yields nothing, and a failure note read back from the cache
+// counted as the second strike — a two-minute outage put 57 pages of one
+// host away for the 30-day window. Those entries carry no mark of their own
+// (a statusless miss is a statusless miss), so every inferred dead end gets
+// its one retry.
+const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -4270,6 +4276,28 @@ class SharedCore {
         }
         if (containedIn.length > 0) return { genericStem: true, containedIn };
         return matches[0];
+    }
+
+    // A bar's name AND its door. A name that other curated names contain
+    // ("The Stud" inside "Le Stud", "STUDS", "Sanctuary Studios") proves
+    // nothing by itself — but an event that states that name together with
+    // the street line curated for it has named the venue twice, by two facts
+    // that do not depend on each other. Exactly one curated bar across all
+    // cities may answer; the street line is compared by areSameStreetLine
+    // (same house number, same street). Returns { city, bar } or null.
+    findCuratedBarByNameAndDoor(barName, address) {
+        if (!this.bars || typeof this.bars !== 'object') return null;
+        if (!this.normalizeBarNameKey(barName) || typeof address !== 'string' || !address.trim()) return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars) || cityBars.length === 0) continue;
+            const curatedBar = this.findCuratedBarByName(cityBars, barName);
+            if (!curatedBar || typeof curatedBar.address !== 'string') continue;
+            if (this.areSameStreetLine(address, curatedBar.address)) matches.push({ city: cityKey, bar: curatedBar });
+        }
+        const cities = [...new Set(matches.map(match => match.city))];
+        return cities.length === 1 ? matches[0] : null;
     }
 
     // Registrable-host key for curated-website matching: the host of an
@@ -9158,6 +9186,42 @@ class SharedCore {
         return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
     }
 
+    // What a platform says when NOTHING answered: no HTTP status, because no
+    // HTTP exchange took place. Node's fetch says exactly "fetch failed" for
+    // every one of them (dead DNS, refused or reset connection, the Mac
+    // asleep or off the network) and keeps the reason in error.cause, which
+    // the adapters' rewrap drops — so the two words are the whole signal.
+    // isRetryableFailure's browser wording ("failed to fetch") never matched
+    // it, and on 2026-09-27 a two-minute outage was therefore written into
+    // the no-retry failure cache as 59 PERMANENT failures: two configured
+    // roots (bearbrum.com, an Eventbrite organizer page) stayed silent for
+    // the three-day cache life, and 57 city pages of one aggregator were
+    // learned as dead ends for thirty. Static + pure: the classifier below
+    // and the adapters' failure-note check read this one definition.
+    static isTransportFailureMessage(message) {
+        const text = typeof message === 'string' ? message : '';
+        if (!text) return false;
+        return /\bfetch failed\b|\bECONNREFUSED\b|\bECONNRESET\b|\bENOTFOUND\b|\bEAI_AGAIN\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bETIMEDOUT\b|\bEPIPE\b|\bUND_ERR_[A-Z_]+\b|socket hang up|other side closed/i.test(text);
+    }
+
+    // A failure note is a statement about the PAGE: the status the server
+    // answered with, or a reason that will be just as true tomorrow. A note
+    // that records a transport failure is a statement about the network at
+    // that minute and is never honoured — it reads as a cache miss, so notes
+    // written before the classifier knew the wording heal on the next run
+    // instead of waiting out their cache life.
+    static isTransportFailureNote(cached) {
+        if (!cached || typeof cached !== 'object') return false;
+        if (Number.isFinite(cached.statusCode)) return false;
+        const failure = cached.failure && typeof cached.failure === 'object' ? cached.failure : null;
+        if (!failure) return false;
+        const message = typeof failure.error === 'string'
+            ? failure.error
+            : (failure.error && typeof failure.error.message === 'string' ? failure.error.message : '');
+        if (/\bHTTP\s+\d{3}\b/i.test(message)) return false;
+        return SharedCore.isTransportFailureMessage(message);
+    }
+
     isRetryableFailure(error) {
         if (error && typeof error.retryable === 'boolean') {
             return error.retryable;
@@ -9209,6 +9273,10 @@ class SharedCore {
             /could not connect to the server/i,
             /data connection is not currently allowed/i
         ];
+        // ---- The wording Node produces (see isTransportFailureMessage) ----
+        if (SharedCore.isTransportFailureMessage(message)) {
+            return true;
+        }
         return retryablePatterns.some(pattern => pattern.test(message));
     }
 
@@ -9484,6 +9552,16 @@ class SharedCore {
                 const owner = this.findOtherParserOwningUrl(url, mainConfig, parserConfig);
                 if (owner) {
                     await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own source ("${owner}") — not crawled from here`);
+                    continue;
+                }
+                // The same goes for THIS source's other configured pages: a
+                // root reached through a link is read as that link's child
+                // (enrich-only under an event page: its own event dropped as
+                // a "sibling"), marked processed, and skipped when its turn
+                // comes. It is read in its turn, as a root.
+                if (this.isConfiguredParserUrlForCrawl(url, parserConfig)
+                    && !this.hasProcessedUrl(processedUrls, url)) {
+                    await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own turn — it is one of this source's configured pages`);
                     continue;
                 }
             }
@@ -9855,10 +9933,26 @@ class SharedCore {
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
                 let adaptiveFollowBlocked = feedRead;
+                // Links a single-event ROOT follows as discovery, never as
+                // enrich-only children (keys, see the adaptive branch below).
+                let frontDoorSiblingKeys = null;
                 if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
+                    // A configured root that reads as ONE event is still the
+                    // source's front door (see selectFrontDoorSiblingLinks):
+                    // the site's other pages it links are read as a listing's
+                    // links would be, not as this event's enrichment.
+                    if (currentDepth === 0 && !enrichContext && !discoveryOnly && pageClassification === 'event-page') {
+                        const siblingLinks = this.selectFrontDoorSiblingLinks(url, additionalLinks, parserConfig);
+                        if (siblingLinks.length > 0) {
+                            frontDoorSiblingKeys = new Set(siblingLinks.map(link => this.getUrlDedupeKey(link)).filter(Boolean));
+                            const offSite = linksToConsider.filter(link => !frontDoorSiblingKeys.has(this.getUrlDedupeKey(link)));
+                            linksToConsider = offSite.concat(siblingLinks);
+                            await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a configured page that reads as one event — reading the ${siblingLinks.length} other page(s) of its own site it links as pages of their own (${siblingLinks.slice(0, 3).join(', ')}${siblingLinks.length > 3 ? ', …' : ''}): a site that gives each party a page names the next one there`);
+                        }
+                    }
                     if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
@@ -10036,6 +10130,9 @@ class SharedCore {
                             const parentTitle = pageEventsForEnrich[0].title || 'event';
                             for (const enqueueUrl of enqueueUrls) {
                                 const enqueueKey = this.getUrlDedupeKey(enqueueUrl);
+                                // The front door's sibling pages announce
+                                // parties of their own: ordinary discovery.
+                                if (enqueueKey && frontDoorSiblingKeys && frontDoorSiblingKeys.has(enqueueKey)) continue;
                                 if (enqueueKey) {
                                     childEnrichOnlyByUrl[enqueueKey] = {
                                         parentEvents: pageEventsForEnrich,
@@ -10124,12 +10221,17 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
-                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)) {
+                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)
+                    && !(error && error.cachedFailure === true)) {
                     // Statusless transport failure from the HTTP adapter
                     // (dead DNS, refused connection — the adapters' fetch
                     // wrapper is the only source of this marker, so parser/
                     // extraction errors can't land here). Staged, two-strike,
                     // and only committed when the run had successful fetches.
+                    // A REPLAYED failure note is not a strike: nothing was
+                    // attempted, so it confirms nothing (the second strike
+                    // against whereto.party's city pages, run 20260927-
+                    // 125246, was the first strike read back from the cache).
                     this.recordDeadEndNetworkFailure({ url, currentDepth });
                 }
                 try {
@@ -10299,6 +10401,54 @@ class SharedCore {
             push(ticketUrl);
         }
         return selected;
+    }
+
+    // A configured root that reads as ONE event. The owner configured it as
+    // the place a source announces its parties; when the site gives each
+    // party a page of its own, the root is simply whichever party is on the
+    // front page today, and the site's menu is its list of the others.
+    // gruntparty.monster, run 20260929-091555: the home page was the Folsom
+    // party (Sept 26, over), the menu read "FOLSOM · Halloween", and
+    // /grunt-halloween — Oct 24 at The Stud — was never opened, because an
+    // event page follows only event-shaped and ticket links. 0 upcoming.
+    // So the links a single-event ROOT makes to other pages of its OWN site
+    // (same registrable domain) are followed once, as discovery: each is
+    // classified and read like any discovered page, and what it yields is
+    // its own event, not enrichment for the root's. Exactly what a root that
+    // reads as a listing already does with its links — a calendar that lists
+    // one night this week and three the next changes nothing about which
+    // pages get read. That includes the site's own event-shaped links: read
+    // as enrichment, the next party's page was "a sibling of the root's
+    // event" and its event was dropped. Off-site links keep the event-page
+    // rule (event-shaped and ticket links, enrich-only). Bounded by the
+    // page's own link budget (maxAdditionalUrls) and the dead-end store,
+    // which learns the pages that yield nothing exactly as it does for a
+    // listing's links.
+    selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
+        const links = Array.isArray(additionalLinks) ? additionalLinks : [];
+        const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
+        if (!pageDomain || links.length === 0) return [];
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const taken = new Set();
+        const siblings = [];
+        for (const link of links) {
+            const withoutFragment = String(link || '').split('#')[0];
+            const normalized = this.normalizeUrl(withoutFragment, pageUrl || withoutFragment);
+            if (!normalized) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || taken.has(key)) continue;
+            if (this.getRegistrableDomainFromUrl(normalized) !== pageDomain) continue;
+            // The source's other configured pages get their own turn.
+            if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
+            if (this.isApiEndpointUrl(normalized)) continue;
+            // A query selects a view of a page (?ical=1, ?eventDisplay=past);
+            // a site's menu names pages. bearitmtl.com/events/ on a week
+            // with one party: 5 of its 15 links were such views.
+            if (normalized.indexOf('?') >= 0) continue;
+            taken.add(key);
+            siblings.push(normalized);
+        }
+        return siblings;
     }
 
     // ------------------------------------------------------------------
@@ -11144,12 +11294,31 @@ class SharedCore {
             // proved the network works (see recordDeadEndNetworkFailure).
             if (context.pendingNetworkFailures.length > 0) {
                 if (context.successfulFetchCount > 0) {
+                    // A connection that fails says nothing about a PATH on a
+                    // host that serves pages: a page that is gone answers
+                    // 404/410, and those are learned on their own. A host
+                    // with a success on record is having an outage — its
+                    // pages are tried again next run. Only a host that has
+                    // never answered (a dead domain) is learned this way.
+                    const hosts = this.getDeadEndHostStore(context);
                     const committed = [];
+                    const outageHosts = [];
+                    let outageCount = 0;
                     for (const url of context.pendingNetworkFailures) {
                         const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
                         if (committed.includes(dedupeKey)) continue; // one miss per URL per run
                         committed.push(dedupeKey);
+                        const hostKey = this.getDeadEndHostKey(url);
+                        const hostEntry = hosts && hostKey ? hosts[hostKey] : null;
+                        if (hostEntry && Number(hostEntry.successes) > 0) {
+                            outageCount += 1;
+                            if (!outageHosts.includes(hostKey)) outageHosts.push(hostKey);
+                            continue;
+                        }
                         this.recordDeadEndUrlMiss(context, url, null, nowMs);
+                    }
+                    if (outageCount > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Not learning ${outageCount} network-failure URL(s) on ${outageHosts.length} host(s) that have answered before (${outageHosts.slice(0, 5).join(', ')}${outageHosts.length > 5 ? ', …' : ''}) — a host that serves pages is having an outage, its pages are not dead`);
                     }
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: Not learning ${context.pendingNetworkFailures.length} network-failure URL(s) — this run had zero successful fetches, so the network itself is suspect`);

@@ -3,11 +3,12 @@
   "source": "GRUNT",
   "slug": "grunt",
   "status": "complete",
-  "recheckAfter": "2026-09-27",
+  "recheckAfter": "2026-10-25",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-09-29",
     "method": [
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://gruntparty.monster/",
@@ -29,9 +30,17 @@
         "rowsReturned": 1,
         "truthFlag": "no listing structure: one hand-written Squarespace text block announcing the next Brooklyn party, nothing paged and nothing counted",
         "note": "Fetched once with curl on 2026-09-19 (133 KB). Same Squarespace template as the home page; <title>BROOKLYN-SEPT-19 &mdash; GRUNT</title>, og:title the same, no Event JSON-LD. Scaled-text blocks in order: \"TICKETS HERE\" (an <a href=\"https://link.dice.fm/j1e6d0b77886\">) / \"SATURDAY SEPTEMBER 19\" / \"With DJS Will Jack (TOSSD) and Del (Bay Area)\" / \"Hosts Quinn and Cor\" / \"GoGos Archie, Damiano and Bru\" / \"At C’MON EVERYBODY\" / \"325 Franklin, Brooklyn NY\", then the same BIG blurb, dress list, coat-check line and mailing-list form; \"Illustration by: Crybaby Dionisi\". One image block, the Brooklyn flyer (Gruntnyseptdigi-01.jpg). No year, no door time, no price."
+      },
+      {
+        "url": "https://gruntparty.monster/grunt-halloween",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "no listing structure: one hand-written Squarespace page announcing the Halloween party; reached from the header nav of both configured pages",
+        "note": "Fetched once with curl on 2026-09-29 (134,623 bytes, HTTP 200). <title>Halloween &mdash; GRUNT</title>, og:title the same, no Event JSON-LD. Text blocks in order: \"OCT 24 at THE STUD\" / \"Gather your crew, your coven, your pack, your murder, and show up in your best or worst TROLL, ORC, GOBLIN or HAG (at a leather bar)\" / \"CHARLES HAWTHORNE X MAMA CELESTE\" / \"TIXXX ARE UNDEAD\" / \"Saturday Oct 24 at the The Stud 1123 FOLSOM 9pm-2am.\" / \"With DJs Charles Hawthorne and Mama Celeste\" / prizes and dress code / \"At THE STUD (1123 FOLSOM STREET, SF, CA)\". Ticket links: https://ra.co/events/2542602 and https://ra.co/events/2480235. No year and no price are printed. Header nav on 2026-09-27 and 2026-09-29: FOLSOM (/) and Halloween (/grunt-halloween) — BROOKLYN is no longer in the menu, though /brooklyn still answers with the September 19 party."
       }
     ],
-    "notes": "Squarespace, static: each of the parser's two urls IS one listing — a single announcement block rewritten per party (the home page for the San Francisco edition, /brooklyn for the New York edition). Neither page prints a year: \"SATURDAY, SEPT 26\" matches 2026-09-26 (a Saturday, the eve of Folsom Street Fair 2026 — what \"FOLSOM\" refers to) and \"SATURDAY SEPTEMBER 19\" matches 2026-09-19 (a Saturday, the recon date itself, so the Brooklyn party is the night of the read). The ra.co and DICE ticket pages would settle year, door time and price but were not opened (no network on the recon date). Neither page states a recurrence for the party itself."
+    "notes": "Squarespace, static: each of the parser's two urls IS one listing — a single announcement block rewritten per party (the home page for the San Francisco edition, /brooklyn for the New York edition). Neither page prints a year: \"SATURDAY, SEPT 26\" matches 2026-09-26 (a Saturday, the eve of Folsom Street Fair 2026 — what \"FOLSOM\" refers to) and \"SATURDAY SEPTEMBER 19\" matches 2026-09-19 (a Saturday, the recon date itself, so the Brooklyn party is the night of the read). The ra.co and DICE ticket pages would settle year, door time and price but were not opened (no network on the recon date). Neither page states a recurrence for the party itself. 2026-09-29: the site announces each party on a page of its own and its menu lists them — the home page still shows the Folsom party of Sept 26 (over), the menu item \"Halloween\" leads to /grunt-halloween (Oct 24). Run 20260929-091555 read 0 upcoming because a page that reads as one event followed no menu link; the crawl now opens the other pages of a single-event root's own site."
   },
   "defaults": {
     "city": "sf",
@@ -41,14 +50,14 @@
   },
   "coverage": {
     "confidence": "medium",
-    "basis": "One event per door. Home-page door (https://gruntparty.monster/, fetched 2026-09-19): exactly one announced party, Folsom Saturday Sept 26 at The Stud with one ra.co ticket link. Brooklyn door (https://gruntparty.monster/brooklyn, fetched 2026-09-19): exactly one announced party, Saturday September 19 at C'mon Everybody with one DICE ticket link. Published = 2 singles; both pages are overwritten per party, so no past listings exist. Confidence is medium rather than high because neither page prints a year and the ticket pages that would confirm it were not opened.",
-    "publishedEventCount": 2,
-    "documentedEventCount": 2,
+    "basis": "One event per page. Home-page door (https://gruntparty.monster/, cached copy of 2026-09-27): the Folsom party, Saturday Sept 26 at The Stud, one ra.co ticket link. Brooklyn door (https://gruntparty.monster/brooklyn, cached copy of 2026-09-27): Saturday September 19 at C'mon Everybody, one DICE ticket link. Halloween door (https://gruntparty.monster/grunt-halloween, fetched 2026-09-29, linked from the header nav): Saturday Oct 24 at The Stud, 9pm-2am. Published = 3 singles, 1 of them upcoming on 2026-09-29. Confidence is medium rather than high because no page prints a year and the ticket pages that would confirm it were not opened.",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
     "occurrenceWindow": {
       "start": "2026-09-19",
-      "end": "2026-12-18"
+      "end": "2026-12-28"
     },
-    "pastListingsPresent": false,
+    "pastListingsPresent": true,
     "knownGaps": []
   },
   "events": [
@@ -113,6 +122,36 @@
       },
       "bearVerdict": null,
       "note": "Page text in order: \"TICKETS HERE\" → https://link.dice.fm/j1e6d0b77886 / \"SATURDAY SEPTEMBER 19\" / \"With DJS Will Jack (TOSSD) and Del (Bay Area)\" / \"Hosts Quinn and Cor\" / \"GoGos Archie, Damiano and Bru\" / \"At C’MON EVERYBODY\" / \"325 Franklin, Brooklyn NY\"; page title \"BROOKLYN-SEPT-19 — GRUNT\". Confidence is ambiguous because no year is printed: 2026-09-19 is the Saturday that matches September 19 — the recon date itself, so this party is the night the page was read and will be past by the next run (the page will then be overwritten with the next Brooklyn date). Address is the page's \"325 Franklin, Brooklyn NY\" completed to the venue's street address. No start time, end time or price is published. Title composed the same way as the Folsom edition: site name + the page's edition label (\"BROOKLYN\")."
+    },
+    {
+      "id": "grunt-halloween-2026-10-24",
+      "kind": "single",
+      "title": "GRUNT Halloween",
+      "shortName": "GRUNT",
+      "description": "Gather your crew, your coven, your pack, your murder, and show up in your best or worst TROLL, ORC, GOBLIN or HAG (at a leather bar). With DJs Charles Hawthorne and Mama Celeste. Prizes for BEST Costume, BEST Group, and BEST Fail.",
+      "bar": "The Stud",
+      "address": "1123 Folsom Street, San Francisco, CA",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endDate": "2026-10-25",
+      "endTime": "02:00",
+      "ticketUrl": "https://ra.co/events/2542602",
+      "image": null,
+      "cover": null,
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://gruntparty.monster/grunt-halloween",
+        "quote": "Saturday Oct 24 at the The Stud 1123 FOLSOM 9pm-2am."
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Confidence is ambiguous because no year is printed: 2026-10-24 is the Saturday that matches Oct 24. The page states the door twice — \"1123 FOLSOM\" beside the date and \"(1123 FOLSOM STREET, SF, CA)\" at the foot; the city is only ever written \"SF\". Two ra.co links are on the page (2542602, 2480235); neither was opened. Title composed like the other editions: site name + the page's own label (\"Halloween\"). Offline replay of 2026-09-29 extracted it as \"GRUNT: Halloween\" at The Stud, 2026-10-24 21:00-02:00 America/Los_Angeles; the city comes from the curated bar, whose street line the page states (the name alone is a stem other curated names contain). The flyer and the ra.co pages were not read in that replay (offline)."
     }
   ],
   "traps": [
@@ -129,7 +168,7 @@
         "extracted": false
       },
       "seenInRun": null,
-      "note": "The nav is rendered three times in each page's source (desktop, mobile, and the mobile overlay), so a text-window reader sees \"FOLSOM | BROOKLYN\" three times before the announcement. Since both urls are in the parser's config, a run should yield exactly one record per page, not a Folsom ghost from /brooklyn or vice versa."
+      "note": "The nav is rendered three times in each page's source (desktop, mobile, and the mobile overlay), so a text-window reader sees \"FOLSOM | BROOKLYN\" three times before the announcement. Since both urls are in the parser's config, a run should yield exactly one record per page, not a Folsom ghost from /brooklyn or vice versa. 2026-09-29: the menu is the site's list of its parties and changes with them (FOLSOM | BROOKLYN on 2026-09-19, FOLSOM | Halloween on 2026-09-27). A menu item is still not an event on the page it appears on; the page it leads to is read as a page of its own."
     },
     {
       "id": "monthly-mailing-list-blurb",
@@ -156,6 +195,11 @@
     {
       "q": "Should the event titles be \"GRUNT FOLSOM\" / \"GRUNT BROOKLYN\" (site name + the page's edition label) or just \"GRUNT\"? The pages print no event name beyond those words; the ticket listings' titles (unread) may settle it.",
       "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "The parser lists / and /brooklyn by hand. /brooklyn has left the site's menu and still shows the September 19 party; the crawl now follows the menu of a single-event root by itself, so the home page alone would reach every page the site lists. Whether to drop /brooklyn from the configured urls is the owner's call (it costs one request per refresh and returns a past event until the page is rewritten).",
+      "raisedOn": "2026-09-29",
       "blocking": false
     }
   ]

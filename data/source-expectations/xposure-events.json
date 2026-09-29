@@ -18,11 +18,11 @@
         "kind": "html",
         "role": "listing",
         "rowsReturned": 3,
-        "truthFlag": "organizer \"Xposure Events, LLC\"; 3 event links",
+        "truthFlag": "organizer \"Xposure Events, LLC\"; hasMoreUpcoming false; upcomingEventsTotal 3 (re-read 2026-09-29)",
         "note": "Eventbrite organizer page (Next.js, server-rendered): every upcoming event with its name, venue and ticket page — the same door as Megawoof America and Bearracuda. No JSON-LD on the listing; each ticket page carries its own."
       }
     ],
-    "notes": "Recon from one cached read on 2026-09-22 plus the parser's first run. Western Xposure at CCBC Resort Hotel, Cathedral City: Fall 2026, XXL, and the X-mas Holiday Bear Retreat."
+    "notes": "Recon from one cached read on 2026-09-22 plus the parser's first run. Western Xposure at CCBC Resort Hotel, Cathedral City: Fall 2026, XXL, and the X-mas Holiday Bear Retreat. 2026-09-29: the page answers 200 and still lists the same three events (one curl). Runs 20260927-125246 through 20260929-091555 read 0 from this source because a two-minute network outage on the Mac (2026-09-27 15:13Z) had been written into the page cache as a permanent failure for this url; a connection failure is no longer noted. The page declares itself as /o/xposure-events-llc-25444337255 (rel=canonical) — the same document, no longer crawled a second time."
   },
   "coverage": {
     "confidence": "high",

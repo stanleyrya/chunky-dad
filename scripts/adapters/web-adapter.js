@@ -495,6 +495,14 @@ class WebAdapter {
             const cached = JSON.parse(cachedText);
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
             if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
+                // A note that records "nothing answered" is about the network
+                // that minute, not about the page: a miss, so the page is
+                // asked for again (SharedCore.isTransportFailureNote).
+                const core = this.getSharedCoreRef();
+                if (core && typeof core.isTransportFailureNote === 'function' && core.isTransportFailureNote(cached)) {
+                    console.log(`🟢 Node.js: Ignoring a cached connection failure for ${normalizedUrl} (noted ${cached.fetchedAt || 'earlier'}) — nothing answered then, asking again`);
+                    return null;
+                }
                 const failureMessage = typeof cached.failure.error === 'string'
                     ? cached.failure.error
                     : (cached.failure.error && typeof cached.failure.error.message === 'string'

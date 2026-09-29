@@ -2843,6 +2843,50 @@ test('curated-bar city backfill: generic-name-stem repro — "Eagle" must NOT ba
   assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log');
 });
 
+// GRUNT's Halloween page (gruntparty.monster/grunt-halloween, 2026-09-29):
+// "Saturday Oct 24 at the The Stud 1123 FOLSOM 9pm-2am." The page writes the
+// city only as "SF", the model's "san francisco" failed the verbatim gate,
+// and "The Stud" is a name three other curated bars contain — so the event
+// had a venue, a street line, and no city. The curated entries are the real
+// ones (data/bars).
+const STUD_CORPUS = {
+  sf: [{ name: 'The Stud', city: 'sf', address: '1123 Folsom Street, San Francisco, California, 94103', coordinates: '37.7761653, -122.4083643' }],
+  montreal: [{ name: 'Le Stud', city: 'montreal', address: '1812 Rue Sainte-Catherine E, Montreal, QC H2K 2H3' }],
+  la: [{ name: 'Sanctuary Studios', city: 'la', address: '13012 Athens Way, Los Angeles, CA 90061' }],
+  pv: [{ name: 'STUDS', city: 'pv', address: '283 Basilio Badillo, Puerto Vallarta, Jal. 48380' }]
+};
+
+test('curated-bar city backfill: a stem name WITH the bar\'s own street line is the venue', () => {
+  const normalizer = createBackfillNormalizer(STUD_CORPUS);
+  const event = {
+    title: 'GRUNT: Halloween',
+    bar: 'The Stud',
+    address: '1123 FOLSOM STREET',
+    city: 'unknown',
+    startDate: '2026-10-24T21:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'sf', `name + door are two facts, got:\n${lines.join('\n')}`);
+  assert.equal(event._citySource, 'curated-bar-door');
+  assert.ok(lines.some(line => line.includes('Backfilled city "sf" from curated bar "The Stud"') && line.includes('1123 FOLSOM STREET')));
+});
+
+test('curated-bar city backfill: a stem name with another door, no door, or a place the page named stays unknown', () => {
+  for (const [label, extra] of [
+    ['another street', { address: '1123 Market Street' }],
+    ['another number', { address: '1125 Folsom Street' }],
+    ['no address at all', {}],
+    ['the page named a city we do not cover', { address: '1123 Folsom Street', _unrecognizedCity: 'sacramento' }]
+  ]) {
+    const normalizer = createBackfillNormalizer(STUD_CORPUS);
+    const event = { title: 'Some Night', bar: 'The Stud', city: 'unknown', startDate: '2026-10-24T21:00:00.000Z', ...extra };
+    const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+    assert.equal(event.city, 'unknown', `${label}: the name alone is still a stem, got:\n${lines.join('\n')}`);
+    assert.ok(lines.some(line => line.includes('is a generic name stem')), `${label}: the skip is still logged`);
+  }
+});
+
 test('curated-bar city backfill: "Massive" (contained in no other curated name) still backfills alongside the stem guard', () => {
   const normalizer = createBackfillNormalizer({
     seattle: [MASSIVE_SEATTLE_BAR],
