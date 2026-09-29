@@ -445,14 +445,34 @@ function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     return { verdicts: list, entry };
 }
 
+// An undo clears the verdict on this title. When there is none and the card
+// was covered through the party fold (the verdict sits on another spelling
+// of the party — "🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ …" for "Jockstrap
+// Wednesday"), it clears the verdicts that cover it: otherwise the undo
+// would say "undone" and the card would be decided again on the next load.
+// `removedTitles` names what went.
 function clearBearVerdict(verdicts, core, identity) {
     const id = buildBearIdentity(identity);
     const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
     const list = normalizeBearVerdicts(verdicts);
-    const kept = list.filter((existing) =>
-        !(key && core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
-            && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing)));
-    return { verdicts: kept, removed: kept.length !== list.length };
+    const place = { title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city };
+    const exact = (existing) => Boolean(key) && core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
+        && core.bearVerdictPlaceMatches(place, existing);
+    let gone = list.filter(exact);
+    if (gone.length === 0 && key) {
+        const before = core.bearVerdicts;
+        core.bearVerdicts = list;
+        try {
+            const partyKey = core.getBearVerdictPartyKey(id.title, [id.bar], core.getBearVerdictLearnedMarkers(place));
+            gone = partyKey ? list.filter((existing) => core.bearVerdictPlaceMatches(place, existing)
+                && core.getBearVerdictPartyKey(existing.title, [existing.venue], core.getBearVerdictLearnedMarkers(
+                    { title: existing.title, bar: existing.venue, address: existing.address, location: existing.location, city: existing.city })) === partyKey) : [];
+        } finally {
+            core.bearVerdicts = before;
+        }
+    }
+    const kept = list.filter((existing) => !gone.includes(existing));
+    return { verdicts: kept, removed: gone.length > 0, removedTitles: gone.map((existing) => String(existing.title || '')) };
 }
 
 // ---------------------------------------------------------------------------
@@ -572,9 +592,13 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         .concat((Array.isArray(diff.removed) ? diff.removed : []).map((entry) => entry && typeof entry === 'object' && !bookkeepingKeys.has(entry.key)
             ? { key: entry.key, from: entry.value == null ? '' : String(entry.value), to: '' } : null))
         .filter(Boolean);
-    const storedVerdict = Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
-        ? core.findStoredBearVerdict(event)
+    // A verdict reached through the party fold (SharedCore
+    // .findStoredBearVerdictMatch) was given on ANOTHER spelling of the
+    // party — the card names it, so the owner sees whose verdict this is.
+    const storedMatch = Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
+        ? core.findStoredBearVerdictMatch(event)
         : null;
+    const storedVerdict = storedMatch ? storedMatch.entry : null;
     // Big drift (shared-core assessMergeDrift, stamped at analysis): the
     // merge is withheld from every automatic write and the card carries
     // the facts — which identity fields move, the rung that matched the
@@ -595,6 +619,7 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         bigDrift,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
+        bearVerdictOn: storedMatch && storedMatch.matchedBy === 'party' ? String(storedVerdict.title || '') : '',
         bearIdentity: buildBearIdentity(event),
         isBearEvent: event.isBearEvent === true,
         barSource: typeof event.barSource === 'string' ? event.barSource : '',
@@ -754,6 +779,25 @@ function nightCompareValues(proposal) {
         ticketUrl: text(p.ticketUrl), image: text(p.image), cover: text(p.cover), description: text(p.description)
     };
 }
+// What rhythm a party's nights show, read off their local days
+// ('YYYY-MM-DD'): "every Wednesday" when three or more nights sit 7 days
+// apart, "every other Wednesday" at 14; null otherwise (the nights are
+// listed). Self-contained on purpose — the deck page runs this same
+// function on the nights still on a card.
+function describeSeriesCadence(days) {
+    var list = (Array.isArray(days) ? days : []).filter(function (day) { return /^\d{4}-\d{2}-\d{2}$/.test(String(day)); });
+    list = list.filter(function (day, index) { return list.indexOf(day) === index; }).sort();
+    if (list.length < 3) return null;
+    var noon = function (day) { return Date.parse(day + 'T12:00:00Z'); };
+    var step = Math.round((noon(list[1]) - noon(list[0])) / 86400000);
+    for (var i = 2; i < list.length; i++) {
+        if (Math.round((noon(list[i]) - noon(list[i - 1])) / 86400000) !== step) return null;
+    }
+    if (step !== 7 && step !== 14) return null;
+    var weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(noon(list[0])).getUTCDay()];
+    return { text: (step === 7 ? 'every ' : 'every other ') + weekday, stepDays: step, weekday: weekday, from: list[0], to: list[list.length - 1], nights: list.length };
+}
+
 function stampSeries(cards, SharedCore) {
     const groups = new Map();
     for (const card of cards) {
@@ -782,7 +826,8 @@ function stampSeries(cards, SharedCore) {
         // swipe decides them all, so the owner sees at a glance whether the
         // nights are copies or each carries its own link / flyer / time.
         const differs = differsOnFullText;
-        for (const card of members) card.series = { key: series, size: members.length, nights, differs };
+        const cadence = describeSeriesCadence(nights.map((night) => night.day));
+        for (const card of members) card.series = { key: series, size: members.length, nights, differs, cadence };
     }
 }
 
@@ -1133,15 +1178,44 @@ function buildDeck(runPayload, store, options = {}) {
 }
 
 // Copy-ready text of every rejection (reasons are the fix queue).
+// One note swiped onto a folded series is stored once per night (each
+// night has its own key) — and is still ONE note: thirteen "Jockstrap
+// Wednesday" lines with the same words read as thirteen problems
+// (2026-09-27). Rejections of NEW nights of one party (same series key)
+// that carry the same title, source and reason print as one line naming
+// the nights. Merges are never folded here: each carries its own values.
 function formatRejectionsText(store) {
     const lines = [];
-    for (const decision of normalizeDecisionStore(store).decisions) {
-        if (decision.verdict !== 'reject') continue;
-        const mode = loadSharedCore().getOwnerRejectionMode(decision);
+    const SharedCore = loadSharedCore();
+    const rejections = normalizeDecisionStore(store).decisions.filter((decision) => decision.verdict === 'reject');
+    const groupOf = (decision) => {
         const snap = decision.snapshot || {};
+        const series = (decision.kind || 'new') === 'new' && (snap.kind || 'new') === 'new' ? SharedCore.getOwnerReviewSeriesKey(decision.key) : '';
+        if (!series) return '';
+        const reason = decision.reason || {};
+        return JSON.stringify([series, snap.title || '', snap.source || '', snap.bar || snap.city || '', reason.mode || '', (reason.tags || []).slice().sort(), reason.text || '']);
+    };
+    const groups = new Map();
+    for (const decision of rejections) {
+        const group = groupOf(decision);
+        if (!group) continue;
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group).push(decision);
+    }
+    for (const decision of rejections) {
+        const mode = SharedCore.getOwnerRejectionMode(decision);
+        const snap = decision.snapshot || {};
+        const members = groups.get(groupOf(decision)) || [];
+        if (members.length > 1 && members[0] !== decision) continue;
+        let when = String(snap.startDate || '').slice(0, 10);
+        if (members.length > 1) {
+            const days = members.map((member) => String(member.key).split('|')[3] || '').filter(Boolean).sort();
+            const cadence = describeSeriesCadence(days);
+            when = `${members.length} nights (${cadence ? `${cadence.text}, ${cadence.from} … ${cadence.to}` : days.join(', ')})`;
+        }
         const label = snap.kind === 'bar'
             ? `BAR ${snap.name || ''} (${snap.city || ''})`
-            : `${(snap.kind || decision.kind || 'new').toUpperCase()} ${snap.title || ''} — ${String(snap.startDate || '').slice(0, 10)} @ ${snap.bar || snap.city || ''} [${snap.source || ''}]`;
+            : `${(snap.kind || decision.kind || 'new').toUpperCase()} ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}]`;
         const tags = decision.reason && decision.reason.tags && decision.reason.tags.length > 0
             ? ` {${decision.reason.tags.join(', ')}}`
             : '';
@@ -1200,5 +1274,6 @@ module.exports = {
     buildParserNamesByKey,
     buildImageUseCounts,
     buildDeck,
+    describeSeriesCadence,
     formatRejectionsText
 };

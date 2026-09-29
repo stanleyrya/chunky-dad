@@ -82,6 +82,11 @@ const CURATED_BAR_SAME_PLACE_KM = 0.025;
 // before the rest of that host's queue is skipped (see noteHostReachability).
 // Three is enough to tell "this host is down" from one flaky request.
 const UNREACHABLE_HOST_FAILURE_THRESHOLD = 3;
+// Links of one path shape on one host the site answered "not found" for,
+// before an untried link of the same shape is presumed gone too (see
+// getGoneShapePresumption — which also demands that none ever answered).
+const DEAD_SHAPE_MIN_SIBLINGS = 5;
+const DEAD_SHAPE_RECENT_DAYS = 14;
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
 // Ticket links are followed/kept only for events that started less than
 // this long ago — a page still selling last night's tickets is not a lead.
@@ -1488,27 +1493,219 @@ class SharedCore {
             : `${field}=${SharedCore.normalizeOwnerReviewValue(changes[field] && changes[field].to)}`).join(';');
     }
 
+    // ---------------------------------------------------------------------
+    // THE PARTY BEHIND THE TITLE (owner, 2026-09-27: thirteen "Jockstrap
+    // Wednesday" nights from Thotyssey were proposed as NEW bear events while
+    // the store already held his not-bear verdict on Eagle NYC's own listing
+    // of that party, "🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH
+    // COVER"). A venue decorates the name of a weekly party with what changes
+    // from night to night; an aggregator prints the name alone. The verdict
+    // is about the party, so its identity folds what is not the name:
+    //   - emoji, case, punctuation (getCrossSourceTitleTokens),
+    //   - a venue tail (stripVenueSuffixFromTitle),
+    //   - a cover tail (stripCoverPartsFromTitle),
+    //   - a per-night performer tail: a WHOLE segment after the name (between
+    //     spaced separators, or opened by an emoji) that a music/DJ marker
+    //     introduces — a music emoji or the word "DJ" — or that the verdict
+    //     store itself proves per-night (getBearVerdictStoreIndex).
+    // The name itself (the leading segment) is never folded, and a tail that
+    // carries bear vocabulary stays in the key: "… | 🎧 BEAR EDITION" says
+    // what the night IS, not who plays it.
+    // getBearVerdictTitleKey is deliberately left alone — it also keys the
+    // owner's review decisions and the calendar link memory.
+    // ---------------------------------------------------------------------
+    static getBearVerdictMusicMarkerPattern() {
+        // headphones, notes, microphones, level slider, control knobs, score, discs
+        return /[\u{1F3A7}\u{1F3B5}\u{1F3B6}\u{1F3A4}\u{1F399}\u{1F39A}\u{1F39B}\u{1F3BC}\u{1F4BF}\u{1F4C0}]/u;
+    }
+
+    // How many stored verdicts of one party at one venue must differ only in
+    // one emoji-opened segment before that emoji is read as a per-night
+    // marker there.
+    static getBearVerdictLearnedMarkerMinEntries() {
+        return 3;
+    }
+
+    // A title as its segments, in order: [{ marker, text }]. A segment starts
+    // at a spaced separator (| • · – — -) or at an emoji followed by words;
+    // `marker` is the emoji run that opens it ('' for plain words). An emoji
+    // with no words after it is decoration and opens nothing.
+    splitBearVerdictTitleSegments(title) {
+        const text = String(title || '').trim();
+        const segments = [];
+        if (!text) return segments;
+        const pictographRun = /((?:[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+)/u;
+        for (const part of text.split(/\s+[|•·–—]\s+|\s+-\s+/)) {
+            const pieces = part.split(pictographRun);
+            const lead = pieces[0].trim();
+            if (lead) segments.push({ marker: '', text: lead });
+            for (let i = 1; i < pieces.length; i += 2) {
+                const words = String(pieces[i + 1] || '').trim();
+                if (!words || !/[\p{L}\p{N}]/u.test(words)) continue;
+                segments.push({ marker: pieces[i], text: words });
+            }
+        }
+        return segments;
+    }
+
+    // Is this tail segment the night's performer? `learnedMarkers` is the set
+    // of emoji the verdict store proved per-night for this party at this
+    // venue (may be empty).
+    isBearVerdictPerformerSegment(segment, learnedMarkers = null) {
+        if (!segment || !segment.text) return false;
+        const marker = String(segment.marker || '');
+        const music = SharedCore.getBearVerdictMusicMarkerPattern().test(marker);
+        const djWord = /^dj(?:s|['’]s)?(?=\s|$)/i.test(segment.text);
+        const learned = Boolean(marker) && learnedMarkers instanceof Set
+            && [...learnedMarkers].some(known => marker.includes(known));
+        if (!music && !djWord && !learned) return false;
+        return this.matchBearKeywords(segment.text).length === 0;
+    }
+
+    // The party key: getBearVerdictTitleKey of the title minus its cover,
+    // venue and performer tails. Equal to getBearVerdictTitleKey whenever the
+    // title carries none of them.
+    getBearVerdictPartyKey(title, barNames = [], learnedMarkers = null) {
+        const names = (Array.isArray(barNames) ? barNames : [barNames]);
+        const stripVenue = (value) => names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(value || ''));
+        const coverFree = this.stripCoverPartsFromTitle(stripVenue(title)).title;
+        const segments = this.splitBearVerdictTitleSegments(coverFree);
+        const kept = segments.filter((segment, index) => index === 0 || !this.isBearVerdictPerformerSegment(segment, learnedMarkers));
+        const bare = kept.length > 0 && kept.length < segments.length
+            ? kept.map(segment => segment.text).join(' | ')
+            : coverFree;
+        return this.getBearVerdictTitleKey(bare, names);
+    }
+
+    // The name a title leads with, as a key (its first segment's tokens).
+    getBearVerdictLeadKey(title, barNames = []) {
+        const names = (Array.isArray(barNames) ? barNames : [barNames]);
+        const stripVenue = (value) => names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(value || ''));
+        const segments = this.splitBearVerdictTitleSegments(this.stripCoverPartsFromTitle(stripVenue(title)).title);
+        return segments.length > 0 ? this.getBearVerdictTitleKey(segments[0].text, names) : '';
+    }
+
+    // What the verdict store says about itself, computed once per store:
+    //   learned  lead key → [{ entry, markers }] — at one venue, N or more
+    //            verdicts (all the same way) that share a leading name and
+    //            differ ONLY in the words after one emoji prove that emoji
+    //            opens a per-night segment of THAT party at THAT venue
+    //            (N = getBearVerdictLearnedMarkerMinEntries). Emoji only: a
+    //            word that opens several tails ("FLW – LEATHER NIGHT",
+    //            "FLW – LEATHER FAMILY SOCIAL") names different events.
+    //   keys     entry → { title key, party key }
+    getBearVerdictStoreIndex() {
+        const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
+        const signature = store.map(entry => (entry && typeof entry === 'object'
+            ? `${entry.verdict}\u0001${entry.title}\u0001${entry.venue}\u0001${entry.city}`
+            : '')).join('\u0002');
+        const cached = this._bearVerdictStoreIndex;
+        if (cached && cached.store === store && cached.signature === signature) return cached;
+        const usable = store.filter(entry => entry && typeof entry === 'object'
+            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+        const groups = new Map();
+        for (const entry of usable) {
+            const names = [entry.venue];
+            const segments = this.splitBearVerdictTitleSegments(
+                this.stripCoverPartsFromTitle(names.reduce((current, name) => this.stripVenueSuffixFromTitle(current, name), String(entry.title || ''))).title
+            );
+            if (segments.length !== 2 || !segments[1].marker) continue;
+            const leadKey = this.getBearVerdictTitleKey(segments[0].text, names);
+            const place = this.normalizeBarNameKey(entry.venue) || `city:${String(entry.city || '').trim().toLowerCase()}`;
+            if (!leadKey || place === 'city:' || place === 'city:unknown') continue;
+            const marker = (segments[1].marker.match(/[\p{Extended_Pictographic}]/u) || [''])[0];
+            if (!marker) continue;
+            const groupKey = `${place}\u0001${leadKey}\u0001${marker}`;
+            if (!groups.has(groupKey)) groups.set(groupKey, { leadKey, marker, entries: [], tails: new Set(), verdicts: new Set() });
+            const group = groups.get(groupKey);
+            group.entries.push(entry);
+            group.tails.add(this.getCrossSourceTitleTokens(segments[1].text).join(' '));
+            group.verdicts.add(entry.verdict);
+        }
+        const learned = new Map();
+        const minEntries = SharedCore.getBearVerdictLearnedMarkerMinEntries();
+        for (const group of groups.values()) {
+            if (group.tails.size < minEntries || group.verdicts.size !== 1) continue;
+            if (!learned.has(group.leadKey)) learned.set(group.leadKey, []);
+            learned.get(group.leadKey).push({ entry: group.entries[0], marker: group.marker });
+        }
+        const index = { store, signature, learned, keys: new Map() };
+        this._bearVerdictStoreIndex = index;
+        return index;
+    }
+
+    // The emoji the store proved per-night for this record's party at this
+    // record's venue (empty Set when it proved none).
+    getBearVerdictLearnedMarkers(record, index = this.getBearVerdictStoreIndex()) {
+        const markers = new Set();
+        if (!record || index.learned.size === 0) return markers;
+        const leadKey = this.getBearVerdictLeadKey(record.title || record.name, [record.bar || record.venue]);
+        for (const proof of index.learned.get(leadKey) || []) {
+            if (this.bearVerdictPlaceMatches(record, proof.entry)) markers.add(proof.marker);
+        }
+        return markers;
+    }
+
     // The owner's stored manual verdict for this event, or null. Fail-closed
-    // twice over: the title token identity must be EQUAL (see
-    // getBearVerdictTitleKey) AND the stored snapshot must positively match
+    // twice over: the title identity must be EQUAL — the title tokens
+    // (getBearVerdictTitleKey), else the party behind them
+    // (getBearVerdictPartyKey) — AND the stored snapshot must positively match
     // the event's venue identity (areIdentityPlacesSimilar — no fuzzy
     // cross-venue hits, and an event without venue data never matches).
     // Dates are deliberately NOT compared: the verdict is about the party at
     // that venue, which recurs.
     findStoredBearVerdict(event) {
+        const match = this.findStoredBearVerdictMatch(event);
+        return match ? match.entry : null;
+    }
+
+    // { entry, matchedBy: 'title' | 'party' } or null. A verdict on the exact
+    // title always speaks first (so a tap on the plain name can overrule the
+    // decorated one). Party matches that DISAGREE (one spelling judged bear,
+    // another not) decide nothing — the owner told them apart himself.
+    findStoredBearVerdictMatch(event) {
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
         if (!eventKey) return null;
-        for (const entry of store) {
-            if (!entry || typeof entry !== 'object') continue;
-            if (entry.verdict !== 'bear' && entry.verdict !== 'not_bear') continue;
-            const entryKey = this.getBearVerdictTitleKey(entry.title, [entry.venue]);
+        const index = this.getBearVerdictStoreIndex();
+        const keysOf = (entry) => {
+            let keys = index.keys.get(entry);
+            if (!keys) {
+                keys = { title: this.getBearVerdictTitleKey(entry.title, [entry.venue]), party: null };
+                index.keys.set(entry, keys);
+            }
+            return keys;
+        };
+        const usable = store.filter(entry => entry && typeof entry === 'object'
+            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+        for (const entry of usable) {
+            const entryKey = keysOf(entry).title;
             if (!entryKey || entryKey !== eventKey) continue;
             if (!this.bearVerdictPlaceMatches(event, entry)) continue;
-            return entry;
+            return { entry, matchedBy: 'title' };
         }
-        return null;
+        const partyKey = this.getBearVerdictPartyKey(event.title || event.name, [event.bar],
+            this.getBearVerdictLearnedMarkers(event, index));
+        if (!partyKey) return null;
+        const hits = [];
+        for (const entry of usable) {
+            const keys = keysOf(entry);
+            if (keys.party === null) {
+                keys.party = this.getBearVerdictPartyKey(entry.title, [entry.venue],
+                    this.getBearVerdictLearnedMarkers({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }, index));
+            }
+            if (!keys.party || keys.party !== partyKey) continue;
+            if (!this.bearVerdictPlaceMatches(event, entry)) continue;
+            hits.push(entry);
+        }
+        if (hits.length === 0) return null;
+        if (new Set(hits.map(entry => entry.verdict)).size > 1) {
+            console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the verdict store holds this party both ways (${hits.map(entry => `${entry.verdict} "${entry.title}"`).join(', ')}); no stored verdict applied`);
+            return null;
+        }
+        const newest = hits.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits[0]);
+        return { entry: newest, matchedBy: 'party' };
     }
 
     // Place half of the verdict-store identity. Venue identity when either
@@ -5368,6 +5565,35 @@ class SharedCore {
         if (LINK_IDENTITY_MERGE_FIELDS.has(fieldName) && this.isSameLinkTarget(valueA, valueB)) {
             return { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' };
         }
+        // Hub rung: a page 3+ differently titled events of the batch share
+        // (stampBatchHubLinks — the stamp rides on the scraped record) is
+        // never one event's link. Against any other link it loses, on either
+        // side: it does not replace a stored link, and a stored copy of it
+        // yields to the event's own. Both hubs, or neither, fall through.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl')
+            && context && context.records && urlA && urlB) {
+            const stamped = [context.records.a, context.records.b];
+            const hubA = stamped.some(record => this.isBatchHubLink(record, valueA));
+            const hubB = stamped.some(record => this.isBatchHubLink(record, valueB));
+            if (hubA !== hubB) {
+                return {
+                    winner: hubA ? 'b' : 'a',
+                    reason: 'a page shared by 3+ differently titled events of this run is a hub (pass page or listing), never one event\'s link'
+                };
+            }
+        }
+        // Dead-link rung: a link the site answers "not found" for
+        // (stampKnownDeadLinks) loses to any other link, on either side — a
+        // stored copy of it yields, and it never replaces a stored link.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl')
+            && context && context.records && urlA && urlB) {
+            const stamped = [context.records.a, context.records.b];
+            const deadA = stamped.some(record => this.isKnownDeadLink(record, valueA));
+            const deadB = stamped.some(record => this.isKnownDeadLink(record, valueB));
+            if (deadA !== deadB) {
+                return { winner: deadA ? 'b' : 'a', reason: 'the site answers "not found" for the other link (404/410 learned by the crawl)' };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -7574,8 +7800,216 @@ class SharedCore {
         return !curatedHosts.includes(parts.host);
     }
 
+    // ── A PAGE SHARED BY MANY EVENTS IS NOT ONE EVENT'S LINK ─────────────
+    // A link that three or more DIFFERENTLY TITLED events of one batch
+    // point at — as website, url or ticketUrl — is a hub: a festival's pass
+    // page ("Get Your Dog Tag" under every card of the week), a listing, a
+    // shop. It names every event on it, so it names none: it is never
+    // presented as one event's ticket page and never replaces the link an
+    // event already has (beefdip.com/planned-events, run 20260927-155245:
+    // MAD.BEAR RED BALL's merge proposed website https://beefdip.com/ →
+    // https://beefdip.com/tags/, the pass page eighteen records shared).
+    //
+    // The batch twin of deduplicateEvents' fan-in rules (3+ records on one
+    // event page / one ticket link are no IDENTITY) — those count rows
+    // because they only decline a match; this one takes a link away, so it
+    // counts PARTIES: three nights of one party share that party's page and
+    // that is not a hub. Two more fences: the events must not all start at
+    // the same instant (three differently titled fragments of ONE event
+    // page share its real ticket link and its start), and a bare root, a
+    // parser's static stamp and the promoter's own curated identity are
+    // front doors the identity ladder already ranks — never hubs.
+    //
+    // Stamped on the records (`_hubLinkKeys`, underscore — internal, never
+    // notes) so the calendar merge and the final build, which see one
+    // record at a time, inherit the batch's finding — the same carry
+    // _ticketUrlFanIn uses.
+    getHubLinkKey(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!/^https?:\/\//i.test(raw)) return '';
+        const parts = this.getUrlRuleParts(raw);
+        if (!parts || (parts.segments.length === 0 && !parts.hasQuery)) return '';
+        return this.getUrlDedupeKey(raw).replace(/^https?:\/\//i, '');
+    }
+
+    isBatchHubLink(event, value) {
+        const keys = event && Array.isArray(event._hubLinkKeys) ? event._hubLinkKeys : null;
+        if (!keys || keys.length === 0) return false;
+        const key = this.getHubLinkKey(value);
+        return Boolean(key) && keys.includes(key);
+    }
+
+    stampBatchHubLinks(events) {
+        const hubs = new Map();
+        if (!Array.isArray(events) || events.length < 3) return hubs;
+        const holders = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+            const promoterEntry = this.getCuratedPromoterIdentityEntry(event);
+            const curatedKeys = promoterEntry
+                ? [this.getPromoterEntryIdentityWebsite(promoterEntry), promoterEntry.favicon].map(url => this.getHubLinkKey(url)).filter(Boolean)
+                : [];
+            const seen = new Set();
+            for (const field of ['website', 'url', 'ticketUrl']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (!value) continue;
+                const staticValue = staticFields[field === 'url' ? 'website' : field] || staticFields[field];
+                if (typeof staticValue === 'string' && staticValue.trim() === value) continue;
+                const key = this.getHubLinkKey(value);
+                if (!key || seen.has(key) || curatedKeys.includes(key)) continue;
+                seen.add(key);
+                if (!holders.has(key)) holders.set(key, []);
+                holders.get(key).push(event);
+            }
+        }
+        for (const [key, group] of holders) {
+            if (group.length < 3) continue;
+            const parties = [];
+            for (const event of group) {
+                const title = typeof event.title === 'string' ? event.title.trim() : '';
+                if (!title) continue;
+                if (!parties.some(known => this.areTitlesSimilar(known, title))) parties.push(title);
+            }
+            if (parties.length < 3) continue;
+            const starts = new Set(group.map(event => this.toEpochMillis(event.startDate)).filter(millis => millis !== null));
+            if (starts.size < 2) continue;
+            hubs.set(key, parties.length);
+            for (const event of group) {
+                if (!Object.isExtensible(event)) continue;
+                if (!Array.isArray(event._hubLinkKeys)) event._hubLinkKeys = [];
+                if (!event._hubLinkKeys.includes(key)) event._hubLinkKeys.push(key);
+            }
+        }
+        if (hubs.size > 0) {
+            console.log(`🔗 LINKS: ${hubs.size} link(s) shared by 3+ differently titled events of this batch are hubs (a pass page or a listing), never one event's link: ${[...hubs].map(([key, count]) => `${key} (${count} parties)`).join(', ')}`);
+        }
+        return hubs;
+    }
+
+    // ── A link the site itself answers "not found" for is not a link ─────
+    // A venue's own cards can publish permalinks that do not exist:
+    // precinctdtla.com prints `/10-11-26/bulkgoods-la-7/` on every calendar
+    // card (itemprop url AND the JSON-LD url) and answers its own "Page not
+    // found" for each — 28 of them learned as dead ends by 2026-09-27, and
+    // every Precinct event on the calendar linked to one. The dead-end store
+    // already records what the origin STATED (404/410, one strike, retried
+    // after the usual window); a link it holds that way is dropped, and the
+    // page the event was read from stands in. A 401/403 is a wall, not an
+    // absence — the page exists for a visitor — so it is never dropped.
+    // Stamped on the record (`_deadLinkKeys`) so the merge and the final
+    // build, and a saved run replayed on the phone, inherit the finding
+    // without needing the store.
+    isStatedGoneEntry(context, entry) {
+        if (!entry) return false;
+        const status = Number(entry.lastStatus);
+        if (status !== 404 && status !== 410) return false;
+        const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = (Number(context.retryDays) || 0) * 24 * 60 * 60 * 1000;
+        return Number.isFinite(lastSeenMs) && (retryMs <= 0 || (Date.now() - lastSeenMs) < retryMs);
+    }
+
+    getDeadLinkKnowledge() {
+        const context = this.deadEndRunContext || this.deadLinkKnowledge || null;
+        return context && context.store ? context : null;
+    }
+
+    isOriginStatedGoneUrl(url) {
+        const context = this.getDeadLinkKnowledge();
+        if (!context || !url) return false;
+        const { entry } = this.findDeadEndUrlEntry(context, url);
+        if (this.isStatedGoneEntry(context, entry)) return true;
+        return Boolean(this.getGoneShapePresumption(url));
+    }
+
+    // A link the crawl never tried can still be known gone — by its SHAPE.
+    // The venue publishes one permalink per card and the crawl reads only
+    // some of them: precinctdtla.com had 26 learned gone, and the ten
+    // upcoming bear nights' own links, same shape, had never been tried.
+    // Presumed gone only when ALL of this holds:
+    //   - the store holds DEAD_SHAPE_MIN_SIBLINGS or more links of that
+    //     shape on that host the site answered 404/410 for;
+    //   - the shape has two segments or more (a top-level page is its own
+    //     kind of thing);
+    //   - the crawl ENGAGED the shape lately: it found one gone this run,
+    //     or the newest of those answers is under DEAD_SHAPE_RECENT_DAYS
+    //     old (the store is the crawl's own record of what it tried);
+    //   - no page of that shape answered this run, from network or cache.
+    // A site whose old event pages expire while new ones live ("/events/
+    // <slug>") always has a page of the shape answering, so it never
+    // qualifies.
+    getGoneShapePresumption(url) {
+        const context = this.getDeadLinkKnowledge();
+        if (!context || !url) return null;
+        const shape = this.getUrlPathShape(url);
+        if (!shape || shape.split('/').length < 3) return null;
+        const evidence = (this.pathShapeEvidence && this.pathShapeEvidence.get(shape)) || { answered: 0, gone: 0 };
+        if (evidence.answered > 0) return null;
+        if (!context.goneShapeCounts) {
+            const counts = new Map();
+            const hostsKey = typeof this.getDeadEndHostsStoreKey === 'function' ? this.getDeadEndHostsStoreKey() : '';
+            for (const [key, entry] of Object.entries(context.store)) {
+                if (key === hostsKey || !this.isStatedGoneEntry(context, entry)) continue;
+                const entryShape = this.getUrlPathShape(key);
+                if (!entryShape) continue;
+                const known = counts.get(entryShape) || { siblings: 0, newestMs: 0 };
+                known.siblings += 1;
+                known.newestMs = Math.max(known.newestMs, Date.parse(entry.lastSeen) || 0);
+                counts.set(entryShape, known);
+            }
+            context.goneShapeCounts = counts;
+        }
+        const known = context.goneShapeCounts.get(shape);
+        if (!known || known.siblings < DEAD_SHAPE_MIN_SIBLINGS) return null;
+        const engagedLately = evidence.gone > 0
+            || (Date.now() - known.newestMs) < DEAD_SHAPE_RECENT_DAYS * 24 * 60 * 60 * 1000;
+        return engagedLately ? { shape, siblings: known.siblings } : null;
+    }
+
+    isKnownDeadLink(event, value) {
+        const key = this.getHubLinkKey(value);
+        if (!key) return false;
+        const keys = event && Array.isArray(event._deadLinkKeys) ? event._deadLinkKeys : null;
+        return Boolean(keys && keys.includes(key));
+    }
+
+    stampKnownDeadLinks(events) {
+        const found = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object' || !Object.isExtensible(event)) continue;
+            for (const field of ['website', 'url', 'ticketUrl']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (!value || !this.isOriginStatedGoneUrl(value)) continue;
+                const key = this.getHubLinkKey(value);
+                if (!key) continue;
+                if (!Array.isArray(event._deadLinkKeys)) event._deadLinkKeys = [];
+                if (!event._deadLinkKeys.includes(key)) event._deadLinkKeys.push(key);
+                found.set(key, (found.get(key) || 0) + 1);
+            }
+        }
+        if (found.size > 0) {
+            console.log(`🔗 LINKS: ${found.size} link(s) the site itself answers "not found" for (404/410, learned by the crawl) — never saved as an event's link: ${[...found.keys()].slice(0, 5).join(', ')}${found.size > 5 ? `, … (+${found.size - 5})` : ''}`);
+        }
+        return found;
+    }
+
+    // The page an event was read from, when it can stand in for a link of
+    // its own: a real page (not a feed or an API door), not itself gone.
+    getStandInSourcePage(event) {
+        const source = typeof (event && event._sourcePageUrl) === 'string' ? event._sourcePageUrl.trim() : '';
+        if (!/^https?:\/\//i.test(source)) return '';
+        if (this.isOriginStatedGoneUrl(source) || this.isKnownDeadLink(event, source)) return '';
+        // A feed, an API door, a file or a search listing is where the data
+        // came from, not a page a visitor can open about the event.
+        if (this.isStaticAssetUrl(source) || this.isApiEndpointUrl(source) || this.isSearchListingUrl(source)
+            || /\.(?:ics|json|xml|rss)(?:$|[?#])/i.test(source)) return '';
+        return source;
+    }
+
     canonicalizeIdentityLinks(events) {
         if (!Array.isArray(events) || events.length === 0) return;
+        this.stampBatchHubLinks(events);
+        this.stampKnownDeadLinks(events);
         for (const event of events) {
             if (!event || typeof event !== 'object') continue;
             // Alias fold backstop: normalization already folded url→website
@@ -7593,6 +8027,42 @@ class SharedCore {
             // curated registry instead of a self-referential machine URL
             // being parked into ticketUrl as a "platform link" below.
             this.clearNonIdentityLinkFields(event, event.title || 'event');
+
+            // The batch's hub pages (stampBatchHubLinks). As a ticket link a
+            // hub is dropped — unless the page itself labelled it this
+            // event's ticket page (markTicketRoleUrl). As a website it is a
+            // front door: cleared when a curated identity can stand in (the
+            // blank rung below fills it), kept otherwise — an event with
+            // only a listing to its name keeps the listing, and the stamp
+            // keeps it from replacing a stored link at the merge.
+            const hubTicketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (hubTicketUrl && this.isBatchHubLink(event, hubTicketUrl) && !this.isTicketRoleUrl(event, hubTicketUrl)) {
+                delete event.ticketUrl;
+                console.log(`🔗 LINKS: dropped ticketUrl ${hubTicketUrl} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a pass page or listing, not this event's ticket page`);
+            }
+            const hubWebsite = typeof event.website === 'string' ? event.website.trim() : '';
+            if (hubWebsite && this.isBatchHubLink(event, hubWebsite)
+                && !(event._staticFields && Object.prototype.hasOwnProperty.call(event._staticFields, 'website'))) {
+                const hubPromoterEntry = this.getCuratedPromoterIdentityEntry(event);
+                if (hubPromoterEntry && this.getPromoterEntryIdentityWebsite(hubPromoterEntry)) {
+                    delete event.website;
+                    console.log(`🔗 LINKS: cleared website ${hubWebsite} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a hub page is a front door, not this event's page`);
+                }
+            }
+
+            // Links the site answers "not found" for (stampKnownDeadLinks).
+            const deadTicketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (deadTicketUrl && this.isKnownDeadLink(event, deadTicketUrl)) {
+                delete event.ticketUrl;
+                console.log(`🔗 LINKS: dropped ticketUrl ${deadTicketUrl} for "${event.title || 'event'}" — the site answers "not found" for it`);
+            }
+            const deadWebsite = typeof event.website === 'string' ? event.website.trim() : '';
+            if (deadWebsite && this.isKnownDeadLink(event, deadWebsite)) {
+                const standIn = this.getStandInSourcePage(event);
+                if (standIn && !this.isSameLinkTarget(standIn, deadWebsite)) event.website = standIn;
+                else delete event.website;
+                console.log(`🔗 LINKS: dropped website ${deadWebsite} for "${event.title || 'event'}" — the site answers "not found" for it${standIn ? `; the page it was read from stands in (${standIn})` : ''}`);
+            }
 
             const website = typeof event.website === 'string' ? event.website.trim() : '';
             const staticFields = event._staticFields && typeof event._staticFields === 'object'
@@ -9061,6 +9531,7 @@ class SharedCore {
                 const deadEndEntry = this.getSkippableDeadEndEntry(url, discoveryOnly);
                 if (deadEndEntry) {
                     await displayAdapter.logInfo(`SYSTEM: Skipping known dead-end URL (${Number(deadEndEntry.misses) || 0} prior misses): ${url}`);
+                    if ([404, 410].includes(Number(deadEndEntry.lastStatus))) this.notePathShapeEvidence(url, 'gone');
                     continue;
                 }
                 const deadEndHostEntry = this.getSkippableDeadEndHostEntry(url, discoveryOnly);
@@ -10286,6 +10757,36 @@ class SharedCore {
         if (!host) return;
         if (!this.hostReachability) this.hostReachability = new Map();
         this.hostReachability.set(host, { failures: 0, succeeded: true });
+        this.notePathShapeEvidence(url, 'answered');
+    }
+
+    // ── Path shapes: what kind of page answered, what kind never does ────
+    // "precinctdtla.com/10-11-26/bulkgoods-la-7" has the shape "#/*" — a
+    // segment carrying digits, then a slug. Evidence is kept per run: which
+    // shapes of a host ANSWERED (a page was read, from the network or the
+    // cache) and which the crawl ENGAGED and found gone (a 404/410 this
+    // run, or a skip of a link already learned gone).
+    getUrlPathShape(url) {
+        const parts = this.getUrlRuleParts(String(url || ''));
+        if (!parts || !Array.isArray(parts.segments) || parts.segments.length === 0) return '';
+        const host = FetchPoliteness.hostKeyOf(url);
+        if (!host) return '';
+        const last = parts.segments.length - 1;
+        const shape = parts.segments.map((segment, index) => {
+            if (index === last) return '*';
+            return /\d/.test(segment) ? '#' : String(segment).toLowerCase();
+        }).join('/');
+        return `${host}/${shape}`;
+    }
+
+    notePathShapeEvidence(url, kind) {
+        const shape = this.getUrlPathShape(url);
+        if (!shape) return;
+        if (!this.pathShapeEvidence) this.pathShapeEvidence = new Map();
+        const entry = this.pathShapeEvidence.get(shape) || { answered: 0, gone: 0 };
+        if (kind === 'answered') entry.answered += 1;
+        else if (kind === 'gone') entry.gone += 1;
+        this.pathShapeEvidence.set(shape, entry);
     }
 
     getUnreachableHostSkip(url, threshold = UNREACHABLE_HOST_FAILURE_THRESHOLD) {
@@ -10494,6 +10995,7 @@ class SharedCore {
             // Configured root URLs are never dead-ended
             return;
         }
+        if ([404, 410].includes(Number(statusCode))) this.notePathShapeEvidence(url, 'gone');
         const { wasNew } = this.recordDeadEndUrlMiss(context, url, statusCode, nowMs);
         // Bot-wall statuses additionally feed the host-level stats: a host
         // whose pages ONLY ever 401/403 (and never once fetched) is a
@@ -10629,6 +11131,10 @@ class SharedCore {
 
     async finalizeDeadEndRun(displayAdapter, results, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
+        // The crawl is over, but the calendar analysis that follows still
+        // judges LINKS by what the crawl learned (isOriginStatedGoneUrl): a
+        // saved event may hold a permalink the site answers 404 for.
+        if (context && context.store) this.deadLinkKnowledge = context;
         this.deadEndRunContext = null;
         if (!context) {
             return;
@@ -11315,12 +11821,16 @@ class SharedCore {
         // manual-override-on-calendar-record path: the owner already judged
         // this party at this venue, and the AI re-litigating it every run is
         // how MEAT RACK kept getting re-dropped (run 20260812-002001).
-        const storedVerdict = this.findStoredBearVerdict(event);
+        const storedMatch = this.findStoredBearVerdictMatch(event);
+        const storedVerdict = storedMatch ? storedMatch.entry : null;
         if (storedVerdict) {
             const stamp = String(storedVerdict.stampedAt || '').slice(0, 10);
+            // A verdict reached through the party fold names the title it
+            // was given on, so the drop reason shows whose verdict this is.
+            const sameParty = storedMatch.matchedBy === 'party' ? ` — same party as "${storedVerdict.title}"` : '';
             return {
                 result: storedVerdict.verdict,
-                provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}`,
+                provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}${sameParty}`,
                 manualStore: true,
                 storedVerdictEntry: storedVerdict
             };
@@ -20201,6 +20711,26 @@ class SharedCore {
             if (event._seriesInfo && !analyzedEvent._seriesInfo) {
                 analyzedEvent._seriesInfo = event._seriesInfo;
             }
+            // The batch's hub finding (stampBatchHubLinks) rides the same way,
+            // so the final LINKS pass below can see that a ticket link the
+            // calendar still holds is the run's pass page.
+            if (Array.isArray(event._hubLinkKeys) && !analyzedEvent._hubLinkKeys) {
+                analyzedEvent._hubLinkKeys = event._hubLinkKeys.slice();
+            }
+            // …and the dead-link finding (stampKnownDeadLinks). The calendar
+            // may hold the dead permalink an earlier run wrote; stamp those
+            // too, so a saved copy is recognised whichever side carries it.
+            {
+                const deadKeys = new Set(Array.isArray(event._deadLinkKeys) ? event._deadLinkKeys : []);
+                for (const field of ['website', 'url', 'ticketUrl']) {
+                    const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                    if (value && this.isOriginStatedGoneUrl(value)) {
+                        const key = this.getHubLinkKey(value);
+                        if (key) deadKeys.add(key);
+                    }
+                }
+                if (deadKeys.size > 0) analyzedEvent._deadLinkKeys = [...deadKeys];
+            }
             // Slot precedence (analyzeEventAction): a night that yields its
             // slot is withheld (filterEventsForExecution); a party that takes
             // a saved night's slot carries whose, and sheds that night's
@@ -20466,6 +20996,38 @@ class SharedCore {
                         this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
                             `ticketUrl dropped at final build — the same site's ${shape}, not a ticket link`);
                     }
+                }
+            }
+
+            // A link the site answers "not found" for is never written,
+            // whichever side of the merge brought it: the calendar may hold
+            // the dead permalink an earlier run saved.
+            for (const field of ['ticketUrl', 'website']) {
+                const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                if (!value || !this.isKnownDeadLink(analyzedEvent, value)) continue;
+                const standIn = field === 'website' ? this.getStandInSourcePage(event) : '';
+                if (standIn && !this.isSameLinkTarget(standIn, value)) analyzedEvent[field] = standIn;
+                else delete analyzedEvent[field];
+                if (field === 'website' && 'url' in analyzedEvent) {
+                    if (analyzedEvent.website) analyzedEvent.url = analyzedEvent.website; else delete analyzedEvent.url;
+                }
+                notesNeedRebuild = true;
+                console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — the site answers "not found" for it; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
+                this.recordDeterministicFieldRewrite(analyzedEvent, field,
+                    `${field} replaced at final build — the site answers "not found" (404/410) for the saved link`);
+            }
+
+            // A hub is never presented as one event's ticket page, whichever
+            // side of the merge brought it (stampBatchHubLinks): the calendar
+            // may still hold the pass page an earlier run wrote there.
+            {
+                const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                if (ticketUrl && this.isBatchHubLink(analyzedEvent, ticketUrl) && !this.isTicketRoleUrl(analyzedEvent, ticketUrl)) {
+                    delete analyzedEvent.ticketUrl;
+                    notesNeedRebuild = true;
+                    console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — a hub page 3+ differently titled events of this run share, not this event's ticket page`);
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                        'ticketUrl dropped at final build — a hub page shared by 3+ differently titled events of the run');
                 }
             }
 

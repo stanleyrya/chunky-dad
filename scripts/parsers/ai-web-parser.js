@@ -762,6 +762,20 @@ function flyerOcrContradictsEventDate(ocrText, localDates) {
     return false;
 }
 
+// Words in an image's FILENAME that name the file, not the party
+// (getFlyerFilenameEvidence): what the artwork is, which version it is,
+// and the calendar — a month or weekday in a filename is its date again.
+const FLYER_FILENAME_NON_NAME_WORDS = new Set([
+    'flyer', 'flier', 'poster', 'banner', 'cartel', 'promo', 'image', 'img', 'pic', 'photo', 'foto', 'artwork', 'graphic',
+    'final', 'fix', 'fixed', 'new', 'copy', 'copia', 'edit', 'edited', 'draft', 'version', 'web', 'scaled', 'base',
+    'square', 'story', 'post', 'feed', 'vertical', 'horizontal', 'portrait', 'landscape', 'thumb', 'thumbnail',
+    'talent', 'lineup', 'event', 'events',
+    'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
+    'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+    'mon', 'tue', 'tues', 'wed', 'thu', 'thur', 'thurs', 'fri', 'sat', 'sun',
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+]);
+
 class AiWebParser {
     constructor(config = {}) {
         this.config = {
@@ -2144,7 +2158,371 @@ class AiWebParser {
             const runsToConverge = Math.ceil(uncachedSegmentsSkipped / Math.max(1, missBudget));
             console.log(`🤖 AI Web: Miss budget ${missBudget} spent — ${uncachedSegmentsSkipped} of ${segments.length} segments still uncached; ~${runsToConverge} more run${runsToConverge === 1 ? '' : 's'} to full coverage at this budget`);
         }
+        // A flyer's own words outrank its date: judged on the finished
+        // records, with every sibling title of the page in view.
+        this.applyFlyerNameGuard(events, { html, sourceUrl, ocrResults, segments });
         return events;
+    }
+
+    // ── A FLYER'S OWN WORDS OUTRANK ITS DATE ────────────────────────────
+    // A picture that NAMES a party — in its filename ("2026-01-31 Wet &
+    // Wild.webp"), or, when the filename is opaque, in the words the vision
+    // pass read off it — belongs to the event of that name. It is never
+    // another event's artwork because the two share a month-day, a venue or
+    // a clock: a festival reuses last year's art, so a flyer printed for
+    // "Saturday January 31 2026" sits on THIS year's Saturday January 30
+    // party, and the text matcher then hands it to whoever falls on the
+    // 31st (beefdip.com/planned-events, run 20260927-155245: HYDRATE POOL
+    // PARTY shipped wearing the Wet & Wild flyer while its own
+    // "2026-02-01 HYDRATE.webp" went unused).
+    //
+    // Judged on the FINISHED records of one page, with every sibling title
+    // in view, after extraction and before the page's events are returned —
+    // the same seam as the one-destination guard, for the same reason: the
+    // splitters and the pairing are fixed one layout at a time, and this is
+    // the invariant under all of them.
+    //
+    //   1. Name evidence. The filename's words (dates, sizes and opaque
+    //      asset ids are not words) are matched against every distinct
+    //      title of the page. The picture names the party whose title it
+    //      covers best; two parties named equally well is nobody. One shared
+    //      word names a party only when no other party of the page uses it.
+    //      A record wearing a flyer that names a DIFFERENT party loses it.
+    //   2. Opaque filename → the flyer's OCR words, held to a higher bar
+    //      (two title words, none of them printed on most of the page's
+    //      flyers — the festival brand and its sponsor strip name no party)
+    //      and only when the record's own title shares none of them.
+    //   3. Date evidence is the LAST resort — a filename that is only a
+    //      date. The same day in the same year is a match. The same day in
+    //      another year is last year's file and matches nothing; a date
+    //      that is a sibling's night is the sibling's. Either way the record
+    //      keeps a picture its own card prints and loses one it was merely
+    //      paired with.
+    //   4. An event left with no picture takes the page's flyer whose
+    //      FILENAME names it, when there is exactly one such party.
+    //
+    // Flag, don't drop: the record stays, the picture goes, and the reason
+    // rides on `_flyerNameWithheld` (underscore — internal, never notes).
+    // An event with no image is better than one wearing another party's.
+    getFlyerFilenameEvidence(url) {
+        const raw = String(url || '').split('#')[0].split('?')[0];
+        let filename = raw.slice(raw.lastIndexOf('/') + 1);
+        try { filename = decodeURIComponent(filename); } catch (_) { /* keep the raw spelling */ }
+        filename = filename.replace(/&amp;/gi, '&')
+            .replace(/\.[a-z0-9]{2,5}$/i, '')
+            .replace(/-\d{2,5}x\d{2,5}$/i, '')
+            .replace(/-scaled$/i, '');
+        const dates = [];
+        const rest = filename.replace(/(^|[^0-9])(20\d{2})[-_. ]?(\d{2})[-_. ]?(\d{2})(?![0-9])/g, (whole, lead, y, m, d) => {
+            const year = parseInt(y, 10);
+            const month = parseInt(m, 10);
+            const day = parseInt(d, 10);
+            if (month < 1 || month > 12 || day < 1 || day > 31) return whole;
+            dates.push({ year, month, day });
+            return `${lead} `;
+        });
+        const tokens = this.foldDiacritics(rest).replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+        // Not a word: an asset id (a long run mixing letters and digits —
+        // cloudfront hashes, "6602b147…" — or a bare number), a two-letter
+        // scrap ("de", "en", "bd"), a month or weekday ("8-sep-Paw.png":
+        // that is the date again), and what a designer calls the FILE
+        // rather than the party ("flyer", "final", "web").
+        const words = tokens.filter(token => token.length >= 3
+            && !/^\d+$/.test(token)
+            && !(/\d/.test(token) && /[a-z]/.test(token) && token.length >= 6)
+            && !FLYER_FILENAME_NON_NAME_WORDS.has(token));
+        return { words: [...new Set(words)], dates };
+    }
+
+    // Which of a title's tokens does this evidence spell? Returns the set
+    // of title-token indexes — a word may run neighbouring title tokens
+    // together ("madbear", "flowerpower", "boozecruise"), and a filename
+    // may spell one title token in pieces.
+    getFlyerNamedTitleTokenIndexes(words, titleTokens, matchedWords = null) {
+        const wordList = Array.isArray(words) ? words : [];
+        const tokens = Array.isArray(titleTokens) ? titleTokens : [];
+        const wordSet = new Set(wordList);
+        const matched = new Set();
+        const spelled = matchedWords instanceof Set ? matchedWords : new Set();
+        tokens.forEach((token, index) => {
+            if (!wordSet.has(token)) return;
+            matched.add(index);
+            spelled.add(token);
+        });
+        for (let i = 0; i < tokens.length; i++) {
+            let joined = tokens[i];
+            for (let j = i + 1; j < tokens.length && j <= i + 3; j++) {
+                joined += tokens[j];
+                if (!wordSet.has(joined)) continue;
+                for (let k = i; k <= j; k++) matched.add(k);
+                spelled.add(joined);
+            }
+        }
+        for (let i = 0; i < wordList.length; i++) {
+            let joined = wordList[i];
+            for (let j = i + 1; j < wordList.length && j <= i + 3; j++) {
+                joined += wordList[j];
+                const index = tokens.indexOf(joined);
+                if (index === -1) continue;
+                matched.add(index);
+                for (let k = i; k <= j; k++) spelled.add(wordList[k]);
+            }
+        }
+        return matched;
+    }
+
+    // Two titles of ONE party: the same words, or one the other's opening
+    // words ("HYDRATE" / "HYDRATE POOL PARTY"). A shared ending is not —
+    // "FOAM POOL PARTY" and "MAD.BEAR FOAM POOL PARTY" are two parties.
+    areFlyerPartyTokensRelated(tokensA, tokensB) {
+        const a = Array.isArray(tokensA) ? tokensA : [];
+        const b = Array.isArray(tokensB) ? tokensB : [];
+        if (a.length === 0 || b.length === 0) return false;
+        const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+        return shorter.every((token, index) => longer[index] === token);
+    }
+
+    // The party this evidence names among the page's parties
+    // ([{ title, tokens }]), or null. options.minScore raises the bar for
+    // OCR words; options.minWordShare is how much of the EVIDENCE the
+    // party's title must explain — a filename is a handful of words and
+    // half of them must be the party's ("0-Blanca-De-Nicolas-en-Bars-
+    // Sitges-expo.jpg" shares one word with a dozen titles and names
+    // none), a flyer's text is a whole poster and is not held to it.
+    resolveFlyerNamedParty(words, parties, options = {}) {
+        const wordList = Array.isArray(words) ? words : [];
+        const list = Array.isArray(parties) ? parties : [];
+        if (wordList.length === 0 || list.length === 0) return null;
+        const minScore = Number.isFinite(options.minScore) ? options.minScore : 1;
+        const minWordShare = Number.isFinite(options.minWordShare) ? options.minWordShare : 0;
+        const scored = list
+            .map(party => {
+                const spelled = new Set();
+                const matched = this.getFlyerNamedTitleTokenIndexes(wordList, party.tokens, spelled);
+                return { party, matched, spelled, score: matched.size, uncovered: party.tokens.length - matched.size };
+            })
+            .filter(entry => entry.score > 0)
+            .sort((a, b) => (b.score - a.score) || (a.uncovered - b.uncovered));
+        if (scored.length === 0) return null;
+        const best = scored[0];
+        if (best.score < minScore) return null;
+        if (best.spelled.size / wordList.length < minWordShare) return null;
+        for (const other of scored.slice(1)) {
+            if (this.areFlyerPartyTokensRelated(other.party.tokens, best.party.tokens)) continue;
+            if (other.score === best.score && other.uncovered === best.uncovered) return null;
+        }
+        if (best.score === 1) {
+            const token = best.party.tokens[[...best.matched][0]];
+            if (!token || token.length < 3) return null;
+            const usedElsewhere = list.some(party => party !== best.party
+                && !this.areFlyerPartyTokensRelated(party.tokens, best.party.tokens)
+                && party.tokens.includes(token));
+            if (usedElsewhere) return null;
+        }
+        return best.party;
+    }
+
+    applyFlyerNameGuard(events, pageContext = {}) {
+        const list = (Array.isArray(events) ? events : []).filter(event => event && typeof event === 'object');
+        if (list.length < 2) return [];
+        if (!this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return [];
+        const sourceUrl = typeof pageContext.sourceUrl === 'string' ? pageContext.sourceUrl : '';
+        const html = typeof pageContext.html === 'string' ? pageContext.html : '';
+        const segments = Array.isArray(pageContext.segments) ? pageContext.segments : [];
+        const ocrResults = Array.isArray(pageContext.ocrResults) ? pageContext.ocrResults : [];
+
+        // The page's parties: every distinct title its records carry (the
+        // title before a brand prefix was added counts too).
+        const parties = [];
+        const partyOf = (title) => {
+            const tokens = this.core.getCrossSourceTitleTokens(title);
+            if (tokens.length === 0) return null;
+            const key = tokens.join(' ');
+            let party = parties.find(entry => entry.key === key);
+            if (!party) {
+                party = { key, title: String(title).trim(), tokens };
+                parties.push(party);
+            }
+            return party;
+        };
+        const partiesByEvent = new Map();
+        for (const event of list) {
+            const own = [...new Set([event._titleBeforeBrandPrefix, event.title]
+                .filter(value => typeof value === 'string' && value.trim()))]
+                .map(partyOf).filter(Boolean);
+            partiesByEvent.set(event, own);
+        }
+        if (parties.length < 2) return [];
+        const isOwnParty = (event, party) => (partiesByEvent.get(event) || []).some(own =>
+            own === party || this.areFlyerPartyTokensRelated(own.tokens, party.tokens));
+        // Fail open on a name that is the same name: one title inside the
+        // other, or one slip of the pen apart ("ASHKOLE" / "AshHole").
+        const nearSpelling = (own, party) => {
+            const a = own.tokens.join('');
+            const b = party.tokens.join('');
+            const shortest = Math.min(a.length, b.length);
+            if (shortest < 6) return false;
+            return this.boundedEditDistance(a, b, Math.max(1, Math.floor(shortest / 6))) >= 0;
+        };
+        const sameNameAs = (event, party) => isOwnParty(event, party)
+            || (partiesByEvent.get(event) || []).some(own => nearSpelling(own, party))
+            || [event._titleBeforeBrandPrefix, event.title].some(title => typeof title === 'string' && title.trim()
+                && typeof this.core.areTitlesSimilar === 'function' && this.core.areTitlesSimilar(title, party.title));
+
+        // What the page's flyers SAY, minus what most of them say: the
+        // festival's own name and its sponsor strip are on every poster.
+        const imageKey = (url) => this.getDestinationImageKey(this.normalizeUrl(url, sourceUrl) || url);
+        const ocrWordsByKey = new Map();
+        for (const result of ocrResults) {
+            const key = result && typeof result.url === 'string' ? imageKey(result.url) : '';
+            const text = result && typeof result.text === 'string' ? result.text : '';
+            if (!key || !text.trim() || ocrWordsByKey.has(key)) continue;
+            const tokens = this.foldDiacritics(text).replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
+                .filter(token => token.length > 1 && !/^\d+$/.test(token));
+            ocrWordsByKey.set(key, [...new Set(tokens)]);
+        }
+        const ocrWordCounts = new Map();
+        for (const words of ocrWordsByKey.values()) {
+            for (const word of words) ocrWordCounts.set(word, (ocrWordCounts.get(word) || 0) + 1);
+        }
+        const brandFloor = Math.max(this.segmentImageChromeMinSegments || 3, Math.ceil(ocrWordsByKey.size / 2));
+        const ocrWordsFor = (url) => (ocrWordsByKey.get(imageKey(url)) || [])
+            .filter(word => (ocrWordCounts.get(word) || 0) < brandFloor);
+
+        // The same for filenames. A site that prefixes every upload with
+        // its own name ("Bears-Sitges-Week-2026-MIM-ROOFTOP.jpg") names no
+        // party by it: the page's brand (its declared names and its host)
+        // and any word most of the page's files carry are not evidence.
+        const pageFlyers = html
+            ? this.extractOrderedImageRecordsFromHtml(html, sourceUrl)
+                .map(record => ({ url: record.url, key: imageKey(record.url), evidence: this.getFlyerFilenameEvidence(record.url) }))
+                .filter(flyer => flyer.key)
+            : [];
+        const fileWordCounts = new Map();
+        const namedFiles = pageFlyers.filter(flyer => flyer.evidence.words.length > 0);
+        for (const flyer of namedFiles) {
+            for (const word of flyer.evidence.words) fileWordCounts.set(word, (fileWordCounts.get(word) || 0) + 1);
+        }
+        const fileBrandFloor = Math.max(this.segmentImageChromeMinSegments || 3, Math.ceil(namedFiles.length / 2));
+        const brandCorpus = this.getPageBrandNames({ html, url: sourceUrl })
+            .map(name => this.foldDiacritics(name).replace(/[^a-z0-9]+/g, ''))
+            .concat([String(this.getRegistrableDomainFromUrl(sourceUrl) || '').split('.')[0].toLowerCase()])
+            .filter(name => name.length >= 3);
+        const filenameEvidenceFor = (url) => {
+            const evidence = this.getFlyerFilenameEvidence(url);
+            return {
+                dates: evidence.dates,
+                words: evidence.words.filter(word => (fileWordCounts.get(word) || 0) < fileBrandFloor
+                    && !brandCorpus.some(brand => brand.includes(word)))
+            };
+        };
+        const FILENAME_NAMING = { minWordShare: 0.5 };
+
+        const segmentOf = (event) => {
+            const index = event._multiEventSegment && Number(event._multiEventSegment.index);
+            return Number.isFinite(index) && index >= 1 ? (segments[index - 1] || null) : null;
+        };
+        const cardPrints = (event, url) => {
+            const segment = segmentOf(event);
+            if (!segment) return false;
+            if (segment._flyerOnlySegment) return true;
+            const key = imageKey(url);
+            const own = typeof segment.html === 'string' ? segment.html : '';
+            return Boolean(key) && this.extractOrderedImageUrlsFromHtml(own, sourceUrl).some(candidate => imageKey(candidate) === key);
+        };
+        const sameDay = (a, b, withYear) => a.month === b.month && a.day === b.day && (!withYear || a.year === b.year);
+
+        const withheld = [];
+        const withhold = (event, url, reason, names = '') => {
+            const key = imageKey(url);
+            for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (value && imageKey(value) === key) delete event[field];
+            }
+            if (!event.image) delete event.imageSource;
+            event._flyerNameWithheld = { url, reason, ...(names ? { names } : {}) };
+            withheld.push(event);
+            console.log(`🖼️ FLYER NAME: withheld ${url} from "${event.title || 'event'}" — ${reason}`);
+        };
+
+        for (const event of list) {
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image) continue;
+            // Artwork the source itself published for this event (a feed
+            // row, its JSON-LD) is its editorial choice, never re-judged.
+            if (this.isPublisherSuppliedImageSource(event.imageSource)) continue;
+            const evidence = filenameEvidenceFor(image);
+            if (evidence.words.length > 0) {
+                const named = this.resolveFlyerNamedParty(evidence.words, parties, FILENAME_NAMING);
+                if (named && !sameNameAs(event, named)) {
+                    withhold(event, image, `its filename names "${named.title}", another party of this page; a flyer belongs to the event it names, whatever day it shares`, named.title);
+                }
+                continue;
+            }
+            const ocrWords = ocrWordsFor(image);
+            if (ocrWords.length > 0) {
+                const named = this.resolveFlyerNamedParty(ocrWords, parties, { minScore: 2 });
+                const ownScore = Math.max(0, ...(partiesByEvent.get(event) || [])
+                    .map(party => this.getFlyerNamedTitleTokenIndexes(ocrWords, party.tokens).size));
+                if (named && ownScore === 0 && !sameNameAs(event, named)) {
+                    withhold(event, image, `the flyer's own text names "${named.title}", another party of this page, and none of this event's words`, named.title);
+                    continue;
+                }
+                if (named) continue;
+            }
+            if (evidence.dates.length === 0) continue;
+            // Only a date to go on.
+            const localDays = event.startDate ? this.getFlyerLocalDateCandidates(event) : null;
+            if (!Array.isArray(localDays) || localDays.length === 0) continue;
+            if (evidence.dates.some(date => localDays.some(local => sameDay(date, local, true)))) continue;
+            if (cardPrints(event, image)) continue;
+            const datedSibling = list.find(other => other !== event && other.startDate
+                && !(partiesByEvent.get(other) || []).some(party => isOwnParty(event, party))
+                && (this.getFlyerLocalDateCandidates(other) || []).slice(0, 1)
+                    .some(local => evidence.dates.some(date => sameDay(date, local, true))));
+            if (datedSibling) {
+                withhold(event, image, `its filename carries only a date, and that date is "${datedSibling.title || 'another event'}"'s night, not this event's`, datedSibling.title || '');
+            } else if (evidence.dates.some(date => localDays.some(local => sameDay(date, local, false)))) {
+                withhold(event, image, `its filename carries only a date from another year (${evidence.dates.map(date => date.year).join(', ')}) — last year's file is not a date match, and this event's card does not print it`);
+            }
+        }
+
+        // An event with no picture takes the flyer that names it.
+        if (html) {
+            const wornBy = new Map();
+            for (const event of list) {
+                const key = typeof event.image === 'string' && event.image.trim() ? imageKey(event.image) : '';
+                if (!key) continue;
+                if (!wornBy.has(key)) wornBy.set(key, []);
+                wornBy.get(key).push(event);
+            }
+            let flyers = null;
+            for (const event of list) {
+                if (typeof event.image === 'string' && event.image.trim()) continue;
+                const segment = segmentOf(event);
+                if (segment && segment._compactListingRow) continue;
+                if (!(partiesByEvent.get(event) || []).length) continue;
+                if (flyers === null) {
+                    flyers = pageFlyers
+                        .map(flyer => ({ ...flyer, named: this.resolveFlyerNamedParty(filenameEvidenceFor(flyer.url).words, parties, FILENAME_NAMING) }))
+                        .filter(flyer => flyer.named);
+                }
+                const flyer = flyers.find(candidate => isOwnParty(event, candidate.named)
+                    && !(event._flyerNameWithheld && imageKey(event._flyerNameWithheld.url) === candidate.key)
+                    && !this.isLikelyUninterestingImageUrl(candidate.url)
+                    && !this.getSegmentPromptImageWithholdReason(candidate.url, sourceUrl)
+                    && (wornBy.get(candidate.key) || []).every(other => isOwnParty(other, candidate.named)));
+                if (!flyer) continue;
+                event.image = flyer.url;
+                event.imageSource = 'page';
+                event._flyerAdoptedByName = { url: flyer.url, names: flyer.named.title };
+                if (!wornBy.has(flyer.key)) wornBy.set(flyer.key, []);
+                wornBy.get(flyer.key).push(event);
+                console.log(`🖼️ FLYER NAME: "${event.title || 'event'}" takes ${flyer.url} — the page's flyer whose filename names this party`);
+                this.applyImageSlots(event, { url: sourceUrl, html, ocrResults }, { allowPageMetaCandidates: false });
+            }
+        }
+        return withheld;
     }
 
     // Add-to-calendar / subscribe / export links: they encode an event (or a
@@ -4084,7 +4462,10 @@ class AiWebParser {
                 .map(line => this.normalizeWhitespace(line))
                 .filter(Boolean);
             if (lines.length === 0) continue;
-            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml });
+            // `_jsonLdCard`: the author marked this element up as ONE event.
+            // Everything inside it — every picture — is that event's (see
+            // getCardOwnArtworkReason).
+            segments.push({ lines: this.trimSegmentLinesToChars(lines, this.extractionLimits.multiEventMaxSegmentChars), html: cardHtml, _jsonLdCard: true });
         }
         return segments.length === cards.length ? segments : [];
     }
@@ -16074,6 +16455,87 @@ class AiWebParser {
         return segments;
     }
 
+    // ── A CARD'S ARTWORK IS NOT A SECOND LISTING ─────────────────────────
+    // The fused-listing split below exists for a listing with NO title of
+    // its own that rides a neighbor's window. It released every extra
+    // text-bearing flyer it found, including the card's OWN artwork:
+    // www.massive.club/calendar (run 20260927-155245) prints each poster
+    // twice per card — the JSON-LD `image` and the card's poster-art
+    // background, two renditions of one flyer that OCR read a few characters
+    // apart ("DJ'S MATT STANDS" / "DJ MATT STANDS &"), so they did not
+    // consolidate as duplicates. The card reads "Bearracuda | Seattle - Red
+    // Light District", Nov 7 9:00 pm, tixr.com/e/207003; the second
+    // rendition was released into a flyer-only window — no title, no date
+    // line, no link — and the model named it from the artwork's tagline:
+    // "FINAL PARTY" (flyer line "FINAL PARTY 2OF26"). One night, two
+    // records, and nothing for dedup to fold them by (owner note: "Wrong
+    // name. Shouldn't it be bearracuda or red light district?"). Same run:
+    // beefdip.com "Furball Gear Night" (bar "Joe Fiore's", wrong year) and
+    // whereto.party/in/tokyo "FRONTIER" (a day early, bar "KINGDOM").
+    //
+    // The name the PAGE gives an event outranks words read off its artwork,
+    // so a flyer is the card's own — never a listing of its own, to be
+    // named from its artwork — when the page says so:
+    //   1. the window is one JSON-LD Event card: its author marked the
+    //      element up as ONE event, so nothing inside it is a neighbor;
+    //   2. the flyer carries the card's own name — every word of the
+    //      listing title is on it.
+    // A window whose "title" is the site or the page naming itself (a
+    // homepage hero reading "EAGLE MANCHESTER") names no event, so rule 2
+    // cannot speak for it, and a flyer naming something else is released
+    // exactly as before. Page-derived only: nothing here knows a site, a
+    // party or a tagline. Returns the reason, '' to release.
+    getCardOwnArtworkReason(segment, ocrResult, sourceUrl = '') {
+        if (!segment || typeof segment !== 'object' || !ocrResult) return '';
+        if (segment._jsonLdCard === true) {
+            return 'the window is one JSON-LD Event card, marked up by the page as a single event';
+        }
+        const eventName = this.getSegmentOwnEventName(segment, sourceUrl);
+        if (!eventName) return '';
+        const nameWords = this.getListingNameWords(eventName);
+        if (nameWords.length === 0) return '';
+        const flyerWords = new Set(this.getListingNameWords(
+            `${String(ocrResult.text || '')} ${String(ocrResult.eventSummary || '')}`));
+        if (!nameWords.every(word => flyerWords.has(word))) return '';
+        return `the flyer carries the card's own name "${eventName}"`;
+    }
+
+    // The name a window gives ITS EVENT: the page's listing title (site-name
+    // tail dropped), or '' when that title is the site's own name or — on a
+    // collection page — what the page says it is about. Those name the
+    // page, not an event on it.
+    getSegmentOwnEventName(segment, sourceUrl = '') {
+        const eventName = this.normalizeWhitespace(this.deriveSegmentEventName(segment, sourceUrl));
+        if (!eventName) return '';
+        const noted = this._pageChromeLines;
+        if (noted && noted.sourceUrl === sourceUrl) {
+            const key = this.normalizeWhitespace(this.decodeBasicEntities(eventName)).toLowerCase();
+            if (noted.siteNames && noted.siteNames.has(key)) return '';
+            if (!noted.memberPage && noted.subjects && noted.subjects.has(key)) return '';
+        }
+        return eventName;
+    }
+
+    // The words of a name, for "does this text carry that name": folded,
+    // lowercased, split on anything that is not a letter or digit, function
+    // words and single characters dropped. Deliberately NOT
+    // getCrossSourceTitleTokens — that one drops city and cadence words to
+    // compare two SOURCES' titles, and here "Bearracuda Portland" on a card
+    // must not be satisfied by a "Bearracuda Seattle" flyer.
+    getListingNameWords(text) {
+        // Entities the decoder leaves encoded on purpose (&amp;) are
+        // punctuation here, never the word "amp".
+        const folded = this.foldDiacritics(
+            this.decodeBasicEntities(String(text || '')).replace(/&#?[0-9a-z]+;/gi, ' '));
+        const stopwords = new Set(['a', 'an', 'and', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
+        const words = [];
+        for (const word of folded.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)) {
+            if (word.length < 2 || stopwords.has(word)) continue;
+            if (!words.includes(word)) words.push(word);
+        }
+        return words;
+    }
+
     // Fused-listing split: a listing whose HTML text has no title line rides
     // its neighbor's window (South Seattle Bear Social inside "Dolly and the
     // DJ", run 20260820 — Dolly's description was literally the bear
@@ -16082,7 +16544,8 @@ class AiWebParser {
     // whose text best matches its own listing title and releases the others
     // into flyer-only segments — EXCEPT a flyer whose identity another
     // window also claims (its listing exists elsewhere on the page;
-    // splitting it out would extract the same event twice).
+    // splitting it out would extract the same event twice), and a flyer
+    // that is the card's own artwork (getCardOwnArtworkReason).
     collectFusedFlyerTopUpSegments(segments, ocrResults, sourceUrl = '') {
         const sourceSegments = Array.isArray(segments) ? segments : [];
         const ocrList = Array.isArray(ocrResults) ? ocrResults : [];
@@ -16139,10 +16602,21 @@ class AiWebParser {
             mine.forEach((entry, mineIndex) => {
                 if (mineIndex === keepIndex) return;
                 if (entry.owners.length > 1) return; // listed elsewhere — splitting would duplicate it
+                // The card names the event: a flyer that is the card's own
+                // artwork is never a second listing. Its words are set
+                // aside exactly as a released flyer's are — the window goes
+                // on reading the one flyer that best matches its title, so
+                // what the model is shown for the card does not change —
+                // but no window is opened for it.
+                const ownArtworkReason = this.getCardOwnArtworkReason(info.segment, entry.ocrResult, sourceUrl);
                 if (!(info.segment.ocrExcludedUrlKeys instanceof Set)) {
                     info.segment.ocrExcludedUrlKeys = new Set();
                 }
                 info.segment.ocrExcludedUrlKeys.add(entry.key);
+                if (ownArtworkReason) {
+                    console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: window ${index + 1} holds ${mine.length} text-bearing flyers — ${entry.ocrResult.url} is the card's own artwork (${ownArtworkReason}), not a second listing; no segment opened for it`);
+                    return;
+                }
                 extras.push({ lines: [], html: '', imageHintUrls: [entry.ocrResult.url], _flyerOnlySegment: true });
                 console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: window ${index + 1} holds ${mine.length} distinct text-bearing flyers — giving ${entry.ocrResult.url} its own segment (fused-listing split)`);
             });
@@ -17445,13 +17919,46 @@ class AiWebParser {
         for (const source of htmlSources) {
             for (const pattern of patterns) {
                 for (const match of source.matchAll(pattern)) {
-                    const candidate = this.truncateAtEncodedDelimiter(match[1] || match[0]);
+                    const raw = match[1] ? match[1] : this.rejoinSpaceSplitImageUrl(source, match.index, match[0]);
+                    const candidate = this.truncateAtEncodedDelimiter(raw);
                     if (candidate && !this.isMarkupNamespaceUrl(candidate)) candidates.add(candidate);
                 }
             }
         }
 
         return Array.from(candidates);
+    }
+
+    // A picture's address with an UNENCODED SPACE in its filename
+    // (src="…/uploads/2026/01/2026-02-01 HYDRATE.webp") is cut at the space
+    // by the bare-URL scan, and the head that is left — "…/2026/01/2026-02-01"
+    // — no longer ends in an image extension, so it reads as a page: it was
+    // offered as the next card's SEGMENT_LINK_URL, shipped as two events'
+    // website, and was crawled (beefdip.com/planned-events, run
+    // 20260927-155245: SWEAT and FOAM POOL PARTY). When the match opens a
+    // quoted attribute value and the rest of that value completes an image
+    // filename, the candidate is the whole value — an image, which every
+    // consumer already knows is not a link. Anything else (a srcset's size
+    // descriptor or second entry, prose after a URL) is left exactly as the
+    // scan cut it.
+    rejoinSpaceSplitImageUrl(source, matchIndex, candidate) {
+        const text = String(source || '');
+        const head = String(candidate || '');
+        const index = Number(matchIndex);
+        if (!head || !Number.isFinite(index) || index < 1) return head;
+        const quote = text[index - 1];
+        if (quote !== '"' && quote !== "'") return head;
+        // A head that is already a whole image address is one entry of a
+        // list ("a-300.jpg 1x, a-600.jpg"), not a filename cut in two.
+        if (this.hasSupportedImageFilenameAtEnd(head)) return head;
+        const end = index + head.length;
+        if (text[end] !== ' ') return head;
+        const close = text.indexOf(quote, end);
+        if (close === -1 || close - end > 200) return head;
+        const tail = text.slice(end, close);
+        if (/[<>\r\n,]|https?:/i.test(tail)) return head;
+        const whole = (head + tail).trim().replace(/\s/g, '%20');
+        return this.hasSupportedImageFilenameAtEnd(whole) ? whole : head;
     }
 
     // An XML namespace is not a link. Inline SVG icons carry

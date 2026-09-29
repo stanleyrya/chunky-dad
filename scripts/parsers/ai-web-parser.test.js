@@ -16689,6 +16689,137 @@ test('a segment fused around two distinct flyers spawns a flyer-only segment for
   assert.equal(none.length, 0, 'a flyer with its own segment elsewhere never spawns a duplicate');
 });
 
+// ── A card's artwork is not a second listing (owner note, run 20260927-155245:
+// `NEW FINAL PARTY — 2026-11-07 @ Massive` — "Wrong name. Shouldn't it be
+// bearracuda or red light district?"). www.massive.club/calendar prints each
+// poster twice per card; the second rendition was released into a window of
+// its own and named from the flyer's tagline. ─────────────────────────────
+const massiveCard = ({ name, wide, tall, ticket, month, day, time, fullDate }) => `<div role="listitem" class="event-item w-dyn-item"><div class="schema w-embed w-script"><script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Event","name":${JSON.stringify(name)},"image":"${wide}","startDate":"${fullDate}","offers":{"@type":"Offer","url":"${ticket}"}}
+</script></div><div class="ticket-links grid"><div class="event-card grid"><div class="date-info grid"><div class="month grid">Sat</div><div class="month grid">${month}</div><div class="month day grid">${day}</div><div class="month day time">${time}</div></div><div style="background-image:url(&quot;${tall}&quot;)" class="poster-art grid"><div class="buy-hover grid"><a href="${ticket}" target="_blank" class="tix-link w-inline-block"><div class="button short grid">get TICKETS</div></a></div></div></div><div class="pinktext cal"><div class="infotext black">${name}</div><div class="infotext hide">${fullDate} ${time}</div></div></div></div>`;
+
+test('a JSON-LD card that prints its poster twice is ONE event, named by the card — no window for the second rendition ("FINAL PARTY")', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.massive.example/calendar';
+  const cdn = 'https://cdn.massive.example/659447a9';
+  const bearWide = `${cdn}/6aa85bca476140f678240d72_wide.webp`;
+  const bearTall = `${cdn}/6aa85bca476140f678240d6d_tall.webp`;
+  const hellWide = `${cdn}/6ab6c04660e95da32d0e6d66_wide.webp`;
+  const hellTall = `${cdn}/6ab6c04660e95da32d0e6d62_tall.webp`;
+  const html = `<html><head><title>Calendar | Massive</title></head><body><div role="list" class="event-grid w-dyn-items">${
+    massiveCard({ name: 'Hell On Earth | Massive Halloween Weekend', wide: hellWide, tall: hellTall, ticket: 'https://tixr.example/e/208606', month: 'Oct', day: 30, time: '9:00 pm', fullDate: 'Oct 30, 2026' })}${
+    massiveCard({ name: 'Bearracuda | Seattle - Red Light District', wide: bearWide, tall: bearTall, ticket: 'https://tixr.example/e/207003', month: 'Nov', day: 7, time: '9:00 pm', fullDate: 'Nov 7, 2026' })}</div></body></html>`;
+  // Two renditions of one poster, read a few characters apart — exactly why
+  // they did not consolidate as duplicates. The Halloween pair is the hard
+  // one: the stylized headline was not read at all on one rendition, so no
+  // word of the card's name is on it.
+  const ocrResults = [
+    { url: hellWide, imageClassification: 'multi-event-flyer', text: 'FRIDAY OCTOBER 30 ONLY FIRE ESTOC COUSIN CHRIS\nSATURDAY OCTOBER 31 JACOB MEEHAN PROSUMER\n10/30-31\nHOSTS THIS GIRL PUPUSA 9PM' },
+    { url: hellTall, imageClassification: 'event-flyer', text: 'FRIDAY OCTOBER 30 ONLY FIRE ESTOC COUSIN CHRIS\nSATURDAY OCTOBER 31 JACOB MEEHAN PROSUMER\nHELL ON EARTH\n10/30-31\nHOSTS THIS GIRL PUPUSA 9PM' },
+    { url: bearWide, imageClassification: 'event-flyer', text: "BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7\nDJ'S MATT STANDS & FREDDY, KING OF PANTS\nFINAL PARTY 2OF26\nMASSIVE 619EPINE\nADVANCE TICKETS AT BEARRACUDA.COM" },
+    { url: bearTall, imageClassification: 'event-flyer', text: 'BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7\nDJ MATT STANDS &\nFREDDY, KING OF PANTS\nFINAL PARTY 2OF26\nMASSIVE 619EPINE\nADVANCE TICKETS AT BEARRACUDA.COM' }
+  ];
+  const seen = [];
+  parser.extractSingleEvent = async (segmentHtmlData) => {
+    const ownOcr = Array.isArray(segmentHtmlData.ocrResults) ? segmentHtmlData.ocrResults : [];
+    seen.push({ listingTitle: segmentHtmlData.segmentListingTitle, cardLines: segmentHtmlData.segmentCardLines.length, ocr: ownOcr.map(o => o.url) });
+    // The model's habit on a window with no card text: the loudest tagline.
+    const flyerTagline = ownOcr.length > 0 && /FINAL PARTY/.test(ownOcr[0].text) ? 'FINAL PARTY' : 'ON EARTH';
+    return { title: segmentHtmlData.segmentListingTitle || flyerTagline, startDate: '2026-11-08T05:00:00.000Z' };
+  };
+  const events = await parser.extractEventsFromMultiEventPage(
+    { url: sourceUrl, html }, { name: 'massive.example' }, null, ['title', 'startDate'], ocrResults, null);
+
+  assert.deepEqual(events.map(e => e.title),
+    ['Hell On Earth | Massive Halloween Weekend', 'Bearracuda | Seattle - Red Light District'],
+    'one event per card, each under the name the card gives it');
+  assert.equal(events.some(e => /FINAL PARTY|^ON EARTH$/.test(e.title)), false, 'no event is named from its artwork');
+  assert.ok(seen.every(window => window.cardLines > 0 && window.listingTitle), 'every window extracted is a card with its own title');
+  // What each card is shown does not change: the one flyer that best matches
+  // its title, exactly as before.
+  assert.deepEqual(seen.map(window => window.ocr), [[hellTall], [bearWide]]);
+});
+
+test('a flyer that carries the card\'s own name is the card\'s artwork; a flyer naming something else is still released', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://whereto.example/in/tokyo';
+  const lineupUrl = 'https://cdn.whereto.example/media/events/386ce9ec.jpeg';
+  const posterUrl = 'https://cdn.whereto.example/media/events/8d22bf7a.jpeg';
+  const triviaUrl = 'https://cdn.whereto.example/media/events/trivia.jpeg';
+  const ocrResults = [
+    { url: lineupUrl, imageClassification: 'event-flyer', text: 'GOGO\nDAISUKE\nDIO\nG-A-Y TOKYO\nNEW CIRCUIT PARTY\nFRONTIER\nSAT, NOV 14, 2026\n@G-A-Y TOKYO 21:00-5:00' },
+    { url: posterUrl, imageClassification: 'event-flyer', text: 'G-A-Y\nTOKYO\nNEW CIRCUIT PARTY\nFRONTIER\nSAT, NOV 14, 2026\n@kingdom\nKINGDOM' },
+    { url: triviaUrl, imageClassification: 'event-flyer', text: 'TACO TRIVIA TUESDAY 7pm' }
+  ];
+  const card = () => ({ lines: ['New Circuit Party: Frontier', 'Tokyo · TOM Building', 'Sat, 14 November 2026 · 21:00 – 05:00'], html: '', imageHintUrls: [lineupUrl, posterUrl] });
+  const other = () => ({ lines: ['Trivia Taco Tuesday', '7pm weekly'], html: '', imageHintUrls: [triviaUrl] });
+
+  const frontier = card();
+  assert.deepEqual(parser.collectFusedFlyerTopUpSegments([frontier, other()], ocrResults, sourceUrl), [],
+    'both posters print "New Circuit Party: Frontier" — no second window (it shipped as "FRONTIER" @ KINGDOM, a day early)');
+  // A flyer whose headline IS the card's title is untouched: it is still the
+  // window's flyer, and the window still reads exactly one.
+  assert.deepEqual(parser.filterOcrResultsForSegment(ocrResults, frontier, sourceUrl).map(o => o.url), [lineupUrl]);
+
+  // A brand is not a name: every word counts, the city included.
+  const portland = { lines: ['Bearracuda Portland', 'Sat, Nov 14'], html: '', imageHintUrls: [lineupUrl, posterUrl] };
+  const brandOcr = [
+    { url: lineupUrl, imageClassification: 'event-flyer', text: 'BEARRACUDA PORTLAND\nSATURDAY NOVEMBER 14' },
+    { url: posterUrl, imageClassification: 'event-flyer', text: 'BEARRACUDA\nSEATTLE RED LIGHT DISTRICT\nSATURDAY NOVEMBER 7' },
+    ocrResults[2]
+  ];
+  const released = parser.collectFusedFlyerTopUpSegments([portland, other()], brandOcr, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[posterUrl]],
+    'the Seattle flyer does not carry "Bearracuda Portland" — a neighbor riding the window, released as before');
+});
+
+test('a card with NO title of its own still gives its extra flyer a window — the flyer is the only name there is', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://bar.example/events';
+  const bingoUrl = 'https://static.bar.example/media/bingo.jpg';
+  const honkyUrl = 'https://static.bar.example/media/honky.jpg';
+  const triviaUrl = 'https://static.bar.example/media/trivia.jpg';
+  const ocrResults = [
+    { url: bingoUrl, imageClassification: 'event-flyer', text: 'GAY BINGO\n2nd & 4th Thursdays 7pm' },
+    { url: honkyUrl, imageClassification: 'event-flyer', text: 'RAT CITY HONKY TONK\nFirst Fridays 9pm' },
+    { url: triviaUrl, imageClassification: 'event-flyer', text: 'TACO TRIVIA TUESDAY 7pm' }
+  ];
+  const untitled = { lines: ['Oct 16, 2026 10:00 PM', 'https://bar.example/tickets'], html: '', imageHintUrls: [bingoUrl, honkyUrl] };
+  const other = { lines: ['Trivia Taco Tuesday', '7pm weekly'], html: '', imageHintUrls: [triviaUrl] };
+  assert.equal(parser.getSegmentOwnEventName(untitled, sourceUrl), '', 'the window names no event');
+  const released = parser.collectFusedFlyerTopUpSegments([untitled, other], ocrResults, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[honkyUrl]]);
+  assert.ok(released.every(segment => segment._flyerOnlySegment === true && segment.lines.length === 0));
+});
+
+test('a window titled by the site naming itself names no event: a flyer printing the venue\'s name is still released', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.eagle.example/';
+  const html = '<html><head><title>Eagle Bar Manchester United Kingdom</title><meta property="og:site_name" content="Eagle Manchester"/></head>'
+    + '<body><h1>EAGLE MANCHESTER</h1><p>MANCHESTERS MEN ONLY MEMBERS BAR</p></body></html>';
+  parser.notePageChromeLines(html, sourceUrl);
+  const heroUrl = 'https://static.eagle.example/media/ca9846.png';
+  const partyUrl = 'https://static.eagle.example/media/09ec66.png';
+  const ocrResults = [
+    { url: heroUrl, imageClassification: 'event-flyer', text: 'EAGLE MANCHESTER\nMEN ONLY MEMBERS BAR\nOPEN 7 DAYS' },
+    { url: partyUrl, imageClassification: 'event-flyer', text: "ULTIMATE 00'S NIGHT\nFIRST SATURDAY OF FEB | APR | JUN\n11PM UNTIL LATE\nEAGLE MANCHESTER | 15 BLOOM STREET" }
+  ];
+  const hero = { lines: ['EAGLE MANCHESTER', 'MANCHESTERS MEN ONLY MEMBERS BAR', 'Apply For Membership'], html: '', imageHintUrls: [heroUrl, partyUrl] };
+  assert.equal(parser.deriveSegmentListingTitle(hero), 'EAGLE MANCHESTER');
+  assert.equal(parser.getSegmentOwnEventName(hero, sourceUrl), '', 'the site\'s own name is not an event\'s name');
+  const released = parser.collectFusedFlyerTopUpSegments([hero], ocrResults, sourceUrl);
+  assert.deepEqual(released.map(segment => segment.imageHintUrls), [[partyUrl]],
+    'the party printed on the homepage keeps its own window');
+});
+
+test('getListingNameWords: every word of a name counts, folded, function words dropped', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.getListingNameWords('Bearracuda | Seattle - Red Light District'),
+    ['bearracuda', 'seattle', 'red', 'light', 'district']);
+  assert.deepEqual(parser.getListingNameWords('La Pescadería &amp; the DJ'), ['la', 'pescaderia', 'dj']);
+  assert.deepEqual(parser.getListingNameWords(' · '), []);
+});
+
 test('getCachedOcrTextForImage: verdict store first, then disk cache, on-demand OCR only when an adapter rides along', async () => {
   const parser = createParser();
   // This run's verdict store answers without touching disk or network.
@@ -20243,6 +20374,260 @@ test('parser link identity strips language selectors on both the URL-global and 
   assert.equal(parser.stripLocaleParams(`${plain}?occurrence=2026-10-01&locale=fr#top`), `${plain}?occurrence=2026-10-01#top`);
   assert.equal(parser.stripLocaleParams('https://x.example/p?slang=en'), 'https://x.example/p?slang=en', 'whole-key match only');
   assert.equal(parser.stripLocaleParams(plain), plain);
+});
+
+// ============================================================================
+// A FLYER'S OWN WORDS OUTRANK ITS DATE (applyFlyerNameGuard)
+// ============================================================================
+//
+// beefdip.com/planned-events, run 20260927-155245: the page's flyers are
+// named by LAST year's dates ("2026-01-31 Wet & Wild.webp") while its cards
+// are this year's programme, so the Wet & Wild flyer — printed "Saturday
+// January 31" — was handed to HYDRATE POOL PARTY, this year's January 31,
+// while HYDRATE's own "2026-02-01 HYDRATE.webp" went unused.
+const FLYER_PAGE_URL = 'https://festival.example/planned-events/';
+const FLYER_UPLOADS = 'https://festival.example/wp-content/uploads/2026/01/';
+const flyerUrl = (filename) => `${FLYER_UPLOADS}${encodeURIComponent(filename).replace(/%26/g, '&')}`;
+const flyerEvent = (title, startDate, filename, extra = {}) => ({
+  title,
+  startDate,
+  ...(filename ? { image: flyerUrl(filename), imageVertical: flyerUrl(filename), imageSource: 'page' } : {}),
+  ...extra
+});
+const flyerPageHtml = (filenames) => `<html><body>${filenames
+  .map(filename => `<div class="event-card"><img src="${FLYER_UPLOADS}${filename.replace(/&/g, '&amp;')}" alt="flyer"></div>`)
+  .join('\n')}</body></html>`;
+function runFlyerNameGuard(events, pageContext = {}) {
+  const parser = createParser();
+  let withheld;
+  const logs = withCapturedLogs(() => {
+    withheld = parser.applyFlyerNameGuard(events, { sourceUrl: FLYER_PAGE_URL, ...pageContext });
+  });
+  return { parser, withheld, logs };
+}
+
+test('flyer filename evidence: the words name the party, the date is kept apart, an asset id is not a word', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.getFlyerFilenameEvidence(flyerUrl('2026-01-31 Wet & Wild.webp')),
+    { words: ['wet', 'wild'], dates: [{ year: 2026, month: 1, day: 31 }] });
+  assert.deepEqual(parser.getFlyerFilenameEvidence(`${FLYER_UPLOADS}2026-01-30-Furball-Gear-768x961.webp`),
+    { words: ['furball', 'gear'], dates: [{ year: 2026, month: 1, day: 30 }] });
+  assert.deepEqual(parser.getFlyerFilenameEvidence(`${FLYER_UPLOADS}2027-01-31.webp`),
+    { words: [], dates: [{ year: 2027, month: 1, day: 31 }] });
+  assert.deepEqual(parser.getFlyerFilenameEvidence('https://cdn.example/event-images/905101f19a7ea53c.jpg'),
+    { words: [], dates: [] }, 'an opaque asset id names nobody');
+  assert.deepEqual(parser.getFlyerFilenameEvidence(`${FLYER_UPLOADS}2026-13-45 Party.webp`).dates, [],
+    'a number that is not a calendar date is not a date');
+});
+
+test('flyer name guard: a flyer named for another party is withheld whatever day it shares, and the event takes the flyer that names it', () => {
+  const wetAndWild = flyerEvent('WET &amp; WILD – POOL &amp; BEACH PARTY', '2027-01-30T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  // This year's January 31 — the day LAST year's Wet & Wild flyer prints.
+  const hydrate = flyerEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  const blackBall = flyerEvent('THE BLACK BALL', '2027-01-31T04:00:00.000Z', '2026-01-31 Black Ball.webp');
+  const html = flyerPageHtml(['2026-01-31 Wet & Wild.webp', '2026-01-31 Black Ball.webp', '2026-02-01 HYDRATE.webp']);
+
+  const { withheld, logs } = runFlyerNameGuard([wetAndWild, hydrate, blackBall], { html });
+
+  assert.deepEqual(withheld, [hydrate]);
+  assert.equal(hydrate.image, 'https://festival.example/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp',
+    'HYDRATE wears its own flyer');
+  assert.notEqual(hydrate.imageVertical, flyerUrl('2026-01-31 Wet & Wild.webp'), 'the orientation slot goes with the picture');
+  assert.equal(hydrate._flyerNameWithheld.url, flyerUrl('2026-01-31 Wet & Wild.webp'));
+  assert.equal(hydrate._flyerNameWithheld.names, 'WET &amp; WILD – POOL &amp; BEACH PARTY');
+  assert.equal(wetAndWild.image, flyerUrl('2026-01-31 Wet & Wild.webp'),
+    'last year\'s flyer is still the same-named party\'s flyer — the year in its name is no objection');
+  assert.equal(blackBall.image, flyerUrl('2026-01-31 Black Ball.webp'));
+  assert.ok(logs.some(line => line.startsWith('🖼️ FLYER NAME: withheld') && line.includes('"HYDRATE POOL PARTY"')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('🖼️ FLYER NAME: "HYDRATE POOL PARTY" takes')), logs.join('\n'));
+});
+
+test('flyer name guard: with no flyer of its own on the page the event is left with no image', () => {
+  const wetAndWild = flyerEvent('WET & WILD – POOL & BEACH PARTY', '2027-01-30T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  const hydrate = flyerEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  const { withheld } = runFlyerNameGuard([wetAndWild, hydrate], { html: flyerPageHtml(['2026-01-31 Wet & Wild.webp']) });
+  assert.deepEqual(withheld, [hydrate]);
+  assert.equal(hydrate.image, undefined);
+  assert.equal(hydrate.imageVertical, undefined);
+  assert.equal(hydrate.imageSource, undefined, 'provenance leaves with the picture');
+  assert.equal(wetAndWild.image, flyerUrl('2026-01-31 Wet & Wild.webp'));
+});
+
+test('flyer name guard: every night and every spelling of ONE party keeps that party\'s flyer', () => {
+  const thursday = flyerEvent('TIDAL WAVE – FUNDRAISER POOL PARTY', '2027-01-28T18:00:00.000Z', '2026-01-29 TIDAL WAVE FIX.webp');
+  const short = flyerEvent('TIDAL WAVE', '2027-01-29T18:00:00.000Z', '2026-01-29 TIDAL WAVE FIX.webp');
+  const foam = flyerEvent('FOAM POOL PARTY', '2027-01-25T18:00:00.000Z', '2026-01-26 Foam Pool Party.webp');
+  const madBearFoam = flyerEvent('MAD.BEAR FOAM POOL PARTY', '2027-01-29T18:00:00.000Z', '2026-01-30 MadBear Foam Party.webp');
+  const flowerPower = flyerEvent('FLOWER POWER DISCO', '2027-01-26T04:00:00.000Z', '2026-01-26 Bearland FlowerPower.webp');
+  const atv = flyerEvent('ON ALL 4’s – ATV ADVENTURE', '2027-01-28T16:00:00.000Z', 'wildtreks.webp');
+  const events = [thursday, short, foam, madBearFoam, flowerPower, atv];
+  const before = events.map(event => event.image);
+  const { withheld } = runFlyerNameGuard(events, { html: flyerPageHtml([]) });
+  assert.deepEqual(withheld, []);
+  assert.deepEqual(events.map(event => event.image), before,
+    'run-together words ("MadBear", "FlowerPower"), a suffix twin and a filename that names nobody all stay put');
+});
+
+test('flyer name guard: a flyer that names two parties equally, or one common word, names nobody', () => {
+  const foam = flyerEvent('FOAM POOL PARTY', '2027-01-25T18:00:00.000Z', 'pool-party-flyer.webp');
+  const splash = flyerEvent('SPLASH POOL PARTY', '2027-01-26T18:00:00.000Z', '2026-01-27 Splash.webp');
+  const white = flyerEvent('WHITE PARTY', '2027-01-27T04:00:00.000Z', 'party.webp');
+  const { withheld } = runFlyerNameGuard([foam, splash, white], { html: flyerPageHtml([]) });
+  assert.deepEqual(withheld, [], '"pool party" fits two parties, "party" fits three');
+  assert.equal(foam.image, flyerUrl('pool-party-flyer.webp'));
+  assert.equal(white.image, flyerUrl('party.webp'));
+});
+
+test('flyer name guard: the site\'s own name on every upload, a stray shared word and a misspelt twin name nobody else', () => {
+  // bearssitges.org prefixes its uploads with the festival's name; the
+  // market wore the rooftop tea dance's flyer and "BEARS SITGES WEEK" in the
+  // filename is no reason to call it the inauguration's.
+  const uploads = 'https://bearssitges.example/wp-content/uploads/2026/07/';
+  const market = { title: 'BEARS SITGES MARKET en Hotel Calipolis', startDate: '2026-09-09T10:00:00.000Z', image: `${uploads}Bears-Sitges-Week-2026-MIM-ROOFTOP.jpg`, imageSource: 'page' };
+  const opening = { title: 'INAUGURACIÓN BEARS SITGES WEEK 2026', startDate: '2026-09-04T18:00:00.000Z' };
+  const pool = { title: 'BEAR POOL PARTY', startDate: '2026-09-09T13:00:00.000Z' };
+  const packs = { title: 'Entrega de BEARS SITGES PACKS en Bears Sitges Market', startDate: '2026-09-05T10:00:00.000Z' };
+  const html = `<html><head><meta property="og:site_name" content="Bears Sitges Week"></head><body>
+    <img src="${uploads}Bears-Sitges-Week-2026-MIM-ROOFTOP.jpg"><img src="${uploads}Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg">
+    <img src="${uploads}0-Blanca-De-Nicolas-en-Bars-Sitges-expo.jpg"><img src="${uploads}8-sep-Paw.png"></body></html>`;
+  const parser = createParser();
+  let withheld;
+  withCapturedLogs(() => {
+    withheld = parser.applyFlyerNameGuard([market, opening, pool, packs], { sourceUrl: 'https://bearssitges.example/bears-sitges-week/', html });
+  });
+  assert.deepEqual(withheld, [], 'the brand names no party');
+  assert.equal(market.image, `${uploads}Bears-Sitges-Week-2026-MIM-ROOFTOP.jpg`);
+  assert.equal(opening.image, undefined, 'and hands no flyer out either');
+  assert.equal(packs.image, undefined, 'one shared word out of five is not this event\'s name');
+  assert.equal(pool.image, `${uploads}Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg`, '"POOLPARTY" spells POOL PARTY');
+
+  // sf-eagle.com: one party, one slip of the pen.
+  const eagle = 'https://wp.eagle.example/wp-content/uploads/2025/11/Ashhole-base-nov.avif';
+  const misspelt = { title: 'ASHKOLE', startDate: '2026-10-02T04:00:00.000Z', image: eagle, imageSource: 'page' };
+  const spelt = { title: 'AshHole', startDate: '2026-11-06T04:00:00.000Z', image: eagle, imageSource: 'page' };
+  const other = { title: 'BEER BUST', startDate: '2026-10-04T22:00:00.000Z' };
+  assert.deepEqual(runFlyerNameGuard([misspelt, spelt, other], { html: '' }).withheld, []);
+  assert.equal(misspelt.image, eagle);
+});
+
+test('flyer name guard (control): a flyer named by date only still pairs by date when the year matches', () => {
+  const saturday = flyerEvent('POOL PARTY', '2027-01-30T18:00:00.000Z', '2027-01-30.webp');
+  const sunday = flyerEvent('RECOVERY BRUNCH', '2027-01-31T18:00:00.000Z', '2027-01-31.webp');
+  // After midnight: the night of the 30th, started on the 31st.
+  const lateNight = flyerEvent('THE BLACK BALL', '2027-01-31T04:00:00.000Z', '20270130.webp', { timezone: 'America/Mexico_City' });
+  const { withheld } = runFlyerNameGuard([saturday, sunday, lateNight], { html: flyerPageHtml([]) });
+  assert.deepEqual(withheld, []);
+  assert.equal(saturday.image, flyerUrl('2027-01-30.webp'));
+  assert.equal(sunday.image, flyerUrl('2027-01-31.webp'));
+  assert.equal(lateNight.image, flyerUrl('20270130.webp'));
+});
+
+test('flyer name guard: a date from another year, or a sibling\'s night, is no date match — only the card that prints the picture keeps it', () => {
+  const stale = () => flyerEvent('RECOVERY BRUNCH', '2027-01-31T18:00:00.000Z', '2026-01-31.webp', { _multiEventSegment: { index: 1 } });
+  const sibling = () => flyerEvent('POOL PARTY', '2027-01-30T18:00:00.000Z', '2027-01-30 .webp', { _multiEventSegment: { index: 2 } });
+  const ownCard = { lines: ['RECOVERY BRUNCH'], html: `<div><h3>RECOVERY BRUNCH</h3><img src="${FLYER_UPLOADS}2026-01-31.webp"></div>` };
+  const otherCard = { lines: ['POOL PARTY'], html: '<div><h3>POOL PARTY</h3></div>' };
+
+  // Paired onto the event (its card does not print it): last year's file.
+  const paired = [stale(), sibling()];
+  const first = runFlyerNameGuard(paired, { html: flyerPageHtml([]), segments: [otherCard, otherCard] });
+  assert.deepEqual(first.withheld, [paired[0]]);
+  assert.equal(paired[0].image, undefined);
+  assert.match(paired[0]._flyerNameWithheld.reason, /another year \(2026\)/);
+
+  // Printed inside the event's own card: the page put it there.
+  const printed = [stale(), sibling()];
+  const second = runFlyerNameGuard(printed, { html: flyerPageHtml([]), segments: [ownCard, otherCard] });
+  assert.deepEqual(second.withheld, []);
+  assert.equal(printed[0].image, flyerUrl('2026-01-31.webp'));
+
+  // This year's date — of the OTHER party's night. (The day before an
+  // event's own is still its own: a night that starts after midnight.)
+  const brunch = flyerEvent('RECOVERY BRUNCH', '2027-01-31T18:00:00.000Z', '2027-01-29.webp', { _multiEventSegment: { index: 1 } });
+  const pool = flyerEvent('POOL PARTY', '2027-01-29T18:00:00.000Z', null, { _multiEventSegment: { index: 2 } });
+  const third = runFlyerNameGuard([brunch, pool], { html: flyerPageHtml([]), segments: [otherCard, otherCard] });
+  assert.deepEqual(third.withheld, [brunch]);
+  assert.match(brunch._flyerNameWithheld.reason, /"POOL PARTY"'s night/);
+});
+
+test('flyer name guard: an opaque filename is judged by the flyer\'s own text, minus the festival brand every flyer prints', () => {
+  const asset = (id) => `https://cdn.example/event-images/${id}.jpg`;
+  const sponsors = 'BEEFDIP BEAR WEEK PRESENT\nFURBALL\nMAD BEAR\nBearland';
+  const ocrResults = [
+    { url: asset('905101f19a7ea53c'), text: `${sponsors}\nSATURDAY JANUARY 31\nWET AND WILD\nPOOL + BEACH PARTY` },
+    { url: asset('11aa22bb33cc44dd'), text: `${sponsors}\nSUNDAY FEBRUARY 1\nHYDRATE\nMUSIC BY DJ GIACO` },
+    { url: asset('55ee66ff77aa88bb'), text: `${sponsors}\nTUESDAY JANUARY 27\nRED BALL\nDRESSCODE RED` },
+    { url: asset('99cc88bb77aa66dd'), text: `${sponsors}\nFRIDAY JANUARY 30\nGEAR NIGHT` }
+  ];
+  const wetAndWild = { title: 'WET & WILD – POOL & BEACH PARTY', startDate: '2027-01-30T18:00:00.000Z', image: asset('905101f19a7ea53c'), imageSource: 'page' };
+  const recovery = { title: 'RECOVERY BRUNCH', startDate: '2027-01-31T18:00:00.000Z', image: asset('905101f19a7ea53c'), imageSource: 'page' };
+  const hydrate = { title: 'HYDRATE POOL PARTY', startDate: '2027-01-31T18:00:00.000Z', image: asset('11aa22bb33cc44dd'), imageSource: 'page' };
+  // Every flyer prints the sponsor strip: FURBALL's own party is not named by it.
+  const furball = { title: 'FURBALL GEAR NIGHT', startDate: '2027-01-30T04:00:00.000Z', image: asset('99cc88bb77aa66dd'), imageSource: 'page' };
+  const madBear = { title: 'MAD.BEAR RED BALL', startDate: '2027-01-27T04:00:00.000Z', image: asset('55ee66ff77aa88bb'), imageSource: 'page' };
+
+  const { withheld } = runFlyerNameGuard([wetAndWild, recovery, hydrate, furball, madBear], { html: '', ocrResults });
+  assert.deepEqual(withheld, [recovery], 'only the record whose own title the flyer never mentions loses it');
+  assert.equal(recovery.image, undefined);
+  assert.match(recovery._flyerNameWithheld.reason, /the flyer's own text names "WET & WILD/);
+  assert.equal(wetAndWild.image, asset('905101f19a7ea53c'));
+  assert.equal(hydrate.image, asset('11aa22bb33cc44dd'));
+  assert.equal(furball.image, asset('99cc88bb77aa66dd'));
+  assert.equal(madBear.image, asset('55ee66ff77aa88bb'));
+});
+
+test('flyer name guard: artwork the source itself published, a lone event and a page of one party are never judged', () => {
+  const published = flyerEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', '2026-01-31 Wet & Wild.webp', { imageSource: 'json-ld' });
+  const wetAndWild = flyerEvent('WET & WILD – POOL & BEACH PARTY', '2027-01-30T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  assert.deepEqual(runFlyerNameGuard([published, wetAndWild], { html: flyerPageHtml([]) }).withheld, []);
+  assert.equal(published.image, flyerUrl('2026-01-31 Wet & Wild.webp'));
+
+  const alone = flyerEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', '2026-01-31 Wet & Wild.webp');
+  assert.deepEqual(runFlyerNameGuard([alone], { html: flyerPageHtml([]) }).withheld, []);
+  assert.equal(alone.image, flyerUrl('2026-01-31 Wet & Wild.webp'));
+});
+
+test('flyer name guard: a one-line listing row never takes a flyer, and a flyer worn by another party is not taken twice', () => {
+  const row = { title: 'HYDRATE POOL PARTY', startDate: '2027-01-31T18:00:00.000Z', _multiEventSegment: { index: 1 } };
+  const card = { title: 'SWEAT', startDate: '2027-02-01T04:00:00.000Z', _multiEventSegment: { index: 2 } };
+  // WELCOME PARTY's flyer sits on the pre-party too; both names fit it.
+  const welcome = flyerEvent('WELCOME PARTY', '2027-01-24T21:00:00.000Z', '2026-01-25 Welcome Party.webp', { _multiEventSegment: { index: 3 } });
+  const segments = [
+    { lines: ['1/31 HYDRATE POOL PARTY - Hotel Delfin'], html: '', _compactListingRow: true },
+    { lines: ['SWEAT'], html: '<div><h3>SWEAT</h3></div>' },
+    { lines: ['WELCOME PARTY'], html: '<div><h3>WELCOME PARTY</h3></div>' }
+  ];
+  const html = flyerPageHtml(['2026-02-01 HYDRATE.webp', '2026-02-01 Sweat.webp', '2026-01-25 Welcome Party.webp']);
+  runFlyerNameGuard([row, card, welcome], { html, segments });
+  assert.equal(row.image, undefined, 'a ticker row owns no artwork');
+  assert.equal(card.image, 'https://festival.example/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp');
+  assert.equal(card.imageSource, 'page');
+  assert.equal(card._flyerAdoptedByName.names, 'SWEAT');
+});
+
+test('raw URL candidates: a picture address with an unencoded space is one image, never a page cut off at the space', () => {
+  const parser = createParser();
+  const html = `<div><h3>SWEAT</h3>
+    <a href="https://festival.example/tags/">Get Your Dog Tag</a>
+    <img src="https://festival.example/wp-content/uploads/2026/01/2026-02-01 HYDRATE.webp" alt="Hydrate Pool Party">
+    <img src="https://festival.example/wp-content/uploads/2026/01/2026-01-31 Wet &amp; Wild.webp" alt="Wet">
+    <img srcset="https://festival.example/a-300x300.jpg 300w, https://festival.example/a.jpg 600w">
+    <img srcset="https://festival.example/b-300x300.jpg 1x, https://festival.example/b.jpg">
+    <a title="https://festival.example/faq is where the answers are" href="/faq/">FAQ</a></div>`;
+  const candidates = parser.extractUrlCandidatesFromRawHtml(html);
+  assert.equal(candidates.includes('https://festival.example/wp-content/uploads/2026/01/2026-02-01'), false,
+    'the head of a space-split image address is not a link');
+  assert.equal(candidates.includes('https://festival.example/wp-content/uploads/2026/01/2026-01-31'), false);
+  assert.ok(candidates.includes('https://festival.example/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp'));
+  assert.ok(candidates.includes('https://festival.example/tags/'));
+  assert.ok(candidates.includes('https://festival.example/a-300x300.jpg'), 'a srcset entry stops at its size descriptor as before');
+  assert.ok(candidates.includes('https://festival.example/b-300x300.jpg') && candidates.includes('https://festival.example/b.jpg'),
+    'a list of image addresses is never glued into one');
+  assert.ok(candidates.every(candidate => !/%20/.test(candidate) || candidate.endsWith('HYDRATE.webp') || candidate.endsWith('Wild.webp')), candidates.join('\n'));
+  assert.ok(candidates.includes('https://festival.example/faq'), 'prose after a URL is not part of it');
+
+  const lines = parser.extractMultiEventSegmentResourceLines(html, FLYER_PAGE_URL);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_LINK_URL:')), ['SEGMENT_LINK_URL: https://festival.example/tags/']);
 });
 
 // ============================================================================
