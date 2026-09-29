@@ -7959,14 +7959,12 @@ html.dusk body {
 .month-strip-grid .calendar-day.month-first .day-number {
     color: #b9c6ff;
 }
-/* full month name where cells are wide enough, short on phones — both spans
-   ship in the markup so switching costs no JS and the fixed 7-col grid means
-   no width churn either way */
+/* the SHORT month name at every width. Both spans ship in the markup; the
+   full name used to switch on at >=769px "where cells are wide enough", but
+   the dusk calendar is docked at phone width (430px) on every screen, so a
+   cell is ~61px everywhere and "September 1" (81px), "November 1",
+   "December 1", "January 1" and "October 1" ran over the next day's number. */
 .month-strip-grid .month-name-full { display: none; }
-@media (min-width: 769px) {
-    .month-strip-grid .month-name-full { display: inline; }
-    .month-strip-grid .month-name-short { display: none; }
-}
 
 /* ---------- the quiet dusk footer: one slim line ending every city page ----------
    The redesign used to hide the footer outright, which lost the Tell Dad
