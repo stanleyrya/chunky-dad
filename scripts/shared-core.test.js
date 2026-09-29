@@ -26462,3 +26462,30 @@ test('a name and a date with no picture, no words and no page of their own, plac
   assert.ok(!byTitle('CALF B&B EVENT')._announcementOnlyWithheld, 'a page of its own');
   assert.ok(!byTitle('Bear Camp Opening')._announcementOnlyWithheld, 'a place the row stated');
 });
+
+// beefdip.com/planned-events, run 20260929-091555: the row "Sunday, Jan 31 •
+// 11AM / 1PM • The Tryst Hotel" of the DRAG BRUNCH + ROOFTOP POOL card became
+// a record titled "The Tryst Hotel", and its copy — "Drag Brunch + Rooftop
+// Pool at The Tryst Hotel" — counted as the party restating its own name.
+test('sanity: a copy that only places something AT the venue does not restate a venue-named title', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, {
+    title: 'The Tryst Hotel',
+    bar: 'The Tryst Hotel',
+    description: 'Drag Brunch + Rooftop Pool at The Tryst Hotel'
+  }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Hotel Delfin',
+    bar: 'Hotel Delfin',
+    description: 'Pool party @ Hotel Delfin, all day.'
+  }), ['junk-title']);
+  // The name standing anywhere else is the party naming itself.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'MASSIVE',
+    bar: 'MASSIVE',
+    description: 'Saturdays at MASSIVE. MASSIVE returns to the warehouse with dirty grooves all night long.'
+  }), []);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('drag brunch rooftop pool at the tryst hotel', 'the tryst hotel'), false);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('the tryst hotel presents drag brunch', 'the tryst hotel'), true);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('great party', 'the tryst hotel'), false);
+});

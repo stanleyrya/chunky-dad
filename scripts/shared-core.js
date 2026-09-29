@@ -3776,10 +3776,20 @@ class SharedCore {
             const isKnownVenueIdentity = titleIsOwnBar
                 || (curatedTitleMatch && (!ownBarKey || ownBarKey === titleBarKey));
             if (isKnownVenueIdentity) {
-                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description) : '';
+                // "@" is "at" before the fold drops it.
+                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description.replace(/@/g, ' at ')) : '';
                 const foldedTitle = foldForCompare(title);
+                // A copy that only ever says "<Party> at <Venue>" names the
+                // PLACE, not the party: the venue after "at" is where, and
+                // the words before it are what. beefdip.com/planned-events,
+                // run 20260929-091555: the card "DRAG BRUNCH + ROOFTOP POOL
+                // / Sunday, Jan 31 • 11AM / 1PM • The Tryst Hotel" lost its
+                // heading, the row's venue slot became the title, and its
+                // copy "Drag Brunch + Rooftop Pool at The Tryst Hotel"
+                // counted as restating the name. The name is restated only
+                // where it stands somewhere other than after "at".
                 const descriptionRestatesTitle = Boolean(foldedDescription) && Boolean(foldedTitle)
-                    && foldedDescription.includes(foldedTitle);
+                    && SharedCore.textNamesPhraseBeyondLocative(foldedDescription, foldedTitle);
                 if (!descriptionRestatesTitle) {
                     flags.push({
                         code: 'junk-title',
@@ -18714,6 +18724,21 @@ class SharedCore {
             // guard.
             !SharedCore.isCuratedFestivalUmbrella(event) &&
             !SharedCore.hasJunkTitleSanityFlag(event));
+    }
+
+    // Does `text` carry `phrase` anywhere other than right after "at"?
+    // Both already folded (lowercase, single spaces). "massive returns" names
+    // Massive; "drag brunch at the tryst hotel" only places something there.
+    static textNamesPhraseBeyondLocative(text, phrase) {
+        const haystack = ` ${String(text || '').trim()} `;
+        const needle = ` ${String(phrase || '').trim()} `;
+        if (needle.trim() === '') return false;
+        let index = haystack.indexOf(needle);
+        while (index !== -1) {
+            if (!haystack.slice(0, index).endsWith(' at')) return true;
+            index = haystack.indexOf(needle, index + 1);
+        }
+        return false;
     }
 
     // True when the stamped sanity flags include the junk-title code — the
