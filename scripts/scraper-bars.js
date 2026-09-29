@@ -106,6 +106,12 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/legacybos",
       "faviconBg": "#b47d04",
       "faviconFg": "#c38703"
+    },
+    {
+      "name": "Jacques Cabaret",
+      "city": "boston",
+      "address": "79 Broadway Street, Boston",
+      "coordinates": "42.3499774, -71.0674461"
     }
   ],
   "brighton": [
@@ -133,9 +139,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/meetinghousetavernchi",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJndazcVjTD4gRimEFGWVA_AU",
       "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z",
       "faviconBg": "#ce5417",
-      "faviconFg": "#edc4a2"
+      "faviconFg": "#edc4a2",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
     },
     {
       "name": "The SoFo Tap",
@@ -146,9 +152,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/thesofotap",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z",
       "faviconBg": "#000000",
-      "faviconFg": "#000000"
+      "faviconFg": "#000000",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z"
     },
     {
       "name": "Jackhammer",
@@ -160,9 +166,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/chijackhammer/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
       "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z",
       "faviconBg": "#0b0b0b",
-      "faviconFg": "#f6f6f6"
+      "faviconFg": "#f6f6f6",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
     },
     {
       "name": "Touché",
@@ -202,6 +208,12 @@ const scraperBars = {
       "city": "chicago",
       "address": "6406 N Clark St, Chicago, IL 60626",
       "coordinates": "41.9993427, -87.6709201"
+    },
+    {
+      "name": "Steamworks",
+      "city": "chicago",
+      "address": "3246 North Halsted Street, Chicago, Illinois",
+      "coordinates": "41.9413599, -87.6494979"
     }
   ],
   "dallas": [
@@ -235,6 +247,12 @@ const scraperBars = {
       "city": "dc",
       "address": "639 Florida Avenue Northwest, Washington, DC 20001",
       "coordinates": "38.9162425, -77.0212487"
+    },
+    {
+      "name": "Green Lantern",
+      "city": "dc",
+      "address": "1335 Green Court Northwest, Washington, District of Columbia",
+      "coordinates": "38.9044841, -77.0308673"
     }
   ],
   "denver": [
@@ -255,6 +273,12 @@ const scraperBars = {
       "city": "denver",
       "address": "629 East Colfax Avenue, Denver, CO 80203",
       "coordinates": "39.7402589, -104.9790106"
+    },
+    {
+      "name": "SUMMIT",
+      "city": "denver",
+      "address": "1902 Blake Street, Denver, Colorado",
+      "coordinates": "39.7533366, -104.9950640"
     }
   ],
   "fort-lauderdale": [
@@ -268,9 +292,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/EagleBarWM/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
       "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
-      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
       "faviconBg": "#ededed",
-      "faviconFg": "#161314"
+      "faviconFg": "#161314",
+      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
     },
     {
       "name": "Gym Sports Bar",
@@ -315,6 +339,12 @@ const scraperBars = {
       "city": "fort-lauderdale",
       "address": "400 Corporate Drive, Fort Lauderdale, Florida",
       "coordinates": "26.2053310, -80.1394930"
+    },
+    {
+      "name": "Ramrod",
+      "city": "fort-lauderdale",
+      "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
+      "coordinates": "26.1462600, -80.1403612"
     }
   ],
   "hong-kong": [
@@ -439,6 +469,12 @@ const scraperBars = {
       "city": "la",
       "address": "13012 Athens Way, Los Angeles, CA 90061",
       "coordinates": "33.9148268, -118.2817851"
+    },
+    {
+      "name": "Bullet Bar",
+      "city": "la",
+      "address": "10522 Burbank Boulevard, Los Angeles, California",
+      "coordinates": "34.1719704, -118.3602280"
     }
   ],
   "london": [
@@ -463,9 +499,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/Duke.Of.Welly",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
       "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z",
       "faviconBg": "#522838",
-      "faviconFg": "#d8ca8e"
+      "faviconFg": "#d8ca8e",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
     },
     {
       "name": "Kings Arms",
@@ -488,9 +524,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/EagleLDN",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
       "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
       "faviconBg": "#060606",
-      "faviconFg": "#787878"
+      "faviconFg": "#787878",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
     },
     {
       "name": "Westminster Pier",
@@ -729,6 +765,18 @@ const scraperBars = {
       "city": "nyc",
       "address": "2233 Broadway, New York, New York",
       "coordinates": "40.7844043, -73.9799172"
+    },
+    {
+      "name": "Parkside Lounge",
+      "city": "nyc",
+      "address": "317 East Houston Street, New York, New York",
+      "coordinates": "40.7210809, -73.9832025"
+    },
+    {
+      "name": "Brass Monkey",
+      "city": "nyc",
+      "address": "55 Little West 12th Street, New York, New York",
+      "coordinates": "40.7406797, -74.0084922"
     }
   ],
   "palm-springs": [
@@ -757,6 +805,18 @@ const scraperBars = {
       "city": "palm-springs",
       "address": "535 South Warm Sands Drive, Palm Springs, California",
       "coordinates": "33.8147765, -116.5376249"
+    },
+    {
+      "name": "Hotel ZOSO",
+      "city": "palm-springs",
+      "address": "South Indian Canyon Drive, Palm Springs, California",
+      "coordinates": "33.8221965, -116.5450337"
+    },
+    {
+      "name": "Hilton Palm Springs",
+      "city": "palm-springs",
+      "address": "North Calle Encilia, Palm Springs, California",
+      "coordinates": "33.8239380, -116.5432028"
     }
   ],
   "paris": [
@@ -950,6 +1010,18 @@ const scraperBars = {
       "city": "san-diego",
       "address": "3796 Fifth Avenue, San Diego, CA 92103",
       "coordinates": "32.7468104, -117.1606487"
+    },
+    {
+      "name": "House of Blues",
+      "city": "san-diego",
+      "address": "1055 5th Avenue, San Diego, California",
+      "coordinates": "32.7164358, -117.1595598"
+    },
+    {
+      "name": "EQ San Diego",
+      "city": "san-diego",
+      "address": "1271 University Avenue, San Diego, California",
+      "coordinates": "32.7481613, -117.1519331"
     }
   ],
   "seattle": [
@@ -975,9 +1047,9 @@ const scraperBars = {
       "website": "https://www.thelumberyardbar.com",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
       "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
       "faviconBg": "#5d3d25",
-      "faviconFg": "#e9e8e6"
+      "faviconFg": "#e9e8e6",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
     },
     {
       "name": "The Cuff Complex",
@@ -988,9 +1060,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/thecuffcomplex",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
       "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
       "faviconBg": "#474747",
-      "faviconFg": "#767676"
+      "faviconFg": "#767676",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
     },
     {
       "name": "Seattle Eagle",
@@ -1065,9 +1137,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/SFEagleBar",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/304619-sf-eagle",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z",
       "faviconBg": "#5f6477",
-      "faviconFg": "#e1e1e1"
+      "faviconFg": "#e1e1e1",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
     },
     {
       "name": "Powerhouse",
@@ -1078,9 +1150,9 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/sfpowerhouse",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z",
       "faviconBg": "#131719",
-      "faviconFg": "#14181b"
+      "faviconFg": "#14181b",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
     },
     {
       "name": "Hole in the Wall Saloon",
@@ -1101,9 +1173,9 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/lonestarsf",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z",
       "faviconBg": "#020000",
-      "faviconFg": "#931d20"
+      "faviconFg": "#931d20",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
     },
     {
       "name": "440 Castro",
@@ -1145,6 +1217,12 @@ const scraperBars = {
       "website": "https://www.mr-s-leather.com",
       "faviconBg": "#e3e3e3",
       "faviconFg": "#353535"
+    },
+    {
+      "name": "Audio Nightclub",
+      "city": "sf",
+      "address": "316 11th Street, San Francisco",
+      "coordinates": "37.7713709, -122.4138077"
     }
   ],
   "sitges": [
@@ -1192,6 +1270,12 @@ const scraperBars = {
       "website": "https://www.blackeagletoronto.com",
       "faviconBg": "#f4f4f4",
       "faviconFg": "#252525"
+    },
+    {
+      "name": "El Mocambo",
+      "city": "toronto",
+      "address": "464 Spadina Avenue, Toronto, Ontario",
+      "coordinates": "43.6575313, -79.4001677"
     }
   ],
   "torremolinos": [
@@ -1204,6 +1288,14 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/aquatorremolinos",
       "faviconBg": "#4f4d4c",
       "faviconFg": "#e5e4e4"
+    }
+  ],
+  "unknown": [
+    {
+      "name": "New Guernica",
+      "city": "unknown",
+      "address": "64-68 Smith Street, Melbourne",
+      "coordinates": "-37.8062453, 144.9833075"
     }
   ],
   "vegas": [

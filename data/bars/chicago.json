@@ -91,5 +91,11 @@
     "city": "chicago",
     "address": "6406 N Clark St, Chicago, IL 60626",
     "coordinates": "41.9993427, -87.6709201"
+  },
+  {
+    "name": "Steamworks",
+    "city": "chicago",
+    "address": "3246 North Halsted Street, Chicago, Illinois",
+    "coordinates": "41.9413599, -87.6494979"
   }
 ]

@@ -4,5 +4,11 @@
     "city": "dc",
     "address": "639 Florida Avenue Northwest, Washington, DC 20001",
     "coordinates": "38.9162425, -77.0212487"
+  },
+  {
+    "name": "Green Lantern",
+    "city": "dc",
+    "address": "1335 Green Court Northwest, Washington, District of Columbia",
+    "coordinates": "38.9044841, -77.0308673"
   }
 ]

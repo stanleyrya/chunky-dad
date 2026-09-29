@@ -81,5 +81,11 @@
     "city": "la",
     "address": "13012 Athens Way, Los Angeles, CA 90061",
     "coordinates": "33.9148268, -118.2817851"
+  },
+  {
+    "name": "Bullet Bar",
+    "city": "la",
+    "address": "10522 Burbank Boulevard, Los Angeles, California",
+    "coordinates": "34.1719704, -118.3602280"
   }
 ]
