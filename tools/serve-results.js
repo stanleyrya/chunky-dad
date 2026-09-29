@@ -1177,6 +1177,8 @@ a { color:var(--accent); }
 .sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
 .waiting li .status { font-size:12px; color:var(--muted); }
 .series-note { margin-top:4px; color:var(--muted); font-size:12px; }
+.series .change-row { margin-top:6px; font-size:13px; overflow-wrap:anywhere; }
+.series-join { font:inherit; font-size:12px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:2px 8px; cursor:pointer; }
 .series .nights a.chip { text-decoration:none; color:inherit; }
 .night-compare { margin-top:6px; font-size:12px; }
 .night-compare summary { cursor:pointer; color:var(--muted); }
@@ -1268,13 +1270,13 @@ ${missingCalendarNotice}
 <div class="sheet" id="sheet">
   <div class="panel">
     <h3>Not yet — why? <span class="muted" id="sheet-title"></span></h3>
+    <div class="sheet-fix-note">What is wrong? Tap what applies, then pick an answer.</div>
+    <div class="chips" id="sheet-tags"></div>
     <div class="sheet-modes">
       <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
       <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
       <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
     </div>
-    <div class="sheet-fix-note">What is wrong? (for "Needs a fix" — this is what gets fixed)</div>
-    <div class="chips" id="sheet-tags"></div>
     <textarea id="sheet-text" placeholder="Anything else (optional)"></textarea>
     <div class="actions">
       <button type="button" id="sheet-cancel" style="background:var(--line); color:var(--ink);">Cancel</button>
@@ -1397,8 +1399,45 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var cadence = describeSeriesCadence(keys.map(dayOf));
     return cadence ? cadence.text : '';
   }
+  // What an item's members are called: nights of one party, or events
+  // that carry the same change.
+  function unitOf(series, count) {
+    return series && series.type === 'change' ? (count === 1 ? 'event' : 'events') : (count === 1 ? 'night' : 'nights');
+  }
+  var CHANGE_LABELS = { url: 'link', ticketUrl: 'ticket link', image: 'image', bar: 'venue', address: 'address', location: 'pin', title: 'title', cover: 'cover', description: 'description' };
+  function changeRows(series) {
+    return (series.change || []).map(function (row) {
+      var isLink = row.field === 'url' || row.field === 'ticketUrl' || row.field === 'image';
+      var show = function (value) { return value ? escapeHtml(isLink ? shortLink(value) : value) : '<span class="muted">empty</span>'; };
+      return '<div class="change-row"><b>' + escapeHtml(CHANGE_LABELS[row.field] || row.field) + '</b> ' + show(row.from) + ' → ' + show(row.to) + '</div>';
+    }).join('');
+  }
+  function changeStrip(item) {
+    return '<div class="series"><b>🔀 ' + item.cards.length + ' events, same change</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
+      + changeRows(item.series)
+      + '<div class="series-note">Each event is saved under its own decision. The card below shows the first one.</div><div class="nights">'
+      + item.cards.slice().sort(function (a, b) { var x = String(a.proposal && a.proposal.startDate || ''), y = String(b.proposal && b.proposal.startDate || ''); return x < y ? -1 : x > y ? 1 : 0; })
+        .map(function (c) { return '<span class="chip">' + escapeHtml(nightLabel(c)) + '</span>'; }).join('') + '</div></div>';
+  }
+  // A folded item the owner took apart ("one at a time") says so on each of
+  // its cards and offers the way back: how many of its members are still
+  // on the stack, and "fold back" to decide them with one swipe again.
+  function siblingsOnStack(card) {
+    if (!card.series) return 0;
+    return visible().filter(function (c) { return c.series && c.series.key === card.series.key; }).length;
+  }
+  function joinStrip(item) {
+    var card = item.cards[0];
+    if (item.cards.length !== 1 || !card.series || !solo[card.series.key]) return '';
+    var count = siblingsOnStack(card);
+    if (count < 2) return '';
+    var what = card.series.type === 'change' ? 'events with the same change' : 'nights of this party';
+    return '<div class="series series-solo">One of <b>' + count + ' ' + what + '</b>, decided one at a time · <button type="button" class="series-join">fold back</button></div>';
+  }
   function seriesStrip(item) {
+    if (item.cards.length === 1) return joinStrip(item);
     if (!item.series || item.cards.length < 2) return '';
+    if (item.series.type === 'change') return changeStrip(item);
     var differs = (item.series.differs || []).filter(function (key) {
       // Judged on the nights still on this card, not the whole party.
       var seen = {}, count = 0;
@@ -1416,7 +1455,10 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   function bindSplit(el, item) {
     var split = el.querySelector('.series-split');
-    if (split) split.onclick = function () { solo[item.series.key] = true; toast('Deciding ' + item.cards.length + ' nights one at a time'); render(); };
+    if (split) split.onclick = function () { solo[item.series.key] = true; toast('Deciding ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) + ' one at a time'); render(); };
+    var join = el.querySelector('.series-join');
+    var series = item.cards[0].series;
+    if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
     var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
@@ -1453,6 +1495,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
         stage.appendChild(el);
         bindSplit(el, item);
         void el.offsetWidth; // commit the entry state so the promotion animates
+      } else if (item.cards.length === 1 && item.cards[0].series && solo[item.cards[0].series.key]) {
+        // The count on a split card follows the stack (its siblings get
+        // decided one by one); the last one left carries no strip.
+        var soloStrip = el.querySelector('.series-solo');
+        var fresh = joinStrip(item);
+        if (soloStrip && soloStrip.outerHTML !== fresh) { if (fresh) soloStrip.outerHTML = fresh; else soloStrip.remove(); bindSplit(el, item); }
       } else if (item.series) {
         var strip = el.querySelector('.series');
         if (strip && strip.querySelectorAll('.nights .chip').length !== item.cards.length) { strip.outerHTML = seriesStrip(item); bindSplit(el, item); }
@@ -1711,12 +1759,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       chain = chain.then(function () { return saveOne(c, verdict, reason).then(function (record) { records.push(record); left.shift(); }); });
     });
     chain.then(function () {
-      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '';
+      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
-      toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' nights back on the stack)' : ''));
+      toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
       if (records.length === 0) history = history.filter(function (h) { return h !== entry; });
       queue = left.concat(queue);
       render(); renderDecided(); renderExecute();
@@ -1777,7 +1825,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
       : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
     document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
-    document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' nights' : '');
+    document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
     sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';

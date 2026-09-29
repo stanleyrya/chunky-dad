@@ -43,10 +43,18 @@ const RUN_ID_PATTERN = /^\d{8}-\d{6}$/;
 const RUN_CACHE_LIMIT = 4;
 
 // Reject-sheet chips. Free text rides alongside; these make rejections
-// groupable when the log is read back.
+// groupable when the log is read back, and a field chip is what lets a
+// "needs a fix" card come back by itself (FIX_TAG_FIELDS).
+// The vocabulary is the owner's own (store of 2026-09-29: 96 rejections, 34
+// with a typed note, not one chip used): his notes are about the link, the
+// image, the title, the venue, a card that should have merged into a saved
+// event, and a party that repeats. "wrong time" and "wrong date" matched
+// nothing he wrote and are one chip now; "duplicate" and "fragment" are the
+// sheet's own "Not an event" answer. Decisions stored with the older tags
+// keep their meaning (FIX_TAG_FIELDS still names them).
 const REVIEW_REASON_TAGS = [
-    'wrong time', 'wrong date', 'wrong venue', 'wrong title',
-    'not bear', 'duplicate', 'fragment', 'bad image', 'other'
+    'wrong link', 'wrong image', 'wrong title', 'wrong venue',
+    'should merge', 'recurring', 'wrong date or time', 'not bear', 'other'
 ];
 
 function resolveSharedRoot(env = process.env) {
@@ -738,16 +746,21 @@ function findPriorDecision(proposal, decisions, SharedCore) {
 
 // Which fields a "needs a fix" note's tags name — the deck's own vocabulary.
 const FIX_TAG_FIELDS = {
+    'wrong link': ['url', 'ticketUrl'],
+    'wrong image': ['image'],
+    'wrong title': ['title'],
+    'wrong venue': ['bar', 'address', 'location'],
+    'wrong date or time': ['startDate', 'endDate'],
+    // The vocabulary before 2026-09-29, still read from stored decisions.
     'wrong time': ['startDate', 'endDate'],
     'wrong date': ['startDate', 'endDate'],
-    'wrong venue': ['bar', 'address', 'location'],
-    'wrong title': ['title'],
     'bad image': ['image']
 };
 
 // { tags, fields } when EVERY drifted field is one a tag of the note names
 // (and at least one tag is a field tag); null otherwise. Fails closed on an
-// untagged note, on "other"/"duplicate"/"fragment", and on any drift
+// untagged note, on a tag that names no field ("should merge",
+// "recurring", "other", the older "duplicate"/"fragment"), and on any drift
 // outside the named fields.
 function driftCoveredByNoteTags(prior, proposal) {
     const tags = prior && prior.reason && Array.isArray(prior.reason.tags) ? prior.reason.tags : [];
@@ -860,6 +873,54 @@ function stampSeries(cards, SharedCore) {
         const differs = differsOnFullText;
         const cadence = describeSeriesCadence(nights.map((night) => night.day));
         for (const card of members) card.series = { key: series, size: members.length, nights, differs, cadence };
+    }
+}
+
+// THE SAME CHANGE ON DIFFERENT EVENTS is one card too (owner, 2026-09-29:
+// six BeefDip parties each proposed the link change beefdip.com/tags/ →
+// beefdip.com on a card of its own). Updates from one source whose change
+// table is the same — the same fields, from the same saved value to the
+// same new one — fold into one item: one swipe decides them all, each under
+// its own key. Same shape as a folded party (card.series), marked
+// type 'change'; "one at a time" unfolds it and "fold back" folds it again.
+// A card already folded with its party's other nights stays with them, and
+// an update that changes a date is never folded here: a start or an end is
+// a fact about one event.
+function getSameChangeSignature(proposal) {
+    const SharedCore = loadSharedCore();
+    const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+    const fields = Object.keys(changes).sort();
+    if (fields.length === 0 || fields.includes('startDate') || fields.includes('endDate')) return '';
+    const value = (raw) => SharedCore.normalizeOwnerReviewValue(raw);
+    return fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`).join(';');
+}
+function describeChangeRows(proposal) {
+    const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+    const text = (value) => String(value === null || value === undefined ? '' : value).trim();
+    return Object.keys(changes).sort().map((field) => ({ field, from: text(changes[field] && changes[field].from), to: text(changes[field] && changes[field].to) }));
+}
+function stampSameChange(cards) {
+    const groups = new Map();
+    for (const card of cards) {
+        if (card.kind !== 'merge' || card.series) continue;
+        const signature = getSameChangeSignature(card.proposal);
+        if (!signature) continue;
+        const group = `change|${String(card.proposal && card.proposal.source || '')}|${signature}`;
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group).push(card);
+    }
+    for (const [group, members] of groups) {
+        if (members.length < 2) continue;
+        const nights = members.map((card) => {
+            const title = String(card.proposal && card.proposal.title || '').trim();
+            const day = formatNightLabel(card.proposal);
+            return { key: card.key, day: String(card.key).split('|')[3] || '', label: [title, day].filter(Boolean).join(' · '), values: nightCompareValues(card.proposal) };
+        });
+        for (const night of nights) {
+            if (night.values.description.length > 160) night.values.description = `${night.values.description.slice(0, 160).trim()}…`;
+        }
+        const change = describeChangeRows(members[0].proposal);
+        for (const card of members) card.series = { key: group, type: 'change', size: members.length, nights, differs: [], cadence: null, change };
     }
 }
 
@@ -1011,6 +1072,7 @@ function buildDeck(runPayload, store, options = {}) {
         );
     });
     stampSeries(cards, SharedCore);
+    stampSameChange(cards);
 
     const candidates = Array.isArray(payload.newVenueCandidates) ? payload.newVenueCandidates : [];
     candidates.forEach((candidate, index) => {
@@ -1215,17 +1277,24 @@ function buildDeck(runPayload, store, options = {}) {
 // Wednesday" lines with the same words read as thirteen problems
 // (2026-09-27). Rejections of NEW nights of one party (same series key)
 // that carry the same title, source and reason print as one line naming
-// the nights. Merges are never folded here: each carries its own values.
+// the nights. Updates fold only when they are the same update: one source,
+// the same change table (getSameChangeSignature) and the same reason — the
+// note swiped onto a folded same-change card.
 function formatRejectionsText(store) {
     const lines = [];
     const SharedCore = loadSharedCore();
     const rejections = normalizeDecisionStore(store).decisions.filter((decision) => decision.verdict === 'reject');
     const groupOf = (decision) => {
         const snap = decision.snapshot || {};
+        const reason = decision.reason || {};
+        const why = [reason.mode || '', (reason.tags || []).slice().sort(), reason.text || ''];
+        if ((decision.kind || 'new') === 'merge') {
+            const signature = getSameChangeSignature(snap);
+            return signature ? JSON.stringify(['change', snap.source || '', signature].concat(why)) : '';
+        }
         const series = (decision.kind || 'new') === 'new' && (snap.kind || 'new') === 'new' ? SharedCore.getOwnerReviewSeriesKey(decision.key) : '';
         if (!series) return '';
-        const reason = decision.reason || {};
-        return JSON.stringify([series, snap.title || '', snap.source || '', snap.bar || snap.city || '', reason.mode || '', (reason.tags || []).slice().sort(), reason.text || '']);
+        return JSON.stringify([series, snap.title || '', snap.source || '', snap.bar || snap.city || ''].concat(why));
     };
     const groups = new Map();
     for (const decision of rejections) {
@@ -1240,7 +1309,11 @@ function formatRejectionsText(store) {
         const members = groups.get(groupOf(decision)) || [];
         if (members.length > 1 && members[0] !== decision) continue;
         let when = String(snap.startDate || '').slice(0, 10);
-        if (members.length > 1) {
+        const sameChange = members.length > 1 && (decision.kind || 'new') === 'merge';
+        if (sameChange) {
+            const others = members.slice(1).map((member) => `${(member.snapshot || {}).title || ''} ${String((member.snapshot || {}).startDate || '').slice(0, 10)}`.trim());
+            when = `${when} + ${others.length} more with the same change (${others.join(', ')})`;
+        } else if (members.length > 1) {
             const days = members.map((member) => String(member.key).split('|')[3] || '').filter(Boolean).sort();
             const cadence = describeSeriesCadence(days);
             when = `${members.length} nights (${cadence ? `${cadence.text}, ${cadence.from} … ${cadence.to}` : days.join(', ')})`;
@@ -1309,5 +1382,8 @@ module.exports = {
     buildImageUseCounts,
     buildDeck,
     describeSeriesCadence,
+    getSameChangeSignature,
+    driftCoveredByNoteTags,
+    stampSameChange,
     formatRejectionsText
 };

@@ -1130,6 +1130,12 @@ test('renderReviewPage ships each card\'s series and each decided entry\'s via, 
   const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
   assert.ok(html.includes('"series":{"key":"' + deck.cards[0].series.key + '"'), 'series rides on the card payload');
   assert.ok(html.includes('class="series-split"'), 'the one-at-a-time control is in the client');
+  assert.ok(html.includes('class="series-join"') && html.includes('fold back'), 'and so is the way back: a split item folds again');
+  assert.ok(html.includes('events, same change'), 'the same change on different events is one item');
+  assert.ok(html.indexOf('id="sheet-tags"') < html.indexOf('id="sheet-fix"'), 'the chips come before the three answers that close the sheet');
+  for (const chip of ['wrong link', 'wrong image', 'should merge', 'recurring']) {
+    assert.ok(html.includes(`"${chip}"`), `the deck carries the chip "${chip}"`);
+  }
   const store = reviewQueue.upsertDecision(reviewQueue.emptyDecisionStore(), reviewQueue.buildDecision({ key: deck.cards[0].key, kind: 'new', verdict: 'approve', snapshot: deck.cards[0].proposal }));
   const decidedDeck = reviewQueue.buildDeck(payload, store, { now: 0, curatedBars: {} });
   const decidedHtml = renderReviewPage(decidedDeck, { runs: [], scriptName: 'display-saved-run' });
