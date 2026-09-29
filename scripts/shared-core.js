@@ -56,6 +56,24 @@ const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
 // dead end at once (58 on one host in the store of 2026-09-29), and a site
 // should not meet all of them in the same two minutes.
 const DEAD_END_CAPABILITY_RETRIES_PER_HOST = 20;
+// The answer to a LOOKUP (options.cacheTtlDays on a fetch) — where an
+// address is — is kept for as long as it is USED. Owner, 2026-09-29:
+// "addresses don't really change at all unless we got them wrong." Under the
+// page cache's three days the same 700 questions were asked again every run
+// and the per-host budget (120) was spent before the new addresses got
+// their turn (runs of 2026-09-27 … 09-29: budget reached on every one).
+// An answer read by a run is marked used (at most once every
+// LOOKUP_ANSWER_TOUCH_DAYS), so the answer for a venue that still holds
+// events never ages out; one nothing has read for LOOKUP_ANSWER_TTL_DAYS is
+// pruned. A wrong answer is not kept by this: the question is the address
+// itself, so a corrected address is a new question — and a curated bar's
+// own coordinates outrank any geocoder.
+const LOOKUP_ANSWER_TTL_DAYS = 365;
+const LOOKUP_ANSWER_TOUCH_DAYS = 7;
+// A source has a home city when this many of its events are placed and
+// this share of them are in one city (see placeVirtualEventsAtSourceHome).
+const SOURCE_HOME_MIN_PLACED = 5;
+const SOURCE_HOME_MIN_SHARE = 0.8;
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -4353,6 +4371,72 @@ class SharedCore {
         return matches[0];
     }
 
+    // A VIRTUAL EVENT BELONGS TO ITS ORGANIZER'S CITY (owner, 2026-09-29:
+    // Mass Bears and Cubs' monthly membership meetings, venue
+    // "Online/Virtual", had no city and so no calendar). An online event
+    // happens nowhere, but it is somebody's event: the club that holds it.
+    // Where that club is, is read off its own listings — the city most of
+    // this source's other events are in.
+    //   - the venue must SAY it is online: every word of the venue line is
+    //     from the online vocabulary ("Online/Virtual", "Zoom", "Online
+    //     event"), and no street line came with it;
+    //   - the source must have a home: at least SOURCE_HOME_MIN_PLACED of its
+    //     events carry a configured city and SOURCE_HOME_MIN_SHARE of those
+    //     are in one city. A touring promoter has none, and an aggregator is
+    //     never asked — it lists everybody's events;
+    //   - the event's time must already be anchored (_timezoneUnresolved
+    //     events are left alone: a city given afterwards would not move a
+    //     wall-clock time that was read without one).
+    // The city is stamped _citySource 'source-home'; nothing else is filled.
+    static isVirtualVenueText(value) {
+        const words = String(value === null || value === undefined ? '' : value).toLowerCase().split(/[^a-z]+/).filter(Boolean);
+        if (words.length === 0 || words.length > 4) return false;
+        const says = ['online', 'virtual', 'virtually', 'zoom', 'webinar', 'livestream'];
+        const around = ['event', 'meeting', 'only', 'via', 'on', 'live', 'stream', 'call'];
+        return words.some(word => says.includes(word)) && words.every(word => says.includes(word) || around.includes(word));
+    }
+
+    getSourceHomeCity(events) {
+        const counts = {};
+        let placed = 0;
+        for (const event of Array.isArray(events) ? events : []) {
+            const city = event && typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (!city || city === 'unknown' || !this.cities || !this.cities[city]) continue;
+            counts[city] = (counts[city] || 0) + 1;
+            placed += 1;
+        }
+        if (placed < SOURCE_HOME_MIN_PLACED) return null;
+        const [city, count] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
+        return count / placed >= SOURCE_HOME_MIN_SHARE ? { city, count, placed } : null;
+    }
+
+    placeVirtualEventsAtSourceHome(events, parserConfig) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        if (parserConfig && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator') return 0;
+        const virtual = events.filter(event => {
+            if (!event || typeof event !== 'object') return false;
+            const city = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (city && city !== 'unknown') return false;
+            if (event._timezoneUnresolved === true) return false;
+            if (typeof event.address === 'string' && event.address.trim()) return false;
+            return SharedCore.isVirtualVenueText(event.bar);
+        });
+        if (virtual.length === 0) return 0;
+        const home = this.getSourceHomeCity(events);
+        if (!home) return 0;
+        for (const event of virtual) {
+            event.city = home.city;
+            event._citySource = 'source-home';
+            event._virtual = true;
+            if (!event.timezone) {
+                const timezone = this.getCityTimezone(home.city);
+                if (timezone) event.timezone = timezone;
+            }
+            console.log(`🗺️ CITY: "${event.title || 'Unknown'}" is held online ("${String(event.bar).trim()}") — filed under ${home.city}, where ${home.count} of this source's ${home.placed} placed events are`);
+        }
+        return virtual.length;
+    }
+
     // Registrable-host key for curated-website matching: the host of an
     // http(s) URL, lowercased, port and a leading "www." dropped. Regex only
     // (getHostFromUrl) — never `new URL`, which iOS JavaScriptCore lacks.
@@ -7484,6 +7568,7 @@ class SharedCore {
         // before the bear check and the calendar merge. Platform links are
         // routed or dropped here, so they never surface as website candidates
         // in merge arbitration — see canonicalizeIdentityLinks.
+        this.placeVirtualEventsAtSourceHome(deduplicatedEvents, effectiveParserConfig);
         this.canonicalizeIdentityLinks(deduplicatedEvents);
         const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
 
@@ -9310,6 +9395,14 @@ class SharedCore {
 
     static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
         return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+    }
+
+    static get LOOKUP_ANSWER_TTL_DAYS() {
+        return LOOKUP_ANSWER_TTL_DAYS;
+    }
+
+    static get LOOKUP_ANSWER_TOUCH_DAYS() {
+        return LOOKUP_ANSWER_TOUCH_DAYS;
     }
 
     static isPermanentlyGoneHttpStatus(statusCode) {
@@ -11516,6 +11609,9 @@ class SharedCore {
             }
             if (context.learnedHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+            }
+            if (Number(context.knownEmptyLookups) > 0 || Number(context.emptyLookupsNoted) > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Geocoder: ${Number(context.knownEmptyLookups) || 0} question(s) not asked again (no answer on two earlier runs; asked again after ${context.retryDays}d), ${Number(context.emptyLookupsNoted) || 0} answered "nothing" this run`);
             }
             const retriedHosts = Object.keys(context.capabilityRetriesByHost || {});
             if (retriedHosts.length > 0 || context.capabilityRetryDeferredCount > 0) {

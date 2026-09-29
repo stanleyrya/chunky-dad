@@ -436,6 +436,8 @@ class ScriptableAdapter {
     this.metricsDir = this.fm.joinPath(this.baseDir, "metrics");
     this.storageDir = this.fm.joinPath(this.baseDir, "storage");
     this.pageStorageDir = this.fm.joinPath(this.storageDir, "pages");
+    // Long-lived answers to lookups (see getAnswerCacheConfig).
+    this.answerStorageDir = this.fm.joinPath(this.storageDir, "answers");
     this.cacheDir = this.fm.joinPath(this.baseDir, "cache");
 
     // Reuse a resolved run context (with automation overrides applied) when the
@@ -1095,6 +1097,52 @@ class ScriptableAdapter {
     };
   }
 
+  // The cache for answers that stay true much longer than a page does — a
+  // geocoder's answer about an address (options.cacheTtlDays on fetchData).
+  // Same envelope and key derivation as the page cache, in a directory of
+  // its own (storage/answers) so the page cache's short prune never reaches
+  // it. The Mac reads and writes the same directory.
+  getAnswerCacheConfig(ttlDays) {
+    const page = this.getPageCacheConfig();
+    const days = Number(ttlDays);
+    return {
+      enabled: page.enabled && Number.isFinite(days) && days > 0,
+      ttlDays: days,
+      storageDir: this.answerStorageDir,
+      // Kept while used: a read marks the entry (see touchAnswerOnRead), so
+      // ttlDays counts from the last use.
+      keepWhileUsed: true,
+    };
+  }
+
+  // An answer that was just read is still in use: the file is written back
+  // as it is (FileManager has no way to set a date), which moves its
+  // modification date to now — at most once every LOOKUP_ANSWER_TOUCH_DAYS.
+  // Age is then "time since last use", and the prune (dates alone) never
+  // takes an answer a venue still needs. A failed touch is harmless.
+  touchAnswerOnRead(cachePath, modifiedAt, rawText) {
+    const days =
+      typeof SharedCore !== "undefined" &&
+      Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS) > 0
+        ? Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS)
+        : 7;
+    const modifiedAtMs = modifiedAt ? modifiedAt.getTime() : NaN;
+    if (
+      !Number.isFinite(modifiedAtMs) ||
+      Date.now() - modifiedAtMs < days * 24 * 60 * 60 * 1000 ||
+      typeof rawText !== "string" ||
+      rawText.length === 0
+    ) {
+      return false;
+    }
+    try {
+      this.fm.writeString(cachePath, rawText);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // How long unused OCR/classification cache entries survive the end-of-run
   // prune. Reads the global `ocr` block threaded in by the orchestrator (the
   // same way pageCache is) — the single retention knob, everything else about
@@ -1241,11 +1289,11 @@ class ScriptableAdapter {
     }
   }
 
-  ensurePageCacheDir(hostDir) {
+  ensurePageCacheDir(hostDir, rootDir = this.pageStorageDir) {
     this.ensureDirectoryExists(this.baseDir);
     this.ensureDirectoryExists(this.storageDir);
-    this.ensureDirectoryExists(this.pageStorageDir);
-    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    this.ensureDirectoryExists(rootDir);
+    const hostDirPath = this.fm.joinPath(rootDir, hostDir);
     this.ensureDirectoryExists(hostDirPath);
     return hostDirPath;
   }
@@ -1257,7 +1305,10 @@ class ScriptableAdapter {
 
     const { hostDir, fileName, normalizedUrl } =
       this.getPageCachePathParts(url);
-    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    const hostDirPath = this.fm.joinPath(
+      pageCacheConfig.storageDir || this.pageStorageDir,
+      hostDir,
+    );
     const cachePath = this.fm.joinPath(hostDirPath, fileName);
 
     try {
@@ -1275,7 +1326,8 @@ class ScriptableAdapter {
         await this.fm.downloadFileFromiCloud(cachePath);
       } catch (_) {}
 
-      const cached = JSON.parse(this.fm.readString(cachePath));
+      const rawCachedText = this.fm.readString(cachePath);
+      const cached = JSON.parse(rawCachedText);
       const fetchState =
         typeof cached.fetchState === "string"
           ? cached.fetchState.toLowerCase()
@@ -1323,6 +1375,10 @@ class ScriptableAdapter {
         cached.html.length === 0
       ) {
         return null;
+      }
+
+      if (pageCacheConfig.keepWhileUsed === true) {
+        this.touchAnswerOnRead(cachePath, modifiedAt, rawCachedText);
       }
 
       return {
@@ -1388,7 +1444,10 @@ class ScriptableAdapter {
 
     const { hostDir, fileName, normalizedUrl } =
       this.getPageCachePathParts(url);
-    const hostDirPath = this.ensurePageCacheDir(hostDir);
+    const hostDirPath = this.ensurePageCacheDir(
+      hostDir,
+      pageCacheConfig.storageDir || this.pageStorageDir,
+    );
     const cachePath = this.fm.joinPath(hostDirPath, fileName);
     const payload = {
       url: normalizedUrl,
@@ -2334,7 +2393,17 @@ class ScriptableAdapter {
         console.log(`📱 Scriptable: Page already read this run — no re-read for ${url}`);
         return memoized;
       }
-      const pageCacheConfig = this.getPageCacheConfig();
+      // options.cacheTtlDays: the caller says how long the answer stays true
+      // (a lookup, not a page) — read from and written to the answer cache
+      // under that life.
+      const answerCacheConfig =
+        Number(options.cacheTtlDays) > 0
+          ? this.getAnswerCacheConfig(options.cacheTtlDays)
+          : null;
+      const pageCacheConfig =
+        answerCacheConfig && answerCacheConfig.enabled
+          ? answerCacheConfig
+          : this.getPageCacheConfig();
       const canUseCache =
         pageCacheConfig.enabled &&
         (options.method || "GET").toUpperCase() === "GET" &&
@@ -2352,6 +2421,21 @@ class ScriptableAdapter {
           this.logPageCacheHit(url, cachedPage, pageCacheConfig);
           this.writeRunPageMemo(memoKey, cachedPage);
           return cachedPage;
+        }
+        // An answer still sitting in the page cache (written before answers
+        // had a cache of their own) moves over instead of being asked for
+        // again.
+        if (pageCacheConfig.storageDir) {
+          const inherited = await this.readCachedPage(
+            url,
+            this.getPageCacheConfig(),
+          );
+          if (inherited && isCacheableResponse(inherited)) {
+            await this.writeCachedPage(url, inherited, pageCacheConfig);
+            this.logPageCacheHit(url, inherited, this.getPageCacheConfig());
+            this.writeRunPageMemo(memoKey, inherited);
+            return inherited;
+          }
         }
       }
 
@@ -15944,6 +16028,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       if (prunedPages > 0) {
         console.log(
           `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
+        );
+      }
+      // Answers to lookups (a geocoder's answer about an address) are kept
+      // while they are used: a read marks the file, so only an answer
+      // nothing has read for the whole life is pruned.
+      const answerTtlDays =
+        typeof SharedCore !== "undefined" &&
+        Number(SharedCore.LOOKUP_ANSWER_TTL_DAYS) > 0
+          ? Number(SharedCore.LOOKUP_ANSWER_TTL_DAYS)
+          : 365;
+      const prunedAnswers = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/answers",
+        { maxAgeDays: answerTtlDays + 1, recurse: true },
+      );
+      if (prunedAnswers > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedAnswers} lookup answer(s) nothing has used for ${answerTtlDays}d`,
         );
       }
       const ocrRetentionDays = this.getOcrCacheRetentionDays();

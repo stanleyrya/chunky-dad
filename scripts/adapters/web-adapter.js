@@ -55,6 +55,8 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
+        // Long-lived answers to lookups (see getAnswerCacheConfig).
+        this.answerStorageDir = null;
         // Local state dir for adapter-owned JSON stores (bear-verdicts.json);
         // Node-only, same root the page cache lives under.
         this.localStateDir = null;
@@ -68,6 +70,7 @@ class WebAdapter {
                 const os = require('os');
                 this.localStateDir = this.path.join(os.homedir(), '.chunky-dad-scraper');
                 this.pageStorageDir = this.path.join(this.localStateDir, 'storage', 'pages');
+                this.answerStorageDir = this.path.join(this.localStateDir, 'storage', 'answers');
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
@@ -89,6 +92,7 @@ class WebAdapter {
                 this.assertSharedStorageRootUsable(sharedRoot);
                 this.sharedStorageRoot = sharedRoot;
                 this.pageStorageDir = this.path.join(sharedRoot, 'storage', 'pages');
+                this.answerStorageDir = this.path.join(sharedRoot, 'storage', 'answers');
                 console.log(`🟢 Node.js: Shared storage root active: ${sharedRoot} — caches, runs and logs read/write the phone's tree; retention pruning is deferred to the cache owner (the phone)`);
             }
         }
@@ -319,6 +323,41 @@ class WebAdapter {
         };
     }
 
+    // The cache for answers that stay true much longer than a page does —
+    // a geocoder's answer about an address (options.cacheTtlDays on
+    // fetchData). Same envelope and the same key derivation as the page
+    // cache, in a directory of its own (storage/answers) so the page cache's
+    // short prune never reaches it.
+    getAnswerCacheConfig(ttlDays) {
+        const page = this.getPageCacheConfig();
+        const days = Number(ttlDays);
+        return {
+            enabled: page.enabled && !!this.answerStorageDir && Number.isFinite(days) && days > 0,
+            ttlDays: days,
+            storageDir: this.answerStorageDir,
+            // Kept while used: a read marks the entry (see
+            // touchAnswerOnRead), so ttlDays counts from the last use.
+            keepWhileUsed: true
+        };
+    }
+
+    // An answer that was just read is still in use: its file time moves to
+    // now, at most once every LOOKUP_ANSWER_TOUCH_DAYS, so age is "time
+    // since last use" and the prune (file time alone) never takes an answer
+    // a venue still needs. A failed touch is harmless.
+    async touchAnswerOnRead(cachePath, modifiedAtMs) {
+        const core = this.getSharedCoreRef();
+        const days = core && Number(core.LOOKUP_ANSWER_TOUCH_DAYS) > 0 ? Number(core.LOOKUP_ANSWER_TOUCH_DAYS) : 7;
+        if (!Number.isFinite(modifiedAtMs) || (Date.now() - modifiedAtMs) < days * 24 * 60 * 60 * 1000) return false;
+        try {
+            const now = new Date();
+            await this.boundedSharedFsOp(() => this.fs.promises.utimes(cachePath, now, now), `touch ${cachePath}`);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     normalizePageCacheUrl(url) {
         try {
             const normalized = new URL(String(url));
@@ -472,7 +511,7 @@ class WebAdapter {
         }
 
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const cachePath = this.path.join(this.pageStorageDir, hostDir, fileName);
+        const cachePath = this.path.join(pageCacheConfig.storageDir || this.pageStorageDir, hostDir, fileName);
 
         try {
             // stat can also wedge against a dataless stub (the incident's
@@ -522,6 +561,8 @@ class WebAdapter {
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
+
+            if (pageCacheConfig.keepWhileUsed === true) await this.touchAnswerOnRead(cachePath, stats.mtimeMs);
 
             return {
                 html: cached.html,
@@ -594,7 +635,7 @@ class WebAdapter {
         }
 
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const cacheDir = this.path.join(this.pageStorageDir, hostDir);
+        const cacheDir = this.path.join(pageCacheConfig.storageDir || this.pageStorageDir, hostDir);
         const cachePath = this.path.join(cacheDir, fileName);
         const payload = {
             url: normalizedUrl,
@@ -1116,7 +1157,11 @@ class WebAdapter {
                 console.log(`🟢 Node.js: Page already read this run — no re-read for ${url}`);
                 return memoized;
             }
-            const pageCacheConfig = this.getPageCacheConfig();
+            // options.cacheTtlDays: the caller says how long the answer stays
+            // true (a lookup, not a page) — read from and written to the
+            // answer cache under that life.
+            const answerCacheConfig = Number(options.cacheTtlDays) > 0 ? this.getAnswerCacheConfig(options.cacheTtlDays) : null;
+            const pageCacheConfig = answerCacheConfig && answerCacheConfig.enabled ? answerCacheConfig : this.getPageCacheConfig();
             const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
             // Optional caller hook (options.isCacheableResponse): a response it
             // rejects is neither served from the disk cache nor written to it —
@@ -1130,6 +1175,18 @@ class WebAdapter {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
                     this.writeRunPageMemo(memoKey, cachedPage);
                     return cachedPage;
+                }
+                // An answer still sitting in the page cache (written before
+                // answers had a cache of their own) moves over instead of
+                // being asked for again.
+                if (pageCacheConfig.storageDir) {
+                    const inherited = await this.readCachedPage(url, this.getPageCacheConfig());
+                    if (inherited && isCacheableResponse(inherited)) {
+                        await this.writeCachedPage(url, inherited, pageCacheConfig);
+                        this.logPageCacheHit(url, inherited, this.getPageCacheConfig());
+                        this.writeRunPageMemo(memoKey, inherited);
+                        return inherited;
+                    }
                 }
             }
 

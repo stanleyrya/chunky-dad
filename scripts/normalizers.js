@@ -1850,12 +1850,23 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         this.lastRequestTime = Date.now();
     }
 
+    getLookupAnswerTtlDays() {
+        const ctor = this.core && this.core.constructor;
+        const days = ctor ? Number(ctor.LOOKUP_ANSWER_TTL_DAYS) : NaN;
+        return Number.isFinite(days) && days > 0 ? days : 365;
+    }
+
     async checkPersistentCache(url, httpAdapter) {
         if (!httpAdapter || typeof httpAdapter.getPageCacheConfig !== 'function' || typeof httpAdapter.readCachedPage !== 'function') {
             return null;
         }
         try {
-            const config = httpAdapter.getPageCacheConfig();
+            // The answer cache first (kept while used); an adapter without one
+            // answers from its page cache as before.
+            const answers = typeof httpAdapter.getAnswerCacheConfig === 'function'
+                ? httpAdapter.getAnswerCacheConfig(this.getLookupAnswerTtlDays())
+                : null;
+            const config = answers && answers.enabled ? answers : httpAdapter.getPageCacheConfig();
             if (config && config.enabled) {
                 const cached = await httpAdapter.readCachedPage(url, config);
                 if (cached && cached.html) {
@@ -1941,6 +1952,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             console.log(`🗺️ OpenStreetMapNormalizer: Ignoring cached empty geocode result for "${this.describeGeocodeQuery(url)}" — refetching`);
         }
 
+        // 2b. A question the geocoder answered "nothing" on two separate runs
+        //     is not asked again for the dead-end retry window (see
+        //     noteLookupAnswer). One empty answer is never believed — that
+        //     is what a throttled or half-failed fetch looks like too.
+        if (this.isKnownEmptyLookup(url)) {
+            const remembered = [];
+            this.memoryCache[url] = remembered;
+            return remembered;
+        }
+
         // 3. Not cached, so we must fetch. Delay for rate limit first.
         await this.delayForRateLimit();
 
@@ -1960,8 +1981,63 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         if (data) {
             this.memoryCache[url] = data;
         }
+        this.noteLookupAnswer(url, data);
 
         return data;
+    }
+
+    // "NO MATCH" IS AN ANSWER TOO, once it has been given twice. Run
+    // 20260929-144519 asked 728 geocoder questions; about 420 came back
+    // empty, as they had the run before and the run before that, and they
+    // used the host's budget before the new addresses were reached. An empty
+    // answer is deliberately never written to the answer cache (one bad fetch
+    // must not hide a venue, see isUsableGeocodeData), so the memory lives
+    // where the crawler already keeps "fetched fine, yielded nothing": the
+    // dead-end store, with its own rules — two misses on separate runs to
+    // believe it, asked again after the retry window, forgotten the moment
+    // the question gets an answer.
+    getLookupDeadEndContext() {
+        const core = this.core;
+        const context = core && core.deadEndRunContext;
+        if (!context || !context.enabled || !context.store) return null;
+        if (typeof core.findDeadEndUrlEntry !== 'function' || typeof core.recordDeadEndUrlMiss !== 'function'
+            || typeof core.isConfirmedDeadEndEntry !== 'function') return null;
+        return context;
+    }
+
+    isKnownEmptyLookup(url, nowMs = Date.now()) {
+        const context = this.getLookupDeadEndContext();
+        if (!context) return false;
+        const { entry } = this.core.findDeadEndUrlEntry(context, url);
+        if (!entry || !this.core.isConfirmedDeadEndEntry(context, entry)) return false;
+        const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = Number(context.retryDays) * 24 * 60 * 60 * 1000;
+        if (!Number.isFinite(lastSeenMs) || !(retryMs > 0) || (nowMs - lastSeenMs) >= retryMs) return false;
+        context.knownEmptyLookups = (Number(context.knownEmptyLookups) || 0) + 1;
+        return true;
+    }
+
+    noteLookupAnswer(url, data, nowMs = Date.now()) {
+        const context = this.getLookupDeadEndContext();
+        if (!context) return;
+        if (Array.isArray(data) && data.length === 0) {
+            const noted = this.core.recordDeadEndUrlMiss(context, url, null, nowMs);
+            // Counted, not listed: the run's "Learned N new dead-end URL(s)"
+            // line names crawl pages, and hundreds of geocoder questions
+            // would bury them.
+            if (noted && noted.wasNew && Array.isArray(context.learned)) {
+                const at = context.learned.lastIndexOf(this.core.findDeadEndUrlEntry(context, url).key);
+                if (at !== -1) context.learned.splice(at, 1);
+            }
+            context.emptyLookupsNoted = (Number(context.emptyLookupsNoted) || 0) + 1;
+            return;
+        }
+        if (!this.isUsableGeocodeData(data)) return;
+        const found = this.core.findDeadEndUrlEntry(context, url);
+        if (found.entry) {
+            delete context.store[found.key];
+            context.dirty = true;
+        }
     }
 
     // Accept a forward-geocode result only when Nominatim's own address details
@@ -2873,6 +2949,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // persist an empty/unparseable Nominatim body to the disk cache and
             // treat an already-cached one as a miss (see isCacheableGeocodeResponse).
             isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData),
+            // Where an address is stays true: the answer goes to the
+            // adapters' answer cache and is kept while it is used (pruned
+            // only after LOOKUP_ANSWER_TTL_DAYS unread), not for the page
+            // cache's three days.
+            cacheTtlDays: this.getLookupAnswerTtlDays(),
             // A geocoder is an API used under its usage policy (paced like any
             // host by the politeness gate), not a site being crawled — its
             // robots.txt "Disallow: /search" addresses crawlers, not callers.

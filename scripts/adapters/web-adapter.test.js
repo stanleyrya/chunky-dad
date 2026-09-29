@@ -1403,3 +1403,85 @@ test('a phone snapshot older than the phone\'s last write is not the calendar â€
     shared.restore();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Answers to lookups live a year, in a cache of their own (2026-09-29: the
+// geocoder was asked the same 700 questions every run because its answers
+// expired with the page cache, after three days).
+// ---------------------------------------------------------------------------
+test('answer cache: an answer is kept while it is used, in storage/answers; pages are unaffected', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-answers-'));
+  const pageDir = path.join(root, 'pages');
+  const answerDir = path.join(root, 'answers');
+  const pageCache = { enabled: true, ttlDays: 3 };
+  const lookup = 'https://geocoder.example/search?format=json&q=398+12th+St%2C+San+Francisco';
+  const page = 'https://venue.example/events';
+  const adapterOf = () => {
+    const adapter = makeAdapter({ pageCache });
+    adapter.pageStorageDir = pageDir;
+    adapter.answerStorageDir = answerDir;
+    return adapter;
+  };
+  const ageAll = (dir, days) => {
+    for (const name of fs.readdirSync(dir, { recursive: true }).map(String).filter((entry) => entry.endsWith('.json'))) {
+      const when = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      fs.utimesSync(path.join(dir, name), when, when);
+    }
+  };
+  try {
+    await withFetchStub('[{"lat":"37.77","lon":"-122.41"}]', async (fetchCalls) => {
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      await adapterOf().fetchData(page, {});
+      assert.equal(fetchCalls(), 2);
+      assert.equal(fs.readdirSync(answerDir, { recursive: true }).map(String).filter((name) => name.endsWith('.json')).length, 1, 'the answer is in storage/answers');
+      assert.equal(fs.readdirSync(pageDir, { recursive: true }).map(String).filter((name) => name.endsWith('.json')).length, 1, 'the page is in storage/pages');
+
+      ageAll(answerDir, 200);
+      ageAll(pageDir, 4);
+      const answer = await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 2, 'a 200-day-old answer is still the answer');
+      assert.equal(JSON.parse(answer.html)[0].lat, '37.77');
+      await adapterOf().fetchData(page, {});
+      assert.equal(fetchCalls(), 3, 'a 4-day-old page is asked for again');
+
+      // Reading it marked it used: its age counts from that read, so an
+      // answer a venue still needs never ages out.
+      const answerFile = fs.readdirSync(answerDir, { recursive: true }).map(String).find((name) => name.endsWith('.json'));
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs < 60 * 1000, 'the read marked the answer as used');
+      ageAll(answerDir, 3);
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs > 2 * 24 * 60 * 60 * 1000, 'marked at most once a week, not on every read');
+
+      ageAll(answerDir, 366);
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 4, 'an answer nothing has read for a year is asked again');
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('answer cache: an answer written to the page cache before answers had their own moves over without a request', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-answers-'));
+  const pageCache = { enabled: true, ttlDays: 3 };
+  const lookup = 'https://geocoder.example/search?format=json&q=1123+Folsom+St';
+  const adapterOf = () => {
+    const adapter = makeAdapter({ pageCache });
+    adapter.pageStorageDir = path.join(root, 'pages');
+    adapter.answerStorageDir = path.join(root, 'answers');
+    return adapter;
+  };
+  try {
+    await withFetchStub('[{"lat":"37.776","lon":"-122.408"}]', async (fetchCalls) => {
+      await adapterOf().fetchData(lookup, { apiCall: true });
+      assert.equal(fetchCalls(), 1, 'the old way: into the page cache');
+      const answer = await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 1, 'not asked again');
+      assert.equal(JSON.parse(answer.html)[0].lon, '-122.408');
+      const kept = fs.readdirSync(path.join(root, 'answers'), { recursive: true }).map(String).filter((name) => name.endsWith('.json'));
+      assert.equal(kept.length, 1, 'and kept as an answer from now on');
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

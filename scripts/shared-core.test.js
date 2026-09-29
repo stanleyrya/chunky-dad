@@ -26889,3 +26889,52 @@ test('an address said once replaces the same address said twice, and the saved p
   assert.ok(lines.some(line => line.includes('field=address resolved deterministically — the same address with a line said twice on the other side — said once')),
     lines.filter(line => line.includes('address')).join('\n'));
 });
+
+// ---------------------------------------------------------------------------
+// A virtual event belongs to its organizer's city (owner, 2026-09-29: Mass
+// Bears and Cubs' monthly membership meetings at "Online/Virtual").
+// ---------------------------------------------------------------------------
+function homeCore() {
+  return new SharedCore({
+    boston: { timezone: 'America/New_York', patterns: ['boston'] },
+    ptown: { timezone: 'America/New_York', patterns: ['provincetown'] },
+    dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
+  }, { eventSchema: EventSchema });
+}
+const placedIn = (city, count) => Array.from({ length: count }, (_, index) => ({ title: `Night ${city} ${index}`, city, bar: 'Club Cafe', startDate: new Date('2037-10-07T23:00:00.000Z') }));
+const meeting = (overrides = {}) => ({ title: 'Monthly Membership Meetings', bar: 'Online/Virtual', city: 'unknown', startDate: new Date('2037-10-07T23:00:00.000Z'), ...overrides });
+
+test('virtual events: a venue that says "online" is recognised by its own words', () => {
+  for (const text of ['Online/Virtual', 'Online', 'virtual', 'Zoom', 'Online event', 'Virtual Meeting', 'via Zoom']) {
+    assert.equal(SharedCore.isVirtualVenueText(text), true, text);
+  }
+  for (const text of ['', 'Club Cafe', 'Virtual Reality Bar', 'The Online Lounge', 'Zoom Nightclub Boston', 'Event', 'Rockbar'] ) {
+    assert.equal(SharedCore.isVirtualVenueText(text), false, text);
+  }
+});
+
+test('virtual events: filed under the city most of the source\'s own events are in', () => {
+  const core = homeCore();
+  const events = [...placedIn('boston', 8), ...placedIn('ptown', 1), meeting(), meeting({ title: 'Board Call', bar: 'Zoom' })];
+  assert.equal(core.placeVirtualEventsAtSourceHome(events, { name: 'Mass Bears and Cubs' }), 2);
+  const placed = events.filter((event) => event._virtual);
+  assert.deepEqual(placed.map((event) => [event.city, event._citySource, event.timezone]), [['boston', 'source-home', 'America/New_York'], ['boston', 'source-home', 'America/New_York']]);
+});
+
+test('virtual events: no home, no placing — a touring source, a thin source, an aggregator, an address, an unanchored time', () => {
+  const run = (events, config = { name: 'Some Club' }) => { const core = homeCore(); return [core.placeVirtualEventsAtSourceHome(events, config), events]; };
+  let [count, events] = run([...placedIn('boston', 3), ...placedIn('dallas', 3), meeting()]);
+  assert.equal(count, 0, 'half here, half there: no home');
+  assert.equal(events[6].city, 'unknown');
+  [count] = run([...placedIn('boston', 4), meeting()]);
+  assert.equal(count, 0, 'four placed events are not enough to call a home');
+  [count] = run([...placedIn('boston', 8), meeting()], { name: 'The Bear Calendar', siteRole: 'aggregator' });
+  assert.equal(count, 0, 'an aggregator lists everybody\'s events');
+  [count] = run([...placedIn('boston', 8), meeting({ address: '459 Broadway, New York, NY' })]);
+  assert.equal(count, 0, 'a street line came with it: not an online event');
+  [count] = run([...placedIn('boston', 8), meeting({ _timezoneUnresolved: true })]);
+  assert.equal(count, 0, 'its time was read without a zone: left alone');
+  [count, events] = run([...placedIn('boston', 8), meeting({ city: 'dallas' }), { title: 'No venue', city: 'unknown' }]);
+  assert.equal(count, 0, 'a city it already has is kept, and a placeless event that is not online is not guessed');
+  assert.equal(events[8].city, 'dallas');
+});

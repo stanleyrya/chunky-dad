@@ -28,7 +28,8 @@ const scraperCities = {
     "calendar": "chunky-dad-seattle",
     "timezone": "America/Los_Angeles",
     "patterns": [
-      "seattle"
+      "seattle",
+      "lynnwood"
     ],
     "coordinates": {
       "lat": 47.6062,
@@ -793,7 +794,9 @@ const scraperCities = {
     "calendar": "chunky-dad-indianapolis",
     "timezone": "America/Indiana/Indianapolis",
     "patterns": [
-      "indianapolis"
+      "indianapolis",
+      "westfield, in",
+      "westfield, indiana"
     ],
     "coordinates": {
       "lat": 39.7684,
@@ -809,6 +812,56 @@ const scraperCities = {
     "coordinates": {
       "lat": 39.8309,
       "lng": -77.2311
+    }
+  },
+  "adelaide": {
+    "calendar": "chunky-dad-adelaide",
+    "timezone": "Australia/Adelaide",
+    "patterns": [
+      "adelaide"
+    ],
+    "coordinates": {
+      "lat": -34.9285,
+      "lng": 138.6007
+    }
+  },
+  "perth": {
+    "calendar": "chunky-dad-perth",
+    "timezone": "Australia/Perth",
+    "patterns": [
+      "perth"
+    ],
+    "coordinates": {
+      "lat": -31.9523,
+      "lng": 115.8613
+    }
+  },
+  "bali": {
+    "calendar": "chunky-dad-bali",
+    "timezone": "Asia/Makassar",
+    "patterns": [
+      "bali",
+      "seminyak",
+      "canggu",
+      "denpasar"
+    ],
+    "coordinates": {
+      "lat": -8.6705,
+      "lng": 115.2126
+    }
+  },
+  "manila": {
+    "calendar": "chunky-dad-manila",
+    "timezone": "Asia/Manila",
+    "patterns": [
+      "manila",
+      "makati",
+      "mandaluyong",
+      "quezon city"
+    ],
+    "coordinates": {
+      "lat": 14.5995,
+      "lng": 120.9842
     }
   }
 };
