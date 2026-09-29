@@ -9532,6 +9532,16 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own source ("${owner}") — not crawled from here`);
                     continue;
                 }
+                // The same goes for THIS source's other configured pages: a
+                // root reached through a link is read as that link's child
+                // (enrich-only under an event page: its own event dropped as
+                // a "sibling"), marked processed, and skipped when its turn
+                // comes. It is read in its turn, as a root.
+                if (this.isConfiguredParserUrlForCrawl(url, parserConfig)
+                    && !this.hasProcessedUrl(processedUrls, url)) {
+                    await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own turn — it is one of this source's configured pages`);
+                    continue;
+                }
             }
             // An aggregator's own pages are only ever its listing and its
             // per-event copies — and its cards already say everything a copy
@@ -9901,10 +9911,26 @@ class SharedCore {
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
                 let adaptiveFollowBlocked = feedRead;
+                // Links a single-event ROOT follows as discovery, never as
+                // enrich-only children (keys, see the adaptive branch below).
+                let frontDoorSiblingKeys = null;
                 if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
+                    // A configured root that reads as ONE event is still the
+                    // source's front door (see selectFrontDoorSiblingLinks):
+                    // the site's other pages it links are read as a listing's
+                    // links would be, not as this event's enrichment.
+                    if (currentDepth === 0 && !enrichContext && !discoveryOnly && pageClassification === 'event-page') {
+                        const siblingLinks = this.selectFrontDoorSiblingLinks(url, additionalLinks, parserConfig);
+                        if (siblingLinks.length > 0) {
+                            frontDoorSiblingKeys = new Set(siblingLinks.map(link => this.getUrlDedupeKey(link)).filter(Boolean));
+                            const offSite = linksToConsider.filter(link => !frontDoorSiblingKeys.has(this.getUrlDedupeKey(link)));
+                            linksToConsider = offSite.concat(siblingLinks);
+                            await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a configured page that reads as one event — reading the ${siblingLinks.length} other page(s) of its own site it links as pages of their own (${siblingLinks.slice(0, 3).join(', ')}${siblingLinks.length > 3 ? ', …' : ''}): a site that gives each party a page names the next one there`);
+                        }
+                    }
                     if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
@@ -10082,6 +10108,9 @@ class SharedCore {
                             const parentTitle = pageEventsForEnrich[0].title || 'event';
                             for (const enqueueUrl of enqueueUrls) {
                                 const enqueueKey = this.getUrlDedupeKey(enqueueUrl);
+                                // The front door's sibling pages announce
+                                // parties of their own: ordinary discovery.
+                                if (enqueueKey && frontDoorSiblingKeys && frontDoorSiblingKeys.has(enqueueKey)) continue;
                                 if (enqueueKey) {
                                     childEnrichOnlyByUrl[enqueueKey] = {
                                         parentEvents: pageEventsForEnrich,
@@ -10350,6 +10379,48 @@ class SharedCore {
             push(ticketUrl);
         }
         return selected;
+    }
+
+    // A configured root that reads as ONE event. The owner configured it as
+    // the place a source announces its parties; when the site gives each
+    // party a page of its own, the root is simply whichever party is on the
+    // front page today, and the site's menu is its list of the others.
+    // gruntparty.monster, run 20260929-091555: the home page was the Folsom
+    // party (Sept 26, over), the menu read "FOLSOM · Halloween", and
+    // /grunt-halloween — Oct 24 at The Stud — was never opened, because an
+    // event page follows only event-shaped and ticket links. 0 upcoming.
+    // So the links a single-event ROOT makes to other pages of its OWN site
+    // (same registrable domain) are followed once, as discovery: each is
+    // classified and read like any discovered page, and what it yields is
+    // its own event, not enrichment for the root's. Exactly what a root that
+    // reads as a listing already does with its links — a calendar that lists
+    // one night this week and three the next changes nothing about which
+    // pages get read. That includes the site's own event-shaped links: read
+    // as enrichment, the next party's page was "a sibling of the root's
+    // event" and its event was dropped. Off-site links keep the event-page
+    // rule (event-shaped and ticket links, enrich-only). Bounded by the
+    // page's own link budget (maxAdditionalUrls) and the dead-end store.
+    selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
+        const links = Array.isArray(additionalLinks) ? additionalLinks : [];
+        const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
+        if (!pageDomain || links.length === 0) return [];
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const taken = new Set();
+        const siblings = [];
+        for (const link of links) {
+            const withoutFragment = String(link || '').split('#')[0];
+            const normalized = this.normalizeUrl(withoutFragment, pageUrl || withoutFragment);
+            if (!normalized) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || taken.has(key)) continue;
+            if (this.getRegistrableDomainFromUrl(normalized) !== pageDomain) continue;
+            // The source's other configured pages get their own turn.
+            if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
+            if (this.isApiEndpointUrl(normalized)) continue;
+            taken.add(key);
+            siblings.push(normalized);
+        }
+        return siblings;
     }
 
     // ------------------------------------------------------------------

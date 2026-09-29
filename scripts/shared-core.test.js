@@ -8183,6 +8183,94 @@ test('adaptive crawl: aggregator and multi-event pages follow links; event pages
   assert.equal(parsedConfigs['https://www.eventbrite.com/e/party-1'].urlDiscoveryDepth, undefined);
 });
 
+// gruntparty.monster, run 20260929-091555. The promoter gives each party a
+// page; the home page is whichever party is next (it read: "FOLSOM SATURDAY,
+// SEPT 26 … At THE STUD (1123 FOLSOM STREET, SF, CA)") and the menu lists the
+// others (<a href="/">FOLSOM</a> <a href="/grunt-halloween">Halloween</a>).
+// The home page is one event, so the crawl stopped there: the Halloween page
+// ("OCT 24 at THE STUD … 9pm-2am") was never opened and the source read 0
+// upcoming for as long as the front page showed a party that was over.
+test('adaptive crawl: a configured root that reads as one event still opens the other pages of its own site', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /gruntparty\.example\/(?:brooklyn|grunt-halloween)?$/i, classification: 'event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://gruntparty.example/': {
+      events: [{ title: 'GRUNT PARTY SF', startDate: soon(-3), bar: 'The Stud' }],
+      additionalLinks: [
+        'https://illustrator.example/portfolio',        // off the site, not event-shaped: the event-page rule stands
+        'https://gruntparty.example/grunt-halloween',   // the site's own next page
+        'https://gruntparty.example/grunt-halloween#page',
+        'https://gruntparty.example/brooklyn',          // a configured root: it gets its own turn
+        'https://bird-tan-mt6p.squarespace.example/'    // the builder's internal host is not this site
+      ]
+    },
+    'https://gruntparty.example/brooklyn': {
+      events: [{ title: 'GRUNT: BROOKLYN', startDate: soon(-10), bar: "C'mon Everybody" }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/grunt-halloween']
+    },
+    'https://gruntparty.example/grunt-halloween': {
+      events: [{ title: 'GRUNT Halloween', startDate: soon(25), bar: 'The Stud' }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/cart-of-things']
+    },
+    'https://gruntparty.example/cart-of-things': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'One Page Per Party', urls: ['https://gruntparty.example/', 'https://gruntparty.example/brooklyn'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.equal(fetched.filter(url => url === 'https://gruntparty.example/grunt-halloween').length, 1,
+    'the page the menu names is opened, once, though two roots link it');
+  assert.ok(display.logs.some(line => line.includes('Leaving https://gruntparty.example/brooklyn to its own turn')),
+    'a configured page linked from another is read in its own turn, as a root');
+  assert.ok(!display.logs.some(line => line.includes('Skipping duplicate URL') && line.includes('/brooklyn')),
+    'and is not consumed on the way as somebody\'s child');
+  assert.equal(result.totalEvents, 3, 'three pages, three parties');
+  assert.ok(!fetched.includes('https://illustrator.example/portfolio'), 'off-site links keep the event-page rule');
+  assert.ok(!fetched.includes('https://bird-tan-mt6p.squarespace.example/'), 'another registrable domain is not the site');
+  assert.ok(!fetched.includes('https://gruntparty.example/cart-of-things'),
+    'one hop: the page reached this way is an ordinary event page and follows only event-shaped links');
+  const titles = (result.events || []).map(event => event.title);
+  assert.ok(titles.some(title => /halloween/i.test(title)),
+    `the sibling page's party is an event of its own, not enrichment dropped as a "sibling" (got: ${titles.join(' | ')})`);
+  assert.ok(display.logs.some(line => line.includes('reads as one event') && line.includes('gruntparty.example/grunt-halloween')),
+    'and the log says why the page was opened');
+});
+
+test('adaptive crawl: only a CONFIGURED root opens its site — an event page found on the way does not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venue\.example\/event\//i, classification: 'event-page' },
+      { pattern: /venue\.example\/calendar/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://venue.example/calendar': { additionalLinks: ['https://venue.example/event/bear-night'] },
+    'https://venue.example/event/bear-night': {
+      events: [{ title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) }],
+      additionalLinks: ['https://venue.example/private-hire', 'https://venue.example/menu']
+    },
+    'https://venue.example/private-hire': {},
+    'https://venue.example/menu': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue Calendar', urls: ['https://venue.example/calendar'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/event/bear-night'));
+  assert.ok(!fetched.includes('https://venue.example/private-hire') && !fetched.includes('https://venue.example/menu'),
+    'an event page reached through the listing keeps following nothing but event and ticket links');
+});
+
 test('adaptive crawl: ad and unknown pages follow nothing', async () => {
   const core = new SharedCore(CITIES, {
     eventSchema: EventSchema,
