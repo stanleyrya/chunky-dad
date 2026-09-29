@@ -186,13 +186,16 @@ function rewriteBridgeHtml(html, registries = {}) {
     // The Withheld header carries one "💾 <calendar> (N)" batch button per
     // calendar in a flex row that cannot wrap: eight calendars made the
     // whole page 1041px wide on a 390px phone (2026-09-29), so every card
-    // scrolled sideways. Server-side override only — the phone's own sheet
-    // is rendered by the adapter and is not touched from here.
+    // scrolled sideways. And the run's errors were its faintest text:
+    // rgb(255,107,107) on rgb(255,240,240), 2.5:1 — the same red, darkened
+    // to 5.9:1. Server-side overrides only — the phone's own sheet is
+    // rendered by the adapter and is not touched from here.
     const shim = `
 <!-- ${BRIDGE_SHIM_MARKER} -->
 <style>
 .section-header { flex-wrap: wrap; row-gap: 6px; column-gap: 6px; }
 .section-header .section-title { flex: 1 1 8em; }
+.error-item { color: #b3261e; overflow-wrap: anywhere; }
 </style>
 <script>
 (function () {

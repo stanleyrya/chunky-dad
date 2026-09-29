@@ -1289,6 +1289,7 @@ test('rewriteBridgeHtml: a section header with many batch buttons wraps instead 
   const override = /<style>\s*\.section-header \{ flex-wrap: wrap;[^}]*\}/.exec(out);
   assert.ok(override, 'the override ships with the shim');
   assert.ok(override.index > out.indexOf('.section-header { display:flex; }'), 'after the page\'s own rule, so it wins');
+  assert.ok(out.includes('.error-item { color: #b3261e;'), 'the errors are readable: 5.9:1 on their own tint, up from 2.5:1');
   assert.equal(rewriteBridgeHtml(out), out, 'still idempotent');
 });
 
