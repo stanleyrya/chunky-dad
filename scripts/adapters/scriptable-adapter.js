@@ -15561,6 +15561,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // One OK-only alert + a log line. Every degrade path (zero events, missing
   // calendar, dry-run preview, nothing executable) reports through here —
   // clear messaging, never a throw.
+  // A local notification: delivered without waiting for a tap, so it
+  // survives whatever the script does (or fails to do) afterwards. Best
+  // effort — an environment without the Notification API just logs.
+  async postSavedRunExecutionNotification(title, message) {
+    console.log(
+      `📱 Scriptable: 🔔 Saved-run execution notification — ${title}: ${String(message).replace(/\n+/g, " ")}`,
+    );
+    try {
+      if (typeof Notification === "undefined") return false;
+      const notification = new Notification();
+      notification.title = String(title);
+      notification.body = String(message);
+      notification.threadIdentifier = "chunky-dad-review-execute";
+      await notification.schedule();
+      return true;
+    } catch (error) {
+      console.log(`📱 Scriptable: Notification not delivered: ${error.message}`);
+      return false;
+    }
+  }
+
   async presentSavedRunExecutionNotice(title, message) {
     console.log(
       `📱 Scriptable: ▶️ Saved-run execution notice — ${title}: ${String(message).replace(/\n+/g, " ")}`,
@@ -16357,13 +16378,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         logRunId,
         pruneRuns: true,
       });
-      // The phone's calendars are the truth the Mac run should compare
-      // against next — snapshot the cities this plan touched.
-      await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
-      void persistedAt;
-      await this.presentSavedRunExecutionNotice(
-        "Calendar Updated",
-        [
+      const noticeLines = [
           `➕ Created ${summary.created}`,
           `🔄 Updated ${summary.updated}`,
           `🃏 Approved ${counts.approved} · ${summary.skipped} not approved (skipped)`,
@@ -16374,8 +16389,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
             : "",
         ]
           .filter(Boolean)
-          .join("\n"),
-      );
+          .join("\n");
+      // The confirmation goes out BEFORE the snapshot step. The writes, the
+      // ledger, the run file and the metrics are all on disk by now; what is
+      // left reads 435 days of every touched calendar, and on 2026-09-27 the
+      // app died there — 36 events created, no alert, no snapshot (the Mac
+      // then compared against a five-day-old one). A notification does not
+      // wait for a tap, so the owner knows the outcome whatever happens next.
+      await this.postSavedRunExecutionNotification("Calendar Updated", noticeLines);
+      // The phone's calendars are the truth the Mac run should compare
+      // against next — snapshot the cities this plan touched.
+      await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
+      void persistedAt;
+      // The log on disk was written by the housekeeping above, so it ended
+      // before the snapshot lines; write it again so a later reader sees
+      // how far this step got.
+      try {
+        await this.appendLogSummary(results, { runIdOverride: logRunId });
+      } catch (logError) {
+        console.log(`📱 Scriptable: Log rewrite after snapshots failed: ${logError.message}`);
+      }
+      await this.presentSavedRunExecutionNotice("Calendar Updated", noticeLines);
       return summary;
     } catch (error) {
       console.log(
@@ -16485,6 +16519,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           console.log(`📱 Scriptable: Calendar snapshot skipped for ${cityKey} — calendar "${calendarName}" not on this device`);
           continue;
         }
+        console.log(`📱 Scriptable: 📸 Reading "${calendarName}" for its snapshot…`);
         const instances = await CalendarEvent.between(start, end, [calendar]);
         const events = (instances || []).map((record) => ({
           identifier: typeof record.identifier === "string" ? record.identifier : "",

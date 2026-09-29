@@ -1317,3 +1317,35 @@ test('fetchData: two requests to one host are spaced by the configured gap; an a
   assert.equal(bare.getFetchPoliteness(), null);
   assert.equal(bare.config.userAgent, 'chunky-dad-scraper/1.0 (+https://chunky.dad)');
 });
+
+test('a phone snapshot older than the phone\'s last write is not the calendar — the published copy is used', async () => {
+  const shared = withSharedRoot();
+  try {
+    const now = Date.now();
+    const writeSnapshot = (capturedMs) => fs.writeFileSync(path.join(shared.dir, 'calendar-snapshot', 'la.json'), JSON.stringify({
+      version: 1, cityKey: 'la', calendarName: 'chunky-dad-la', capturedAt: new Date(capturedMs).toISOString(),
+      windowStart: new Date(now - 35 * 86400000).toISOString(), windowEnd: new Date(now + 400 * 86400000).toISOString(), events: []
+    }));
+    const writeLedger = (executedMs) => fs.writeFileSync(path.join(shared.dir, 'written-ledger.json'), JSON.stringify({
+      version: 1, entries: { 'event|bear night|eaglela|2030-01-01': { executedAt: new Date(executedMs).toISOString(), action: 'created', title: 'Bear Night', runId: 'r' } }
+    }));
+    // The 2026-09-27 shape: snapshot five days old, the phone wrote tonight.
+    writeSnapshot(now - 5 * 86400000);
+    writeLedger(now - 3600000);
+    assert.equal(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'), null);
+    // The normal flow: the snapshot is taken moments after the writes.
+    writeSnapshot(now - 3600000 + 30000);
+    assert.ok(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'), 'a snapshot taken after the last write is the calendar');
+    // …and a ledger row stamped seconds after it is part of the same run.
+    writeSnapshot(now - 3600000 - 30000);
+    assert.ok(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'), 'within the slack');
+    // No ledger, or an unreadable one: age alone decides, as before.
+    fs.writeFileSync(path.join(shared.dir, 'written-ledger.json'), '{not json');
+    writeSnapshot(now - 5 * 86400000);
+    assert.ok(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'));
+    fs.unlinkSync(path.join(shared.dir, 'written-ledger.json'));
+    assert.ok(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'));
+  } finally {
+    shared.restore();
+  }
+});

@@ -17,6 +17,10 @@
 // ============================================================================
 
 const PAGE_CACHE_MAX_FILE_BASENAME = 120;
+// The phone snapshots its calendars moments after it writes them, and the
+// ledger row and the snapshot are stamped by separate steps of one run: a
+// write this close to the snapshot is part of it, not news since.
+const PHONE_SNAPSHOT_WRITE_SLACK_MS = 2 * 60 * 1000;
 const PAGE_CACHE_TRUNCATED_PREFIX_LENGTH = 80;
 // Sentinel for bounded shared-root fs operations (dataless iCloud stubs).
 // Originally only the cache read was bounded; the 2026-08 scheduled-run hang
@@ -1955,6 +1959,33 @@ async saveFailureNote(url, error, metadata = {}) {
     // it exists and is recent (the published copy comes from Google's public
     // feed, which lags hours behind the calendar). null when absent, stale
     // or unreadable. Memoized per run.
+    // When the phone last wrote to a calendar, from its own written ledger
+    // (written-ledger.json, phone-owned, Mac read-only). NaN when there is
+    // no ledger or it cannot be read — the snapshot rule then falls back to
+    // age alone, exactly as before.
+    getPhoneLastWriteMs() {
+        if (this._phoneLastWriteMs !== undefined) return this._phoneLastWriteMs;
+        let latest = NaN;
+        try {
+            if (this.sharedStorageRoot && this.fs && this.path) {
+                const filePath = this.path.join(this.sharedStorageRoot, 'written-ledger.json');
+                if (this.fs.existsSync(filePath)) {
+                    const parsed = JSON.parse(this.fs.readFileSync(filePath, 'utf8'));
+                    const entries = parsed && parsed.entries && typeof parsed.entries === 'object' ? Object.values(parsed.entries) : [];
+                    for (const entry of entries) {
+                        const ms = Date.parse(entry && entry.executedAt);
+                        if (Number.isFinite(ms) && !(ms <= latest)) latest = ms;
+                    }
+                }
+            }
+        } catch (error) {
+            console.log(`🖥️ WebAdapter: written ledger unreadable (${error.message}) — snapshot freshness judged by age alone`);
+            latest = NaN;
+        }
+        this._phoneLastWriteMs = latest;
+        return latest;
+    }
+
     async getPhoneCalendarSnapshot(cityKey) {
         const key = String(cityKey || '').trim();
         if (!key || !this.sharedStorageRoot || !this.fs || !this.path) return null;
@@ -1969,7 +2000,18 @@ async saveFailureNote(url, error, metadata = {}) {
                 const parsed = JSON.parse(this.fs.readFileSync(filePath, 'utf8'));
                 const capturedMs = Date.parse(parsed && parsed.capturedAt);
                 const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+                // A snapshot OLDER than the phone's last write is not the
+                // calendar any more. The phone snapshots right after it
+                // writes; when that step does not finish (2026-09-27: the
+                // app died after 36 creates), the last good snapshot keeps
+                // being preferred for up to a week and everything written
+                // since comes back as "new". The written ledger is the
+                // phone's own record of when it last wrote.
+                const lastWriteMs = this.getPhoneLastWriteMs();
                 if (parsed && Array.isArray(parsed.events) && Number.isFinite(capturedMs)
+                    && Number.isFinite(lastWriteMs) && lastWriteMs > capturedMs + PHONE_SNAPSHOT_WRITE_SLACK_MS) {
+                    console.log(`🖥️ WebAdapter: phone calendar snapshot for ${key} (${parsed.capturedAt}) is older than the phone's last write (${new Date(lastWriteMs).toISOString()}) — ignored, published copy used`);
+                } else if (parsed && Array.isArray(parsed.events) && Number.isFinite(capturedMs)
                     && Date.now() - capturedMs <= maxAgeMs) {
                     const coerce = (value) => {
                         const parsedDate = value ? new Date(value) : null;
