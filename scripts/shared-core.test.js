@@ -15843,19 +15843,21 @@ test('recurring withhold: override identity is never stamped on a series the scr
 // identity that names which occurrence it replaces.
 test('recurring override: a single-occurrence override keeps the identity that names its occurrence', async () => {
   const core = createFinalBuildCore();
+  // Dated 2037 (same weekdays as 2026, so still a first Friday): a night more
+  // than 30 days past is withheld as a fully-past span, which is not this rule.
   const sourceEvent = {
     title: 'CUBSCOUT',
     identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
-    startDate: new Date('2026-09-05T01:00:00.000Z'),
-    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    startDate: new Date('2037-09-05T01:00:00.000Z'),
+    endDate: new Date('2037-09-05T05:00:00.000Z'),
     notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
   };
   // No recurrenceRule on the scraped side: this run describes ONE night, not
   // the series definition.
   const event = {
     title: 'CUBSCOUT',
-    startDate: new Date('2026-09-05T04:00:00.000Z'),
-    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    startDate: new Date('2037-09-05T04:00:00.000Z'),
+    endDate: new Date('2037-09-05T09:00:00.000Z'),
     city: 'la'
   };
   const analysis = {
@@ -15864,13 +15866,13 @@ test('recurring override: a single-occurrence override keeps the identity that n
     sourceEvent,
     overrideIdentity: {
       overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
-      overrideRecurrenceId: '20260905'
+      overrideRecurrenceId: '20370905'
     }
   };
   const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, null, {});
 
   assert.equal(analyzed.overrideUid, 'cubscout-20260730T183109Z@chunky.dad', 'override uid survives');
-  assert.equal(analyzed.overrideRecurrenceId, '20260905', 'override recurrence id survives');
+  assert.equal(analyzed.overrideRecurrenceId, '20370905', 'override recurrence id survives');
   assert.notEqual(analyzed._recurring, true, 'a one-night override is not a series');
 
   // The load-bearing assertion. `recurrence` is the canonical notes/ICS key, so
@@ -16118,15 +16120,20 @@ test('series edit: builder plumbing never reaches the calendar notes', async () 
 
 test('series edit: an occurrence override is still an override, not a series update', async () => {
   const core = createFinalBuildCore();
+  // The occurrence sits in 2037 (same weekdays as 2026, so still a first
+  // Friday): "still written" must not depend on how long ago the night was.
+  const night = () => ({
+    startDate: new Date('2037-09-05T04:00:00.000Z'),
+    endDate: new Date('2037-09-05T09:00:00.000Z')
+  });
   const override = {
     title: 'CUBSCOUT one night',
     city: 'la',
-    startDate: new Date('2026-09-05T04:00:00.000Z'),
-    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    ...night(),
     overrideUid: SERIES_UID,
-    overrideRecurrenceId: '20260905'
+    overrideRecurrenceId: '20370905'
   };
-  const analysis = core.analyzeEventAction(override, [buildSeriesRecord()], 'upsert');
+  const analysis = core.analyzeEventAction(override, [buildSeriesRecord(night())], 'upsert');
   const analyzed = await core.buildAnalyzedCalendarEvent(override, analysis, null, {});
 
   assert.equal(analyzed._seriesUpdate, undefined, 'not a series update');
@@ -19499,11 +19506,11 @@ test('junk-title records are withheld from calendar execution with the 🚫 JUNK
   const core = createCore();
   const buildScraped = (title) => ({
     title,
-    // Future-dated on purpose: a fully-elapsed span would trip wave 3's
-    // span-fully-past flag once both waves land, and this test isolates
-    // the junk-title flag.
-    startDate: new Date('2027-08-08T02:00:00.000Z'),
-    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    // Future-dated on purpose (far enough that it stays so): a
+    // fully-elapsed span would trip wave 3's span-fully-past flag once both
+    // waves land, and this test isolates the junk-title flag.
+    startDate: new Date('2038-08-08T02:00:00.000Z'),
+    endDate: new Date('2038-08-08T07:00:00.000Z'),
     bar: 'STATION 4',
     city: 'dallas',
     shortName: 'TAGS' // keeps the shortName derivation pass inert
@@ -19650,8 +19657,8 @@ test('junk-title sibling families are withheld with a detail-bearing 🚫 JUNK T
     address: '4 Malecon, Puerto Vallarta, Jalisco',
     bar: 'Blue Chairs Resort',
     city: 'dallas',
-    startDate: new Date('2027-08-08T02:00:00.000Z'),
-    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    startDate: new Date('2038-08-08T02:00:00.000Z'),
+    endDate: new Date('2038-08-08T07:00:00.000Z'),
     shortName: 'TAGS' // keeps the shortName derivation pass inert
   };
   const logLines = [];
@@ -21294,6 +21301,12 @@ const FESTIVAL_CITIES = {
 
 // Verbatim curated entries (subset of data/festivals.json); the last one has
 // no nextDates on purpose — it must never match (fail closed).
+//
+// Every date in this section is the real one moved 11 years on (2026 → 2037,
+// 2027 → 2038: the same weekdays and the same DST changes), windows and
+// records together. The write path withholds a span that ended more than 30
+// days ago, so records dated by the run they were cut from stopped reaching
+// "normal write path" a month after their night.
 const CURATED_FESTIVALS = [
   {
     key: 'beefdip-bear-week',
@@ -21302,7 +21315,7 @@ const CURATED_FESTIVALS = [
     cityKey: 'pv',
     recurring: 'annual',
     website: 'https://beefdip.com/planned-events/',
-    nextDates: { start: '2027-01-23', end: '2027-01-31' }
+    nextDates: { start: '2038-01-23', end: '2038-01-31' }
   },
   {
     key: 'spooky-bear',
@@ -21311,7 +21324,7 @@ const CURATED_FESTIVALS = [
     cityKey: 'ptown',
     recurring: 'annual',
     website: 'https://www.ursamen.org/spookybear',
-    nextDates: { start: '2026-10-29', end: '2026-11-01' }
+    nextDates: { start: '2037-10-29', end: '2037-11-01' }
   },
   {
     key: 'amsterdam-bear-pride',
@@ -21340,12 +21353,13 @@ function buildFestivalPrepAdapter(records = []) {
 
 // Run 20260815-083809: the zero-duration Jan 23 impostor ("BeefDip Bear
 // Week", startDate === endDate, action new) scraped off the planned-events
-// page — the AI split "BeefDip Bear Week 2026 / Jan 23 – 31" into 2027.
+// page — the AI split "BeefDip Bear Week 2026 / Jan 23 – 31" into 2027
+// (2038 here).
 function buildBeefdipUmbrellaEvent(overrides = {}) {
   return {
     title: 'BeefDip Bear Week',
-    startDate: '2027-01-23T06:00:00.000Z',
-    endDate: '2027-01-23T06:00:00.000Z',
+    startDate: '2038-01-23T06:00:00.000Z',
+    endDate: '2038-01-23T06:00:00.000Z',
     city: 'pv',
     timezone: 'America/Mexico_City',
     source: 'ai-web',
@@ -21361,8 +21375,8 @@ function buildBeefdipUmbrellaEvent(overrides = {}) {
 function buildCocktailPartyEvent(overrides = {}) {
   return {
     title: '🍸 Cocktail Party',
-    startDate: '2027-01-24T00:00:00.000Z',
-    endDate: '2027-01-24T00:00:00.000Z',
+    startDate: '2038-01-24T00:00:00.000Z',
+    endDate: '2038-01-24T00:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     isBearEvent: true,
@@ -21398,8 +21412,8 @@ test('festival umbrella: a scraped Spooky Bear umbrella from ursamen.org gets th
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Spooky Bear',
-    startDate: '2026-10-29T16:00:00.000Z',
-    endDate: '2026-11-01T20:00:00.000Z',
+    startDate: '2037-10-29T16:00:00.000Z',
+    endDate: '2037-11-01T20:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'www.ursamen.org',
@@ -21429,7 +21443,7 @@ test('festival context: run 20260815-083809 "🍸 Cocktail Party" inherits city 
     'inheritance runs BEFORE the calendar lookup so the search hits the pv calendar');
   assert.ok(!party._festivalMatch, 'a sub-party is NOT an umbrella');
   assert.ok(!(party._sanityFlags || []).some(flag => flag.code === 'festival-window-violation'),
-    'Jan 24 2027 sits inside the curated window — no violation');
+    'Jan 24 2038 sits inside the curated window — no violation');
   assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1,
     'sub-parties are normal events on the normal write path');
 });
@@ -21437,13 +21451,14 @@ test('festival context: run 20260815-083809 "🍸 Cocktail Party" inherits city 
 test('festival context: a year-split record resolving outside the curated window gets the report-only flag', async () => {
   // Run 20260815-083809 evidence: the FOAM POOL PARTY record's own OCR reads
   // "MONDAY JANUARY 26" with source image 2026-01-26, but extraction produced
-  // 2027-01-25 — this is the 2026-dated twin of that year-split.
+  // 2027-01-25 — this is the 2026-dated twin of that year-split (2037 here,
+  // a year before the 2038 window).
   const core = createFestivalCore();
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Foam Pool Party',
-    startDate: '2026-01-26T18:00:00.000Z',
-    endDate: '2026-01-27T00:00:00.000Z',
+    startDate: '2037-01-26T18:00:00.000Z',
+    endDate: '2037-01-27T00:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'beefdip.com',
@@ -21463,8 +21478,8 @@ test('festival context: the window flag is report-only — a future out-of-windo
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Warm-Up Party',
-    startDate: '2026-11-20T02:00:00.000Z',
-    endDate: '2026-11-20T06:00:00.000Z',
+    startDate: '2037-11-20T02:00:00.000Z',
+    endDate: '2037-11-20T06:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'beefdip.com',
@@ -21499,8 +21514,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
 
   // Same name + city, dates nowhere near the window → no match.
   assert.equal(core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
-    startDate: '2026-06-15T06:00:00.000Z',
-    endDate: '2026-06-16T06:00:00.000Z'
+    startDate: '2037-06-15T06:00:00.000Z',
+    endDate: '2037-06-16T06:00:00.000Z'
   })), null, 'no date overlap → not a match');
 
   // Same name + dates, explicit clashing city → no match.
@@ -21511,8 +21526,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
   // Curated entry without nextDates can never umbrella-match.
   assert.equal(core.findCuratedFestivalMatch({
     title: 'Amsterdam Bear Pride',
-    startDate: '2026-06-18T12:00:00.000Z',
-    endDate: '2026-06-21T12:00:00.000Z',
+    startDate: '2037-06-18T12:00:00.000Z',
+    endDate: '2037-06-21T12:00:00.000Z',
     city: 'unknown'
   }), null, 'missing nextDates → fail closed');
 
@@ -21524,8 +21539,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
 
   // The ±7d grace admits an off-by-a-few-days umbrella.
   const grace = core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
-    startDate: '2027-01-20T06:00:00.000Z',
-    endDate: '2027-01-21T06:00:00.000Z'
+    startDate: '2038-01-20T06:00:00.000Z',
+    endDate: '2038-01-21T06:00:00.000Z'
   }));
   assert.equal(grace && grace.key, 'beefdip-bear-week', 'within the ±7d grace → match');
 });
@@ -21539,13 +21554,13 @@ test('festival drift: ONE report-only line when a scraped umbrella disagrees wit
   try {
     await core.prepareEventsForCalendar([
       buildBeefdipUmbrellaEvent({
-        startDate: '2027-01-22T06:00:00.000Z',
-        endDate: '2027-01-30T06:00:00.000Z'
+        startDate: '2038-01-22T06:00:00.000Z',
+        endDate: '2038-01-30T06:00:00.000Z'
       }),
       buildBeefdipUmbrellaEvent({
-        title: 'BeefDip Bear Week 2027',
-        startDate: '2027-01-22T06:00:00.000Z',
-        endDate: '2027-01-30T06:00:00.000Z'
+        title: 'BeefDip Bear Week 2038',
+        startDate: '2038-01-22T06:00:00.000Z',
+        endDate: '2038-01-30T06:00:00.000Z'
       })
     ], adapter, {});
   } finally {
@@ -21554,7 +21569,7 @@ test('festival drift: ONE report-only line when a scraped umbrella disagrees wit
   const driftLines = logLines.filter(line => line.startsWith('📆 FESTIVAL:'));
   assert.equal(driftLines.length, 1, 'one drift line per festival per pass, not per record');
   assert.equal(driftLines[0],
-    '📆 FESTIVAL: scraped BeefDip Bear Week dates 2027-01-22 – 2027-01-30 differ from curated 2027-01-23 – 2027-01-31 — curated wins; update data/festivals.json from the official source if real');
+    '📆 FESTIVAL: scraped BeefDip Bear Week dates 2038-01-22 – 2038-01-30 differ from curated 2038-01-23 – 2038-01-31 — curated wins; update data/festivals.json from the official source if real');
 });
 
 test('festival negative: a non-festival multi-day event is untouched', async () => {
@@ -21562,8 +21577,8 @@ test('festival negative: a non-festival multi-day event is untouched', async () 
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Hotel Takeover Weekend',
-    startDate: '2026-09-18T20:00:00.000Z',
-    endDate: '2026-09-20T20:00:00.000Z',
+    startDate: '2037-09-18T20:00:00.000Z',
+    endDate: '2037-09-20T20:00:00.000Z',
     city: 'dallas',
     timezone: 'America/Chicago',
     source: 'ai-web',
@@ -22692,11 +22707,14 @@ function doorStubAdapter(bodies) {
   };
 }
 
+// The feed's nights sit in 2037 (Sep 12 and 19 are Saturdays, as in 2026): an
+// iCalendar record that ended more than a month ago is the site's archive
+// and is not counted, and these two must both answer.
 const DOOR_LISTING_HTML = '<html><head><link rel="alternate" type="text/calendar" href="/feed.ics"></head><body><a href="/feed.ics">Subscribe</a><article>Bear Night · Sep 12</article><article>Cub Social · Sep 19</article></body></html>';
-const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20260912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20260919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
+const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20370912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20370919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
 const DOOR_JSON = { events: [
-  { title: 'Bear Night', start: '2026-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
-  { title: 'Cub Social', start: '2026-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
+  { title: 'Bear Night', start: '2037-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
+  { title: 'Cub Social', start: '2037-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
 ] };
 
 test('machine door: a root that advertises a feed is read through the fullest door that answers', async () => {
@@ -22725,8 +22743,8 @@ test('machine door: an iCalendar-only site becomes feed rows — floating times 
   assert.equal(out.machineDoor.kind, 'ics');
   const rows = JSON.parse(out.html).events;
   assert.equal(rows.length, 2);
-  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2026-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
-  assert.equal(rows[1].start, '2026-09-19', 'a date-only start');
+  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2037-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
+  assert.equal(rows[1].start, '2037-09-19', 'a date-only start');
   assert.equal(rows[1].rrule, 'FREQ=WEEKLY;BYDAY=SA');
   assert.equal(rows[1].all_day, true);
 });
@@ -23222,24 +23240,25 @@ test('a promoter registry site claims its own host only from a bare root', () =>
 });
 
 test('festival umbrella: a one-night party carrying the festival name is a sub-event, not the umbrella', () => {
+  // Dated 2037 with the curated windows above.
   const core = createFestivalCore();
   assert.equal(core.findCuratedFestivalMatch({
     title: 'The Belly Party - SPOOKY BEAR!',
-    startDate: '2026-10-31T01:00:00.000Z',
-    endDate: '2026-10-31T05:00:00.000Z',
+    startDate: '2037-10-31T01:00:00.000Z',
+    endDate: '2037-10-31T05:00:00.000Z',
     city: 'unknown'
   }), null, 'run 20260913-152123: Red Room, 9pm — saves like any party');
   const named = core.findCuratedFestivalMatch({
-    title: 'Spooky Bear 2026',
-    startDate: '2026-10-30T20:00:00.000Z',
-    endDate: '2026-10-30T23:00:00.000Z',
+    title: 'Spooky Bear 2037',
+    startDate: '2037-10-30T20:00:00.000Z',
+    endDate: '2037-10-30T23:00:00.000Z',
     city: 'unknown'
   });
   assert.equal(named && named.key, 'spooky-bear', 'the festival\'s own name is the umbrella whatever its span');
   const spanning = core.findCuratedFestivalMatch({
     title: 'Spooky Bear Weekend Pass',
-    startDate: '2026-10-29T20:00:00.000Z',
-    endDate: '2026-11-01T20:00:00.000Z',
+    startDate: '2037-10-29T20:00:00.000Z',
+    endDate: '2037-11-01T20:00:00.000Z',
     city: 'unknown'
   });
   assert.equal(spanning && spanning.key, 'spooky-bear', 'a record spanning days is the umbrella');
@@ -25482,8 +25501,10 @@ test('one destination: prepareEventsForCalendar never matches a chimera against 
     title: 'Bearracuda | Seattle - Red Light District',
     bar: 'Massive',
     address: '1400 E Union St, Seattle, WA',
-    startDate: '2026-10-17T05:00:00.000Z',
-    endDate: '2026-10-17T08:00:00.000Z',
+    // 2037: the same Friday night. A span more than 30 days past is withheld
+    // on its own, and 'Looking' must reach the write path.
+    startDate: '2037-10-17T05:00:00.000Z',
+    endDate: '2037-10-17T08:00:00.000Z',
     timezone: 'America/Los_Angeles',
     ticketUrl: 'https://tixr.example/e/205790',
     city: 'seattle',
