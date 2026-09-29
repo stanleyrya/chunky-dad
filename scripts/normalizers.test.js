@@ -4682,4 +4682,19 @@ test('an address line said twice is said once; a city and a state of one name ar
     captureConsoleLog(() => { normalizer.normalize(event); });
     assert.equal(event.address, address);
   }
+  // The calendar still holds the doubled form an earlier run saved, with the
+  // pin geocoded from it: the clean form wins the merge on either side.
+  const saved = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY, London EC2A 3AY', location: '51.5251192, -0.0798044', pinSource: 'geocoded-exact', addressSource: 'page' };
+  const scraped = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY', addressSource: 'page' };
+  let verdict;
+  captureConsoleLog(() => {
+    verdict = core.resolveConflictDeterministically('address', saved.address, scraped.address,
+      { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: saved, b: scraped }, eventTitle: 'SPOOKMINCE' });
+  });
+  assert.deepEqual(verdict, { winner: 'b', reason: 'the same address with a line said twice on the other side — said once' });
+  captureConsoleLog(() => {
+    verdict = core.resolveConflictDeterministically('address', scraped.address, saved.address,
+      { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: scraped, b: saved }, eventTitle: 'SPOOKMINCE' });
+  });
+  assert.equal(verdict.winner, 'a', 'and the doubled form never replaces the clean one');
 });

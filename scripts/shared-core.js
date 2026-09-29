@@ -4048,6 +4048,28 @@ class SharedCore {
         return fused;
     }
 
+    // An address with each of its lines said once: a comma segment that
+    // repeats an earlier one word for word AND carries a digit (a street
+    // line, a postcode line) is dropped, the first stays. "118 Curtain Rd,
+    // London EC2A 3AY, London EC2A 3AY" → "118 Curtain Rd, London EC2A 3AY".
+    // Digit-free repeats stand ("New York, New York" is a city and a
+    // state). Returns the value unchanged when nothing repeats.
+    collapseRepeatedAddressLines(value) {
+        if (typeof value !== 'string') return value;
+        const segments = value.split(',').map(segment => segment.trim()).filter(Boolean);
+        if (segments.length < 2) return value;
+        const fold = (segment) => this.foldDiacritics(segment).replace(/[^a-z0-9]+/g, ' ').trim();
+        const seen = new Set();
+        const kept = [];
+        for (const segment of segments) {
+            const key = fold(segment);
+            if (key && /\d/.test(key) && seen.has(key)) continue;
+            seen.add(key);
+            kept.push(segment);
+        }
+        return kept.length === segments.length ? value : kept.join(', ');
+    }
+
     // Parse an address candidate for the same-address merge rung. Returns
     // null unless the value leads with a house number (incl. hyphenated
     // Queens style) — a candidate without one is never comparable here.
@@ -6472,6 +6494,23 @@ class SharedCore {
                 // them (keeping the more complete, city-bearing form).
                 const citySuffixTwin = this.resolveCitySuffixedAddressTwin(valueA, valueB, context);
                 if (citySuffixTwin) return citySuffixTwin;
+                // Said-twice twin rung: one candidate IS the other with a
+                // line said twice (collapseRepeatedAddressLines) — the
+                // calendar's "118 Curtain Rd, London EC2A 3AY, London EC2A
+                // 3AY" beside the scrape's clean form. The clean form wins
+                // on either side; a pin belongs to the address, not to its
+                // spelling, so the evidence rung below has nothing to add.
+                {
+                    const foldTwin = value => this.normalizeAddressTokens(value).join(' ');
+                    const onceA = this.collapseRepeatedAddressLines(String(valueA));
+                    const onceB = this.collapseRepeatedAddressLines(String(valueB));
+                    if (onceA !== String(valueA) && onceB === String(valueB) && foldTwin(onceA) === foldTwin(valueB)) {
+                        return { winner: 'b', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                    if (onceB !== String(valueB) && onceA === String(valueA) && foldTwin(onceB) === foldTwin(valueA)) {
+                        return { winner: 'a', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                }
                 // Rung 3 (evidence). Case-only twins are NOT a street
                 // mismatch — they fall through untouched so the case-only
                 // rule below keeps deciding them; empty candidates belong to

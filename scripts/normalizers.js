@@ -304,22 +304,13 @@ class BasicDataNormalizer extends BaseNormalizer {
     // A comma segment that repeats an earlier one word for word AND carries
     // a digit (a street line, a postcode line) is dropped; the first stays.
     // Digit-free repeats are left alone: "New York, New York" is a city and
-    // a state.
+    // a state. The rule itself lives in SharedCore.collapseRepeatedAddressLines
+    // (the address merge uses it too).
     collapseRepeatedAddressLines(event) {
         if (!event || typeof event !== 'object' || typeof event.address !== 'string') return event;
-        const segments = event.address.split(',').map(segment => segment.trim()).filter(Boolean);
-        if (segments.length < 2) return event;
-        const fold = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
-        const seen = new Set();
-        const kept = [];
-        for (const segment of segments) {
-            const key = fold(segment);
-            if (key && /\d/.test(key) && seen.has(key)) continue;
-            seen.add(key);
-            kept.push(segment);
-        }
-        if (kept.length === segments.length) return event;
-        const collapsed = kept.join(', ');
+        if (!this.core || typeof this.core.collapseRepeatedAddressLines !== 'function') return event;
+        const collapsed = this.core.collapseRepeatedAddressLines(event.address);
+        if (collapsed === event.address) return event;
         console.log(`🧹 NORMALIZE: address "${event.address}" → "${collapsed}" for "${event.title || 'unknown'}" — a line said twice is said once`);
         event.address = collapsed;
         return event;
