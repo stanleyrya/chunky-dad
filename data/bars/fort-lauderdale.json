@@ -59,5 +59,11 @@
     "city": "fort-lauderdale",
     "address": "400 Corporate Drive, Fort Lauderdale, Florida",
     "coordinates": "26.2053310, -80.1394930"
+  },
+  {
+    "name": "Ramrod",
+    "city": "fort-lauderdale",
+    "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
+    "coordinates": "26.1462600, -80.1403612"
   }
 ]

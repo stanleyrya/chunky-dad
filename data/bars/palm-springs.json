@@ -27,5 +27,17 @@
     "city": "palm-springs",
     "address": "535 South Warm Sands Drive, Palm Springs, California",
     "coordinates": "33.8147765, -116.5376249"
+  },
+  {
+    "name": "Hotel ZOSO",
+    "city": "palm-springs",
+    "address": "South Indian Canyon Drive, Palm Springs, California",
+    "coordinates": "33.8221965, -116.5450337"
+  },
+  {
+    "name": "Hilton Palm Springs",
+    "city": "palm-springs",
+    "address": "North Calle Encilia, Palm Springs, California",
+    "coordinates": "33.8239380, -116.5432028"
   }
 ]

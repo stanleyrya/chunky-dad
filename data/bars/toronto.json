@@ -16,5 +16,11 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:71:0 #000000:16:0 #8b8b8b:3:0",
     "faviconPlate": "#ffffff"
+  },
+  {
+    "name": "El Mocambo",
+    "city": "toronto",
+    "address": "464 Spadina Avenue, Toronto, Ontario",
+    "coordinates": "43.6575313, -79.4001677"
   }
 ]

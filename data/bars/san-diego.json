@@ -10,5 +10,17 @@
     "city": "san-diego",
     "address": "3796 Fifth Avenue, San Diego, CA 92103",
     "coordinates": "32.7468104, -117.1606487"
+  },
+  {
+    "name": "House of Blues",
+    "city": "san-diego",
+    "address": "1055 5th Avenue, San Diego, California",
+    "coordinates": "32.7164358, -117.1595598"
+  },
+  {
+    "name": "EQ San Diego",
+    "city": "san-diego",
+    "address": "1271 University Avenue, San Diego, California",
+    "coordinates": "32.7481613, -117.1519331"
   }
 ]

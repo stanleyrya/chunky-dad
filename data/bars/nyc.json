@@ -206,5 +206,17 @@
     "city": "nyc",
     "address": "2233 Broadway, New York, New York",
     "coordinates": "40.7844043, -73.9799172"
+  },
+  {
+    "name": "Parkside Lounge",
+    "city": "nyc",
+    "address": "317 East Houston Street, New York, New York",
+    "coordinates": "40.7210809, -73.9832025"
+  },
+  {
+    "name": "Brass Monkey",
+    "city": "nyc",
+    "address": "55 Little West 12th Street, New York, New York",
+    "coordinates": "40.7406797, -74.0084922"
   }
 ]
