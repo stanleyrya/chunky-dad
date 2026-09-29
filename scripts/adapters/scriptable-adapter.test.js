@@ -11887,4 +11887,14 @@ test('answer cache on the phone: a lookup reads and writes storage/answers under
     'the answer cache first, then the page cache an older build wrote to');
   assert.deepEqual(writes.map((write) => [write.ttlDays, write.dir]), [[365, answers.storageDir], [3, 'pages']]);
   assert.equal(adapter.getAnswerCacheConfig(0).enabled, false);
+  assert.equal(answers.keepWhileUsed, true);
+
+  // A read marks the answer used by writing it back, at most once a week.
+  const written = [];
+  adapter.fm = { writeString: (filePath, text) => written.push([filePath, text]) };
+  const days = (count) => new Date(Date.now() - count * 24 * 60 * 60 * 1000);
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(2), '{"html":"[]"}'), false, 'read two days ago: nothing to do');
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(30), '{"html":"[1]"}'), true);
+  assert.deepEqual(written, [['/answers/a.json', '{"html":"[1]"}']], 'written back byte for byte');
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(30), ''), false, 'never writes an empty file over an answer');
 });

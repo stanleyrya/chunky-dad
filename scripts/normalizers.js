@@ -1861,7 +1861,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             return null;
         }
         try {
-            // The answer cache first (a year's life); an adapter without one
+            // The answer cache first (kept while used); an adapter without one
             // answers from its page cache as before.
             const answers = typeof httpAdapter.getAnswerCacheConfig === 'function'
                 ? httpAdapter.getAnswerCacheConfig(this.getLookupAnswerTtlDays())
@@ -2949,9 +2949,10 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // persist an empty/unparseable Nominatim body to the disk cache and
             // treat an already-cached one as a miss (see isCacheableGeocodeResponse).
             isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData),
-            // Where an address is stays true: the answer is kept for
-            // LOOKUP_ANSWER_TTL_DAYS in the adapters' answer cache, not for
-            // the page cache's three days.
+            // Where an address is stays true: the answer goes to the
+            // adapters' answer cache and is kept while it is used (pruned
+            // only after LOOKUP_ANSWER_TTL_DAYS unread), not for the page
+            // cache's three days.
             cacheTtlDays: this.getLookupAnswerTtlDays(),
             // A geocoder is an API used under its usage policy (paced like any
             // host by the politeness gate), not a site being crawled — its

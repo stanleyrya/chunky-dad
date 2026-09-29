@@ -334,8 +334,28 @@ class WebAdapter {
         return {
             enabled: page.enabled && !!this.answerStorageDir && Number.isFinite(days) && days > 0,
             ttlDays: days,
-            storageDir: this.answerStorageDir
+            storageDir: this.answerStorageDir,
+            // Kept while used: a read marks the entry (see
+            // touchAnswerOnRead), so ttlDays counts from the last use.
+            keepWhileUsed: true
         };
+    }
+
+    // An answer that was just read is still in use: its file time moves to
+    // now, at most once every LOOKUP_ANSWER_TOUCH_DAYS, so age is "time
+    // since last use" and the prune (file time alone) never takes an answer
+    // a venue still needs. A failed touch is harmless.
+    async touchAnswerOnRead(cachePath, modifiedAtMs) {
+        const core = this.getSharedCoreRef();
+        const days = core && Number(core.LOOKUP_ANSWER_TOUCH_DAYS) > 0 ? Number(core.LOOKUP_ANSWER_TOUCH_DAYS) : 7;
+        if (!Number.isFinite(modifiedAtMs) || (Date.now() - modifiedAtMs) < days * 24 * 60 * 60 * 1000) return false;
+        try {
+            const now = new Date();
+            await this.boundedSharedFsOp(() => this.fs.promises.utimes(cachePath, now, now), `touch ${cachePath}`);
+            return true;
+        } catch (_) {
+            return false;
+        }
     }
 
     normalizePageCacheUrl(url) {
@@ -541,6 +561,8 @@ class WebAdapter {
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
+
+            if (pageCacheConfig.keepWhileUsed === true) await this.touchAnswerOnRead(cachePath, stats.mtimeMs);
 
             return {
                 html: cached.html,

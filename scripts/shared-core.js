@@ -56,15 +56,20 @@ const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
 // dead end at once (58 on one host in the store of 2026-09-29), and a site
 // should not meet all of them in the same two minutes.
 const DEAD_END_CAPABILITY_RETRIES_PER_HOST = 20;
-// How long the answer to a LOOKUP stays true (options.cacheTtlDays on a
-// fetch): where an address is. A street does not move, so a geocoder is
-// asked about an address once a year and not twice a week — under the page
-// cache's three days the same 700 questions were asked again every run and
-// the per-host budget (120) was spent before the new addresses got their
-// turn (runs of 2026-09-27 … 09-29: budget reached on every one). A wrong
-// answer is not kept by this: the question is the address itself, so a
-// corrected address is a new question.
+// The answer to a LOOKUP (options.cacheTtlDays on a fetch) — where an
+// address is — is kept for as long as it is USED. Owner, 2026-09-29:
+// "addresses don't really change at all unless we got them wrong." Under the
+// page cache's three days the same 700 questions were asked again every run
+// and the per-host budget (120) was spent before the new addresses got
+// their turn (runs of 2026-09-27 … 09-29: budget reached on every one).
+// An answer read by a run is marked used (at most once every
+// LOOKUP_ANSWER_TOUCH_DAYS), so the answer for a venue that still holds
+// events never ages out; one nothing has read for LOOKUP_ANSWER_TTL_DAYS is
+// pruned. A wrong answer is not kept by this: the question is the address
+// itself, so a corrected address is a new question — and a curated bar's
+// own coordinates outrank any geocoder.
 const LOOKUP_ANSWER_TTL_DAYS = 365;
+const LOOKUP_ANSWER_TOUCH_DAYS = 7;
 // A source has a home city when this many of its events are placed and
 // this share of them are in one city (see placeVirtualEventsAtSourceHome).
 const SOURCE_HOME_MIN_PLACED = 5;
@@ -9394,6 +9399,10 @@ class SharedCore {
 
     static get LOOKUP_ANSWER_TTL_DAYS() {
         return LOOKUP_ANSWER_TTL_DAYS;
+    }
+
+    static get LOOKUP_ANSWER_TOUCH_DAYS() {
+        return LOOKUP_ANSWER_TOUCH_DAYS;
     }
 
     static isPermanentlyGoneHttpStatus(statusCode) {

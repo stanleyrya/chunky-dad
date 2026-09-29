@@ -1109,7 +1109,38 @@ class ScriptableAdapter {
       enabled: page.enabled && Number.isFinite(days) && days > 0,
       ttlDays: days,
       storageDir: this.answerStorageDir,
+      // Kept while used: a read marks the entry (see touchAnswerOnRead), so
+      // ttlDays counts from the last use.
+      keepWhileUsed: true,
     };
+  }
+
+  // An answer that was just read is still in use: the file is written back
+  // as it is (FileManager has no way to set a date), which moves its
+  // modification date to now — at most once every LOOKUP_ANSWER_TOUCH_DAYS.
+  // Age is then "time since last use", and the prune (dates alone) never
+  // takes an answer a venue still needs. A failed touch is harmless.
+  touchAnswerOnRead(cachePath, modifiedAt, rawText) {
+    const days =
+      typeof SharedCore !== "undefined" &&
+      Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS) > 0
+        ? Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS)
+        : 7;
+    const modifiedAtMs = modifiedAt ? modifiedAt.getTime() : NaN;
+    if (
+      !Number.isFinite(modifiedAtMs) ||
+      Date.now() - modifiedAtMs < days * 24 * 60 * 60 * 1000 ||
+      typeof rawText !== "string" ||
+      rawText.length === 0
+    ) {
+      return false;
+    }
+    try {
+      this.fm.writeString(cachePath, rawText);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   // How long unused OCR/classification cache entries survive the end-of-run
@@ -1295,7 +1326,8 @@ class ScriptableAdapter {
         await this.fm.downloadFileFromiCloud(cachePath);
       } catch (_) {}
 
-      const cached = JSON.parse(this.fm.readString(cachePath));
+      const rawCachedText = this.fm.readString(cachePath);
+      const cached = JSON.parse(rawCachedText);
       const fetchState =
         typeof cached.fetchState === "string"
           ? cached.fetchState.toLowerCase()
@@ -1343,6 +1375,10 @@ class ScriptableAdapter {
         cached.html.length === 0
       ) {
         return null;
+      }
+
+      if (pageCacheConfig.keepWhileUsed === true) {
+        this.touchAnswerOnRead(cachePath, modifiedAt, rawCachedText);
       }
 
       return {
@@ -15994,8 +16030,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
         );
       }
-      // Answers to lookups live their own, much longer life (a geocoder's
-      // answer about an address): pruned only past it.
+      // Answers to lookups (a geocoder's answer about an address) are kept
+      // while they are used: a read marks the file, so only an answer
+      // nothing has read for the whole life is pruned.
       const answerTtlDays =
         typeof SharedCore !== "undefined" &&
         Number(SharedCore.LOOKUP_ANSWER_TTL_DAYS) > 0
@@ -16007,7 +16044,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
       if (prunedAnswers > 0) {
         console.log(
-          `📱 Scriptable: Pruned ${prunedAnswers} expired lookup answer(s) (ttl ${answerTtlDays}d)`,
+          `📱 Scriptable: Pruned ${prunedAnswers} lookup answer(s) nothing has used for ${answerTtlDays}d`,
         );
       }
       const ocrRetentionDays = this.getOcrCacheRetentionDays();

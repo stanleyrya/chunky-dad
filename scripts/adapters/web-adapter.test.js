@@ -1409,7 +1409,7 @@ test('a phone snapshot older than the phone\'s last write is not the calendar â€
 // geocoder was asked the same 700 questions every run because its answers
 // expired with the page cache, after three days).
 // ---------------------------------------------------------------------------
-test('answer cache: options.cacheTtlDays keeps an answer past the page cache life, in storage/answers; pages are unaffected', async () => {
+test('answer cache: an answer is kept while it is used, in storage/answers; pages are unaffected', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-answers-'));
   const pageDir = path.join(root, 'pages');
   const answerDir = path.join(root, 'answers');
@@ -1444,9 +1444,17 @@ test('answer cache: options.cacheTtlDays keeps an answer past the page cache lif
       await adapterOf().fetchData(page, {});
       assert.equal(fetchCalls(), 3, 'a 4-day-old page is asked for again');
 
+      // Reading it marked it used: its age counts from that read, so an
+      // answer a venue still needs never ages out.
+      const answerFile = fs.readdirSync(answerDir, { recursive: true }).map(String).find((name) => name.endsWith('.json'));
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs < 60 * 1000, 'the read marked the answer as used');
+      ageAll(answerDir, 3);
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs > 2 * 24 * 60 * 60 * 1000, 'marked at most once a week, not on every read');
+
       ageAll(answerDir, 366);
       await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
-      assert.equal(fetchCalls(), 4, 'past its year the question is asked again');
+      assert.equal(fetchCalls(), 4, 'an answer nothing has read for a year is asked again');
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

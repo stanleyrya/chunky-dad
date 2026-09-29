@@ -4800,7 +4800,7 @@ test('geocoder: "no match" is believed after two runs, not one, and is asked aga
   assert.equal(later.core.findDeadEndUrlEntry(later.core.deadEndRunContext, NOWHERE).entry, null, 'answered: forgotten');
 });
 
-test('geocoder: every question is asked with a year\'s life, and the answer cache is read before the page cache', async () => {
+test('geocoder: every question goes to the answer cache, read before the page cache', async () => {
   const core = new SharedCore(CITIES, { eventSchema: EventSchema });
   const normalizer = new OpenStreetMapNormalizer(core);
   assert.equal(normalizer.getLookupAnswerTtlDays(), SharedCore.LOOKUP_ANSWER_TTL_DAYS);
@@ -4813,6 +4813,7 @@ test('geocoder: every question is asked with a year\'s life, and the answer cach
   };
   assert.deepEqual(await normalizer.checkPersistentCache(NOWHERE, httpAdapter), [{ lat: '1', lon: '2' }]);
   assert.deepEqual(reads, [{ enabled: true, ttlDays: 365, storageDir: '/answers' }]);
+  assert.equal(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS, 7);
 });
 
 test('city patterns: Lynnwood is Seattle, and Westfield is Indianapolis only when it says Indiana', () => {
