@@ -8910,6 +8910,135 @@ test('dead-end store: network failures are NOT learned when the run had zero suc
 });
 
 // ---------------------------------------------------------------------------
+// An outage is not a dead end (2026-09-27, 10:11–10:13: the Mac lost the
+// network for two minutes mid-run). Node's fetch says "fetch failed" and
+// nothing else, the classifier only knew the browser's "failed to fetch", so
+// every one of the 59 failures was written into the no-retry failure cache —
+// the real records, verbatim:
+//   { url: "https://www.bearbrum.com/", statusCode: null, fetchState:
+//     "failed", failure: { nonRetryable: true, context: "root-page", error:
+//     "HTTP request failed for https://www.bearbrum.com/: fetch failed" } }
+// Two configured roots (Bear Brum, Xposure Events' organizer page) read 0
+// for four runs, and 57 whereto.party city pages were confirmed dead by the
+// NEXT run replaying those notes: 3 of 60 cities read since.
+// ---------------------------------------------------------------------------
+
+const OUTAGE_ROOT_URL = 'https://www.bearbrum.com/';
+const OUTAGE_NOTE = {
+  url: OUTAGE_ROOT_URL,
+  fetchedAt: '2026-09-27T15:13:08.626Z',
+  statusCode: null,
+  headers: {},
+  fetchState: 'failed',
+  failure: {
+    nonRetryable: true,
+    context: 'root-page',
+    error: `HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`
+  }
+};
+
+test('outage: Node\'s "fetch failed" is a transport failure — retryable, never a failure note', async () => {
+  const core = createCore();
+  const outage = new Error(`HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`);
+  assert.equal(core.isRetryableFailure(outage), true, 'nothing answered: the next run asks again');
+  for (const wording of [
+    'HTTP request failed for https://a.example/: connect ECONNREFUSED 203.0.113.7:443',
+    'HTTP request failed for https://a.example/: getaddrinfo ENOTFOUND a.example',
+    'HTTP request failed for https://a.example/: other side closed',
+    'HTTP request failed for https://a.example/: UND_ERR_CONNECT_TIMEOUT'
+  ]) {
+    assert.equal(core.isRetryableFailure(new Error(wording)), true, wording);
+  }
+
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+  await core.saveNonRetryableFailureNote(httpAdapter, OUTAGE_ROOT_URL, outage, 'root-page');
+  assert.deepEqual(saved, [], 'an outage writes nothing into the no-retry cache');
+
+  // What the server ANSWERED is still a fact about the page.
+  const gone = new Error('HTTP request failed for https://a.example/x: HTTP 404: Not Found');
+  assert.equal(core.isRetryableFailure(gone), false);
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', gone, 'crawl-page');
+  assert.deepEqual(saved, ['https://a.example/x'], 'a 404 is still noted');
+  const empty = new Error('HTTP request failed for https://a.example/y: Empty response from https://a.example/y');
+  assert.equal(core.isRetryableFailure(empty), false, 'an empty answer is an answer');
+});
+
+test('outage: a note that records "nothing answered" is recognised, a note with a status is not', () => {
+  assert.equal(SharedCore.isTransportFailureNote(OUTAGE_NOTE), true, 'the real note from 2026-09-27');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    statusCode: 404,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+  }), false, 'a stated status is the page speaking');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: HTTP 403: Forbidden' }
+  }), false, 'a status kept only in the message still counts');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: Empty response from https://a.example/x' }
+  }), false, 'a reason that is about the page stays a note');
+  assert.equal(SharedCore.isTransportFailureNote(null), false);
+  assert.equal(SharedCore.isTransportFailureNote({ fetchState: 'downloaded', html: '<p>fetch failed</p>' }), false, 'a page is not a note');
+});
+
+test('outage: a replayed failure note is never the second strike', async () => {
+  const cityUrl = 'https://dead-domain.example/in/sydney';
+  const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);
+  replayed.cachedFailure = true;
+  replayed.retryable = false;
+  const pages = { 'https://hub.example/': { additionalLinks: [cityUrl] } };
+  const harness = createCrawlHarness(pages);
+  const realFetch = harness.httpAdapter.fetchData;
+  harness.httpAdapter.fetchData = async (url) => {
+    if (url === cityUrl) throw replayed;
+    return realFetch(url);
+  };
+  const core = deadEndCore();
+  const key = core.getUrlDedupeKey(cityUrl);
+  const store = { [key]: { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T15:13:08.649Z', misses: 1, capability: SharedCore.DEAD_END_CAPABILITY } };
+  const results = await core.processEvents(deadEndConfig({ store }), harness.httpAdapter, createDisplayAdapterStub(), harness.parsers);
+  assert.equal(results.deadEndStore[key].misses, 1, 'reading the note back attempted nothing and confirms nothing');
+});
+
+test('outage: a connection failure on a host that has answered before is not learned', async () => {
+  const cityUrl = 'https://whereto.party/in/sydney';
+  const deadUrl = 'https://www.iqosvape.com/';
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  core.deadEndRunContext = core.createDeadEndRunContext({
+    deadEndStore: {
+      '::hosts': {
+        'whereto.party': { firstSeen: '2026-09-23T21:11:32.875Z', lastSeen: '2026-09-23T21:11:32.875Z', successes: 1, lastSuccess: '2026-09-23T21:11:32.875Z' }
+      }
+    }
+  });
+  core.deadEndRunContext.successfulFetchCount = 1;
+  core.recordDeadEndNetworkFailure({ url: cityUrl, currentDepth: 1 });
+  core.recordDeadEndNetworkFailure({ url: deadUrl, currentDepth: 1 });
+  const results = {};
+  await core.finalizeDeadEndRun(display, results);
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(cityUrl)], undefined,
+    'the host serves pages: this was its outage, the page is asked for again next run');
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(deadUrl)]?.misses, 1,
+    'a host that never answered is still learned, two-strike as before');
+  assert.ok(display.logs.some(line => line.includes('Not learning 1 network-failure URL(s)') && line.includes('whereto.party')),
+    'and the log says which host was out');
+});
+
+test('outage: dead ends confirmed before the crawler told an outage from a dead page get their one retry', () => {
+  const core = deadEndCore();
+  const context = core.createDeadEndRunContext({ deadEndStore: {} });
+  const learnedInTheOutage = { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T17:48:04.231Z', misses: 2, capability: 'machine-door-2026-09' };
+  assert.equal(core.isConfirmedDeadEndEntry(context, learnedInTheOutage), false, 'the real whereto.party entry is retried once');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { ...learnedInTheOutage, capability: SharedCore.DEAD_END_CAPABILITY }), true,
+    'and re-confirms under the current stamp if it misses again');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { firstSeen: '2026-09-27T15:25:11.000Z', lastSeen: '2026-09-27T15:25:11.000Z', misses: 1, lastStatus: 404 }), true,
+    'a page the origin called gone needs no second opinion');
+});
+
+// ---------------------------------------------------------------------------
 // Store keying: entries live under the URL dedupe key (www/tracking-param/
 // case variants share ONE entry — the phone store held eventim www-variant
 // twins), and legacy raw-URL entries from existing dead-ends.json files still

@@ -43,7 +43,13 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// 'outage-aware-2026-09': until then a connection failure was learned like a
+// page that yields nothing, and a failure note read back from the cache
+// counted as the second strike — a two-minute outage put 57 pages of one
+// host away for the 30-day window. Those entries carry no mark of their own
+// (a statusless miss is a statusless miss), so every inferred dead end gets
+// its one retry.
+const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -9158,6 +9164,42 @@ class SharedCore {
         return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
     }
 
+    // What a platform says when NOTHING answered: no HTTP status, because no
+    // HTTP exchange took place. Node's fetch says exactly "fetch failed" for
+    // every one of them (dead DNS, refused or reset connection, the Mac
+    // asleep or off the network) and keeps the reason in error.cause, which
+    // the adapters' rewrap drops — so the two words are the whole signal.
+    // isRetryableFailure's browser wording ("failed to fetch") never matched
+    // it, and on 2026-09-27 a two-minute outage was therefore written into
+    // the no-retry failure cache as 59 PERMANENT failures: two configured
+    // roots (bearbrum.com, an Eventbrite organizer page) stayed silent for
+    // the three-day cache life, and 57 city pages of one aggregator were
+    // learned as dead ends for thirty. Static + pure: the classifier below
+    // and the adapters' failure-note check read this one definition.
+    static isTransportFailureMessage(message) {
+        const text = typeof message === 'string' ? message : '';
+        if (!text) return false;
+        return /\bfetch failed\b|\bECONNREFUSED\b|\bECONNRESET\b|\bENOTFOUND\b|\bEAI_AGAIN\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bETIMEDOUT\b|\bEPIPE\b|\bUND_ERR_[A-Z_]+\b|socket hang up|other side closed/i.test(text);
+    }
+
+    // A failure note is a statement about the PAGE: the status the server
+    // answered with, or a reason that will be just as true tomorrow. A note
+    // that records a transport failure is a statement about the network at
+    // that minute and is never honoured — it reads as a cache miss, so notes
+    // written before the classifier knew the wording heal on the next run
+    // instead of waiting out their cache life.
+    static isTransportFailureNote(cached) {
+        if (!cached || typeof cached !== 'object') return false;
+        if (Number.isFinite(cached.statusCode)) return false;
+        const failure = cached.failure && typeof cached.failure === 'object' ? cached.failure : null;
+        if (!failure) return false;
+        const message = typeof failure.error === 'string'
+            ? failure.error
+            : (failure.error && typeof failure.error.message === 'string' ? failure.error.message : '');
+        if (/\bHTTP\s+\d{3}\b/i.test(message)) return false;
+        return SharedCore.isTransportFailureMessage(message);
+    }
+
     isRetryableFailure(error) {
         if (error && typeof error.retryable === 'boolean') {
             return error.retryable;
@@ -9209,6 +9251,10 @@ class SharedCore {
             /could not connect to the server/i,
             /data connection is not currently allowed/i
         ];
+        // ---- The wording Node produces (see isTransportFailureMessage) ----
+        if (SharedCore.isTransportFailureMessage(message)) {
+            return true;
+        }
         return retryablePatterns.some(pattern => pattern.test(message));
     }
 
@@ -10124,12 +10170,17 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
-                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)) {
+                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)
+                    && !(error && error.cachedFailure === true)) {
                     // Statusless transport failure from the HTTP adapter
                     // (dead DNS, refused connection — the adapters' fetch
                     // wrapper is the only source of this marker, so parser/
                     // extraction errors can't land here). Staged, two-strike,
                     // and only committed when the run had successful fetches.
+                    // A REPLAYED failure note is not a strike: nothing was
+                    // attempted, so it confirms nothing (the second strike
+                    // against whereto.party's city pages, run 20260927-
+                    // 125246, was the first strike read back from the cache).
                     this.recordDeadEndNetworkFailure({ url, currentDepth });
                 }
                 try {
@@ -11144,12 +11195,31 @@ class SharedCore {
             // proved the network works (see recordDeadEndNetworkFailure).
             if (context.pendingNetworkFailures.length > 0) {
                 if (context.successfulFetchCount > 0) {
+                    // A connection that fails says nothing about a PATH on a
+                    // host that serves pages: a page that is gone answers
+                    // 404/410, and those are learned on their own. A host
+                    // with a success on record is having an outage — its
+                    // pages are tried again next run. Only a host that has
+                    // never answered (a dead domain) is learned this way.
+                    const hosts = this.getDeadEndHostStore(context);
                     const committed = [];
+                    const outageHosts = [];
+                    let outageCount = 0;
                     for (const url of context.pendingNetworkFailures) {
                         const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
                         if (committed.includes(dedupeKey)) continue; // one miss per URL per run
                         committed.push(dedupeKey);
+                        const hostKey = this.getDeadEndHostKey(url);
+                        const hostEntry = hosts && hostKey ? hosts[hostKey] : null;
+                        if (hostEntry && Number(hostEntry.successes) > 0) {
+                            outageCount += 1;
+                            if (!outageHosts.includes(hostKey)) outageHosts.push(hostKey);
+                            continue;
+                        }
                         this.recordDeadEndUrlMiss(context, url, null, nowMs);
+                    }
+                    if (outageCount > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Not learning ${outageCount} network-failure URL(s) on ${outageHosts.length} host(s) that have answered before (${outageHosts.slice(0, 5).join(', ')}${outageHosts.length > 5 ? ', …' : ''}) — a host that serves pages is having an outage, its pages are not dead`);
                     }
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: Not learning ${context.pendingNetworkFailures.length} network-failure URL(s) — this run had zero successful fetches, so the network itself is suspect`);

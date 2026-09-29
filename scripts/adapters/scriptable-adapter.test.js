@@ -11809,3 +11809,51 @@ test('postSavedRunExecutionNotification schedules a local notification and never
     if (original === undefined) delete global.Notification; else global.Notification = original;
   }
 });
+
+// ---------------------------------------------------------------------------
+// The phone reads the tree the Mac writes into. On 2026-09-27 the Mac lost its
+// network for two minutes and noted 59 "permanent" failures there — every one
+// a connection that never got an answer. Such a note says nothing about the
+// page: it is a cache miss on the phone too. A note with a status is kept.
+// ---------------------------------------------------------------------------
+test('page cache: a cached CONNECTION failure is a miss; a cached 404 is still replayed', async () => {
+  const adapter = buildAdapter();
+  adapter.pageStorageDir = '/pages';
+  const notes = {
+    'https://www.bearbrum.com/': {
+      url: 'https://www.bearbrum.com/',
+      fetchedAt: '2026-09-27T15:13:08.626Z',
+      statusCode: null,
+      headers: {},
+      fetchState: 'failed',
+      failure: { nonRetryable: true, context: 'root-page', error: 'HTTP request failed for https://www.bearbrum.com/: fetch failed' }
+    },
+    'https://precinctdtla.com/9-30-26/sissy-4/': {
+      url: 'https://precinctdtla.com/9-30-26/sissy-4/',
+      fetchedAt: '2026-09-27T17:25:11.000Z',
+      statusCode: 404,
+      headers: {},
+      fetchState: 'failed',
+      failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+    }
+  };
+  const byPath = {};
+  for (const [url, note] of Object.entries(notes)) {
+    const parts = adapter.getPageCachePathParts(url);
+    byPath[`/pages/${parts.hostDir}/${parts.fileName}`] = JSON.stringify(note);
+  }
+  adapter.fm = {
+    ...fileManagerStub,
+    fileExists: (p) => Object.prototype.hasOwnProperty.call(byPath, p),
+    modificationDate: () => new Date(),
+    readString: (p) => byPath[p]
+  };
+  const config = { enabled: true, ttlDays: 3 };
+  assert.equal(await adapter.readCachedPage('https://www.bearbrum.com/', config), null,
+    'nothing answered then — the page is asked for again');
+  await assert.rejects(
+    adapter.readCachedPage('https://precinctdtla.com/9-30-26/sissy-4/', config),
+    (error) => error.cachedFailure === true && error.statusCode === 404,
+    'what the server answered is still remembered'
+  );
+});
