@@ -31,7 +31,7 @@
         "note": "The linktree he sent: links to bearbrum.com, /guide (404) and the festival's Instagram/Facebook. Nothing of its own."
       }
     ],
-    "notes": "Recon from one cached read of the site on 2026-09-22. Bear Brum is Birmingham's bear festival, 25–27 September 2026."
+    "notes": "Recon from one cached read of the site on 2026-09-22. Bear Brum is Birmingham's bear festival, 25–27 September 2026. 2026-09-29: the festival has taken place; the home page now opens with a thank-you note and its Wix events blob still carries the one record (BEAR BRUM WEEKEND PASS, 25 September 2026 at 17:00 – 27 September 2026 at 21:00), now past. Runs 20260927-125246 through 20260929-091555 read 0 from this source for the same reason as Xposure Events: a connection failure during a network outage had been cached as a permanent failure of the configured url."
   },
   "coverage": {
     "confidence": "high",
@@ -42,7 +42,7 @@
       "start": "2026-09-22",
       "end": "2026-12-21"
     },
-    "pastListingsPresent": false,
+    "pastListingsPresent": true,
     "knownGaps": []
   },
   "defaults": {

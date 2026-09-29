@@ -5,9 +5,10 @@
   "status": "complete",
   "recheckAfter": "2026-10-19",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-09-27",
     "method": [
       "feed",
+      "page-cache",
       "static"
     ],
     "parserUrlsAtRecon": [
@@ -18,24 +19,34 @@
         "url": "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776",
         "kind": "eventbrite-organizer-next-data",
         "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": "hasMoreUpcoming: false; upcomingEventsTotal: 1; upcomingEventsFailed: false; organizer.metrics.totalEvents: 37 (lifetime)",
-        "note": "Static curl with a Chrome UA, HTTP 200 (the numeric /o/30560403776 URL serves the canonical organizer page). Payload is <script id=\"__NEXT_DATA__\"> → props.pageProps.upcomingEvents[]: name, url, start_date/start_time, end_date/end_time, timezone, primary_venue { name, address { … latitude, longitude, localized_address_display } }, image.url, summary, series_id, additionalSessionsCount. The Past tab is client-loaded and not read."
+        "rowsReturned": 3,
+        "truthFlag": "hasMoreUpcoming: false; upcomingEventsTotal: 3; upcomingEventsFailed: false; organizer.metrics.totalEvents: 39 (lifetime)",
+        "note": "Static curl with a Chrome UA, HTTP 200 (the numeric /o/30560403776 URL serves the canonical organizer page). Payload is <script id=\"__NEXT_DATA__\"> → props.pageProps.upcomingEvents[]: name, url, start_date/start_time, end_date/end_time, timezone, primary_venue { name, address { … latitude, longitude, localized_address_display } }, image.url, summary, series_id, additionalSessionsCount. The Past tab is client-loaded and not read. Re-read from the scraper page cache of 2026-09-27: three upcoming rows."
+      },
+      {
+        "url": "https://www.ccbcresorthotel.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "the page's own text: \"Use the dropdown box arrows to see a list of all CCBC Events.\"; the list itself is not in the document",
+        "note": "Fetched once with curl on 2026-09-29 (868,251 bytes, HTTP 200). Wix. The events list is an HtmlComponent (nickname \"rollingEventsHtml\", title \"CCBC Events\") whose document is https://www-ccbcresorthotel-com.filesusr.com/html/acbe7c_ff04a057ec84b72a30bdde0e882bbe0d.html (39,308 bytes, fetched once): an empty widget (\"Loading events…\") that receives its rows from the page's own Wix code through window.postMessage ({ type: \"events\", events: [{ date, title, image, … }] }). No event is present in either document, in the warmup data, or in JSON-LD. The rows come from a Wix data collection queried by the page code; that call was not replayed. Linked from the site's menu (\"Events\") and the home page's \"EVENTS\" button; the Eventbrite organizer page names https://www.ccbcresorthotel.com/ as its website (JSON-LD sameAs)."
       }
     ],
-    "notes": "Recon from one cached read on 2026-09-19. Organizer \"CCBC Resort Hotel\" (id 30560403776). 1 upcoming event(s); the organizer also publishes Club Chub's Palm Springs nights when they are on sale (none on the recon day — see the Club Chub parser comment in scraper-input.js)."
+    "notes": "Organizer \"CCBC Resort Hotel\" (id 30560403776): 3 upcoming events on 2026-09-27, all the resort's own pool parties. The resort's own site has an events page that says it lists \"all CCBC Events\" and tells visitors to \"check promoter websites\" — the promoters' weekends held at the resort (Western Xposure, Club Chub) are announced there and not on the organizer page. That list is served to an embedded widget by the page's Wix code and is not readable from the documents."
   },
   "coverage": {
-    "confidence": "high",
-    "basis": "Feed door: the organizer page's __NEXT_DATA__ upcomingEvents (1, hasMoreUpcoming false, upcomingEventsTotal 1). Every upcoming row is a single. Past events are counted via the lifetime metric only.",
-    "publishedEventCount": 1,
-    "documentedEventCount": 1,
+    "confidence": "medium",
+    "basis": "Feed door: the organizer page's __NEXT_DATA__ upcomingEvents (3, hasMoreUpcoming false, upcomingEventsTotal 3). Every upcoming row is a single. Past events are counted via the lifetime metric only. This covers the configured door completely; the resort's own events page (see doors) was not readable and is listed under knownGaps.",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
     "occurrenceWindow": {
-      "start": "2026-09-19",
-      "end": "2026-12-18"
+      "start": "2026-09-27",
+      "end": "2027-09-05"
     },
     "pastListingsPresent": false,
-    "knownGaps": []
+    "knownGaps": [
+      "https://www.ccbcresorthotel.com/events publishes the resort's full list (promoter weekends included) through a Wix HTML embed fed by page code; its rows were not read, so events announced only there are not documented."
+    ]
   },
   "defaults": {
     "city": "palm-springs",
@@ -68,8 +79,64 @@
         "extracted": true
       },
       "bearVerdict": null
+    },
+    {
+      "id": "memorial-day-weekend-pool-party-2027-2027-05-29",
+      "kind": "single",
+      "title": "Memorial Day Weekend Pool Party 2027",
+      "description": null,
+      "address": "68300 Gay Resort Drive, Cathedral City, CA 92234",
+      "location": "33.7797769, -116.4692472",
+      "startDate": "2027-05-29",
+      "startTime": "12:00",
+      "endDate": "2027-05-29",
+      "endTime": null,
+      "ticketUrl": "https://www.eventbrite.com/e/memorial-day-weekend-pool-party-2027-tickets-2002169368478",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194226309%2F455155557312%2F1%2Foriginal.20260923-195309?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.491&fp-y=0.483&s=c92771c607de0f31116fe0099bf8fab0",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Feed quirk shared with the other Eventbrite organizer feeds: end_date/end_time equal start_date/start_time on the listing row; the real end lives in the event page's JSON-LD.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776",
+        "jsonPath": "$.props.pageProps.upcomingEvents[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "labor-day-weekend-pool-party-2027-2027-09-04",
+      "kind": "single",
+      "title": "Labor Day Weekend Pool Party 2027",
+      "description": null,
+      "address": "68300 Gay Resort Drive, Cathedral City, CA 92234",
+      "location": "33.7797769, -116.4692472",
+      "startDate": "2027-09-04",
+      "startTime": "12:00",
+      "endDate": "2027-09-04",
+      "endTime": null,
+      "ticketUrl": "https://www.eventbrite.com/e/labor-day-weekend-pool-party-2027-tickets-2002180464667",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194245016%2F455155557312%2F1%2Foriginal.20260924-003355?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.529&fp-y=0.02&s=92e65a8f0bcaf171c787489c2f7d703e",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Feed quirk shared with the other Eventbrite organizer feeds: end_date/end_time equal start_date/start_time on the listing row; the real end lives in the event page's JSON-LD.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776",
+        "jsonPath": "$.props.pageProps.upcomingEvents[2]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "The resort publishes its full programme on https://www.ccbcresorthotel.com/events, not on the Eventbrite organizer page this parser reads. The list reaches the page through Wix page code (a data-collection query posted into an HTML embed). Reading it needs a door for Wix data collections — the site's public instance token from /_api/v2/dynamicmodel, then the collection query the page code makes. Not built: it is the owner's call whether the resort's own list is wanted (its bear weekends already arrive through Xposure Events and Club Chub).",
+      "raisedOn": "2026-09-29",
+      "blocking": false
+    }
+  ]
 }
