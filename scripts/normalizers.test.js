@@ -4618,7 +4618,15 @@ test('curated-door city backfill: a venue name and the street line the page gave
   assert.equal(event._citySource, 'curated-door');
   assert.equal(event.timezone, 'America/Los_Angeles');
   assert.equal(event.startDate, '2026-11-15T05:00:00.000Z', '9pm wall clock anchored to Los Angeles (PST)');
-  assert.equal(event.location, '34.0498149, -118.2493321', 'the curated pin follows once the city is known');
+  assert.equal(event.bar, 'Precinct LA', 'the door names the venue: the curated spelling');
+  assert.equal(event.barSource, 'curated');
+  assert.equal(event.address, '357 South Broadway, Los Angeles, California, 90013', 'the curated address replaces the bare street line');
+  assert.equal(event.addressSource, 'curated');
+  assert.equal(event.location, '34.0498149, -118.2493321');
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.gmaps, 'https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI', 'the curated place, not a text search');
+  assert.ok(lines.includes('🗺️ LocationNormalizer: Filled bar, address, location, gmaps for "BEARRACUDA: LA" from curated bar "Precinct LA" — the same door that gave the city'),
+    lines.filter(line => line.includes('Filled')).join('\n'));
   assert.ok(lines.includes('🗺️ LocationNormalizer: Backfilled city "la" for "BEARRACUDA: LA" from the curated door of "Precinct LA" — venue "Precinct" at "357 S. Broadway" is that bar\'s name and street line'),
     lines.filter(line => line.includes('LocationNormalizer')).join('\n'));
 });

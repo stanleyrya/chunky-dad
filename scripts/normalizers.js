@@ -1294,7 +1294,58 @@ class LocationNormalizer extends BaseNormalizer {
         console.log(byDoor
             ? `🗺️ LocationNormalizer: Backfilled city "${result.city}" for "${title}" from the curated door of "${result.bar.name}" — venue "${barName}" at "${String(event.address || '').trim()}" is that bar's name and street line`
             : `🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        if (byDoor) this.fillVenueFromCuratedDoor(event, result.bar, title);
         return event;
+    }
+
+    // The door that gave the city names the VENUE too, by name and street
+    // line both — so the record takes the curated record's own spelling of
+    // them: the bar's curated name ("Precinct" → "Precinct LA"), its full
+    // address in place of the bare street line (the same line, by the match
+    // itself), and — fill-only — its pin, maps link and handle. Same stamps
+    // BarDataNormalizer uses for the same values.
+    fillVenueFromCuratedDoor(event, curated, title) {
+        if (!event || !curated || typeof curated !== 'object') return false;
+        const filled = [];
+        const curatedName = typeof curated.name === 'string' ? curated.name.trim() : '';
+        if (curatedName && event.bar !== curatedName) {
+            event.bar = curatedName;
+            event.barSource = 'curated';
+            filled.push('bar');
+        }
+        const curatedAddress = typeof curated.address === 'string' ? curated.address.trim() : '';
+        if (curatedAddress && event.address !== curatedAddress) {
+            event.address = curatedAddress;
+            event.addressSource = 'curated';
+            markCuratedVenueField(event, 'address', curated);
+            filled.push('address');
+        }
+        const curatedPin = typeof curated.coordinates === 'string' ? curated.coordinates.trim() : '';
+        const hasPin = typeof event.location === 'string' && event.location.trim();
+        if (!hasPin && this.isCoordinatePairString(curatedPin)) {
+            event.location = curatedPin;
+            event.pinSource = 'curated';
+            markCuratedVenueField(event, 'location', curated);
+            filled.push('location');
+        } else if (!hasPin) {
+            this.markCuratedAddressForGeocode(event, curated);
+        }
+        const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
+        if (!event.gmaps && curatedMaps) {
+            event.gmaps = curatedMaps;
+            markCuratedVenueField(event, 'gmaps', curated);
+            filled.push('gmaps');
+        }
+        const curatedInstagram = typeof curated.instagram === 'string' ? curated.instagram.trim() : '';
+        if (!event.instagram && curatedInstagram) {
+            event.instagram = curatedInstagram;
+            markCuratedVenueField(event, 'instagram', curated);
+            filled.push('instagram');
+        }
+        if (filled.length > 0) {
+            console.log(`🗺️ LocationNormalizer: Filled ${filled.join(', ')} for "${title}" from curated bar "${curatedName || 'curated bar'}" — the same door that gave the city`);
+        }
+        return filled.length > 0;
     }
 
     // Identity-signal city backfill — the rungs BELOW the curated-bar rung
