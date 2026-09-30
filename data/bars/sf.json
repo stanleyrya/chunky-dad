@@ -89,7 +89,12 @@
     "city": "sf",
     "address": "1123 Folsom Street, San Francisco, California, 94103",
     "coordinates": "37.7761653, -122.4083643",
-    "website": "https://www.studsf.com"
+    "website": "https://www.studsf.com",
+    "faviconBg": "#1a1919",
+    "faviconFg": "#e3e3e3",
+    "faviconPlate": "#030202",
+    "paletteSource": "favicon",
+    "palette": "#020101:55:1 #fdfdfd:21:0 #848484:8:0"
   },
   {
     "name": "F8 Nightclub & Bar",
