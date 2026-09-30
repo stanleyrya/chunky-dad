@@ -8145,6 +8145,46 @@ test('a feed whose "UTC" times are the venue\'s wall clock is corrected against 
   assert.equal(kept.events[0].start, '2026-09-10T19:00:00+00:00');
 });
 
+test('feed clock: a series row whose page prints the NEXT occurrence still decides by how the clock is printed, and a page that says nothing is not agreement', async () => {
+  const parser = createParser();
+  const source = 'https://thebearcalendar.example/feed.json';
+  // The first row is a weekly series; its page prints a later date, no offset.
+  const series = { title: 'Bear Hangout', url: 'https://thebearcalendar.example/events/bear-hangout/', start: '2026-08-26T18:00:00+00:00', tz: 'UTC', rrule: 'FREQ=WEEKLY;BYDAY=WE', city: 'Prague' };
+  const party = { title: 'BEAR BASH COLOGNE', url: 'https://thebearcalendar.example/events/bear-bash/', start: '2026-10-16T21:00:00+00:00', end: '2026-10-17T05:00:00+00:00', tz: 'UTC', city: 'Cologne' };
+  const pages = {
+    'https://thebearcalendar.example/events/bear-hangout/': '<script type="application/ld+json">{"@type":"Event","startDate":"2026-09-23T18:00:00"}</script>',
+    'https://thebearcalendar.example/events/bear-bash/': '<script type="application/ld+json">{"@type":"Event","startDate":"2026-10-16T21:00:00"}</script>'
+  };
+  const { fetched, httpAdapter } = feedStubAdapter(pages);
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let payload;
+  try { payload = await parser.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(series)), JSON.parse(JSON.stringify(party))] }, source, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched, ['https://thebearcalendar.example/events/bear-bash/'], 'the one-off row is asked first; the series row never needed');
+  assert.equal(payload.events[1].start, '2026-10-16T21:00:00', 'wall clock');
+  assert.equal(payload.events[0].start, '2026-08-26T18:00:00', 'every row follows');
+  assert.ok(!lines.some(line => line.includes('agree')), lines.join('\n'));
+
+  // Only series rows: the page's next-occurrence date differs, but the
+  // clock is printed with no offset — a wall clock.
+  const onlySeries = feedStubAdapter(pages);
+  const fresh = createParser();
+  console.log = (line) => lines.push(String(line));
+  let seriesOnly;
+  try { seriesOnly = await fresh.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(series))] }, source, onlySeries.httpAdapter); } finally { console.log = originalLog; }
+  assert.equal(seriesOnly.events[0].start, '2026-08-26T18:00:00', 'a different date on the page is not "agreement"');
+
+  // A page that prints an unrelated clock says nothing: instants are kept
+  // but the log says unconfirmed, never "agree".
+  const mute = feedStubAdapter({ 'https://thebearcalendar.example/events/bear-bash/': '<script type="application/ld+json">{"@type":"Event","startDate":"2026-10-16T09:30:00"}</script>' });
+  const third = createParser();
+  const muteLines = [];
+  console.log = (line) => muteLines.push(String(line));
+  let unconfirmed;
+  try { unconfirmed = await third.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(party))] }, source, mute.httpAdapter); } finally { console.log = originalLog; }
+  assert.equal(unconfirmed.events[0].start, '2026-10-16T21:00:00+00:00');
+  assert.ok(muteLines.some(line => /unconfirmed/.test(line)) && !muteLines.some(line => /agree/.test(line)), muteLines.join('\n'));
+});
+
 test('buildEventFromJsonApiObject strips HTML from descriptions and never invents ticket URLs from slugs', () => {
   const parser = createParser();
   const event = parser.buildEventFromJsonApiObject({

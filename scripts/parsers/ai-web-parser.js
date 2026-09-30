@@ -14117,9 +14117,20 @@ class AiWebParser {
     // wall-clock time (JSON-LD startDate with no offset) is labelling the
     // venue's local time as UTC — thebearcalendar.com/feed.json does this
     // for every city it lists, so a 7pm Sydney party would land at 5am.
-    // ONE row is checked against the site's own page; on a match every
-    // row's UTC label is stripped, and the offset-less values then follow
-    // the wall-clock path (city → timezone). Verdict cached per host.
+    // Rows are checked against the site's own pages — one-off rows first,
+    // a repeating row's page prints its NEXT occurrence, up to three pages
+    // — and on a match every row's UTC label is stripped, so the
+    // offset-less values follow the wall-clock path (city → timezone).
+    // The page's verdict is read from HOW it prints the clock, never from
+    // whether the date is the same one: the feed's HH:MM printed with no
+    // offset is a wall clock (whatever the date — the next occurrence of a
+    // series prints the same clock); the feed's instant printed with an
+    // explicit offset is UTC confirmed; anything else says nothing, and a
+    // page that says nothing is not agreement (runs 20260928–0930: the
+    // first row was a series, its page showed the next date, the mismatch
+    // was logged as "agree" and every Bear Calendar party sat hours off —
+    // Cologne two hours late, Orlando four hours early, Brisbane ten).
+    // Verdict cached per host.
     async reconcileJsonApiUtcLabels(payload, sourceUrl, httpAdapter) {
         if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
         const rowArray = this.findJsonApiRowArray(payload);
@@ -14128,35 +14139,54 @@ class AiWebParser {
         const utcPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)$/;
         const dateKey = (key) => /(^|_)(start|end)(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
         const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
-        const sample = rowArray.rows.find(row => {
+        const startOf = (view) => view.start || view.start_date || view.startDate || view.starts_at;
+        const repeats = (view) => Boolean(view.rrule || view.recurrence || view.recurrence_rule || view.recurring || view.series);
+        const candidates = rowArray.rows.filter(row => {
             const view = this.unwrapJsonApiCandidate(row);
-            const start = view.start || view.start_date || view.startDate || view.starts_at;
+            const start = startOf(view);
             const pageUrl = typeof view.url === 'string' ? view.url : '';
             const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
             return typeof start === 'string' && utcPattern.test(start) && !/T00:00/.test(start) && pageHost && pageHost === sourceHost;
         });
-        if (!sample) return payload;
+        if (candidates.length === 0) return payload;
+        const samples = candidates.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
+            .concat(candidates.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
+            .slice(0, 3);
         if (!this.jsonApiUtcLabelVerdicts) this.jsonApiUtcLabelVerdicts = new Map();
         let verdict = this.jsonApiUtcLabelVerdicts.get(sourceHost);
         if (verdict === undefined) {
-            const view = this.unwrapJsonApiCandidate(sample);
-            const feedStart = String(view.start || view.start_date || view.startDate || view.starts_at);
-            const digits = feedStart.match(utcPattern);
             verdict = false;
-            try {
-                const response = await httpAdapter.fetchData(view.url);
-                const html = response && typeof response.html === 'string' ? response.html : '';
-                const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-                const wallClock = pageStarts.find(value => new RegExp(`^${digits[1]}T${digits[2]}(?::\\d{2})?$`).test(value.trim()));
-                if (wallClock) {
-                    verdict = true;
-                    console.log(`🕒 FEED CLOCK: ${sourceUrl} labels wall-clock times as UTC — "${view.title || view.name || view.url}" is ${feedStart} in the feed and ${wallClock} (no offset) on its own page; reading every row as local time`);
-                } else if (pageStarts.length > 0) {
-                    console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels agree with its own page (${feedStart} vs ${pageStarts[0]}) — instants kept`);
+            let decided = false;
+            for (const sample of samples) {
+                const view = this.unwrapJsonApiCandidate(sample);
+                const feedStart = String(startOf(view));
+                const digits = feedStart.match(utcPattern);
+                const feedMillis = Date.parse(feedStart);
+                try {
+                    const response = await httpAdapter.fetchData(view.url);
+                    const html = response && typeof response.html === 'string' ? response.html : '';
+                    const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
+                    // The feed's clock, printed as a wall clock (no offset).
+                    const wallClock = pageStarts.find(value => new RegExp(`^\\d{4}-\\d{2}-\\d{2}T${digits[2]}(?::\\d{2})?$`).test(value));
+                    // The feed's instant, printed with an explicit offset.
+                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis);
+                    if (wallClock) {
+                        verdict = true;
+                        decided = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} labels wall-clock times as UTC — "${view.title || view.name || view.url}" is ${feedStart} in the feed and ${wallClock} (no offset) on its own page; reading every row as local time`);
+                        break;
+                    }
+                    if (instant) {
+                        decided = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels agree with its own page (${feedStart} vs ${instant}) — instants kept`);
+                        break;
+                    }
+                    console.log(`🕒 FEED CLOCK: ${view.url} prints ${pageStarts.length > 0 ? pageStarts.slice(0, 2).join(', ') : 'no startDate'} for the feed's ${feedStart} — says nothing about the label, trying another row`);
+                } catch (error) {
+                    console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's UTC labels (${error.message}) — trying another row`);
                 }
-            } catch (error) {
-                console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's UTC labels (${error.message}) — instants kept`);
             }
+            if (!decided) console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels could not be checked against the site's own pages (${samples.length} tried) — instants kept, unconfirmed`);
             this.jsonApiUtcLabelVerdicts.set(sourceHost, verdict);
         }
         if (!verdict) return payload;
