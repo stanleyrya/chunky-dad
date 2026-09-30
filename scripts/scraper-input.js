@@ -474,6 +474,17 @@ const scraperConfig = {
       metadata: { website: { value: "https://www.lonestarsf.com" } },
     },
     {
+      name: "The Stud",
+      // 1123 Folsom St, SoMa. A general queer venue that hosts bear parties
+      // (Bear Happy Hour SF, GRUNT, Bark Before Dark were on its calendar in
+      // September 2026). Squarespace events collection (/calendar/<slug>, 38
+      // cards on 2026-09-30, 8 upcoming) — same door shape as Lone Star.
+      urls: ["https://www.studsf.com/calendar"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.studsf.com" } },
+    },
+    {
       name: "The Cuff Complex",
       // 1533 13th Ave, Seattle. Squarespace events collection (/events/<slug>,
       // 42 dated pages on 2026-09-19) — same door shape as Lone Star.

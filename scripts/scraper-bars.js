@@ -1201,7 +1201,8 @@ const scraperBars = {
       "name": "The Stud",
       "city": "sf",
       "address": "1123 Folsom Street, San Francisco, California, 94103",
-      "coordinates": "37.7761653, -122.4083643"
+      "coordinates": "37.7761653, -122.4083643",
+      "website": "https://www.studsf.com"
     },
     {
       "name": "F8 Nightclub & Bar",

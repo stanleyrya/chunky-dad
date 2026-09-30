@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "source": "The Stud",
+  "slug": "the-stud",
+  "status": "complete",
+  "recheckAfter": "2026-10-30",
+  "recon": {
+    "date": "2026-09-30",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.studsf.com/calendar"
+    ],
+    "doors": [
+      {
+        "url": "https://www.studsf.com/calendar",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 38,
+        "truthFlag": "8 cards marked eventlist-event--upcoming, 30 marked eventlist-event--past",
+        "note": "Squarespace events collection, one static read (HTTP 200, 404 KB). Every card carries its title, start and end (<time> elements with 24-hour values), the venue line \"The Stud\" and an ICS / Google Calendar export. The collection has a ?format=json twin (the door the scraper reads for Lone Star Saloon, The Cuff Complex, 3 Dollar Bill and Mass Bears and Cubs); it was not requested at recon."
+      },
+      {
+        "url": "https://www.studsf.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "/calendar allowed; Disallow: /*?format=json for crawlers",
+        "note": "Squarespace's stock robots.txt. The listing page is allowed. The JSON twin is disallowed for crawlers and is read inside the first-party window of a configured source, as on the other Squarespace venues."
+      }
+    ],
+    "notes": "Added 2026-09-30 at the owner's request. 1123 Folsom Street, San Francisco (curated bar \"The Stud\"). A general queer venue that hosts bear parties: its past listings on the recon date include GRUNT (2026-09-26), BARK BEFORE DARK (2026-09-25), Bear Happy Hour SF (2026-09-10). None of the 8 upcoming events is a bear party by its title; the bear check decides per event. \"TRUCK\" is a party here, not a second bar at this address."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "The listing page renders every upcoming card of the collection (8); all are documented from their own <time> elements.",
+    "publishedEventCount": 8,
+    "documentedEventCount": 8,
+    "occurrenceWindow": {
+      "start": "2026-09-30",
+      "end": "2026-12-29"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "bar": "The Stud",
+    "address": "1123 Folsom Street, San Francisco, CA 94103",
+    "website": "https://www.studsf.com"
+  },
+  "events": [
+    {
+      "id": "truck-2026-09-30",
+      "kind": "single",
+      "title": "TRUCK",
+      "startDate": "2026-09-30",
+      "startTime": "21:30",
+      "endDate": "2026-10-01",
+      "endTime": "02:00",
+      "website": "https://www.studsf.com/calendar/h4wr7zbsakm3fye-ayfjb-srz3e-sfwg9-khmp3-44pt5-9hzwp-xw23y-y9pxa-53wtc-xy2w8",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "TRUCK Wed, Sep 30, 2026 9:30 PM"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "slaughter-haus-2026-10-10",
+      "kind": "single",
+      "title": "Slaughter Haus",
+      "startDate": "2026-10-10",
+      "startTime": "22:00",
+      "endDate": "2026-10-11",
+      "endTime": "02:00",
+      "website": "https://www.studsf.com/calendar/2026/10/10/slaughter-haus",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "Slaughter Haus Sat, Oct 10, 2026 10:00 PM"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-nonprofit-happy-hour-2026-10-13",
+      "kind": "single",
+      "title": "QUEER NONPROFIT HAPPY HOUR",
+      "startDate": "2026-10-13",
+      "startTime": null,
+      "endDate": "2026-10-13",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2025/11/11/queer-nonprofit-happy-hour-m8hjk-23j62-tb748-whp8e-k3r5e-82wz9-z6w9c",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "QUEER NONPROFIT HAPPY HOUR Tuesday, October 13, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-tarot-happy-hour-2026-10-27",
+      "kind": "single",
+      "title": "QUEER TAROT HAPPY HOUR",
+      "startDate": "2026-10-27",
+      "startTime": null,
+      "endDate": "2026-10-27",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2026/5/26/queer-tarot-happy-hour-yym98-mak4y",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "QUEER TAROT HAPPY HOUR Tuesday, October 27, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-nonprofit-happy-hour-2026-11-10",
+      "kind": "single",
+      "title": "QUEER NONPROFIT HAPPY HOUR",
+      "startDate": "2026-11-10",
+      "startTime": null,
+      "endDate": "2026-11-10",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2025/11/11/queer-nonprofit-happy-hour-m8hjk-23j62-tb748-whp8e-k3r5e-82wz9-3tx9n",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "QUEER NONPROFIT HAPPY HOUR Tuesday, November 10, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "nudie-nubies-2026-11-14",
+      "kind": "single",
+      "title": "Nudie Nubies",
+      "startDate": "2026-11-14",
+      "startTime": null,
+      "endDate": "2026-11-14",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2026/9/12/nudie-nubies-tagwy",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "Nudie Nubies Saturday, November 14, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-tarot-happy-hour-2026-11-24",
+      "kind": "single",
+      "title": "QUEER TAROT HAPPY HOUR",
+      "startDate": "2026-11-24",
+      "startTime": null,
+      "endDate": "2026-11-24",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2026/5/26/queer-tarot-happy-hour-yym98-mak4y-nwk2w",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "QUEER TAROT HAPPY HOUR Tuesday, November 24, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "queer-nonprofit-happy-hour-2026-12-08",
+      "kind": "single",
+      "title": "QUEER NONPROFIT HAPPY HOUR",
+      "startDate": "2026-12-08",
+      "startTime": null,
+      "endDate": "2026-12-08",
+      "endTime": null,
+      "website": "https://www.studsf.com/calendar/2025/11/11/queer-nonprofit-happy-hour-m8hjk-23j62-tb748-whp8e-k3r5e-82wz9-hjnjn",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.studsf.com/calendar",
+        "quote": "QUEER NONPROFIT HAPPY HOUR Tuesday, December 8, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [],
+  "openQuestions": [
+    {
+      "q": "GRUNT's own site announces GRUNT: Halloween at The Stud on 2026-10-24; the venue's calendar does not list it yet on the recon date.",
+      "raisedOn": "2026-09-30",
+      "blocking": false
+    }
+  ]
+}
