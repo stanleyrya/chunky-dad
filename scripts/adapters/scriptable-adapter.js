@@ -4692,9 +4692,11 @@ class ScriptableAdapter {
     return { isAllDay: true, allDayStartDay: startDay, allDayEndDay: endDay >= startDay ? endDay : startDay };
   }
 
-  // ALL-DAY ON THE CALENDAR. The event says it is all-day (`allDay: true`,
-  // derived from its dates by SharedCore.applyAllDayConvention) and names
-  // its days in ITS OWN zone. EventKit stores an all-day event against the
+  // ALL-DAY ON THE CALENDAR. The event says it is a whole day — a real
+  // all-day event (`allDay: true`) or an ordinary one whose time is not
+  // known (`timeUnknown: true`), both derived from its dates by
+  // SharedCore.applyAllDayConvention; the calendar has one switch for both,
+  // the notes say which — and names its days in ITS OWN zone. EventKit stores an all-day event against the
   // DEVICE's day, so handing it the event's instants would put a London or
   // Tokyo day on the evening before (or a Los Angeles day correctly only by
   // luck) on a phone kept on Eastern time. The days are therefore read in
@@ -4707,7 +4709,9 @@ class ScriptableAdapter {
   // written as all-day.
   applyAllDayToCalendarEvent(target, event) {
     if (!target || !event) return false;
-    const flagged = SharedCore.isAllDayFlag(event.allDay);
+    // Both kinds of whole-day event — a real all-day one (`allDay`) and one
+    // whose time is not known (`timeUnknown`) — are all-day on the calendar.
+    const flagged = SharedCore.isWholeDayEvent(event);
     if (!flagged) {
       // A saved all-day record whose event now states a time is a timed
       // event: the switch goes off with the dates that replaced it.
@@ -4730,7 +4734,7 @@ class ScriptableAdapter {
       : null;
     if (!days) {
       console.log(
-        `📱 Scriptable: ⚠️ "${event.title || "event"}" is marked all-day but its dates are not a whole day in ${timezone || "any known zone"} — written as the timed span it carries`,
+        `📱 Scriptable: ⚠️ "${event.title || "event"}" is marked as a whole-day event but its dates are not a whole day in ${timezone || "any known zone"} — written as the timed span it carries`,
       );
       if (target.isAllDay === true) target.isAllDay = false;
       return false;
@@ -12637,14 +12641,20 @@ class ScriptableAdapter {
     // HALF is an atomic .dt-nowrap span and only the separator may break, so
     // a narrow screen moves the whole end datetime down instead of splitting
     // it after the date.
-    // An all-day event (the page gave a date and no time — see
-    // SharedCore.applyAllDayConvention) prints its day, or first and last
-    // day, and says so: never the span's own "12:00 AM - 11:59 PM".
-    const allDayCard = SharedCore.isAllDayFlag(event.allDay);
+    // A whole-day event (see SharedCore.applyAllDayConvention) prints its
+    // day, or first and last day, and says which kind it is — a real all-day
+    // event, or one whose time the page never gave: never the span's own
+    // "12:00 AM - 11:59 PM".
+    const wholeDayKind = SharedCore.wholeDayKind(event);
+    const allDayCard = wholeDayKind !== "";
     const dateLineHtml = allDayCard
       ? `<span class="dt-nowrap">${dateStr}</span>${
           endDateStr ? ` - <span class="dt-nowrap">${endDateStr}</span>` : ""
-        } · all day <span class="no-end-note">(no time listed)</span>`
+        } · ${
+          wholeDayKind === "time-unknown"
+            ? 'time not listed <span class="no-end-note">(saved as all-day)</span>'
+            : "all day"
+        }`
       : `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
       hasRealEnd
         ? ` - <span class="dt-nowrap">${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}</span>`

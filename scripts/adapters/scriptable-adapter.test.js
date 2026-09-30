@@ -11953,7 +11953,20 @@ test('all-day write fails closed: a flag the dates do not back, or no zone, writ
   } finally {
     console.log = originalLog;
   }
-  assert.equal(lines.filter((line) => line.includes('is marked all-day but its dates are not a whole day')).length, 2);
+  assert.equal(lines.filter((line) => line.includes('is marked as a whole-day event but its dates are not a whole day')).length, 2);
+});
+
+test('all-day write: an event whose time is unknown is written all-day too — the calendar has one switch for both kinds', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const target = {};
+  const wrote = adapter.applyAllDayToCalendarEvent(target, {
+    title: 'B BAR', timeUnknown: true, timezone: 'America/Los_Angeles',
+    startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-02T06:59:59.000Z')
+  });
+  assert.equal(wrote, true);
+  assert.equal(target.isAllDay, true);
+  assert.deepEqual([target.startDate.getFullYear(), target.startDate.getMonth(), target.startDate.getDate(), target.startDate.getHours()], [2037, 9, 1, 0]);
+  assert.deepEqual([target.endDate.getMonth(), target.endDate.getDate(), target.endDate.getHours(), target.endDate.getMinutes()], [9, 1, 23, 59]);
 });
 
 test('all-day write: an event that now has a time switches a saved all-day record back to timed', () => {

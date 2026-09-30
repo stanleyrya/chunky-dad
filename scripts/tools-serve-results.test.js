@@ -1549,12 +1549,16 @@ test('review page: the missing-calendar notice says how old the phone\'s list is
   assert.equal(buildScriptableSnapshotLink('display-saved-run'), 'scriptable:///run?scriptName=display-saved-run&snapshot=1');
 });
 
-test('review date line: an all-day event names its day (or days) and never a clock; "late" is shown as the page\'s word', () => {
-  const { formatReviewDateLine } = require(path.join(__dirname, '..', 'tools', 'serve-results.js'));
-  assert.equal(formatReviewDateLine('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', { allDay: true }),
-    'Thu, Oct 1, 2037 · all day (no time listed)');
-  assert.equal(formatReviewDateLine('2037-10-08T07:00:00.000Z', '2037-10-13T06:59:59.000Z', 'America/Los_Angeles', { allDay: true }),
-    'Thu, Oct 8, 2037 – Mon, Oct 12, 2037 · all day (no time listed)');
+test('review date line: a whole-day event names its day (or days), says which kind it is and never prints a clock; "late" is shown as the page\'s word', () => {
+  const { formatReviewDateLine } = require('../tools/serve-results.js');
+  // A bar night whose time the page never gave: saved as all-day, said so.
+  assert.equal(formatReviewDateLine('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', { wholeDay: 'time-unknown' }),
+    'Thu, Oct 1, 2037 · time not listed (saved as all-day)');
+  assert.equal(formatReviewDateLine('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', { wholeDay: 'time-unknown', endNote: 'late' }),
+    'Thu, Oct 1, 2037 · time not listed (saved as all-day) · the page says: late');
+  // A festival: a real all-day event.
+  assert.equal(formatReviewDateLine('2037-10-08T07:00:00.000Z', '2037-10-13T06:59:59.000Z', 'America/Los_Angeles', { wholeDay: 'all-day' }),
+    'Thu, Oct 8, 2037 – Mon, Oct 12, 2037 · all day');
   const timed = formatReviewDateLine('2037-10-02T01:00:00.000Z', '2037-10-02T04:00:00.000Z', 'America/Los_Angeles', { endDefaulted: true, endNote: 'late' });
   assert.match(timed, /6:00 PM/);
   assert.match(timed, /the page says: late$/);

@@ -27111,7 +27111,72 @@ test('all-day: where a scraped event meets its calendar record', () => {
   assert.equal(SharedCore.getOwnerReviewChangeFields().includes('allDay'), false, 'housekeeping, not a card of its own');
 });
 
-test('all-day end to end: a saved midnight-plus-default event becomes all-day with the flag in its notes; a day already all-day is left alone', async () => {
+test('whole-day kinds: a festival is all-day; one date at a venue, or anything that runs "til late", is an event whose time is unknown', () => {
+  const core = allDayCore();
+  const kind = (event) => {
+    core.applyAllDayConvention(event);
+    assert.ok(!(event.allDay === true && event.timeUnknown === true), 'never both flags');
+    return SharedCore.wholeDayKind(event);
+  };
+  const oneDay = (extra) => ({ title: 'X', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: null, _noTimeStated: true, ...extra });
+  const days = (extra) => ({ title: 'X', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-08T07:00:00.000Z'), endDate: new Date('2037-10-12T07:00:00.000Z'), _noTimeStated: true, ...extra });
+
+  // A night at a bar with no printed time: an ordinary event, time unknown.
+  const barNight = oneDay({ title: 'B BAR', bar: 'Eagle LA' });
+  assert.equal(kind(barNight), 'time-unknown');
+  assert.equal(barNight.timeUnknown, true);
+  assert.equal('allDay' in barNight, false);
+  assert.equal(kind(oneDay({ address: '4219 Santa Monica Blvd, Los Angeles, CA' })), 'time-unknown', 'a street address is a venue');
+
+  // A day in a city, no venue — a holiday, a festival day: a real all-day event.
+  const festivalDay = oneDay({ title: 'BeefDip Bear Week', address: 'Puerto Vallarta, Jalisco' });
+  assert.equal(kind(festivalDay), 'all-day');
+  assert.equal(festivalDay.allDay, true);
+  assert.equal('timeUnknown' in festivalDay, false);
+
+  // More than one day is a festival, a weekend, a cruise — venue or not.
+  assert.equal(kind(days({ title: 'Bear Weekend', bar: 'Camp Out Poconos' })), 'all-day');
+  assert.equal(kind(days({ title: 'Leipzig Bear Weekend' })), 'all-day');
+
+  // The page's own word outranks the span: a day does not run "til late".
+  assert.equal(kind(oneDay({ endNote: 'late' })), 'time-unknown');
+  assert.equal(kind(days({ endNote: 'late' })), 'time-unknown');
+
+  // A timed event carries neither flag, whatever it was stamped with.
+  const timed = { title: 'X', city: 'la', timezone: 'America/Los_Angeles', bar: 'Eagle LA', allDay: true, timeUnknown: true,
+    startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') };
+  assert.equal(kind(timed), '');
+  assert.equal('allDay' in timed, false);
+  assert.equal('timeUnknown' in timed, false);
+
+  // Re-derived, never sticky: the venue arriving later (a merge, a fold)
+  // changes the kind on the next derive.
+  const late = oneDay({ title: 'Bear Night' });
+  assert.equal(kind(late), 'all-day');
+  late.bar = 'Club Try-Angles';
+  assert.equal(kind(late), 'time-unknown');
+  assert.equal(SharedCore.isWholeDayEvent(late), true);
+  // Read back from the notes, the flag is the string "true".
+  assert.equal(SharedCore.wholeDayKind({ timeUnknown: 'true' }), 'time-unknown');
+  assert.equal(SharedCore.wholeDayKind({ allDay: 'true' }), 'all-day');
+  assert.equal(SharedCore.wholeDayKind({}), '');
+});
+
+test('whole-day end to end: a festival merges as a real all-day event with `allDay: true` in its notes', async () => {
+  const core = allDayCore();
+  const span = core.buildAllDaySpan('2037-10-08', '2037-10-11', 'America/Los_Angeles');
+  const festival = { title: 'BEAR WEEKEND', city: 'la', timezone: 'America/Los_Angeles', bar: 'Camp Out',
+    startDate: new Date(span.startDate), endDate: new Date(span.endDate), website: 'https://campout.example/bear-weekend', source: 'mec' };
+  core.applyAllDayConvention(festival);
+  const created = (await core.prepareEventsForCalendar([festival], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal(created._action, 'new');
+  assert.equal(created.allDay, true);
+  assert.equal('timeUnknown' in created, false);
+  assert.match(created.notes, /^allDay: true$/m);
+  assert.ok(!/^timeUnknown:/m.test(created.notes));
+});
+
+test('all-day end to end: a saved midnight-plus-default event becomes a whole day marked `timeUnknown` in its notes; a day already saved that way is left alone', async () => {
   const core = allDayCore();
   const day = core.buildAllDaySpan('2037-10-01', '2037-10-01', 'America/Los_Angeles');
   const scraped = () => ({
@@ -27124,10 +27189,13 @@ test('all-day end to end: a saved midnight-plus-default event becomes all-day wi
   core.applyAllDayConvention(first);
   const merged = (await core.prepareEventsForCalendar([first], buildPrepCalendarAdapter([legacy]), {}))[0];
   assert.equal(merged._action, 'merge');
-  assert.equal(merged.allDay, true);
+  assert.equal(merged.timeUnknown, true, 'one night at a bar: an ordinary event whose time is not known');
+  assert.equal('allDay' in merged, false, 'and not a real all-day event');
   assert.equal(new Date(merged.endDate).toISOString(), '2037-10-02T06:59:59.000Z', 'the stored 3-hour default gives way to the day');
   assert.ok(merged._changes.includes('endDate') && merged._changes.includes('allDay'), JSON.stringify(merged._changes));
-  assert.match(merged.notes, /^allDay: true$/m, 'the flag is in the calendar notes, where a person can read it');
+  assert.match(merged.notes, /^timeUnknown: true$/m, 'the flag is in the calendar notes, where a person can read it');
+  assert.ok(!/^allDay:/m.test(merged.notes));
+  assert.equal(core.buildOwnerReviewProposal(merged).wholeDay, 'time-unknown', 'and the deck is told which kind');
   assert.equal(merged._endDateDefaulted, undefined);
   assert.ok(!(merged._sanityFlags || []).some((flag) => /overnight/.test(flag.code)), 'a whole day is not an AM/PM typo');
   assert.equal(new Date(merged.endDate).toISOString(), '2037-10-02T06:59:59.000Z', 'and its end is not "corrected"');

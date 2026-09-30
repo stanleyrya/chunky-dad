@@ -2260,9 +2260,11 @@ class SharedCore {
             image: String(event.image || ''),
             cover: String(event.cover || ''),
             description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
-            // A day, not a time (see applyAllDayConvention), and what the
-            // page said in place of a closing time ("late").
-            ...(SharedCore.isAllDayFlag(event.allDay) ? { allDay: true } : {}),
+            // Saved as a whole day (see applyAllDayConvention) — 'all-day'
+            // for a real all-day event, 'time-unknown' for one whose time
+            // the page never gave — and what the page said in place of a
+            // closing time ("late").
+            ...(SharedCore.isWholeDayEvent(event) ? { wholeDay: SharedCore.wholeDayKind(event) } : {}),
             ...(typeof event.endNote === 'string' && event.endNote.trim() ? { endNote: event.endNote.trim() } : {}),
             changes
         };
@@ -15905,10 +15907,10 @@ class SharedCore {
             console.log(`🔄 MERGE: "${mergedObject.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
         
-        // ALL-DAY follows the dates that won: the flag is derived from the
-        // merged start and end (applyAllDayConvention), never arbitrated on
-        // its own, so the note line and the calendar switch always agree
-        // with the span that is written.
+        // WHOLE-DAY follows the dates that won: the flag (`allDay` or
+        // `timeUnknown`) is derived from the merged start and end
+        // (applyAllDayConvention), never arbitrated on its own, so the note
+        // line and the calendar switch always agree with the span written.
         {
             const probe = {
                 startDate: mergedObject.startDate || calendarObject.startDate,
@@ -15916,8 +15918,15 @@ class SharedCore {
                 timezone: mergedObject.timezone || scraperObject.timezone || calendarObject.timezone,
                 city: newEvent.city
             };
-            if (this.applyAllDayConvention(probe)) mergedObject.allDay = true;
-            else delete mergedObject.allDay;
+            // The kind is read from the merged record's own words and venue.
+            probe.endNote = mergedObject.endNote;
+            probe.bar = mergedObject.bar;
+            probe.address = mergedObject.address;
+            this.applyAllDayConvention(probe);
+            for (const flag of ['allDay', 'timeUnknown']) {
+                if (probe[flag] === true) mergedObject[flag] = true;
+                else delete mergedObject[flag];
+            }
         }
 
         // STEP 5: Build new notes from merged object
@@ -16048,8 +16057,9 @@ class SharedCore {
         }
         const inZone = (side) => this.isAllDaySpan(side.startDate, side.endDate, timezone);
         const calendarAllDay = inZone(calendarObject);
-        if (calendarAllDay) calendarObject.allDay = true;
-        else if ('allDay' in calendarObject) delete calendarObject.allDay;
+        SharedCore.setWholeDayFlags(calendarObject, calendarAllDay
+            ? this.decideWholeDayKind(calendarObject, SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone))
+            : '');
         const scrapedAllDay = !scraperObject._timezoneUnresolved && inZone(scraperObject);
         if (scrapedAllDay === calendarAllDay) return;
         const clockOf = (side) => {
@@ -16060,7 +16070,7 @@ class SharedCore {
             console.log(`🗓️ ALL DAY: "${label}" — this run found a date and no time; the saved start time and end are kept`);
             scraperObject.startDate = calendarObject.startDate;
             scraperObject.endDate = calendarObject.endDate;
-            if ('allDay' in scraperObject) delete scraperObject.allDay;
+            SharedCore.setWholeDayFlags(scraperObject, '');
             return;
         }
         if (calendarAllDay && !scraperObject._timezoneUnresolved && clockOf(scraperObject)) {
@@ -16074,7 +16084,7 @@ class SharedCore {
             console.log(`🗓️ ALL DAY: "${label}" — the saved event is all-day; this run found a time on that day, which replaces it (start and end together)`);
             calendarObject.startDate = scraperObject.startDate;
             calendarObject.endDate = this.isEmptyArbitrationValue(scraperObject.endDate) ? null : scraperObject.endDate;
-            delete calendarObject.allDay;
+            SharedCore.setWholeDayFlags(calendarObject, '');
         }
     }
 
@@ -16107,7 +16117,7 @@ class SharedCore {
         // event that became all-day (or stopped being it) is a change even
         // when its instants did not move. Not an owner-review field — it
         // rides with the dates or, alone, as housekeeping.
-        if (SharedCore.isAllDayFlag(finalEvent.allDay) !== (existingEvent.isAllDay === true)) changes.push('allDay');
+        if (SharedCore.isWholeDayEvent(finalEvent) !== (existingEvent.isAllDay === true)) changes.push('allDay');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         // url is an output view of website (one logical field): compare the
         // canonical merged website against the calendar's canonical website
@@ -16497,13 +16507,32 @@ class SharedCore {
     // and showed on the site as "12:00 AM – 3:00 AM" (run 20260930-085424:
     // 58 upcoming events, 26 of them Eagle LA's).
     //
-    // ONE SHAPE, everywhere: an all-day event starts at 00:00:00 and ends at
-    // 23:59:59 of its last day, both read in the EVENT's zone. The feeds'
+    // ONE SHAPE, everywhere: a whole-day event starts at 00:00:00 and ends
+    // at 23:59:59 of its last day, both read in the EVENT's zone. The feeds'
     // all-day rows already had that shape (see the JSON-API row builder).
-    // The flag — `allDay: true`, a plain event field, so it is written into
-    // the calendar notes where a person reading the record can see it — is
-    // DERIVED from the dates and can never disagree with them: only that
-    // exact shape is all-day (applyAllDayConvention), whoever produced it.
+    //
+    // TWO KINDS, ONE CALENDAR SWITCH (owner, same day: "there are two types
+    // of events that are all day. Actual all day events and events that we
+    // just don't know the time of … they will be saved the same in the
+    // calendar, so if there is additional metadata we can infer (terms like
+    // 'late') then we can say 'this is just an event that we don't know the
+    // time of' and save it special"):
+    //   `allDay: true`      a real all-day event — a festival, a bear
+    //                       weekend, a cruise: it spans more than one day;
+    //   `timeUnknown: true` an ordinary event whose time the page never
+    //                       gave — a bar night, a contest, a Halloween
+    //                       party: one day at a venue, or anything whose
+    //                       own words say it runs "til late"
+    //                       (decideWholeDayKind).
+    // Both are written to the calendar as all-day (there is no time to
+    // write); the flag says which it is. They are plain event fields, so
+    // they land in the calendar notes where a person reading the record
+    // sees them, and both are DERIVED from the dates (applyAllDayConvention):
+    // only the whole-day shape carries either, never both.
+    // Run 20260930-085424, the whole-day events of five sources: every
+    // multi-day one is a festival, weekend or cruise (26); the one-day ones
+    // are nights at a venue (Eagle LA's B BAR, its Halloween party, Salt
+    // Lake's Bear Night) and one venue-less festival day.
     //
     // What is NOT decided here is which day the phone's calendar puts it
     // on: the write rebuilds the day at the device's own midnight
@@ -16513,6 +16542,51 @@ class SharedCore {
 
     static isAllDayFlag(value) {
         return value === true || (typeof value === 'string' && value.trim().toLowerCase() === 'true');
+    }
+
+    // Which kind of whole-day event this is: 'all-day', 'time-unknown', or
+    // '' for a timed event.
+    static wholeDayKind(event) {
+        if (!event || typeof event !== 'object') return '';
+        if (SharedCore.isAllDayFlag(event.timeUnknown)) return 'time-unknown';
+        if (SharedCore.isAllDayFlag(event.allDay)) return 'all-day';
+        return '';
+    }
+
+    static isWholeDayEvent(event) {
+        return SharedCore.wholeDayKind(event) !== '';
+    }
+
+    // Which kind a whole-day record is, from what the record itself says
+    // (`days` = SharedCore.allDayDaysInZone; null = a timed event → '').
+    // It is a real all-day event unless something on it says "this is a
+    // party with a start time nobody printed":
+    //   - its own words: the page put "late" where a closing time goes
+    //     (endNote) — a day does not run "til late", a night does;
+    //   - one day at a venue: a bar name or a street address. A festival
+    //     or a holiday is a day (or days) in a city; one date at a bar's
+    //     door is a night there.
+    // More than one day, or a day with no venue ("BeefDip Bear Week",
+    // Puerto Vallarta), stays all-day.
+    decideWholeDayKind(record, days) {
+        if (!record || typeof record !== 'object' || !days) return '';
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        if (text(record.endNote)) return 'time-unknown';
+        if (days.startDay !== days.endDay) return 'all-day';
+        const atVenue = text(record.bar) !== '' || this.looksLikeStreetAddress(text(record.address));
+        return atVenue ? 'time-unknown' : 'all-day';
+    }
+
+    // Stamp the kind on a record — never both flags, and neither on a timed
+    // event.
+    static setWholeDayFlags(target, kind) {
+        if (!target || typeof target !== 'object') return '';
+        if ('allDay' in target) delete target.allDay;
+        if ('timeUnknown' in target) delete target.timeUnknown;
+        if (kind === 'time-unknown') target.timeUnknown = true;
+        else if (kind === 'all-day') target.allDay = true;
+        else return '';
+        return kind;
     }
 
     // Wall clock of an instant in a zone: { year, month, day, hour, minute,
@@ -16738,12 +16812,8 @@ class SharedCore {
                 }
             }
         }
-        if (this.isAllDaySpan(event.startDate, event.endDate, timezone)) {
-            event.allDay = true;
-            return true;
-        }
-        if ('allDay' in event) delete event.allDay;
-        return false;
+        const days = SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone);
+        return SharedCore.setWholeDayFlags(event, this.decideWholeDayKind(event, days)) !== '';
     }
 
     // The ai-web parser stores extracted local times as wall-clock components labeled

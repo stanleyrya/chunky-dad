@@ -908,16 +908,17 @@ function getSameChangeSignature(proposal) {
     const SharedCore = loadSharedCore();
     const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
     let fields = Object.keys(changes).sort();
-    // An event that becomes ALL-DAY says the same thing on every night it
-    // applies to — "no time listed, saved as a day" — although each night's
+    // An event that becomes a WHOLE DAY (a real all-day event, or one whose
+    // time is not known) says the same thing on every night it applies to
+    // — "no time listed, saved as a day" — although each night's
     // end instant differs. Its end-date row is the conversion, so it folds
     // under that name; a start that moves is still one event's own fact.
-    const becomesAllDay = proposal && proposal.allDay === true && fields.includes('endDate') && !fields.includes('startDate');
+    const becomesAllDay = proposal && Boolean(proposal.wholeDay) && fields.includes('endDate') && !fields.includes('startDate');
     if (becomesAllDay) fields = fields.filter((field) => field !== 'endDate');
     if ((fields.length === 0 && !becomesAllDay) || fields.includes('startDate') || fields.includes('endDate')) return '';
     const value = (raw) => SharedCore.normalizeOwnerReviewValue(raw);
     if (becomesAllDay) {
-        return ['allDay=→true'].concat(fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`)).join(';');
+        return [`wholeDay=→${proposal.wholeDay}`].concat(fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`)).join(';');
     }
     return fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`).join(';');
 }
@@ -927,10 +928,13 @@ function describeChangeRows(proposal) {
     const fields = Object.keys(changes).sort();
     // The all-day conversion is one row in words, not one member's end
     // instant (see getSameChangeSignature).
-    const becomesAllDay = proposal && proposal.allDay === true && fields.includes('endDate') && !fields.includes('startDate');
+    const becomesAllDay = proposal && Boolean(proposal.wholeDay) && fields.includes('endDate') && !fields.includes('startDate');
     const rows = fields.filter((field) => !(becomesAllDay && field === 'endDate'))
         .map((field) => ({ field, from: text(changes[field] && changes[field].from), to: text(changes[field] && changes[field].to) }));
-    if (becomesAllDay) rows.unshift({ field: 'allDay', from: 'a time the page never stated', to: 'all day (no time listed)' });
+    if (becomesAllDay) {
+        rows.unshift({ field: 'allDay', from: 'a time the page never stated',
+            to: proposal.wholeDay === 'time-unknown' ? 'time not listed (saved as all-day)' : 'all day' });
+    }
     return rows;
 }
 function stampSameChange(cards) {
@@ -1418,6 +1422,7 @@ module.exports = {
     buildDeck,
     describeSeriesCadence,
     getSameChangeSignature,
+    describeChangeRows,
     driftCoveredByNoteTags,
     stampSameChange,
     formatRejectionsText
