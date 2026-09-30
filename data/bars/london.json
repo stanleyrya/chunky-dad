@@ -61,5 +61,11 @@
     "city": "london",
     "address": "Victoria Embankment, London SW1A 2JH",
     "coordinates": "51.5022544, -0.1231736"
+  },
+  {
+    "name": "The Steel Yard",
+    "city": "london",
+    "address": "13-16 Allhallows Ln, London EC4R 3UL",
+    "coordinates": "51.5101240, -0.0903711"
   }
 ]

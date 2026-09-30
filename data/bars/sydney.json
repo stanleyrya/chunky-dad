@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Kings Cross Hotel",
+    "city": "sydney",
+    "address": "244-248 William Street, Sydney, New South Wales",
+    "coordinates": "-33.8749589, 151.2219447"
+  },
+  {
+    "name": "ARQ",
+    "city": "sydney",
+    "address": "16 Flinders Street, Sydney, New South Wales",
+    "coordinates": "-33.8814084, 151.2172668"
+  }
+]

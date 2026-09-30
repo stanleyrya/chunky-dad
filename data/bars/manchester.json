@@ -10,5 +10,11 @@
     "paletteSource": "favicon",
     "palette": "#111113:81:0 #868686:4:0 #ffffff:3:0",
     "faviconPlate": "#111113"
+  },
+  {
+    "name": "YES",
+    "city": "manchester",
+    "address": "38 Charles Street, Manchester M1 7DB",
+    "coordinates": "53.4740106, -2.2381584"
   }
 ]
