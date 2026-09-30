@@ -889,13 +889,16 @@ test('buildDeck: a defaulted end rides on the card as display.endDefaulted; a st
     summary: { runId: '20300101-051500' }, config: { cities: CITIES }, parserResults: [], bearDroppedEvents: [],
     analyzedEvents: [
       newEvent({ title: 'SPRING', endDate: iso(FUTURE + 3 * 3600 * 1000), _endDateDefaulted: true }),
-      newEvent({ title: 'FURBALL NYC' })
+      newEvent({ title: 'FURBALL NYC' }),
+      // A record read back from the calendar: the notes carry the flag.
+      newEvent({ title: 'SAVED DEFAULT', endDate: iso(FUTURE + 3 * 3600 * 1000), endUnknown: 'true' })
     ]
   };
   const deck = rq.buildDeck(payload, rq.emptyDecisionStore(), { now: 0, curatedBars: {} });
   const byTitle = Object.fromEntries(deck.cards.map((card) => [card.proposal.title, card]));
   assert.equal(byTitle.SPRING.display.endDefaulted, true);
   assert.equal(byTitle['FURBALL NYC'].display.endDefaulted, false);
+  assert.equal(byTitle['SAVED DEFAULT'].display.endDefaulted, true, 'the notes flag reads the same as the create stamp');
   assert.ok(!('endDefaulted' in byTitle.SPRING.proposal), 'display only — the decision snapshot is unchanged, so no stored decision stops covering its card');
 });
 

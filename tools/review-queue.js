@@ -710,7 +710,9 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         // the pipeline writes so the calendar accepts the event
         // (SharedCore.applyDefaultEventEnd). The card says so instead of
         // printing it as the party's closing time.
-        endDefaulted: event._endDateDefaulted === true
+        // Stamped on a create; carried in the notes (`endUnknown: true`)
+        // for a saved record whose end is still the default.
+        endDefaulted: event._endDateDefaulted === true || event.endUnknown === true || String(event.endUnknown || "").trim().toLowerCase() === "true"
     };
 }
 

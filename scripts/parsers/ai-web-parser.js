@@ -1338,6 +1338,16 @@ class AiWebParser {
             // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
             // in that city, not an incomplete record.
             const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
+            // The page's own data, streamed to the browser as React flight
+            // chunks (see collectPageFlightDataRows): read as feed rows, with
+            // the same builder, completeness gate and enrichment as a feed.
+            const pageDataRows = jsonApiPayload === null ? this.collectPageFlightDataRows(html) : [];
+            const pageDataEvents = pageDataRows
+                .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
+                .filter(event => event && (event.bar || event.address || event.city));
+            if (pageDataRows.length > 0) {
+                console.log(`📦 PAGE DATA: ${sourceUrl} ships ${pageDataRows.length} event row(s) in its own flight data — built ${pageDataEvents.length} event(s)`);
+            }
             // Elfsight rows carry no venue of their own — the widget IS the
             // venue's own calendar on the venue's own page, so bar/address come
             // from the site the same way they do for any venue-role parser.
@@ -1372,8 +1382,10 @@ class AiWebParser {
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
+                            : (pageDataEvents.length > 0
+                                ? 'page-data'
                             : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice'
-                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null))))))));
+                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null)))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
                 : (structuredSource === 'listing-prose'
@@ -1388,7 +1400,9 @@ class AiWebParser {
                         ? completeJsonLdEvents
                         : (structuredSource === 'json-api'
                             ? completeJsonApiEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))))));
+                            : (structuredSource === 'page-data'
+                                ? pageDataEvents
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1414,6 +1428,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'page-data') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the page's own flight data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 }
@@ -1552,6 +1568,9 @@ class AiWebParser {
                 // A listing that states no time may have a poster that does
                 // (see adoptFlyerClockForPlaceholderTimes).
                 this.adoptFlyerClockForPlaceholderTimes(structuredEvents);
+                // …and a listing that states a start and no end may have a
+                // poster that prints the range (see adoptFlyerEndForOpenEnds).
+                this.adoptFlyerEndForOpenEnds(structuredEvents);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -13512,6 +13531,96 @@ class AiWebParser {
     // lines so the HTML-oriented AI machinery still sees real content
     // (fail open, never fail silent).
 
+    // THE PAGE'S OWN DATA, SHIPPED TO THE BROWSER. A Next.js app-router page
+    // streams the props it rendered from as React Server Component "flight"
+    // chunks — `self.__next_f.push([1,"<row-id>:<json>\n"])` — and a
+    // listing page's event rows sit in there whole (whereto.party/in/<city>:
+    // `initialEvents: [{ name, start_date, start_time, end_time, place,
+    // city, images, ticketing_url … }]`). The visible HTML is those same rows
+    // rendered as cards, which the AI text pass read approximately (run
+    // 20260930-150601: THICK 'N' JUICY Brisbane read as Dec 5, page data
+    // Nov 13). Generic: the chunks are decoded (each is a JSON string
+    // literal), joined, split into their `id:payload` lines, every JSON
+    // payload parsed, and every array of event-like objects (the same
+    // recognizer the JSON-API route uses) is read as feed rows through the
+    // same builder. No site names, no key names beyond the recognizer's.
+    collectPageFlightDataRows(html) {
+        const text = String(html || '');
+        if (!text.includes('__next_f.push')) return [];
+        const chunks = [];
+        const pushPattern = /__next_f\.push\(\[\s*\d+\s*,\s*("(?:[^"\\]|\\.)*")\s*\]\)/g;
+        let match;
+        while ((match = pushPattern.exec(text)) !== null) {
+            try {
+                chunks.push(JSON.parse(match[1]));
+            } catch (_) {
+                // A chunk that is not a JSON string literal carries no data.
+            }
+        }
+        if (chunks.length === 0) return [];
+        const rows = [];
+        const seen = new Set();
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const visit = (node, depth) => {
+            if (!node || typeof node !== 'object' || depth > 60) return;
+            if (Array.isArray(node)) {
+                if (node.length >= 2 && node.every(isPlainObject) && node.every(item => this.jsonApiObjectLooksEventLike(item))) {
+                    for (const item of node) {
+                        const key = String(item.id || item.slug || item.uid || `${item.name || item.title}|${item.start_date || item.startDate || item.start || ''}`);
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        rows.push(item);
+                    }
+                    return;
+                }
+                for (const item of node) visit(item, depth + 1);
+                return;
+            }
+            for (const key of Object.keys(node)) visit(node[key], depth + 1);
+        };
+        // The stream is `id:payload\n` records — except a text record
+        // (`id:T<hex byte length>,<text>`), which is length-delimited and
+        // NOT newline-terminated: the next record starts right after its
+        // bytes (the page's JSON-LD travels this way, and the event rows'
+        // record followed it on the same "line" until this reader counted
+        // the bytes). Read sequentially over the UTF-8 bytes.
+        const stream = Buffer.from(chunks.join(''), 'utf8');
+        let offset = 0;
+        while (offset < stream.length) {
+            const colon = stream.indexOf(':', offset);
+            if (colon < 0) break;
+            const head = stream.slice(offset, colon).toString('utf8');
+            if (!/^[0-9a-f]*$/i.test(head)) {
+                // Not at a record boundary: skip to the next line.
+                const newline = stream.indexOf('\n', offset);
+                if (newline < 0) break;
+                offset = newline + 1;
+                continue;
+            }
+            const marker = stream.slice(colon + 1, colon + 2).toString('utf8');
+            if (marker === 'T') {
+                const comma = stream.indexOf(',', colon + 2);
+                const length = comma > 0 ? parseInt(stream.slice(colon + 2, comma).toString('utf8'), 16) : NaN;
+                if (!Number.isFinite(length)) break;
+                offset = comma + 1 + length;
+                continue;
+            }
+            const newline = stream.indexOf('\n', colon + 1);
+            const end = newline < 0 ? stream.length : newline;
+            const payload = stream.slice(colon + 1, end).toString('utf8');
+            offset = end + 1;
+            if (payload[0] !== '[' && payload[0] !== '{') continue;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(payload);
+            } catch (_) {
+                continue;
+            }
+            visit(parsed, 0);
+        }
+        return rows;
+    }
+
     // Trimmed body that IS a JSON document ({...} or [...]) → parsed value;
     // anything else (HTML, scalars, malformed JSON) → null. Cheap and safe to
     // run on every fetched page.
@@ -15084,7 +15193,7 @@ class AiWebParser {
     collectJsonApiImageCandidates(view, keyPattern) {
         const candidates = [];
         const seen = new Set();
-        const urlMemberKey = /^(url|src|href|source_url|secure_url|image_url|link|original|full|large)$/;
+        const urlMemberKey = /^(url|src|href|source_url|secure_url|image_url|cdn_url|media_url|file_url|link|original|full|large)$/;
         const dimension = (value) => {
             const number = Number(value);
             return Number.isFinite(number) && number > 0 ? number : 0;
@@ -15232,6 +15341,51 @@ class AiWebParser {
         const start = startFromNamed.date ? startFromNamed : firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
         if (!title || !start.date) return null;
         const end = firstDateBy((key, value) => this.jsonApiEndDateFromEntry(key, value));
+        // A ROW THAT SPLITS ITS CLOCK FROM ITS DATE (start_date "2026-11-13"
+        // + start_time "21:00:00", end_time "03:00:00" with no end_date —
+        // whereto.party's page data) states a wall clock: the date-only
+        // value alone read as midnight, and the end went unread (run
+        // 20260930-150601: THICK 'N' JUICY Brisbane saved on the wrong day
+        // with the default end while the page said Nov 13, 9 PM – 3 AM).
+        // The clock joins its date as an offset-less wall clock; an end
+        // clock with no end date lands on the start's day, or the next day
+        // when it reads earlier than the start.
+        {
+            const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/;
+            const clockOnly = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+            const clockFor = (pattern) => {
+                for (const key of keys) {
+                    if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                    const match = typeof view[key] === 'string' ? view[key].trim().match(clockOnly) : null;
+                    if (match && Number(match[1]) < 24 && Number(match[2]) < 60) return { hour: Number(match[1]), minute: Number(match[2]) };
+                }
+                return null;
+            };
+            const dayFor = (pattern) => {
+                for (const key of keys) {
+                    if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                    const match = typeof view[key] === 'string' ? view[key].trim().match(dateOnly) : null;
+                    if (match) return { year: Number(match[1]), month: Number(match[2]) - 1, day: Number(match[3]) };
+                }
+                return null;
+            };
+            const startDay = dayFor(/(^|_)starts?(_(date|day))?$|^date$/);
+            const startClock = clockFor(/(^|_)start_time$|^time$/);
+            if (startDay && startClock) {
+                start.date = new Date(Date.UTC(startDay.year, startDay.month, startDay.day, startClock.hour, startClock.minute));
+                start.timezoneUnresolved = true;
+                start.timezone = start.timezone || null;
+                const endClock = clockFor(/(^|_)end_time$/);
+                const endDay = dayFor(/(^|_)ends?(_(date|day))?$/);
+                if (endClock && (!end.date || endDay)) {
+                    const day = endDay || startDay;
+                    let endDate = new Date(Date.UTC(day.year, day.month, day.day, endClock.hour, endClock.minute));
+                    if (endDate.getTime() <= start.date.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                    end.date = endDate;
+                    end.timezoneUnresolved = true;
+                }
+            }
+        }
 
         // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
         // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
@@ -15474,9 +15628,14 @@ class AiWebParser {
         // City from the address, else from the payload's own city/region/
         // country keys ("Sydney, NSW, Australia") — an aggregator row names
         // its city without an address.
-        const placeCity = clean(venueField(/^(city|locality|town)$/) || firstValue(/(^|_)(city|locality|town)$/, isNonEmptyString));
-        const placeRegion = clean(venueField(/^(region|state|province|state_province)$/) || firstValue(/(^|_)(region|state|province)$/, isNonEmptyString));
-        const placeCountry = clean(venueField(/^(country|country_name)$/) || firstValue(/(^|_)country$/, isNonEmptyString));
+        // A place key may hold a record ({ city: { name: "Brisbane" } }):
+        // its name is the value.
+        const isNamedPlace = (value) => isNonEmptyString(value)
+            || (value && typeof value === 'object' && !Array.isArray(value) && isNonEmptyString(value.name));
+        const placeName = (value) => (value && typeof value === 'object' ? value.name : value);
+        const placeCity = clean(venueField(/^(city|locality|town)$/) || placeName(firstValue(/(^|_)(city|locality|town)$/, isNamedPlace)));
+        const placeRegion = clean(venueField(/^(region|state|province|state_province)$/) || placeName(firstValue(/(^|_)(region|state|province)$/, isNamedPlace)));
+        const placeCountry = clean(venueField(/^(country|country_name)$/) || placeName(firstValue(/(^|_)country$/, isNamedPlace)));
         const placeText = [placeCity, placeRegion, placeCountry].filter(Boolean).join(', ');
         if (cityConfig) {
             // …else from the GROUP the payload files the row under: an
@@ -26857,6 +27016,64 @@ TEXT:
             event._startTimeFromFlyer = true;
             adopted++;
             console.log(`🕒 FLYER CLOCK: "${event.title}" listed with no time — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; start set to ${String(clock.start.hour).padStart(2, '0')}:${String(clock.start.minute).padStart(2, '0')} wall clock`);
+        }
+        return adopted;
+    }
+
+    // A STATED START WITH NO END takes the end its own poster prints. The
+    // rule above reads a poster only for a listing with NO time; a feed row
+    // that states its start and no end (The Bear Calendar's Bear Tea-Dance:
+    // start 12:00, end null) ignored a flyer saying "12PM - 6PM" and was
+    // saved with the 3-hour default (owner, 2026-09-30: "I see date and
+    // time in the image" / "I don't understand why we would ignore the
+    // flyer data"). Deterministic and fail-closed, like the start rule:
+    // only records with a start and no end; only a poster stating exactly
+    // one range whose START is this record's own clock (a poster for
+    // another party, or another night of this one, decides nothing); only
+    // a poster naming this date or no date. The end lands on the start's
+    // day, or the next day when it reads earlier ("9pm - 2am"). Wall clocks
+    // are compared in the record's own zone (an offset-less record's UTC
+    // digits ARE its wall clock; an instant is read in its timezone).
+    adoptFlyerEndForOpenEnds(events) {
+        if (!Array.isArray(events)) return 0;
+        const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        let adopted = 0;
+        for (const event of events) {
+            if (!event || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) continue;
+            if (event.endDate !== null && event.endDate !== undefined && event.endDate !== '') continue;
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image) continue;
+            const verdict = this.getOcrImageVerdict(image);
+            const text = verdict && typeof verdict.text === 'string' ? verdict.text : '';
+            if (!text.trim()) continue;
+            const clock = this.readSingleStartClockFromFlyerText(text);
+            if (!clock || !clock.end) continue;
+            const wallClockOnly = event._timezoneUnresolved === true || !event.timezone;
+            const wall = wallClockOnly
+                ? { year: event.startDate.getUTCFullYear(), month: event.startDate.getUTCMonth() + 1, day: event.startDate.getUTCDate(), hour: event.startDate.getUTCHours(), minute: event.startDate.getUTCMinutes() }
+                : (this.core && typeof this.core.getZonedWallParts === 'function' ? this.core.getZonedWallParts(event.startDate, event.timezone) : null);
+            if (!wall) continue;
+            if (wall.hour !== clock.start.hour || wall.minute !== clock.start.minute) continue;
+            const month = wall.month - 1;
+            const date = wall.day;
+            const datePattern = new RegExp(`\\b(?:${MONTHS[month]}[a-z]*\\.?\\s+${date}(?!\\d)|${month + 1}[/.]${date}(?!\\d)|${date}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTHS[month]}[a-z]*)`, 'i');
+            const anyDatePattern = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?!\d)|\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/i;
+            const namesThisDate = datePattern.test(text);
+            if (!namesThisDate && anyDatePattern.test(text)) continue;
+            let endWall = new Date(Date.UTC(wall.year, month, date, clock.end.hour, clock.end.minute));
+            const startWall = new Date(Date.UTC(wall.year, month, date, wall.hour, wall.minute));
+            if (endWall.getTime() <= startWall.getTime()) endWall = new Date(endWall.getTime() + 24 * 60 * 60 * 1000);
+            let endDate = endWall;
+            if (!wallClockOnly) {
+                endDate = this.core && typeof this.core.convertWallClockDateToUtc === 'function'
+                    ? this.core.convertWallClockDateToUtc(endWall, event.timezone)
+                    : null;
+                if (!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) continue;
+            }
+            event.endDate = endDate;
+            event._endTimeFromFlyer = true;
+            adopted++;
+            console.log(`🕒 FLYER END: "${event.title}" states ${String(wall.hour).padStart(2, '0')}:${String(wall.minute).padStart(2, '0')} and no end — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; end set to ${String(clock.end.hour).padStart(2, '0')}:${String(clock.end.minute).padStart(2, '0')} wall clock`);
         }
         return adopted;
     }

@@ -27211,6 +27211,46 @@ test('all-day end to end: a saved midnight-plus-default event becomes a whole da
   assert.deepEqual((again._changes || []).filter((field) => field !== 'notes'), [], 'no date change, no switch change');
 });
 
+test('endUnknown: the default 3h end says so in the notes; a stated end from a later scrape removes it; a saved default is backfilled', async () => {
+  const core = allDayCore();
+  // A create with no end: the default is written and the notes say so.
+  const scraped = { title: 'Happy Bärsday', city: 'la', timezone: 'America/Los_Angeles', bar: 'Eagle LA', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: null, website: 'https://x.example/b', source: 'ai-web' };
+  const created = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal(created._action, 'new');
+  assert.equal(created._endDateDefaulted, true);
+  assert.equal(created.endUnknown, true);
+  assert.match(created.notes, /^endUnknown: true$/m, 'the flag is in the notes, next to timeUnknown');
+  assert.equal(core.buildOwnerReviewProposal(created).endDate instanceof Date || typeof core.buildOwnerReviewProposal(created).endDate === 'string', true);
+
+  // Next run: the saved record carries the default end and the flag; the
+  // scrape still states no end → flag kept, nothing else changes.
+  const saved = { title: 'Happy Bärsday', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: new Date('2037-10-11T05:00:00.000Z'), location: '', notes: created.notes };
+  const again = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([saved]), {}))[0];
+  assert.equal(again._action, 'merge');
+  assert.equal(again.endUnknown, true);
+  assert.deepEqual((again._changes || []).filter((field) => field !== 'notes'), []);
+
+  // A run that finds the real end: the flag goes, the end is replaced.
+  const stated = { ...scraped, endDate: new Date('2037-10-11T08:00:00.000Z') };
+  const known = (await core.prepareEventsForCalendar([stated], buildPrepCalendarAdapter([saved]), {}))[0];
+  assert.equal(known._action, 'merge');
+  assert.equal(new Date(known.endDate).toISOString(), '2037-10-11T08:00:00.000Z');
+  assert.equal('endUnknown' in known, false, JSON.stringify(known.endUnknown));
+  assert.ok(!/^endUnknown:/m.test(known.notes));
+
+  // A record saved before the flag existed, still on its default end, is
+  // backfilled — a notes-only change.
+  const legacy = { title: 'Happy Bärsday', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: new Date('2037-10-11T05:00:00.000Z'), location: '', notes: created.notes.replace(/^endUnknown: true\n?/m, '') };
+  assert.ok(!/endUnknown/.test(legacy.notes));
+  const backfilled = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([legacy]), {}))[0];
+  assert.equal(backfilled.endUnknown, true);
+  assert.deepEqual(backfilled._changes, ['notes']);
+  // A stated 3-hour end is NOT unknown.
+  const threeHours = { ...scraped, endDate: new Date('2037-10-11T05:00:00.000Z') };
+  const exact = (await core.prepareEventsForCalendar([threeHours], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal('endUnknown' in exact, false, 'a page that states 9–midnight is not a default');
+});
+
 test('all-day in dedup: a stated time is never mixed with an all-day twin', async () => {
   const core = allDayCore();
   const day = core.buildAllDaySpan('2037-10-01', '2037-10-01', 'America/Los_Angeles');

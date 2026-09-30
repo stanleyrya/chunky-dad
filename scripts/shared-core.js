@@ -2560,6 +2560,11 @@ class SharedCore {
         if (!this.isEmptyArbitrationValue(event.endDate) && this.toEpochMillis(event.endDate) !== null) return false;
         event.endDate = new Date(startMs + DEFAULT_MISSING_END_DURATION_MS);
         event._endDateDefaulted = true;
+        // Said in the notes too (`endUnknown: true`, next to `timeUnknown`):
+        // the calendar shows a 3-hour event either way, the note says the
+        // page never gave an end (owner, 2026-09-30: "I see we don't know
+        // the end time. Is this an opportunity for our metadata?").
+        event.endUnknown = true;
         console.log(`🕓 END: "${event.title || 'Unknown'}" states no end — writing the default ${DEFAULT_MISSING_END_DURATION_HOURS}h span (replaced by any stated end a later run finds)`);
         return true;
     }
@@ -15928,6 +15933,20 @@ class SharedCore {
                 else delete mergedObject[flag];
             }
         }
+        // END UNKNOWN follows the end that won: a stated end from this
+        // run's scrape means the end is known; otherwise an end sitting
+        // exactly the default span after its start is the default this
+        // pipeline wrote (see isDefaultShapedEnd) and the note says so.
+        // Whole-day records carry their own flags and never this one.
+        {
+            const scrapedStatesEnd = !keepCalendarEndOverDegenerateScrape
+                && scrapedEndMs !== null && scrapedStartMs !== null && scrapedEndMs > scrapedStartMs;
+            const endIsDefault = !SharedCore.isWholeDayEvent(mergedObject)
+                && (mergedObject._endDateDefaulted === true
+                    || (!scrapedStatesEnd && this.isDefaultShapedEnd(mergedObject.startDate, mergedObject.endDate)));
+            if (endIsDefault) mergedObject.endUnknown = true;
+            else delete mergedObject.endUnknown;
+        }
 
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
@@ -22377,7 +22396,11 @@ class SharedCore {
             // default) and before the sanity pass (so "no end stated" stops
             // being reported as a zero-duration event).
             this.applyAllDayConvention(analyzedEvent);
-            this.applyDefaultEventEnd(analyzedEvent);
+            // The default stamps `endUnknown` — a notes field — so the notes
+            // built above are rebuilt to carry it.
+            if (this.applyDefaultEventEnd(analyzedEvent) && analyzedEvent.notes) {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+            }
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             // A SECOND approval now exists: overnight-span-corrected (rule 11
             // enforce, owner-approved 2026-08-24) - a clean -12h AM/PM slip is
