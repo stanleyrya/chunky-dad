@@ -478,6 +478,12 @@ function buildScriptableExecuteLink(runId, scriptName = resolveReviewScriptName(
     return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&runId=${encodeURIComponent(runId)}&reviewExecute=1`;
 }
 
+// The same script, asked only to read the calendars and write the snapshot
+// files (display-saved-run.js refreshCalendarSnapshots): no scrape, no write.
+function buildScriptableSnapshotLink(scriptName = resolveReviewScriptName()) {
+    return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&snapshot=1`;
+}
+
 // ---- dates -----------------------------------------------------------------
 
 function reviewZoneFormatter(timezone, options) {
@@ -1061,8 +1067,12 @@ function renderReviewPage(deck, options = {}) {
         ? escapeHtmlText(`run ${SharedCore.formatRunAgeLabel(deck.savedAt, deck.runId)}${shapeLabel ? ` · ${shapeLabel}` : ''}`)
         : '';
     const missingCalendars = Array.isArray(deck.missingCalendars) ? deck.missingCalendars : [];
+    const snapshotLink = buildScriptableSnapshotLink(options.scriptName);
+    const phoneListAge = typeof options.phoneCalendarListCapturedAt === 'string' && options.phoneCalendarListCapturedAt
+        ? options.phoneCalendarListCapturedAt.slice(0, 10)
+        : '';
     const missingCalendarNotice = missingCalendars.length > 0
-        ? `<div class="missing-cal">❌ No calendar on the phone for ${missingCalendars.map((entry) => `<b>${escapeHtmlText(entry.city)}</b> (${escapeHtmlText(entry.calendarName)} · ${entry.events} event${entry.events === 1 ? '' : 's'})`).join(', ')} — the phone cannot write those until a calendar with that exact name exists.</div>`
+        ? `<div class="missing-cal">❌ No calendar on the phone for ${missingCalendars.map((entry) => `<b>${escapeHtmlText(entry.city)}</b> (${escapeHtmlText(entry.calendarName)} · ${entry.events} event${entry.events === 1 ? '' : 's'})`).join(', ')} — the phone cannot write those until a calendar with that exact name exists.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''} <a href="${escapeHtmlText(snapshotLink)}">Refresh it on the phone</a> after adding calendars.</div>`
         : '';
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -2415,7 +2425,7 @@ async function handleRequest(state, req, res) {
         }
         try {
             const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run);
-            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx }));
+            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot) }));
         } catch (error) {
             console.error(`Review render failed: ${error.stack || error}`);
             return sendText(res, 500, `Review render failed: ${error.message}`);
@@ -2597,6 +2607,7 @@ module.exports = {
     lookupIcsEvent,
     resolveReviewScriptName,
     buildScriptableExecuteLink,
+    buildScriptableSnapshotLink,
     formatReviewDateLine,
     formatReviewUtcLine,
     describeReviewTimeDelta,

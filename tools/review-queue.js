@@ -115,7 +115,12 @@ function describeRunShape(payload) {
         ? payload.parserResults.map((result) => result && result.name).filter(Boolean)
         : [];
     const context = payload && payload.runContext && typeof payload.runContext === 'object' ? payload.runContext : {};
+    // A run that could not read the saved calendars analysed every saved
+    // event as new (SharedCore.describeCalendarReadHealth) — never the
+    // deck's default, and labelled in the picker.
+    const calendars = loadSharedCore().describeCalendarReadHealth(payload && payload.publishedCalendarSnapshots);
     return {
+        calendarsUnread: calendars.degraded ? calendars.cities.length : 0,
         configured: configured.length,
         ran,
         trigger: context.trigger || null,
@@ -128,11 +133,13 @@ function describeRunShape(payload) {
 // produced results (the daily run skips the automation-disabled ones and
 // the template). Unknown shape never excludes a run.
 function isCompleteRunShape(shape) {
+    if (shape && shape.calendarsUnread > 0) return false;
     if (!shape || !Number.isFinite(shape.configured) || shape.configured === 0) return true;
     return shape.ran.length >= Math.ceil(shape.configured / 2);
 }
 
 function describeRunShapeLabel(shape) {
+    if (shape && shape.calendarsUnread > 0) return `calendars unread (${shape.calendarsUnread}) — saved events show as new`;
     if (!shape || isCompleteRunShape(shape)) return '';
     if (shape.ran.length === 1) return `${shape.ran[0]} only`;
     if (shape.ran.length === 0) return 'no parser results';
@@ -199,6 +206,17 @@ function loadWrittenLedger(sharedRoot) {
 // when the phone has not written the list — then nothing is claimed
 // missing. Never inferred from the per-city snapshot files: those exist
 // only for cities a run touched.
+// When the phone last wrote its calendar list (calendar-snapshot/
+// calendars.json): an ISO instant, or '' when the file is absent.
+function getPhoneCalendarListCapturedAt(sharedRoot) {
+    try {
+        const payload = JSON.parse(fs.readFileSync(path.join(sharedRoot, 'calendar-snapshot', 'calendars.json'), 'utf8'));
+        return payload && typeof payload.capturedAt === 'string' ? payload.capturedAt : '';
+    } catch (error) {
+        return '';
+    }
+}
+
 function listPhoneCalendars(sharedRoot, cities) {
     let payload;
     try {
@@ -1351,6 +1369,7 @@ module.exports = {
     describeRunShapeLabel,
     describeRunFiles,
     listPhoneCalendars,
+    getPhoneCalendarListCapturedAt,
     loadWrittenLedger,
     findMissingPhoneCalendars,
     readRunFile,

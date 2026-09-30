@@ -17,7 +17,7 @@ test('parseLaunchOptions: reviewExecute needs a runId; the display defaults are 
 
   assert.equal(parseLaunchOptions({ reviewExecute: '1' }).reviewExecute, false, 'no runId → a plain display launch');
   const plain = parseLaunchOptions({});
-  assert.deepEqual(plain, { last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false });
+  assert.deepEqual(plain, { snapshot: false, last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false });
   assert.equal(parseLaunchOptions({}, 'last').last, true);
   assert.equal(parseLaunchOptions({}, 'runid:20260101-000000').runId, '20260101-000000');
   assert.equal(parseLaunchOptions({ runid: '20260101-000000', readOnly: 'false' }).readOnly, false);
@@ -88,4 +88,55 @@ test('executeReviewedRun degrades with an alert when the run is missing, syncing
   assert.equal(await display.executeReviewedRun({ runId: '20260913-051750' }), null);
   assert.equal(await display.executeReviewedRun({}), null);
   assert.deepEqual(errors, ['Load failed', 'Still syncing from iCloud', 'No run named']);
+});
+
+// ---------------------------------------------------------------------------
+// Snapshot only: scriptable:///run?scriptName=display-saved-run&snapshot=1
+// reads the calendars and writes the files the Mac needs — no scrape.
+// ---------------------------------------------------------------------------
+test('parseLaunchOptions: snapshot=1 (or the shortcut parameter "snapshot") asks for the snapshot only', () => {
+  assert.equal(parseLaunchOptions({ snapshot: '1' }).snapshot, true);
+  assert.equal(parseLaunchOptions({}, 'snapshot').snapshot, true);
+  assert.equal(parseLaunchOptions({}, ' Snapshot ').snapshot, true);
+  assert.equal(parseLaunchOptions({ snapshot: '0' }).snapshot, false);
+  assert.equal(parseLaunchOptions({ runId: '20260913-051750', reviewExecute: '1' }).snapshot, false);
+});
+
+test('refreshCalendarSnapshots reads every configured city calendar, writes nothing else, and names the calendars the phone lacks', async () => {
+  const display = new SavedRunDisplay();
+  const asked = [];
+  const cities = {
+    nyc: { calendar: 'chunky-dad-nyc' }, sydney: { calendar: 'chunky-dad-sydney' }, oslo: { calendar: 'chunky-dad-oslo' }, broken: { timezone: 'UTC' }
+  };
+  display.createAdapter = () => ({
+    cities,
+    writeCalendarSnapshots: async (keys) => { asked.push(keys); return [{ cityKey: 'nyc', events: 212 }, { cityKey: 'sydney', events: 0 }]; }
+  });
+  const shown = [];
+  global.Alert = class { addAction() {} async present() { shown.push([this.title, this.message]); } };
+  let result;
+  try {
+    result = await display.refreshCalendarSnapshots();
+  } finally {
+    delete global.Alert;
+  }
+  assert.deepEqual(asked, [['nyc', 'sydney', 'oslo']], 'every city that names a calendar, once');
+  assert.deepEqual(result.missing, ['chunky-dad-oslo']);
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0][0], 'Snapshot refreshed — 1 calendar missing');
+  assert.match(shown[0][1], /2 of 3 city calendars read, 212 events/);
+  assert.match(shown[0][1], /Not on this phone: chunky-dad-oslo\./);
+});
+
+test('refreshCalendarSnapshots: nothing missing reads as a plain success; an old adapter says so', async () => {
+  const summary = SavedRunDisplay.describeSnapshotRefresh(['nyc'], [{ cityKey: 'nyc', events: 1 }], { nyc: { calendar: 'chunky-dad-nyc' } }, 1234);
+  assert.equal(summary.title, 'Snapshot refreshed');
+  assert.match(summary.message, /1 of 1 city calendars read, 1 event, in 1\.2s\./);
+  assert.deepEqual(summary.missing, []);
+  const display = new SavedRunDisplay();
+  display.createAdapter = () => ({ cities: {} });
+  const errors = [];
+  display.showError = async (title) => { errors.push(title); };
+  assert.equal(await display.refreshCalendarSnapshots(), null);
+  assert.deepEqual(errors, ['Adapter too old']);
 });

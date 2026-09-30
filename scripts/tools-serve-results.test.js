@@ -1509,3 +1509,42 @@ test('the review page: the click a browser makes up after a tap neither closes t
   assert.ok(html.includes('if (Date.now() - lastTouchAt < 800) return;'), 'a mouse press right after a touch is the touch\'s echo');
   assert.ok(html.includes("el.addEventListener('touchend', function (e) { lastTouchAt = Date.now(); end(e.target, false); });"));
 });
+
+// ---------------------------------------------------------------------------
+// run-once: no network, no run (2026-09-30: a run started before the Mac had
+// a network was written as the day's run).
+// ---------------------------------------------------------------------------
+test('run-once: the network is waited for, then the run aborts before any parser work', async () => {
+  const sleeps = [];
+  let calls = 0;
+  const flaky = async () => { calls++; if (calls < 3) throw new TypeError('fetch failed'); return { ok: true }; };
+  const reached = await runOnce.waitForNetwork({ env: {}, fetch: flaky, sleep: async (ms) => { sleeps.push(ms); }, attempts: 5, gapMs: 15000 });
+  assert.deepEqual(reached, { skipped: false, attempts: 3 });
+  assert.deepEqual(sleeps, [15000, 15000]);
+  let dead = 0;
+  await assert.rejects(
+    runOnce.waitForNetwork({ env: {}, fetch: async () => { dead++; throw new TypeError('fetch failed'); }, sleep: async () => {}, attempts: 4, gapMs: 1 }),
+    /no network after 4 attempts \(fetch failed\) — ABORTING before any parser work/
+  );
+  assert.equal(dead, 4);
+  let skippedCalls = 0;
+  assert.deepEqual(await runOnce.waitForNetwork({ env: { CHUNKY_SKIP_NETWORK_PREFLIGHT: '1' }, fetch: async () => { skippedCalls++; } }), { skipped: true, attempts: 0 });
+  assert.equal(skippedCalls, 0, 'an offline replay asks nothing');
+  // Any answer is a network — a 404 from the site is not an outage.
+  assert.equal((await runOnce.waitForNetwork({ env: {}, fetch: async () => ({ ok: false, status: 404 }), sleep: async () => {} })).attempts, 1);
+});
+
+test('run-once: a run that could not read the saved calendars is discarded, not written', () => {
+  const { SharedCore } = require(path.join(__dirname, 'shared-core'));
+  assert.equal(runOnce.assertCalendarsWereRead({ publishedCalendarSnapshots: { nyc: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } } }, SharedCore).degraded, false);
+  assert.equal(runOnce.assertCalendarsWereRead({}, SharedCore).degraded, false, 'a single-parser run that read no calendar is fine');
+  assert.throws(
+    () => runOnce.assertCalendarsWereRead({ publishedCalendarSnapshots: { nyc: { status: 'unavailable', reason: 'outage' }, la: { status: 'ok' } } }, SharedCore),
+    /1 saved calendar\(s\) could not be read \(nyc\) — their events would be analysed as NEW\. Run discarded/
+  );
+});
+
+test('review page: the missing-calendar notice says how old the phone\'s list is and links the snapshot-only refresh', () => {
+  const { buildScriptableSnapshotLink } = require(path.join(__dirname, '..', 'tools', 'serve-results.js'));
+  assert.equal(buildScriptableSnapshotLink('display-saved-run'), 'scriptable:///run?scriptName=display-saved-run&snapshot=1');
+});

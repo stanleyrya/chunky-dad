@@ -968,6 +968,12 @@ class WebAdapter {
                     calendarHygiene: Array.isArray(results.calendarHygiene)
                         ? results.calendarHygiene
                         : [],
+                    // Which saved calendars the analysis could read — the
+                    // review deck refuses to default to a run that could not
+                    // (SharedCore.describeCalendarReadHealth).
+                    ...(results.publishedCalendarSnapshots && typeof results.publishedCalendarSnapshots === 'object'
+                        ? { publishedCalendarSnapshots: results.publishedCalendarSnapshots }
+                        : {}),
                     // New-venue candidates ride with the run so the Mac
                     // server's review deck (tools/review-queue.js) can offer
                     // them as cards.
@@ -1974,6 +1980,11 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         if (!this._publishedCalendarSnapshots) this._publishedCalendarSnapshots = {};
         let entry = null;
+        // Why the calendar could not be read, when it could not (see
+        // SharedCore.describeCalendarReadHealth): 'missing' is a city with
+        // no published file yet, 'outage' is nothing answering, 'unreadable'
+        // anything else.
+        let unavailableReason = 'unreadable';
         try {
             const core = this.getSharedCoreRef();
             const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
@@ -2005,12 +2016,21 @@ async saveFailureNote(url, error, metadata = {}) {
             }
         } catch (error) {
             entry = null;
+            const core = this.getSharedCoreRef();
+            const message = error && typeof error.message === 'string' ? error.message : '';
+            const named = message.match(/HTTP\s+(\d{3})/i);
+            const statusCode = error && Number.isFinite(error.statusCode) ? error.statusCode : (named ? Number(named[1]) : null);
+            if (statusCode === 404 || statusCode === 410) unavailableReason = 'missing';
+            else if (statusCode === null && ((core && typeof core.isTransportFailureMessage === 'function' && core.isTransportFailureMessage(message))
+                || /parked for this run \(no answer/i.test(message))) unavailableReason = 'outage';
         }
         if (entry) {
             this._publishedCalendarSnapshots[key] = { status: 'ok', fetchedAt: entry.fetchedAt };
         } else {
-            console.warn(`🖥️ WebAdapter: published calendar unavailable for ${key} — merge analysis degraded to NEW`);
-            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null };
+            console.warn(unavailableReason === 'missing'
+                ? `🖥️ WebAdapter: no published calendar for ${key} yet — its events are analysed as new`
+                : `🖥️ WebAdapter: published calendar unavailable for ${key} (${unavailableReason}) — merge analysis degraded to NEW`);
+            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null, reason: unavailableReason };
         }
         this._publishedCalendarByCity[key] = entry;
         return entry;
