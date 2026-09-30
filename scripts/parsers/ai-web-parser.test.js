@@ -21044,7 +21044,8 @@ test('listing prose: a monthly roundup yields one dated event per line and per d
     '2026-07-25T04:00:00.000Z|Northern Bear Bash|The Black Eagle|toronto|America/Toronto'
   ]);
   // The range ends when its last day does; single nights state no end.
-  assert.equal(events[4].endDate.toISOString(), '2026-07-19T04:00:00.000Z');
+  assert.equal(events[4].endDate.toISOString(), '2026-07-19T03:59:59.000Z', 'through the 18th: it ends when the 18th does');
+  assert.equal(events[4]._noTimeStated, true, 'a line with no clock names days');
   assert.equal(events[0].endDate, null);
   // The line's link is the party's own; the article is the record's page.
   assert.equal(events[0].ticketUrl, 'https://www.rockbarnyc.com/calendar');
@@ -21669,4 +21670,66 @@ test('a label above a heading that is what the page is about stays a title', () 
   </body></html>`;
   parser.notePageChromeLines(html, sourceUrl);
   assert.equal(parser.isPageChromeLine('Furball NYC'), false);
+});
+
+// ---------------------------------------------------------------------------
+// A date and no time is a day (owner, 2026-09-30). Each reader stamps the
+// records whose page gave no clock; SharedCore.applyAllDayConvention turns
+// the stamp into the all-day shape. "Late" is kept as the page's own word.
+// ---------------------------------------------------------------------------
+test('normalizeAiEvent stamps a date with no time, and only that', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const base = { title: 'BEAR PICNIC', address: '247 Commercial St, New York, NY' };
+  const dateOnly = parser.normalizeAiEvent({ ...base, startDate: '2026-07-18' }, {}, null, cityConfig, null);
+  assert.equal(dateOnly._noTimeStated, true);
+  assert.equal(dateOnly.startDate.toISOString(), '2026-07-18T04:00:00.000Z', 'the local-midnight placeholder, for now');
+  const dateRange = parser.normalizeAiEvent({ ...base, title: 'BEAR WEEKEND', startDate: '2026-07-18', endDate: '2026-07-20' }, {}, null, cityConfig, null);
+  assert.equal(dateRange._noTimeStated, true, 'two dates and no clock are days');
+  for (const timed of [
+    { startDate: '2026-07-18', startTime: '21:00' },
+    { startDate: '2026-07-18', startTime: '21:00', endTime: '02:00' },
+    { start: '2026-07-18T21:00:00' },
+    { startDate: '2026-07-18', endTime: '23:00' }
+  ]) {
+    const event = parser.normalizeAiEvent({ ...base, ...timed }, {}, null, cityConfig, null);
+    assert.ok(event, JSON.stringify(timed));
+    assert.equal(event._noTimeStated, undefined, `${JSON.stringify(timed)} states a clock`);
+  }
+});
+
+test('"late" in place of a closing time is kept as the page\'s word, never made into an end', () => {
+  const parser = createParser();
+  const late = (aiEvent) => parser.detectLateEndNote(aiEvent);
+  assert.equal(late({ endTime: 'late' }), 'late');
+  assert.equal(late({ endTime: 'LATE' }), 'late');
+  assert.equal(late({ end: "'til late" }), 'late');
+  assert.equal(late({ __fieldEvidence: { startTime: "6PM ’til LATE" } }), 'late');
+  assert.equal(late({ __fieldEvidence: { endDate: '11PM UNTIL LATE' } }), 'late');
+  assert.equal(late({ __fieldEvidence: { startTime: '9PM - Late' } }), 'late');
+  assert.equal(late({ endTime: '02:00' }), '');
+  assert.equal(late({ __fieldEvidence: { startTime: 'Late Night Tea Dance 9PM' } }), '', 'a name with the word in it is not a closing time');
+  assert.equal(late({ __fieldEvidence: { title: 'Open til late' } }), '', 'only the evidence cited for a date or time field is read');
+  assert.equal(late({ __fieldEvidence: { description: 'we dance until late' } }), '');
+  assert.equal(late(null), '');
+
+  parser.now = FROZEN_NOW;
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const event = parser.normalizeAiEvent({
+    title: 'BEAR TEA', startDate: '2026-07-18', startTime: '18:00', endTime: 'late',
+    address: '247 Commercial St, New York, NY', __fieldEvidence: { startTime: "6PM 'til LATE" }
+  }, {}, null, cityConfig, null);
+  assert.equal(event.endNote, 'late');
+  assert.equal(event._noTimeStated, undefined, 'it states a start');
+  assert.ok(!event.endDate, 'no end is invented from the word');
+});
+
+test('MEC and Elfsight rows with no clock are stamped date-only; rows with one are not', () => {
+  const parser = createParser();
+  const cell = (timeText) => parser.buildMecOccurrenceEvent({ title: 'B BAR', href: 'https://venue.example/events/b-bar/', day: '20371001', timeText }, 'https://venue.example/events/');
+  assert.equal(cell('')._noTimeStated, true);
+  assert.equal(cell('Every Thursday')._noTimeStated, true);
+  assert.equal(cell('9:00 pm - 2:00 am')._noTimeStated, undefined);
+  assert.equal(cell('21:00')._noTimeStated, undefined);
 });

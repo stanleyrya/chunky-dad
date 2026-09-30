@@ -1025,3 +1025,18 @@ test('run picker: a run that could not read the saved calendars is never the def
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// All-day conversions on the deck: an event that becomes all-day says the
+// same thing on every event it applies to, and folds.
+// ---------------------------------------------------------------------------
+test('same-change fold: events that become all-day fold under that name; a moved start never folds', () => {
+  const allDay = (end) => ({ allDay: true, source: 'Eagle LA', changes: { endDate: { from: '2037-10-01T10:00:00.000Z', to: end } } });
+  const first = rq.getSameChangeSignature(allDay('2037-10-02T06:59:59.000Z'));
+  assert.equal(first, 'allDay=→true');
+  assert.equal(rq.getSameChangeSignature(allDay('2037-10-09T06:59:59.000Z')), first, 'each night\'s own end instant does not split the fold');
+  assert.equal(rq.getSameChangeSignature({ allDay: true, changes: { endDate: { from: 'a', to: 'b' }, url: { from: 'https://x.example/a', to: 'https://x.example/b' } } }),
+    'allDay=→true;url=https://x.example/a→https://x.example/b', 'another change rides along in the signature');
+  assert.equal(rq.getSameChangeSignature({ allDay: true, changes: { startDate: { from: 'a', to: 'b' }, endDate: { from: 'c', to: 'd' } } }), '', 'a start that moves is one event\'s own fact');
+  assert.equal(rq.getSameChangeSignature({ changes: { endDate: { from: 'a', to: 'b' } } }), '', 'a timed end change still never folds');
+});

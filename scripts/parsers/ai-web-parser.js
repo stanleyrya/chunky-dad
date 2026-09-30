@@ -3481,6 +3481,27 @@ class AiWebParser {
         return this.stripPageSiteNameTail(this.deriveSegmentListingTitle(segment), sourceUrl);
     }
 
+    // 'late' when the model's own reading of this event says it runs "til
+    // late": the raw end value it returned, or the evidence it cited for a
+    // date/time field ("6PM 'til LATE"). '' otherwise. Only this event's own
+    // cited words are read — never the page at large, where the phrase may
+    // belong to a neighbouring card.
+    detectLateEndNote(aiEvent) {
+        if (!aiEvent || typeof aiEvent !== 'object') return '';
+        const texts = [aiEvent.endTime, aiEvent.end];
+        const evidence = aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object' ? aiEvent.__fieldEvidence : {};
+        for (const key of Object.keys(evidence)) {
+            if (/^(start|end)(date|time)?$/i.test(key)) texts.push(evidence[key]);
+        }
+        const bare = /^\s*(?:'?til|till|until)?\s*late\s*$/i;
+        const tail = /(?:'|’)?\b(?:til|till|until|to)\s+late\b|[-–—]\s*late\b/i;
+        for (const value of texts) {
+            if (typeof value !== 'string' || !value.trim()) continue;
+            if (bare.test(value) || tail.test(value)) return 'late';
+        }
+        return '';
+    }
+
     // A line whose only date signal is a month WORD, inside a name: no digit
     // anywhere (so no day, no year, no clock time), and at least two words
     // of its own left once month names, weekday names and the words a date
@@ -8891,6 +8912,10 @@ class AiWebParser {
             _timezoneUnresolved: true,
             _titleFromListing: true
         };
+        // A cell whose tooltip prints no clock names the day only: written
+        // as an all-day event (SharedCore.applyAllDayConvention), not as a
+        // party that starts at midnight.
+        if (!start) event._noTimeStated = true;
         if (image) {
             event.image = image;
             event.imageSource = 'json-ld';
@@ -9128,6 +9153,9 @@ class AiWebParser {
             website: sourceUrl,
             source: 'elfsight'
         };
+        // Flagged all-day by the widget, or carrying no start time at all:
+        // the entry names a day (SharedCore.applyAllDayConvention).
+        if (isAllDay || !start.time) event._noTimeStated = true;
         const image = this.pickElfsightImage(row);
         if (image) event.image = image;
         const rrule = this.buildElfsightRecurrenceRule(row, startDate, timezone);
@@ -10201,7 +10229,7 @@ class AiWebParser {
                     description: '',
                     startDate: localMidnight(startParsed, timezone, 0, row.time),
                     // "July 11th through July 18th" ends when the 18th does.
-                    endDate: endParsed ? localMidnight(endParsed, timezone, 1) : null,
+                    endDate: endParsed ? new Date(localMidnight(endParsed, timezone, 1).getTime() - 1000) : null,
                     // No url: a hundred rows sharing the article's address
                     // would read as one event scraped a hundred times, and
                     // an aggregator is never linked anyway. The line's own
@@ -10209,6 +10237,9 @@ class AiWebParser {
                     source: 'listing-prose'
                 };
                 if (timezone) event.timezone = timezone;
+                // A line with no clock names its day (or days): all-day, once
+                // its zone is known (SharedCore.applyAllDayConvention).
+                if (timezone && !/^\d{2}:\d{2}$/.test(String(row.time || ''))) event._noTimeStated = true;
                 if (row.venue) event.bar = row.venue;
                 // A city no calendar covers stays as written: the normalizer
                 // parks it on _unrecognizedCity and the curated rungs get
@@ -25180,6 +25211,29 @@ TEXT:
         if (oddMinuteRejected) {
             event._impossibleClockRejected = oddMinuteRejected;
         }
+
+        // A DATE AND NO TIME IS A DAY. Nothing on the page (and nothing the
+        // model cited) states when the event starts or ends: the start is
+        // the local-midnight placeholder. Stamped so SharedCore.
+        // applyAllDayConvention writes it as an all-day event instead of
+        // "12:00 AM – 3:00 AM" once the event's zone is settled. A full
+        // datetime the model handed over counts as a stated time only when
+        // it carries a clock.
+        const statesClock = (value) => typeof value === 'string' && /\d{1,2}:\d{2}|\d\s*[ap]\.?m\b|T\d{2}/i.test(value);
+        const noTimeStated = !effectiveStartTime && !endTimeRaw
+            && !(dayPhraseSynthesis && (dayPhraseSynthesis.startTime || dayPhraseSynthesis.endTime))
+            && !(startProvided && statesClock(aiEvent.start))
+            && !(endProvided && statesClock(aiEvent.end));
+        if (noTimeStated && event.startDate) {
+            event._noTimeStated = true;
+        }
+
+        // "LATE" IS WHAT THE PAGE SAYS IN PLACE OF A CLOSING TIME ("6PM 'til
+        // LATE", "11PM UNTIL LATE"). It is not a clock, so no end is made of
+        // it — the word itself is kept (`endNote: late`, a plain field, so
+        // it lands in the calendar notes) and the end stays unstated.
+        const lateEnd = this.detectLateEndNote(aiEvent);
+        if (lateEnd) event.endNote = lateEnd;
 
         // Stamp the derived organizer as internal metadata (underscore fields are
         // excluded from calendar notes and merge field loops) so downstream merge

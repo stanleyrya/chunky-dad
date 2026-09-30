@@ -2260,6 +2260,10 @@ class SharedCore {
             image: String(event.image || ''),
             cover: String(event.cover || ''),
             description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
+            // A day, not a time (see applyAllDayConvention), and what the
+            // page said in place of a closing time ("late").
+            ...(SharedCore.isAllDayFlag(event.allDay) ? { allDay: true } : {}),
+            ...(typeof event.endNote === 'string' && event.endNote.trim() ? { endNote: event.endNote.trim() } : {}),
             changes
         };
     }
@@ -7555,7 +7559,12 @@ class SharedCore {
         // its merged evidence. Safe now that segmentation no longer produces
         // neighbor-URL chimera events (#1644) — dedup's same-URL rung can no
         // longer weld two different real events together.
+        // A date with no time is a day (see applyAllDayConvention): shaped
+        // before dedup so both records of one event are compared alike, and
+        // again after it for records whose zone a merge resolved.
+        for (const event of futureEvents) this.applyAllDayConvention(event);
         const deduplicatedEvents = await this.deduplicateEvents(futureEvents, httpAdapter, mainConfig?.config || mainConfig || null);
+        for (const event of deduplicatedEvents) this.applyAllDayConvention(event);
 
         // Calculate deduplication stats
         const duplicatesRemoved = futureEvents.length - deduplicatedEvents.length;
@@ -14604,6 +14613,32 @@ class SharedCore {
                 }
             }
 
+            // ALL-DAY NEVER MIXES WITH A STATED TIME. One record of the event
+            // names a day (all-day shape), its twin states a clock time: the
+            // timed record's start AND end are the event's. Without this the
+            // all-day end (23:59:59) filled the timed record's missing end
+            // through the "non-empty side" rule below and a 9 PM party ran
+            // "9:00 PM – 11:59 PM".
+            if (fieldName === 'startDate' || fieldName === 'endDate') {
+                const existingAllDay = this.isAllDayShapedRecord(existingEvent);
+                const newAllDay = this.isAllDayShapedRecord(newEvent);
+                if (existingAllDay !== newAllDay) {
+                    const timed = existingAllDay ? newEvent : existingEvent;
+                    if (this.recordStatesClockStart(timed)) {
+                        const chosenValue = isEmpty(timed[fieldName]) ? null : timed[fieldName];
+                        mergedEvent[fieldName] = chosenValue;
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: chosenValue,
+                            reason: 'a stated time wins over an all-day (date-only) record — its start and end are kept together'
+                        });
+                        return;
+                    }
+                }
+            }
+
             // A startDate at EXACT local midnight on a record without an
             // explicit start time is the parser's "no time stated" placeholder
             // (see isInventedMidnight in normalizeAiEvent) — it must never
@@ -15053,6 +15088,10 @@ class SharedCore {
             notes: existingEvent.notes,
             url: existingEvent.url,
         };
+        // ALL-DAY: both sides are put in the one shape before anything is
+        // compared (see applyAllDayConvention / alignAllDayMergeSides).
+        this.alignAllDayMergeSides(scraperObject, calendarObject, existingEvent);
+
         // The notes-parsed website is canonical. A native url (readable on the
         // web/Node adapter) only fills in when the notes carry no website —
         // Scriptable always reports url as empty, and that empty value must not
@@ -15866,6 +15905,21 @@ class SharedCore {
             console.log(`🔄 MERGE: "${mergedObject.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
         
+        // ALL-DAY follows the dates that won: the flag is derived from the
+        // merged start and end (applyAllDayConvention), never arbitrated on
+        // its own, so the note line and the calendar switch always agree
+        // with the span that is written.
+        {
+            const probe = {
+                startDate: mergedObject.startDate || calendarObject.startDate,
+                endDate: mergedObject.endDate || calendarObject.endDate,
+                timezone: mergedObject.timezone || scraperObject.timezone || calendarObject.timezone,
+                city: newEvent.city
+            };
+            if (this.applyAllDayConvention(probe)) mergedObject.allDay = true;
+            else delete mergedObject.allDay;
+        }
+
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
         
@@ -15965,6 +16019,75 @@ class SharedCore {
         return finalEvent;
     }
 
+    // ALL-DAY, where a scraped event meets its calendar record.
+    //
+    // 1. A stored all-day record is read into the one shape, in the zone the
+    //    event is in: its store keeps a DAY (the device's own midnight, or
+    //    midnight UTC in a published ICS), so its raw instants differ from
+    //    the scraped ones by the zone offset and every run would propose a
+    //    date change that is none.
+    // 2. A stated time is never replaced by "no time listed": a scrape that
+    //    found only the date leaves a saved clock time — and its end — alone.
+    // 3. "No time listed" is replaced by a stated time: a saved ONE-day
+    //    all-day record takes the scraped start and end together when the
+    //    time is on that day (an empty scraped end is filled by the one end
+    //    default later, never by the stored 23:59:59).
+    alignAllDayMergeSides(scraperObject, calendarObject, existingEvent) {
+        if (!scraperObject || !calendarObject) return;
+        const timezone = this.getEventZone(scraperObject) || this.getEventZone(calendarObject)
+            || this.getCityTimezone(scraperObject.city || calendarObject.city) || '';
+        if (!timezone) return;
+        const label = scraperObject.title || calendarObject.title || 'event';
+        const storedDays = this.getStoredAllDayDays(existingEvent);
+        if (storedDays) {
+            const span = this.buildAllDaySpan(storedDays.startDay, storedDays.endDay, timezone);
+            if (span) {
+                calendarObject.startDate = span.startDate;
+                calendarObject.endDate = span.endDate;
+            }
+        }
+        const inZone = (side) => this.isAllDaySpan(side.startDate, side.endDate, timezone);
+        const calendarAllDay = inZone(calendarObject);
+        if (calendarAllDay) calendarObject.allDay = true;
+        else if ('allDay' in calendarObject) delete calendarObject.allDay;
+        const scrapedAllDay = !scraperObject._timezoneUnresolved && inZone(scraperObject);
+        if (scrapedAllDay === calendarAllDay) return;
+        const clockOf = (side) => {
+            const wall = this.getZonedWallParts(side.startDate, timezone);
+            return wall && (wall.hour !== 0 || wall.minute !== 0);
+        };
+        if (scrapedAllDay && clockOf(calendarObject)) {
+            console.log(`🗓️ ALL DAY: "${label}" — this run found a date and no time; the saved start time and end are kept`);
+            scraperObject.startDate = calendarObject.startDate;
+            scraperObject.endDate = calendarObject.endDate;
+            if ('allDay' in scraperObject) delete scraperObject.allDay;
+            return;
+        }
+        if (calendarAllDay && !scraperObject._timezoneUnresolved && clockOf(scraperObject)) {
+            // Only a ONE-day all-day record, and only a time on that same
+            // day: a saved multi-day span (a festival, a bear week) is not
+            // "a party whose time we did not know", and a time on another
+            // day is a date conflict — both stay with the ordinary rules.
+            const saved = SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone);
+            const scrapedDay = SharedCore.formatDayKey(this.getZonedWallParts(scraperObject.startDate, timezone));
+            if (!saved || saved.startDay !== saved.endDay || saved.startDay !== scrapedDay) return;
+            console.log(`🗓️ ALL DAY: "${label}" — the saved event is all-day; this run found a time on that day, which replaces it (start and end together)`);
+            calendarObject.startDate = scraperObject.startDate;
+            calendarObject.endDate = this.isEmptyArbitrationValue(scraperObject.endDate) ? null : scraperObject.endDate;
+            delete calendarObject.allDay;
+        }
+    }
+
+    // Does the merged event name the same day(s) its stored all-day record
+    // already holds? Then its dates are unchanged, whatever instants the two
+    // stores use for that day.
+    isSameStoredAllDay(finalEvent, existingEvent) {
+        const stored = this.getStoredAllDayDays(existingEvent);
+        if (!stored) return false;
+        const merged = this.getAllDayDays(finalEvent);
+        return Boolean(merged) && merged.startDay === stored.startDay && merged.endDay === stored.endDay;
+    }
+
     // The "changed = merged differs from calendar" change list: exactly the
     // fields the calendar write applies (title, dates, location, url view,
     // notes), compared against the live calendar record. Stamped as
@@ -15975,8 +16098,16 @@ class SharedCore {
     computeCalendarWriteChanges(finalEvent, existingEvent, calendarObject) {
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
-        if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        // An all-day event is a DAY: compared as days against a stored
+        // all-day record (see isSameStoredAllDay), never as instants.
+        const sameAllDay = this.isSameStoredAllDay(finalEvent, existingEvent);
+        if (!sameAllDay && !this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
+        if (!sameAllDay && !this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        // The calendar's own all-day switch is part of what is written: an
+        // event that became all-day (or stopped being it) is a change even
+        // when its instants did not move. Not an owner-review field — it
+        // rides with the dates or, alone, as housekeeping.
+        if (SharedCore.isAllDayFlag(finalEvent.allDay) !== (existingEvent.isAllDay === true)) changes.push('allDay');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         // url is an output view of website (one logical field): compare the
         // canonical merged website against the calendar's canonical website
@@ -16355,6 +16486,264 @@ class SharedCore {
             utcMillis = nextUtcMillis;
         }
         return new Date(utcMillis);
+    }
+
+    // ------------------------------------------------------------------
+    // ALL-DAY EVENTS (owner, 2026-09-30: "I'm ok with all day events. Just
+    // don't fuck up and maybe make that clear as metadata").
+    //
+    // A page that states a DATE and no time is naming a day. Until now such
+    // an event was written as a midnight start with the 3-hour default end
+    // and showed on the site as "12:00 AM – 3:00 AM" (run 20260930-085424:
+    // 58 upcoming events, 26 of them Eagle LA's).
+    //
+    // ONE SHAPE, everywhere: an all-day event starts at 00:00:00 and ends at
+    // 23:59:59 of its last day, both read in the EVENT's zone. The feeds'
+    // all-day rows already had that shape (see the JSON-API row builder).
+    // The flag — `allDay: true`, a plain event field, so it is written into
+    // the calendar notes where a person reading the record can see it — is
+    // DERIVED from the dates and can never disagree with them: only that
+    // exact shape is all-day (applyAllDayConvention), whoever produced it.
+    //
+    // What is NOT decided here is which day the phone's calendar puts it
+    // on: the write rebuilds the day at the device's own midnight
+    // (ScriptableAdapter.applyAllDayToCalendarEvent) — midnight in London is
+    // the evening before in New York.
+    // ------------------------------------------------------------------
+
+    static isAllDayFlag(value) {
+        return value === true || (typeof value === 'string' && value.trim().toLowerCase() === 'true');
+    }
+
+    // Wall clock of an instant in a zone: { year, month, day, hour, minute,
+    // second } or null (no zone, bad date, no Intl).
+    getZonedWallParts(dateInput, timezone) {
+        return SharedCore.zonedWallParts(dateInput, timezone);
+    }
+
+    static zonedWallParts(dateInput, timezone) {
+        const ms = SharedCore.toEpochMillis(dateInput);
+        if (ms === null || !timezone || typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return null;
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone, hourCycle: 'h23',
+                year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(new Date(ms));
+            const read = (type) => Number((parts.find(part => part.type === type) || {}).value);
+            const wall = { year: read('year'), month: read('month'), day: read('day'), hour: read('hour') % 24, minute: read('minute'), second: read('second') };
+            return Object.values(wall).every(Number.isFinite) ? wall : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // The days ('YYYY-MM-DD', inclusive) an all-day span covers in a zone,
+    // or null when the pair is not the all-day shape there. Static: the
+    // adapters' calendar write uses it without a core instance.
+    static allDayDaysInZone(startValue, endValue, timezone) {
+        const start = SharedCore.zonedWallParts(startValue, timezone);
+        const end = SharedCore.zonedWallParts(endValue, timezone);
+        if (!start || !end) return null;
+        if (start.hour !== 0 || start.minute !== 0 || start.second !== 0) return null;
+        if (end.hour !== 23 || end.minute !== 59 || (end.second !== 59 && end.second !== 0)) return null;
+        if (!(SharedCore.toEpochMillis(endValue) > SharedCore.toEpochMillis(startValue))) return null;
+        return { startDay: SharedCore.formatDayKey(start), endDay: SharedCore.formatDayKey(end) };
+    }
+
+    static formatDayKey(wall) {
+        if (!wall) return '';
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
+    }
+
+    // The zone an event's own dates are read in: its timezone, the one its
+    // calendar notes state, or its city's.
+    getEventZone(event) {
+        if (!event || typeof event !== 'object') return '';
+        if (typeof event.timezone === 'string' && event.timezone.trim()) return event.timezone.trim();
+        if (typeof event.calendarTimezone === 'string' && event.calendarTimezone.trim()) return event.calendarTimezone.trim();
+        if (typeof event.notes === 'string' && event.notes.includes('timezone')) {
+            const stated = String(this.parseNotesIntoFields(event.notes).timezone || '').trim();
+            if (stated) return stated;
+        }
+        return this.getCityTimezone(event.city) || '';
+    }
+
+    // Is this pair of instants the all-day shape in that zone: 00:00:00
+    // through 23:59:59 (a stored 23:59:00 counts) of the same or a later day?
+    isAllDaySpan(startValue, endValue, timezone) {
+        return SharedCore.allDayDaysInZone(startValue, endValue, timezone) !== null;
+    }
+
+    // The all-day span of a day range ('YYYY-MM-DD', inclusive) in a zone:
+    // { startDate, endDate } as instants, or null.
+    buildAllDaySpan(startDay, endDay, timezone) {
+        const parse = (value) => {
+            const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return match ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) } : null;
+        };
+        const first = parse(startDay);
+        const last = parse(endDay) || first;
+        if (!first || !timezone) return null;
+        const lastDay = (SharedCore.formatDayKey(last) < SharedCore.formatDayKey(first)) ? first : last;
+        const startDate = this.convertWallClockDateToUtc(new Date(Date.UTC(first.year, first.month - 1, first.day, 0, 0, 0)), timezone);
+        const endDate = this.convertWallClockDateToUtc(new Date(Date.UTC(lastDay.year, lastDay.month - 1, lastDay.day, 23, 59, 59)), timezone);
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+        return { startDate, endDate };
+    }
+
+    // The days ('YYYY-MM-DD', inclusive) an all-day-shaped event covers in
+    // its own zone, or null when it is not all-day.
+    getAllDayDays(event) {
+        const timezone = this.getEventZone(event);
+        if (!timezone || !event) return null;
+        return SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone);
+    }
+
+    // The days a STORED all-day calendar record covers. The record says it
+    // is all-day (EventKit's isAllDay, an ICS VALUE=DATE); its instants are
+    // whatever its store uses — the device's own midnight from EventKit and
+    // the phone snapshot, midnight UTC with an exclusive end from a
+    // published ICS — so the days are read from `allDayStartDay` /
+    // `allDayEndDay` when the reader stamped them, else off the record's
+    // dates with this process's own clock (on the phone that IS the
+    // calendar's clock). Null for a record that is not all-day.
+    getStoredAllDayDays(record) {
+        if (!record || record.isAllDay !== true) return null;
+        const valid = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
+        const stampedStart = valid(record.allDayStartDay);
+        if (stampedStart) {
+            const stampedEnd = valid(record.allDayEndDay);
+            return { startDay: stampedStart, endDay: stampedEnd && stampedEnd >= stampedStart ? stampedEnd : stampedStart };
+        }
+        const startMs = this.toEpochMillis(record.startDate);
+        if (startMs === null) return null;
+        const local = (ms) => {
+            const date = new Date(ms);
+            return SharedCore.formatDayKey({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() });
+        };
+        const startDay = local(startMs);
+        let endMs = this.toEpochMillis(record.endDate);
+        if (endMs === null || endMs < startMs) endMs = startMs;
+        // An end sitting exactly on a local midnight after the start is the
+        // exclusive end of the day before.
+        const endDate = new Date(endMs);
+        if (endMs > startMs && endDate.getHours() === 0 && endDate.getMinutes() === 0 && endDate.getSeconds() === 0) endMs -= 1000;
+        const endDay = local(endMs);
+        return { startDay, endDay: endDay >= startDay ? endDay : startDay };
+    }
+
+    // A record that names a day and no time: already in the all-day shape,
+    // or stamped date-only by its reader and waiting for its zone.
+    isAllDayShapedRecord(record) {
+        if (!record || typeof record !== 'object') return false;
+        if (record._noTimeStated === true) return true;
+        if (record._timezoneUnresolved) {
+            // Wall clock labelled UTC: read the shape straight off it.
+            return this.isAllDaySpan(record.startDate, record.endDate, 'UTC');
+        }
+        const timezone = this.getEventZone(record);
+        return Boolean(timezone) && this.isAllDaySpan(record.startDate, record.endDate, timezone);
+    }
+
+    // Does the record's start carry a clock time of its own — anything but
+    // the local-midnight "no time stated" placeholder?
+    recordStatesClockStart(record) {
+        if (!record || typeof record !== 'object' || record._noTimeStated === true) return false;
+        const timezone = record._timezoneUnresolved ? 'UTC' : this.getEventZone(record);
+        const wall = timezone ? this.getZonedWallParts(record.startDate, timezone) : null;
+        return Boolean(wall) && (wall.hour !== 0 || wall.minute !== 0);
+    }
+
+    // THE ANALYSIS NEVER SEES A STORED ALL-DAY RECORD'S RAW INSTANTS. They
+    // are the store's own notation for a day (the device's midnight; midnight
+    // UTC in a published ICS), hours away from the event's own midnight —
+    // read as instants they put the record on the day before, and a saved
+    // all-day event then matches nothing and is proposed again as NEW on
+    // every run. Each all-day record is therefore handed to the analysis as
+    // a VIEW: a plain copy whose start and end are the one all-day shape in
+    // the record's own zone (its notes' timezone, else the zone of the event
+    // it is being compared with), with the days it covers.
+    // The view is what is matched, merged and compared. The record itself —
+    // on the phone a live EventKit object — is kept on the view as
+    // `_nativeRecord` (non-enumerable: never serialized, never spread) and
+    // is what a write goes to. Timed records pass through untouched.
+    viewStoredAllDayRecords(records, comparedEvent = null) {
+        if (!Array.isArray(records)) return records;
+        const fallbackZone = this.getEventZone(comparedEvent) || this.getCityTimezone(comparedEvent && comparedEvent.city) || '';
+        return records.map(record => this.viewStoredAllDayRecord(record, fallbackZone));
+    }
+
+    viewStoredAllDayRecord(record, fallbackZone = '') {
+        if (!record || typeof record !== 'object' || record._nativeRecord) return record;
+        const days = this.getStoredAllDayDays(record);
+        if (!days) return record;
+        const notesZone = typeof record.notes === 'string' && record.notes.includes('timezone')
+            ? String(this.parseNotesIntoFields(record.notes).timezone || '').trim()
+            : '';
+        const span = this.buildAllDaySpan(days.startDay, days.endDay, notesZone || fallbackZone);
+        if (!span) return record;
+        const view = { ...record };
+        // A live calendar object exposes its fields through accessors, which
+        // a spread does not copy: the ones the analysis reads are taken by
+        // name.
+        for (const key of ['identifier', 'title', 'location', 'notes', 'url', 'availability', 'timeZone', 'calendar', 'recurrence', 'recurrenceId']) {
+            if (view[key] === undefined && record[key] !== undefined) view[key] = record[key];
+        }
+        view.startDate = span.startDate;
+        view.endDate = span.endDate;
+        view.isAllDay = true;
+        view.allDayStartDay = days.startDay;
+        view.allDayEndDay = days.endDay;
+        Object.defineProperty(view, '_nativeRecord', { value: record, enumerable: false, writable: false });
+        return view;
+    }
+
+    // The record a calendar write goes to: the stored record behind an
+    // all-day view, or the record itself.
+    static getNativeCalendarRecord(record) {
+        return record && record._nativeRecord ? record._nativeRecord : record;
+    }
+
+    // Put an event into the one all-day shape, or take the flag away.
+    //   - `_noTimeStated` (stamped by a reader whose page gave a date and no
+    //     time): the start day through the end day become the all-day span.
+    //   - any record already in the shape is all-day.
+    //   - everything else is a timed event and carries no flag.
+    // Waits for a zone: an event whose dates are still a wall clock
+    // (_timezoneUnresolved) or whose zone is unknown is left untouched, flag
+    // included, and gets its turn once the zone is known.
+    applyAllDayConvention(event) {
+        if (!event || typeof event !== 'object') return false;
+        if (event._timezoneUnresolved) return false;
+        const timezone = this.getEventZone(event);
+        if (!timezone || this.toEpochMillis(event.startDate) === null) return false;
+        if (event._noTimeStated === true) {
+            const start = this.getZonedWallParts(event.startDate, timezone);
+            // Only a start that really is the midnight placeholder: a reader
+            // that stamped the flag and then found a time is not overruled.
+            if (start && start.hour === 0 && start.minute === 0) {
+                const startDay = SharedCore.formatDayKey(start);
+                // A date-only END names its day too ("Oct 8 – Oct 12" runs
+                // through the 12th): the day the end instant falls on is the
+                // last day, midnight included.
+                const endMs = this.toEpochMillis(event.endDate);
+                const endWall = endMs !== null && endMs > this.toEpochMillis(event.startDate) ? this.getZonedWallParts(event.endDate, timezone) : null;
+                const span = this.buildAllDaySpan(startDay, endWall ? SharedCore.formatDayKey(endWall) : startDay, timezone);
+                if (span) {
+                    const asDates = this.isDateLike(event.startDate);
+                    event.startDate = asDates ? span.startDate : span.startDate.toISOString();
+                    event.endDate = asDates ? span.endDate : span.endDate.toISOString();
+                    delete event._endDateDefaulted;
+                }
+            }
+        }
+        if (this.isAllDaySpan(event.startDate, event.endDate, timezone)) {
+            event.allDay = true;
+            return true;
+        }
+        if ('allDay' in event) delete event.allDay;
+        return false;
     }
 
     // The ai-web parser stores extracted local times as wall-clock components labeled
@@ -20134,6 +20523,20 @@ class SharedCore {
             const effectiveEnd = end instanceof Date && !isNaN(end.getTime()) ? end : start;
             return start.getTime() <= windowEndDate.getTime() && effectiveEnd.getTime() >= windowStartDate.getTime();
         };
+        // An all-day VEVENT (VALUE=DATE) names days: its instants here are
+        // midnight UTC with an EXCLUSIVE end, so the days it covers ride
+        // along for getStoredAllDayDays — read off these instants with a
+        // local clock they would land on the day before, west of Greenwich.
+        const allDayDays = (record, startDate, endDate) => {
+            if (!record.isAllDay || !(startDate instanceof Date) || isNaN(startDate.getTime())) return {};
+            const day = (date) => date.toISOString().slice(0, 10);
+            const startDay = day(startDate);
+            const lastMs = endDate instanceof Date && !isNaN(endDate.getTime()) && endDate.getTime() > startDate.getTime()
+                ? endDate.getTime() - 24 * 60 * 60 * 1000
+                : startDate.getTime();
+            const endDay = day(new Date(lastMs));
+            return { allDayStartDay: startDay, allDayEndDay: endDay >= startDay ? endDay : startDay };
+        };
         const toEvent = (record, startDate, endDate, extra) => ({
             identifier: record.uid,
             title: record.summary || '',
@@ -20143,6 +20546,7 @@ class SharedCore {
             notes: record.description || '',
             url: record.url || '',
             isAllDay: Boolean(record.isAllDay),
+            ...allDayDays(record, startDate, endDate),
             ...(extra || {})
         });
         const recordEnd = (record) => (record.end && record.end.date) ? record.end.date : record.start.date;
@@ -20665,7 +21069,7 @@ class SharedCore {
             }
 
             // Get existing events from the adapter
-            const existingEvents = await calendarAdapter.getExistingEvents(event);
+            const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(event), event);
 
             // Analyze what action to take (with the adapter-side recurring
             // series probe when a merge match carries no series signal yet)
@@ -20790,7 +21194,7 @@ class SharedCore {
                 // not resurrect it (taps keep the store and the calendar
                 // stamp in sync going forward, so the store is never older).
                 if (typeof dropped.reason === 'string' && dropped.reason.startsWith('manual store:')) continue;
-                const existingEvents = await calendarAdapter.getExistingEvents(droppedEvent);
+                const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(droppedEvent), droppedEvent);
                 const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(droppedEvent, existingEvents, mergeMode, calendarAdapter);
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
                 if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
@@ -21902,6 +22306,7 @@ class SharedCore {
             // After every merge (so a stored end always wins over the
             // default) and before the sanity pass (so "no end stated" stops
             // being reported as a zero-duration event).
+            this.applyAllDayConvention(analyzedEvent);
             this.applyDefaultEventEnd(analyzedEvent);
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             // A SECOND approval now exists: overnight-span-corrected (rule 11

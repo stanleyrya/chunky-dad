@@ -4474,7 +4474,10 @@ class ScriptableAdapter {
               }
 
               actionCounts.merge.push(event.title);
-              const targetEvent = event._existingEvent;
+              // An all-day record reaches the analysis as a plain VIEW
+              // (SharedCore.viewStoredAllDayRecord); the write goes to the
+              // live EventKit record behind it.
+              const targetEvent = SharedCore.getNativeCalendarRecord(event._existingEvent);
               // The write mutates the LIVE EventKit record in place, and that
               // same object is what the saved run serializes as "what the
               // calendar had". A failed save leaves the mutation standing, so
@@ -4505,6 +4508,13 @@ class ScriptableAdapter {
                 }
               } else {
                 targetEvent.endDate = resolvedEndDate;
+              }
+              // All-day: the day(s) rebuilt at this device's midnight and
+              // the switch set — or cleared, for an event that now has a time.
+              if (this.applyAllDayToCalendarEvent(targetEvent, event)) {
+                console.log(
+                  `📱 Scriptable: "${event.title}" written as an all-day event`,
+                );
               }
               targetEvent.location = event.location;
               targetEvent.notes = event.notes;
@@ -4640,7 +4650,99 @@ class ScriptableAdapter {
       location: record.location,
       notes: record.notes,
       url: record.url,
+      ...this.describeStoredAllDay(record),
     };
+  }
+
+  // A calendar record's all-day state, as plain data: the switch itself and
+  // the days it covers, read with THIS device's clock — EventKit hands an
+  // all-day event back as the device's own midnight, so these are the days
+  // the calendar shows. Empty for a timed record.
+  describeStoredAllDay(record) {
+    if (!record || record.isAllDay !== true) return {};
+    // Days already read off the live record (an all-day view) are kept: the
+    // view's own instants are the event's midnight, not this device's.
+    if (typeof record.allDayStartDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(record.allDayStartDay)) {
+      return {
+        isAllDay: true,
+        allDayStartDay: record.allDayStartDay,
+        allDayEndDay:
+          typeof record.allDayEndDay === "string" && record.allDayEndDay >= record.allDayStartDay
+            ? record.allDayEndDay
+            : record.allDayStartDay,
+      };
+    }
+    const day = (value) => {
+      const ms = SharedCore.toEpochMillis(value);
+      if (ms === null) return "";
+      const date = new Date(ms);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    };
+    const startMs = SharedCore.toEpochMillis(record.startDate);
+    let endMs = SharedCore.toEpochMillis(record.endDate);
+    if (startMs === null) return { isAllDay: true };
+    if (endMs === null || endMs < startMs) endMs = startMs;
+    // An end exactly on a later local midnight is the exclusive end of the
+    // day before.
+    const end = new Date(endMs);
+    if (endMs > startMs && end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) endMs -= 1000;
+    const startDay = day(startMs);
+    const endDay = day(endMs);
+    return { isAllDay: true, allDayStartDay: startDay, allDayEndDay: endDay >= startDay ? endDay : startDay };
+  }
+
+  // ALL-DAY ON THE CALENDAR. The event says it is all-day (`allDay: true`,
+  // derived from its dates by SharedCore.applyAllDayConvention) and names
+  // its days in ITS OWN zone. EventKit stores an all-day event against the
+  // DEVICE's day, so handing it the event's instants would put a London or
+  // Tokyo day on the evening before (or a Los Angeles day correctly only by
+  // luck) on a phone kept on Eastern time. The days are therefore read in
+  // the event's zone and rebuilt at this device's own midnight, first day
+  // 00:00:00 through last day 23:59:59, with the all-day switch on.
+  //
+  // Fails closed: with no zone, or dates that are not the all-day shape in
+  // it, nothing is rebuilt and the record is written as the timed span the
+  // event carries — logged, never guessed. Returns true when the record was
+  // written as all-day.
+  applyAllDayToCalendarEvent(target, event) {
+    if (!target || !event) return false;
+    const flagged = SharedCore.isAllDayFlag(event.allDay);
+    if (!flagged) {
+      // A saved all-day record whose event now states a time is a timed
+      // event: the switch goes off with the dates that replaced it.
+      if (target.isAllDay === true) target.isAllDay = false;
+      return false;
+    }
+    let timezone =
+      typeof event.timezone === "string" && event.timezone.trim()
+        ? event.timezone.trim()
+        : "";
+    if (!timezone) {
+      try {
+        timezone = this.getTimezoneForCity(event.city);
+      } catch (_) {
+        timezone = "";
+      }
+    }
+    const days = timezone
+      ? SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone)
+      : null;
+    if (!days) {
+      console.log(
+        `📱 Scriptable: ⚠️ "${event.title || "event"}" is marked all-day but its dates are not a whole day in ${timezone || "any known zone"} — written as the timed span it carries`,
+      );
+      if (target.isAllDay === true) target.isAllDay = false;
+      return false;
+    }
+    const at = (dayKey, hours, minutes, seconds) => {
+      const [year, month, day] = dayKey.split("-").map(Number);
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    };
+    target.startDate = at(days.startDay, 0, 0, 0);
+    target.endDate = at(days.endDay, 23, 59, 59);
+    target.isAllDay = true;
+    return true;
   }
 
   resolveCalendarWriteEndDate(event) {
@@ -4692,7 +4794,12 @@ class ScriptableAdapter {
     // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
     calendarEvent.calendar = calendar;
 
-    const isAllDay = this.isAllDayEvent(event);
+    // An event that says it is all-day is written by its days (see
+    // applyAllDayToCalendarEvent). The older shape test stays for records
+    // that carry no flag: a span that is a whole day on THIS device's clock.
+    const isAllDay =
+      this.applyAllDayToCalendarEvent(calendarEvent, event) ||
+      this.isAllDayEvent(event);
     if (isAllDay) {
       calendarEvent.isAllDay = true;
     }
@@ -12530,7 +12637,15 @@ class ScriptableAdapter {
     // HALF is an atomic .dt-nowrap span and only the separator may break, so
     // a narrow screen moves the whole end datetime down instead of splitting
     // it after the date.
-    const dateLineHtml = `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
+    // An all-day event (the page gave a date and no time — see
+    // SharedCore.applyAllDayConvention) prints its day, or first and last
+    // day, and says so: never the span's own "12:00 AM - 11:59 PM".
+    const allDayCard = SharedCore.isAllDayFlag(event.allDay);
+    const dateLineHtml = allDayCard
+      ? `<span class="dt-nowrap">${dateStr}</span>${
+          endDateStr ? ` - <span class="dt-nowrap">${endDateStr}</span>` : ""
+        } · all day <span class="no-end-note">(no time listed)</span>`
+      : `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
       hasRealEnd
         ? ` - <span class="dt-nowrap">${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}</span>`
         : ' <span class="no-end-note">(no end listed)</span>'
@@ -16645,6 +16760,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           notes: typeof record.notes === "string" ? record.notes : "",
           url: typeof record.url === "string" ? record.url : "",
           isAllDay: record.isAllDay === true,
+          // The days an all-day record covers, read with this device's
+          // clock — the Mac cannot recover them from the instants once its
+          // own clock differs from the phone's.
+          ...this.describeStoredAllDay(record),
         })).filter((event) => event.startDate);
         const payload = {
           version: 1,
