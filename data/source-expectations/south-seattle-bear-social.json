@@ -60,8 +60,8 @@
   },
   "coverage": {
     "confidence": "high",
-    "basis": "The homepage prints every upcoming Sunday it intends to hold (13 cards, 2026-09-27 → 2026-12-27) and states the rule; the TicketLeap upcoming door is still empty (ticketed parties only, none on sale). All 13 cards documented: 10 as occurrences of the weekly series, 3 themed Sundays as singles.",
-    "publishedEventCount": 13,
+    "basis": "The homepage prints every upcoming Sunday it intends to hold (13 cards, 2026-09-27 → 2026-12-27) and states the rule; the TicketLeap upcoming door is still empty (ticketed parties only, none on sale). The 13 cards are 4 events: the weekly series (10 listed Sundays) and 3 themed Sundays; all documented.",
+    "publishedEventCount": 4,
     "documentedEventCount": 4,
     "occurrenceWindow": {
       "start": "2026-09-27",
