@@ -14107,6 +14107,64 @@ test('a venue closure notice is not an event; markup inside HTML comments is not
   assert.equal(timed.startDate.toISOString(), '2026-05-10T01:00:00.000Z', 'a timed row keeps its clock');
 });
 
+test('a stated start with no end takes the end its own poster prints — only when the poster\'s start is this clock', () => {
+  const parser = createParser();
+  parser.recordOcrImageTextEvidence('https://v.example/tea.jpg', { text: 'BEAR PRIDE TEA-DANCE\n18 OCT SUNDAY\n12PM - 6PM\nANTHEM' });
+  parser.recordOcrImageTextEvidence('https://v.example/other-clock.jpg', { text: 'LATE NIGHT 10PM - 4AM' });
+  parser.recordOcrImageTextEvidence('https://v.example/other-date.jpg', { text: 'BEAR NIGHT OCT 3 9pm - 2am' });
+  parser.recordOcrImageTextEvidence('https://v.example/start-only.jpg', { text: 'DOORS 9PM' });
+  // Offset-less wall clock (a feed row corrected to local time).
+  const tea = { title: 'Bear Tea-Dance', startDate: new Date(Date.UTC(2026, 9, 18, 12, 0)), endDate: null, image: 'https://v.example/tea.jpg', _timezoneUnresolved: true };
+  // A real instant in its zone: 9 PM EDT = 01:00Z; the poster's 9pm matches in New York.
+  const night = { title: 'BEAR NIGHT', startDate: new Date('2026-10-04T01:00:00.000Z'), endDate: null, timezone: 'America/New_York', image: 'https://v.example/other-date.jpg' };
+  const wrongClock = { title: 'X', startDate: new Date(Date.UTC(2026, 9, 18, 12, 0)), endDate: null, image: 'https://v.example/other-clock.jpg', _timezoneUnresolved: true };
+  const startOnly = { title: 'Y', startDate: new Date(Date.UTC(2026, 9, 18, 21, 0)), endDate: null, image: 'https://v.example/start-only.jpg', _timezoneUnresolved: true };
+  const hasEnd = { title: 'Z', startDate: new Date(Date.UTC(2026, 9, 18, 12, 0)), endDate: new Date(Date.UTC(2026, 9, 18, 15, 0)), image: 'https://v.example/tea.jpg', _timezoneUnresolved: true };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let adopted;
+  try { adopted = parser.adoptFlyerEndForOpenEnds([tea, night, wrongClock, startOnly, hasEnd]); } finally { console.log = originalLog; }
+  assert.equal(adopted, 2, lines.join('\n'));
+  assert.equal(tea.endDate.toISOString(), '2026-10-18T18:00:00.000Z', '12PM - 6PM on the poster, for this date → 18:00 wall clock');
+  assert.equal(tea._endTimeFromFlyer, true);
+  assert.equal(night.endDate.toISOString(), '2026-10-04T06:00:00.000Z', '9pm - 2am in New York → 02:00 EDT next day, as an instant');
+  assert.equal(wrongClock.endDate, null, 'a poster whose start is not this clock decides nothing');
+  assert.equal(startOnly.endDate, null, 'a poster with no range decides nothing');
+  assert.equal(hasEnd.endDate.toISOString(), '2026-10-18T15:00:00.000Z', 'a stated end is never replaced');
+});
+
+test('page flight data: a Next.js page\'s own event rows are read as feed rows — split date/time clocks, named places, cdn images', () => {
+  const parser = createParser();
+  const rows = [
+    { id: 'a', slug: 'thick-n-juicy', name: "THICK 'N' JUICY Brisbane", start_date: '2026-11-13', end_date: null, start_time: '21:00:00', end_time: '03:00:00', ticketing_url: 'https://tickets.example/bri13nov', city: { name: 'Brisbane' }, place: { name: 'Wonderland Brisbane' }, images: [{ id: 'i', cdn_url: 'https://cdn.example/media/events/758ff60d.jpg', sort_order: 0 }] },
+    { id: 'b', slug: 'sundown', name: 'Sundown Music Festival', start_date: '2026-10-03', end_date: '2026-10-03', start_time: '16:00:00', end_time: '23:00:00', ticketing_url: null, city: { name: 'Brisbane' }, place: { name: 'Superordinary' }, images: [] }
+  ];
+  const tree = ['$', 'div', null, { children: [['$', 'script', null, { type: 'application/ld+json', dangerouslySetInnerHTML: { __html: '$24' } }], ['$', '$L25', null, { initialEvents: rows, city: { name: 'Brisbane', slug: 'brisbane' } }]] }];
+  const jsonLd = '{"@context":"https://schema.org","@type":"ItemList"}';
+  // Three chunks: imports, a length-delimited text record (the JSON-LD)
+  // with the rows' record glued right after it, and a trailing record.
+  const chunk1 = '3:I[39756,["/_next/static/chunks/a.js"],"default"]\n0:{"P":null,"c":["","in","brisbane"]}\n';
+  const chunk2 = `24:T${Buffer.byteLength(jsonLd, 'utf8').toString(16)},${jsonLd}13:${JSON.stringify(tree)}\n`;
+  const chunk3 = '26:["$","section",null,{"className":"x"}]\n';
+  const html = `<html><body><div>cards</div><script>self.__next_f.push([1,${JSON.stringify(chunk1)}])</script><script>self.__next_f.push([1,${JSON.stringify(chunk2)}])</script><script>self.__next_f.push([1,${JSON.stringify(chunk3)}])</script></body></html>`;
+  const found = parser.collectPageFlightDataRows(html);
+  assert.deepEqual(found.map((row) => row.slug), ['thick-n-juicy', 'sundown'], 'the rows behind the text record are reached');
+  assert.deepEqual(parser.collectPageFlightDataRows('<html><body>no flight data</body></html>'), []);
+  const originalLog = console.log; console.log = () => {};
+  let event, festival;
+  try {
+    event = parser.buildEventFromJsonApiObject(found[0], 'https://party.example/in/brisbane', null);
+    festival = parser.buildEventFromJsonApiObject(found[1], 'https://party.example/in/brisbane', null);
+  } finally { console.log = originalLog; }
+  assert.equal(event.startDate.toISOString(), '2026-11-13T21:00:00.000Z', 'start_date + start_time → a wall clock');
+  assert.equal(event._timezoneUnresolved, true);
+  assert.equal(event.endDate.toISOString(), '2026-11-14T03:00:00.000Z', 'end_time earlier than the start → the next day');
+  assert.equal(event.bar, 'Wonderland Brisbane');
+  assert.equal(event.image, 'https://cdn.example/media/events/758ff60d.jpg', 'images[].cdn_url');
+  assert.equal(event.ticketUrl, 'https://tickets.example/bri13nov');
+  assert.equal(event.timezone, 'Australia/Brisbane', 'city: { name } names the place, so the zone follows');
+  assert.equal(festival.endDate.toISOString(), '2026-10-03T23:00:00.000Z', 'an end_date with its end_time');
+});
+
 test('a listing with no time adopts the single clock its own poster states — for this date, or undated', () => {
   const parser = createParser();
   const at = (day) => new Date(Date.UTC(2026, 8, day));
