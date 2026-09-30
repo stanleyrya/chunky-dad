@@ -120,6 +120,14 @@
       "coordinates": "50.8172912, -0.1225875"
     }
   ],
+  "brisbane": [
+    {
+      "name": "Wonderland",
+      "city": "brisbane",
+      "address": "633 Ann Street, Brisbane, Queensland",
+      "coordinates": "-27.4589399, 153.0347011"
+    }
+  ],
   "chicago": [
     {
       "name": "Meeting House Tavern",
@@ -205,6 +213,14 @@
       "city": "chicago",
       "address": "3246 North Halsted Street, Chicago, Illinois",
       "coordinates": "41.9413599, -87.6494979"
+    }
+  ],
+  "cologne": [
+    {
+      "name": "Pullermanns",
+      "city": "cologne",
+      "address": "22 Mathiasstraße, Köln, Nordrhein-Westfalen",
+      "coordinates": "50.9332999, 6.9593916"
     }
   ],
   "dallas": [
@@ -524,6 +540,12 @@
       "city": "london",
       "address": "Victoria Embankment, London SW1A 2JH",
       "coordinates": "51.5022544, -0.1231736"
+    },
+    {
+      "name": "The Steel Yard",
+      "city": "london",
+      "address": "13-16 Allhallows Ln, London EC4R 3UL",
+      "coordinates": "51.5101240, -0.0903711"
     }
   ],
   "manchester": [
@@ -535,6 +557,20 @@
       "website": "https://www.eaglemanchester.com",
       "faviconBg": "#131315",
       "faviconFg": "#a7a7a8"
+    },
+    {
+      "name": "YES",
+      "city": "manchester",
+      "address": "38 Charles Street, Manchester M1 7DB",
+      "coordinates": "53.4740106, -2.2381584"
+    }
+  ],
+  "melbourne": [
+    {
+      "name": "New Guernica",
+      "city": "melbourne",
+      "address": "64-68 Smith Street, Melbourne",
+      "coordinates": "-37.8062453, 144.9833075"
     }
   ],
   "montreal": [
@@ -770,6 +806,22 @@
       "coordinates": "40.7406797, -74.0084922"
     }
   ],
+  "orlando": [
+    {
+      "name": "Anthem Orlando",
+      "city": "orlando",
+      "address": "100 North Orange Avenue, Orlando, Florida",
+      "coordinates": "28.5437437, -81.3792958"
+    }
+  ],
+  "ottawa": [
+    {
+      "name": "T's Pub",
+      "city": "ottawa",
+      "address": "323 Somerset Street West, Ottawa, Ontario",
+      "coordinates": "45.4162040, -75.6951151"
+    }
+  ],
   "palm-springs": [
     {
       "name": "Hunters",
@@ -897,6 +949,14 @@
       "faviconFg": "#ededed"
     }
   ],
+  "prague": [
+    {
+      "name": "Café Bar Flirt",
+      "city": "prague",
+      "address": "5 Martinská, Praha",
+      "coordinates": "50.0833243, 14.4199785"
+    }
+  ],
   "ptown": [
     {
       "name": "A-House",
@@ -987,6 +1047,14 @@
       "city": "pv",
       "address": "4 Malecon, Puerto Vallarta, Jalisco",
       "coordinates": "20.5973207, -105.2392083"
+    }
+  ],
+  "salt-lake-city": [
+    {
+      "name": "Club Try-Angles",
+      "city": "salt-lake-city",
+      "address": "251 900 South, Salt Lake City, Utah",
+      "coordinates": "40.7495344, -111.8985315"
     }
   ],
   "san-diego": [
@@ -1193,7 +1261,9 @@
       "city": "sf",
       "address": "1123 Folsom Street, San Francisco, California, 94103",
       "coordinates": "37.7761653, -122.4083643",
-      "website": "https://www.studsf.com"
+      "website": "https://www.studsf.com",
+      "faviconBg": "#1a1919",
+      "faviconFg": "#e3e3e3"
     },
     {
       "name": "F8 Nightclub & Bar",
@@ -1223,6 +1293,20 @@
       "city": "sitges",
       "address": "Carrer de Bonaire 12, 08870 Sitges",
       "coordinates": "41.2360385, 1.8079068"
+    }
+  ],
+  "sydney": [
+    {
+      "name": "Kings Cross Hotel",
+      "city": "sydney",
+      "address": "244-248 William Street, Sydney, New South Wales",
+      "coordinates": "-33.8749589, 151.2219447"
+    },
+    {
+      "name": "ARQ",
+      "city": "sydney",
+      "address": "16 Flinders Street, Sydney, New South Wales",
+      "coordinates": "-33.8814084, 151.2172668"
     }
   ],
   "tokyo": [
