@@ -11898,3 +11898,113 @@ test('answer cache on the phone: a lookup reads and writes storage/answers under
   assert.deepEqual(written, [['/answers/a.json', '{"html":"[1]"}']], 'written back byte for byte');
   assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(30), ''), false, 'never writes an empty file over an answer');
 });
+
+// ---------------------------------------------------------------------------
+// ALL-DAY on the phone's calendar. EventKit keeps an all-day event against
+// the DEVICE's day, so the event's own days are rebuilt at this device's
+// midnight — never written as the event-zone instants, which are the evening
+// before for a zone east of the phone. These assertions read the written
+// dates with local getters, so they hold whatever zone the test runs in.
+// ---------------------------------------------------------------------------
+function allDayEvent(startIso, endIso, timezone, extra = {}) {
+  return { title: 'Bear Day', allDay: true, timezone, startDate: new Date(startIso), endDate: new Date(endIso), ...extra };
+}
+const localParts = (date) => [date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()];
+
+test('all-day write: the event\'s day lands on that same day on the device, in any zone', () => {
+  const adapter = new ScriptableAdapter({ cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles' } } });
+  for (const [label, start, end, zone, firstDay, lastDay] of [
+    ['Los Angeles', '2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', [2037, 10, 1], [2037, 10, 1]],
+    ['London (midnight there is the evening before in New York)', '2037-09-30T23:00:00.000Z', '2037-10-01T22:59:59.000Z', 'Europe/London', [2037, 10, 1], [2037, 10, 1]],
+    ['Tokyo', '2037-09-30T15:00:00.000Z', '2037-10-01T14:59:59.000Z', 'Asia/Tokyo', [2037, 10, 1], [2037, 10, 1]],
+    ['Sydney, four days', '2037-09-30T14:00:00.000Z', '2037-10-04T12:59:59.000Z', 'Australia/Sydney', [2037, 10, 1], [2037, 10, 4]],
+    ['New York across the end of daylight saving', '2037-10-28T04:00:00.000Z', '2037-11-03T04:59:59.000Z', 'America/New_York', [2037, 10, 28], [2037, 11, 2]]
+  ]) {
+    const target = {};
+    assert.equal(adapter.applyAllDayToCalendarEvent(target, allDayEvent(start, end, zone)), true, label);
+    assert.equal(target.isAllDay, true, label);
+    assert.deepEqual(localParts(target.startDate), [...firstDay, 0, 0, 0], `${label}: first day, device midnight`);
+    assert.deepEqual(localParts(target.endDate), [...lastDay, 23, 59, 59], `${label}: last day, 23:59:59`);
+  }
+  // No timezone on the event: the city's.
+  const byCity = {};
+  assert.equal(adapter.applyAllDayToCalendarEvent(byCity, allDayEvent('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', '', { city: 'la' })), true);
+  assert.deepEqual(localParts(byCity.startDate), [2037, 10, 1, 0, 0, 0]);
+  // The note-line spelling of the flag counts.
+  const fromNotes = {};
+  assert.equal(adapter.applyAllDayToCalendarEvent(fromNotes, allDayEvent('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', { allDay: 'true' })), true);
+});
+
+test('all-day write fails closed: a flag the dates do not back, or no zone, writes the timed span and says so', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  try {
+    const start = new Date('2037-10-02T04:00:00.000Z');
+    const end = new Date('2037-10-02T09:00:00.000Z');
+    const timedButFlagged = { startDate: start, endDate: end };
+    assert.equal(adapter.applyAllDayToCalendarEvent(timedButFlagged, { title: 'Party', allDay: true, timezone: 'America/Los_Angeles', startDate: start, endDate: end }), false);
+    assert.equal(timedButFlagged.startDate, start, 'dates untouched');
+    assert.notEqual(timedButFlagged.isAllDay, true);
+    const noZone = { startDate: start, endDate: end };
+    assert.equal(adapter.applyAllDayToCalendarEvent(noZone, { title: 'Nowhere', allDay: true, city: 'atlantis', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-02T06:59:59.000Z') }), false);
+    assert.equal(noZone.startDate, start);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(lines.filter((line) => line.includes('is marked as a whole-day event but its dates are not a whole day')).length, 2);
+});
+
+test('all-day write: an event whose time is unknown is written all-day too — the calendar has one switch for both kinds', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const target = {};
+  const wrote = adapter.applyAllDayToCalendarEvent(target, {
+    title: 'B BAR', timeUnknown: true, timezone: 'America/Los_Angeles',
+    startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-02T06:59:59.000Z')
+  });
+  assert.equal(wrote, true);
+  assert.equal(target.isAllDay, true);
+  assert.deepEqual([target.startDate.getFullYear(), target.startDate.getMonth(), target.startDate.getDate(), target.startDate.getHours()], [2037, 9, 1, 0]);
+  assert.deepEqual([target.endDate.getMonth(), target.endDate.getDate(), target.endDate.getHours(), target.endDate.getMinutes()], [9, 1, 23, 59]);
+});
+
+test('all-day write: an event that now has a time switches a saved all-day record back to timed', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const saved = { isAllDay: true };
+  assert.equal(adapter.applyAllDayToCalendarEvent(saved, { title: 'Found a time', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') }), false);
+  assert.equal(saved.isAllDay, false);
+  const timed = {};
+  adapter.applyAllDayToCalendarEvent(timed, { title: 'Timed', startDate: new Date(), endDate: new Date() });
+  assert.equal('isAllDay' in timed, false, 'a timed record is not touched');
+});
+
+test('all-day read: a stored all-day record is described by the days this device shows it on', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: false, startDate: new Date() }), {});
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, startDate: new Date(2037, 9, 1, 0, 0, 0), endDate: new Date(2037, 9, 1, 23, 59, 59) }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-01' });
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 4) }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-03' }, 'an end on a later midnight is exclusive');
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-02', startDate: new Date('2037-09-30T23:00:00.000Z') }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-02' }, 'days already read off the live record are kept');
+  // The pre-write snapshot of a record carries them.
+  const snapshot = adapter.snapshotCalendarRecord({ title: 'Bear Day', identifier: 'X', isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 1, 23, 59, 59), notes: 'allDay: true' });
+  assert.equal(snapshot.isAllDay, true);
+  assert.equal(snapshot.allDayStartDay, '2037-10-01');
+});
+
+test('all-day merge write goes to the live record behind the analysis view', () => {
+  const live = { title: 'Bear Day', isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 1, 23, 59, 59), notes: 'timezone: Europe/London' };
+  const { SharedCore } = require('../shared-core');
+  const core = new SharedCore({ london: { timezone: 'Europe/London', patterns: ['london'] } }, { eventSchema: require('../event-schema').EventSchema });
+  const view = core.viewStoredAllDayRecord(live, '');
+  assert.notEqual(view, live);
+  assert.equal(view.startDate.toISOString(), '2037-09-30T23:00:00.000Z', 'the view is the London day');
+  assert.equal(SharedCore.getNativeCalendarRecord(view), live, 'the write target is the record itself');
+  assert.equal(Object.keys(view).includes('_nativeRecord'), false, 'never serialized with the run');
+  assert.equal(JSON.stringify(view).includes('_nativeRecord'), false);
+  const timed = { title: 'Timed', startDate: new Date(), endDate: new Date() };
+  assert.equal(core.viewStoredAllDayRecord(timed, 'Europe/London'), timed, 'a timed record passes through untouched');
+  assert.equal(SharedCore.getNativeCalendarRecord(timed), timed);
+});

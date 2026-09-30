@@ -2111,7 +2111,12 @@ async saveFailureNote(url, error, metadata = {}) {
                             location: String((event && event.location) || ''),
                             notes: String((event && event.notes) || ''),
                             url: String((event && event.url) || ''),
-                            isAllDay: Boolean(event && event.isAllDay)
+                            isAllDay: Boolean(event && event.isAllDay),
+                            // The days an all-day record covers, as the
+                            // phone read them (SharedCore.getStoredAllDayDays).
+                            ...(event && event.isAllDay && typeof event.allDayStartDay === 'string'
+                                ? { allDayStartDay: event.allDayStartDay, allDayEndDay: typeof event.allDayEndDay === 'string' ? event.allDayEndDay : event.allDayStartDay }
+                                : {})
                         }))
                         .filter((event) => event.startDate);
                     snapshot = {

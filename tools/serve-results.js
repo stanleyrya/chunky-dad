@@ -532,6 +532,17 @@ function formatReviewDateLine(startIso, endIso, timezone, options = {}) {
     const start = reviewDateParts(startIso, timezone);
     if (!start) return '';
     const end = reviewDateParts(endIso, timezone);
+    // `options.wholeDay`: the event is saved as a whole day
+    // (SharedCore.applyAllDayConvention) — 'all-day' for a real all-day event
+    // (a festival, a weekend), 'time-unknown' for an ordinary event whose
+    // time the page never gave. The line names the day — or the first and
+    // last day — says which kind, and never prints a clock.
+    if (options.wholeDay === 'all-day' || options.wholeDay === 'time-unknown') {
+        const lastDay = end && end.dayKey !== start.dayKey ? ` – ${end.dayYear}` : '';
+        const kind = options.wholeDay === 'time-unknown' ? 'time not listed (saved as all-day)' : 'all day';
+        const late = typeof options.endNote === 'string' && options.endNote.trim() ? ` · the page says: ${options.endNote.trim()}` : '';
+        return `${start.dayYear}${lastDay} · ${kind}${late}${timezone ? '' : ' — no timezone on the event'}`;
+    }
     const hasEnd = Boolean(end && end.ms > start.ms);
     const hasRealEnd = hasEnd && options.endDefaulted !== true;
     let line = `${start.dayYear} · ${start.time}`;
@@ -543,6 +554,8 @@ function formatReviewDateLine(startIso, endIso, timezone, options = {}) {
             ? ` (no end listed — saved with the ${Number.isInteger(hours) ? hours : hours.toFixed(1)} h default)`
             : ' (no end listed)';
     }
+    // What the page said in place of a closing time ("til late").
+    if (typeof options.endNote === 'string' && options.endNote.trim()) line += ` · the page says: ${options.endNote.trim()}`;
     if (!timezone) line += ' — no timezone on the event';
     return line;
 }
@@ -660,6 +673,15 @@ function describeReviewChange(field, change, proposal, ctx) {
         const toHtml = tp
             ? escapeHtmlText(sameDay ? tp.time : `${tp.day} ${tp.time}`)
             : (field === 'endDate' ? '<span class="none">(no end listed)</span>' : none);
+        // The event becomes a whole day: the row says which kind instead of
+        // printing the span's own "11:59 PM" as if it were a closing time.
+        if (proposal && (proposal.wholeDay === 'all-day' || proposal.wholeDay === 'time-unknown')) {
+            const kind = proposal.wholeDay === 'time-unknown' ? 'time not listed (saved as all-day)' : 'all day';
+            const label = field === 'endDate'
+                ? (tp && fp && tp.dayKey !== fp.dayKey ? `${kind}, through ${tp.day}` : kind)
+                : (tp ? `${tp.day} · ${kind}` : kind);
+            return { fromHtml, toHtml: escapeHtmlText(label), noteHtml: '', warn: false };
+        }
         const delta = fp && tp ? describeReviewTimeDelta(from, to) : '';
         return { fromHtml, toHtml, noteHtml: escapeHtmlText(delta), warn: false };
     }
@@ -719,7 +741,7 @@ const REVIEW_NOTES_LABELS = {
     shortName: 'Short name', shorterName: 'Shorter name', description: 'Description', website: 'Website', ticketUrl: 'Tickets',
     instagram: 'Instagram', facebook: 'Facebook', cover: 'Cover', bar: 'Venue', address: 'Address', image: 'Image',
     imageVertical: 'Image (portrait)', imageHorizontal: 'Image (landscape)', bearSource: 'Bear verdict', bearReview: 'Bear review',
-    festival: 'Festival', tea: 'Tea', recurrence: 'Recurrence', city: 'City'
+    festival: 'Festival', tea: 'Tea', recurrence: 'Recurrence', city: 'City', allDay: 'All-day event', timeUnknown: 'Time unknown', endNote: 'Ends'
 };
 function reviewVisibleText(value) {
     return String(value == null ? '' : value).replace(/\u00ad/g, '·').replace(/[\u200b\u200c\u200d\ufeff]/g, '⁞');
@@ -936,8 +958,10 @@ function renderReviewCard(entry, ctx = {}) {
     const isDropped = entry.kind === 'dropped';
     const tz = proposal.timezone || null;
     const endDefaulted = display.endDefaulted === true;
-    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz, { endDefaulted });
-    const utcLine = formatReviewUtcLine(proposal.startDate, endDefaulted ? null : proposal.endDate);
+    const wholeDay = proposal.wholeDay === 'all-day' || proposal.wholeDay === 'time-unknown' ? proposal.wholeDay : '';
+    const dateLine = formatReviewDateLine(proposal.startDate, proposal.endDate, tz, { endDefaulted, wholeDay, endNote: proposal.endNote });
+    // A whole-day event is a day, not an instant: no UTC line to check.
+    const utcLine = wholeDay ? '' : formatReviewUtcLine(proposal.startDate, endDefaulted ? null : proposal.endDate);
     const changes = isMerge && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
     const existingTitle = isMerge && proposal.existingTitle && proposal.existingTitle !== proposal.title && !changes.title
         ? `<div class="line muted">${isOverride ? 'series' : 'calendar title'}: ${escapeHtmlText(proposal.existingTitle)}</div>`
@@ -1414,7 +1438,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   function unitOf(series, count) {
     return series && series.type === 'change' ? (count === 1 ? 'event' : 'events') : (count === 1 ? 'night' : 'nights');
   }
-  var CHANGE_LABELS = { url: 'link', ticketUrl: 'ticket link', image: 'image', bar: 'venue', address: 'address', location: 'pin', title: 'title', cover: 'cover', description: 'description' };
+  var CHANGE_LABELS = { allDay: 'time', url: 'link', ticketUrl: 'ticket link', image: 'image', bar: 'venue', address: 'address', location: 'pin', title: 'title', cover: 'cover', description: 'description' };
   function changeRows(series) {
     return (series.change || []).map(function (row) {
       var isLink = row.field === 'url' || row.field === 'ticketUrl' || row.field === 'image';
