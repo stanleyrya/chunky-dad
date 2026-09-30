@@ -392,6 +392,46 @@ function patchLoadConfiguration(WebAdapter) {
     };
 }
 
+// NETWORK PREFLIGHT (NO PARTIAL RUNS). The scheduled job can fire while the
+// Mac is still joining its network: on 2026-09-30 the 04:34 run made 414
+// requests into nothing, could not read 58 published calendars, analysed
+// every saved event as new and was written as the day's run. The site the
+// calendars are read from is asked until it answers; a Mac that has no
+// network after the wait aborts BEFORE the pipeline starts, with no run
+// file. CHUNKY_SKIP_NETWORK_PREFLIGHT=1 is for offline replays.
+const NETWORK_PREFLIGHT_URL = 'https://chunky.dad/robots.txt';
+async function waitForNetwork(options = {}) {
+    const env = options.env || process.env;
+    if (String(env.CHUNKY_SKIP_NETWORK_PREFLIGHT || '').trim() === '1') return { skipped: true, attempts: 0 };
+    const fetchImpl = options.fetch || globalThis.fetch;
+    const sleep = options.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+    const attempts = Number.isFinite(options.attempts) ? options.attempts : 20;
+    const gapMs = Number.isFinite(options.gapMs) ? options.gapMs : 15000;
+    let lastError = '';
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+            // Any answer at all is a network: the status is not judged here.
+            await fetchImpl(NETWORK_PREFLIGHT_URL, { method: 'GET', signal: AbortSignal.timeout(10000) });
+            if (attempt > 1) console.log(`run-once: network reached on attempt ${attempt}`);
+            return { skipped: false, attempts: attempt };
+        } catch (error) {
+            lastError = error && error.message ? error.message : String(error);
+            if (attempt === 1) console.log(`run-once: no network yet (${lastError}) — waiting up to ${Math.round((attempts - 1) * gapMs / 60000)} min before starting`);
+            if (attempt < attempts) await sleep(gapMs);
+        }
+    }
+    throw new Error(`run-once: no network after ${attempts} attempts (${lastError}) — ABORTING before any parser work (no partial runs)`);
+}
+
+// A run that could not read the calendars it analyses against is not a run
+// (SharedCore.describeCalendarReadHealth): thrown after the pipeline so the
+// shared-storage failure path writes its LOG and no run JSON.
+function assertCalendarsWereRead(results, SharedCore) {
+    const health = SharedCore.describeCalendarReadHealth(results && results.publishedCalendarSnapshots);
+    if (!health.degraded) return health;
+    throw new Error(`run-once: ${health.cities.length} saved calendar(s) could not be read (${health.cities.slice(0, 8).join(', ')}${health.cities.length > 8 ? ', …' : ''}) — their events would be analysed as NEW. Run discarded (no partial runs); the log is kept.`);
+}
+
 async function main() {
     // Abort loudly BEFORE any module of the pipeline runs (the WebAdapter
     // constructor re-checks this — belt and suspenders).
@@ -405,6 +445,8 @@ async function main() {
         // launchd's err log rather than start a run that would wedge.
         await sweepSharedStorageBeforeRun(sharedRoot);
     }
+
+    await waitForNetwork();
 
     const { WebAdapter } = require(path.join(repoRoot, 'scripts', 'adapters', 'web-adapter'));
     patchLoadConfiguration(WebAdapter);
@@ -427,6 +469,8 @@ async function main() {
     let results;
     try {
         results = await orchestrator.run();
+        const { SharedCore } = require(path.join(repoRoot, 'scripts', 'shared-core'));
+        assertCalendarsWereRead(results, SharedCore);
     } catch (error) {
         // A failed shared-storage run still writes its log — that log is the
         // only evidence of what went wrong (mirrors the phone's pre-UI log
@@ -475,6 +519,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+    waitForNetwork,
+    assertCalendarsWereRead,
     deepMergeInto,
     safeStringify,
     isAutomationEnv,

@@ -1006,3 +1006,22 @@ test('reject chips: the owner\'s own vocabulary, and a field chip lets a fixed c
   assert.equal(covered(['should merge'], ['title']), null, 'a chip that names no field never approves');
   assert.equal(covered(['wrong link', 'recurring'], ['url']), null);
 });
+
+test('run picker: a run that could not read the saved calendars is never the default and says so', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-degraded-'));
+  const runsDir = rq.getRunsDir(dir);
+  fs.mkdirSync(runsDir);
+  const parsers = Array.from({ length: 10 }, (_, i) => ({ name: 'Parser ' + i }));
+  const base = { config: { cities: CITIES, config: { dryRun: true }, parsers }, parserResults: parsers.map((p) => ({ name: p.name })) };
+  const good = runPayload({ ...base, summary: { runId: '20300101-194629' }, publishedCalendarSnapshots: { nyc: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } } });
+  const outage = runPayload({ ...base, summary: { runId: '20300102-043418' }, publishedCalendarSnapshots: { nyc: { status: 'unavailable' }, la: { status: 'unavailable' }, sf: { status: 'unavailable' }, chicago: { status: 'ok' } } });
+  fs.writeFileSync(path.join(runsDir, '20300101-194629.json'), JSON.stringify(good));
+  fs.writeFileSync(path.join(runsDir, '20300102-043418.json'), JSON.stringify(outage));
+  try {
+    assert.equal(rq.pickLatestRunId(dir), '20300101-194629', 'the last run that read the calendars, not the newer one that could not');
+    const labels = rq.describeRunFiles(dir).map((r) => [r.runId, rq.describeRunShapeLabel(r.shape)]);
+    assert.deepEqual(labels, [['20300102-043418', 'calendars unread (3) — saved events show as new'], ['20300101-194629', '']]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

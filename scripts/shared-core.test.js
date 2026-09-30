@@ -25227,6 +25227,42 @@ test('FetchPoliteness parks a host on 429 for the rest of the run and stamps the
   assert.match(second.refusalReasonFor('https://b.example/other'), /parked/);
 });
 
+test('FetchPoliteness parks a host that does not answer three times running; an answer in between resets the count', async () => {
+  const { gate, logs } = makePoliteness({ minHostGapMs: 0 });
+  let calls = 0;
+  const dead = () => gate.run('https://nominatim.example/search?q=x' + calls, async () => { calls++; throw new Error('HTTP request failed for https://nominatim.example/search: fetch failed'); });
+  await assert.rejects(dead()); await assert.rejects(dead());
+  assert.equal(gate.refusalReasonFor('https://nominatim.example/search?q=y'), '', 'two silences are not yet a verdict');
+  await gate.run('https://nominatim.example/status', async () => 'ok');
+  await assert.rejects(dead()); await assert.rejects(dead());
+  assert.equal(gate.refusalReasonFor('https://nominatim.example/search?q=y'), '', 'an answer in between starts the count again');
+  await assert.rejects(dead());
+  assert.match(gate.refusalReasonFor('https://nominatim.example/search?q=y'), /parked for this run \(no answer 3 times running\)/);
+  const before = calls;
+  await assert.rejects(dead(), (error) => error.politeness && error.politeness.reason === 'parked');
+  assert.equal(calls, before, 'the silent host is not asked again this run');
+  assert.ok(logs.some(line => line.includes('nominatim.example did not answer 3 requests in a row')), logs.join('\n'));
+  // A page the host answers "not found" for is an answer, never silence.
+  const { gate: other } = makePoliteness({ minHostGapMs: 0 });
+  for (let i = 0; i < 5; i++) await assert.rejects(other.run('https://site.example/gone' + i, async () => { throw httpError(404); }));
+  assert.equal(other.refusalReasonFor('https://site.example/x'), '');
+});
+
+test('calendar read health: an outage or an unreadable calendar degrades the run; a city with no published calendar yet does not', () => {
+  const health = (snapshots) => SharedCore.describeCalendarReadHealth(snapshots);
+  assert.deepEqual(health({ nyc: { status: 'ok' }, la: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } }),
+    { ok: 2, missing: 1, failed: 0, unknown: 0, degraded: false, cities: [] });
+  const outage = health({ nyc: { status: 'unavailable', reason: 'outage' }, la: { status: 'ok' }, sf: { status: 'unavailable', reason: 'unreadable' } });
+  assert.equal(outage.degraded, true);
+  assert.deepEqual(outage.cities, ['nyc', 'sf']);
+  // Runs written before reasons were recorded: degraded when more calendars
+  // were unavailable than read (2026-09-30: 58 unavailable).
+  assert.equal(health({ a: { status: 'unavailable' }, b: { status: 'unavailable' }, c: { status: 'ok' } }).degraded, true);
+  assert.equal(health({ a: { status: 'unavailable' }, b: { status: 'ok' }, c: { status: 'ok' } }).degraded, false, 'one city without a published file is an ordinary run');
+  assert.equal(health(null).degraded, false);
+  assert.equal(health({}).degraded, false);
+});
+
 test('FetchPoliteness parks on 403 only when the host never answered, or says it three times running', async () => {
   const { gate } = makePoliteness({ minHostGapMs: 0 });
   await assert.rejects(gate.run('https://wall.example/', async () => { throw httpError(403); }));

@@ -9420,6 +9420,39 @@ class SharedCore {
         return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
     }
 
+    // DID THE RUN READ THE CALENDARS IT ANALYSED AGAINST? (2026-09-30: the
+    // Mac had no network at 04:34; 58 published calendars could not be read,
+    // every saved event was analysed as NEW — 827 "new", 37 merges, where the
+    // run before had 440 and 424 — and that run became the review deck.)
+    // `snapshots` is results.publishedCalendarSnapshots: per city
+    // { status: 'ok' | 'unavailable', reason? }.
+    //   reason 'missing'    the site has no file for that city yet (HTTP
+    //                       404: a calendar nothing was ever saved to) —
+    //                       analysing its events as new is correct;
+    //   reason 'outage'     nothing answered;
+    //   reason 'unreadable' it answered something that is not a calendar;
+    //   no reason           a run written before reasons were recorded.
+    // A run is DEGRADED when any calendar failed by outage or was unreadable,
+    // or — for runs without reasons — when more calendars were unavailable
+    // than were read. Returns { ok, missing, failed, unknown, degraded,
+    // cities } (cities: the ones that failed).
+    static describeCalendarReadHealth(snapshots) {
+        const health = { ok: 0, missing: 0, failed: 0, unknown: 0, degraded: false, cities: [] };
+        if (!snapshots || typeof snapshots !== 'object') return health;
+        for (const [city, entry] of Object.entries(snapshots)) {
+            if (!entry || typeof entry !== 'object') continue;
+            if (entry.status === 'ok') { health.ok += 1; continue; }
+            if (entry.status !== 'unavailable') continue;
+            if (entry.reason === 'missing') { health.missing += 1; continue; }
+            if (entry.reason === 'outage' || entry.reason === 'unreadable') { health.failed += 1; health.cities.push(city); continue; }
+            health.unknown += 1;
+            health.cities.push(city);
+        }
+        health.degraded = health.failed > 0 || (health.unknown > 0 && health.unknown > health.ok);
+        if (!health.degraded) health.cities = [];
+        return health;
+    }
+
     // What a platform says when NOTHING answered: no HTTP status, because no
     // HTTP exchange took place. Node's fetch says exactly "fetch failed" for
     // every one of them (dead DNS, refused or reset connection, the Mac
@@ -26595,6 +26628,7 @@ class FetchPoliteness {
             state.lastRequestAt = this.now();
             state.successes++;
             state.consecutiveForbidden = 0;
+            state.consecutiveUnanswered = 0;
             return result;
         } catch (error) {
             state.lastRequestAt = this.now();
@@ -26612,6 +26646,21 @@ class FetchPoliteness {
         const stamped = error && Number.isFinite(error.statusCode) ? error.statusCode : null;
         const named = message.match(/HTTP\s+(\d{3})/i);
         const statusCode = stamped !== null ? stamped : (named ? Number(named[1]) : null);
+        // NOTHING ANSWERED, three times running: the host is not there this
+        // run (or the network is not). Asking again is 117 more requests
+        // into the same silence — the geocoder's whole budget on 2026-09-30,
+        // every one "fetch failed". Parked for the rest of the run; nothing
+        // is learned about the pages themselves (a connection failure is
+        // never a fact about a page).
+        if (statusCode === null && typeof SharedCore !== 'undefined' && SharedCore.isTransportFailureMessage(message)) {
+            state.consecutiveUnanswered = (state.consecutiveUnanswered || 0) + 1;
+            if (state.consecutiveUnanswered >= FetchPoliteness.UNANSWERED_PARK_THRESHOLD) {
+                state.parked = { reason: `no answer ${state.consecutiveUnanswered} times running`, url };
+                this.log(`🚦 POLITE: ${hostKey} did not answer ${state.consecutiveUnanswered} requests in a row — parked for the rest of this run`);
+            }
+            return;
+        }
+        state.consecutiveUnanswered = 0;
         if (statusCode !== 429 && statusCode !== 403) return;
         if (error && typeof error === 'object') error.retryable = false;
         const retryAfter = error && error.retryAfter ? String(error.retryAfter).trim() : '';
@@ -26675,6 +26724,7 @@ class FetchPoliteness {
 FetchPoliteness.DEFAULT_MIN_HOST_GAP_MS = 2000;
 FetchPoliteness.DEFAULT_MAX_CRAWL_DELAY_MS = 15000;
 FetchPoliteness.DEFAULT_MAX_REQUESTS_PER_HOST = 120;
+FetchPoliteness.UNANSWERED_PARK_THRESHOLD = 3;
 // Our own infrastructure and the machine itself are never paced or parked.
 FetchPoliteness.DEFAULT_EXEMPT_HOSTS = ['chunky.dad', 'localhost', '127.0.0.1', '.ts.net', '.local'];
 

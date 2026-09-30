@@ -200,7 +200,7 @@ test('published calendar unavailable → [] and exactly one warn per city per ru
       assert.deepEqual(await adapter.getExistingEvents(scrapedDuroEvent()), []);
       assert.deepEqual(await adapter.getExistingEvents(scrapedDuroEvent()), [], 'second lookup degrades the same way');
       const degraded = warns.filter((message) =>
-        message.includes('published calendar unavailable for la — merge analysis degraded to NEW'));
+        message.includes('published calendar unavailable for la (unreadable) — merge analysis degraded to NEW'));
       assert.equal(degraded.length, 1, 'one warn per city per run');
       assert.equal(adapter._publishedCalendarSnapshots.la.status, 'unavailable');
     });
@@ -710,7 +710,8 @@ test('shared root: saveRunToSharedStorage writes the phone version-2 run JSON + 
         }],
         bearDroppedEvents: [{ reason: 'not bear', _parserConfig: { big: true }, event: { title: 'Drop', _working: 'x' } }],
         parserResults: [{ name: 'p', bearEvents: 2, totalEvents: 3 }],
-        calendarHygiene: []
+        calendarHygiene: [],
+        publishedCalendarSnapshots: { la: { status: 'ok', fetchedAt: '2026-08-14T10:00:00.000Z' }, sydney: { status: 'unavailable', fetchedAt: null, reason: 'missing' } }
       };
 
       const runId = await adapter.saveRunToSharedStorage(results, { logText: 'line one\nline two' });
@@ -720,6 +721,8 @@ test('shared root: saveRunToSharedStorage writes the phone version-2 run JSON + 
       const runPath = path.join(root, 'runs', `${runId}.json`);
       const payload = JSON.parse(fs.readFileSync(runPath, 'utf8'));
       assert.equal(payload.version, 2, 'phone saved-run envelope version');
+      assert.deepEqual(payload.publishedCalendarSnapshots, results.publishedCalendarSnapshots,
+        'which saved calendars were read rides in the run file — the deck refuses a run that read none');
       assert.equal(payload.summary.runId, runId);
       assert.deepEqual(payload.summary.totals, { totalEvents: 3, bearEvents: 2, calendarEvents: 0, errors: 1 });
       assert.deepEqual(payload.summary.parserSummaries, [{ name: 'p', bearEvents: 2, totalEvents: 3 }]);
@@ -1483,5 +1486,32 @@ test('answer cache: an answer written to the page cache before answers had their
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('published calendar: a city with no file yet is "missing", nothing answering is an "outage" — only the outage degrades the run', async () => {
+  const notFound = Object.assign(new Error('HTTP 404: Not Found'), { statusCode: 404 });
+  const originalFetch = global.fetch;
+  const warns = [];
+  const originalWarn = console.warn;
+  console.warn = (message) => warns.push(String(message));
+  try {
+    global.fetch = async () => ({ ok: false, status: 404, statusText: 'Not Found', headers: new Map(), text: async () => '' });
+    const fresh = makeAdapter();
+    assert.equal(await fresh.getPublishedCalendarEvents('sydney'), null);
+    assert.equal(fresh._publishedCalendarSnapshots.sydney.reason, 'missing');
+    global.fetch = async () => { throw new TypeError('fetch failed'); };
+    const dark = makeAdapter();
+    assert.equal(await dark.getPublishedCalendarEvents('nyc'), null);
+    assert.equal(dark._publishedCalendarSnapshots.nyc.reason, 'outage');
+    const { SharedCore } = require('../shared-core');
+    assert.equal(SharedCore.describeCalendarReadHealth(fresh._publishedCalendarSnapshots).degraded, false);
+    assert.equal(SharedCore.describeCalendarReadHealth(dark._publishedCalendarSnapshots).degraded, true);
+    assert.ok(warns.some((line) => line.includes('no published calendar for sydney yet')));
+    assert.ok(warns.some((line) => line.includes('published calendar unavailable for nyc (outage)')));
+    void notFound;
+  } finally {
+    global.fetch = originalFetch;
+    console.warn = originalWarn;
   }
 });
