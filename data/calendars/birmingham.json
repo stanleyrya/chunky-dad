@@ -59,6 +59,56 @@
         }
       ],
       "slug": "beefmince-x-bear-brum-2026-267f8da8"
+    },
+    {
+      "name": "BEAR BRUM WEEKEND PASS",
+      "day": "Friday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4822694,
+        "lng": -1.8900078
+      },
+      "startDate": "2026-09-25T17:00:00",
+      "endDate": "2026-09-27T21:00:00",
+      "unprocessedDescription": "address: Birmingham, UK\nimage: https://static.wixstatic.com/m\redia/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg/v1/fill/w_2048,h_1450,al_c,q_90/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg\nimageSource: jsonld\ntimezone: Europe/London\ninstagram: https://www.instagram.com/bear_brum_festival\npinSource: page\naddressSource: page\nwebsite: https://www.bearbrum.com/event-details/bear-brum-weekend-pass-1\ngmaps: https://www.google.com/maps/search/?api=1&query=52.4822694%2C-1.8900078\nkey: bear-brum-weekend-pass|2026-09-25|\nbearSource: keyword\nshortName: BEAR BRUM",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "05B322BD-2AA9-449D-897D-A0C992994FA6",
+      "uid": "05B322BD-2AA9-449D-897D-A0C992994FA6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://static.wixstatic.com/media/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg/v1/fill/w_2048,h_1450,al_c,q_90/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg",
+      "cadence": null,
+      "address": "Birmingham, UK",
+      "website": "https://www.bearbrum.com/event-details/bear-brum-weekend-pass-1",
+      "instagram": "https://www.instagram.com/bear_brum_festival",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=52.4822694%2C-1.8900078",
+      "shortName": "BEAR BRUM",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearbrum.com/event-details/bear-brum-weekend-pass-1",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bear_brum_festival",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=52.4822694%2C-1.8900078",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-brum-weekend-pass-2173f28d"
     }
   ]
 }

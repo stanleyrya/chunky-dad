@@ -6,9 +6,36 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-palm-springs
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20260222T050000Z
+DTEND:20260222T200000Z
+DTSTAMP:20260930T220722Z
+UID:88686A1C-DD82-4C9B-A917-74B3647FD814
+CREATED:20260117T210201Z
+DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
+ address: 333 S Palm Canyon Dr Unit\, Palm Springs\, CA 92262\ntimezone: Ame
+ rica/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls
+ -ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84
+  - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?cr
+ op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
+ x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\nin
+ stagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee
+ /megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=3
+ 3.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: m
+ egawoof|2026-02-22|palm springs
+LAST-MODIFIED:20260208T200152Z
+LOCATION:33.8189101\, -116.5470896
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260925T070000Z
 DTEND:20260928T065959Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260930T220722Z
 UID:1FF301F0-00FE-4849-BB32-A779D9362E83
 CREATED:20260919T161248Z
 DESCRIPTION:bar: Casa Oliver\naddress: 535 South Warm Sands Drive\, Palm Sp
@@ -32,9 +59,41 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261224T180000Z
+DTEND:20261228T030000Z
+DTSTAMP:20260930T220722Z
+UID:F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC
+CREATED:20260930T202318Z
+DESCRIPTION:description: Celebrate the season with your chosen family at We
+ stern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68
+ -300 Gay Resort Drive\, Cathedral City\, CA 92234\nticketUrl: https://www.e
+ ventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-19995022159
+ 53\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F106
+ 3551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=c
+ rop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88
+ b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimez
+ one: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2
+ F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250
+ 630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp
+ =10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curate
+ d\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&qu
+ ery=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral
+ %20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bea
+ r-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName
+ : WESTERN XMAS
+LAST-MODIFIED:20260930T202318Z
+LOCATION:33.7796835\, -116.4689784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Western X-Mas: Holiday Bear Retreat 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261008T160000Z
 DTEND:20261012T065959Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260930T220722Z
 UID:CF94E9E5-F620-4918-AB7E-6B3BC007FB5C
 CREATED:20260919T161250Z
 DESCRIPTION:description: Western Xposure's HAUNTED GAY RESORT returns this 
@@ -63,33 +122,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261015T070000Z
-DTEND:20261019T065959Z
-DTSTAMP:20260921T002121Z
-UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
-CREATED:20260919T161250Z
-DESCRIPTION:bar: CCBC Resort\naddress: Cathedral City\, CA\nwebsite: https:
- //www.westernxposure.com/westernxposurexxl\nticketUrl: https://xxl2026.even
- tbrite.com/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/obj
- ect/public/event-images/cc0bf12ecfeed9c6.jpg\ncover: $1-$180\ntimezone: Ame
- rica/Los_Angeles\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co
- /storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nkey: western-x
- posure-xxl|2026-10-15|ccbc resort\nbearSource: ai\nshortName: WESTERN XPOSU
- RE\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: 
- https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784
-LAST-MODIFIED:20260920T233607Z
-LOCATION:33.7796835\, -116.4689784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Western Xposure XXL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20260921T002121Z
+DTSTAMP:20260930T220722Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:bar: CCBC Resort\naddress: 68-300 Gay Resort Dr\, Cathedral Cit
@@ -120,28 +155,30 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260222T050000Z
-DTEND:20260222T200000Z
-DTSTAMP:20260921T002121Z
-UID:88686A1C-DD82-4C9B-A917-74B3647FD814
-CREATED:20260117T210201Z
-DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
- address: 333 S Palm Canyon Dr Unit\, Palm Springs\, CA 92262\ntimezone: Ame
- rica/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls
- -ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84
-  - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?cr
- op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
- x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\nin
- stagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee
- /megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=3
- 3.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: m
- egawoof|2026-02-22|palm springs
-LAST-MODIFIED:20260208T200152Z
-LOCATION:33.8189101\, -116.5470896
-SEQUENCE:0
+DTSTART:20261015T160000Z
+DTEND:20261019T065959Z
+DTSTAMP:20260930T220722Z
+UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
+CREATED:20260919T161250Z
+DESCRIPTION:description: Western Xposure's XXL is weekend 2 of Western Xpos
+ ure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbri
+ te.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%
+ 2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&f
+ it=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=
+ d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Ang
+ eles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: 
+ ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizon
+ tal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/even
+ t-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 
+ Gay Resort Drive\, Cathedral City\, CA 92234\npinSource: curated\naddressSo
+ urce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20
+ Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234
+LAST-MODIFIED:20260930T202319Z
+LOCATION:33.7796835\, -116.4689784
+SEQUENCE:1
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
+SUMMARY:Western Xposure's XXL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

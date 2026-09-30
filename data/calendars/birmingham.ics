@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260926T210000Z
 DTEND:20260927T030000Z
-DTSTAMP:20260919T220621Z
+DTSTAMP:20260930T220722Z
 UID:2F6B95B8-EB63-4396-AB18-A5F6F20D84F2
 CREATED:20260731T131550Z
 DESCRIPTION:bar: Eden\naddress: 138 Gooch Street\, Birmingham\, B5 7HF\, Un
@@ -38,6 +38,29 @@ LOCATION:52.46975\, -1.89513
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFMINCE x Bear Brum 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260925T160000Z
+DTEND:20260927T200000Z
+DTSTAMP:20260930T220722Z
+UID:05B322BD-2AA9-449D-897D-A0C992994FA6
+CREATED:20260930T202359Z
+DESCRIPTION:address: Birmingham\, UK\nimage: https://static.wixstatic.com/m
+ edia/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg/v1/fill/w_2048\,h_1450
+ \,al_c\,q_90/5b0e6e_5165ccca22874fa6a5b7ecfafcdd95c6~mv2.jpg\nimageSource: 
+ jsonld\ntimezone: Europe/London\ninstagram: https://www.instagram.com/bear_
+ brum_festival\npinSource: page\naddressSource: page\nwebsite: https://www.b
+ earbrum.com/event-details/bear-brum-weekend-pass-1\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=52.4822694%2C-1.8900078\nkey: bear-brum-wee
+ kend-pass|2026-09-25|\nbearSource: keyword\nshortName: BEAR BRUM
+LAST-MODIFIED:20260930T202359Z
+LOCATION:52.4822694\, -1.8900078
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR BRUM WEEKEND PASS
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

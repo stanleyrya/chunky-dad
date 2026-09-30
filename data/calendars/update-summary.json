@@ -51,8 +51,8 @@
     "birmingham": {
       "name": "Birmingham",
       "status": "success",
-      "dataLength": 2305,
-      "eventCount": 1
+      "dataLength": 3320,
+      "eventCount": 2
     },
     "bogota": {
       "name": "Bogotá",
@@ -141,8 +141,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 44247,
-      "eventCount": 39
+      "dataLength": 45490,
+      "eventCount": 40
     },
     "gettysburg": {
       "name": "Gettysburg",
@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 144585,
-      "eventCount": 126
+      "dataLength": 182946,
+      "eventCount": 164
     },
     "orlando": {
       "name": "Orlando",
@@ -273,8 +273,8 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 7183,
-      "eventCount": 5
+      "dataLength": 9241,
+      "eventCount": 6
     },
     "paris": {
       "name": "Paris",
