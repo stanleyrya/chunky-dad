@@ -1095,6 +1095,11 @@ function renderReviewPage(deck, options = {}) {
     const phoneListAge = typeof options.phoneCalendarListCapturedAt === 'string' && options.phoneCalendarListCapturedAt
         ? options.phoneCalendarListCapturedAt.slice(0, 10)
         : '';
+    // The snapshot refresh is always on the page, not only inside the
+    // missing-calendar notice (owner, 2026-09-30: "I don't see an option to
+    // refresh the local file on scriptable" — the notice was the only place
+    // it lived, and it shows only while a calendar is missing).
+    const snapshotBlock = `<div class="snapshot"><a href="${escapeHtmlText(snapshotLink)}">🔄 Refresh the phone's calendar snapshot</a><small>Opens Scriptable: reads the phone's calendars and rewrites the snapshot the Mac analyses against — no scrape, no calendar write.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''}</small></div>`;
     const missingCalendarNotice = missingCalendars.length > 0
         ? `<div class="missing-cal">❌ No calendar on the phone for ${missingCalendars.map((entry) => `<b>${escapeHtmlText(entry.city)}</b> (${escapeHtmlText(entry.calendarName)} · ${entry.events} event${entry.events === 1 ? '' : 's'})`).join(', ')} — the phone cannot write those until a calendar with that exact name exists.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''} <a href="${escapeHtmlText(snapshotLink)}">Refresh it on the phone</a> after adding calendars.</div>`
         : '';
@@ -1250,6 +1255,9 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .execute a { background:var(--accent); color:#fff; }
 .execute span { background:var(--card); color:var(--muted); border:1px dashed var(--line); }
 .execute small { display:block; text-align:center; color:var(--muted); font-weight:400; margin-top:6px; }
+.snapshot { display:block; max-width:560px; margin:10px auto 0; padding:0 14px; }
+.snapshot a { display:block; text-align:center; padding:10px; border-radius:12px; font-weight:600; text-decoration:none; color:var(--ink); background:var(--card); border:1px solid var(--line); }
+.snapshot small { display:block; text-align:center; color:var(--muted); font-weight:400; margin-top:6px; }
 .decided { max-width:560px; margin:18px auto 40px; padding:0 14px; }
 .decided summary { cursor:pointer; font-weight:600; }
 .decided ul { list-style:none; padding:0; margin:8px 0 0; }
@@ -1292,6 +1300,7 @@ ${missingCalendarNotice}
 </div>
 <div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · → approve · ␣ skip · n not bear</div>
 <div class="execute" id="execute"></div>
+${snapshotBlock}
 <details class="decided waiting" id="waiting-wrap" hidden>
   <summary>🔧 Waiting on a fix <span id="waiting-count"></span></summary>
   <p class="waiting-note">Sent back with a note. Each comes back to the stack by itself when the scraper's card for it changes — nothing to hunt for. "Bring back" returns it now.</p>
