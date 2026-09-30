@@ -2,18 +2,27 @@
   "schemaVersion": 1,
   "source": "South Seattle Bear Social",
   "slug": "south-seattle-bear-social",
-  "status": "publishes-nothing",
-  "recheckAfter": "2026-10-20",
+  "status": "complete",
+  "recheckAfter": "2026-11-15",
   "recon": {
-    "date": "2026-09-20",
+    "date": "2026-09-30",
     "method": [
       "feed",
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming"
+      "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming",
+      "https://www.southseattlebears.com/"
     ],
     "doors": [
+      {
+        "url": "https://www.southseattlebears.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 13,
+        "truthFlag": "13 <article class=\"event-item\" data-event-date> cards, 2026-09-27 through 2026-12-27",
+        "note": "The social's own site (added 2026-09-30). Static Astro build: no feed, no JSON-LD, no <time> elements, no per-event pages; each card is <h2> title, <h4> \"27 SEP 2026 @ 2p-7p\", one <p> blurb. The hero above the list states the rule and the venue (\"The Weekly Bear Social — Every Sunday at Lumberyard from 2p-7p\"); the footer states the city. /events/bear-social, /events/bear-pride and /events/themed-events are prose (Bear Pride Weekend \"Save the date for August 20-22\" 2027 — ticketing and schedule \"coming soon\", no dated card). robots.txt: Disallow (empty) — everything allowed; its Sitemap line points at southseattlebearsocial.com, which is a DIFFERENT build (a 3 KB Squarespace shell whose robots disallow /) — not read."
+      },
       {
         "url": "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming",
         "kind": "json",
@@ -47,22 +56,210 @@
         "note": "The calendar view's range door answered {\"errors\":[{\"status\":500}]} for this query shape — not retried, not relied on."
       }
     ],
-    "notes": "Organizer southseattlebearsocial on TicketLeap; promoter registry entry \"South Seattle Bear Social\" (bearAffinity always). Parties run a few times a year, so an empty upcoming list is the normal state between them."
+    "notes": "Organizer southseattlebearsocial on TicketLeap; promoter registry entry \"South Seattle Bear Social\" (bearAffinity always). Parties run a few times a year, so an empty upcoming list is the normal state between them. 2026-09-30: the owner pointed at the social's own site, www.southseattlebears.com, which lists the weekly Sunday social the TicketLeap doors never carry (those hold only the ticketed parties). Both are read."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Two doors agree nothing is upcoming on 2026-09-20: the upcoming listing door returns an empty array with hasMore false, and the past door's five listings (hasMore false) are all dated before the recon date, the latest 2026-07-31. Past listings are counted (5), not enumerated.",
-    "publishedEventCount": 0,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
+    "basis": "The homepage prints every upcoming Sunday it intends to hold (13 cards, 2026-09-27 → 2026-12-27) and states the rule; the TicketLeap upcoming door is still empty (ticketed parties only, none on sale). All 13 cards documented: 10 as occurrences of the weekly series, 3 themed Sundays as singles.",
+    "publishedEventCount": 13,
+    "documentedEventCount": 4,
+    "occurrenceWindow": {
+      "start": "2026-09-27",
+      "end": "2026-12-27"
+    },
     "pastListingsPresent": true,
-    "knownGaps": []
+    "knownGaps": [
+      "Bear Pride Weekend 2027 (/events/bear-pride, \"Save the date for August 20-22\") has no dated card, ticketing or schedule yet — not documented as an event."
+    ]
   },
   "defaults": {
     "city": "seattle",
     "timezone": "America/Los_Angeles"
   },
-  "events": [],
+  "events": [
+    {
+      "id": "weekly-bear-social",
+      "kind": "series",
+      "title": "Weekly Bear Social",
+      "description": "Come join the bears for good music, belly rubs, and delicious foods.",
+      "bar": "The Lumber Yard Bar",
+      "city": "seattle",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-27",
+      "startTime": "14:00",
+      "endTime": "19:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "The Weekly Bear Social Every Sunday at Lumberyard from 2p-7p",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 27 SEP 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 04 OCT 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 11 OCT 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 18 OCT 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 01 NOV 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 08 NOV 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 22 NOV 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 06 DEC 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 13 DEC 2026 @ 2p-7p"
+          }
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.southseattlebears.com/",
+            "quote": "Weekly Bear Social 20 DEC 2026 @ 2p-7p"
+          }
+        }
+      ],
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "The homepage hero states the rule (\"Every Sunday at Lumberyard from 2p-7p\"); the \"Upcoming Socials\" list prints each Sunday as its own <article class=\"event-item\" data-event-date> card. Sundays the list leaves out are simply absent (2026-11-15 is not listed; the three themed Sundays below are listed under their own names instead of this one). The venue and city are stated only in the hero and the footer (\"A Bear Social Happy Hour ran with ❤️ in Seattle WA\"), never on a card. The Lumber Yard Bar is the curated Seattle bar; the page spells it \"Lumberyard\".",
+      "evidence": {
+        "url": "https://www.southseattlebears.com/",
+        "quote": "The Weekly Bear Social Every Sunday at Lumberyard from 2p-7p"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Each listed Sunday is read as its own dated event (the scraper never writes a series); run 2026-09-30 on the branch: all 13 cards dated and timed, none with a venue or city — the cards state neither."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "totally-terrifying-80s-halloween-2026-10-25",
+      "kind": "single",
+      "title": "TOTALLY TERRIFYING 80S HALLOWEEN",
+      "description": "Grab your raddest neon threads and tease up that hair, because the Social is going full tubular with an ’80s Costume Day that’s gonna be totally awesome!",
+      "bar": "The Lumber Yard Bar",
+      "city": "seattle",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-25",
+      "startTime": "14:00",
+      "endDate": "2026-10-25",
+      "endTime": "19:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "A themed Sunday of the weekly social, listed under its own name in place of that week's \"Weekly Bear Social\" card.",
+      "evidence": {
+        "url": "https://www.southseattlebears.com/",
+        "quote": "TOTALLY TERRIFYING 80S HALLOWEEN 25 OCT 2026 @ 2p-7p"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "it-s-giving-thanks-2026-11-29",
+      "kind": "single",
+      "title": "IT'S GIVING THANKS",
+      "description": "Gobble these bears up with a fun Thanksgiving themed event.",
+      "bar": "The Lumber Yard Bar",
+      "city": "seattle",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-11-29",
+      "startTime": "14:00",
+      "endDate": "2026-11-29",
+      "endTime": "19:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "A themed Sunday of the weekly social, listed under its own name in place of that week's \"Weekly Bear Social\" card.",
+      "evidence": {
+        "url": "https://www.southseattlebears.com/",
+        "quote": "IT'S GIVING THANKS 29 NOV 2026 @ 2p-7p"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "naughty-santa-social-2026-12-27",
+      "kind": "single",
+      "title": "NAUGHTY SANTA SOCIAL",
+      "description": "Celebrate the holidays with the Bears.",
+      "bar": "The Lumber Yard Bar",
+      "city": "seattle",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-12-27",
+      "startTime": "14:00",
+      "endDate": "2026-12-27",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "note": "A themed Sunday of the weekly social, listed under its own name in place of that week's \"Weekly Bear Social\" card. Runs to 9p, two hours past the usual 7p.",
+      "evidence": {
+        "url": "https://www.southseattlebears.com/",
+        "quote": "NAUGHTY SANTA SOCIAL 27 DEC 2026 @ 2p-9p"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    "The cards state no venue and no city; the hero (\"Every Sunday at Lumberyard\") and footer (\"in Seattle WA\") do. Whether a listing page's own prose may place its cards is an owner decision (2026-09-30)."
+  ]
 }
