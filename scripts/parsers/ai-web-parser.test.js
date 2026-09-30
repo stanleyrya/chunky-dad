@@ -14107,6 +14107,20 @@ test('a venue closure notice is not an event; markup inside HTML comments is not
   assert.equal(timed.startDate.toISOString(), '2026-05-10T01:00:00.000Z', 'a timed row keeps its clock');
 });
 
+test('date evidence: day-first spellings on the page corroborate the date ("27 SEP 2026", "16.10.26"); an ambiguous numeric day-first does not', () => {
+  const parser = createParser();
+  const has = (text, value) => parser.hasFieldEvidence(parser.buildAiEvidenceContextFromText(text), value, 'date', { imageEvidenceUrls: new Set() });
+  assert.equal(has('Weekly Bear Social\n27 SEP 2026 @ 2p-7p', '2026-09-27'), true, 'DD MON YYYY');
+  assert.equal(has('27 September 2026', '2026-09-27'), true);
+  assert.equal(has('04 OCT 2026', '2026-10-04'), true, 'zero-padded day first');
+  assert.equal(has('BEAR BASH COLOGNE 16.10.26 / 15.1.27', '2026-10-16'), true, 'dotted European date');
+  assert.equal(has('15.1.27', '2027-01-15'), true);
+  assert.equal(has('13/10 party', '2026-10-13'), true, 'a day past 12 cannot be a month');
+  assert.equal(has('5/10 party', '2026-10-05'), false, '5/10 reads May 10 in the US — not corroboration');
+  assert.equal(has('Sep 27, 2026', '2026-09-27'), true, 'month-first still matches');
+  assert.equal(has('27 SEP 2026', '2026-09-28'), false);
+});
+
 test('a stated start with no end takes the end its own poster prints — only when the poster\'s start is this clock', () => {
   const parser = createParser();
   parser.recordOcrImageTextEvidence('https://v.example/tea.jpg', { text: 'BEAR PRIDE TEA-DANCE\n18 OCT SUNDAY\n12PM - 6PM\nANTHEM' });

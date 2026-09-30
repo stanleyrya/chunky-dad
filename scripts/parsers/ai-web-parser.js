@@ -21916,6 +21916,27 @@ TEXT:
             variants.add(`${month}/${day}/${year}`);
             variants.add(`${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`);
         }
+        // DAY-FIRST spellings — "27 SEP 2026", "27 September", "16.10.26" —
+        // are how most of the world prints a date, and none of the forms
+        // above contains them: every variant put the month first, so a
+        // page dating its party "27 SEP 2026" corroborated nothing and the
+        // gate dropped a date printed on the page (southseattlebears.com,
+        // 2026-09-30: all 13 Sundays lost their date, the rrule the model
+        // read off "Weekly" then produced nothing). Day-before-month-name
+        // is unambiguous; the numeric day-first forms are added only where
+        // they cannot be read month-first (a dotted date, or a day past 12).
+        for (const dayText of new Set([String(day), paddedDay])) {
+            variants.add(`${dayText} ${monthNames[monthIndex]}`);
+            variants.add(`${dayText} ${monthShortNames[monthIndex]}`);
+            if (monthIndex === 8) variants.add(`${dayText} sept`);
+            variants.add(`${dayText}.${month}.`);
+            variants.add(`${dayText}.${String(month).padStart(2, '0')}.`);
+            if (day > 12) {
+                variants.add(`${dayText}/${month}`);
+                variants.add(`${dayText}/${String(month).padStart(2, '0')}`);
+                variants.add(`${dayText}-${String(month).padStart(2, '0')}`);
+            }
+        }
         // Add range variants for dates that might appear in a range format (e.g., "Aug 21-23")
         // These help match cases like "AUG 21-23, 2026" when we're validating a specific date
         if (Number.isFinite(year) && year > 0) {
