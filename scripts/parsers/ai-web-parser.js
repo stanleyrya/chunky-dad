@@ -228,7 +228,12 @@ const JSON_API_FEED_WINDOW_PAST_MS = 24 * 60 * 60 * 1000;
 // blob; the rest is fetched by the widget itself. Same page budget as the JSON
 // feeds above, and the same 90-day horizon.
 const WIX_EVENTS_MAX_PAGES = 6;
-const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// How many dated nights one repeating entry may become: a weekly night for
+// the WHOLE horizon (13 in 90 days). It was 6, so a weekly party read 90
+// days ahead still stopped after six weeks (Lodge NY, 2026-09-29: its
+// weekly nights ended on Nov 8, 21 series sitting at the cap). A nightly
+// series still stops at the same count — two weeks of it, not ninety rows.
+const JSON_API_SERIES_MAX_OCCURRENCES = Math.ceil(JSON_API_FEED_HORIZON_DAYS / 7);
 // An Elfsight calendar entry that ended more than this many days ago is the
 // widget's archive, not an event (see collectElfsightCalendarEvents).
 const ELFSIGHT_ARCHIVE_DAYS = 30;
@@ -1225,8 +1230,9 @@ class AiWebParser {
             // Squarespace event collections, the same way: the listing page
             // has a JSON twin at its own URL (see collectSquarespaceCollectionEvents).
             const squarespaceRows = await this.collectSquarespaceCollectionEvents(effectiveHtmlData, parserConfig, httpAdapter);
+            const squarespaceTemplateMarker = this.findSquarespaceTemplateMarker(squarespaceRows);
             const squarespaceEvents = squarespaceRows
-                .map(row => this.buildEventFromSquarespaceItem(row, sourceUrl))
+                .map(row => this.buildEventFromSquarespaceItem(row, sourceUrl, { templateMarker: squarespaceTemplateMarker }))
                 .filter(Boolean);
             if (squarespaceRows.length > 0) {
                 console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
@@ -1332,6 +1338,16 @@ class AiWebParser {
             // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
             // in that city, not an incomplete record.
             const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
+            // The page's own data, streamed to the browser as React flight
+            // chunks (see collectPageFlightDataRows): read as feed rows, with
+            // the same builder, completeness gate and enrichment as a feed.
+            const pageDataRows = jsonApiPayload === null ? this.collectPageFlightDataRows(html) : [];
+            const pageDataEvents = pageDataRows
+                .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
+                .filter(event => event && (event.bar || event.address || event.city));
+            if (pageDataRows.length > 0) {
+                console.log(`📦 PAGE DATA: ${sourceUrl} ships ${pageDataRows.length} event row(s) in its own flight data — built ${pageDataEvents.length} event(s)`);
+            }
             // Elfsight rows carry no venue of their own — the widget IS the
             // venue's own calendar on the venue's own page, so bar/address come
             // from the site the same way they do for any venue-role parser.
@@ -1366,8 +1382,10 @@ class AiWebParser {
                         ? 'jsonld'
                         : (completeJsonApiEvents.length > 0
                             ? 'json-api'
+                            : (pageDataEvents.length > 0
+                                ? 'page-data'
                             : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice'
-                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null))))))));
+                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null)))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
                 : (structuredSource === 'listing-prose'
@@ -1382,7 +1400,9 @@ class AiWebParser {
                         ? completeJsonLdEvents
                         : (structuredSource === 'json-api'
                             ? completeJsonApiEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))))));
+                            : (structuredSource === 'page-data'
+                                ? pageDataEvents
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))))));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1408,6 +1428,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'page-data') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the page's own flight data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 }
@@ -1546,6 +1568,9 @@ class AiWebParser {
                 // A listing that states no time may have a poster that does
                 // (see adoptFlyerClockForPlaceholderTimes).
                 this.adoptFlyerClockForPlaceholderTimes(structuredEvents);
+                // …and a listing that states a start and no end may have a
+                // poster that prints the range (see adoptFlyerEndForOpenEnds).
+                this.adoptFlyerEndForOpenEnds(structuredEvents);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -2102,8 +2127,10 @@ class AiWebParser {
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (event) {
                     // A one-line listing row owns no artwork: any picture it
-                    // acquired came from the page around it.
-                    if (segment && segment._compactListingRow && event.image && !(typeof segment.html === 'string' && segment.html.includes(String(event.image)))) {
+                    // acquired came from the page around it — unless the
+                    // row's own markup carries that picture, however the
+                    // page spells its address (segmentMarkupCarriesImage).
+                    if (segment && segment._compactListingRow && event.image && !this.segmentMarkupCarriesImage(segment, event.image, sourceUrl)) {
                         console.log(`🖼️ AI Web: Dropped "${event.title || 'event'}" image — a one-line listing row has no artwork of its own (the picture belongs to the page's cards): ${event.image}`);
                         delete event.image;
                         delete event.imageSource;
@@ -3419,8 +3446,14 @@ class AiWebParser {
                 // "own" listing title. Recover the name span instead; a line
                 // with no name span still falls through to the skip.
                 const span = this.deriveListingTitleSpanFromDatedLine(line);
-                if (!span) continue;
-                return span.length <= this.extractionLimits.multiEventTitleMaxChars ? span : '';
+                if (span) return span.length <= this.extractionLimits.multiEventTitleMaxChars ? span : '';
+                // A month WORD inside a name is not a date: "THICK 'N' JUICY
+                // Sydney - October Long Weekend" (whereto.party, run
+                // 20260929-170047) prints no day, no year and no time, and
+                // was skipped as the card's date line — the venue line under
+                // it became the listing title. Such a line is judged like
+                // any other candidate below.
+                if (!this.isNameCarryingMonthWord(line)) continue;
             }
             if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(line)) continue;
             // European time-only lines: "14:00h", "21h a 03h", "de 21 a 03h",
@@ -3467,6 +3500,40 @@ class AiWebParser {
         return this.stripPageSiteNameTail(this.deriveSegmentListingTitle(segment), sourceUrl);
     }
 
+    // 'late' when the model's own reading of this event says it runs "til
+    // late": the raw end value it returned, or the evidence it cited for a
+    // date/time field ("6PM 'til LATE"). '' otherwise. Only this event's own
+    // cited words are read — never the page at large, where the phrase may
+    // belong to a neighbouring card.
+    detectLateEndNote(aiEvent) {
+        if (!aiEvent || typeof aiEvent !== 'object') return '';
+        const texts = [aiEvent.endTime, aiEvent.end];
+        const evidence = aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object' ? aiEvent.__fieldEvidence : {};
+        for (const key of Object.keys(evidence)) {
+            if (/^(start|end)(date|time)?$/i.test(key)) texts.push(evidence[key]);
+        }
+        const bare = /^\s*(?:'?til|till|until)?\s*late\s*$/i;
+        const tail = /(?:'|’)?\b(?:til|till|until|to)\s+late\b|[-–—]\s*late\b/i;
+        for (const value of texts) {
+            if (typeof value !== 'string' || !value.trim()) continue;
+            if (bare.test(value) || tail.test(value)) return 'late';
+        }
+        return '';
+    }
+
+    // A line whose only date signal is a month WORD, inside a name: no digit
+    // anywhere (so no day, no year, no clock time), and at least two words
+    // of its own left once month names, weekday names and the words a date
+    // line is built from are taken away. "October Long Weekend" names a
+    // party; "October", "Sat · Oct" and "Every Friday in October" do not.
+    isNameCarryingMonthWord(line) {
+        const text = this.normalizeWhitespace(String(line || ''));
+        if (!text || /\d/.test(text)) return false;
+        const dateWords = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|every|each|this|next|last|first|second|third|fourth|weekly|monthly|from|until|till|through|thru)$/;
+        const own = this.getListingNameWords(text).filter(word => !dateWords.test(word));
+        return own.length >= 2;
+    }
+
     // A line that is nothing but a weekday name — "Sun", "Sunday", "Sat.",
     // "Mon," — the way listing cards print a date tag one token per line.
     isBareWeekdayLine(line) {
@@ -3508,6 +3575,19 @@ class AiWebParser {
     //      a weekly party's name repeats across a year of cards too
     //      ("Bears, Brews & Boys" appears nine times on that same page),
     //      and dropping it would cost real titles. Count parties, not rows.
+    //
+    //   4. A LABEL printed directly above a heading: a text-only element
+    //      whose next sibling is the card's heading —
+    //      <p class="eyebrow">Up next</p><h3>THICK 'N' JUICY Sydney</h3>
+    //      (whereto.party, 43 of its cached pages, run 20260929-170047:
+    //      "Up next" became an event of its own at ARQ Sydney). The markup
+    //      states which of the two is the name: the heading. What sits
+    //      above it is a kicker — "Up next", "With DJ Casey Alva", "No
+    //      cover", "Bear Cave opens 8 pm", "Error 404" — and across the
+    //      790 pages cached on 2026-09-29 (98 distinct labels) not one was
+    //      the event's name. One occurrence is enough, as for rule 1. A
+    //      label that is ALSO a heading somewhere on the page, or what the
+    //      page says it is about, is kept: it names something there.
     //
     // Bare weekday/month lines are handled separately by isBareWeekdayLine
     // and the date-signal skips above.
@@ -3680,6 +3760,7 @@ class AiWebParser {
         for (const [key, count] of facetCounts) {
             if (count >= this.segmentImageChromeMinSegments) keys.add(key);
         }
+        for (const key of this.collectHeadingLabelKeys(source, subjects)) keys.add(key);
         // A member page of a collection it links back UP to — a detail page.
         // NOT when an ancestor anchor was rescued as the page's own subject:
         // there the parent path IS the event
@@ -3687,6 +3768,38 @@ class AiWebParser {
         // that parent and this page has no destination of its own to claim.
         const memberPage = navUpTargets.size > 0 && subjectUpTargets.size === 0;
         return { lineKeys: keys, navUpTargets, subjectUpTargets, memberPage, subjects };
+    }
+
+    // Rule 4 of the chrome lines: the labels printed directly above a
+    // heading. Text-only elements (no markup inside) whose closing tag is
+    // followed by nothing but whitespace and a heading's opening tag.
+    // Lowercased keys; dated labels are left to the date rules.
+    collectHeadingLabelKeys(html, subjects = new Set()) {
+        const source = String(html || '');
+        const labels = new Set();
+        if (!source) return labels;
+        const text = (value) => this.normalizeWhitespace(this.decodeBasicEntities(String(value || '').replace(/<[^>]+>/g, ' ')));
+        const headings = new Set();
+        const headingPattern = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+        let heading;
+        while ((heading = headingPattern.exec(source)) !== null) {
+            const key = text(heading[2]).toLowerCase();
+            if (key) headings.add(key);
+        }
+        const titleMax = this.extractionLimits.multiEventTitleMaxChars;
+        const pattern = /<(p|span|div|small|strong|em)\b[^>]*>([^<]+)<\/\1>\s*<h([1-6])\b[^>]*>([\s\S]*?)<\/h\3>/gi;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            const label = text(match[2]);
+            const key = label.toLowerCase();
+            if (!key || label.length > titleMax) continue;
+            if (!/[\p{L}\p{N}]/u.test(label)) continue;
+            if (!text(match[4])) continue;
+            if (this.hasMultiEventDateSignal(label)) continue;
+            if (headings.has(key) || subjects.has(key)) continue;
+            labels.add(key);
+        }
+        return labels;
     }
 
     // What this page says it is ABOUT: its <h1> text, and the leading part
@@ -6614,6 +6727,28 @@ class AiWebParser {
         };
     }
 
+    // Does this segment's OWN markup carry the picture? A literal search for
+    // the picture's address misses every card whose page spells it another
+    // way: behind an image-optimizer wrapper
+    // (src="/_next/image?url=https%3A%2F%2Fcdn…%2Fflyer.png&amp;w=1920"),
+    // percent- or entity-encoded, or at another rendition size. whereto.party,
+    // run 20260929-091555: every card prints its flyer that way, its one
+    // text line ("Sat, 3 October 2026 · 22:00") made each card a one-line
+    // row, and 19 records lost the flyer their own card carries.
+    // Judged on the addresses the segment's markup yields through the same
+    // reader that offered the picture (extractOrderedImageUrlsFromHtml),
+    // compared at rendition-neutral identity (stripSizeParams).
+    segmentMarkupCarriesImage(segment, imageUrl, sourceUrl = '') {
+        const html = segment && typeof segment.html === 'string' ? segment.html : '';
+        const image = String(imageUrl || '').trim();
+        if (!html || !image) return false;
+        if (html.includes(image)) return true;
+        const wanted = this.stripSizeParams(image);
+        if (!wanted) return false;
+        return this.extractOrderedImageUrlsFromHtml(html, sourceUrl)
+            .some(url => url === image || this.stripSizeParams(url) === wanted);
+    }
+
     attachSequentialImageHintsToSegments(html, segments, sourceUrl = '', ocrResults = []) {
         // A one-line listing row ("10/3 FURBALL DC - ICON") states no artwork
         // of its own; the page's pictures belong to its cards. Pairing one
@@ -8796,6 +8931,10 @@ class AiWebParser {
             _timezoneUnresolved: true,
             _titleFromListing: true
         };
+        // A cell whose tooltip prints no clock names the day only: written
+        // as an all-day event (SharedCore.applyAllDayConvention), not as a
+        // party that starts at midnight.
+        if (!start) event._noTimeStated = true;
         if (image) {
             event.image = image;
             event.imageSource = 'json-ld';
@@ -9033,6 +9172,9 @@ class AiWebParser {
             website: sourceUrl,
             source: 'elfsight'
         };
+        // Flagged all-day by the widget, or carrying no start time at all:
+        // the entry names a day (SharedCore.applyAllDayConvention).
+        if (isAllDay || !start.time) event._noTimeStated = true;
         const image = this.pickElfsightImage(row);
         if (image) event.image = image;
         const rrule = this.buildElfsightRecurrenceRule(row, startDate, timezone);
@@ -9342,14 +9484,44 @@ class AiWebParser {
         return rows;
     }
 
-    buildEventFromSquarespaceItem(item, sourceUrl) {
+    // The template's own marker, learned from the collection itself: the
+    // marker coordinate that rows keep while their MAP pin points somewhere
+    // else (massbearsandcubs.org, run 20260929-091555: 38 of 50 rows carry
+    // marker 40.7207559, -74.0007613 beside a Boston map pin). A row whose
+    // map pin IS that marker never had its map set. '' when fewer than two
+    // rows show the pattern — one row proves nothing.
+    findSquarespaceTemplateMarker(rows) {
+        const counts = new Map();
+        const keyOf = (lat, lng) => (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && (Number(lat) !== 0 || Number(lng) !== 0)
+            ? `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`
+            : '');
+        for (const row of Array.isArray(rows) ? rows : []) {
+            const location = row && row.location && typeof row.location === 'object' ? row.location : null;
+            if (!location) continue;
+            const marker = keyOf(location.markerLat, location.markerLng);
+            const map = keyOf(location.mapLat, location.mapLng);
+            if (!marker || !map || marker === map) continue;
+            counts.set(marker, (counts.get(marker) || 0) + 1);
+        }
+        let best = '';
+        for (const [marker, count] of counts) {
+            if (count >= 2 && count > (counts.get(best) || 0)) best = marker;
+        }
+        return best;
+    }
+
+    buildEventFromSquarespaceItem(item, sourceUrl, options = {}) {
         if (!item || typeof item !== 'object') return null;
-        const startDate = new Date(Number(item.startDate));
+        // The platform stamps its epoch values with the milliseconds of the
+        // moment the item was saved (1796256000686 — 7:00:00.686 PM); an
+        // event starts on the second.
+        const wholeSecond = (value) => Math.floor(Number(value) / 1000) * 1000;
+        const startDate = new Date(wholeSecond(item.startDate));
         if (Number.isNaN(startDate.getTime())) return null;
         const clean = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
         const title = clean(item.title);
         if (!title) return null;
-        const endCandidate = typeof item.endDate === 'number' ? new Date(item.endDate) : null;
+        const endCandidate = typeof item.endDate === 'number' ? new Date(wholeSecond(item.endDate)) : null;
         const endDate = endCandidate && !Number.isNaN(endCandidate.getTime()) && endCandidate.getTime() > startDate.getTime()
             ? endCandidate
             : null;
@@ -9396,10 +9568,24 @@ class AiWebParser {
         // 20260913-152123) carried only 40.7207559, -74.0007613 — Squarespace's
         // own New York default — and geocoded to 443–459 Broadway while its
         // flyer says 60 Rowes Wharf, Boston.
+        // …and so is a location with a name and no street line whose map pin
+        // IS the template's marker (findSquarespaceTemplateMarker): the
+        // monthly meetings at "Online/Virtual" carried that pin, were
+        // reverse-geocoded to "459, Broadway, Little Italy, Lower
+        // Manhattan" and shipped with that address (run 20260929-091555).
+        // A street line beneath the name is the editor stating a place, and
+        // keeps its pin whatever it equals.
         const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
         const statesPlace = Boolean(clean(location.addressTitle) || addressParts.length > 0);
-        const lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
-        const lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
+        let lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
+        let lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
+        const templateMarker = options && typeof options.templateMarker === 'string' ? options.templateMarker : '';
+        if (templateMarker && addressParts.length === 0 && Number.isFinite(lat) && Number.isFinite(lng)
+            && `${lat.toFixed(5)},${lng.toFixed(5)}` === templateMarker) {
+            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng}) and no street line — an untouched map, not a place; no pin taken`);
+            lat = undefined;
+            lng = undefined;
+        }
         if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
             event.location = `${lat}, ${lng}`;
         }
@@ -10062,7 +10248,7 @@ class AiWebParser {
                     description: '',
                     startDate: localMidnight(startParsed, timezone, 0, row.time),
                     // "July 11th through July 18th" ends when the 18th does.
-                    endDate: endParsed ? localMidnight(endParsed, timezone, 1) : null,
+                    endDate: endParsed ? new Date(localMidnight(endParsed, timezone, 1).getTime() - 1000) : null,
                     // No url: a hundred rows sharing the article's address
                     // would read as one event scraped a hundred times, and
                     // an aggregator is never linked anyway. The line's own
@@ -10070,6 +10256,9 @@ class AiWebParser {
                     source: 'listing-prose'
                 };
                 if (timezone) event.timezone = timezone;
+                // A line with no clock names its day (or days): all-day, once
+                // its zone is known (SharedCore.applyAllDayConvention).
+                if (timezone && !/^\d{2}:\d{2}$/.test(String(row.time || ''))) event._noTimeStated = true;
                 if (row.venue) event.bar = row.venue;
                 // A city no calendar covers stays as written: the normalizer
                 // parks it on _unrecognizedCity and the curated rungs get
@@ -10782,10 +10971,14 @@ class AiWebParser {
      * parameter or host.
      *
      * FAIL CLOSED: only a declared canonical that resolves to the SAME host+path
-     * as the page we actually fetched is suppressed. A canonical pointing at a
-     * different path or host may be a genuinely different resource (a slug
-     * alias, a section index), so it stays in the crawl queue and costs us at
-     * most one redundant fetch — never a lost page.
+     * as the page we actually fetched is suppressed — or one that carries the
+     * fetched address's own identifier (getUrlIdAliasKey: an Eventbrite
+     * organizer configured as /o/25444337255 declares /o/xposure-events-llc-
+     * 25444337255, and was fetched a second time under that spelling and a
+     * third under eventbrite.co.uk, every refresh). A canonical pointing at
+     * any other path or host may be a genuinely different resource (a section
+     * index, page one of a paged list), so it stays in the crawl queue and
+     * costs us at most one redundant fetch — never a lost page.
      *
      * Returns the suppressed URLs (for tests/callers); the crawl-visible effect
      * is the mutation of `urls`.
@@ -10797,6 +10990,8 @@ class AiWebParser {
 
         const sourceKey = this.getUrlPathIdentityKey(sourceUrl);
         if (!sourceKey) return suppressed;
+        const sourceAlias = this.getUrlIdAliasKey(sourceUrl);
+        let aliasDeclared = false;
 
         const seen = new Set();
         for (const rawDeclared of this.extractSelfDeclaredCanonicalUrls(html)) {
@@ -10807,8 +11002,14 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
+            const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
+            // The declared address carries the fetched address's own
+            // identifier (see getUrlIdAliasKey): the same document under its
+            // other spelling.
+            const sameId = Boolean(sourceAlias) && this.getUrlIdAliasKey(resolved) === sourceAlias;
             // Not the page we fetched → not a self-reference → leave it alone.
-            if (this.getUrlPathIdentityKey(resolved) !== sourceKey) continue;
+            if (!samePath && !sameId) continue;
+            if (sameId) aliasDeclared = true;
 
             const key = this.getUrlDedupeKey(resolved);
             if (!key || seen.has(key)) continue;
@@ -10819,10 +11020,61 @@ class AiWebParser {
             suppressed.push(entry.url);
         }
 
+        // Once the page has declared itself under that identifier, every
+        // other spelling of it among the links is this document too: the
+        // bare-id form, the slugged form, the same path on the platform's
+        // other national domain.
+        const aliases = [];
+        if (aliasDeclared) {
+            for (const [key, entry] of Array.from(urls.entries())) {
+                if (!entry || !entry.url || this.getUrlIdAliasKey(entry.url) !== sourceAlias) continue;
+                // A query that survived tracking-parameter stripping selects
+                // something (a date, an occurrence): a page of its own.
+                if (/\?/.test(String(entry.url).split('#')[0])) continue;
+                urls.delete(key);
+                aliases.push(entry.url);
+            }
+        }
+
         if (suppressed.length > 0) {
             console.log(`🤖 AI Web: Self-canonical link skipped for ${sourceUrl}: ${suppressed.join(', ')} — the page's own canonical/og:url is this same document, not a new page to crawl`);
         }
-        return suppressed;
+        if (aliases.length > 0) {
+            console.log(`🤖 AI Web: Self-alias link skipped for ${sourceUrl}: ${aliases.join(', ')} — the page declares itself under the same identifier; another spelling of its address is this same document`);
+        }
+        return suppressed.concat(aliases);
+    }
+
+    /**
+     * Platforms address one document two ways: by its identifier alone and
+     * by a readable slug that ENDS in that identifier —
+     *   eventbrite.com/o/25444337255
+     *   eventbrite.com/o/xposure-events-llc-25444337255   (its rel=canonical)
+     *   eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913
+     * The slug is decoration, the number is the address. The key is
+     * "<site name>|<parent path>|<identifier>": the registrable domain's own
+     * label (so a platform's national domains agree), everything before the
+     * last path segment, and the run of six or more digits the last segment
+     * consists of or ends in after a hyphen. '' when the last segment carries
+     * no such identifier — most URLs — so nothing is ever matched on a guess.
+     * Never used alone: suppressSelfCanonicalUrls only trusts it after the
+     * page itself declared an address with the same key.
+     * Pure string work: iOS JavaScriptCore has no URL global.
+     */
+    getUrlIdAliasKey(url) {
+        const text = String(url || '').trim();
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        const domain = this.getRegistrableDomainFromUrl(text);
+        const siteName = String(domain || '').split('.')[0];
+        if (!siteName) return '';
+        const segments = String(match[2] || '').split('/').filter(Boolean);
+        if (segments.length === 0) return '';
+        const last = segments[segments.length - 1].toLowerCase();
+        const id = last.match(/^(?:.*-)?(\d{6,})$/);
+        if (!id) return '';
+        const parent = segments.slice(0, -1).join('/').toLowerCase();
+        return `${siteName}|${parent}|${id[1]}`;
     }
 
     getDefaultMaxAdditionalUrls() {
@@ -13279,6 +13531,96 @@ class AiWebParser {
     // lines so the HTML-oriented AI machinery still sees real content
     // (fail open, never fail silent).
 
+    // THE PAGE'S OWN DATA, SHIPPED TO THE BROWSER. A Next.js app-router page
+    // streams the props it rendered from as React Server Component "flight"
+    // chunks — `self.__next_f.push([1,"<row-id>:<json>\n"])` — and a
+    // listing page's event rows sit in there whole (whereto.party/in/<city>:
+    // `initialEvents: [{ name, start_date, start_time, end_time, place,
+    // city, images, ticketing_url … }]`). The visible HTML is those same rows
+    // rendered as cards, which the AI text pass read approximately (run
+    // 20260930-150601: THICK 'N' JUICY Brisbane read as Dec 5, page data
+    // Nov 13). Generic: the chunks are decoded (each is a JSON string
+    // literal), joined, split into their `id:payload` lines, every JSON
+    // payload parsed, and every array of event-like objects (the same
+    // recognizer the JSON-API route uses) is read as feed rows through the
+    // same builder. No site names, no key names beyond the recognizer's.
+    collectPageFlightDataRows(html) {
+        const text = String(html || '');
+        if (!text.includes('__next_f.push')) return [];
+        const chunks = [];
+        const pushPattern = /__next_f\.push\(\[\s*\d+\s*,\s*("(?:[^"\\]|\\.)*")\s*\]\)/g;
+        let match;
+        while ((match = pushPattern.exec(text)) !== null) {
+            try {
+                chunks.push(JSON.parse(match[1]));
+            } catch (_) {
+                // A chunk that is not a JSON string literal carries no data.
+            }
+        }
+        if (chunks.length === 0) return [];
+        const rows = [];
+        const seen = new Set();
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const visit = (node, depth) => {
+            if (!node || typeof node !== 'object' || depth > 60) return;
+            if (Array.isArray(node)) {
+                if (node.length >= 2 && node.every(isPlainObject) && node.every(item => this.jsonApiObjectLooksEventLike(item))) {
+                    for (const item of node) {
+                        const key = String(item.id || item.slug || item.uid || `${item.name || item.title}|${item.start_date || item.startDate || item.start || ''}`);
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        rows.push(item);
+                    }
+                    return;
+                }
+                for (const item of node) visit(item, depth + 1);
+                return;
+            }
+            for (const key of Object.keys(node)) visit(node[key], depth + 1);
+        };
+        // The stream is `id:payload\n` records — except a text record
+        // (`id:T<hex byte length>,<text>`), which is length-delimited and
+        // NOT newline-terminated: the next record starts right after its
+        // bytes (the page's JSON-LD travels this way, and the event rows'
+        // record followed it on the same "line" until this reader counted
+        // the bytes). Read sequentially over the UTF-8 bytes.
+        const stream = Buffer.from(chunks.join(''), 'utf8');
+        let offset = 0;
+        while (offset < stream.length) {
+            const colon = stream.indexOf(':', offset);
+            if (colon < 0) break;
+            const head = stream.slice(offset, colon).toString('utf8');
+            if (!/^[0-9a-f]*$/i.test(head)) {
+                // Not at a record boundary: skip to the next line.
+                const newline = stream.indexOf('\n', offset);
+                if (newline < 0) break;
+                offset = newline + 1;
+                continue;
+            }
+            const marker = stream.slice(colon + 1, colon + 2).toString('utf8');
+            if (marker === 'T') {
+                const comma = stream.indexOf(',', colon + 2);
+                const length = comma > 0 ? parseInt(stream.slice(colon + 2, comma).toString('utf8'), 16) : NaN;
+                if (!Number.isFinite(length)) break;
+                offset = comma + 1 + length;
+                continue;
+            }
+            const newline = stream.indexOf('\n', colon + 1);
+            const end = newline < 0 ? stream.length : newline;
+            const payload = stream.slice(colon + 1, end).toString('utf8');
+            offset = end + 1;
+            if (payload[0] !== '[' && payload[0] !== '{') continue;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(payload);
+            } catch (_) {
+                continue;
+            }
+            visit(parsed, 0);
+        }
+        return rows;
+    }
+
     // Trimmed body that IS a JSON document ({...} or [...]) → parsed value;
     // anything else (HTML, scalars, malformed JSON) → null. Cheap and safe to
     // run on every fetched page.
@@ -13884,9 +14226,20 @@ class AiWebParser {
     // wall-clock time (JSON-LD startDate with no offset) is labelling the
     // venue's local time as UTC — thebearcalendar.com/feed.json does this
     // for every city it lists, so a 7pm Sydney party would land at 5am.
-    // ONE row is checked against the site's own page; on a match every
-    // row's UTC label is stripped, and the offset-less values then follow
-    // the wall-clock path (city → timezone). Verdict cached per host.
+    // Rows are checked against the site's own pages — one-off rows first,
+    // a repeating row's page prints its NEXT occurrence, up to three pages
+    // — and on a match every row's UTC label is stripped, so the
+    // offset-less values follow the wall-clock path (city → timezone).
+    // The page's verdict is read from HOW it prints the clock, never from
+    // whether the date is the same one: the feed's HH:MM printed with no
+    // offset is a wall clock (whatever the date — the next occurrence of a
+    // series prints the same clock); the feed's instant printed with an
+    // explicit offset is UTC confirmed; anything else says nothing, and a
+    // page that says nothing is not agreement (runs 20260928–0930: the
+    // first row was a series, its page showed the next date, the mismatch
+    // was logged as "agree" and every Bear Calendar party sat hours off —
+    // Cologne two hours late, Orlando four hours early, Brisbane ten).
+    // Verdict cached per host.
     async reconcileJsonApiUtcLabels(payload, sourceUrl, httpAdapter) {
         if (!payload || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return payload;
         const rowArray = this.findJsonApiRowArray(payload);
@@ -13895,35 +14248,54 @@ class AiWebParser {
         const utcPattern = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)$/;
         const dateKey = (key) => /(^|_)(start|end)(_(at|date|time|datetime))?$/.test(this.normalizeJsonApiKey(key));
         const sourceHost = (String(sourceUrl || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
-        const sample = rowArray.rows.find(row => {
+        const startOf = (view) => view.start || view.start_date || view.startDate || view.starts_at;
+        const repeats = (view) => Boolean(view.rrule || view.recurrence || view.recurrence_rule || view.recurring || view.series);
+        const candidates = rowArray.rows.filter(row => {
             const view = this.unwrapJsonApiCandidate(row);
-            const start = view.start || view.start_date || view.startDate || view.starts_at;
+            const start = startOf(view);
             const pageUrl = typeof view.url === 'string' ? view.url : '';
             const pageHost = (pageUrl.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
             return typeof start === 'string' && utcPattern.test(start) && !/T00:00/.test(start) && pageHost && pageHost === sourceHost;
         });
-        if (!sample) return payload;
+        if (candidates.length === 0) return payload;
+        const samples = candidates.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
+            .concat(candidates.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
+            .slice(0, 3);
         if (!this.jsonApiUtcLabelVerdicts) this.jsonApiUtcLabelVerdicts = new Map();
         let verdict = this.jsonApiUtcLabelVerdicts.get(sourceHost);
         if (verdict === undefined) {
-            const view = this.unwrapJsonApiCandidate(sample);
-            const feedStart = String(view.start || view.start_date || view.startDate || view.starts_at);
-            const digits = feedStart.match(utcPattern);
             verdict = false;
-            try {
-                const response = await httpAdapter.fetchData(view.url);
-                const html = response && typeof response.html === 'string' ? response.html : '';
-                const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-                const wallClock = pageStarts.find(value => new RegExp(`^${digits[1]}T${digits[2]}(?::\\d{2})?$`).test(value.trim()));
-                if (wallClock) {
-                    verdict = true;
-                    console.log(`🕒 FEED CLOCK: ${sourceUrl} labels wall-clock times as UTC — "${view.title || view.name || view.url}" is ${feedStart} in the feed and ${wallClock} (no offset) on its own page; reading every row as local time`);
-                } else if (pageStarts.length > 0) {
-                    console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels agree with its own page (${feedStart} vs ${pageStarts[0]}) — instants kept`);
+            let decided = false;
+            for (const sample of samples) {
+                const view = this.unwrapJsonApiCandidate(sample);
+                const feedStart = String(startOf(view));
+                const digits = feedStart.match(utcPattern);
+                const feedMillis = Date.parse(feedStart);
+                try {
+                    const response = await httpAdapter.fetchData(view.url);
+                    const html = response && typeof response.html === 'string' ? response.html : '';
+                    const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
+                    // The feed's clock, printed as a wall clock (no offset).
+                    const wallClock = pageStarts.find(value => new RegExp(`^\\d{4}-\\d{2}-\\d{2}T${digits[2]}(?::\\d{2})?$`).test(value));
+                    // The feed's instant, printed with an explicit offset.
+                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis);
+                    if (wallClock) {
+                        verdict = true;
+                        decided = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} labels wall-clock times as UTC — "${view.title || view.name || view.url}" is ${feedStart} in the feed and ${wallClock} (no offset) on its own page; reading every row as local time`);
+                        break;
+                    }
+                    if (instant) {
+                        decided = true;
+                        console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels agree with its own page (${feedStart} vs ${instant}) — instants kept`);
+                        break;
+                    }
+                    console.log(`🕒 FEED CLOCK: ${view.url} prints ${pageStarts.length > 0 ? pageStarts.slice(0, 2).join(', ') : 'no startDate'} for the feed's ${feedStart} — says nothing about the label, trying another row`);
+                } catch (error) {
+                    console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's UTC labels (${error.message}) — trying another row`);
                 }
-            } catch (error) {
-                console.log(`🕒 FEED CLOCK: could not read ${view.url} to check the feed's UTC labels (${error.message}) — instants kept`);
             }
+            if (!decided) console.log(`🕒 FEED CLOCK: ${sourceUrl} UTC labels could not be checked against the site's own pages (${samples.length} tried) — instants kept, unconfirmed`);
             this.jsonApiUtcLabelVerdicts.set(sourceHost, verdict);
         }
         if (!verdict) return payload;
@@ -14821,7 +15193,7 @@ class AiWebParser {
     collectJsonApiImageCandidates(view, keyPattern) {
         const candidates = [];
         const seen = new Set();
-        const urlMemberKey = /^(url|src|href|source_url|secure_url|image_url|link|original|full|large)$/;
+        const urlMemberKey = /^(url|src|href|source_url|secure_url|image_url|cdn_url|media_url|file_url|link|original|full|large)$/;
         const dimension = (value) => {
             const number = Number(value);
             return Number.isFinite(number) && number > 0 ? number : 0;
@@ -14969,6 +15341,51 @@ class AiWebParser {
         const start = startFromNamed.date ? startFromNamed : firstDateBy((key, value) => this.jsonApiStartDateFromEntry(key, value));
         if (!title || !start.date) return null;
         const end = firstDateBy((key, value) => this.jsonApiEndDateFromEntry(key, value));
+        // A ROW THAT SPLITS ITS CLOCK FROM ITS DATE (start_date "2026-11-13"
+        // + start_time "21:00:00", end_time "03:00:00" with no end_date —
+        // whereto.party's page data) states a wall clock: the date-only
+        // value alone read as midnight, and the end went unread (run
+        // 20260930-150601: THICK 'N' JUICY Brisbane saved on the wrong day
+        // with the default end while the page said Nov 13, 9 PM – 3 AM).
+        // The clock joins its date as an offset-less wall clock; an end
+        // clock with no end date lands on the start's day, or the next day
+        // when it reads earlier than the start.
+        {
+            const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/;
+            const clockOnly = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+            const clockFor = (pattern) => {
+                for (const key of keys) {
+                    if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                    const match = typeof view[key] === 'string' ? view[key].trim().match(clockOnly) : null;
+                    if (match && Number(match[1]) < 24 && Number(match[2]) < 60) return { hour: Number(match[1]), minute: Number(match[2]) };
+                }
+                return null;
+            };
+            const dayFor = (pattern) => {
+                for (const key of keys) {
+                    if (!pattern.test(this.normalizeJsonApiKey(key))) continue;
+                    const match = typeof view[key] === 'string' ? view[key].trim().match(dateOnly) : null;
+                    if (match) return { year: Number(match[1]), month: Number(match[2]) - 1, day: Number(match[3]) };
+                }
+                return null;
+            };
+            const startDay = dayFor(/(^|_)starts?(_(date|day))?$|^date$/);
+            const startClock = clockFor(/(^|_)start_time$|^time$/);
+            if (startDay && startClock) {
+                start.date = new Date(Date.UTC(startDay.year, startDay.month, startDay.day, startClock.hour, startClock.minute));
+                start.timezoneUnresolved = true;
+                start.timezone = start.timezone || null;
+                const endClock = clockFor(/(^|_)end_time$/);
+                const endDay = dayFor(/(^|_)ends?(_(date|day))?$/);
+                if (endClock && (!end.date || endDay)) {
+                    const day = endDay || startDay;
+                    let endDate = new Date(Date.UTC(day.year, day.month, day.day, endClock.hour, endClock.minute));
+                    if (endDate.getTime() <= start.date.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                    end.date = endDate;
+                    end.timezoneUnresolved = true;
+                }
+            }
+        }
 
         // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
         // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
@@ -15211,9 +15628,14 @@ class AiWebParser {
         // City from the address, else from the payload's own city/region/
         // country keys ("Sydney, NSW, Australia") — an aggregator row names
         // its city without an address.
-        const placeCity = clean(venueField(/^(city|locality|town)$/) || firstValue(/(^|_)(city|locality|town)$/, isNonEmptyString));
-        const placeRegion = clean(venueField(/^(region|state|province|state_province)$/) || firstValue(/(^|_)(region|state|province)$/, isNonEmptyString));
-        const placeCountry = clean(venueField(/^(country|country_name)$/) || firstValue(/(^|_)country$/, isNonEmptyString));
+        // A place key may hold a record ({ city: { name: "Brisbane" } }):
+        // its name is the value.
+        const isNamedPlace = (value) => isNonEmptyString(value)
+            || (value && typeof value === 'object' && !Array.isArray(value) && isNonEmptyString(value.name));
+        const placeName = (value) => (value && typeof value === 'object' ? value.name : value);
+        const placeCity = clean(venueField(/^(city|locality|town)$/) || placeName(firstValue(/(^|_)(city|locality|town)$/, isNamedPlace)));
+        const placeRegion = clean(venueField(/^(region|state|province|state_province)$/) || placeName(firstValue(/(^|_)(region|state|province)$/, isNamedPlace)));
+        const placeCountry = clean(venueField(/^(country|country_name)$/) || placeName(firstValue(/(^|_)country$/, isNamedPlace)));
         const placeText = [placeCity, placeRegion, placeCountry].filter(Boolean).join(', ');
         if (cityConfig) {
             // …else from the GROUP the payload files the row under: an
@@ -17461,8 +17883,11 @@ class AiWebParser {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
         }
-        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages
-        if (/\{[^}]+\}/.test(url)) {
+        // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages.
+        // The braces arrive percent-encoded when the placeholder sat in an
+        // href the browser never rendered (bearitmtl.com/events/ links
+        // "/events/%7B%7B%20data.link%20%7D%7D" six times over).
+        if (/\{[^}]+\}/.test(String(url).replace(/%7B/gi, '{').replace(/%7D/gi, '}'))) {
             return { valid: false, reason: 'template-url' };
         }
 
@@ -24976,6 +25401,29 @@ TEXT:
             event._impossibleClockRejected = oddMinuteRejected;
         }
 
+        // A DATE AND NO TIME IS A DAY. Nothing on the page (and nothing the
+        // model cited) states when the event starts or ends: the start is
+        // the local-midnight placeholder. Stamped so SharedCore.
+        // applyAllDayConvention writes it as an all-day event instead of
+        // "12:00 AM – 3:00 AM" once the event's zone is settled. A full
+        // datetime the model handed over counts as a stated time only when
+        // it carries a clock.
+        const statesClock = (value) => typeof value === 'string' && /\d{1,2}:\d{2}|\d\s*[ap]\.?m\b|T\d{2}/i.test(value);
+        const noTimeStated = !effectiveStartTime && !endTimeRaw
+            && !(dayPhraseSynthesis && (dayPhraseSynthesis.startTime || dayPhraseSynthesis.endTime))
+            && !(startProvided && statesClock(aiEvent.start))
+            && !(endProvided && statesClock(aiEvent.end));
+        if (noTimeStated && event.startDate) {
+            event._noTimeStated = true;
+        }
+
+        // "LATE" IS WHAT THE PAGE SAYS IN PLACE OF A CLOSING TIME ("6PM 'til
+        // LATE", "11PM UNTIL LATE"). It is not a clock, so no end is made of
+        // it — the word itself is kept (`endNote: late`, a plain field, so
+        // it lands in the calendar notes) and the end stays unstated.
+        const lateEnd = this.detectLateEndNote(aiEvent);
+        if (lateEnd) event.endNote = lateEnd;
+
         // Stamp the derived organizer as internal metadata (underscore fields are
         // excluded from calendar notes and merge field loops) so downstream merge
         // arbitration can warn the model off picking the organizer as the venue.
@@ -26568,6 +27016,64 @@ TEXT:
             event._startTimeFromFlyer = true;
             adopted++;
             console.log(`🕒 FLYER CLOCK: "${event.title}" listed with no time — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; start set to ${String(clock.start.hour).padStart(2, '0')}:${String(clock.start.minute).padStart(2, '0')} wall clock`);
+        }
+        return adopted;
+    }
+
+    // A STATED START WITH NO END takes the end its own poster prints. The
+    // rule above reads a poster only for a listing with NO time; a feed row
+    // that states its start and no end (The Bear Calendar's Bear Tea-Dance:
+    // start 12:00, end null) ignored a flyer saying "12PM - 6PM" and was
+    // saved with the 3-hour default (owner, 2026-09-30: "I see date and
+    // time in the image" / "I don't understand why we would ignore the
+    // flyer data"). Deterministic and fail-closed, like the start rule:
+    // only records with a start and no end; only a poster stating exactly
+    // one range whose START is this record's own clock (a poster for
+    // another party, or another night of this one, decides nothing); only
+    // a poster naming this date or no date. The end lands on the start's
+    // day, or the next day when it reads earlier ("9pm - 2am"). Wall clocks
+    // are compared in the record's own zone (an offset-less record's UTC
+    // digits ARE its wall clock; an instant is read in its timezone).
+    adoptFlyerEndForOpenEnds(events) {
+        if (!Array.isArray(events)) return 0;
+        const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        let adopted = 0;
+        for (const event of events) {
+            if (!event || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) continue;
+            if (event.endDate !== null && event.endDate !== undefined && event.endDate !== '') continue;
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image) continue;
+            const verdict = this.getOcrImageVerdict(image);
+            const text = verdict && typeof verdict.text === 'string' ? verdict.text : '';
+            if (!text.trim()) continue;
+            const clock = this.readSingleStartClockFromFlyerText(text);
+            if (!clock || !clock.end) continue;
+            const wallClockOnly = event._timezoneUnresolved === true || !event.timezone;
+            const wall = wallClockOnly
+                ? { year: event.startDate.getUTCFullYear(), month: event.startDate.getUTCMonth() + 1, day: event.startDate.getUTCDate(), hour: event.startDate.getUTCHours(), minute: event.startDate.getUTCMinutes() }
+                : (this.core && typeof this.core.getZonedWallParts === 'function' ? this.core.getZonedWallParts(event.startDate, event.timezone) : null);
+            if (!wall) continue;
+            if (wall.hour !== clock.start.hour || wall.minute !== clock.start.minute) continue;
+            const month = wall.month - 1;
+            const date = wall.day;
+            const datePattern = new RegExp(`\\b(?:${MONTHS[month]}[a-z]*\\.?\\s+${date}(?!\\d)|${month + 1}[/.]${date}(?!\\d)|${date}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTHS[month]}[a-z]*)`, 'i');
+            const anyDatePattern = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?!\d)|\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/i;
+            const namesThisDate = datePattern.test(text);
+            if (!namesThisDate && anyDatePattern.test(text)) continue;
+            let endWall = new Date(Date.UTC(wall.year, month, date, clock.end.hour, clock.end.minute));
+            const startWall = new Date(Date.UTC(wall.year, month, date, wall.hour, wall.minute));
+            if (endWall.getTime() <= startWall.getTime()) endWall = new Date(endWall.getTime() + 24 * 60 * 60 * 1000);
+            let endDate = endWall;
+            if (!wallClockOnly) {
+                endDate = this.core && typeof this.core.convertWallClockDateToUtc === 'function'
+                    ? this.core.convertWallClockDateToUtc(endWall, event.timezone)
+                    : null;
+                if (!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) continue;
+            }
+            event.endDate = endDate;
+            event._endTimeFromFlyer = true;
+            adopted++;
+            console.log(`🕒 FLYER END: "${event.title}" states ${String(wall.hour).padStart(2, '0')}:${String(wall.minute).padStart(2, '0')} and no end — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; end set to ${String(clock.end.hour).padStart(2, '0')}:${String(clock.end.minute).padStart(2, '0')} wall clock`);
         }
         return adopted;
     }

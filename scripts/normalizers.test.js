@@ -2843,6 +2843,50 @@ test('curated-bar city backfill: generic-name-stem repro — "Eagle" must NOT ba
   assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log');
 });
 
+// GRUNT's Halloween page (gruntparty.monster/grunt-halloween, 2026-09-29):
+// "Saturday Oct 24 at the The Stud 1123 FOLSOM 9pm-2am." The page writes the
+// city only as "SF", the model's "san francisco" failed the verbatim gate,
+// and "The Stud" is a name three other curated bars contain — so the event
+// had a venue, a street line, and no city. The curated entries are the real
+// ones (data/bars).
+const STUD_CORPUS = {
+  sf: [{ name: 'The Stud', city: 'sf', address: '1123 Folsom Street, San Francisco, California, 94103', coordinates: '37.7761653, -122.4083643' }],
+  montreal: [{ name: 'Le Stud', city: 'montreal', address: '1812 Rue Sainte-Catherine E, Montreal, QC H2K 2H3' }],
+  la: [{ name: 'Sanctuary Studios', city: 'la', address: '13012 Athens Way, Los Angeles, CA 90061' }],
+  pv: [{ name: 'STUDS', city: 'pv', address: '283 Basilio Badillo, Puerto Vallarta, Jal. 48380' }]
+};
+
+test('curated-bar city backfill: a stem name WITH the bar\'s own street line is the venue', () => {
+  const normalizer = createBackfillNormalizer(STUD_CORPUS);
+  const event = {
+    title: 'GRUNT: Halloween',
+    bar: 'The Stud',
+    address: '1123 FOLSOM STREET',
+    city: 'unknown',
+    startDate: '2026-10-24T21:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'sf', `name + door are two facts, got:\n${lines.join('\n')}`);
+  assert.equal(event._citySource, 'curated-door');
+  assert.ok(lines.some(line => line.includes('Backfilled city "sf"') && line.includes('"The Stud"') && line.includes('1123 FOLSOM STREET')));
+});
+
+test('curated-bar city backfill: a stem name with another door, no door, or a place the page named stays unknown', () => {
+  for (const [label, extra] of [
+    ['another street', { address: '1123 Market Street' }],
+    ['another number', { address: '1125 Folsom Street' }],
+    ['no address at all', {}],
+    ['the page named a city we do not cover', { address: '1123 Folsom Street', _unrecognizedCity: 'sacramento' }]
+  ]) {
+    const normalizer = createBackfillNormalizer(STUD_CORPUS);
+    const event = { title: 'Some Night', bar: 'The Stud', city: 'unknown', startDate: '2026-10-24T21:00:00.000Z', ...extra };
+    const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+    assert.equal(event.city, 'unknown', `${label}: the name alone is still a stem, got:\n${lines.join('\n')}`);
+    assert.ok(lines.some(line => line.includes('is a generic name stem') || line.includes('is a namesake, not this venue')), `${label}: the skip is still logged`);
+  }
+});
+
 test('curated-bar city backfill: "Massive" (contained in no other curated name) still backfills alongside the stem guard', () => {
   const normalizer = createBackfillNormalizer({
     seattle: [MASSIVE_SEATTLE_BAR],
@@ -4573,4 +4617,213 @@ test('isFullAddress: neighbourhood initialisms are rejected by shape — the ret
   // "Ripple, Portland, OR 97217" (it reaches the full-address test because
   // "Ripple" contains "pl").
   assert.equal(normalizer.isFullAddress('Ripple, Portland, OR 97217'), true);
+});
+
+// ---------------------------------------------------------------------------
+// Curated DOOR city backfill (bearracuda.com/events/la7, run 20260929-091555:
+// venue "Precinct", address "357 S. Broadway", no city anywhere on the page —
+// the event shipped city "unknown" although Precinct LA is a curated bar).
+// ---------------------------------------------------------------------------
+const PRECINCT_LA_BAR = {
+  name: 'Precinct LA',
+  city: 'la',
+  address: '357 South Broadway, Los Angeles, California, 90013',
+  coordinates: '34.0498149, -118.2493321',
+  website: 'https://precinctdtla.com',
+  googleMaps: 'https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI'
+};
+const DOOR_CITIES = {
+  la: { timezone: 'America/Los_Angeles', patterns: ['los angeles', 'dtla'] },
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  denver: { timezone: 'America/Denver', patterns: ['denver'] }
+};
+function bearracudaLaRecord(overrides = {}) {
+  return {
+    title: 'BEARRACUDA: LA',
+    bar: 'Precinct',
+    address: '357 S. Broadway',
+    startDate: '2026-11-14T21:00:00.000Z',
+    endDate: '2026-11-15T02:00:00.000Z',
+    _timezoneUnresolved: true,
+    website: 'https://bearracuda.com/events/la7/',
+    _sourcePageUrl: 'https://bearracuda.com/events/la7/',
+    ...overrides
+  };
+}
+
+test('curated-door city backfill: a venue name and the street line the page gave answer to one curated bar', () => {
+  const bars = { la: [PRECINCT_LA_BAR], seattle: [MASSIVE_SEATTLE_BAR] };
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars });
+  const pipeline = new NormalizerPipeline(core);
+  pipeline.setCore(core);
+  let event;
+  const lines = captureConsoleLog(() => { event = pipeline.normalizeEvent(bearracudaLaRecord()); });
+  assert.equal(event.city, 'la');
+  assert.equal(event._citySource, 'curated-door');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.equal(event.startDate, '2026-11-15T05:00:00.000Z', '9pm wall clock anchored to Los Angeles (PST)');
+  assert.equal(event.bar, 'Precinct LA', 'the door names the venue: the curated spelling');
+  assert.equal(event.barSource, 'curated');
+  assert.equal(event.address, '357 South Broadway, Los Angeles, California, 90013', 'the curated address replaces the bare street line');
+  assert.equal(event.addressSource, 'curated');
+  assert.equal(event.location, '34.0498149, -118.2493321');
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.gmaps, 'https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI', 'the curated place, not a text search');
+  assert.ok(lines.includes('🗺️ LocationNormalizer: Filled bar, address, location, gmaps for "BEARRACUDA: LA" from curated bar "Precinct LA" — the same door that gave the city'),
+    lines.filter(line => line.includes('Filled')).join('\n'));
+  assert.ok(lines.includes('🗺️ LocationNormalizer: Backfilled city "la" for "BEARRACUDA: LA" from the curated door of "Precinct LA" — venue "Precinct" at "357 S. Broadway" is that bar\'s name and street line'),
+    lines.filter(line => line.includes('LocationNormalizer')).join('\n'));
+});
+
+test('curated-door city backfill: a name without its street line, a street line under another name, and doors in two cities decide nothing', () => {
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars: { la: [PRECINCT_LA_BAR] } });
+  assert.deepEqual(core.findCuratedBarCityByDoor('Precinct', '357 S. Broadway'), { city: 'la', bar: PRECINCT_LA_BAR });
+  // Broadway is a street in a hundred towns: another number is another door.
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', '1428 Broadway'), null);
+  // The same street line under a name the curated bar does not answer to.
+  assert.equal(core.findCuratedBarCityByDoor('The Bradbury', '357 S. Broadway'), null);
+  // No numbered street line, no door.
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', 'Downtown'), null);
+  assert.equal(core.findCuratedBarCityByDoor('Precinct', ''), null);
+  // A three-letter stem is not a name.
+  assert.equal(core.findCuratedBarCityByDoor('Pre', '357 S. Broadway'), null);
+  // Doors answering in two cities are ambiguous, and nothing is backfilled.
+  const twoCities = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema, bars: {
+    la: [PRECINCT_LA_BAR],
+    denver: [{ name: 'Precinct Denver', city: 'denver', address: '357 S Broadway, Denver, CO 80209' }]
+  } });
+  assert.deepEqual(twoCities.findCuratedBarCityByDoor('Precinct', '357 S. Broadway'), { ambiguousCities: ['la', 'denver'] });
+  const normalizer = new LocationNormalizer(twoCities);
+  const event = bearracudaLaRecord();
+  captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'unknown');
+  assert.equal(event._citySource, undefined);
+
+  // A page that names another place keeps its veto (the namesake rule).
+  const single = new LocationNormalizer(core);
+  const elsewhere = bearracudaLaRecord({ city: 'seoul' });
+  captureConsoleLog(() => { single.normalize(elsewhere); });
+  assert.equal(elsewhere.city, 'unknown', 'the page said Seoul');
+});
+
+// dice.fm SPOOKMINCE (BEEFMINCE parser), run 20260929-091555: the feed's
+// street line already ends in the locality its locality field repeats.
+test('an address line said twice is said once; a city and a state of one name are not a repeat', () => {
+  const core = new SharedCore(DOOR_CITIES, { eventSchema: EventSchema });
+  const normalizer = new BasicDataNormalizer(core);
+  const spookmince = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY, London EC2A 3AY' };
+  const lines = captureConsoleLog(() => { normalizer.normalize(spookmince); });
+  assert.equal(spookmince.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.ok(lines.some(line => line.startsWith('🧹 NORMALIZE: address "118 Curtain Rd, London EC2A 3AY, London EC2A 3AY" → "118 Curtain Rd, London EC2A 3AY"')), lines.join('\n'));
+  const untouched = [
+    '185 Christopher St, New York, New York',
+    '357 South Broadway, Los Angeles, California, 90013',
+    '2209 Wilton Drive, Wilton Manors, FL 33305',
+    'Zona Romántica'
+  ];
+  for (const address of untouched) {
+    const event = { title: 'Party', address };
+    captureConsoleLog(() => { normalizer.normalize(event); });
+    assert.equal(event.address, address);
+  }
+  // The calendar still holds the doubled form an earlier run saved, with the
+  // pin geocoded from it: the clean form wins the merge on either side.
+  const saved = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY, London EC2A 3AY', location: '51.5251192, -0.0798044', pinSource: 'geocoded-exact', addressSource: 'page' };
+  const scraped = { title: 'SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY', addressSource: 'page' };
+  let verdict;
+  captureConsoleLog(() => {
+    verdict = core.resolveConflictDeterministically('address', saved.address, scraped.address,
+      { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: saved, b: scraped }, eventTitle: 'SPOOKMINCE' });
+  });
+  assert.deepEqual(verdict, { winner: 'b', reason: 'the same address with a line said twice on the other side — said once' });
+  captureConsoleLog(() => {
+    verdict = core.resolveConflictDeterministically('address', scraped.address, saved.address,
+      { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: scraped, b: saved }, eventTitle: 'SPOOKMINCE' });
+  });
+  assert.equal(verdict.winner, 'a', 'and the doubled form never replaces the clean one');
+});
+
+// ---------------------------------------------------------------------------
+// The geocoder is asked once (2026-09-29: 728 questions a run, about 420 of
+// them answered "nothing" run after run, the host's budget spent before the
+// new addresses got their turn).
+// ---------------------------------------------------------------------------
+function lookupHarness({ answers, store = {} } = {}) {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const asked = [];
+  const httpAdapter = {
+    getPageCacheConfig: () => ({ enabled: false, ttlDays: 3 }),
+    readCachedPage: async () => null,
+    fetchData: async (url, options) => {
+      asked.push({ url, cacheTtlDays: options && options.cacheTtlDays });
+      const body = typeof answers === 'function' ? answers(url) : answers;
+      return { html: JSON.stringify(body), statusCode: 200 };
+    }
+  };
+  return { core, normalizer, httpAdapter, asked };
+}
+const NOWHERE = 'https://nominatim.openstreetmap.org/search?format=json&q=Hacienda+La+Yerbabuena&limit=5&addressdetails=1';
+const ELSEWHERE = 'https://nominatim.openstreetmap.org/search?format=json&q=Wyndham+Westfield&limit=5&addressdetails=1';
+
+test('geocoder: "no match" is believed after two runs, not one, and is asked again once it gets an answer', async () => {
+  const store = {};
+  const options = { cacheTtlDays: 365 };
+  const first = lookupHarness({ answers: [], store });
+  assert.deepEqual(await first.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, first.httpAdapter), []);
+  assert.deepEqual(await first.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, first.httpAdapter), [], 'asked once per run');
+  assert.equal(first.asked.length, 1);
+  assert.equal(first.core.findDeadEndUrlEntry(first.core.deadEndRunContext, NOWHERE).entry.misses, 1);
+  assert.deepEqual(first.core.deadEndRunContext.learned, [], 'counted, not listed among the crawl pages');
+
+  const second = lookupHarness({ answers: [], store });
+  await second.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, second.httpAdapter);
+  assert.equal(second.asked.length, 1, 'one empty answer is not believed: asked again on the second run');
+  assert.equal(second.core.findDeadEndUrlEntry(second.core.deadEndRunContext, NOWHERE).entry.misses, 2);
+
+  const third = lookupHarness({ answers: [], store });
+  assert.deepEqual(await third.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, third.httpAdapter), []);
+  assert.equal(third.asked.length, 0, 'two empty answers on two runs: not asked again');
+  assert.equal(third.core.deadEndRunContext.knownEmptyLookups, 1);
+  await third.normalizer.fetchDataWithCacheAndRateLimit(ELSEWHERE, options, third.httpAdapter);
+  assert.equal(third.asked.length, 1, 'another question is its own question');
+
+  // Past the retry window the question is asked again; an answer clears it.
+  const entry = store[Object.keys(store).find((key) => key.includes('yerbabuena'))];
+  entry.lastSeen = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
+  const later = lookupHarness({ answers: [{ lat: '36.19', lon: '-5.92', display_name: 'Hacienda La Yerbabuena, Barbate' }], store });
+  const answer = await later.normalizer.fetchDataWithCacheAndRateLimit(NOWHERE, options, later.httpAdapter);
+  assert.equal(later.asked.length, 1);
+  assert.equal(answer[0].lat, '36.19');
+  assert.equal(later.core.findDeadEndUrlEntry(later.core.deadEndRunContext, NOWHERE).entry, null, 'answered: forgotten');
+});
+
+test('geocoder: every question goes to the answer cache, read before the page cache', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  assert.equal(normalizer.getLookupAnswerTtlDays(), SharedCore.LOOKUP_ANSWER_TTL_DAYS);
+  assert.equal(SharedCore.LOOKUP_ANSWER_TTL_DAYS, 365);
+  const reads = [];
+  const httpAdapter = {
+    getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }),
+    getAnswerCacheConfig: (ttlDays) => ({ enabled: true, ttlDays, storageDir: '/answers' }),
+    readCachedPage: async (url, config) => { reads.push(config); return { html: '[{"lat":"1","lon":"2"}]' }; }
+  };
+  assert.deepEqual(await normalizer.checkPersistentCache(NOWHERE, httpAdapter), [{ lat: '1', lon: '2' }]);
+  assert.deepEqual(reads, [{ enabled: true, ttlDays: 365, storageDir: '/answers' }]);
+  assert.equal(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS, 7);
+});
+
+test('city patterns: Lynnwood is Seattle, and Westfield is Indianapolis only when it says Indiana', () => {
+  const cities = require('./scraper-cities.js');
+  const config = cities.cities || cities.SCRAPER_CITIES || cities;
+  const core = new SharedCore(config, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  assert.equal(normalizer.matchCityInText('17420 Hwy 99, Lynnwood, WA 98037, USA'), 'seattle');
+  assert.equal(normalizer.matchCityInText('Westfield, IN'), 'indianapolis');
+  assert.equal(normalizer.matchCityInText('Wyndham Westfield, Westfield, Indiana'), 'indianapolis');
+  assert.equal(normalizer.matchCityInText('Westfield, NJ'), null);
+  assert.equal(normalizer.matchCityInText('Westfield, MA 01085'), null);
 });

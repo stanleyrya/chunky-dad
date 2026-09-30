@@ -1,5 +1,15 @@
 [
   {
+    "slug": "bear-brum-weekend-pass-2173f28d",
+    "url": "https://www.bearbrum.com/event-details/bear-brum-weekend-pass-1",
+    "faviconBg": "#e5e5e5",
+    "faviconFg": "#3c3c3c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faa512:65:17 #ae7669:10:7 #855754:7:6",
+    "accent": "#faa512"
+  },
+  {
     "slug": "beefmince-x-bear-brum-2026-267f8da8",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",

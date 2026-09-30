@@ -436,6 +436,8 @@ class ScriptableAdapter {
     this.metricsDir = this.fm.joinPath(this.baseDir, "metrics");
     this.storageDir = this.fm.joinPath(this.baseDir, "storage");
     this.pageStorageDir = this.fm.joinPath(this.storageDir, "pages");
+    // Long-lived answers to lookups (see getAnswerCacheConfig).
+    this.answerStorageDir = this.fm.joinPath(this.storageDir, "answers");
     this.cacheDir = this.fm.joinPath(this.baseDir, "cache");
 
     // Reuse a resolved run context (with automation overrides applied) when the
@@ -1095,6 +1097,52 @@ class ScriptableAdapter {
     };
   }
 
+  // The cache for answers that stay true much longer than a page does — a
+  // geocoder's answer about an address (options.cacheTtlDays on fetchData).
+  // Same envelope and key derivation as the page cache, in a directory of
+  // its own (storage/answers) so the page cache's short prune never reaches
+  // it. The Mac reads and writes the same directory.
+  getAnswerCacheConfig(ttlDays) {
+    const page = this.getPageCacheConfig();
+    const days = Number(ttlDays);
+    return {
+      enabled: page.enabled && Number.isFinite(days) && days > 0,
+      ttlDays: days,
+      storageDir: this.answerStorageDir,
+      // Kept while used: a read marks the entry (see touchAnswerOnRead), so
+      // ttlDays counts from the last use.
+      keepWhileUsed: true,
+    };
+  }
+
+  // An answer that was just read is still in use: the file is written back
+  // as it is (FileManager has no way to set a date), which moves its
+  // modification date to now — at most once every LOOKUP_ANSWER_TOUCH_DAYS.
+  // Age is then "time since last use", and the prune (dates alone) never
+  // takes an answer a venue still needs. A failed touch is harmless.
+  touchAnswerOnRead(cachePath, modifiedAt, rawText) {
+    const days =
+      typeof SharedCore !== "undefined" &&
+      Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS) > 0
+        ? Number(SharedCore.LOOKUP_ANSWER_TOUCH_DAYS)
+        : 7;
+    const modifiedAtMs = modifiedAt ? modifiedAt.getTime() : NaN;
+    if (
+      !Number.isFinite(modifiedAtMs) ||
+      Date.now() - modifiedAtMs < days * 24 * 60 * 60 * 1000 ||
+      typeof rawText !== "string" ||
+      rawText.length === 0
+    ) {
+      return false;
+    }
+    try {
+      this.fm.writeString(cachePath, rawText);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // How long unused OCR/classification cache entries survive the end-of-run
   // prune. Reads the global `ocr` block threaded in by the orchestrator (the
   // same way pageCache is) — the single retention knob, everything else about
@@ -1241,11 +1289,11 @@ class ScriptableAdapter {
     }
   }
 
-  ensurePageCacheDir(hostDir) {
+  ensurePageCacheDir(hostDir, rootDir = this.pageStorageDir) {
     this.ensureDirectoryExists(this.baseDir);
     this.ensureDirectoryExists(this.storageDir);
-    this.ensureDirectoryExists(this.pageStorageDir);
-    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    this.ensureDirectoryExists(rootDir);
+    const hostDirPath = this.fm.joinPath(rootDir, hostDir);
     this.ensureDirectoryExists(hostDirPath);
     return hostDirPath;
   }
@@ -1257,7 +1305,10 @@ class ScriptableAdapter {
 
     const { hostDir, fileName, normalizedUrl } =
       this.getPageCachePathParts(url);
-    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    const hostDirPath = this.fm.joinPath(
+      pageCacheConfig.storageDir || this.pageStorageDir,
+      hostDir,
+    );
     const cachePath = this.fm.joinPath(hostDirPath, fileName);
 
     try {
@@ -1275,7 +1326,8 @@ class ScriptableAdapter {
         await this.fm.downloadFileFromiCloud(cachePath);
       } catch (_) {}
 
-      const cached = JSON.parse(this.fm.readString(cachePath));
+      const rawCachedText = this.fm.readString(cachePath);
+      const cached = JSON.parse(rawCachedText);
       const fetchState =
         typeof cached.fetchState === "string"
           ? cached.fetchState.toLowerCase()
@@ -1285,6 +1337,20 @@ class ScriptableAdapter {
         cached.failure &&
         cached.failure.nonRetryable === true
       ) {
+        // A note that records "nothing answered" is about the network that
+        // minute, not about the page: a miss, so the page is asked for again
+        // (SharedCore.isTransportFailureNote). The Mac writes into this same
+        // tree, so its notes are read here too.
+        if (
+          typeof SharedCore !== "undefined" &&
+          typeof SharedCore.isTransportFailureNote === "function" &&
+          SharedCore.isTransportFailureNote(cached)
+        ) {
+          console.log(
+            `📱 Scriptable: Ignoring a cached connection failure for ${normalizedUrl} (noted ${cached.fetchedAt || "earlier"}) — nothing answered then, asking again`,
+          );
+          return null;
+        }
         const failureMessage =
           typeof cached.failure.error === "string"
             ? cached.failure.error
@@ -1309,6 +1375,10 @@ class ScriptableAdapter {
         cached.html.length === 0
       ) {
         return null;
+      }
+
+      if (pageCacheConfig.keepWhileUsed === true) {
+        this.touchAnswerOnRead(cachePath, modifiedAt, rawCachedText);
       }
 
       return {
@@ -1374,7 +1444,10 @@ class ScriptableAdapter {
 
     const { hostDir, fileName, normalizedUrl } =
       this.getPageCachePathParts(url);
-    const hostDirPath = this.ensurePageCacheDir(hostDir);
+    const hostDirPath = this.ensurePageCacheDir(
+      hostDir,
+      pageCacheConfig.storageDir || this.pageStorageDir,
+    );
     const cachePath = this.fm.joinPath(hostDirPath, fileName);
     const payload = {
       url: normalizedUrl,
@@ -2320,7 +2393,17 @@ class ScriptableAdapter {
         console.log(`📱 Scriptable: Page already read this run — no re-read for ${url}`);
         return memoized;
       }
-      const pageCacheConfig = this.getPageCacheConfig();
+      // options.cacheTtlDays: the caller says how long the answer stays true
+      // (a lookup, not a page) — read from and written to the answer cache
+      // under that life.
+      const answerCacheConfig =
+        Number(options.cacheTtlDays) > 0
+          ? this.getAnswerCacheConfig(options.cacheTtlDays)
+          : null;
+      const pageCacheConfig =
+        answerCacheConfig && answerCacheConfig.enabled
+          ? answerCacheConfig
+          : this.getPageCacheConfig();
       const canUseCache =
         pageCacheConfig.enabled &&
         (options.method || "GET").toUpperCase() === "GET" &&
@@ -2338,6 +2421,21 @@ class ScriptableAdapter {
           this.logPageCacheHit(url, cachedPage, pageCacheConfig);
           this.writeRunPageMemo(memoKey, cachedPage);
           return cachedPage;
+        }
+        // An answer still sitting in the page cache (written before answers
+        // had a cache of their own) moves over instead of being asked for
+        // again.
+        if (pageCacheConfig.storageDir) {
+          const inherited = await this.readCachedPage(
+            url,
+            this.getPageCacheConfig(),
+          );
+          if (inherited && isCacheableResponse(inherited)) {
+            await this.writeCachedPage(url, inherited, pageCacheConfig);
+            this.logPageCacheHit(url, inherited, this.getPageCacheConfig());
+            this.writeRunPageMemo(memoKey, inherited);
+            return inherited;
+          }
         }
       }
 
@@ -4376,7 +4474,10 @@ class ScriptableAdapter {
               }
 
               actionCounts.merge.push(event.title);
-              const targetEvent = event._existingEvent;
+              // An all-day record reaches the analysis as a plain VIEW
+              // (SharedCore.viewStoredAllDayRecord); the write goes to the
+              // live EventKit record behind it.
+              const targetEvent = SharedCore.getNativeCalendarRecord(event._existingEvent);
               // The write mutates the LIVE EventKit record in place, and that
               // same object is what the saved run serializes as "what the
               // calendar had". A failed save leaves the mutation standing, so
@@ -4407,6 +4508,13 @@ class ScriptableAdapter {
                 }
               } else {
                 targetEvent.endDate = resolvedEndDate;
+              }
+              // All-day: the day(s) rebuilt at this device's midnight and
+              // the switch set — or cleared, for an event that now has a time.
+              if (this.applyAllDayToCalendarEvent(targetEvent, event)) {
+                console.log(
+                  `📱 Scriptable: "${event.title}" written as an all-day event`,
+                );
               }
               targetEvent.location = event.location;
               targetEvent.notes = event.notes;
@@ -4542,7 +4650,103 @@ class ScriptableAdapter {
       location: record.location,
       notes: record.notes,
       url: record.url,
+      ...this.describeStoredAllDay(record),
     };
+  }
+
+  // A calendar record's all-day state, as plain data: the switch itself and
+  // the days it covers, read with THIS device's clock — EventKit hands an
+  // all-day event back as the device's own midnight, so these are the days
+  // the calendar shows. Empty for a timed record.
+  describeStoredAllDay(record) {
+    if (!record || record.isAllDay !== true) return {};
+    // Days already read off the live record (an all-day view) are kept: the
+    // view's own instants are the event's midnight, not this device's.
+    if (typeof record.allDayStartDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(record.allDayStartDay)) {
+      return {
+        isAllDay: true,
+        allDayStartDay: record.allDayStartDay,
+        allDayEndDay:
+          typeof record.allDayEndDay === "string" && record.allDayEndDay >= record.allDayStartDay
+            ? record.allDayEndDay
+            : record.allDayStartDay,
+      };
+    }
+    const day = (value) => {
+      const ms = SharedCore.toEpochMillis(value);
+      if (ms === null) return "";
+      const date = new Date(ms);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    };
+    const startMs = SharedCore.toEpochMillis(record.startDate);
+    let endMs = SharedCore.toEpochMillis(record.endDate);
+    if (startMs === null) return { isAllDay: true };
+    if (endMs === null || endMs < startMs) endMs = startMs;
+    // An end exactly on a later local midnight is the exclusive end of the
+    // day before.
+    const end = new Date(endMs);
+    if (endMs > startMs && end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) endMs -= 1000;
+    const startDay = day(startMs);
+    const endDay = day(endMs);
+    return { isAllDay: true, allDayStartDay: startDay, allDayEndDay: endDay >= startDay ? endDay : startDay };
+  }
+
+  // ALL-DAY ON THE CALENDAR. The event says it is a whole day — a real
+  // all-day event (`allDay: true`) or an ordinary one whose time is not
+  // known (`timeUnknown: true`), both derived from its dates by
+  // SharedCore.applyAllDayConvention; the calendar has one switch for both,
+  // the notes say which — and names its days in ITS OWN zone. EventKit stores an all-day event against the
+  // DEVICE's day, so handing it the event's instants would put a London or
+  // Tokyo day on the evening before (or a Los Angeles day correctly only by
+  // luck) on a phone kept on Eastern time. The days are therefore read in
+  // the event's zone and rebuilt at this device's own midnight, first day
+  // 00:00:00 through last day 23:59:59, with the all-day switch on.
+  //
+  // Fails closed: with no zone, or dates that are not the all-day shape in
+  // it, nothing is rebuilt and the record is written as the timed span the
+  // event carries — logged, never guessed. Returns true when the record was
+  // written as all-day.
+  applyAllDayToCalendarEvent(target, event) {
+    if (!target || !event) return false;
+    // Both kinds of whole-day event — a real all-day one (`allDay`) and one
+    // whose time is not known (`timeUnknown`) — are all-day on the calendar.
+    const flagged = SharedCore.isWholeDayEvent(event);
+    if (!flagged) {
+      // A saved all-day record whose event now states a time is a timed
+      // event: the switch goes off with the dates that replaced it.
+      if (target.isAllDay === true) target.isAllDay = false;
+      return false;
+    }
+    let timezone =
+      typeof event.timezone === "string" && event.timezone.trim()
+        ? event.timezone.trim()
+        : "";
+    if (!timezone) {
+      try {
+        timezone = this.getTimezoneForCity(event.city);
+      } catch (_) {
+        timezone = "";
+      }
+    }
+    const days = timezone
+      ? SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone)
+      : null;
+    if (!days) {
+      console.log(
+        `📱 Scriptable: ⚠️ "${event.title || "event"}" is marked as a whole-day event but its dates are not a whole day in ${timezone || "any known zone"} — written as the timed span it carries`,
+      );
+      if (target.isAllDay === true) target.isAllDay = false;
+      return false;
+    }
+    const at = (dayKey, hours, minutes, seconds) => {
+      const [year, month, day] = dayKey.split("-").map(Number);
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    };
+    target.startDate = at(days.startDay, 0, 0, 0);
+    target.endDate = at(days.endDay, 23, 59, 59);
+    target.isAllDay = true;
+    return true;
   }
 
   resolveCalendarWriteEndDate(event) {
@@ -4594,7 +4798,12 @@ class ScriptableAdapter {
     // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
     calendarEvent.calendar = calendar;
 
-    const isAllDay = this.isAllDayEvent(event);
+    // An event that says it is all-day is written by its days (see
+    // applyAllDayToCalendarEvent). The older shape test stays for records
+    // that carry no flag: a span that is a whole day on THIS device's clock.
+    const isAllDay =
+      this.applyAllDayToCalendarEvent(calendarEvent, event) ||
+      this.isAllDayEvent(event);
     if (isAllDay) {
       calendarEvent.isAllDay = true;
     }
@@ -12432,7 +12641,21 @@ class ScriptableAdapter {
     // HALF is an atomic .dt-nowrap span and only the separator may break, so
     // a narrow screen moves the whole end datetime down instead of splitting
     // it after the date.
-    const dateLineHtml = `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
+    // A whole-day event (see SharedCore.applyAllDayConvention) prints its
+    // day, or first and last day, and says which kind it is — a real all-day
+    // event, or one whose time the page never gave: never the span's own
+    // "12:00 AM - 11:59 PM".
+    const wholeDayKind = SharedCore.wholeDayKind(event);
+    const allDayCard = wholeDayKind !== "";
+    const dateLineHtml = allDayCard
+      ? `<span class="dt-nowrap">${dateStr}</span>${
+          endDateStr ? ` - <span class="dt-nowrap">${endDateStr}</span>` : ""
+        } · ${
+          wholeDayKind === "time-unknown"
+            ? 'time not listed <span class="no-end-note">(saved as all-day)</span>'
+            : "all day"
+        }`
+      : `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
       hasRealEnd
         ? ` - <span class="dt-nowrap">${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}</span>`
         : ' <span class="no-end-note">(no end listed)</span>'
@@ -15932,6 +16155,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
         );
       }
+      // Answers to lookups (a geocoder's answer about an address) are kept
+      // while they are used: a read marks the file, so only an answer
+      // nothing has read for the whole life is pruned.
+      const answerTtlDays =
+        typeof SharedCore !== "undefined" &&
+        Number(SharedCore.LOOKUP_ANSWER_TTL_DAYS) > 0
+          ? Number(SharedCore.LOOKUP_ANSWER_TTL_DAYS)
+          : 365;
+      const prunedAnswers = await this.cleanupOldFiles(
+        "chunky-dad-scraper/storage/answers",
+        { maxAgeDays: answerTtlDays + 1, recurse: true },
+      );
+      if (prunedAnswers > 0) {
+        console.log(
+          `📱 Scriptable: Pruned ${prunedAnswers} lookup answer(s) nothing has used for ${answerTtlDays}d`,
+        );
+      }
       const ocrRetentionDays = this.getOcrCacheRetentionDays();
       const unusedCutoffDays = ocrRetentionDays + 7;
       const prunedOcr = await this.cleanupOldFiles(
@@ -16530,6 +16770,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           notes: typeof record.notes === "string" ? record.notes : "",
           url: typeof record.url === "string" ? record.url : "",
           isAllDay: record.isAllDay === true,
+          // The days an all-day record covers, read with this device's
+          // clock — the Mac cannot recover them from the instants once its
+          // own clock differs from the phone's.
+          ...this.describeStoredAllDay(record),
         })).filter((event) => event.startDate);
         const payload = {
           version: 1,

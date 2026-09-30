@@ -28,7 +28,8 @@ const scraperCities = {
     "calendar": "chunky-dad-seattle",
     "timezone": "America/Los_Angeles",
     "patterns": [
-      "seattle"
+      "seattle",
+      "lynnwood"
     ],
     "coordinates": {
       "lat": 47.6062,
@@ -599,6 +600,268 @@ const scraperCities = {
     "coordinates": {
       "lat": 35.6762,
       "lng": 139.6503
+    }
+  },
+  "sydney": {
+    "calendar": "chunky-dad-sydney",
+    "timezone": "Australia/Sydney",
+    "patterns": [
+      "sydney"
+    ],
+    "coordinates": {
+      "lat": -33.8688,
+      "lng": 151.2093
+    }
+  },
+  "melbourne": {
+    "calendar": "chunky-dad-melbourne",
+    "timezone": "Australia/Melbourne",
+    "patterns": [
+      "melbourne"
+    ],
+    "coordinates": {
+      "lat": -37.8136,
+      "lng": 144.9631
+    }
+  },
+  "brisbane": {
+    "calendar": "chunky-dad-brisbane",
+    "timezone": "Australia/Brisbane",
+    "patterns": [
+      "brisbane",
+      "fortitude valley"
+    ],
+    "coordinates": {
+      "lat": -27.4698,
+      "lng": 153.0251
+    }
+  },
+  "oslo": {
+    "calendar": "chunky-dad-oslo",
+    "timezone": "Europe/Oslo",
+    "patterns": [
+      "oslo"
+    ],
+    "coordinates": {
+      "lat": 59.9139,
+      "lng": 10.7522
+    }
+  },
+  "ottawa": {
+    "calendar": "chunky-dad-ottawa",
+    "timezone": "America/Toronto",
+    "patterns": [
+      "ottawa"
+    ],
+    "coordinates": {
+      "lat": 45.4215,
+      "lng": -75.6972
+    }
+  },
+  "salt-lake-city": {
+    "calendar": "chunky-dad-salt-lake-city",
+    "timezone": "America/Denver",
+    "patterns": [
+      "salt lake city",
+      "salt lake",
+      "slc"
+    ],
+    "coordinates": {
+      "lat": 40.7608,
+      "lng": -111.891
+    }
+  },
+  "orlando": {
+    "calendar": "chunky-dad-orlando",
+    "timezone": "America/New_York",
+    "patterns": [
+      "orlando",
+      "lake buena vista"
+    ],
+    "coordinates": {
+      "lat": 28.5383,
+      "lng": -81.3792
+    }
+  },
+  "edinburgh": {
+    "calendar": "chunky-dad-edinburgh",
+    "timezone": "Europe/London",
+    "patterns": [
+      "edinburgh"
+    ],
+    "coordinates": {
+      "lat": 55.9533,
+      "lng": -3.1883
+    }
+  },
+  "prague": {
+    "calendar": "chunky-dad-prague",
+    "timezone": "Europe/Prague",
+    "patterns": [
+      "prague",
+      "praha"
+    ],
+    "coordinates": {
+      "lat": 50.0755,
+      "lng": 14.4378
+    }
+  },
+  "leipzig": {
+    "calendar": "chunky-dad-leipzig",
+    "timezone": "Europe/Berlin",
+    "patterns": [
+      "leipzig"
+    ],
+    "coordinates": {
+      "lat": 51.3397,
+      "lng": 12.3731
+    }
+  },
+  "cologne": {
+    "calendar": "chunky-dad-cologne",
+    "timezone": "Europe/Berlin",
+    "patterns": [
+      "cologne",
+      "köln",
+      "koeln"
+    ],
+    "coordinates": {
+      "lat": 50.9375,
+      "lng": 6.9603
+    }
+  },
+  "brussels": {
+    "calendar": "chunky-dad-brussels",
+    "timezone": "Europe/Brussels",
+    "patterns": [
+      "brussels",
+      "bruxelles",
+      "brussel"
+    ],
+    "coordinates": {
+      "lat": 50.8503,
+      "lng": 4.3517
+    }
+  },
+  "seoul": {
+    "calendar": "chunky-dad-seoul",
+    "timezone": "Asia/Seoul",
+    "patterns": [
+      "seoul"
+    ],
+    "coordinates": {
+      "lat": 37.5665,
+      "lng": 126.978
+    }
+  },
+  "singapore": {
+    "calendar": "chunky-dad-singapore",
+    "timezone": "Asia/Singapore",
+    "patterns": [
+      "singapore"
+    ],
+    "coordinates": {
+      "lat": 1.3521,
+      "lng": 103.8198
+    }
+  },
+  "taipei": {
+    "calendar": "chunky-dad-taipei",
+    "timezone": "Asia/Taipei",
+    "patterns": [
+      "taipei"
+    ],
+    "coordinates": {
+      "lat": 25.033,
+      "lng": 121.5654
+    }
+  },
+  "gran-canaria": {
+    "calendar": "chunky-dad-gran-canaria",
+    "timezone": "Atlantic/Canary",
+    "patterns": [
+      "gran canaria",
+      "maspalomas",
+      "playa del ingles",
+      "playa del inglés"
+    ],
+    "coordinates": {
+      "lat": 27.7606,
+      "lng": -15.586
+    }
+  },
+  "indianapolis": {
+    "calendar": "chunky-dad-indianapolis",
+    "timezone": "America/Indiana/Indianapolis",
+    "patterns": [
+      "indianapolis",
+      "westfield, in",
+      "westfield, indiana"
+    ],
+    "coordinates": {
+      "lat": 39.7684,
+      "lng": -86.1581
+    }
+  },
+  "gettysburg": {
+    "calendar": "chunky-dad-gettysburg",
+    "timezone": "America/New_York",
+    "patterns": [
+      "gettysburg"
+    ],
+    "coordinates": {
+      "lat": 39.8309,
+      "lng": -77.2311
+    }
+  },
+  "adelaide": {
+    "calendar": "chunky-dad-adelaide",
+    "timezone": "Australia/Adelaide",
+    "patterns": [
+      "adelaide"
+    ],
+    "coordinates": {
+      "lat": -34.9285,
+      "lng": 138.6007
+    }
+  },
+  "perth": {
+    "calendar": "chunky-dad-perth",
+    "timezone": "Australia/Perth",
+    "patterns": [
+      "perth"
+    ],
+    "coordinates": {
+      "lat": -31.9523,
+      "lng": 115.8613
+    }
+  },
+  "bali": {
+    "calendar": "chunky-dad-bali",
+    "timezone": "Asia/Makassar",
+    "patterns": [
+      "bali",
+      "seminyak",
+      "canggu",
+      "denpasar"
+    ],
+    "coordinates": {
+      "lat": -8.6705,
+      "lng": 115.2126
+    }
+  },
+  "manila": {
+    "calendar": "chunky-dad-manila",
+    "timezone": "Asia/Manila",
+    "patterns": [
+      "manila",
+      "makati",
+      "mandaluyong",
+      "quezon city"
+    ],
+    "coordinates": {
+      "lat": 14.5995,
+      "lng": 120.9842
     }
   }
 };

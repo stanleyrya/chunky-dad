@@ -685,7 +685,7 @@ test('buildDeck: a series card says its rhythm; another party and a merge never 
   assert.ok(decided.every((entry) => !entry.via && entry.decision.key === entry.key), 'every night stands on its own decision');
 });
 
-test('formatRejectionsText: one note on the nights of one party is one line naming the nights; a different note, a merge, or a lone night keeps its own line', () => {
+test('formatRejectionsText: one note on the nights of one party is one line naming the nights; a different note or a lone night keeps its own line; the same update with the same note is one line', () => {
   const snapshot = (day, overrides = {}) => ({ kind: 'new', title: 'Jockstrap Wednesday', startDate: `${day}T02:00:00.000Z`, bar: 'Eagle NYC', city: 'nyc', source: 'Thotyssey', ...overrides });
   const note = { mode: 'fix', tags: [], text: 'Should we just create a recurring event?' };
   let store = rq.emptyDecisionStore();
@@ -704,8 +704,7 @@ test('formatRejectionsText: one note on the nights of one party is one line nami
   assert.deepEqual(lines, [
     '- [NEEDS FIX] NEW Jockstrap Wednesday — 3 nights (every Wednesday, 2026-09-30 … 2026-10-14) @ Eagle NYC [Thotyssey] — Should we just create a recurring event?',
     '- [NEEDS FIX] NEW Jockstrap Wednesday — 2026-10-22 @ Eagle NYC [Thotyssey] {bad image}',
-    '- [REJECTED] MERGE Fuzzy — 2026-10-02 @ Nowhere [Thotyssey] {wrong title} (title: Fuzzy at Nowhere → Fuzzy)',
-    '- [REJECTED] MERGE Fuzzy — 2026-10-09 @ Nowhere [Thotyssey] {wrong title} (title: Fuzzy at Nowhere → Fuzzy)',
+    '- [REJECTED] MERGE Fuzzy — 2026-10-02 + 1 more with the same change (Fuzzy 2026-10-09) @ Nowhere [Thotyssey] {wrong title} (title: Fuzzy at Nowhere → Fuzzy)',
     '- [NOT BEAR] NEW WOOF! — 2 nights (2026-10-03, 2026-11-07) @ SF Eagle [SF Eagle] {not bear}'
   ]);
 });
@@ -878,4 +877,178 @@ test('planBarPromotions: an approval at a curated bar\'s address or pin is a ren
   ] }, { boston: [legacy] });
   assert.deepEqual(pinOnly.additions, []);
   assert.equal(pinOnly.skipped[0].why, 'same address/pin as curated "Legacy"');
+});
+
+// ---------------------------------------------------------------------------
+// UI review 2026-09-29: the card must be able to tell a stated end from the
+// one default the pipeline writes (SPRING at Camp Out read "12:00 AM –
+// 3:00 AM" off a page that names no hours).
+// ---------------------------------------------------------------------------
+test('buildDeck: a defaulted end rides on the card as display.endDefaulted; a stated end does not', () => {
+  const payload = {
+    summary: { runId: '20300101-051500' }, config: { cities: CITIES }, parserResults: [], bearDroppedEvents: [],
+    analyzedEvents: [
+      newEvent({ title: 'SPRING', endDate: iso(FUTURE + 3 * 3600 * 1000), _endDateDefaulted: true }),
+      newEvent({ title: 'FURBALL NYC' }),
+      // A record read back from the calendar: the notes carry the flag.
+      newEvent({ title: 'SAVED DEFAULT', endDate: iso(FUTURE + 3 * 3600 * 1000), endUnknown: 'true' })
+    ]
+  };
+  const deck = rq.buildDeck(payload, rq.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const byTitle = Object.fromEntries(deck.cards.map((card) => [card.proposal.title, card]));
+  assert.equal(byTitle.SPRING.display.endDefaulted, true);
+  assert.equal(byTitle['FURBALL NYC'].display.endDefaulted, false);
+  assert.equal(byTitle['SAVED DEFAULT'].display.endDefaulted, true, 'the notes flag reads the same as the create stamp');
+  assert.ok(!('endDefaulted' in byTitle.SPRING.proposal), 'display only — the decision snapshot is unchanged, so no stored decision stops covering its card');
+});
+
+test('an undo restores the decision the swipe replaced — the note a card came back with is not thrown away', () => {
+  // HYDRATE POOL PARTY (2026-09-29): sent back on 09-27 with a note, back on the deck with a new flyer.
+  const note = rq.buildDecision({ key: 'event|hydrate pool party|hoteldelfin|2027-01-31', kind: 'new', verdict: 'reject', runId: '20260927-155245',
+    snapshot: { title: 'HYDRATE POOL PARTY' }, reason: { mode: 'fix', tags: [], text: 'The image seems to be “wet and wild” not hydrate' } }, { now: new Date('2026-09-27T21:40:00.000Z') });
+  let store = rq.upsertDecision(rq.emptyDecisionStore(), note);
+  // A slip of the thumb: approved…
+  const slip = rq.buildDecision({ key: note.key, kind: 'new', verdict: 'approve', runId: '20260929-091555', snapshot: { title: 'HYDRATE POOL PARTY' } }, { now: new Date('2026-09-29T15:00:00.000Z') });
+  store = rq.upsertDecision(store, slip);
+  assert.equal(store.decisions.length, 1);
+  assert.equal(store.decisions[0].verdict, 'approve', 'one decision per key: the note is overwritten');
+  // …and undone.
+  const undone = rq.restoreDecision(store, note.key, note);
+  assert.equal(undone.restored, true);
+  assert.deepEqual(undone.store.decisions, [note], 'the note is back as it was stored, stamp and all');
+  assert.ok(rq.formatRejectionsText(undone.store).includes('[NEEDS FIX] NEW HYDRATE POOL PARTY'), 'and back in the fix queue');
+
+  // Refused: another key's decision, or something that is not a decision.
+  assert.equal(rq.restoreDecision(store, note.key, { ...note, key: 'event|other|bar|2027-01-31' }).restored, false);
+  assert.equal(rq.restoreDecision(store, note.key, { key: note.key, verdict: 'maybe' }).restored, false);
+  assert.equal(rq.restoreDecision(store, note.key, null).restored, false);
+  assert.deepEqual(rq.restoreDecision(store, note.key, null).store.decisions, store.decisions, 'a refusal leaves the store as it is');
+});
+
+test('bear verdicts: the upsert hands back the verdict it overwrote, and an undo restores it verbatim', () => {
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const party = { title: 'FURBALL NYC', bar: 'Rockbar', address: '185 Christopher St', location: '', city: 'nyc' };
+  const first = rq.upsertBearVerdict([], core, party, 'bear', { now: new Date('2026-09-20T14:00:00.000Z') });
+  assert.equal(first.replaced, null, 'nothing to overwrite');
+  const slip = rq.upsertBearVerdict(first.verdicts, core, party, 'not_bear', { now: new Date('2026-09-29T15:00:00.000Z') });
+  assert.deepEqual(slip.replaced, first.entry);
+  assert.equal(slip.verdicts.length, 1);
+  const undone = rq.restoreBearVerdict(slip.verdicts, core, slip.replaced);
+  assert.equal(undone.restored, true);
+  assert.deepEqual(undone.verdicts, [first.entry], 'the 🐻 of 09-20 is back, with its own stamp');
+  assert.equal(rq.restoreBearVerdict(slip.verdicts, core, { verdict: 'perhaps', title: 'FURBALL NYC' }).restored, false);
+  assert.equal(rq.restoreBearVerdict(slip.verdicts, core, { verdict: 'bear', title: '' }).restored, false, 'no title identity, nothing to restore');
+});
+
+// ---------------------------------------------------------------------------
+// The same change on different events is one card (owner, 2026-09-29: six
+// BeefDip parties each carried "beefdip.com/tags/ → beefdip.com").
+// ---------------------------------------------------------------------------
+function beefDipLinkFix(title, days, overrides = {}) {
+  const start = iso(FUTURE + days * 86400000);
+  const end = iso(FUTURE + days * 86400000 + 4 * 3600000);
+  return mergeEvent({
+    title, bar: 'Hotel Delfin', startDate: start, endDate: end, location: '20.6, -105.2',
+    url: 'https://beefdip.com', website: 'https://beefdip.com',
+    notes: 'bar: Hotel Delfin\nwebsite: https://beefdip.com',
+    _parserConfig: { name: 'BeefDip', parser: 'ai-web', dryRun: false },
+    _existingEvent: { title, identifier: `B${days}`, startDate: start, endDate: end, location: '20.6, -105.2', notes: 'bar: Hotel Delfin\nwebsite: https://beefdip.com/tags/' },
+    _original: { scraper: {}, calendar: { title, startDate: start, endDate: end, url: 'https://beefdip.com/tags/', website: 'https://beefdip.com/tags/', notes: 'bar: Hotel Delfin' } },
+    _changes: ['url', 'notes'],
+    ...overrides
+  });
+}
+
+test('buildDeck: the same change on different events of one source folds into one item; another change, another source or a date change stays apart', () => {
+  const renamed = beefDipLinkFix('PRE WELCOME PARTY', 3);
+  renamed._existingEvent.title = 'PRE-WELCOME';
+  renamed._original.calendar.title = 'PRE-WELCOME';
+  const otherSource = beefDipLinkFix('SOMEONE ELSE', 4, { _parserConfig: { name: 'Bearracuda Events', parser: 'ai-web', dryRun: false } });
+  const moved = beefDipLinkFix('MOVED PARTY', 5);
+  moved._existingEvent.startDate = iso(FUTURE + 5 * 86400000 - 3600000);
+  moved._original.calendar.startDate = moved._existingEvent.startDate;
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    beefDipLinkFix('WELCOME PARTY', 0), beefDipLinkFix('TIDAL WAVE', 1), beefDipLinkFix('THE BLACK BALL', 2), renamed, otherSource, moved
+  ] }));
+  assert.equal(deck.cards.length, 6);
+  const byTitle = (title) => deck.cards.find((card) => card.proposal.title === title);
+  const folded = ['WELCOME PARTY', 'TIDAL WAVE', 'THE BLACK BALL'].map(byTitle);
+  assert.deepEqual(folded.map((card) => card.series && card.series.type), ['change', 'change', 'change']);
+  assert.equal(new Set(folded.map((card) => card.series.key)).size, 1, 'one item');
+  assert.equal(folded[0].series.size, 3);
+  assert.deepEqual(folded[0].series.change, [{ field: 'url', from: 'https://beefdip.com/tags/', to: 'https://beefdip.com' }]);
+  assert.deepEqual(folded[0].series.nights.map((night) => night.key), folded.map((card) => card.key), 'each event keeps its own key');
+  assert.ok(folded[0].series.nights[1].label.startsWith('TIDAL WAVE · '), 'a member is named by its title and its day');
+  assert.equal(new Set(folded.map((card) => card.key)).size, 3);
+  assert.equal(byTitle('PRE WELCOME PARTY').series, undefined, 'it also renames the event: another change');
+  assert.equal(byTitle('SOMEONE ELSE').series, undefined, 'another source');
+  assert.equal(byTitle('MOVED PARTY').series, undefined, 'a date is a fact about one event');
+});
+
+test('formatRejectionsText: one note on a folded same-change card is one line naming the events', () => {
+  const snapshot = (title, day) => ({ kind: 'merge', title, startDate: `${day}T02:00:00.000Z`, bar: 'Hotel Delfin', source: 'BeefDip', changes: { url: { from: 'https://beefdip.com/', to: 'https://beefdip.com/tags/' } } });
+  const note = { mode: 'fix', tags: ['wrong link'], text: 'Weird website link change' };
+  let store = rq.emptyDecisionStore();
+  [['MAD.BEAR RED BALL', '2027-01-27'], ['WELCOME PARTY', '2027-01-25'], ['TIDAL WAVE', '2027-01-29']].forEach(([title, day], index) => {
+    store = rq.upsertDecision(store, rq.buildDecision({ key: `event|party${index}|hoteldelfin|${day}`, kind: 'merge', verdict: 'reject', snapshot: snapshot(title, day), reason: note }));
+  });
+  store = rq.upsertDecision(store, rq.buildDecision({ key: 'event|sweat|hoteldelfin|2027-01-30', kind: 'merge', verdict: 'reject', snapshot: snapshot('SWEAT', '2027-01-30'), reason: { mode: 'fix', tags: ['wrong link'], text: 'a different note' } }));
+  assert.deepEqual(rq.formatRejectionsText(store).split('\n'), [
+    '- [NEEDS FIX] MERGE MAD.BEAR RED BALL — 2027-01-27 + 2 more with the same change (WELCOME PARTY 2027-01-25, TIDAL WAVE 2027-01-29) @ Hotel Delfin [BeefDip] {wrong link} — Weird website link change (url: https://beefdip.com/ → https://beefdip.com/tags/)',
+    '- [NEEDS FIX] MERGE SWEAT — 2027-01-30 @ Hotel Delfin [BeefDip] {wrong link} — a different note (url: https://beefdip.com/ → https://beefdip.com/tags/)'
+  ]);
+});
+
+test('reject chips: the owner\'s own vocabulary, and a field chip lets a fixed card come back by itself', () => {
+  assert.deepEqual(rq.REVIEW_REASON_TAGS, ['wrong link', 'wrong image', 'wrong title', 'wrong venue', 'should merge', 'recurring', 'wrong date or time', 'not bear', 'other']);
+  const covered = (tags, drift) => rq.driftCoveredByNoteTags({ reason: { tags }, drift }, {});
+  assert.deepEqual(covered(['wrong link'], ['url']), { tags: ['wrong link'], fields: ['url'] });
+  assert.deepEqual(covered(['wrong image'], ['image']), { tags: ['wrong image'], fields: ['image'] });
+  assert.deepEqual(covered(['bad image'], ['image']), { tags: ['bad image'], fields: ['image'] }, 'a decision stored with the older chip keeps its meaning');
+  assert.equal(covered(['wrong link'], ['title']), null, 'a change outside the named field is not the fix');
+  assert.equal(covered(['should merge'], ['title']), null, 'a chip that names no field never approves');
+  assert.equal(covered(['wrong link', 'recurring'], ['url']), null);
+});
+
+test('run picker: a run that could not read the saved calendars is never the default and says so', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-degraded-'));
+  const runsDir = rq.getRunsDir(dir);
+  fs.mkdirSync(runsDir);
+  const parsers = Array.from({ length: 10 }, (_, i) => ({ name: 'Parser ' + i }));
+  const base = { config: { cities: CITIES, config: { dryRun: true }, parsers }, parserResults: parsers.map((p) => ({ name: p.name })) };
+  const good = runPayload({ ...base, summary: { runId: '20300101-194629' }, publishedCalendarSnapshots: { nyc: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } } });
+  const outage = runPayload({ ...base, summary: { runId: '20300102-043418' }, publishedCalendarSnapshots: { nyc: { status: 'unavailable' }, la: { status: 'unavailable' }, sf: { status: 'unavailable' }, chicago: { status: 'ok' } } });
+  fs.writeFileSync(path.join(runsDir, '20300101-194629.json'), JSON.stringify(good));
+  fs.writeFileSync(path.join(runsDir, '20300102-043418.json'), JSON.stringify(outage));
+  try {
+    assert.equal(rq.pickLatestRunId(dir), '20300101-194629', 'the last run that read the calendars, not the newer one that could not');
+    const labels = rq.describeRunFiles(dir).map((r) => [r.runId, rq.describeRunShapeLabel(r.shape)]);
+    assert.deepEqual(labels, [['20300102-043418', 'calendars unread (3) — saved events show as new'], ['20300101-194629', '']]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// All-day conversions on the deck: an event that becomes all-day says the
+// same thing on every event it applies to, and folds.
+// ---------------------------------------------------------------------------
+test('same-change fold: events that become a whole day fold under their kind; a moved start never folds', () => {
+  const allDay = (end) => ({ wholeDay: 'time-unknown', source: 'Eagle LA', changes: { endDate: { from: '2037-10-01T10:00:00.000Z', to: end } } });
+  const first = rq.getSameChangeSignature(allDay('2037-10-02T06:59:59.000Z'));
+  assert.equal(first, 'wholeDay=→time-unknown');
+  assert.equal(rq.getSameChangeSignature(allDay('2037-10-09T06:59:59.000Z')), first, 'each night\'s own end instant does not split the fold');
+  assert.equal(rq.getSameChangeSignature({ wholeDay: 'time-unknown', changes: { endDate: { from: 'a', to: 'b' }, url: { from: 'https://x.example/a', to: 'https://x.example/b' } } }),
+    'wholeDay=→time-unknown;url=https://x.example/a→https://x.example/b', 'another change rides along in the signature');
+  assert.equal(rq.getSameChangeSignature({ wholeDay: 'time-unknown', changes: { startDate: { from: 'a', to: 'b' }, endDate: { from: 'c', to: 'd' } } }), '', 'a start that moves is one event\'s own fact');
+  // The two kinds never share a card: a festival becoming all-day is not a
+  // bar night whose time is unknown.
+  const festival = rq.getSameChangeSignature({ wholeDay: 'all-day', changes: { endDate: { from: 'a', to: 'b' } } });
+  assert.equal(festival, 'wholeDay=→all-day');
+  assert.notEqual(festival, first);
+  assert.deepEqual(rq.describeChangeRows({ wholeDay: 'time-unknown', changes: { endDate: { from: 'a', to: 'b' } } }),
+    [{ field: 'allDay', from: 'a time the page never stated', to: 'time not listed (saved as all-day)' }]);
+  assert.deepEqual(rq.describeChangeRows({ wholeDay: 'all-day', changes: { endDate: { from: 'a', to: 'b' } } }),
+    [{ field: 'allDay', from: 'a time the page never stated', to: 'all day' }]);
+  assert.equal(rq.getSameChangeSignature({ changes: { endDate: { from: 'a', to: 'b' } } }), '', 'a timed end change still never folds');
 });

@@ -249,6 +249,55 @@ class SavedRunDisplay {
         return this.adapter;
     }
 
+    // SNAPSHOT ONLY (owner, 2026-09-30: "is there a way we can update one
+    // of the scripts on my phone to write the file we need without going
+    // through the whole rigamaroo of doing a scrape?"). The Mac analyses its
+    // runs against calendar-snapshot/<city>.json and reads which calendars
+    // the phone has from calendar-snapshot/calendars.json; both were only
+    // ever written at the end of a phone run or a reviewed execute, so new
+    // calendars stayed "missing on the phone" on the deck until one of those
+    // happened. This reads every configured city's calendar and writes both,
+    // and nothing else: no fetch, no run file, no calendar write.
+    async refreshCalendarSnapshots() {
+        const startedAt = Date.now();
+        const adapter = this.createAdapter();
+        if (typeof adapter.writeCalendarSnapshots !== 'function') {
+            await this.showError('Adapter too old', 'This adapter has no writeCalendarSnapshots — update scripts/adapters/scriptable-adapter.js.');
+            return null;
+        }
+        const cities = adapter.cities && typeof adapter.cities === 'object' ? adapter.cities : {};
+        const cityKeys = Object.keys(cities).filter((key) => cities[key] && typeof cities[key].calendar === 'string' && cities[key].calendar);
+        const written = await adapter.writeCalendarSnapshots(cityKeys);
+        const summary = SavedRunDisplay.describeSnapshotRefresh(cityKeys, written, cities, Date.now() - startedAt);
+        console.log(`📱 Display: ${summary.line}`);
+        try {
+            const alert = new Alert();
+            alert.title = summary.title;
+            alert.message = summary.message;
+            alert.addAction('OK');
+            await alert.present();
+        } catch (_) { /* no UI (a shortcut run): the log line above is the record */ }
+        return { cityKeys, written, missing: summary.missing };
+    }
+
+    // What a snapshot refresh did, in the owner's terms: how many calendars
+    // were read, how many occurrences, and which configured cities have no
+    // calendar on this phone (by the exact calendar name to create).
+    static describeSnapshotRefresh(cityKeys, written, cities, elapsedMs) {
+        const keys = Array.isArray(cityKeys) ? cityKeys : [];
+        const done = Array.isArray(written) ? written : [];
+        const have = new Set(done.map((entry) => entry && entry.cityKey));
+        const missing = keys.filter((key) => !have.has(key))
+            .map((key) => (cities && cities[key] && cities[key].calendar) || key);
+        const events = done.reduce((sum, entry) => sum + (Number(entry && entry.events) || 0), 0);
+        const seconds = Math.round((Number(elapsedMs) || 0) / 100) / 10;
+        const title = missing.length === 0 ? 'Snapshot refreshed' : `Snapshot refreshed — ${missing.length} calendar${missing.length === 1 ? '' : 's'} missing`;
+        const lines = [`${done.length} of ${keys.length} city calendars read, ${events} event${events === 1 ? '' : 's'}, in ${seconds}s.`];
+        if (missing.length > 0) lines.push(`Not on this phone: ${missing.join(', ')}.`);
+        lines.push('The Mac uses this on its next run; the review deck shows it on reload.');
+        return { title, message: lines.join('\n\n'), missing, line: `Calendar snapshot refreshed — ${done.length} of ${keys.length} calendars, ${events} events, ${missing.length} missing${missing.length ? ` (${missing.join(', ')})` : ''}` };
+    }
+
     // scriptable:///run?scriptName=<this>&runId=<id>&reviewExecute=1 — the
     // Mac server's "Execute on phone" link. Loads the named run, the owner's
     // decisions, and executes without presenting the results sheet.
@@ -387,7 +436,13 @@ function parseLaunchOptions(query = {}, widgetParam = null) {
     const last = runId ? false : (toBool(params.last, false) || lastFromParam);
     const presentHistoryDefault = !runId && !last;
     const reviewExecute = Boolean(runId) && toBool(params.reviewExecute, false);
+    // scriptable:///run?scriptName=<this>&snapshot=1 (or the widget/shortcut
+    // parameter "snapshot"): read the calendars and write the snapshot files
+    // the Mac analyses against — no scrape, no run, no calendar write.
+    const snapshot = toBool(params.snapshot, false)
+        || (widgetParam !== null && widgetParam !== undefined && String(widgetParam).trim().toLowerCase() === 'snapshot');
     return {
+        snapshot,                               // refresh the calendar snapshot only
         last,                                   // auto-load most recent
         runId,                                  // a specific runId like "20250101-120000"
         presentHistory: toBool(params.presentHistory, presentHistoryDefault),
@@ -408,7 +463,9 @@ if (!isNodeEnvironment) {
             const query = (typeof args !== 'undefined' && args.queryParameters) ? args.queryParameters : {};
             const widgetParam = (typeof args !== 'undefined' && args.widgetParameter) ? args.widgetParameter : null;
             const OPTIONS = parseLaunchOptions(query, widgetParam);
-            if (OPTIONS.reviewExecute) {
+            if (OPTIONS.snapshot) {
+                await display.refreshCalendarSnapshots();
+            } else if (OPTIONS.reviewExecute) {
                 await display.executeReviewedRun(OPTIONS);
             } else {
                 await display.displaySavedRun(OPTIONS);

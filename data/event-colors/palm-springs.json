@@ -39,10 +39,23 @@
     "accent": "#df573d"
   },
   {
+    "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6",
+    "paletteSource": "flyer",
+    "palette": "#030b33:26:8 #848894:18:2 #d2ccd4:16:1 #05319b:15:18 #e64b47:7:19",
+    "accent": "#05319b"
+  },
+  {
     "slug": "western-xposure-xxl-27c8c346",
     "url": "https://www.westernxposure.com/westernxposurexxl",
     "paletteSource": "flyer",
     "palette": "#130102:27:4 #3b0b0d:18:8 #732224:16:11 #e42125:13:22 #b52224:10:18",
     "accent": "#e42125"
+  },
+  {
+    "slug": "western-xposures-xxl-27c8c346",
+    "url": "https://www.westernxposure.com/westernxposurexxl",
+    "paletteSource": "flyer",
+    "palette": "#130102:26:4 #3b0b0d:19:8 #742224:16:11 #e32025:12:22 #bb2225:10:19",
+    "accent": "#e32025"
   }
 ]

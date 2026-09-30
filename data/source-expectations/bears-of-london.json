@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "source": "Bears of London",
+  "slug": "bears-of-london",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-10-29",
+  "recon": {
+    "date": "2026-09-29",
+    "method": [
+      "feed",
+      "rendered"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.com/o/64998384913"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/64998384913",
+        "kind": "feed",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "hasMoreUpcoming=false; upcomingEventsTotal=0; upcomingEventsFailed=false",
+        "note": "One static read (HTTP 200, 149 KB). Payload is <script id=\"__NEXT_DATA__\"> -> props.pageProps: upcomingEvents=[] (length 0), upcomingEventsTotal=0, hasMoreUpcoming=false, upcomingEventsFailed=false, collections=[] (collectionsTotal 0). organizer.name \"Bears of London Meet-ups\", organizer.metrics: followers 24, hostingYears \"3 years\", totalEvents 9, attendeesHosted 61. organizer.profilePageUrl https://www.eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/64998384913",
+        "kind": "rendered",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "empty-state text: \"Nothing planned right now\"",
+        "note": "One headless Chrome --dump-dom (virtual-time-budget 15s). The Upcoming tab renders the literal empty state \"Nothing planned right now Follow this organizer to stay in the loop for future plans\" under the header \"followers 24 • hosting on Eventbrite 3 years • total events 9 • total attendees 61\". No /e/ event link anywhere in the DOM."
+      },
+      {
+        "url": "https://www.eventbrite.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "no Disallow covers /o/ or /e/",
+        "note": "Organizer and event pages are permitted; the disallowed paths are feeds, checkout and tracking-parameter URLs."
+      }
+    ],
+    "notes": "Added 2026-09-29 at the owner's request, who named three channels as one organisation: instagram.com/bearsoflondon_network, eventbrite.com/o/64998384913 and a Facebook group (facebook.com/share/g/19hST5FKTP/). Instagram and Facebook are behind a login and were not requested. The Eventbrite profile's own socials name instagram.com/bearsoflondon_meetups (organizer.socials.website) and facebook.com/profile.php?id=102095092901119 — an earlier handle than the one the owner gave. Nine events in three years: this door is quiet most of the time, and costs one request per run."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two independent doors agree the organizer currently publishes zero upcoming events: the static __NEXT_DATA__ payload (upcomingEventsTotal 0, hasMoreUpcoming false, upcomingEvents []) and a headless-Chrome render of the same page showing the literal empty state \"Nothing planned right now\". The organizer has 9 lifetime events; the Past tab is client-fetched, so past listings are counted, not enumerated.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-09-29",
+      "end": "2026-12-28"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "london",
+    "timezone": "Europe/London",
+    "instagram": "https://www.instagram.com/bearsoflondon_network"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "organizer-header-stats",
+      "label": "followers 24 • hosting on Eventbrite 3 years • total events 9 • total attendees 61",
+      "kind": "venue-header",
+      "why": "Organizer profile header with lifetime metrics; its counts are not events and not dates. Only visible in the rendered DOM.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/64998384913",
+        "quote": "followers 24 • hosting on Eventbrite 3 years • total events 9 • total attendees 61"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "upcoming-empty-state",
+      "label": "Nothing planned right now / Follow this organizer to stay in the loop for future plans",
+      "kind": "announcement",
+      "why": "The rendered Upcoming tab's empty-state copy: the positive signal that the organizer publishes nothing. It must never be read as an event or as a fetch failure (the page is HTTP 200 and upcomingEventsFailed is false).",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/64998384913",
+        "quote": "Nothing planned right now Follow this organizer to stay in the loop for future plans"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The group announces on Instagram and in a Facebook group, both behind a login; only ticketed meet-ups reach Eventbrite (9 in 3 years). Events announced on the social channels alone cannot be read by the scraper.",
+      "raisedOn": "2026-09-29",
+      "blocking": false
+    }
+  ]
+}

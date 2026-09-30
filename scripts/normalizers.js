@@ -264,6 +264,9 @@ class BasicDataNormalizer extends BaseNormalizer {
         // Cover shape gate: prose never ships as a cover (see dropProseCover).
         event = this.dropProseCover(event);
 
+        // An address says each of its lines once (see collapseRepeatedAddressLines).
+        event = this.collapseRepeatedAddressLines(event);
+
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
     }
@@ -290,6 +293,26 @@ class BasicDataNormalizer extends BaseNormalizer {
         if (/^\d{1,4}(?:[.,]\d{1,2})?(?:\s*[-–—/]\s*\d{1,4}(?:[.,]\d{1,2})?)?$/.test(coverText)) return event;
         console.log(`🧹 NORMALIZE: dropped cover "${coverText}" for "${event.title || 'unknown'}" — neither a price nor a free-admission phrase (age restrictions and ticket-availability prose are not a cover)`);
         delete event.cover;
+        return event;
+    }
+
+    // A feed that publishes the street line and the locality as separate
+    // fields, where the street line already ends in the locality, comes out
+    // saying it twice: dice.fm's SPOOKMINCE, run 20260929-091555 — "118
+    // Curtain Rd, London EC2A 3AY, London EC2A 3AY" — and the doubled form
+    // then returns 0 geocode results for its first two query variants.
+    // A comma segment that repeats an earlier one word for word AND carries
+    // a digit (a street line, a postcode line) is dropped; the first stays.
+    // Digit-free repeats are left alone: "New York, New York" is a city and
+    // a state. The rule itself lives in SharedCore.collapseRepeatedAddressLines
+    // (the address merge uses it too).
+    collapseRepeatedAddressLines(event) {
+        if (!event || typeof event !== 'object' || typeof event.address !== 'string') return event;
+        if (!this.core || typeof this.core.collapseRepeatedAddressLines !== 'function') return event;
+        const collapsed = this.core.collapseRepeatedAddressLines(event.address);
+        if (collapsed === event.address) return event;
+        console.log(`🧹 NORMALIZE: address "${event.address}" → "${collapsed}" for "${event.title || 'unknown'}" — a line said twice is said once`);
+        event.address = collapsed;
         return event;
     }
 
@@ -1193,6 +1216,9 @@ class LocationNormalizer extends BaseNormalizer {
     // inside another curated bar's name key, e.g. "Eagle" ⊂ "Dallas Eagle")
     // is never backfilled either. A present city that differs is NEVER
     // overwritten.
+    // When the name decides nothing, the DOOR is asked: the venue name and
+    // the event's numbered street line together answer to the curated bars
+    // of exactly one city (_citySource 'curated-door').
     // Provenance is stamped via the existing _citySource convention
     // (underscore fields stay out of serialized output).
     backfillCityFromCuratedBar(event) {
@@ -1201,7 +1227,23 @@ class LocationNormalizer extends BaseNormalizer {
         if (currentCity && currentCity !== 'unknown') return event;
         const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (!barName) return event;
-        const result = this.core.findCuratedBarCityByName(barName);
+        let result = this.core.findCuratedBarCityByName(barName);
+        // The name alone decided nothing (not a curated name in full, a
+        // family stem, or curated in several cities): the DOOR may — the
+        // venue name together with the numbered street line the page gave
+        // (SharedCore.findCuratedBarCityByDoor).
+        // A stem name is decided the same way: GRUNT's Halloween page
+        // (2026-09-29) says "at the The Stud 1123 FOLSOM" — a name three
+        // other curated bars contain, and that bar's own street line.
+        let byDoor = false;
+        if ((!result || result.ambiguousCities || result.genericStem)
+            && typeof this.core.findCuratedBarCityByDoor === 'function') {
+            const door = this.core.findCuratedBarCityByDoor(barName, event.address);
+            if (door && !door.ambiguousCities) {
+                result = door;
+                byDoor = true;
+            }
+        }
         if (!result) return event;
         const title = event.title || 'unknown';
         // The page NAMED a city we do not cover ("seoul", parked on
@@ -1242,9 +1284,62 @@ class LocationNormalizer extends BaseNormalizer {
             return event;
         }
         event.city = result.city;
-        event._citySource = 'curated-bar';
-        console.log(`🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        event._citySource = byDoor ? 'curated-door' : 'curated-bar';
+        console.log(byDoor
+            ? `🗺️ LocationNormalizer: Backfilled city "${result.city}" for "${title}" from the curated door of "${result.bar.name}" — venue "${barName}" at "${String(event.address || '').trim()}" is that bar's name and street line`
+            : `🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        if (byDoor) this.fillVenueFromCuratedDoor(event, result.bar, title);
         return event;
+    }
+
+    // The door that gave the city names the VENUE too, by name and street
+    // line both — so the record takes the curated record's own spelling of
+    // them: the bar's curated name ("Precinct" → "Precinct LA"), its full
+    // address in place of the bare street line (the same line, by the match
+    // itself), and — fill-only — its pin, maps link and handle. Same stamps
+    // BarDataNormalizer uses for the same values.
+    fillVenueFromCuratedDoor(event, curated, title) {
+        if (!event || !curated || typeof curated !== 'object') return false;
+        const filled = [];
+        const curatedName = typeof curated.name === 'string' ? curated.name.trim() : '';
+        if (curatedName && event.bar !== curatedName) {
+            event.bar = curatedName;
+            event.barSource = 'curated';
+            filled.push('bar');
+        }
+        const curatedAddress = typeof curated.address === 'string' ? curated.address.trim() : '';
+        if (curatedAddress && event.address !== curatedAddress) {
+            event.address = curatedAddress;
+            event.addressSource = 'curated';
+            markCuratedVenueField(event, 'address', curated);
+            filled.push('address');
+        }
+        const curatedPin = typeof curated.coordinates === 'string' ? curated.coordinates.trim() : '';
+        const hasPin = typeof event.location === 'string' && event.location.trim();
+        if (!hasPin && this.isCoordinatePairString(curatedPin)) {
+            event.location = curatedPin;
+            event.pinSource = 'curated';
+            markCuratedVenueField(event, 'location', curated);
+            filled.push('location');
+        } else if (!hasPin) {
+            this.markCuratedAddressForGeocode(event, curated);
+        }
+        const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
+        if (!event.gmaps && curatedMaps) {
+            event.gmaps = curatedMaps;
+            markCuratedVenueField(event, 'gmaps', curated);
+            filled.push('gmaps');
+        }
+        const curatedInstagram = typeof curated.instagram === 'string' ? curated.instagram.trim() : '';
+        if (!event.instagram && curatedInstagram) {
+            event.instagram = curatedInstagram;
+            markCuratedVenueField(event, 'instagram', curated);
+            filled.push('instagram');
+        }
+        if (filled.length > 0) {
+            console.log(`🗺️ LocationNormalizer: Filled ${filled.join(', ')} for "${title}" from curated bar "${curatedName || 'curated bar'}" — the same door that gave the city`);
+        }
+        return filled.length > 0;
     }
 
     // Identity-signal city backfill — the rungs BELOW the curated-bar rung
@@ -1755,12 +1850,23 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         this.lastRequestTime = Date.now();
     }
 
+    getLookupAnswerTtlDays() {
+        const ctor = this.core && this.core.constructor;
+        const days = ctor ? Number(ctor.LOOKUP_ANSWER_TTL_DAYS) : NaN;
+        return Number.isFinite(days) && days > 0 ? days : 365;
+    }
+
     async checkPersistentCache(url, httpAdapter) {
         if (!httpAdapter || typeof httpAdapter.getPageCacheConfig !== 'function' || typeof httpAdapter.readCachedPage !== 'function') {
             return null;
         }
         try {
-            const config = httpAdapter.getPageCacheConfig();
+            // The answer cache first (kept while used); an adapter without one
+            // answers from its page cache as before.
+            const answers = typeof httpAdapter.getAnswerCacheConfig === 'function'
+                ? httpAdapter.getAnswerCacheConfig(this.getLookupAnswerTtlDays())
+                : null;
+            const config = answers && answers.enabled ? answers : httpAdapter.getPageCacheConfig();
             if (config && config.enabled) {
                 const cached = await httpAdapter.readCachedPage(url, config);
                 if (cached && cached.html) {
@@ -1846,6 +1952,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             console.log(`🗺️ OpenStreetMapNormalizer: Ignoring cached empty geocode result for "${this.describeGeocodeQuery(url)}" — refetching`);
         }
 
+        // 2b. A question the geocoder answered "nothing" on two separate runs
+        //     is not asked again for the dead-end retry window (see
+        //     noteLookupAnswer). One empty answer is never believed — that
+        //     is what a throttled or half-failed fetch looks like too.
+        if (this.isKnownEmptyLookup(url)) {
+            const remembered = [];
+            this.memoryCache[url] = remembered;
+            return remembered;
+        }
+
         // 3. Not cached, so we must fetch. Delay for rate limit first.
         await this.delayForRateLimit();
 
@@ -1865,8 +1981,63 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         if (data) {
             this.memoryCache[url] = data;
         }
+        this.noteLookupAnswer(url, data);
 
         return data;
+    }
+
+    // "NO MATCH" IS AN ANSWER TOO, once it has been given twice. Run
+    // 20260929-144519 asked 728 geocoder questions; about 420 came back
+    // empty, as they had the run before and the run before that, and they
+    // used the host's budget before the new addresses were reached. An empty
+    // answer is deliberately never written to the answer cache (one bad fetch
+    // must not hide a venue, see isUsableGeocodeData), so the memory lives
+    // where the crawler already keeps "fetched fine, yielded nothing": the
+    // dead-end store, with its own rules — two misses on separate runs to
+    // believe it, asked again after the retry window, forgotten the moment
+    // the question gets an answer.
+    getLookupDeadEndContext() {
+        const core = this.core;
+        const context = core && core.deadEndRunContext;
+        if (!context || !context.enabled || !context.store) return null;
+        if (typeof core.findDeadEndUrlEntry !== 'function' || typeof core.recordDeadEndUrlMiss !== 'function'
+            || typeof core.isConfirmedDeadEndEntry !== 'function') return null;
+        return context;
+    }
+
+    isKnownEmptyLookup(url, nowMs = Date.now()) {
+        const context = this.getLookupDeadEndContext();
+        if (!context) return false;
+        const { entry } = this.core.findDeadEndUrlEntry(context, url);
+        if (!entry || !this.core.isConfirmedDeadEndEntry(context, entry)) return false;
+        const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = Number(context.retryDays) * 24 * 60 * 60 * 1000;
+        if (!Number.isFinite(lastSeenMs) || !(retryMs > 0) || (nowMs - lastSeenMs) >= retryMs) return false;
+        context.knownEmptyLookups = (Number(context.knownEmptyLookups) || 0) + 1;
+        return true;
+    }
+
+    noteLookupAnswer(url, data, nowMs = Date.now()) {
+        const context = this.getLookupDeadEndContext();
+        if (!context) return;
+        if (Array.isArray(data) && data.length === 0) {
+            const noted = this.core.recordDeadEndUrlMiss(context, url, null, nowMs);
+            // Counted, not listed: the run's "Learned N new dead-end URL(s)"
+            // line names crawl pages, and hundreds of geocoder questions
+            // would bury them.
+            if (noted && noted.wasNew && Array.isArray(context.learned)) {
+                const at = context.learned.lastIndexOf(this.core.findDeadEndUrlEntry(context, url).key);
+                if (at !== -1) context.learned.splice(at, 1);
+            }
+            context.emptyLookupsNoted = (Number(context.emptyLookupsNoted) || 0) + 1;
+            return;
+        }
+        if (!this.isUsableGeocodeData(data)) return;
+        const found = this.core.findDeadEndUrlEntry(context, url);
+        if (found.entry) {
+            delete context.store[found.key];
+            context.dirty = true;
+        }
     }
 
     // Accept a forward-geocode result only when Nominatim's own address details
@@ -2778,6 +2949,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // persist an empty/unparseable Nominatim body to the disk cache and
             // treat an already-cached one as a miss (see isCacheableGeocodeResponse).
             isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData),
+            // Where an address is stays true: the answer goes to the
+            // adapters' answer cache and is kept while it is used (pruned
+            // only after LOOKUP_ANSWER_TTL_DAYS unread), not for the page
+            // cache's three days.
+            cacheTtlDays: this.getLookupAnswerTtlDays(),
             // A geocoder is an API used under its usage policy (paced like any
             // host by the politeness gate), not a site being crawled — its
             // robots.txt "Disallow: /search" addresses crawlers, not callers.

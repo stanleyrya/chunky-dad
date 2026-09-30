@@ -43,7 +43,37 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // nothing now can — every inferred dead end confirmed before it is retried
 // once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
 // 404/410) is not. Bump this when the crawler learns to read a new shape.
-const DEAD_END_CAPABILITY = 'machine-door-2026-09';
+// 'outage-aware-2026-09': until then a connection failure was learned like a
+// page that yields nothing, and a failure note read back from the cache
+// counted as the second strike — a two-minute outage put 57 pages of one
+// host away for the 30-day window. Those entries carry no mark of their own
+// (a statusless miss is a statusless miss), so every inferred dead end gets
+// its one retry.
+const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
+// The one retry a capability bump grants is spread out: no more than this
+// many forgiven URLs are asked for on one host in one run; the rest stay
+// skipped and take their turn on a later run. A bump forgives every inferred
+// dead end at once (58 on one host in the store of 2026-09-29), and a site
+// should not meet all of them in the same two minutes.
+const DEAD_END_CAPABILITY_RETRIES_PER_HOST = 20;
+// The answer to a LOOKUP (options.cacheTtlDays on a fetch) — where an
+// address is — is kept for as long as it is USED. Owner, 2026-09-29:
+// "addresses don't really change at all unless we got them wrong." Under the
+// page cache's three days the same 700 questions were asked again every run
+// and the per-host budget (120) was spent before the new addresses got
+// their turn (runs of 2026-09-27 … 09-29: budget reached on every one).
+// An answer read by a run is marked used (at most once every
+// LOOKUP_ANSWER_TOUCH_DAYS), so the answer for a venue that still holds
+// events never ages out; one nothing has read for LOOKUP_ANSWER_TTL_DAYS is
+// pruned. A wrong answer is not kept by this: the question is the address
+// itself, so a corrected address is a new question — and a curated bar's
+// own coordinates outrank any geocoder.
+const LOOKUP_ANSWER_TTL_DAYS = 365;
+const LOOKUP_ANSWER_TOUCH_DAYS = 7;
+// A source has a home city when this many of its events are placed and
+// this share of them are in one city (see placeVirtualEventsAtSourceHome).
+const SOURCE_HOME_MIN_PLACED = 5;
+const SOURCE_HOME_MIN_SHARE = 0.8;
 // Well-known machine-feed paths probed on a configured root's own host
 // (after whatever the page advertises). Platform conventions, not sites.
 const MACHINE_DOOR_MAX_PROBES = 12;
@@ -2230,6 +2260,12 @@ class SharedCore {
             image: String(event.image || ''),
             cover: String(event.cover || ''),
             description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
+            // Saved as a whole day (see applyAllDayConvention) — 'all-day'
+            // for a real all-day event, 'time-unknown' for one whose time
+            // the page never gave — and what the page said in place of a
+            // closing time ("late").
+            ...(SharedCore.isWholeDayEvent(event) ? { wholeDay: SharedCore.wholeDayKind(event) } : {}),
+            ...(typeof event.endNote === 'string' && event.endNote.trim() ? { endNote: event.endNote.trim() } : {}),
             changes
         };
     }
@@ -2524,6 +2560,11 @@ class SharedCore {
         if (!this.isEmptyArbitrationValue(event.endDate) && this.toEpochMillis(event.endDate) !== null) return false;
         event.endDate = new Date(startMs + DEFAULT_MISSING_END_DURATION_MS);
         event._endDateDefaulted = true;
+        // Said in the notes too (`endUnknown: true`, next to `timeUnknown`):
+        // the calendar shows a 3-hour event either way, the note says the
+        // page never gave an end (owner, 2026-09-30: "I see we don't know
+        // the end time. Is this an opportunity for our metadata?").
+        event.endUnknown = true;
         console.log(`🕓 END: "${event.title || 'Unknown'}" states no end — writing the default ${DEFAULT_MISSING_END_DURATION_HOURS}h span (replaced by any stated end a later run finds)`);
         return true;
     }
@@ -3776,10 +3817,20 @@ class SharedCore {
             const isKnownVenueIdentity = titleIsOwnBar
                 || (curatedTitleMatch && (!ownBarKey || ownBarKey === titleBarKey));
             if (isKnownVenueIdentity) {
-                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description) : '';
+                // "@" is "at" before the fold drops it.
+                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description.replace(/@/g, ' at ')) : '';
                 const foldedTitle = foldForCompare(title);
+                // A copy that only ever says "<Party> at <Venue>" names the
+                // PLACE, not the party: the venue after "at" is where, and
+                // the words before it are what. beefdip.com/planned-events,
+                // run 20260929-091555: the card "DRAG BRUNCH + ROOFTOP POOL
+                // / Sunday, Jan 31 • 11AM / 1PM • The Tryst Hotel" lost its
+                // heading, the row's venue slot became the title, and its
+                // copy "Drag Brunch + Rooftop Pool at The Tryst Hotel"
+                // counted as restating the name. The name is restated only
+                // where it stands somewhere other than after "at".
                 const descriptionRestatesTitle = Boolean(foldedDescription) && Boolean(foldedTitle)
-                    && foldedDescription.includes(foldedTitle);
+                    && SharedCore.textNamesPhraseBeyondLocative(foldedDescription, foldedTitle);
                 if (!descriptionRestatesTitle) {
                     flags.push({
                         code: 'junk-title',
@@ -4038,6 +4089,28 @@ class SharedCore {
         return fused;
     }
 
+    // An address with each of its lines said once: a comma segment that
+    // repeats an earlier one word for word AND carries a digit (a street
+    // line, a postcode line) is dropped, the first stays. "118 Curtain Rd,
+    // London EC2A 3AY, London EC2A 3AY" → "118 Curtain Rd, London EC2A 3AY".
+    // Digit-free repeats stand ("New York, New York" is a city and a
+    // state). Returns the value unchanged when nothing repeats.
+    collapseRepeatedAddressLines(value) {
+        if (typeof value !== 'string') return value;
+        const segments = value.split(',').map(segment => segment.trim()).filter(Boolean);
+        if (segments.length < 2) return value;
+        const fold = (segment) => this.foldDiacritics(segment).replace(/[^a-z0-9]+/g, ' ').trim();
+        const seen = new Set();
+        const kept = [];
+        for (const segment of segments) {
+            const key = fold(segment);
+            if (key && /\d/.test(key) && seen.has(key)) continue;
+            seen.add(key);
+            kept.push(segment);
+        }
+        return kept.length === segments.length ? value : kept.join(', ');
+    }
+
     // Parse an address candidate for the same-address merge rung. Returns
     // null unless the value leads with a house number (incl. hyphenated
     // Queens style) — a candidate without one is never comparable here.
@@ -4270,6 +4343,109 @@ class SharedCore {
         }
         if (containedIn.length > 0) return { genericStem: true, containedIn };
         return matches[0];
+    }
+
+    // Cross-city lookup by DOOR, for an event whose city is unknown and
+    // whose venue name is not a curated name in full: the page gave a venue
+    // name AND a numbered street line, and one curated bar answers to both —
+    // its street line is the event's (areSameStreetLine) and one name holds
+    // the other ("Precinct" / "Precinct LA"). bearracuda.com/events/la7, run
+    // 20260929-091555: venue "Precinct", address "357 S. Broadway", no city
+    // on the page — the name alone is not the curated name, and the street
+    // line alone exists in a hundred towns. Together they are one door.
+    // Fail closed:
+    //   { city, bar }              — every curated bar answering to both is
+    //                                in one city
+    //   { ambiguousCities: [...] } — doors in more than one city answer
+    //   null                       — no name, no numbered street line, no
+    //                                match, or bars data missing
+    findCuratedBarCityByDoor(barName, address) {
+        const nameKey = this.normalizeBarNameKey(barName);
+        if (!nameKey || nameKey.length < 4 || !this.bars || typeof this.bars !== 'object') return null;
+        if (!this.parseAddressForComparison(typeof address === 'string' ? address : '')) return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || typeof bar.address !== 'string') continue;
+                const curatedKey = this.normalizeBarNameKey(bar.name);
+                if (!curatedKey || curatedKey.length < 4) continue;
+                if (!curatedKey.includes(nameKey) && !nameKey.includes(curatedKey)) continue;
+                if (!this.areSameStreetLine(address, bar.address)) continue;
+                matches.push({ city: cityKey, bar });
+            }
+        }
+        if (matches.length === 0) return null;
+        const cities = [...new Set(matches.map(match => match.city))];
+        if (cities.length > 1) return { ambiguousCities: cities };
+        return matches[0];
+    }
+
+    // A VIRTUAL EVENT BELONGS TO ITS ORGANIZER'S CITY (owner, 2026-09-29:
+    // Mass Bears and Cubs' monthly membership meetings, venue
+    // "Online/Virtual", had no city and so no calendar). An online event
+    // happens nowhere, but it is somebody's event: the club that holds it.
+    // Where that club is, is read off its own listings — the city most of
+    // this source's other events are in.
+    //   - the venue must SAY it is online: every word of the venue line is
+    //     from the online vocabulary ("Online/Virtual", "Zoom", "Online
+    //     event"), and no street line came with it;
+    //   - the source must have a home: at least SOURCE_HOME_MIN_PLACED of its
+    //     events carry a configured city and SOURCE_HOME_MIN_SHARE of those
+    //     are in one city. A touring promoter has none, and an aggregator is
+    //     never asked — it lists everybody's events;
+    //   - the event's time must already be anchored (_timezoneUnresolved
+    //     events are left alone: a city given afterwards would not move a
+    //     wall-clock time that was read without one).
+    // The city is stamped _citySource 'source-home'; nothing else is filled.
+    static isVirtualVenueText(value) {
+        const words = String(value === null || value === undefined ? '' : value).toLowerCase().split(/[^a-z]+/).filter(Boolean);
+        if (words.length === 0 || words.length > 4) return false;
+        const says = ['online', 'virtual', 'virtually', 'zoom', 'webinar', 'livestream'];
+        const around = ['event', 'meeting', 'only', 'via', 'on', 'live', 'stream', 'call'];
+        return words.some(word => says.includes(word)) && words.every(word => says.includes(word) || around.includes(word));
+    }
+
+    getSourceHomeCity(events) {
+        const counts = {};
+        let placed = 0;
+        for (const event of Array.isArray(events) ? events : []) {
+            const city = event && typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (!city || city === 'unknown' || !this.cities || !this.cities[city]) continue;
+            counts[city] = (counts[city] || 0) + 1;
+            placed += 1;
+        }
+        if (placed < SOURCE_HOME_MIN_PLACED) return null;
+        const [city, count] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
+        return count / placed >= SOURCE_HOME_MIN_SHARE ? { city, count, placed } : null;
+    }
+
+    placeVirtualEventsAtSourceHome(events, parserConfig) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        if (parserConfig && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator') return 0;
+        const virtual = events.filter(event => {
+            if (!event || typeof event !== 'object') return false;
+            const city = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (city && city !== 'unknown') return false;
+            if (event._timezoneUnresolved === true) return false;
+            if (typeof event.address === 'string' && event.address.trim()) return false;
+            return SharedCore.isVirtualVenueText(event.bar);
+        });
+        if (virtual.length === 0) return 0;
+        const home = this.getSourceHomeCity(events);
+        if (!home) return 0;
+        for (const event of virtual) {
+            event.city = home.city;
+            event._citySource = 'source-home';
+            event._virtual = true;
+            if (!event.timezone) {
+                const timezone = this.getCityTimezone(home.city);
+                if (timezone) event.timezone = timezone;
+            }
+            console.log(`🗺️ CITY: "${event.title || 'Unknown'}" is held online ("${String(event.bar).trim()}") — filed under ${home.city}, where ${home.count} of this source's ${home.placed} placed events are`);
+        }
+        return virtual.length;
     }
 
     // Registrable-host key for curated-website matching: the host of an
@@ -5594,6 +5770,17 @@ class SharedCore {
                 return { winner: deadA ? 'b' : 'a', reason: 'the site answers "not found" for the other link (404/410 learned by the crawl)' };
             }
         }
+        // Cut-picture rung: a link that is the head of a picture's address
+        // (isCutPictureAddress) is a file address cut at a space, never a
+        // page — it loses to any other link, on either side.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl') && urlA && urlB) {
+            const records = context && context.records ? [context.records.a, context.records.b] : [];
+            const cutA = this.isCutPictureAddress(valueA, records);
+            const cutB = this.isCutPictureAddress(valueB, records);
+            if (cutA !== cutB) {
+                return { winner: cutA ? 'b' : 'a', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' };
+            }
+        }
         if (urlA && urlB) {
             // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
             // path ends in an image/font/css/js asset extension is a FILE, not
@@ -6414,6 +6601,23 @@ class SharedCore {
                 // them (keeping the more complete, city-bearing form).
                 const citySuffixTwin = this.resolveCitySuffixedAddressTwin(valueA, valueB, context);
                 if (citySuffixTwin) return citySuffixTwin;
+                // Said-twice twin rung: one candidate IS the other with a
+                // line said twice (collapseRepeatedAddressLines) — the
+                // calendar's "118 Curtain Rd, London EC2A 3AY, London EC2A
+                // 3AY" beside the scrape's clean form. The clean form wins
+                // on either side; a pin belongs to the address, not to its
+                // spelling, so the evidence rung below has nothing to add.
+                {
+                    const foldTwin = value => this.normalizeAddressTokens(value).join(' ');
+                    const onceA = this.collapseRepeatedAddressLines(String(valueA));
+                    const onceB = this.collapseRepeatedAddressLines(String(valueB));
+                    if (onceA !== String(valueA) && onceB === String(valueB) && foldTwin(onceA) === foldTwin(valueB)) {
+                        return { winner: 'b', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                    if (onceB !== String(valueB) && onceA === String(valueA) && foldTwin(onceB) === foldTwin(valueA)) {
+                        return { winner: 'a', reason: 'the same address with a line said twice on the other side — said once' };
+                    }
+                }
                 // Rung 3 (evidence). Case-only twins are NOT a street
                 // mismatch — they fall through untouched so the case-only
                 // rule below keeps deciding them; empty candidates belong to
@@ -7362,7 +7566,12 @@ class SharedCore {
         // its merged evidence. Safe now that segmentation no longer produces
         // neighbor-URL chimera events (#1644) — dedup's same-URL rung can no
         // longer weld two different real events together.
+        // A date with no time is a day (see applyAllDayConvention): shaped
+        // before dedup so both records of one event are compared alike, and
+        // again after it for records whose zone a merge resolved.
+        for (const event of futureEvents) this.applyAllDayConvention(event);
         const deduplicatedEvents = await this.deduplicateEvents(futureEvents, httpAdapter, mainConfig?.config || mainConfig || null);
+        for (const event of deduplicatedEvents) this.applyAllDayConvention(event);
 
         // Calculate deduplication stats
         const duplicatesRemoved = futureEvents.length - deduplicatedEvents.length;
@@ -7375,6 +7584,7 @@ class SharedCore {
         // before the bear check and the calendar merge. Platform links are
         // routed or dropped here, so they never surface as website candidates
         // in merge arbitration — see canonicalizeIdentityLinks.
+        this.placeVirtualEventsAtSourceHome(deduplicatedEvents, effectiveParserConfig);
         this.canonicalizeIdentityLinks(deduplicatedEvents);
         const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
 
@@ -7964,6 +8174,62 @@ class SharedCore {
         const engagedLately = evidence.gone > 0
             || (Date.now() - known.newestMs) < DEAD_SHAPE_RECENT_DAYS * 24 * 60 * 60 * 1000;
         return engagedLately ? { shape, siblings: known.siblings } : null;
+    }
+
+    // ── The head of a picture's address is not a link ───────────────────
+    // A picture whose filename carries an unencoded space
+    // (".../uploads/2026/01/2026-01-25 Welcome Party.webp") was once cut at
+    // the space into a "page" link (".../uploads/2026/01/2026-01-25"). The
+    // cut itself is gone (#1835), but the calendar still holds what earlier
+    // runs saved, and a deeper same-site link beats a front door in every
+    // merge: run 20260929-091555 kept
+    // https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 as FOAM POOL
+    // PARTY's website. Judged against the pictures themselves: the link,
+    // followed by a space, begins the address of a picture this run has
+    // seen (on any record — the cut head was handed to a NEIGHBOUR card) or
+    // that either record of the merge carries.
+    notePictureAddresses(events) {
+        if (!this.runPictureAddresses) this.runPictureAddresses = new Set();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(event[field]);
+                if (key) this.runPictureAddresses.add(key);
+            }
+        }
+        return this.runPictureAddresses;
+    }
+
+    // Comparable form of a picture (or link) address: scheme and "www."
+    // dropped, query and fragment dropped, percent-encoding decoded,
+    // lowercase. '' when it is not an http(s) address.
+    static getPictureAddressKey(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        const match = raw.match(/^https?:\/\/(?:www\.)?([^?#]+)/i);
+        if (!match) return '';
+        let address = match[1];
+        try { address = decodeURIComponent(address); } catch (_) { /* keep the raw spelling */ }
+        return address.toLowerCase();
+    }
+
+    isCutPictureAddress(url, records = []) {
+        const head = SharedCore.getPictureAddressKey(url).replace(/\/+$/, '');
+        // A folder or a front door heads every file below it; only a
+        // would-be file name (something after the last slash) can be a cut.
+        if (!head || !head.includes('/') || head.endsWith('/')) return false;
+        const pictures = new Set(this.runPictureAddresses || []);
+        for (const record of Array.isArray(records) ? records : []) {
+            if (!record || typeof record !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                const key = SharedCore.getPictureAddressKey(record[field]);
+                if (key) pictures.add(key);
+            }
+        }
+        const cutHead = `${head} `;
+        for (const picture of pictures) {
+            if (picture.startsWith(cutHead)) return true;
+        }
+        return false;
     }
 
     isKnownDeadLink(event, value) {
@@ -9143,6 +9409,18 @@ class SharedCore {
         return DEAD_END_CAPABILITY;
     }
 
+    static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
+        return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+    }
+
+    static get LOOKUP_ANSWER_TTL_DAYS() {
+        return LOOKUP_ANSWER_TTL_DAYS;
+    }
+
+    static get LOOKUP_ANSWER_TOUCH_DAYS() {
+        return LOOKUP_ANSWER_TOUCH_DAYS;
+    }
+
     static isPermanentlyGoneHttpStatus(statusCode) {
         return statusCode === 410 || statusCode === 404;
     }
@@ -9156,6 +9434,75 @@ class SharedCore {
     // shape callers already branch on. One list, never a second classifier.
     static isRetryableHttpStatus(statusCode) {
         return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+    }
+
+    // DID THE RUN READ THE CALENDARS IT ANALYSED AGAINST? (2026-09-30: the
+    // Mac had no network at 04:34; 58 published calendars could not be read,
+    // every saved event was analysed as NEW — 827 "new", 37 merges, where the
+    // run before had 440 and 424 — and that run became the review deck.)
+    // `snapshots` is results.publishedCalendarSnapshots: per city
+    // { status: 'ok' | 'unavailable', reason? }.
+    //   reason 'missing'    the site has no file for that city yet (HTTP
+    //                       404: a calendar nothing was ever saved to) —
+    //                       analysing its events as new is correct;
+    //   reason 'outage'     nothing answered;
+    //   reason 'unreadable' it answered something that is not a calendar;
+    //   no reason           a run written before reasons were recorded.
+    // A run is DEGRADED when any calendar failed by outage or was unreadable,
+    // or — for runs without reasons — when more calendars were unavailable
+    // than were read. Returns { ok, missing, failed, unknown, degraded,
+    // cities } (cities: the ones that failed).
+    static describeCalendarReadHealth(snapshots) {
+        const health = { ok: 0, missing: 0, failed: 0, unknown: 0, degraded: false, cities: [] };
+        if (!snapshots || typeof snapshots !== 'object') return health;
+        for (const [city, entry] of Object.entries(snapshots)) {
+            if (!entry || typeof entry !== 'object') continue;
+            if (entry.status === 'ok') { health.ok += 1; continue; }
+            if (entry.status !== 'unavailable') continue;
+            if (entry.reason === 'missing') { health.missing += 1; continue; }
+            if (entry.reason === 'outage' || entry.reason === 'unreadable') { health.failed += 1; health.cities.push(city); continue; }
+            health.unknown += 1;
+            health.cities.push(city);
+        }
+        health.degraded = health.failed > 0 || (health.unknown > 0 && health.unknown > health.ok);
+        if (!health.degraded) health.cities = [];
+        return health;
+    }
+
+    // What a platform says when NOTHING answered: no HTTP status, because no
+    // HTTP exchange took place. Node's fetch says exactly "fetch failed" for
+    // every one of them (dead DNS, refused or reset connection, the Mac
+    // asleep or off the network) and keeps the reason in error.cause, which
+    // the adapters' rewrap drops — so the two words are the whole signal.
+    // isRetryableFailure's browser wording ("failed to fetch") never matched
+    // it, and on 2026-09-27 a two-minute outage was therefore written into
+    // the no-retry failure cache as 59 PERMANENT failures: two configured
+    // roots (bearbrum.com, an Eventbrite organizer page) stayed silent for
+    // the three-day cache life, and 57 city pages of one aggregator were
+    // learned as dead ends for thirty. Static + pure: the classifier below
+    // and the adapters' failure-note check read this one definition.
+    static isTransportFailureMessage(message) {
+        const text = typeof message === 'string' ? message : '';
+        if (!text) return false;
+        return /\bfetch failed\b|\bECONNREFUSED\b|\bECONNRESET\b|\bENOTFOUND\b|\bEAI_AGAIN\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bETIMEDOUT\b|\bEPIPE\b|\bUND_ERR_[A-Z_]+\b|socket hang up|other side closed/i.test(text);
+    }
+
+    // A failure note is a statement about the PAGE: the status the server
+    // answered with, or a reason that will be just as true tomorrow. A note
+    // that records a transport failure is a statement about the network at
+    // that minute and is never honoured — it reads as a cache miss, so notes
+    // written before the classifier knew the wording heal on the next run
+    // instead of waiting out their cache life.
+    static isTransportFailureNote(cached) {
+        if (!cached || typeof cached !== 'object') return false;
+        if (Number.isFinite(cached.statusCode)) return false;
+        const failure = cached.failure && typeof cached.failure === 'object' ? cached.failure : null;
+        if (!failure) return false;
+        const message = typeof failure.error === 'string'
+            ? failure.error
+            : (failure.error && typeof failure.error.message === 'string' ? failure.error.message : '');
+        if (/\bHTTP\s+\d{3}\b/i.test(message)) return false;
+        return SharedCore.isTransportFailureMessage(message);
     }
 
     isRetryableFailure(error) {
@@ -9209,6 +9556,10 @@ class SharedCore {
             /could not connect to the server/i,
             /data connection is not currently allowed/i
         ];
+        // ---- The wording Node produces (see isTransportFailureMessage) ----
+        if (SharedCore.isTransportFailureMessage(message)) {
+            return true;
+        }
         return retryablePatterns.some(pattern => pattern.test(message));
     }
 
@@ -9484,6 +9835,16 @@ class SharedCore {
                 const owner = this.findOtherParserOwningUrl(url, mainConfig, parserConfig);
                 if (owner) {
                     await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own source ("${owner}") — not crawled from here`);
+                    continue;
+                }
+                // The same goes for THIS source's other configured pages: a
+                // root reached through a link is read as that link's child
+                // (enrich-only under an event page: its own event dropped as
+                // a "sibling"), marked processed, and skipped when its turn
+                // comes. It is read in its turn, as a root.
+                if (this.isConfiguredParserUrlForCrawl(url, parserConfig)
+                    && !this.hasProcessedUrl(processedUrls, url)) {
+                    await displayAdapter.logInfo(`SYSTEM: Leaving ${url} to its own turn — it is one of this source's configured pages`);
                     continue;
                 }
             }
@@ -9855,10 +10216,26 @@ class SharedCore {
                 // links are not being followed (enrich-only / chain cap), so the
                 // following/stopping logs further down don't double-report.
                 let adaptiveFollowBlocked = feedRead;
+                // Links a single-event ROOT follows as discovery, never as
+                // enrich-only children (keys, see the adaptive branch below).
+                let frontDoorSiblingKeys = null;
                 if (adaptiveCrawl && !feedRead) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
+                    // A configured root that reads as ONE event is still the
+                    // source's front door (see selectFrontDoorSiblingLinks):
+                    // the site's other pages it links are read as a listing's
+                    // links would be, not as this event's enrichment.
+                    if (currentDepth === 0 && !enrichContext && !discoveryOnly && pageClassification === 'event-page') {
+                        const siblingLinks = this.selectFrontDoorSiblingLinks(url, additionalLinks, parserConfig);
+                        if (siblingLinks.length > 0) {
+                            frontDoorSiblingKeys = new Set(siblingLinks.map(link => this.getUrlDedupeKey(link)).filter(Boolean));
+                            const offSite = linksToConsider.filter(link => !frontDoorSiblingKeys.has(this.getUrlDedupeKey(link)));
+                            linksToConsider = offSite.concat(siblingLinks);
+                            await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a configured page that reads as one event — reading the ${siblingLinks.length} other page(s) of its own site it links as pages of their own (${siblingLinks.slice(0, 3).join(', ')}${siblingLinks.length > 3 ? ', …' : ''}): a site that gives each party a page names the next one there`);
+                        }
+                    }
                     if (enrichContext) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
@@ -10036,6 +10413,9 @@ class SharedCore {
                             const parentTitle = pageEventsForEnrich[0].title || 'event';
                             for (const enqueueUrl of enqueueUrls) {
                                 const enqueueKey = this.getUrlDedupeKey(enqueueUrl);
+                                // The front door's sibling pages announce
+                                // parties of their own: ordinary discovery.
+                                if (enqueueKey && frontDoorSiblingKeys && frontDoorSiblingKeys.has(enqueueKey)) continue;
                                 if (enqueueKey) {
                                     childEnrichOnlyByUrl[enqueueKey] = {
                                         parentEvents: pageEventsForEnrich,
@@ -10124,12 +10504,17 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
-                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)) {
+                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)
+                    && !(error && error.cachedFailure === true)) {
                     // Statusless transport failure from the HTTP adapter
                     // (dead DNS, refused connection — the adapters' fetch
                     // wrapper is the only source of this marker, so parser/
                     // extraction errors can't land here). Staged, two-strike,
                     // and only committed when the run had successful fetches.
+                    // A REPLAYED failure note is not a strike: nothing was
+                    // attempted, so it confirms nothing (the second strike
+                    // against whereto.party's city pages, run 20260927-
+                    // 125246, was the first strike read back from the cache).
                     this.recordDeadEndNetworkFailure({ url, currentDepth });
                 }
                 try {
@@ -10299,6 +10684,54 @@ class SharedCore {
             push(ticketUrl);
         }
         return selected;
+    }
+
+    // A configured root that reads as ONE event. The owner configured it as
+    // the place a source announces its parties; when the site gives each
+    // party a page of its own, the root is simply whichever party is on the
+    // front page today, and the site's menu is its list of the others.
+    // gruntparty.monster, run 20260929-091555: the home page was the Folsom
+    // party (Sept 26, over), the menu read "FOLSOM · Halloween", and
+    // /grunt-halloween — Oct 24 at The Stud — was never opened, because an
+    // event page follows only event-shaped and ticket links. 0 upcoming.
+    // So the links a single-event ROOT makes to other pages of its OWN site
+    // (same registrable domain) are followed once, as discovery: each is
+    // classified and read like any discovered page, and what it yields is
+    // its own event, not enrichment for the root's. Exactly what a root that
+    // reads as a listing already does with its links — a calendar that lists
+    // one night this week and three the next changes nothing about which
+    // pages get read. That includes the site's own event-shaped links: read
+    // as enrichment, the next party's page was "a sibling of the root's
+    // event" and its event was dropped. Off-site links keep the event-page
+    // rule (event-shaped and ticket links, enrich-only). Bounded by the
+    // page's own link budget (maxAdditionalUrls) and the dead-end store,
+    // which learns the pages that yield nothing exactly as it does for a
+    // listing's links.
+    selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
+        const links = Array.isArray(additionalLinks) ? additionalLinks : [];
+        const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
+        if (!pageDomain || links.length === 0) return [];
+        const pageKey = this.getUrlDedupeKey(pageUrl);
+        const taken = new Set();
+        const siblings = [];
+        for (const link of links) {
+            const withoutFragment = String(link || '').split('#')[0];
+            const normalized = this.normalizeUrl(withoutFragment, pageUrl || withoutFragment);
+            if (!normalized) continue;
+            const key = this.getUrlDedupeKey(normalized);
+            if (!key || key === pageKey || taken.has(key)) continue;
+            if (this.getRegistrableDomainFromUrl(normalized) !== pageDomain) continue;
+            // The source's other configured pages get their own turn.
+            if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
+            if (this.isApiEndpointUrl(normalized)) continue;
+            // A query selects a view of a page (?ical=1, ?eventDisplay=past);
+            // a site's menu names pages. bearitmtl.com/events/ on a week
+            // with one party: 5 of its 15 links were such views.
+            if (normalized.indexOf('?') >= 0) continue;
+            taken.add(key);
+            siblings.push(normalized);
+        }
+        return siblings;
     }
 
     // ------------------------------------------------------------------
@@ -10647,7 +11080,14 @@ class SharedCore {
             learnedHosts: [],
             recoveredHosts: [],
             hostSkippedCount: 0,
-            hostSkippedSamples: []
+            hostSkippedSamples: [],
+            // Capability retries granted this run (see
+            // isDeadEndRetryDeferred): per host, and the store entries
+            // themselves so the enqueue filter and its processing-time twin
+            // (which may spell the URL differently) count one entry once.
+            capabilityRetriesByHost: {},
+            capabilityRetryEntries: [],
+            capabilityRetryDeferredCount: 0
         };
     }
 
@@ -10903,6 +11343,33 @@ class SharedCore {
         return (Number(entry.misses) || 0) >= minMisses;
     }
 
+    // The retry isConfirmedDeadEndEntry grants to an entry confirmed under an
+    // older capability is rationed per host (DEAD_END_CAPABILITY_RETRIES_
+    // PER_HOST). True = this URL's retry waits for a later run and the URL is
+    // skipped like a confirmed dead end; its entry is left untouched, so it
+    // is still owed its retry. Only entries that WERE confirmed (enough
+    // misses, no status from the origin) are rationed — an entry still short
+    // of its misses was never suppressed and is not a retry.
+    isDeadEndRetryDeferred(context, entry, url) {
+        if (!context || !entry || !url) return false;
+        if (Number.isFinite(Number(entry.lastStatus))) return false;
+        if (entry.capability === DEAD_END_CAPABILITY) return false;
+        const minMisses = Number.isFinite(Number(context.minMisses)) ? Number(context.minMisses) : 2;
+        if ((Number(entry.misses) || 0) < minMisses) return false;
+        if (!context.capabilityRetriesByHost) context.capabilityRetriesByHost = {};
+        if (!Array.isArray(context.capabilityRetryEntries)) context.capabilityRetryEntries = [];
+        if (context.capabilityRetryEntries.includes(entry)) return false;
+        const hostKey = this.getDeadEndHostKey(url) || url;
+        const granted = Number(context.capabilityRetriesByHost[hostKey]) || 0;
+        if (granted >= DEAD_END_CAPABILITY_RETRIES_PER_HOST) {
+            context.capabilityRetryDeferredCount = (Number(context.capabilityRetryDeferredCount) || 0) + 1;
+            return true;
+        }
+        context.capabilityRetriesByHost[hostKey] = granted + 1;
+        context.capabilityRetryEntries.push(entry);
+        return false;
+    }
+
     filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
         const list = Array.isArray(urls) ? urls : [];
@@ -10914,8 +11381,8 @@ class SharedCore {
         for (const url of list) {
             const { entry } = this.findDeadEndUrlEntry(context, url);
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
-            if (entry && this.isConfirmedDeadEndEntry(context, entry)
-                && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+            if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+                && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
                 context.skippedCount += 1;
                 if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                     context.skippedSamples.push(url);
@@ -10949,8 +11416,8 @@ class SharedCore {
         const { entry } = this.findDeadEndUrlEntry(context, url);
         const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
-        if (entry && this.isConfirmedDeadEndEntry(context, entry)
-            && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+        if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs
+            && (this.isConfirmedDeadEndEntry(context, entry) || this.isDeadEndRetryDeferred(context, entry, url))) {
             context.skippedCount += 1;
             if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                 context.skippedSamples.push(url);
@@ -11144,12 +11611,31 @@ class SharedCore {
             // proved the network works (see recordDeadEndNetworkFailure).
             if (context.pendingNetworkFailures.length > 0) {
                 if (context.successfulFetchCount > 0) {
+                    // A connection that fails says nothing about a PATH on a
+                    // host that serves pages: a page that is gone answers
+                    // 404/410, and those are learned on their own. A host
+                    // with a success on record is having an outage — its
+                    // pages are tried again next run. Only a host that has
+                    // never answered (a dead domain) is learned this way.
+                    const hosts = this.getDeadEndHostStore(context);
                     const committed = [];
+                    const outageHosts = [];
+                    let outageCount = 0;
                     for (const url of context.pendingNetworkFailures) {
                         const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
                         if (committed.includes(dedupeKey)) continue; // one miss per URL per run
                         committed.push(dedupeKey);
+                        const hostKey = this.getDeadEndHostKey(url);
+                        const hostEntry = hosts && hostKey ? hosts[hostKey] : null;
+                        if (hostEntry && Number(hostEntry.successes) > 0) {
+                            outageCount += 1;
+                            if (!outageHosts.includes(hostKey)) outageHosts.push(hostKey);
+                            continue;
+                        }
                         this.recordDeadEndUrlMiss(context, url, null, nowMs);
+                    }
+                    if (outageCount > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Not learning ${outageCount} network-failure URL(s) on ${outageHosts.length} host(s) that have answered before (${outageHosts.slice(0, 5).join(', ')}${outageHosts.length > 5 ? ', …' : ''}) — a host that serves pages is having an outage, its pages are not dead`);
                     }
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: Not learning ${context.pendingNetworkFailures.length} network-failure URL(s) — this run had zero successful fetches, so the network itself is suspect`);
@@ -11172,6 +11658,14 @@ class SharedCore {
             }
             if (context.learnedHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+            }
+            if (Number(context.knownEmptyLookups) > 0 || Number(context.emptyLookupsNoted) > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Geocoder: ${Number(context.knownEmptyLookups) || 0} question(s) not asked again (no answer on two earlier runs; asked again after ${context.retryDays}d), ${Number(context.emptyLookupsNoted) || 0} answered "nothing" this run`);
+            }
+            const retriedHosts = Object.keys(context.capabilityRetriesByHost || {});
+            if (retriedHosts.length > 0 || context.capabilityRetryDeferredCount > 0) {
+                const retried = retriedHosts.reduce((sum, host) => sum + (Number(context.capabilityRetriesByHost[host]) || 0), 0);
+                await displayAdapter.logInfo(`SYSTEM: Dead ends learned before "${DEAD_END_CAPABILITY}": ${retried} asked for again on ${retriedHosts.length} host(s) (at most ${DEAD_END_CAPABILITY_RETRIES_PER_HOST} per host per run), ${context.capabilityRetryDeferredCount || 0} wait for a later run`);
             }
             if (context.recoveredHosts.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Removed bot-wall flag from ${context.recoveredHosts.length} recovered host(s): ${context.recoveredHosts.join(', ')}`);
@@ -14126,6 +14620,32 @@ class SharedCore {
                 }
             }
 
+            // ALL-DAY NEVER MIXES WITH A STATED TIME. One record of the event
+            // names a day (all-day shape), its twin states a clock time: the
+            // timed record's start AND end are the event's. Without this the
+            // all-day end (23:59:59) filled the timed record's missing end
+            // through the "non-empty side" rule below and a 9 PM party ran
+            // "9:00 PM – 11:59 PM".
+            if (fieldName === 'startDate' || fieldName === 'endDate') {
+                const existingAllDay = this.isAllDayShapedRecord(existingEvent);
+                const newAllDay = this.isAllDayShapedRecord(newEvent);
+                if (existingAllDay !== newAllDay) {
+                    const timed = existingAllDay ? newEvent : existingEvent;
+                    if (this.recordStatesClockStart(timed)) {
+                        const chosenValue = isEmpty(timed[fieldName]) ? null : timed[fieldName];
+                        mergedEvent[fieldName] = chosenValue;
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: chosenValue,
+                            reason: 'a stated time wins over an all-day (date-only) record — its start and end are kept together'
+                        });
+                        return;
+                    }
+                }
+            }
+
             // A startDate at EXACT local midnight on a record without an
             // explicit start time is the parser's "no time stated" placeholder
             // (see isInventedMidnight in normalizeAiEvent) — it must never
@@ -14575,6 +15095,10 @@ class SharedCore {
             notes: existingEvent.notes,
             url: existingEvent.url,
         };
+        // ALL-DAY: both sides are put in the one shape before anything is
+        // compared (see applyAllDayConvention / alignAllDayMergeSides).
+        this.alignAllDayMergeSides(scraperObject, calendarObject, existingEvent);
+
         // The notes-parsed website is canonical. A native url (readable on the
         // web/Node adapter) only fills in when the notes carry no website —
         // Scriptable always reports url as empty, and that empty value must not
@@ -15256,8 +15780,11 @@ class SharedCore {
         // is FLAGGED for review — never silently applied or dropped.
         if (deferredCoordinateDecision) {
             const { scraperValue, calendarValue } = deferredCoordinateDecision;
+            // A line said twice and then said once is the same address
+            // respelled, not a venue that moved (collapseRepeatedAddressLines).
             const normalizeAddressForComparison = (value) =>
-                String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+                this.collapseRepeatedAddressLines(String(value === null || value === undefined ? '' : value))
+                    .replace(/\s+/g, ' ').trim().toLowerCase();
             const calendarAddress = normalizeAddressForComparison(calendarObject.address);
             const finalAddress = normalizeAddressForComparison(
                 Object.prototype.hasOwnProperty.call(mergedObject, 'address') ? mergedObject.address : calendarObject.address
@@ -15385,6 +15912,42 @@ class SharedCore {
             console.log(`🔄 MERGE: "${mergedObject.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
         
+        // WHOLE-DAY follows the dates that won: the flag (`allDay` or
+        // `timeUnknown`) is derived from the merged start and end
+        // (applyAllDayConvention), never arbitrated on its own, so the note
+        // line and the calendar switch always agree with the span written.
+        {
+            const probe = {
+                startDate: mergedObject.startDate || calendarObject.startDate,
+                endDate: mergedObject.endDate || calendarObject.endDate,
+                timezone: mergedObject.timezone || scraperObject.timezone || calendarObject.timezone,
+                city: newEvent.city
+            };
+            // The kind is read from the merged record's own words and venue.
+            probe.endNote = mergedObject.endNote;
+            probe.bar = mergedObject.bar;
+            probe.address = mergedObject.address;
+            this.applyAllDayConvention(probe);
+            for (const flag of ['allDay', 'timeUnknown']) {
+                if (probe[flag] === true) mergedObject[flag] = true;
+                else delete mergedObject[flag];
+            }
+        }
+        // END UNKNOWN follows the end that won: a stated end from this
+        // run's scrape means the end is known; otherwise an end sitting
+        // exactly the default span after its start is the default this
+        // pipeline wrote (see isDefaultShapedEnd) and the note says so.
+        // Whole-day records carry their own flags and never this one.
+        {
+            const scrapedStatesEnd = !keepCalendarEndOverDegenerateScrape
+                && scrapedEndMs !== null && scrapedStartMs !== null && scrapedEndMs > scrapedStartMs;
+            const endIsDefault = !SharedCore.isWholeDayEvent(mergedObject)
+                && (mergedObject._endDateDefaulted === true
+                    || (!scrapedStatesEnd && this.isDefaultShapedEnd(mergedObject.startDate, mergedObject.endDate)));
+            if (endIsDefault) mergedObject.endUnknown = true;
+            else delete mergedObject.endUnknown;
+        }
+
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
         
@@ -15484,6 +16047,76 @@ class SharedCore {
         return finalEvent;
     }
 
+    // ALL-DAY, where a scraped event meets its calendar record.
+    //
+    // 1. A stored all-day record is read into the one shape, in the zone the
+    //    event is in: its store keeps a DAY (the device's own midnight, or
+    //    midnight UTC in a published ICS), so its raw instants differ from
+    //    the scraped ones by the zone offset and every run would propose a
+    //    date change that is none.
+    // 2. A stated time is never replaced by "no time listed": a scrape that
+    //    found only the date leaves a saved clock time — and its end — alone.
+    // 3. "No time listed" is replaced by a stated time: a saved ONE-day
+    //    all-day record takes the scraped start and end together when the
+    //    time is on that day (an empty scraped end is filled by the one end
+    //    default later, never by the stored 23:59:59).
+    alignAllDayMergeSides(scraperObject, calendarObject, existingEvent) {
+        if (!scraperObject || !calendarObject) return;
+        const timezone = this.getEventZone(scraperObject) || this.getEventZone(calendarObject)
+            || this.getCityTimezone(scraperObject.city || calendarObject.city) || '';
+        if (!timezone) return;
+        const label = scraperObject.title || calendarObject.title || 'event';
+        const storedDays = this.getStoredAllDayDays(existingEvent);
+        if (storedDays) {
+            const span = this.buildAllDaySpan(storedDays.startDay, storedDays.endDay, timezone);
+            if (span) {
+                calendarObject.startDate = span.startDate;
+                calendarObject.endDate = span.endDate;
+            }
+        }
+        const inZone = (side) => this.isAllDaySpan(side.startDate, side.endDate, timezone);
+        const calendarAllDay = inZone(calendarObject);
+        SharedCore.setWholeDayFlags(calendarObject, calendarAllDay
+            ? this.decideWholeDayKind(calendarObject, SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone))
+            : '');
+        const scrapedAllDay = !scraperObject._timezoneUnresolved && inZone(scraperObject);
+        if (scrapedAllDay === calendarAllDay) return;
+        const clockOf = (side) => {
+            const wall = this.getZonedWallParts(side.startDate, timezone);
+            return wall && (wall.hour !== 0 || wall.minute !== 0);
+        };
+        if (scrapedAllDay && clockOf(calendarObject)) {
+            console.log(`🗓️ ALL DAY: "${label}" — this run found a date and no time; the saved start time and end are kept`);
+            scraperObject.startDate = calendarObject.startDate;
+            scraperObject.endDate = calendarObject.endDate;
+            SharedCore.setWholeDayFlags(scraperObject, '');
+            return;
+        }
+        if (calendarAllDay && !scraperObject._timezoneUnresolved && clockOf(scraperObject)) {
+            // Only a ONE-day all-day record, and only a time on that same
+            // day: a saved multi-day span (a festival, a bear week) is not
+            // "a party whose time we did not know", and a time on another
+            // day is a date conflict — both stay with the ordinary rules.
+            const saved = SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone);
+            const scrapedDay = SharedCore.formatDayKey(this.getZonedWallParts(scraperObject.startDate, timezone));
+            if (!saved || saved.startDay !== saved.endDay || saved.startDay !== scrapedDay) return;
+            console.log(`🗓️ ALL DAY: "${label}" — the saved event is all-day; this run found a time on that day, which replaces it (start and end together)`);
+            calendarObject.startDate = scraperObject.startDate;
+            calendarObject.endDate = this.isEmptyArbitrationValue(scraperObject.endDate) ? null : scraperObject.endDate;
+            SharedCore.setWholeDayFlags(calendarObject, '');
+        }
+    }
+
+    // Does the merged event name the same day(s) its stored all-day record
+    // already holds? Then its dates are unchanged, whatever instants the two
+    // stores use for that day.
+    isSameStoredAllDay(finalEvent, existingEvent) {
+        const stored = this.getStoredAllDayDays(existingEvent);
+        if (!stored) return false;
+        const merged = this.getAllDayDays(finalEvent);
+        return Boolean(merged) && merged.startDay === stored.startDay && merged.endDay === stored.endDay;
+    }
+
     // The "changed = merged differs from calendar" change list: exactly the
     // fields the calendar write applies (title, dates, location, url view,
     // notes), compared against the live calendar record. Stamped as
@@ -15494,8 +16127,16 @@ class SharedCore {
     computeCalendarWriteChanges(finalEvent, existingEvent, calendarObject) {
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
-        if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        // An all-day event is a DAY: compared as days against a stored
+        // all-day record (see isSameStoredAllDay), never as instants.
+        const sameAllDay = this.isSameStoredAllDay(finalEvent, existingEvent);
+        if (!sameAllDay && !this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
+        if (!sameAllDay && !this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        // The calendar's own all-day switch is part of what is written: an
+        // event that became all-day (or stopped being it) is a change even
+        // when its instants did not move. Not an owner-review field — it
+        // rides with the dates or, alone, as housekeeping.
+        if (SharedCore.isWholeDayEvent(finalEvent) !== (existingEvent.isAllDay === true)) changes.push('allDay');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         // url is an output view of website (one logical field): compare the
         // canonical merged website against the calendar's canonical website
@@ -15874,6 +16515,324 @@ class SharedCore {
             utcMillis = nextUtcMillis;
         }
         return new Date(utcMillis);
+    }
+
+    // ------------------------------------------------------------------
+    // ALL-DAY EVENTS (owner, 2026-09-30: "I'm ok with all day events. Just
+    // don't fuck up and maybe make that clear as metadata").
+    //
+    // A page that states a DATE and no time is naming a day. Until now such
+    // an event was written as a midnight start with the 3-hour default end
+    // and showed on the site as "12:00 AM – 3:00 AM" (run 20260930-085424:
+    // 58 upcoming events, 26 of them Eagle LA's).
+    //
+    // ONE SHAPE, everywhere: a whole-day event starts at 00:00:00 and ends
+    // at 23:59:59 of its last day, both read in the EVENT's zone. The feeds'
+    // all-day rows already had that shape (see the JSON-API row builder).
+    //
+    // TWO KINDS, ONE CALENDAR SWITCH (owner, same day: "there are two types
+    // of events that are all day. Actual all day events and events that we
+    // just don't know the time of … they will be saved the same in the
+    // calendar, so if there is additional metadata we can infer (terms like
+    // 'late') then we can say 'this is just an event that we don't know the
+    // time of' and save it special"):
+    //   `allDay: true`      a real all-day event — a festival, a bear
+    //                       weekend, a cruise: it spans more than one day;
+    //   `timeUnknown: true` an ordinary event whose time the page never
+    //                       gave — a bar night, a contest, a Halloween
+    //                       party: one day at a venue, or anything whose
+    //                       own words say it runs "til late"
+    //                       (decideWholeDayKind).
+    // Both are written to the calendar as all-day (there is no time to
+    // write); the flag says which it is. They are plain event fields, so
+    // they land in the calendar notes where a person reading the record
+    // sees them, and both are DERIVED from the dates (applyAllDayConvention):
+    // only the whole-day shape carries either, never both.
+    // Run 20260930-085424, the whole-day events of five sources: every
+    // multi-day one is a festival, weekend or cruise (26); the one-day ones
+    // are nights at a venue (Eagle LA's B BAR, its Halloween party, Salt
+    // Lake's Bear Night) and one venue-less festival day.
+    //
+    // What is NOT decided here is which day the phone's calendar puts it
+    // on: the write rebuilds the day at the device's own midnight
+    // (ScriptableAdapter.applyAllDayToCalendarEvent) — midnight in London is
+    // the evening before in New York.
+    // ------------------------------------------------------------------
+
+    static isAllDayFlag(value) {
+        return value === true || (typeof value === 'string' && value.trim().toLowerCase() === 'true');
+    }
+
+    // Which kind of whole-day event this is: 'all-day', 'time-unknown', or
+    // '' for a timed event.
+    static wholeDayKind(event) {
+        if (!event || typeof event !== 'object') return '';
+        if (SharedCore.isAllDayFlag(event.timeUnknown)) return 'time-unknown';
+        if (SharedCore.isAllDayFlag(event.allDay)) return 'all-day';
+        return '';
+    }
+
+    static isWholeDayEvent(event) {
+        return SharedCore.wholeDayKind(event) !== '';
+    }
+
+    // Which kind a whole-day record is, from what the record itself says
+    // (`days` = SharedCore.allDayDaysInZone; null = a timed event → '').
+    // It is a real all-day event unless something on it says "this is a
+    // party with a start time nobody printed":
+    //   - its own words: the page put "late" where a closing time goes
+    //     (endNote) — a day does not run "til late", a night does;
+    //   - one day at a venue: a bar name or a street address. A festival
+    //     or a holiday is a day (or days) in a city; one date at a bar's
+    //     door is a night there.
+    // More than one day, or a day with no venue ("BeefDip Bear Week",
+    // Puerto Vallarta), stays all-day.
+    decideWholeDayKind(record, days) {
+        if (!record || typeof record !== 'object' || !days) return '';
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        if (text(record.endNote)) return 'time-unknown';
+        if (days.startDay !== days.endDay) return 'all-day';
+        const atVenue = text(record.bar) !== '' || this.looksLikeStreetAddress(text(record.address));
+        return atVenue ? 'time-unknown' : 'all-day';
+    }
+
+    // Stamp the kind on a record — never both flags, and neither on a timed
+    // event.
+    static setWholeDayFlags(target, kind) {
+        if (!target || typeof target !== 'object') return '';
+        if ('allDay' in target) delete target.allDay;
+        if ('timeUnknown' in target) delete target.timeUnknown;
+        if (kind === 'time-unknown') target.timeUnknown = true;
+        else if (kind === 'all-day') target.allDay = true;
+        else return '';
+        return kind;
+    }
+
+    // Wall clock of an instant in a zone: { year, month, day, hour, minute,
+    // second } or null (no zone, bad date, no Intl).
+    getZonedWallParts(dateInput, timezone) {
+        return SharedCore.zonedWallParts(dateInput, timezone);
+    }
+
+    static zonedWallParts(dateInput, timezone) {
+        const ms = SharedCore.toEpochMillis(dateInput);
+        if (ms === null || !timezone || typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return null;
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone, hourCycle: 'h23',
+                year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(new Date(ms));
+            const read = (type) => Number((parts.find(part => part.type === type) || {}).value);
+            const wall = { year: read('year'), month: read('month'), day: read('day'), hour: read('hour') % 24, minute: read('minute'), second: read('second') };
+            return Object.values(wall).every(Number.isFinite) ? wall : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // The days ('YYYY-MM-DD', inclusive) an all-day span covers in a zone,
+    // or null when the pair is not the all-day shape there. Static: the
+    // adapters' calendar write uses it without a core instance.
+    static allDayDaysInZone(startValue, endValue, timezone) {
+        const start = SharedCore.zonedWallParts(startValue, timezone);
+        const end = SharedCore.zonedWallParts(endValue, timezone);
+        if (!start || !end) return null;
+        if (start.hour !== 0 || start.minute !== 0 || start.second !== 0) return null;
+        if (end.hour !== 23 || end.minute !== 59 || (end.second !== 59 && end.second !== 0)) return null;
+        if (!(SharedCore.toEpochMillis(endValue) > SharedCore.toEpochMillis(startValue))) return null;
+        return { startDay: SharedCore.formatDayKey(start), endDay: SharedCore.formatDayKey(end) };
+    }
+
+    static formatDayKey(wall) {
+        if (!wall) return '';
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
+    }
+
+    // The zone an event's own dates are read in: its timezone, the one its
+    // calendar notes state, or its city's.
+    getEventZone(event) {
+        if (!event || typeof event !== 'object') return '';
+        if (typeof event.timezone === 'string' && event.timezone.trim()) return event.timezone.trim();
+        if (typeof event.calendarTimezone === 'string' && event.calendarTimezone.trim()) return event.calendarTimezone.trim();
+        if (typeof event.notes === 'string' && event.notes.includes('timezone')) {
+            const stated = String(this.parseNotesIntoFields(event.notes).timezone || '').trim();
+            if (stated) return stated;
+        }
+        return this.getCityTimezone(event.city) || '';
+    }
+
+    // Is this pair of instants the all-day shape in that zone: 00:00:00
+    // through 23:59:59 (a stored 23:59:00 counts) of the same or a later day?
+    isAllDaySpan(startValue, endValue, timezone) {
+        return SharedCore.allDayDaysInZone(startValue, endValue, timezone) !== null;
+    }
+
+    // The all-day span of a day range ('YYYY-MM-DD', inclusive) in a zone:
+    // { startDate, endDate } as instants, or null.
+    buildAllDaySpan(startDay, endDay, timezone) {
+        const parse = (value) => {
+            const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return match ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) } : null;
+        };
+        const first = parse(startDay);
+        const last = parse(endDay) || first;
+        if (!first || !timezone) return null;
+        const lastDay = (SharedCore.formatDayKey(last) < SharedCore.formatDayKey(first)) ? first : last;
+        const startDate = this.convertWallClockDateToUtc(new Date(Date.UTC(first.year, first.month - 1, first.day, 0, 0, 0)), timezone);
+        const endDate = this.convertWallClockDateToUtc(new Date(Date.UTC(lastDay.year, lastDay.month - 1, lastDay.day, 23, 59, 59)), timezone);
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+        return { startDate, endDate };
+    }
+
+    // The days ('YYYY-MM-DD', inclusive) an all-day-shaped event covers in
+    // its own zone, or null when it is not all-day.
+    getAllDayDays(event) {
+        const timezone = this.getEventZone(event);
+        if (!timezone || !event) return null;
+        return SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone);
+    }
+
+    // The days a STORED all-day calendar record covers. The record says it
+    // is all-day (EventKit's isAllDay, an ICS VALUE=DATE); its instants are
+    // whatever its store uses — the device's own midnight from EventKit and
+    // the phone snapshot, midnight UTC with an exclusive end from a
+    // published ICS — so the days are read from `allDayStartDay` /
+    // `allDayEndDay` when the reader stamped them, else off the record's
+    // dates with this process's own clock (on the phone that IS the
+    // calendar's clock). Null for a record that is not all-day.
+    getStoredAllDayDays(record) {
+        if (!record || record.isAllDay !== true) return null;
+        const valid = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
+        const stampedStart = valid(record.allDayStartDay);
+        if (stampedStart) {
+            const stampedEnd = valid(record.allDayEndDay);
+            return { startDay: stampedStart, endDay: stampedEnd && stampedEnd >= stampedStart ? stampedEnd : stampedStart };
+        }
+        const startMs = this.toEpochMillis(record.startDate);
+        if (startMs === null) return null;
+        const local = (ms) => {
+            const date = new Date(ms);
+            return SharedCore.formatDayKey({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() });
+        };
+        const startDay = local(startMs);
+        let endMs = this.toEpochMillis(record.endDate);
+        if (endMs === null || endMs < startMs) endMs = startMs;
+        // An end sitting exactly on a local midnight after the start is the
+        // exclusive end of the day before.
+        const endDate = new Date(endMs);
+        if (endMs > startMs && endDate.getHours() === 0 && endDate.getMinutes() === 0 && endDate.getSeconds() === 0) endMs -= 1000;
+        const endDay = local(endMs);
+        return { startDay, endDay: endDay >= startDay ? endDay : startDay };
+    }
+
+    // A record that names a day and no time: already in the all-day shape,
+    // or stamped date-only by its reader and waiting for its zone.
+    isAllDayShapedRecord(record) {
+        if (!record || typeof record !== 'object') return false;
+        if (record._noTimeStated === true) return true;
+        if (record._timezoneUnresolved) {
+            // Wall clock labelled UTC: read the shape straight off it.
+            return this.isAllDaySpan(record.startDate, record.endDate, 'UTC');
+        }
+        const timezone = this.getEventZone(record);
+        return Boolean(timezone) && this.isAllDaySpan(record.startDate, record.endDate, timezone);
+    }
+
+    // Does the record's start carry a clock time of its own — anything but
+    // the local-midnight "no time stated" placeholder?
+    recordStatesClockStart(record) {
+        if (!record || typeof record !== 'object' || record._noTimeStated === true) return false;
+        const timezone = record._timezoneUnresolved ? 'UTC' : this.getEventZone(record);
+        const wall = timezone ? this.getZonedWallParts(record.startDate, timezone) : null;
+        return Boolean(wall) && (wall.hour !== 0 || wall.minute !== 0);
+    }
+
+    // THE ANALYSIS NEVER SEES A STORED ALL-DAY RECORD'S RAW INSTANTS. They
+    // are the store's own notation for a day (the device's midnight; midnight
+    // UTC in a published ICS), hours away from the event's own midnight —
+    // read as instants they put the record on the day before, and a saved
+    // all-day event then matches nothing and is proposed again as NEW on
+    // every run. Each all-day record is therefore handed to the analysis as
+    // a VIEW: a plain copy whose start and end are the one all-day shape in
+    // the record's own zone (its notes' timezone, else the zone of the event
+    // it is being compared with), with the days it covers.
+    // The view is what is matched, merged and compared. The record itself —
+    // on the phone a live EventKit object — is kept on the view as
+    // `_nativeRecord` (non-enumerable: never serialized, never spread) and
+    // is what a write goes to. Timed records pass through untouched.
+    viewStoredAllDayRecords(records, comparedEvent = null) {
+        if (!Array.isArray(records)) return records;
+        const fallbackZone = this.getEventZone(comparedEvent) || this.getCityTimezone(comparedEvent && comparedEvent.city) || '';
+        return records.map(record => this.viewStoredAllDayRecord(record, fallbackZone));
+    }
+
+    viewStoredAllDayRecord(record, fallbackZone = '') {
+        if (!record || typeof record !== 'object' || record._nativeRecord) return record;
+        const days = this.getStoredAllDayDays(record);
+        if (!days) return record;
+        const notesZone = typeof record.notes === 'string' && record.notes.includes('timezone')
+            ? String(this.parseNotesIntoFields(record.notes).timezone || '').trim()
+            : '';
+        const span = this.buildAllDaySpan(days.startDay, days.endDay, notesZone || fallbackZone);
+        if (!span) return record;
+        const view = { ...record };
+        // A live calendar object exposes its fields through accessors, which
+        // a spread does not copy: the ones the analysis reads are taken by
+        // name.
+        for (const key of ['identifier', 'title', 'location', 'notes', 'url', 'availability', 'timeZone', 'calendar', 'recurrence', 'recurrenceId']) {
+            if (view[key] === undefined && record[key] !== undefined) view[key] = record[key];
+        }
+        view.startDate = span.startDate;
+        view.endDate = span.endDate;
+        view.isAllDay = true;
+        view.allDayStartDay = days.startDay;
+        view.allDayEndDay = days.endDay;
+        Object.defineProperty(view, '_nativeRecord', { value: record, enumerable: false, writable: false });
+        return view;
+    }
+
+    // The record a calendar write goes to: the stored record behind an
+    // all-day view, or the record itself.
+    static getNativeCalendarRecord(record) {
+        return record && record._nativeRecord ? record._nativeRecord : record;
+    }
+
+    // Put an event into the one all-day shape, or take the flag away.
+    //   - `_noTimeStated` (stamped by a reader whose page gave a date and no
+    //     time): the start day through the end day become the all-day span.
+    //   - any record already in the shape is all-day.
+    //   - everything else is a timed event and carries no flag.
+    // Waits for a zone: an event whose dates are still a wall clock
+    // (_timezoneUnresolved) or whose zone is unknown is left untouched, flag
+    // included, and gets its turn once the zone is known.
+    applyAllDayConvention(event) {
+        if (!event || typeof event !== 'object') return false;
+        if (event._timezoneUnresolved) return false;
+        const timezone = this.getEventZone(event);
+        if (!timezone || this.toEpochMillis(event.startDate) === null) return false;
+        if (event._noTimeStated === true) {
+            const start = this.getZonedWallParts(event.startDate, timezone);
+            // Only a start that really is the midnight placeholder: a reader
+            // that stamped the flag and then found a time is not overruled.
+            if (start && start.hour === 0 && start.minute === 0) {
+                const startDay = SharedCore.formatDayKey(start);
+                // A date-only END names its day too ("Oct 8 – Oct 12" runs
+                // through the 12th): the day the end instant falls on is the
+                // last day, midnight included.
+                const endMs = this.toEpochMillis(event.endDate);
+                const endWall = endMs !== null && endMs > this.toEpochMillis(event.startDate) ? this.getZonedWallParts(event.endDate, timezone) : null;
+                const span = this.buildAllDaySpan(startDay, endWall ? SharedCore.formatDayKey(endWall) : startDay, timezone);
+                if (span) {
+                    const asDates = this.isDateLike(event.startDate);
+                    event.startDate = asDates ? span.startDate : span.startDate.toISOString();
+                    event.endDate = asDates ? span.endDate : span.endDate.toISOString();
+                    delete event._endDateDefaulted;
+                }
+            }
+        }
+        const days = SharedCore.allDayDaysInZone(event.startDate, event.endDate, timezone);
+        return SharedCore.setWholeDayFlags(event, this.decideWholeDayKind(event, days)) !== '';
     }
 
     // The ai-web parser stores extracted local times as wall-clock components labeled
@@ -16347,9 +17306,17 @@ class SharedCore {
         const referenceMs = anchored ? options.anchorMs : now.getTime();
         const weekdays = Array.isArray(options.weekdays) && options.weekdays.length > 0 ? options.weekdays : null;
         const dayMs = 24 * 60 * 60 * 1000;
+        // The candidate years sit around the instant the date is measured
+        // from — the anchor's own years as well as today's. With today's
+        // alone, an anchored date could only land within a year of the day
+        // it was READ: a roundup published 2026-07-02, read in 2028, dated
+        // its July nights 2027.
+        const nowYear = now.getUTCFullYear();
+        const referenceYear = new Date(referenceMs).getUTCFullYear();
+        const candidateYears = [...new Set([referenceYear - 1, referenceYear, referenceYear + 1, nowYear - 1, nowYear, nowYear + 1])];
         const pick = (requireWeekday) => {
             let best = null;
-            for (const year of [now.getUTCFullYear() - 1, now.getUTCFullYear(), now.getUTCFullYear() + 1]) {
+            for (const year of candidateYears) {
                 const at = Date.UTC(year, month - 1, day);
                 if (new Date(at).getUTCDate() !== day) continue; // Feb 29 of a common year
                 if (requireWeekday && !weekdays.includes(new Date(at).getUTCDay())) continue;
@@ -18645,6 +19612,9 @@ class SharedCore {
             // dataset (chunky-dad-festivals) or somebody's personal calendar.
             !event?._noCityCalendarWithheld &&
             event?._announcementOnlyWithheld !== true &&
+            // The same blank-fill on every night of a saved series is a
+            // fact about the series (withholdSeriesLevelOverrideFills).
+            !event?._seriesLevelFillWithheld &&
             // One record, one destination: a record assembled from two
             // listings (stamp site: the ai-web parser's
             // applyOneDestinationGuard) is never written — and never
@@ -18674,6 +19644,21 @@ class SharedCore {
             // guard.
             !SharedCore.isCuratedFestivalUmbrella(event) &&
             !SharedCore.hasJunkTitleSanityFlag(event));
+    }
+
+    // Does `text` carry `phrase` anywhere other than right after "at"?
+    // Both already folded (lowercase, single spaces). "massive returns" names
+    // Massive; "drag brunch at the tryst hotel" only places something there.
+    static textNamesPhraseBeyondLocative(text, phrase) {
+        const haystack = ` ${String(text || '').trim()} `;
+        const needle = ` ${String(phrase || '').trim()} `;
+        if (needle.trim() === '') return false;
+        let index = haystack.indexOf(needle);
+        while (index !== -1) {
+            if (!haystack.slice(0, index).endsWith(' at')) return true;
+            index = haystack.indexOf(needle, index + 1);
+        }
+        return false;
     }
 
     // True when the stamped sanity flags include the junk-title code — the
@@ -18724,6 +19709,7 @@ class SharedCore {
             '_unresolvedCityWithheld',
             '_noCityCalendarWithheld',
             '_announcementOnlyWithheld',
+            '_seriesLevelFillWithheld',
             '_ownerReviewWithheld',
             '_ownerReviewApproved',
             '_bigDriftWithheld',
@@ -18767,6 +19753,10 @@ class SharedCore {
             return `WITHHELD (city${city ? ` "${city}"` : ''} has no configured city calendar — a scraped event is never written to a non-city calendar)`;
         }
         if (event._announcementOnlyWithheld === true) return 'WITHHELD (announcement only — no time, no ticket link, no place or a one-line row)';
+        if (event._seriesLevelFillWithheld) {
+            const fields = Array.isArray(event._seriesLevelFillWithheld.fields) ? event._seriesLevelFillWithheld.fields.join(', ') : '';
+            return `WITHHELD (series-level fact — the same ${fields || 'value'} on ${event._seriesLevelFillWithheld.nights} nights of the saved series; edit the series, not its nights)`;
+        }
         if (event._chimeraWithheld) {
             const reason = String(event._chimeraWithheld.reason || '').trim();
             return `WITHHELD (assembled from two listings${reason ? ` — ${reason}` : ''})`;
@@ -19622,6 +20612,20 @@ class SharedCore {
             const effectiveEnd = end instanceof Date && !isNaN(end.getTime()) ? end : start;
             return start.getTime() <= windowEndDate.getTime() && effectiveEnd.getTime() >= windowStartDate.getTime();
         };
+        // An all-day VEVENT (VALUE=DATE) names days: its instants here are
+        // midnight UTC with an EXCLUSIVE end, so the days it covers ride
+        // along for getStoredAllDayDays — read off these instants with a
+        // local clock they would land on the day before, west of Greenwich.
+        const allDayDays = (record, startDate, endDate) => {
+            if (!record.isAllDay || !(startDate instanceof Date) || isNaN(startDate.getTime())) return {};
+            const day = (date) => date.toISOString().slice(0, 10);
+            const startDay = day(startDate);
+            const lastMs = endDate instanceof Date && !isNaN(endDate.getTime()) && endDate.getTime() > startDate.getTime()
+                ? endDate.getTime() - 24 * 60 * 60 * 1000
+                : startDate.getTime();
+            const endDay = day(new Date(lastMs));
+            return { allDayStartDay: startDay, allDayEndDay: endDay >= startDay ? endDay : startDay };
+        };
         const toEvent = (record, startDate, endDate, extra) => ({
             identifier: record.uid,
             title: record.summary || '',
@@ -19631,6 +20635,7 @@ class SharedCore {
             notes: record.description || '',
             url: record.url || '',
             isAllDay: Boolean(record.isAllDay),
+            ...allDayDays(record, startDate, endDate),
             ...(extra || {})
         });
         const recordEnd = (record) => (record.end && record.end.date) ? record.end.date : record.start.date;
@@ -20105,6 +21110,10 @@ class SharedCore {
         // Per-run calendar-stickiness tally (report-only observation phase).
         this.resetCalendarStickinessStats();
 
+        // The run's pictures, for the cut-picture link check (a saved link
+        // that is the head of a picture's address — isCutPictureAddress).
+        this.notePictureAddresses(events);
+
         // Curated festival awareness: one drift line per festival per pass,
         // and a batch pre-pass mapping source hosts whose pages produced an
         // umbrella match — sibling records from the same source inherit the
@@ -20149,7 +21158,7 @@ class SharedCore {
             }
 
             // Get existing events from the adapter
-            const existingEvents = await calendarAdapter.getExistingEvents(event);
+            const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(event), event);
 
             // Analyze what action to take (with the adapter-side recurring
             // series probe when a merge match carries no series signal yet)
@@ -20274,7 +21283,7 @@ class SharedCore {
                 // not resurrect it (taps keep the store and the calendar
                 // stamp in sync going forward, so the store is never older).
                 if (typeof dropped.reason === 'string' && dropped.reason.startsWith('manual store:')) continue;
-                const existingEvents = await calendarAdapter.getExistingEvents(droppedEvent);
+                const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(droppedEvent), droppedEvent);
                 const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(droppedEvent, existingEvents, mergeMode, calendarAdapter);
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
                 if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
@@ -20375,6 +21384,11 @@ class SharedCore {
             }
         }
 
+        // What a source says identically about every night of a saved
+        // series is a fact about the SERIES, never a reason to detach its
+        // nights one by one (see withholdSeriesLevelOverrideFills).
+        this.withholdSeriesLevelOverrideFills(analyzedEvents);
+
         // Same-venue overlap surfacing (report-only, never throws): stamp
         // colliding cards + one ⚔️ OVERLAP line per pair. Actions, merges and
         // writes are untouched — the owner resolves double-booked slots.
@@ -20387,6 +21401,107 @@ class SharedCore {
         this.logCalendarStickinessSummary();
 
         return analyzedEvents;
+    }
+
+    // SERIES-LEVEL FILLS NEVER DETACH A NIGHT.
+    //
+    // An override exists for what ONE night states that its series does not:
+    // this week's venue, a guest's flyer, a moved start (resolveSeriesAuthority:
+    // "per-night facts are exactly what an override is for"). Run
+    // 20260929-091555 proposed eight overrides that state nothing of the
+    // kind: Gathr's row for the owner's weekly "Bear Happy Hour" series adds
+    // the same picture and the same "Free" to five Thursdays, Thotyssey's
+    // row for his monthly "FUZZY" adds one picture to three Fridays. Every
+    // saved field of those nights stays as it is; the only difference is a
+    // blank filled with a value the source repeats on every night it lists.
+    // Writing them detaches the nights from the series (a later edit of the
+    // series no longer reaches them) to say one thing N times — and the
+    // scraper never writes a series, so the fact has no automatic home.
+    //
+    // Judged on the finished plan, per saved series (overrideUid):
+    //   - the night changes no stored field and no notes line the series
+    //     night already carries — it only ADDS lines (getOverrideNightFills);
+    //   - two or more nights of that series in this plan add exactly the
+    //     same lines.
+    // Those nights are withheld from every write and from the deck, each
+    // stamped with the fields and the night count, and one line per series
+    // names what the series could gain. A single night, a night that
+    // changes anything, and a night whose additions are its own (a flyer
+    // per night, this week's address) are untouched.
+    withholdSeriesLevelOverrideFills(analyzedEvents) {
+        if (!Array.isArray(analyzedEvents) || analyzedEvents.length < 2) return [];
+        const bySeries = new Map();
+        for (const event of analyzedEvents) {
+            if (!event || typeof event !== 'object' || event._mergeNoOp === true) continue;
+            if (!SharedCore.isOverrideCreate(event)) continue;
+            const seriesUid = this.normalizeOverrideUid(event.overrideUid);
+            if (!seriesUid) continue;
+            const fills = this.getOverrideNightFills(event);
+            if (!fills || !fills.signature) continue;
+            // Nights are grouped by WHAT they add: a night whose additions
+            // differ from the others' (its own flyer, its own address) is
+            // the source speaking about that night and stands alone; a
+            // night that changes something never enters a group at all.
+            const groupKey = `${seriesUid}\n${fills.signature}`;
+            if (!bySeries.has(groupKey)) bySeries.set(groupKey, []);
+            bySeries.get(groupKey).push({ event, fills });
+        }
+        const withheld = [];
+        for (const nights of bySeries.values()) {
+            if (nights.length < 2) continue;
+            const fields = nights[0].fills.keys;
+            for (const night of nights) {
+                night.event._seriesLevelFillWithheld = { fields, nights: nights.length };
+                withheld.push(night.event);
+            }
+            const seriesTitle = String((nights[0].event._original.calendar && nights[0].event._original.calendar.title) || nights[0].event.title || 'Unknown');
+            const source = String((nights[0].event._parserConfig && nights[0].event._parserConfig.name) || 'the source');
+            console.log(`🔁 SERIES FILL: "${seriesTitle}" — ${source} adds the same ${fields.join(', ')} to ${nights.length} nights of the saved series and changes nothing else; a fact about the series, not about a night — ${nights.length} override(s) withheld (the series itself is edited through the Event Builder / ICS)`);
+        }
+        return withheld;
+    }
+
+    // What an override would ADD to the series night it replaces, when
+    // adding is ALL it does: { keys, signature } — the added notes fields
+    // (canonical keys, sorted) and their values as one comparable string.
+    // null when the night changes a stored field (title, start, end, pin,
+    // link), changes or removes a notes line the series night carries, or
+    // carries a bear verdict or review flag of its own — that night states
+    // something of its own. Run bookkeeping, the override
+    // identity and an automatic bear stamp are not additions (the same
+    // exclusions notesProjectionsMatch applies to an override).
+    getOverrideNightFills(event) {
+        const seriesNight = event && event._original && event._original.calendar;
+        if (!seriesNight || typeof seriesNight !== 'object') return null;
+        const storedChanges = this.computeCalendarWriteChanges(event, seriesNight, seriesNight)
+            .filter(field => field !== 'notes');
+        if (storedChanges.length > 0) return null;
+        const saved = this.parseNotesIntoFields(seriesNight.notes || '');
+        const proposed = this.parseNotesIntoFields(event.notes || '');
+        const isBookkeeping = (key, value) => REGENERATED_NOTES_KEYS.has(key)
+            || key === 'overrideUid' || key === 'overrideRecurrenceId'
+            || (key === 'bearSource' && !this.isManualBearSource(value));
+        const textOf = (value) => (value === null || value === undefined ? '' : String(value).trim());
+        const added = [];
+        for (const key of Object.keys(proposed)) {
+            const value = textOf(proposed[key]);
+            if (!value || isBookkeeping(key, value)) continue;
+            // The owner's own verdict on a night always lands on that night.
+            if (key === 'bearSource' || key === 'bearReview') return null;
+            const savedValue = textOf(saved[key]);
+            if (!savedValue) { added.push([key, value]); continue; }
+            if (!SharedCore.notesValuesEquivalent(savedValue, value)) return null;
+        }
+        for (const key of Object.keys(saved)) {
+            const savedValue = textOf(saved[key]);
+            if (!savedValue || isBookkeeping(key, savedValue)) continue;
+            if (!textOf(proposed[key])) return null;
+        }
+        added.sort((a, b) => a[0].localeCompare(b[0]));
+        return {
+            keys: added.map(entry => entry[0]),
+            signature: added.map(entry => `${entry[0]}: ${entry[1]}`).join('\n')
+        };
     }
 
     // A late bear-override event (a drop rescued by a stored calendar verdict,
@@ -21017,6 +22132,24 @@ class SharedCore {
                     `${field} replaced at final build — the site answers "not found" (404/410) for the saved link`);
             }
 
+            // …and neither is the head of a picture's address
+            // (isCutPictureAddress), which the calendar may hold from a run
+            // that cut a picture's address at the space in its filename.
+            for (const field of ['ticketUrl', 'website']) {
+                const value = typeof analyzedEvent[field] === 'string' ? analyzedEvent[field].trim() : '';
+                if (!value || !this.isCutPictureAddress(value, [analyzedEvent, event, analyzedEvent._original && analyzedEvent._original.calendar])) continue;
+                const standIn = field === 'website' ? this.getStandInSourcePage(event) : '';
+                if (standIn && !this.isSameLinkTarget(standIn, value)) analyzedEvent[field] = standIn;
+                else delete analyzedEvent[field];
+                if (field === 'website' && 'url' in analyzedEvent) {
+                    if (analyzedEvent.website) analyzedEvent.url = analyzedEvent.website; else delete analyzedEvent.url;
+                }
+                notesNeedRebuild = true;
+                console.log(`🔗 LINKS: ${field} ${value} for "${analyzedEvent.title || 'event'}" — it is the head of a picture's address, cut at a space in the filename: a file, not a page; ${analyzedEvent[field] ? `${analyzedEvent[field]} stands in` : 'dropped'}`);
+                this.recordDeterministicFieldRewrite(analyzedEvent, field,
+                    `${field} replaced at final build — the saved link is the head of a picture's address, not a page`);
+            }
+
             // A hub is never presented as one event's ticket page, whichever
             // side of the merge brought it (stampBatchHubLinks): the calendar
             // may still hold the pass page an earlier run wrote there.
@@ -21262,7 +22395,12 @@ class SharedCore {
             // After every merge (so a stored end always wins over the
             // default) and before the sanity pass (so "no end stated" stops
             // being reported as a zero-duration event).
-            this.applyDefaultEventEnd(analyzedEvent);
+            this.applyAllDayConvention(analyzedEvent);
+            // The default stamps `endUnknown` — a notes field — so the notes
+            // built above are rebuilt to carry it.
+            if (this.applyDefaultEventEnd(analyzedEvent) && analyzedEvent.notes) {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+            }
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             // A SECOND approval now exists: overnight-span-corrected (rule 11
             // enforce, owner-approved 2026-08-24) - a clean -12h AM/PM slip is
@@ -21341,9 +22479,23 @@ class SharedCore {
                     && !this.isCoordinatePair(analyzedEvent.location);
                 const noTime = !analyzedEvent.startTime && this.hasMissingTimeStartPlaceholder(analyzedEvent);
                 const noTicket = !(typeof analyzedEvent.ticketUrl === 'string' && analyzedEvent.ticketUrl.trim());
-                if ((oneLineRow || placeless) && noTime && noTicket) {
+                // …and for a name and a date with NOTHING of their own, on a
+                // venue's own site: the place is the site's identity (filled
+                // from the curated venue, not read off the row), and the row
+                // gave no picture, no words beyond its own name and no page.
+                // campoutpoconos.com/accommodations, run 20260929-091555:
+                // the cabin rate table's "SPRING | April 23 – May 21 •
+                // Weekday $150 | Weekend $285" reached the deck as a party
+                // called SPRING at Camp Out — the venue backfill had given
+                // it an address and a pin, so it no longer read as placeless.
+                // A venue's real all-day events carry a flyer, a blurb or a
+                // page of their own and are untouched.
+                const nameAndDateOnly = Boolean(segment && typeof segment === 'object')
+                    && this.isNameAndDateOnlyRecord(analyzedEvent);
+                if ((oneLineRow || placeless || nameAndDateOnly) && noTime && noTicket) {
                     analyzedEvent._announcementOnlyWithheld = true;
-                    const shape = oneLineRow ? 'a one-line listing row' : 'a dated record with no place';
+                    const shape = oneLineRow ? 'a one-line listing row'
+                        : (placeless ? 'a dated record with no place' : 'a name and a date with no picture, no words and no page of their own, placed only by the site it was read from');
                     console.log(`📣 ANNOUNCEMENT: "${analyzedEvent.title || 'Unknown'}" is ${shape} with no time and no ticket link — withheld from calendar write until a venue or ticket page corroborates it; card kept in results`);
                 }
             }
@@ -21679,6 +22831,23 @@ class SharedCore {
 
             return analyzedEvent;
         }
+    }
+
+    // A record that is a name and a date and nothing else (see the
+    // announcement withhold): its place is the site's own identity
+    // (barSource venue-site / venue-site-identity — never a line the row
+    // stated), it carries no picture in any slot, no description beyond its
+    // own title, and no page of its own (no link, or a bare front door).
+    isNameAndDateOnlyRecord(event) {
+        if (!event || typeof event !== 'object') return false;
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        if (barSource !== 'venue-site' && barSource !== 'venue-site-identity') return false;
+        const hasText = (value) => typeof value === 'string' && value.trim() !== '';
+        if (hasText(event.image) || hasText(event.imageVertical) || hasText(event.imageHorizontal)) return false;
+        const fold = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').trim();
+        const description = hasText(event.description) ? fold(event.description) : '';
+        if (description && description !== fold(event.title || '')) return false;
+        return !this.getEventPageUrlIdentity(event);
     }
 
     // Analyze events against existing calendar events and determine actions
@@ -25957,6 +27126,7 @@ class FetchPoliteness {
             state.lastRequestAt = this.now();
             state.successes++;
             state.consecutiveForbidden = 0;
+            state.consecutiveUnanswered = 0;
             return result;
         } catch (error) {
             state.lastRequestAt = this.now();
@@ -25974,6 +27144,21 @@ class FetchPoliteness {
         const stamped = error && Number.isFinite(error.statusCode) ? error.statusCode : null;
         const named = message.match(/HTTP\s+(\d{3})/i);
         const statusCode = stamped !== null ? stamped : (named ? Number(named[1]) : null);
+        // NOTHING ANSWERED, three times running: the host is not there this
+        // run (or the network is not). Asking again is 117 more requests
+        // into the same silence — the geocoder's whole budget on 2026-09-30,
+        // every one "fetch failed". Parked for the rest of the run; nothing
+        // is learned about the pages themselves (a connection failure is
+        // never a fact about a page).
+        if (statusCode === null && typeof SharedCore !== 'undefined' && SharedCore.isTransportFailureMessage(message)) {
+            state.consecutiveUnanswered = (state.consecutiveUnanswered || 0) + 1;
+            if (state.consecutiveUnanswered >= FetchPoliteness.UNANSWERED_PARK_THRESHOLD) {
+                state.parked = { reason: `no answer ${state.consecutiveUnanswered} times running`, url };
+                this.log(`🚦 POLITE: ${hostKey} did not answer ${state.consecutiveUnanswered} requests in a row — parked for the rest of this run`);
+            }
+            return;
+        }
+        state.consecutiveUnanswered = 0;
         if (statusCode !== 429 && statusCode !== 403) return;
         if (error && typeof error === 'object') error.retryable = false;
         const retryAfter = error && error.retryAfter ? String(error.retryAfter).trim() : '';
@@ -26037,6 +27222,7 @@ class FetchPoliteness {
 FetchPoliteness.DEFAULT_MIN_HOST_GAP_MS = 2000;
 FetchPoliteness.DEFAULT_MAX_CRAWL_DELAY_MS = 15000;
 FetchPoliteness.DEFAULT_MAX_REQUESTS_PER_HOST = 120;
+FetchPoliteness.UNANSWERED_PARK_THRESHOLD = 3;
 // Our own infrastructure and the machine itself are never paced or parked.
 FetchPoliteness.DEFAULT_EXEMPT_HOSTS = ['chunky.dad', 'localhost', '127.0.0.1', '.ts.net', '.local'];
 

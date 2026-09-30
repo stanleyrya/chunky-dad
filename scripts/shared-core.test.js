@@ -8183,6 +8183,96 @@ test('adaptive crawl: aggregator and multi-event pages follow links; event pages
   assert.equal(parsedConfigs['https://www.eventbrite.com/e/party-1'].urlDiscoveryDepth, undefined);
 });
 
+// gruntparty.monster, run 20260929-091555. The promoter gives each party a
+// page; the home page is whichever party is next (it read: "FOLSOM SATURDAY,
+// SEPT 26 … At THE STUD (1123 FOLSOM STREET, SF, CA)") and the menu lists the
+// others (<a href="/">FOLSOM</a> <a href="/grunt-halloween">Halloween</a>).
+// The home page is one event, so the crawl stopped there: the Halloween page
+// ("OCT 24 at THE STUD … 9pm-2am") was never opened and the source read 0
+// upcoming for as long as the front page showed a party that was over.
+test('adaptive crawl: a configured root that reads as one event still opens the other pages of its own site', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /gruntparty\.example\/(?:brooklyn|grunt-halloween)?$/i, classification: 'event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://gruntparty.example/': {
+      events: [{ title: 'GRUNT PARTY SF', startDate: soon(-3), bar: 'The Stud' }],
+      additionalLinks: [
+        'https://gruntparty.example/?format=ical',      // a query selects a view of a page, the menu names pages
+        'https://illustrator.example/portfolio',        // off the site, not event-shaped: the event-page rule stands
+        'https://gruntparty.example/grunt-halloween',   // the site's own next page
+        'https://gruntparty.example/grunt-halloween#page',
+        'https://gruntparty.example/brooklyn',          // a configured root: it gets its own turn
+        'https://bird-tan-mt6p.squarespace.example/'    // the builder's internal host is not this site
+      ]
+    },
+    'https://gruntparty.example/brooklyn': {
+      events: [{ title: 'GRUNT: BROOKLYN', startDate: soon(-10), bar: "C'mon Everybody" }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/grunt-halloween']
+    },
+    'https://gruntparty.example/grunt-halloween': {
+      events: [{ title: 'GRUNT Halloween', startDate: soon(25), bar: 'The Stud' }],
+      additionalLinks: ['https://gruntparty.example/', 'https://gruntparty.example/cart-of-things']
+    },
+    'https://gruntparty.example/cart-of-things': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'One Page Per Party', urls: ['https://gruntparty.example/', 'https://gruntparty.example/brooklyn'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.equal(fetched.filter(url => url === 'https://gruntparty.example/grunt-halloween').length, 1,
+    'the page the menu names is opened, once, though two roots link it');
+  assert.ok(display.logs.some(line => line.includes('Leaving https://gruntparty.example/brooklyn to its own turn')),
+    'a configured page linked from another is read in its own turn, as a root');
+  assert.ok(!display.logs.some(line => line.includes('Skipping duplicate URL') && line.includes('/brooklyn')),
+    'and is not consumed on the way as somebody\'s child');
+  assert.equal(result.totalEvents, 3, 'three pages, three parties');
+  assert.ok(!fetched.includes('https://illustrator.example/portfolio'), 'off-site links keep the event-page rule');
+  assert.ok(!fetched.includes('https://bird-tan-mt6p.squarespace.example/'), 'another registrable domain is not the site');
+  assert.ok(!fetched.some(url => url.includes('?format=ical')), 'a view of a page is not a page of the site');
+  assert.ok(!fetched.includes('https://gruntparty.example/cart-of-things'),
+    'one hop: the page reached this way is an ordinary event page and follows only event-shaped links');
+  const titles = (result.events || []).map(event => event.title);
+  assert.ok(titles.some(title => /halloween/i.test(title)),
+    `the sibling page's party is an event of its own, not enrichment dropped as a "sibling" (got: ${titles.join(' | ')})`);
+  assert.ok(display.logs.some(line => line.includes('reads as one event') && line.includes('gruntparty.example/grunt-halloween')),
+    'and the log says why the page was opened');
+});
+
+test('adaptive crawl: only a CONFIGURED root opens its site — an event page found on the way does not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venue\.example\/event\//i, classification: 'event-page' },
+      { pattern: /venue\.example\/calendar/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://venue.example/calendar': { additionalLinks: ['https://venue.example/event/bear-night'] },
+    'https://venue.example/event/bear-night': {
+      events: [{ title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) }],
+      additionalLinks: ['https://venue.example/private-hire', 'https://venue.example/menu']
+    },
+    'https://venue.example/private-hire': {},
+    'https://venue.example/menu': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue Calendar', urls: ['https://venue.example/calendar'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://venue.example/event/bear-night'));
+  assert.ok(!fetched.includes('https://venue.example/private-hire') && !fetched.includes('https://venue.example/menu'),
+    'an event page reached through the listing keeps following nothing but event and ticket links');
+});
+
 test('adaptive crawl: ad and unknown pages follow nothing', async () => {
   const core = new SharedCore(CITIES, {
     eventSchema: EventSchema,
@@ -8907,6 +8997,181 @@ test('dead-end store: network failures are NOT learned when the run had zero suc
   await core2.finalizeDeadEndRun(display2, results2);
   const key = core2.getUrlDedupeKey(IQOS_URL);
   assert.equal(results2.deadEndStore[key]?.misses, 1, 'network is up, so the failure is trustworthy');
+});
+
+// ---------------------------------------------------------------------------
+// An outage is not a dead end (2026-09-27, 10:11–10:13: the Mac lost the
+// network for two minutes mid-run). Node's fetch says "fetch failed" and
+// nothing else, the classifier only knew the browser's "failed to fetch", so
+// every one of the 59 failures was written into the no-retry failure cache —
+// the real records, verbatim:
+//   { url: "https://www.bearbrum.com/", statusCode: null, fetchState:
+//     "failed", failure: { nonRetryable: true, context: "root-page", error:
+//     "HTTP request failed for https://www.bearbrum.com/: fetch failed" } }
+// Two configured roots (Bear Brum, Xposure Events' organizer page) read 0
+// for four runs, and 57 whereto.party city pages were confirmed dead by the
+// NEXT run replaying those notes: 3 of 60 cities read since.
+// ---------------------------------------------------------------------------
+
+const OUTAGE_ROOT_URL = 'https://www.bearbrum.com/';
+const OUTAGE_NOTE = {
+  url: OUTAGE_ROOT_URL,
+  fetchedAt: '2026-09-27T15:13:08.626Z',
+  statusCode: null,
+  headers: {},
+  fetchState: 'failed',
+  failure: {
+    nonRetryable: true,
+    context: 'root-page',
+    error: `HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`
+  }
+};
+
+test('outage: Node\'s "fetch failed" is a transport failure — retryable, never a failure note', async () => {
+  const core = createCore();
+  const outage = new Error(`HTTP request failed for ${OUTAGE_ROOT_URL}: fetch failed`);
+  assert.equal(core.isRetryableFailure(outage), true, 'nothing answered: the next run asks again');
+  for (const wording of [
+    'HTTP request failed for https://a.example/: connect ECONNREFUSED 203.0.113.7:443',
+    'HTTP request failed for https://a.example/: getaddrinfo ENOTFOUND a.example',
+    'HTTP request failed for https://a.example/: other side closed',
+    'HTTP request failed for https://a.example/: UND_ERR_CONNECT_TIMEOUT'
+  ]) {
+    assert.equal(core.isRetryableFailure(new Error(wording)), true, wording);
+  }
+
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+  await core.saveNonRetryableFailureNote(httpAdapter, OUTAGE_ROOT_URL, outage, 'root-page');
+  assert.deepEqual(saved, [], 'an outage writes nothing into the no-retry cache');
+
+  // What the server ANSWERED is still a fact about the page.
+  const gone = new Error('HTTP request failed for https://a.example/x: HTTP 404: Not Found');
+  assert.equal(core.isRetryableFailure(gone), false);
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', gone, 'crawl-page');
+  assert.deepEqual(saved, ['https://a.example/x'], 'a 404 is still noted');
+  const empty = new Error('HTTP request failed for https://a.example/y: Empty response from https://a.example/y');
+  assert.equal(core.isRetryableFailure(empty), false, 'an empty answer is an answer');
+});
+
+test('outage: a note that records "nothing answered" is recognised, a note with a status is not', () => {
+  assert.equal(SharedCore.isTransportFailureNote(OUTAGE_NOTE), true, 'the real note from 2026-09-27');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    statusCode: 404,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+  }), false, 'a stated status is the page speaking');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: HTTP 403: Forbidden' }
+  }), false, 'a status kept only in the message still counts');
+  assert.equal(SharedCore.isTransportFailureNote({
+    ...OUTAGE_NOTE,
+    failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://a.example/x: Empty response from https://a.example/x' }
+  }), false, 'a reason that is about the page stays a note');
+  assert.equal(SharedCore.isTransportFailureNote(null), false);
+  assert.equal(SharedCore.isTransportFailureNote({ fetchState: 'downloaded', html: '<p>fetch failed</p>' }), false, 'a page is not a note');
+});
+
+test('outage: a replayed failure note is never the second strike', async () => {
+  const cityUrl = 'https://dead-domain.example/in/sydney';
+  const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);
+  replayed.cachedFailure = true;
+  replayed.retryable = false;
+  const pages = { 'https://hub.example/': { additionalLinks: [cityUrl] } };
+  const harness = createCrawlHarness(pages);
+  const realFetch = harness.httpAdapter.fetchData;
+  harness.httpAdapter.fetchData = async (url) => {
+    if (url === cityUrl) throw replayed;
+    return realFetch(url);
+  };
+  const core = deadEndCore();
+  const key = core.getUrlDedupeKey(cityUrl);
+  const store = { [key]: { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T15:13:08.649Z', misses: 1, capability: SharedCore.DEAD_END_CAPABILITY } };
+  const results = await core.processEvents(deadEndConfig({ store }), harness.httpAdapter, createDisplayAdapterStub(), harness.parsers);
+  assert.equal(results.deadEndStore[key].misses, 1, 'reading the note back attempted nothing and confirms nothing');
+});
+
+test('outage: a connection failure on a host that has answered before is not learned', async () => {
+  const cityUrl = 'https://whereto.party/in/sydney';
+  const deadUrl = 'https://www.iqosvape.com/';
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  core.deadEndRunContext = core.createDeadEndRunContext({
+    deadEndStore: {
+      '::hosts': {
+        'whereto.party': { firstSeen: '2026-09-23T21:11:32.875Z', lastSeen: '2026-09-23T21:11:32.875Z', successes: 1, lastSuccess: '2026-09-23T21:11:32.875Z' }
+      }
+    }
+  });
+  core.deadEndRunContext.successfulFetchCount = 1;
+  core.recordDeadEndNetworkFailure({ url: cityUrl, currentDepth: 1 });
+  core.recordDeadEndNetworkFailure({ url: deadUrl, currentDepth: 1 });
+  const results = {};
+  await core.finalizeDeadEndRun(display, results);
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(cityUrl)], undefined,
+    'the host serves pages: this was its outage, the page is asked for again next run');
+  assert.equal(results.deadEndStore[core.getUrlDedupeKey(deadUrl)]?.misses, 1,
+    'a host that never answered is still learned, two-strike as before');
+  assert.ok(display.logs.some(line => line.includes('Not learning 1 network-failure URL(s)') && line.includes('whereto.party')),
+    'and the log says which host was out');
+});
+
+test('outage: dead ends confirmed before the crawler told an outage from a dead page get their one retry', () => {
+  const core = deadEndCore();
+  const context = core.createDeadEndRunContext({ deadEndStore: {} });
+  const learnedInTheOutage = { firstSeen: '2026-09-27T15:13:08.649Z', lastSeen: '2026-09-27T17:48:04.231Z', misses: 2, capability: 'machine-door-2026-09' };
+  assert.equal(core.isConfirmedDeadEndEntry(context, learnedInTheOutage), false, 'the real whereto.party entry is retried once');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { ...learnedInTheOutage, capability: SharedCore.DEAD_END_CAPABILITY }), true,
+    'and re-confirms under the current stamp if it misses again');
+  assert.equal(core.isConfirmedDeadEndEntry(context, { firstSeen: '2026-09-27T15:25:11.000Z', lastSeen: '2026-09-27T15:25:11.000Z', misses: 1, lastStatus: 404 }), true,
+    'a page the origin called gone needs no second opinion');
+});
+
+test('outage: the one retry is rationed per host — 58 forgiven pages of one site are not all asked for in one run', () => {
+  const core = deadEndCore();
+  const cap = SharedCore.DEAD_END_CAPABILITY_RETRIES_PER_HOST;
+  const young = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const store = {};
+  const cityUrls = [];
+  for (let index = 0; index < 58; index += 1) {
+    const url = `https://whereto.party/in/city-${index}`;
+    cityUrls.push(url);
+    store[core.getUrlDedupeKey(url)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  }
+  const otherHost = 'https://venue.example/events/old-page';
+  store[core.getUrlDedupeKey(otherHost)] = { firstSeen: young, lastSeen: young, misses: 2, capability: 'machine-door-2026-09' };
+  const gone = 'https://whereto.party/in/gone';
+  store[core.getUrlDedupeKey(gone)] = { firstSeen: young, lastSeen: young, misses: 1, lastStatus: 404 };
+  const current = 'https://whereto.party/in/barren';
+  store[core.getUrlDedupeKey(current)] = { firstSeen: young, lastSeen: young, misses: 2, capability: SharedCore.DEAD_END_CAPABILITY };
+  const before = JSON.stringify(store);
+
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const allowed = core.filterKnownDeadEndUrls([...cityUrls, otherHost, gone, current]);
+  const allowedCities = allowed.filter(url => url.startsWith('https://whereto.party/in/city-'));
+  assert.equal(allowedCities.length, cap, `only ${cap} of the 58 forgiven pages are asked for this run`);
+  assert.deepEqual(allowedCities, cityUrls.slice(0, cap), 'in the order the site listed them');
+  assert.ok(allowed.includes(otherHost), 'another host has its own ration');
+  assert.ok(!allowed.includes(gone), 'a page the origin called gone stays skipped');
+  assert.ok(!allowed.includes(current), 'a dead end confirmed under the current capability stays skipped');
+  assert.equal(core.deadEndRunContext.capabilityRetryDeferredCount, 58 - cap);
+  assert.equal(JSON.stringify(store), before, 'a deferred entry is untouched: it is still owed its retry');
+
+  // The processing-time twin sees the same entries: a granted one is not
+  // counted twice, a deferred one is skipped there too.
+  assert.equal(core.getSkippableDeadEndEntry(cityUrls[0]), null, 'granted at enqueue → fetched');
+  assert.ok(core.getSkippableDeadEndEntry(cityUrls[57]), 'deferred at enqueue → skipped at fetch time');
+  assert.equal(core.deadEndRunContext.capabilityRetriesByHost['whereto.party'], cap);
+
+  // Next run: the pages retried last run were re-stamped or recovered; the
+  // rest take their turn.
+  for (const url of cityUrls.slice(0, cap)) delete store[core.getUrlDedupeKey(url)];
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: store });
+  const nextRun = core.filterKnownDeadEndUrls(cityUrls);
+  assert.deepEqual(nextRun, [...cityUrls.slice(0, cap), ...cityUrls.slice(cap, 2 * cap)],
+    'recovered pages are ordinary pages again, and the next ration of forgiven ones goes out');
+  core.deadEndRunContext = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -15843,19 +16108,21 @@ test('recurring withhold: override identity is never stamped on a series the scr
 // identity that names which occurrence it replaces.
 test('recurring override: a single-occurrence override keeps the identity that names its occurrence', async () => {
   const core = createFinalBuildCore();
+  // Dated 2037 (same weekdays as 2026, so still a first Friday): a night more
+  // than 30 days past is withheld as a fully-past span, which is not this rule.
   const sourceEvent = {
     title: 'CUBSCOUT',
     identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
-    startDate: new Date('2026-09-05T01:00:00.000Z'),
-    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    startDate: new Date('2037-09-05T01:00:00.000Z'),
+    endDate: new Date('2037-09-05T05:00:00.000Z'),
     notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
   };
   // No recurrenceRule on the scraped side: this run describes ONE night, not
   // the series definition.
   const event = {
     title: 'CUBSCOUT',
-    startDate: new Date('2026-09-05T04:00:00.000Z'),
-    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    startDate: new Date('2037-09-05T04:00:00.000Z'),
+    endDate: new Date('2037-09-05T09:00:00.000Z'),
     city: 'la'
   };
   const analysis = {
@@ -15864,13 +16131,13 @@ test('recurring override: a single-occurrence override keeps the identity that n
     sourceEvent,
     overrideIdentity: {
       overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
-      overrideRecurrenceId: '20260905'
+      overrideRecurrenceId: '20370905'
     }
   };
   const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, null, {});
 
   assert.equal(analyzed.overrideUid, 'cubscout-20260730T183109Z@chunky.dad', 'override uid survives');
-  assert.equal(analyzed.overrideRecurrenceId, '20260905', 'override recurrence id survives');
+  assert.equal(analyzed.overrideRecurrenceId, '20370905', 'override recurrence id survives');
   assert.notEqual(analyzed._recurring, true, 'a one-night override is not a series');
 
   // The load-bearing assertion. `recurrence` is the canonical notes/ICS key, so
@@ -16118,15 +16385,20 @@ test('series edit: builder plumbing never reaches the calendar notes', async () 
 
 test('series edit: an occurrence override is still an override, not a series update', async () => {
   const core = createFinalBuildCore();
+  // The occurrence sits in 2037 (same weekdays as 2026, so still a first
+  // Friday): "still written" must not depend on how long ago the night was.
+  const night = () => ({
+    startDate: new Date('2037-09-05T04:00:00.000Z'),
+    endDate: new Date('2037-09-05T09:00:00.000Z')
+  });
   const override = {
     title: 'CUBSCOUT one night',
     city: 'la',
-    startDate: new Date('2026-09-05T04:00:00.000Z'),
-    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    ...night(),
     overrideUid: SERIES_UID,
-    overrideRecurrenceId: '20260905'
+    overrideRecurrenceId: '20370905'
   };
-  const analysis = core.analyzeEventAction(override, [buildSeriesRecord()], 'upsert');
+  const analysis = core.analyzeEventAction(override, [buildSeriesRecord(night())], 'upsert');
   const analyzed = await core.buildAnalyzedCalendarEvent(override, analysis, null, {});
 
   assert.equal(analyzed._seriesUpdate, undefined, 'not a series update');
@@ -17016,8 +17288,8 @@ test('merge no-op fail-closed: one real field change writes, and a verdict-line-
 test('merge no-op ordering: a post-merge sanity correction is stamped false, never left to stale _changes', async () => {
   const core = createCore();
   // Sat 9PM EDT -> Sun 4PM EDT: the 19h span rule 11 corrects to 7h.
-  const badStart = new Date('2026-08-30T01:00:00.000Z');
-  const badEnd = new Date('2026-08-30T20:00:00.000Z');
+  const badStart = new Date('2030-09-01T01:00:00.000Z');
+  const badEnd = new Date('2030-09-01T20:00:00.000Z');
   const scraped = () => ({
     title: 'GOLIDLOXX AUGUST',
     startDate: new Date(badStart),
@@ -17059,7 +17331,7 @@ test('merge no-op ordering: a post-merge sanity correction is stamped false, nev
   assert.equal(merged._action, 'merge');
   assert.ok(!merged._changes.includes('endDate'),
     'merge-time _changes cannot see the end correction — scraper and calendar carried the same wrong end');
-  assert.equal(new Date(merged.endDate).toISOString(), '2026-08-30T08:00:00.000Z',
+  assert.equal(new Date(merged.endDate).toISOString(), '2030-09-01T08:00:00.000Z',
     'the sanity pass corrected the end AFTER _changes was stamped');
   assert.ok((merged._sanityFlags || []).some(flag => flag.code === 'overnight-span-corrected'),
     'the correction is the one flagged on the card');
@@ -19499,11 +19771,11 @@ test('junk-title records are withheld from calendar execution with the 🚫 JUNK
   const core = createCore();
   const buildScraped = (title) => ({
     title,
-    // Future-dated on purpose: a fully-elapsed span would trip wave 3's
-    // span-fully-past flag once both waves land, and this test isolates
-    // the junk-title flag.
-    startDate: new Date('2027-08-08T02:00:00.000Z'),
-    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    // Future-dated on purpose (far enough that it stays so): a
+    // fully-elapsed span would trip wave 3's span-fully-past flag once both
+    // waves land, and this test isolates the junk-title flag.
+    startDate: new Date('2038-08-08T02:00:00.000Z'),
+    endDate: new Date('2038-08-08T07:00:00.000Z'),
     bar: 'STATION 4',
     city: 'dallas',
     shortName: 'TAGS' // keeps the shortName derivation pass inert
@@ -19650,8 +19922,8 @@ test('junk-title sibling families are withheld with a detail-bearing 🚫 JUNK T
     address: '4 Malecon, Puerto Vallarta, Jalisco',
     bar: 'Blue Chairs Resort',
     city: 'dallas',
-    startDate: new Date('2027-08-08T02:00:00.000Z'),
-    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    startDate: new Date('2038-08-08T02:00:00.000Z'),
+    endDate: new Date('2038-08-08T07:00:00.000Z'),
     shortName: 'TAGS' // keeps the shortName derivation pass inert
   };
   const logLines = [];
@@ -21294,6 +21566,12 @@ const FESTIVAL_CITIES = {
 
 // Verbatim curated entries (subset of data/festivals.json); the last one has
 // no nextDates on purpose — it must never match (fail closed).
+//
+// Every date in this section is the real one moved 11 years on (2026 → 2037,
+// 2027 → 2038: the same weekdays and the same DST changes), windows and
+// records together. The write path withholds a span that ended more than 30
+// days ago, so records dated by the run they were cut from stopped reaching
+// "normal write path" a month after their night.
 const CURATED_FESTIVALS = [
   {
     key: 'beefdip-bear-week',
@@ -21302,7 +21580,7 @@ const CURATED_FESTIVALS = [
     cityKey: 'pv',
     recurring: 'annual',
     website: 'https://beefdip.com/planned-events/',
-    nextDates: { start: '2027-01-23', end: '2027-01-31' }
+    nextDates: { start: '2038-01-23', end: '2038-01-31' }
   },
   {
     key: 'spooky-bear',
@@ -21311,7 +21589,7 @@ const CURATED_FESTIVALS = [
     cityKey: 'ptown',
     recurring: 'annual',
     website: 'https://www.ursamen.org/spookybear',
-    nextDates: { start: '2026-10-29', end: '2026-11-01' }
+    nextDates: { start: '2037-10-29', end: '2037-11-01' }
   },
   {
     key: 'amsterdam-bear-pride',
@@ -21340,12 +21618,13 @@ function buildFestivalPrepAdapter(records = []) {
 
 // Run 20260815-083809: the zero-duration Jan 23 impostor ("BeefDip Bear
 // Week", startDate === endDate, action new) scraped off the planned-events
-// page — the AI split "BeefDip Bear Week 2026 / Jan 23 – 31" into 2027.
+// page — the AI split "BeefDip Bear Week 2026 / Jan 23 – 31" into 2027
+// (2038 here).
 function buildBeefdipUmbrellaEvent(overrides = {}) {
   return {
     title: 'BeefDip Bear Week',
-    startDate: '2027-01-23T06:00:00.000Z',
-    endDate: '2027-01-23T06:00:00.000Z',
+    startDate: '2038-01-23T06:00:00.000Z',
+    endDate: '2038-01-23T06:00:00.000Z',
     city: 'pv',
     timezone: 'America/Mexico_City',
     source: 'ai-web',
@@ -21361,8 +21640,8 @@ function buildBeefdipUmbrellaEvent(overrides = {}) {
 function buildCocktailPartyEvent(overrides = {}) {
   return {
     title: '🍸 Cocktail Party',
-    startDate: '2027-01-24T00:00:00.000Z',
-    endDate: '2027-01-24T00:00:00.000Z',
+    startDate: '2038-01-24T00:00:00.000Z',
+    endDate: '2038-01-24T00:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     isBearEvent: true,
@@ -21398,8 +21677,8 @@ test('festival umbrella: a scraped Spooky Bear umbrella from ursamen.org gets th
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Spooky Bear',
-    startDate: '2026-10-29T16:00:00.000Z',
-    endDate: '2026-11-01T20:00:00.000Z',
+    startDate: '2037-10-29T16:00:00.000Z',
+    endDate: '2037-11-01T20:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'www.ursamen.org',
@@ -21429,7 +21708,7 @@ test('festival context: run 20260815-083809 "🍸 Cocktail Party" inherits city 
     'inheritance runs BEFORE the calendar lookup so the search hits the pv calendar');
   assert.ok(!party._festivalMatch, 'a sub-party is NOT an umbrella');
   assert.ok(!(party._sanityFlags || []).some(flag => flag.code === 'festival-window-violation'),
-    'Jan 24 2027 sits inside the curated window — no violation');
+    'Jan 24 2038 sits inside the curated window — no violation');
   assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1,
     'sub-parties are normal events on the normal write path');
 });
@@ -21437,13 +21716,14 @@ test('festival context: run 20260815-083809 "🍸 Cocktail Party" inherits city 
 test('festival context: a year-split record resolving outside the curated window gets the report-only flag', async () => {
   // Run 20260815-083809 evidence: the FOAM POOL PARTY record's own OCR reads
   // "MONDAY JANUARY 26" with source image 2026-01-26, but extraction produced
-  // 2027-01-25 — this is the 2026-dated twin of that year-split.
+  // 2027-01-25 — this is the 2026-dated twin of that year-split (2037 here,
+  // a year before the 2038 window).
   const core = createFestivalCore();
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Foam Pool Party',
-    startDate: '2026-01-26T18:00:00.000Z',
-    endDate: '2026-01-27T00:00:00.000Z',
+    startDate: '2037-01-26T18:00:00.000Z',
+    endDate: '2037-01-27T00:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'beefdip.com',
@@ -21463,8 +21743,8 @@ test('festival context: the window flag is report-only — a future out-of-windo
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Warm-Up Party',
-    startDate: '2026-11-20T02:00:00.000Z',
-    endDate: '2026-11-20T06:00:00.000Z',
+    startDate: '2037-11-20T02:00:00.000Z',
+    endDate: '2037-11-20T06:00:00.000Z',
     city: 'unknown',
     source: 'ai-web',
     _venueSitePageHost: 'beefdip.com',
@@ -21499,8 +21779,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
 
   // Same name + city, dates nowhere near the window → no match.
   assert.equal(core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
-    startDate: '2026-06-15T06:00:00.000Z',
-    endDate: '2026-06-16T06:00:00.000Z'
+    startDate: '2037-06-15T06:00:00.000Z',
+    endDate: '2037-06-16T06:00:00.000Z'
   })), null, 'no date overlap → not a match');
 
   // Same name + dates, explicit clashing city → no match.
@@ -21511,8 +21791,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
   // Curated entry without nextDates can never umbrella-match.
   assert.equal(core.findCuratedFestivalMatch({
     title: 'Amsterdam Bear Pride',
-    startDate: '2026-06-18T12:00:00.000Z',
-    endDate: '2026-06-21T12:00:00.000Z',
+    startDate: '2037-06-18T12:00:00.000Z',
+    endDate: '2037-06-21T12:00:00.000Z',
     city: 'unknown'
   }), null, 'missing nextDates → fail closed');
 
@@ -21524,8 +21804,8 @@ test('festival matching fails closed: no date overlap, clashing city, or missing
 
   // The ±7d grace admits an off-by-a-few-days umbrella.
   const grace = core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
-    startDate: '2027-01-20T06:00:00.000Z',
-    endDate: '2027-01-21T06:00:00.000Z'
+    startDate: '2038-01-20T06:00:00.000Z',
+    endDate: '2038-01-21T06:00:00.000Z'
   }));
   assert.equal(grace && grace.key, 'beefdip-bear-week', 'within the ±7d grace → match');
 });
@@ -21539,13 +21819,13 @@ test('festival drift: ONE report-only line when a scraped umbrella disagrees wit
   try {
     await core.prepareEventsForCalendar([
       buildBeefdipUmbrellaEvent({
-        startDate: '2027-01-22T06:00:00.000Z',
-        endDate: '2027-01-30T06:00:00.000Z'
+        startDate: '2038-01-22T06:00:00.000Z',
+        endDate: '2038-01-30T06:00:00.000Z'
       }),
       buildBeefdipUmbrellaEvent({
-        title: 'BeefDip Bear Week 2027',
-        startDate: '2027-01-22T06:00:00.000Z',
-        endDate: '2027-01-30T06:00:00.000Z'
+        title: 'BeefDip Bear Week 2038',
+        startDate: '2038-01-22T06:00:00.000Z',
+        endDate: '2038-01-30T06:00:00.000Z'
       })
     ], adapter, {});
   } finally {
@@ -21554,7 +21834,7 @@ test('festival drift: ONE report-only line when a scraped umbrella disagrees wit
   const driftLines = logLines.filter(line => line.startsWith('📆 FESTIVAL:'));
   assert.equal(driftLines.length, 1, 'one drift line per festival per pass, not per record');
   assert.equal(driftLines[0],
-    '📆 FESTIVAL: scraped BeefDip Bear Week dates 2027-01-22 – 2027-01-30 differ from curated 2027-01-23 – 2027-01-31 — curated wins; update data/festivals.json from the official source if real');
+    '📆 FESTIVAL: scraped BeefDip Bear Week dates 2038-01-22 – 2038-01-30 differ from curated 2038-01-23 – 2038-01-31 — curated wins; update data/festivals.json from the official source if real');
 });
 
 test('festival negative: a non-festival multi-day event is untouched', async () => {
@@ -21562,8 +21842,8 @@ test('festival negative: a non-festival multi-day event is untouched', async () 
   const adapter = buildFestivalPrepAdapter();
   const analyzed = await core.prepareEventsForCalendar([{
     title: 'Hotel Takeover Weekend',
-    startDate: '2026-09-18T20:00:00.000Z',
-    endDate: '2026-09-20T20:00:00.000Z',
+    startDate: '2037-09-18T20:00:00.000Z',
+    endDate: '2037-09-20T20:00:00.000Z',
     city: 'dallas',
     timezone: 'America/Chicago',
     source: 'ai-web',
@@ -22528,6 +22808,33 @@ test('inline data: a date with no year takes the season the list states, or the 
   assert.equal(SharedCore.parseInlineDateText('Feb 30', now), null);
 });
 
+test('inline data: an anchored date takes its year from the anchor, whenever it is read', () => {
+  // bearworldmag.com's July roundup (article:published_time 2026-07-02) lists
+  // "on July 3rd". Read that week, a year and a half on, or in 2030, it is
+  // the same night.
+  const july = { anchorMs: Date.parse('2026-07-02T12:00:00Z') };
+  for (const readOn of ['2026-07-05', '2027-12-31', '2028-01-01', '2030-03-01']) {
+    assert.equal(SharedCore.parseInlineDateText('July 3', new Date(`${readOn}T12:00:00Z`), july).year, 2026, `read on ${readOn}`);
+  }
+  // Published December 29th, listing January: the next year, not the reader's.
+  const december = { anchorMs: Date.parse('2026-12-29T10:00:00Z') };
+  assert.equal(SharedCore.parseInlineDateText('January 3', new Date('2026-12-30T12:00:00Z'), december).year, 2027);
+  assert.equal(SharedCore.parseInlineDateText('January 3', new Date('2029-02-01T12:00:00Z'), december).year, 2027);
+  // An old December post read in January is not last month's party.
+  assert.equal(SharedCore.parseInlineDateText('December 20', new Date('2027-01-05T12:00:00Z'), { anchorMs: Date.parse('2024-12-10T12:00:00Z') }).year, 2024);
+  // The repeat's weekday still chooses among the anchor's years: Feb 5 is a
+  // Thursday in 2026 and a Friday in 2027.
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2030-03-01T12:00:00Z'), { anchorMs: Date.UTC(2026, 6, 1), weekdays: [4] }).year, 2026);
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2030-03-01T12:00:00Z'), { anchorMs: Date.UTC(2026, 6, 1), weekdays: [5] }).year, 2027);
+  // Today's years stay candidates: with Saturdays only, and an anchor in
+  // November 2026 read in January 2027, Feb 5 is still 2028's (the one
+  // Saturday among 2025–2028), as it was.
+  assert.equal(SharedCore.parseInlineDateText('Feb 5', new Date('2027-01-10T12:00:00Z'), { anchorMs: Date.UTC(2026, 10, 15), weekdays: [6] }).year, 2028);
+  // No anchor: nothing changes — the year nearest now, four months back, eight ahead.
+  assert.equal(SharedCore.parseInlineDateText('July 3', new Date('2028-12-07T12:00:00Z')).year, 2029);
+  assert.equal(SharedCore.parseInlineDateText('Oct 3', new Date('2028-12-07T12:00:00Z')).year, 2028);
+});
+
 test('inline data: a printed clock becomes start/end; words state no clock', () => {
   assert.deepEqual(SharedCore.parseInlineTimeText('10:00 PM - 4:00 AM'), { start: '22:00', end: '04:00' });
   assert.deepEqual(SharedCore.parseInlineTimeText('12:00 PM – 6:00 PM'), { start: '12:00', end: '18:00' });
@@ -22692,11 +22999,14 @@ function doorStubAdapter(bodies) {
   };
 }
 
+// The feed's nights sit in 2037 (Sep 12 and 19 are Saturdays, as in 2026): an
+// iCalendar record that ended more than a month ago is the site's archive
+// and is not counted, and these two must both answer.
 const DOOR_LISTING_HTML = '<html><head><link rel="alternate" type="text/calendar" href="/feed.ics"></head><body><a href="/feed.ics">Subscribe</a><article>Bear Night · Sep 12</article><article>Cub Social · Sep 19</article></body></html>';
-const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20260912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20260919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
+const DOOR_ICS = 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:a@x\nDTSTART:20370912T210000\nSUMMARY:Bear Night\nLOCATION:The Eagle\\, Portland\\, USA\nURL:https://door.example/events/bear-night/\nEND:VEVENT\nBEGIN:VEVENT\nUID:b@x\nDTSTART;VALUE=DATE:20370919\nSUMMARY:Cub Social\nRRULE:FREQ=WEEKLY;BYDAY=SA\nEND:VEVENT\nEND:VCALENDAR';
 const DOOR_JSON = { events: [
-  { title: 'Bear Night', start: '2026-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
-  { title: 'Cub Social', start: '2026-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
+  { title: 'Bear Night', start: '2037-09-12T21:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/bear-night', website_url: 'https://eagle.example', image: 'https://cdn.example/a.jpg' },
+  { title: 'Cub Social', start: '2037-09-19T20:00:00', venue: 'The Eagle', city: 'Portland', country: 'USA', ticket_url: 'https://tix.example/cub', website_url: 'https://eagle.example', image: 'https://cdn.example/b.jpg' }
 ] };
 
 test('machine door: a root that advertises a feed is read through the fullest door that answers', async () => {
@@ -22725,8 +23035,8 @@ test('machine door: an iCalendar-only site becomes feed rows — floating times 
   assert.equal(out.machineDoor.kind, 'ics');
   const rows = JSON.parse(out.html).events;
   assert.equal(rows.length, 2);
-  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2026-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
-  assert.equal(rows[1].start, '2026-09-19', 'a date-only start');
+  assert.deepEqual({ ...rows[0], description: undefined }, { uid: 'a@x', title: 'Bear Night', description: undefined, start: '2037-09-12T21:00:00', end: '', url: 'https://door.example/events/bear-night/', venue: 'The Eagle', address: 'Portland, USA', all_day: false });
+  assert.equal(rows[1].start, '2037-09-19', 'a date-only start');
   assert.equal(rows[1].rrule, 'FREQ=WEEKLY;BYDAY=SA');
   assert.equal(rows[1].all_day, true);
 });
@@ -23222,24 +23532,25 @@ test('a promoter registry site claims its own host only from a bare root', () =>
 });
 
 test('festival umbrella: a one-night party carrying the festival name is a sub-event, not the umbrella', () => {
+  // Dated 2037 with the curated windows above.
   const core = createFestivalCore();
   assert.equal(core.findCuratedFestivalMatch({
     title: 'The Belly Party - SPOOKY BEAR!',
-    startDate: '2026-10-31T01:00:00.000Z',
-    endDate: '2026-10-31T05:00:00.000Z',
+    startDate: '2037-10-31T01:00:00.000Z',
+    endDate: '2037-10-31T05:00:00.000Z',
     city: 'unknown'
   }), null, 'run 20260913-152123: Red Room, 9pm — saves like any party');
   const named = core.findCuratedFestivalMatch({
-    title: 'Spooky Bear 2026',
-    startDate: '2026-10-30T20:00:00.000Z',
-    endDate: '2026-10-30T23:00:00.000Z',
+    title: 'Spooky Bear 2037',
+    startDate: '2037-10-30T20:00:00.000Z',
+    endDate: '2037-10-30T23:00:00.000Z',
     city: 'unknown'
   });
   assert.equal(named && named.key, 'spooky-bear', 'the festival\'s own name is the umbrella whatever its span');
   const spanning = core.findCuratedFestivalMatch({
     title: 'Spooky Bear Weekend Pass',
-    startDate: '2026-10-29T20:00:00.000Z',
-    endDate: '2026-11-01T20:00:00.000Z',
+    startDate: '2037-10-29T20:00:00.000Z',
+    endDate: '2037-11-01T20:00:00.000Z',
     city: 'unknown'
   });
   assert.equal(spanning && spanning.key, 'spooky-bear', 'a record spanning days is the umbrella');
@@ -24916,6 +25227,42 @@ test('FetchPoliteness parks a host on 429 for the rest of the run and stamps the
   assert.match(second.refusalReasonFor('https://b.example/other'), /parked/);
 });
 
+test('FetchPoliteness parks a host that does not answer three times running; an answer in between resets the count', async () => {
+  const { gate, logs } = makePoliteness({ minHostGapMs: 0 });
+  let calls = 0;
+  const dead = () => gate.run('https://nominatim.example/search?q=x' + calls, async () => { calls++; throw new Error('HTTP request failed for https://nominatim.example/search: fetch failed'); });
+  await assert.rejects(dead()); await assert.rejects(dead());
+  assert.equal(gate.refusalReasonFor('https://nominatim.example/search?q=y'), '', 'two silences are not yet a verdict');
+  await gate.run('https://nominatim.example/status', async () => 'ok');
+  await assert.rejects(dead()); await assert.rejects(dead());
+  assert.equal(gate.refusalReasonFor('https://nominatim.example/search?q=y'), '', 'an answer in between starts the count again');
+  await assert.rejects(dead());
+  assert.match(gate.refusalReasonFor('https://nominatim.example/search?q=y'), /parked for this run \(no answer 3 times running\)/);
+  const before = calls;
+  await assert.rejects(dead(), (error) => error.politeness && error.politeness.reason === 'parked');
+  assert.equal(calls, before, 'the silent host is not asked again this run');
+  assert.ok(logs.some(line => line.includes('nominatim.example did not answer 3 requests in a row')), logs.join('\n'));
+  // A page the host answers "not found" for is an answer, never silence.
+  const { gate: other } = makePoliteness({ minHostGapMs: 0 });
+  for (let i = 0; i < 5; i++) await assert.rejects(other.run('https://site.example/gone' + i, async () => { throw httpError(404); }));
+  assert.equal(other.refusalReasonFor('https://site.example/x'), '');
+});
+
+test('calendar read health: an outage or an unreadable calendar degrades the run; a city with no published calendar yet does not', () => {
+  const health = (snapshots) => SharedCore.describeCalendarReadHealth(snapshots);
+  assert.deepEqual(health({ nyc: { status: 'ok' }, la: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } }),
+    { ok: 2, missing: 1, failed: 0, unknown: 0, degraded: false, cities: [] });
+  const outage = health({ nyc: { status: 'unavailable', reason: 'outage' }, la: { status: 'ok' }, sf: { status: 'unavailable', reason: 'unreadable' } });
+  assert.equal(outage.degraded, true);
+  assert.deepEqual(outage.cities, ['nyc', 'sf']);
+  // Runs written before reasons were recorded: degraded when more calendars
+  // were unavailable than read (2026-09-30: 58 unavailable).
+  assert.equal(health({ a: { status: 'unavailable' }, b: { status: 'unavailable' }, c: { status: 'ok' } }).degraded, true);
+  assert.equal(health({ a: { status: 'unavailable' }, b: { status: 'ok' }, c: { status: 'ok' } }).degraded, false, 'one city without a published file is an ordinary run');
+  assert.equal(health(null).degraded, false);
+  assert.equal(health({}).degraded, false);
+});
+
 test('FetchPoliteness parks on 403 only when the host never answered, or says it three times running', async () => {
   const { gate } = makePoliteness({ minHostGapMs: 0 });
   await assert.rejects(gate.run('https://wall.example/', async () => { throw httpError(403); }));
@@ -25482,8 +25829,10 @@ test('one destination: prepareEventsForCalendar never matches a chimera against 
     title: 'Bearracuda | Seattle - Red Light District',
     bar: 'Massive',
     address: '1400 E Union St, Seattle, WA',
-    startDate: '2026-10-17T05:00:00.000Z',
-    endDate: '2026-10-17T08:00:00.000Z',
+    // 2037: the same Friday night. A span more than 30 days past is withheld
+    // on its own, and 'Looking' must reach the write path.
+    startDate: '2037-10-17T05:00:00.000Z',
+    endDate: '2037-10-17T08:00:00.000Z',
     timezone: 'America/Los_Angeles',
     ticketUrl: 'https://tixr.example/e/205790',
     city: 'seattle',
@@ -26296,4 +26645,625 @@ test('links: an untried link is presumed gone only by its SHAPE — five sibling
   few.deadEndRunContext = { enabled: true, retryDays: 30, minMisses: 2, store: Object.fromEntries(Object.entries(store).slice(0, 4)) };
   few.notePathShapeEvidence('https://venue.example/1-6-26/tendie-tuesday-3', 'gone');
   assert.equal(few.isOriginStatedGoneUrl(untried), false);
+});
+
+// ---------------------------------------------------------------------------
+// Series-level fills never detach a night (run 20260929-091555: Gathr's row
+// for the owner's weekly "Bear Happy Hour" series proposed five overrides
+// that add one picture and "Free" and change nothing; Thotyssey's FUZZY row
+// three more). Shapes below are the run's own records, trimmed.
+// ---------------------------------------------------------------------------
+async function buildSeriesFillNights(core, nights) {
+  const SERIES_NOTES = [
+    'Bar: Check instagram for this week’s location.',
+    'Tea: Popular happy hour that changes location every week in Manhattan.',
+    'Instagram: https://www.instagram.com/bearhappyhournyc',
+    'Shorter: BHH',
+    'Web: https://linktr.ee/bearhappyhour'
+  ].join('\n');
+  const first = Date.now() + 14 * 24 * 60 * 60 * 1000;
+  const built = [];
+  const original = console.log;
+  console.log = () => {};
+  try {
+    for (let i = 0; i < nights.length; i++) {
+      const start = new Date(first + i * 7 * 24 * 60 * 60 * 1000);
+      const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+      const seriesNight = { title: 'Bear Happy Hour', identifier: 'cal:6thhos5ct3pllq5kmvsp7infd8@google.com', startDate: start, endDate: end, location: '', notes: SERIES_NOTES };
+      const scraped = {
+        title: 'Bear Happy Hour',
+        description: 'Popular happy hour that changes location every week in Manhattan.',
+        startDate: start,
+        endDate: end,
+        city: 'dallas',
+        image: 'https://i.imgur.com/eiEbgvg.jpeg',
+        imageSource: 'json-api',
+        cover: 'Free',
+        instagram: 'https://www.instagram.com/bearhappyhournyc',
+        website: 'https://linktr.ee/bearhappyhour',
+        source: 'ai-web',
+        _parserConfig: { name: 'Gathr', siteRole: 'aggregator' },
+        ...nights[i]
+      };
+      built.push(await core.buildAnalyzedCalendarEvent(scraped, {
+        action: 'new',
+        reason: 'Recurring source match found - creating override',
+        sourceEvent: seriesNight,
+        existingKey: '6thhos5ct3pllq5kmvsp7infd8@google.com',
+        overrideIdentity: { overrideUid: '6thhos5ct3pllq5kmvsp7infd8@google.com', overrideRecurrenceId: start.toISOString() }
+      }, {}, {}));
+    }
+  } finally { console.log = original; }
+  return built;
+}
+
+test('series-level fills: the same picture and cover on every night of a saved series detach no night', async () => {
+  const core = createCore();
+  const nights = await buildSeriesFillNights(core, [{}, {}, {}, {}, {}]);
+  for (const night of nights) {
+    assert.equal(SharedCore.isOverrideCreate(night), true);
+    assert.equal(night._mergeNoOp, false, 'precondition: each night adds lines, so the no-op gate lets it through');
+    assert.deepEqual(core.getOverrideNightFills(night).keys, ['cover', 'image']);
+  }
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let withheld;
+  try { withheld = core.withholdSeriesLevelOverrideFills(nights); } finally { console.log = original; }
+  assert.equal(withheld.length, 5);
+  assert.deepEqual(nights[0]._seriesLevelFillWithheld, { fields: ['cover', 'image'], nights: 5 });
+  assert.equal(lines.filter(line => line.startsWith('🔁 SERIES FILL: "Bear Happy Hour" — Gathr adds the same cover, image to 5 nights')).length, 1, lines.join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution(nights), [], 'never written');
+  assert.equal(core.isOwnerReviewCandidate(nights[0]), false, 'and never a card');
+  assert.equal(SharedCore.describeExecutionDisposition(nights[0]),
+    'WITHHELD (series-level fact — the same cover, image on 5 nights of the saved series; edit the series, not its nights)');
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_seriesLevelFillWithheld'), 'a re-analysis starts clean');
+});
+
+test('series-level fills: a night with a fact of its own, a lone night, a flyer per night and an owner verdict all stay proposals', async () => {
+  const core = createCore();
+  const quiet = (fn) => { const original = console.log; console.log = () => {}; try { return fn(); } finally { console.log = original; } };
+
+  // This week's venue is what an override is for: that night stays, the
+  // nights that only repeat the series picture do not.
+  const withVenue = await buildSeriesFillNights(core, [{}, { bar: 'Rawhide', address: '500 8th Ave, New York, NY 10018' }, {}]);
+  assert.ok(core.getOverrideNightFills(withVenue[1]).keys.includes('address'), 'that night adds its own address');
+  quiet(() => core.withholdSeriesLevelOverrideFills(withVenue));
+  assert.equal(Boolean(withVenue[1]._seriesLevelFillWithheld), false);
+  assert.equal(SharedCore.filterEventsForExecution([withVenue[1]]).length, 1);
+  assert.equal(Boolean(withVenue[0]._seriesLevelFillWithheld), true);
+  assert.equal(Boolean(withVenue[2]._seriesLevelFillWithheld), true);
+
+  // One night alone cannot show that the value is the series'.
+  const lone = await buildSeriesFillNights(core, [{}]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(lone)), []);
+  assert.equal(SharedCore.filterEventsForExecution(lone).length, 1);
+
+  // A flyer per night is the source speaking per night.
+  const perNight = await buildSeriesFillNights(core, [
+    { image: 'https://i.imgur.com/october-1.jpeg' },
+    { image: 'https://i.imgur.com/october-8.jpeg' }
+  ]);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(perNight)), []);
+
+  // The owner's verdict on a night always lands on that night.
+  const verdicts = await buildSeriesFillNights(core, [
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true },
+    { bearSource: 'manual-bear (verdict store 2026-09-20)', isBearEvent: true }
+  ]);
+  assert.equal(core.getOverrideNightFills(verdicts[0]), null);
+  assert.deepEqual(quiet(() => core.withholdSeriesLevelOverrideFills(verdicts)), []);
+});
+
+// A rate table's season row is a name and a date with nothing of its own
+// (campoutpoconos.com/accommodations, run 20260929-091555 — the record as
+// the run built it, trimmed).
+test('a name and a date with no picture, no words and no page of their own, placed only by the site, is withheld as an announcement', async () => {
+  const core = createFestivalCore([]);
+  const seasonRow = {
+    title: 'SPRING',
+    description: 'SPRING',
+    startDate: '2027-04-23T04:00:00.000Z',
+    endDate: '2027-04-23T07:00:00.000Z',
+    _endDateDefaulted: true,
+    bar: 'Camp Out',
+    barSource: 'venue-site-identity',
+    address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301',
+    addressSource: 'curated',
+    location: '41.0219799, -75.1167816',
+    pinSource: 'curated',
+    website: 'https://campoutpoconos.com',
+    url: 'https://campoutpoconos.com',
+    timezone: 'America/New_York',
+    city: 'nyc',
+    source: 'ai-web',
+    isBearEvent: true,
+    _sourcePageUrl: 'https://campoutpoconos.com/accommodations/',
+    _multiEventSegment: { index: 14, total: 17, lineCount: 3, text: 'SPRING | April 23 – May 21 • Weekday $40 | Weekend $70 • Additional Guest: Weekday $40 | Weekend $50' }
+  };
+  // The same venue's real theme weekend: all-day too, but it has a flyer and a blurb.
+  const themeWeekend = {
+    ...seasonRow,
+    title: 'LEATHER BEARS',
+    description: 'Leather Bear Weekend hits hard as we celebrate National Coming OUT Day with fur, gear, and unapologetic heat taking over camp.',
+    image: 'https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/16c632d9-8105-473d-b044-d54c0979c9d7/Camp-Out-October-9-Bears.jpg',
+    startDate: '2026-10-09T04:00:00.000Z',
+    endDate: '2026-10-12T03:59:00.000Z',
+    _multiEventSegment: { index: 2, total: 9, lineCount: 4 }
+  };
+  // A row that names its own page is an event with a page, however bare.
+  const withPage = { ...seasonRow, title: 'CALF B&B EVENT', description: 'CALF B&B EVENT', website: 'https://eaglela.com/events/calf-bb-event/', url: 'https://eaglela.com/events/calf-bb-event/' };
+  // A place the row itself stated is not the site's identity.
+  const statedPlace = { ...seasonRow, title: 'Bear Camp Opening', description: 'Bear Camp Opening', barSource: 'page-adjacent' };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([seasonRow, themeWeekend, withPage, statedPlace], buildFestivalPrepAdapter(), {});
+  } finally { console.log = original; }
+  const byTitle = (title) => analyzed.find(e => e.title === title);
+  assert.equal(byTitle('SPRING')._announcementOnlyWithheld, true);
+  assert.ok(lines.some(line => line.startsWith('📣 ANNOUNCEMENT: "SPRING" is a name and a date with no picture, no words and no page of their own')), lines.filter(l => l.includes('ANNOUNCEMENT')).join('\n'));
+  assert.deepEqual(SharedCore.filterEventsForExecution([byTitle('SPRING')]), []);
+  assert.equal(core.isOwnerReviewCandidate(byTitle('SPRING')), false, 'never a card');
+  assert.ok(!byTitle('LEATHER BEARS')._announcementOnlyWithheld, 'a flyer and a blurb are the event\'s own');
+  assert.ok(!byTitle('CALF B&B EVENT')._announcementOnlyWithheld, 'a page of its own');
+  assert.ok(!byTitle('Bear Camp Opening')._announcementOnlyWithheld, 'a place the row stated');
+});
+
+// beefdip.com/planned-events, run 20260929-091555: the row "Sunday, Jan 31 •
+// 11AM / 1PM • The Tryst Hotel" of the DRAG BRUNCH + ROOFTOP POOL card became
+// a record titled "The Tryst Hotel", and its copy — "Drag Brunch + Rooftop
+// Pool at The Tryst Hotel" — counted as the party restating its own name.
+test('sanity: a copy that only places something AT the venue does not restate a venue-named title', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, {
+    title: 'The Tryst Hotel',
+    bar: 'The Tryst Hotel',
+    description: 'Drag Brunch + Rooftop Pool at The Tryst Hotel'
+  }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Hotel Delfin',
+    bar: 'Hotel Delfin',
+    description: 'Pool party @ Hotel Delfin, all day.'
+  }), ['junk-title']);
+  // The name standing anywhere else is the party naming itself.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'MASSIVE',
+    bar: 'MASSIVE',
+    description: 'Saturdays at MASSIVE. MASSIVE returns to the warehouse with dirty grooves all night long.'
+  }), []);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('drag brunch rooftop pool at the tryst hotel', 'the tryst hotel'), false);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('the tryst hotel presents drag brunch', 'the tryst hotel'), true);
+  assert.equal(SharedCore.textNamesPhraseBeyondLocative('great party', 'the tryst hotel'), false);
+});
+
+// beefdip.com/planned-events: WELCOME PARTY's flyer is
+// ".../uploads/2026/01/2026-01-25 Welcome Party.webp"; an earlier run cut it
+// at the space and saved the head as FOAM POOL PARTY's website, and run
+// 20260929-091555 kept it ("same-host deeper URL beats domain root").
+test('the head of a picture\'s address is a file, not a page: it loses every link merge', () => {
+  const core = createCore();
+  const cut = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25';
+  const welcomeFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp';
+  const foamFlyer = 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp';
+  // Nothing known about the run's pictures: nothing is presumed.
+  assert.equal(core.isCutPictureAddress(cut), false);
+  // The neighbour card's flyer is a picture of this run.
+  core.notePictureAddresses([{ title: 'WELCOME PARTY', image: welcomeFlyer }, { title: 'FOAM POOL PARTY', image: foamFlyer }]);
+  assert.equal(core.isCutPictureAddress(cut), true);
+  assert.equal(core.isCutPictureAddress('http://www.beefdip.com/wp-content/uploads/2026/01/2026-01-25'), true, 'scheme and www are spelling');
+  // A page, a front door, the pictures' folder and a shorter head that ends
+  // inside a word are not cut picture addresses.
+  for (const page of ['https://beefdip.com/planned-events/', 'https://beefdip.com', 'https://beefdip.com/wp-content/uploads/2026/01/',
+    'https://beefdip.com/wp-content/uploads/2026/01/2026-01', 'https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome']) {
+    assert.equal(core.isCutPictureAddress(page), page.endsWith('Welcome'), page);
+  }
+  const records = { a: { title: 'FOAM POOL PARTY' }, b: { title: 'FOAM POOL PARTY', image: foamFlyer } };
+  assert.deepEqual(core.resolveConflictDeterministically('website', cut, 'https://beefdip.com',
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }),
+    { winner: 'b', reason: 'the other link is the head of a picture\'s address (cut at a space in its filename) — a file, not a page' });
+  assert.equal(core.resolveConflictDeterministically('website', 'https://beefdip.com', cut,
+    { sideLabels: { a: 'calendar', b: 'scraped' }, records }).winner, 'a', 'and it never replaces a saved link');
+  // A picture carried only by a record of the merge counts too.
+  const fresh = createCore();
+  assert.equal(fresh.isCutPictureAddress(cut, [{ imageVertical: welcomeFlyer }]), true);
+});
+
+// BEEFMINCE SPOOKMINCE, run 20260929-091555: the calendar holds the doubled
+// address an earlier run saved and the pin geocoded from it; the scrape now
+// brings the clean form and (its geocode unanswered) the page's maps-link pin.
+test('an address said once replaces the same address said twice, and the saved pin stays where it is', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    location: '51.5251192, -0.0798044',
+    notes: [
+      'bar: UNLOCKED (Shoreditch)',
+      'address: 118 Curtain Rd, London EC2A 3AY, London EC2A 3AY',
+      'timezone: Europe/London',
+      'website: https://beefmince.com/events',
+      'pinSource: geocoded-exact',
+      'addressSource: page',
+      'key: spookmince|2026-10-31|unlocked (shoreditch)'
+    ].join('\n')
+  };
+  const scraped = {
+    title: 'SPOOKMINCE',
+    startDate: new Date(start),
+    endDate: new Date(end),
+    bar: 'UNLOCKED (Shoreditch)',
+    address: '118 Curtain Rd, London EC2A 3AY',
+    addressSource: 'page',
+    location: '51.52608,-0.079068',
+    pinSource: 'maps-link',
+    city: 'london',
+    timezone: 'Europe/London',
+    website: 'https://beefmince.com/events',
+    source: 'ai-web',
+    _parserConfig: { name: 'BEEFMINCE' },
+    _fieldPriorities: {
+      address: { priority: ['ai-web'], merge: 'ai' },
+      location: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let merged;
+  try {
+    merged = (await core.prepareEventsForCalendar([scraped], buildPrepCalendarAdapter([calendarRecord]), {}))[0];
+  } finally { console.log = original; }
+  assert.equal(merged._action, 'merge');
+  assert.equal(merged.address, '118 Curtain Rd, London EC2A 3AY');
+  assert.equal(merged.location, '51.5251192, -0.0798044', 'a respelled address is not a venue that moved');
+  assert.ok(lines.some(line => line.includes('field=address resolved deterministically — the same address with a line said twice on the other side — said once')),
+    lines.filter(line => line.includes('address')).join('\n'));
+});
+
+// ---------------------------------------------------------------------------
+// A virtual event belongs to its organizer's city (owner, 2026-09-29: Mass
+// Bears and Cubs' monthly membership meetings at "Online/Virtual").
+// ---------------------------------------------------------------------------
+function homeCore() {
+  return new SharedCore({
+    boston: { timezone: 'America/New_York', patterns: ['boston'] },
+    ptown: { timezone: 'America/New_York', patterns: ['provincetown'] },
+    dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
+  }, { eventSchema: EventSchema });
+}
+const placedIn = (city, count) => Array.from({ length: count }, (_, index) => ({ title: `Night ${city} ${index}`, city, bar: 'Club Cafe', startDate: new Date('2037-10-07T23:00:00.000Z') }));
+const meeting = (overrides = {}) => ({ title: 'Monthly Membership Meetings', bar: 'Online/Virtual', city: 'unknown', startDate: new Date('2037-10-07T23:00:00.000Z'), ...overrides });
+
+test('virtual events: a venue that says "online" is recognised by its own words', () => {
+  for (const text of ['Online/Virtual', 'Online', 'virtual', 'Zoom', 'Online event', 'Virtual Meeting', 'via Zoom']) {
+    assert.equal(SharedCore.isVirtualVenueText(text), true, text);
+  }
+  for (const text of ['', 'Club Cafe', 'Virtual Reality Bar', 'The Online Lounge', 'Zoom Nightclub Boston', 'Event', 'Rockbar'] ) {
+    assert.equal(SharedCore.isVirtualVenueText(text), false, text);
+  }
+});
+
+test('virtual events: filed under the city most of the source\'s own events are in', () => {
+  const core = homeCore();
+  const events = [...placedIn('boston', 8), ...placedIn('ptown', 1), meeting(), meeting({ title: 'Board Call', bar: 'Zoom' })];
+  assert.equal(core.placeVirtualEventsAtSourceHome(events, { name: 'Mass Bears and Cubs' }), 2);
+  const placed = events.filter((event) => event._virtual);
+  assert.deepEqual(placed.map((event) => [event.city, event._citySource, event.timezone]), [['boston', 'source-home', 'America/New_York'], ['boston', 'source-home', 'America/New_York']]);
+});
+
+test('virtual events: no home, no placing — a touring source, a thin source, an aggregator, an address, an unanchored time', () => {
+  const run = (events, config = { name: 'Some Club' }) => { const core = homeCore(); return [core.placeVirtualEventsAtSourceHome(events, config), events]; };
+  let [count, events] = run([...placedIn('boston', 3), ...placedIn('dallas', 3), meeting()]);
+  assert.equal(count, 0, 'half here, half there: no home');
+  assert.equal(events[6].city, 'unknown');
+  [count] = run([...placedIn('boston', 4), meeting()]);
+  assert.equal(count, 0, 'four placed events are not enough to call a home');
+  [count] = run([...placedIn('boston', 8), meeting()], { name: 'The Bear Calendar', siteRole: 'aggregator' });
+  assert.equal(count, 0, 'an aggregator lists everybody\'s events');
+  [count] = run([...placedIn('boston', 8), meeting({ address: '459 Broadway, New York, NY' })]);
+  assert.equal(count, 0, 'a street line came with it: not an online event');
+  [count] = run([...placedIn('boston', 8), meeting({ _timezoneUnresolved: true })]);
+  assert.equal(count, 0, 'its time was read without a zone: left alone');
+  [count, events] = run([...placedIn('boston', 8), meeting({ city: 'dallas' }), { title: 'No venue', city: 'unknown' }]);
+  assert.equal(count, 0, 'a city it already has is kept, and a placeless event that is not online is not guessed');
+  assert.equal(events[8].city, 'dallas');
+});
+
+// ---------------------------------------------------------------------------
+// ALL-DAY EVENTS (owner, 2026-09-30). A page that states a date and no time
+// names a day: one shape everywhere — 00:00:00 through 23:59:59 of the last
+// day, in the event's own zone — and a flag derived from those dates.
+// ---------------------------------------------------------------------------
+function allDayCore() {
+  return new SharedCore({
+    la: { timezone: 'America/Los_Angeles', patterns: ['los angeles'] },
+    london: { timezone: 'Europe/London', patterns: ['london'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york'] },
+    tokyo: { timezone: 'Asia/Tokyo', patterns: ['tokyo'] }
+  }, { eventSchema: EventSchema });
+}
+
+test('all-day: a date with no time becomes the whole day in the event\'s own zone; a timed event carries no flag', () => {
+  const core = allDayCore();
+  const la = { title: 'B BAR', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: null, _noTimeStated: true };
+  assert.equal(core.applyAllDayConvention(la), true);
+  assert.equal(la.startDate.toISOString(), '2037-10-01T07:00:00.000Z', 'midnight in Los Angeles');
+  assert.equal(la.endDate.toISOString(), '2037-10-02T06:59:59.000Z', '23:59:59 that same Los Angeles day');
+  assert.equal(la.allDay, true);
+
+  // "Oct 8 – Oct 12", date only: through the 12th.
+  const weekend = { title: 'Western Xposure', city: 'la', startDate: new Date('2037-10-08T07:00:00.000Z'), endDate: new Date('2037-10-12T07:00:00.000Z'), _noTimeStated: true };
+  core.applyAllDayConvention(weekend);
+  assert.deepEqual(core.getAllDayDays(weekend), { startDay: '2037-10-08', endDay: '2037-10-12' });
+
+  // A span that crosses the end of daylight saving is still whole days.
+  const acrossDst = { title: 'Cannonball Bash', city: 'nyc', startDate: new Date('2037-10-28T04:00:00.000Z'), endDate: new Date('2037-11-03T04:59:59.000Z') };
+  assert.equal(core.applyAllDayConvention(acrossDst), true, 'already in the shape: all-day without any stamp');
+  assert.deepEqual(core.getAllDayDays(acrossDst), { startDay: '2037-10-28', endDay: '2037-11-02' });
+
+  // A stored 00:00–03:00 default, a 9 PM party, and a midnight show with a real end are timed.
+  for (const timed of [
+    { startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-01T10:00:00.000Z') },
+    { startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') },
+    { startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-01T11:00:00.000Z') }
+  ]) {
+    const event = { title: 'Timed', city: 'la', allDay: true, ...timed };
+    assert.equal(core.applyAllDayConvention(event), false);
+    assert.equal('allDay' in event, false, 'a flag the dates do not back is taken away');
+  }
+
+  // A stamp on a record that turned out to have a time is not obeyed.
+  const found = { title: 'Found a time', city: 'la', startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: null, _noTimeStated: true };
+  assert.equal(core.applyAllDayConvention(found), false);
+  assert.equal(found.startDate.toISOString(), '2037-10-02T04:00:00.000Z');
+
+  // No zone yet (wall clock labelled UTC, or an unknown city): untouched until there is one.
+  const waiting = { title: 'MEC cell', startDate: new Date('2037-10-01T00:00:00.000Z'), endDate: null, _noTimeStated: true, _timezoneUnresolved: true };
+  assert.equal(core.applyAllDayConvention(waiting), false);
+  assert.equal(waiting.endDate, null);
+  assert.equal(waiting._noTimeStated, true);
+  const nowhere = { title: 'No city', city: 'unknown', startDate: new Date('2037-10-01T00:00:00.000Z'), _noTimeStated: true };
+  assert.equal(core.applyAllDayConvention(nowhere), false);
+
+  // ISO strings stay strings.
+  const text = { title: 'As text', city: 'london', startDate: '2037-09-30T23:00:00.000Z', endDate: null, _noTimeStated: true };
+  core.applyAllDayConvention(text);
+  assert.equal(text.startDate, '2037-09-30T23:00:00.000Z');
+  assert.equal(text.endDate, '2037-10-01T22:59:59.000Z');
+  assert.equal(SharedCore.isAllDayFlag('true'), true, 'the note line reads back as the flag');
+  assert.equal(SharedCore.isAllDayFlag('false'), false);
+});
+
+test('all-day: a stored all-day record names days, whatever instants its store uses', () => {
+  const core = allDayCore();
+  assert.equal(core.getStoredAllDayDays({ isAllDay: false, startDate: new Date() }), null);
+  assert.deepEqual(core.getStoredAllDayDays({ isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-04', startDate: new Date('2037-10-01T00:00:00Z') }),
+    { startDay: '2037-10-01', endDay: '2037-10-04' }, 'the days the reader stamped win');
+  // EventKit / the phone snapshot: the device's own midnight, read with this process's clock.
+  assert.deepEqual(core.getStoredAllDayDays({ isAllDay: true, startDate: new Date(2037, 9, 1, 0, 0, 0), endDate: new Date(2037, 9, 1, 23, 59, 59) }),
+    { startDay: '2037-10-01', endDay: '2037-10-01' });
+  assert.deepEqual(core.getStoredAllDayDays({ isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 3) }),
+    { startDay: '2037-10-01', endDay: '2037-10-02' }, 'an end exactly on a later midnight is exclusive');
+  // A published ICS: VALUE=DATE, midnight UTC, exclusive DTEND — the days ride along from the reader.
+  const records = SharedCore.parsePublishedCalendarIcs([
+    'BEGIN:VCALENDAR', 'BEGIN:VEVENT', 'UID:bash@test', 'SUMMARY:Bear Bash',
+    'DTSTART;VALUE=DATE:20371001', 'DTEND;VALUE=DATE:20371003', 'DESCRIPTION:bar: Eagle', 'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n'));
+  const { events } = SharedCore.expandPublishedCalendarEventsInWindow(records, new Date('2037-09-25T00:00:00Z'), new Date('2037-10-10T00:00:00Z'));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].isAllDay, true);
+  assert.deepEqual([events[0].allDayStartDay, events[0].allDayEndDay], ['2037-10-01', '2037-10-02']);
+  assert.deepEqual(core.getStoredAllDayDays(events[0]), { startDay: '2037-10-01', endDay: '2037-10-02' });
+});
+
+test('all-day: where a scraped event meets its calendar record', () => {
+  const core = allDayCore();
+  const laDay = (day) => core.buildAllDaySpan(day, day, 'America/Los_Angeles');
+  const scrapedAllDay = () => ({ title: 'B BAR', city: 'la', timezone: 'America/Los_Angeles', ...laDay('2037-10-01'), allDay: true });
+
+  // 1. The stored record is all-day in a published ICS (midnight UTC): same day → same instants after alignment.
+  const stored = { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-01', startDate: new Date('2037-10-01T00:00:00Z'), endDate: new Date('2037-10-02T00:00:00Z') };
+  const calendar = { title: 'B BAR', startDate: stored.startDate, endDate: stored.endDate };
+  const scraped = scrapedAllDay();
+  core.alignAllDayMergeSides(scraped, calendar, stored);
+  assert.equal(calendar.startDate.toISOString(), scraped.startDate.toISOString(), 'one day, one pair of instants');
+  assert.equal(calendar.endDate.toISOString(), scraped.endDate.toISOString());
+  assert.equal(calendar.allDay, true);
+  assert.deepEqual(core.computeCalendarWriteChanges({ ...scraped, url: '', notes: 'x' }, { ...stored, title: 'B BAR', notes: 'x' }, { website: '' }), [],
+    'the same day is no date change, although the two stores keep different instants for it');
+
+  // 2. A saved clock time is never replaced by "no time listed".
+  const timedRecord = { title: 'B BAR', startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') };
+  const dateOnly = scrapedAllDay();
+  const timedCalendar = { ...timedRecord };
+  core.alignAllDayMergeSides(dateOnly, timedCalendar, timedRecord);
+  assert.equal(dateOnly.startDate.toISOString(), '2037-10-02T04:00:00.000Z');
+  assert.equal(dateOnly.endDate.toISOString(), '2037-10-02T09:00:00.000Z');
+  assert.equal('allDay' in dateOnly, false);
+
+  // 3. A saved ONE-day all-day record takes a time found for that day, start and end together.
+  const found = { title: 'B BAR', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: null };
+  const allDayCalendar = { title: 'B BAR', startDate: stored.startDate, endDate: stored.endDate };
+  core.alignAllDayMergeSides(found, allDayCalendar, stored);
+  assert.equal(allDayCalendar.startDate.toISOString(), '2037-10-02T04:00:00.000Z');
+  assert.equal(allDayCalendar.endDate, null, 'never the stored 23:59:59 under a 9 PM start');
+  assert.equal('allDay' in allDayCalendar, false);
+
+  // …but not a saved multi-day span, and not a time on another day.
+  const week = { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-05', startDate: new Date('2037-10-01T00:00:00Z'), endDate: new Date('2037-10-06T00:00:00Z') };
+  const weekCalendar = { title: 'Bear Week', startDate: week.startDate, endDate: week.endDate };
+  core.alignAllDayMergeSides({ ...found }, weekCalendar, week);
+  assert.deepEqual(core.getAllDayDays({ ...weekCalendar, city: 'la' }), { startDay: '2037-10-01', endDay: '2037-10-05' }, 'the week stays a week, in the one shape');
+  const otherDay = { title: 'B BAR', startDate: stored.startDate, endDate: stored.endDate };
+  core.alignAllDayMergeSides({ ...found, startDate: new Date('2037-10-04T04:00:00.000Z') }, otherDay, stored);
+  assert.equal(otherDay.allDay, true, 'a time on another day is a date conflict, left to the ordinary rules');
+
+  // The calendar's own switch is part of the write: a record that is all-day
+  // by its dates but not by its switch is a change, with no date row.
+  const shapedButTimed = { title: 'Fest', isAllDay: false, startDate: scraped.startDate, endDate: scraped.endDate, notes: 'x' };
+  assert.deepEqual(core.computeCalendarWriteChanges({ ...scrapedAllDay(), url: '', notes: 'x', title: 'Fest' }, shapedButTimed, { website: '' }), ['allDay']);
+  assert.equal(SharedCore.getOwnerReviewChangeFields().includes('allDay'), false, 'housekeeping, not a card of its own');
+});
+
+test('whole-day kinds: a festival is all-day; one date at a venue, or anything that runs "til late", is an event whose time is unknown', () => {
+  const core = allDayCore();
+  const kind = (event) => {
+    core.applyAllDayConvention(event);
+    assert.ok(!(event.allDay === true && event.timeUnknown === true), 'never both flags');
+    return SharedCore.wholeDayKind(event);
+  };
+  const oneDay = (extra) => ({ title: 'X', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: null, _noTimeStated: true, ...extra });
+  const days = (extra) => ({ title: 'X', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-08T07:00:00.000Z'), endDate: new Date('2037-10-12T07:00:00.000Z'), _noTimeStated: true, ...extra });
+
+  // A night at a bar with no printed time: an ordinary event, time unknown.
+  const barNight = oneDay({ title: 'B BAR', bar: 'Eagle LA' });
+  assert.equal(kind(barNight), 'time-unknown');
+  assert.equal(barNight.timeUnknown, true);
+  assert.equal('allDay' in barNight, false);
+  assert.equal(kind(oneDay({ address: '4219 Santa Monica Blvd, Los Angeles, CA' })), 'time-unknown', 'a street address is a venue');
+
+  // A day in a city, no venue — a holiday, a festival day: a real all-day event.
+  const festivalDay = oneDay({ title: 'BeefDip Bear Week', address: 'Puerto Vallarta, Jalisco' });
+  assert.equal(kind(festivalDay), 'all-day');
+  assert.equal(festivalDay.allDay, true);
+  assert.equal('timeUnknown' in festivalDay, false);
+
+  // More than one day is a festival, a weekend, a cruise — venue or not.
+  assert.equal(kind(days({ title: 'Bear Weekend', bar: 'Camp Out Poconos' })), 'all-day');
+  assert.equal(kind(days({ title: 'Leipzig Bear Weekend' })), 'all-day');
+
+  // The page's own word outranks the span: a day does not run "til late".
+  assert.equal(kind(oneDay({ endNote: 'late' })), 'time-unknown');
+  assert.equal(kind(days({ endNote: 'late' })), 'time-unknown');
+
+  // A timed event carries neither flag, whatever it was stamped with.
+  const timed = { title: 'X', city: 'la', timezone: 'America/Los_Angeles', bar: 'Eagle LA', allDay: true, timeUnknown: true,
+    startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') };
+  assert.equal(kind(timed), '');
+  assert.equal('allDay' in timed, false);
+  assert.equal('timeUnknown' in timed, false);
+
+  // Re-derived, never sticky: the venue arriving later (a merge, a fold)
+  // changes the kind on the next derive.
+  const late = oneDay({ title: 'Bear Night' });
+  assert.equal(kind(late), 'all-day');
+  late.bar = 'Club Try-Angles';
+  assert.equal(kind(late), 'time-unknown');
+  assert.equal(SharedCore.isWholeDayEvent(late), true);
+  // Read back from the notes, the flag is the string "true".
+  assert.equal(SharedCore.wholeDayKind({ timeUnknown: 'true' }), 'time-unknown');
+  assert.equal(SharedCore.wholeDayKind({ allDay: 'true' }), 'all-day');
+  assert.equal(SharedCore.wholeDayKind({}), '');
+});
+
+test('whole-day end to end: a festival merges as a real all-day event with `allDay: true` in its notes', async () => {
+  const core = allDayCore();
+  const span = core.buildAllDaySpan('2037-10-08', '2037-10-11', 'America/Los_Angeles');
+  const festival = { title: 'BEAR WEEKEND', city: 'la', timezone: 'America/Los_Angeles', bar: 'Camp Out',
+    startDate: new Date(span.startDate), endDate: new Date(span.endDate), website: 'https://campout.example/bear-weekend', source: 'mec' };
+  core.applyAllDayConvention(festival);
+  const created = (await core.prepareEventsForCalendar([festival], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal(created._action, 'new');
+  assert.equal(created.allDay, true);
+  assert.equal('timeUnknown' in created, false);
+  assert.match(created.notes, /^allDay: true$/m);
+  assert.ok(!/^timeUnknown:/m.test(created.notes));
+});
+
+test('all-day end to end: a saved midnight-plus-default event becomes a whole day marked `timeUnknown` in its notes; a day already saved that way is left alone', async () => {
+  const core = allDayCore();
+  const day = core.buildAllDaySpan('2037-10-01', '2037-10-01', 'America/Los_Angeles');
+  const scraped = () => ({
+    title: 'B BAR', city: 'la', timezone: 'America/Los_Angeles', bar: 'Eagle LA',
+    startDate: new Date(day.startDate), endDate: null, _noTimeStated: true,
+    website: 'https://eaglela.example/b-bar', source: 'mec'
+  });
+  const legacy = { title: 'B BAR', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-01T10:00:00.000Z'), location: '', notes: 'bar: Eagle LA\nwebsite: https://eaglela.example/b-bar\ntimezone: America/Los_Angeles' };
+  const first = scraped();
+  core.applyAllDayConvention(first);
+  const merged = (await core.prepareEventsForCalendar([first], buildPrepCalendarAdapter([legacy]), {}))[0];
+  assert.equal(merged._action, 'merge');
+  assert.equal(merged.timeUnknown, true, 'one night at a bar: an ordinary event whose time is not known');
+  assert.equal('allDay' in merged, false, 'and not a real all-day event');
+  assert.equal(new Date(merged.endDate).toISOString(), '2037-10-02T06:59:59.000Z', 'the stored 3-hour default gives way to the day');
+  assert.ok(merged._changes.includes('endDate') && merged._changes.includes('allDay'), JSON.stringify(merged._changes));
+  assert.match(merged.notes, /^timeUnknown: true$/m, 'the flag is in the calendar notes, where a person can read it');
+  assert.ok(!/^allDay:/m.test(merged.notes));
+  assert.equal(core.buildOwnerReviewProposal(merged).wholeDay, 'time-unknown', 'and the deck is told which kind');
+  assert.equal(merged._endDateDefaulted, undefined);
+  assert.ok(!(merged._sanityFlags || []).some((flag) => /overnight/.test(flag.code)), 'a whole day is not an AM/PM typo');
+  assert.equal(new Date(merged.endDate).toISOString(), '2037-10-02T06:59:59.000Z', 'and its end is not "corrected"');
+
+  // Next run: the calendar holds it as an all-day event (device-local
+  // midnight, the days stamped by the reader) with the note line.
+  const saved = { title: 'B BAR', isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-01',
+    startDate: new Date(2037, 9, 1, 0, 0, 0), endDate: new Date(2037, 9, 1, 23, 59, 59), location: '', notes: merged.notes };
+  const second = scraped();
+  core.applyAllDayConvention(second);
+  const again = (await core.prepareEventsForCalendar([second], buildPrepCalendarAdapter([saved]), {}))[0];
+  assert.equal(again._action, 'merge');
+  assert.deepEqual((again._changes || []).filter((field) => field !== 'notes'), [], 'no date change, no switch change');
+});
+
+test('endUnknown: the default 3h end says so in the notes; a stated end from a later scrape removes it; a saved default is backfilled', async () => {
+  const core = allDayCore();
+  // A create with no end: the default is written and the notes say so.
+  const scraped = { title: 'Happy Bärsday', city: 'la', timezone: 'America/Los_Angeles', bar: 'Eagle LA', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: null, website: 'https://x.example/b', source: 'ai-web' };
+  const created = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal(created._action, 'new');
+  assert.equal(created._endDateDefaulted, true);
+  assert.equal(created.endUnknown, true);
+  assert.match(created.notes, /^endUnknown: true$/m, 'the flag is in the notes, next to timeUnknown');
+  assert.equal(core.buildOwnerReviewProposal(created).endDate instanceof Date || typeof core.buildOwnerReviewProposal(created).endDate === 'string', true);
+
+  // Next run: the saved record carries the default end and the flag; the
+  // scrape still states no end → flag kept, nothing else changes.
+  const saved = { title: 'Happy Bärsday', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: new Date('2037-10-11T05:00:00.000Z'), location: '', notes: created.notes };
+  const again = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([saved]), {}))[0];
+  assert.equal(again._action, 'merge');
+  assert.equal(again.endUnknown, true);
+  assert.deepEqual((again._changes || []).filter((field) => field !== 'notes'), []);
+
+  // A run that finds the real end: the flag goes, the end is replaced.
+  const stated = { ...scraped, endDate: new Date('2037-10-11T08:00:00.000Z') };
+  const known = (await core.prepareEventsForCalendar([stated], buildPrepCalendarAdapter([saved]), {}))[0];
+  assert.equal(known._action, 'merge');
+  assert.equal(new Date(known.endDate).toISOString(), '2037-10-11T08:00:00.000Z');
+  assert.equal('endUnknown' in known, false, JSON.stringify(known.endUnknown));
+  assert.ok(!/^endUnknown:/m.test(known.notes));
+
+  // A record saved before the flag existed, still on its default end, is
+  // backfilled — a notes-only change.
+  const legacy = { title: 'Happy Bärsday', startDate: new Date('2037-10-11T02:00:00.000Z'), endDate: new Date('2037-10-11T05:00:00.000Z'), location: '', notes: created.notes.replace(/^endUnknown: true\n?/m, '') };
+  assert.ok(!/endUnknown/.test(legacy.notes));
+  const backfilled = (await core.prepareEventsForCalendar([{ ...scraped }], buildPrepCalendarAdapter([legacy]), {}))[0];
+  assert.equal(backfilled.endUnknown, true);
+  assert.deepEqual(backfilled._changes, ['notes']);
+  // A stated 3-hour end is NOT unknown.
+  const threeHours = { ...scraped, endDate: new Date('2037-10-11T05:00:00.000Z') };
+  const exact = (await core.prepareEventsForCalendar([threeHours], buildPrepCalendarAdapter([]), {}))[0];
+  assert.equal('endUnknown' in exact, false, 'a page that states 9–midnight is not a default');
+});
+
+test('all-day in dedup: a stated time is never mixed with an all-day twin', async () => {
+  const core = allDayCore();
+  const day = core.buildAllDaySpan('2037-10-01', '2037-10-01', 'America/Los_Angeles');
+  const timed = { title: 'CUB NIGHT', source: 'ai-web', city: 'la', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-02T04:00:00.000Z') };
+  const allDay = { title: 'CUB NIGHT', source: 'json-api', city: 'la', timezone: 'America/Los_Angeles', startDate: day.startDate, endDate: day.endDate, allDay: true };
+  for (const [first, second] of [[timed, allDay], [allDay, timed]]) {
+    const merged = await core.mergeParsedEvents({ ...first }, { ...second }, {});
+    assert.equal(new Date(merged.startDate).toISOString(), '2037-10-02T04:00:00.000Z', 'the 9 PM start');
+    assert.ok(!merged.endDate, `no 23:59:59 under a 9 PM start (got ${merged.endDate})`);
+    assert.equal(core.applyAllDayConvention(merged), false);
+  }
+  // Two date-only records of one event stay a day.
+  const stub = { title: 'CUB NIGHT', source: 'ai-web', city: 'la', timezone: 'America/Los_Angeles', startDate: day.startDate, _noTimeStated: true };
+  const both = await core.mergeParsedEvents({ ...stub }, { ...allDay }, {});
+  assert.equal(core.applyAllDayConvention(both), true);
 });

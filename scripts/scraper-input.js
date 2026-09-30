@@ -474,6 +474,17 @@ const scraperConfig = {
       metadata: { website: { value: "https://www.lonestarsf.com" } },
     },
     {
+      name: "The Stud",
+      // 1123 Folsom St, SoMa. A general queer venue that hosts bear parties
+      // (Bear Happy Hour SF, GRUNT, Bark Before Dark were on its calendar in
+      // September 2026). Squarespace events collection (/calendar/<slug>, 38
+      // cards on 2026-09-30, 8 upcoming) — same door shape as Lone Star.
+      urls: ["https://www.studsf.com/calendar"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://www.studsf.com" } },
+    },
+    {
       name: "The Cuff Complex",
       // 1533 13th Ave, Seattle. Squarespace events collection (/events/<slug>,
       // 42 dated pages on 2026-09-19) — same door shape as Lone Star.
@@ -640,6 +651,16 @@ const scraperConfig = {
       // Bear Calendar's copies; this is the organizer's own statement.
       urls: ["https://www.eventbrite.com/o/25444337255"],
       alwaysBear: true,
+    },
+    {
+      name: "Bears of London",
+      // Bears of London Network — a London social group (meet-ups, meals,
+      // trips) that announces on Instagram and in a Facebook group, both
+      // behind a login. Its Eventbrite organizer page is the one door that
+      // can be read: every ticketed meet-up lands there with its ticket page
+      // — the same door as Megawoof America and Xposure Events. A few events
+      // a year; zero upcoming is this source's normal state between them.
+      urls: ["https://www.eventbrite.com/o/64998384913"],
     },
     {
       // ── New Site Template ─────────────────────────────────────────────

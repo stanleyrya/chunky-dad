@@ -200,7 +200,7 @@ test('published calendar unavailable → [] and exactly one warn per city per ru
       assert.deepEqual(await adapter.getExistingEvents(scrapedDuroEvent()), []);
       assert.deepEqual(await adapter.getExistingEvents(scrapedDuroEvent()), [], 'second lookup degrades the same way');
       const degraded = warns.filter((message) =>
-        message.includes('published calendar unavailable for la — merge analysis degraded to NEW'));
+        message.includes('published calendar unavailable for la (unreadable) — merge analysis degraded to NEW'));
       assert.equal(degraded.length, 1, 'one warn per city per run');
       assert.equal(adapter._publishedCalendarSnapshots.la.status, 'unavailable');
     });
@@ -493,6 +493,60 @@ test('shared root: cache writes are temp-file-then-rename in the same dir, devic
   }
 });
 
+// 2026-09-27: two minutes without a network wrote this exact record over
+// bearbrum.com's cached root page, and the next four runs replayed it as a
+// permanent failure. Nothing answered, so nothing is known about the page.
+test('shared root: a cached CONNECTION failure is a cache MISS; a cached 404 is still replayed', async () => {
+  const root = makeSharedRootFixture();
+  try {
+    await withSharedRootEnv(root, async () => {
+      const adapter = makeAdapter({ pageCache: { enabled: true, ttlDays: 3 } });
+      const outageUrl = 'https://www.bearbrum.com/';
+      const outageParts = adapter.getPageCachePathParts(outageUrl);
+      const outageDir = path.join(root, 'storage', 'pages', outageParts.hostDir);
+      fs.mkdirSync(outageDir, { recursive: true });
+      fs.writeFileSync(path.join(outageDir, outageParts.fileName), JSON.stringify({
+        url: outageUrl,
+        fetchedAt: '2026-09-27T15:13:08.626Z',
+        statusCode: null,
+        headers: {},
+        fetchState: 'failed',
+        failure: {
+          nonRetryable: true,
+          context: 'root-page',
+          error: 'HTTP request failed for https://www.bearbrum.com/: fetch failed'
+        }
+      }, null, 2));
+      const cached = await adapter.readCachedPage(outageUrl, adapter.getPageCacheConfig());
+      assert.equal(cached, null, 'the page is asked for again');
+
+      const goneUrl = 'https://precinctdtla.com/9-30-26/sissy-4/';
+      const goneParts = adapter.getPageCachePathParts(goneUrl);
+      const goneDir = path.join(root, 'storage', 'pages', goneParts.hostDir);
+      fs.mkdirSync(goneDir, { recursive: true });
+      fs.writeFileSync(path.join(goneDir, goneParts.fileName), JSON.stringify({
+        url: goneUrl,
+        fetchedAt: '2026-09-27T17:25:11.000Z',
+        statusCode: 404,
+        headers: {},
+        fetchState: 'failed',
+        failure: {
+          nonRetryable: true,
+          context: 'crawl-page',
+          error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: '
+        }
+      }, null, 2));
+      await assert.rejects(
+        adapter.readCachedPage(goneUrl, adapter.getPageCacheConfig()),
+        (error) => error.cachedFailure === true && error.statusCode === 404,
+        'what the server answered is still remembered'
+      );
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('shared root: dataless iCloud stub (0-byte placeholder) is a cache MISS, never a crash', async () => {
   const root = makeSharedRootFixture();
   try {
@@ -656,7 +710,8 @@ test('shared root: saveRunToSharedStorage writes the phone version-2 run JSON + 
         }],
         bearDroppedEvents: [{ reason: 'not bear', _parserConfig: { big: true }, event: { title: 'Drop', _working: 'x' } }],
         parserResults: [{ name: 'p', bearEvents: 2, totalEvents: 3 }],
-        calendarHygiene: []
+        calendarHygiene: [],
+        publishedCalendarSnapshots: { la: { status: 'ok', fetchedAt: '2026-08-14T10:00:00.000Z' }, sydney: { status: 'unavailable', fetchedAt: null, reason: 'missing' } }
       };
 
       const runId = await adapter.saveRunToSharedStorage(results, { logText: 'line one\nline two' });
@@ -666,6 +721,8 @@ test('shared root: saveRunToSharedStorage writes the phone version-2 run JSON + 
       const runPath = path.join(root, 'runs', `${runId}.json`);
       const payload = JSON.parse(fs.readFileSync(runPath, 'utf8'));
       assert.equal(payload.version, 2, 'phone saved-run envelope version');
+      assert.deepEqual(payload.publishedCalendarSnapshots, results.publishedCalendarSnapshots,
+        'which saved calendars were read rides in the run file — the deck refuses a run that read none');
       assert.equal(payload.summary.runId, runId);
       assert.deepEqual(payload.summary.totals, { totalEvents: 3, bearEvents: 2, calendarEvents: 0, errors: 1 });
       assert.deepEqual(payload.summary.parserSummaries, [{ name: 'p', bearEvents: 2, totalEvents: 3 }]);
@@ -1347,5 +1404,114 @@ test('a phone snapshot older than the phone\'s last write is not the calendar �
     assert.ok(await new WebAdapter({ cities: CITIES }).getPhoneCalendarSnapshot('la'));
   } finally {
     shared.restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Answers to lookups live a year, in a cache of their own (2026-09-29: the
+// geocoder was asked the same 700 questions every run because its answers
+// expired with the page cache, after three days).
+// ---------------------------------------------------------------------------
+test('answer cache: an answer is kept while it is used, in storage/answers; pages are unaffected', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-answers-'));
+  const pageDir = path.join(root, 'pages');
+  const answerDir = path.join(root, 'answers');
+  const pageCache = { enabled: true, ttlDays: 3 };
+  const lookup = 'https://geocoder.example/search?format=json&q=398+12th+St%2C+San+Francisco';
+  const page = 'https://venue.example/events';
+  const adapterOf = () => {
+    const adapter = makeAdapter({ pageCache });
+    adapter.pageStorageDir = pageDir;
+    adapter.answerStorageDir = answerDir;
+    return adapter;
+  };
+  const ageAll = (dir, days) => {
+    for (const name of fs.readdirSync(dir, { recursive: true }).map(String).filter((entry) => entry.endsWith('.json'))) {
+      const when = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      fs.utimesSync(path.join(dir, name), when, when);
+    }
+  };
+  try {
+    await withFetchStub('[{"lat":"37.77","lon":"-122.41"}]', async (fetchCalls) => {
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      await adapterOf().fetchData(page, {});
+      assert.equal(fetchCalls(), 2);
+      assert.equal(fs.readdirSync(answerDir, { recursive: true }).map(String).filter((name) => name.endsWith('.json')).length, 1, 'the answer is in storage/answers');
+      assert.equal(fs.readdirSync(pageDir, { recursive: true }).map(String).filter((name) => name.endsWith('.json')).length, 1, 'the page is in storage/pages');
+
+      ageAll(answerDir, 200);
+      ageAll(pageDir, 4);
+      const answer = await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 2, 'a 200-day-old answer is still the answer');
+      assert.equal(JSON.parse(answer.html)[0].lat, '37.77');
+      await adapterOf().fetchData(page, {});
+      assert.equal(fetchCalls(), 3, 'a 4-day-old page is asked for again');
+
+      // Reading it marked it used: its age counts from that read, so an
+      // answer a venue still needs never ages out.
+      const answerFile = fs.readdirSync(answerDir, { recursive: true }).map(String).find((name) => name.endsWith('.json'));
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs < 60 * 1000, 'the read marked the answer as used');
+      ageAll(answerDir, 3);
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.ok(Date.now() - fs.statSync(path.join(answerDir, answerFile)).mtimeMs > 2 * 24 * 60 * 60 * 1000, 'marked at most once a week, not on every read');
+
+      ageAll(answerDir, 366);
+      await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 4, 'an answer nothing has read for a year is asked again');
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('answer cache: an answer written to the page cache before answers had their own moves over without a request', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-answers-'));
+  const pageCache = { enabled: true, ttlDays: 3 };
+  const lookup = 'https://geocoder.example/search?format=json&q=1123+Folsom+St';
+  const adapterOf = () => {
+    const adapter = makeAdapter({ pageCache });
+    adapter.pageStorageDir = path.join(root, 'pages');
+    adapter.answerStorageDir = path.join(root, 'answers');
+    return adapter;
+  };
+  try {
+    await withFetchStub('[{"lat":"37.776","lon":"-122.408"}]', async (fetchCalls) => {
+      await adapterOf().fetchData(lookup, { apiCall: true });
+      assert.equal(fetchCalls(), 1, 'the old way: into the page cache');
+      const answer = await adapterOf().fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+      assert.equal(fetchCalls(), 1, 'not asked again');
+      assert.equal(JSON.parse(answer.html)[0].lon, '-122.408');
+      const kept = fs.readdirSync(path.join(root, 'answers'), { recursive: true }).map(String).filter((name) => name.endsWith('.json'));
+      assert.equal(kept.length, 1, 'and kept as an answer from now on');
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('published calendar: a city with no file yet is "missing", nothing answering is an "outage" — only the outage degrades the run', async () => {
+  const notFound = Object.assign(new Error('HTTP 404: Not Found'), { statusCode: 404 });
+  const originalFetch = global.fetch;
+  const warns = [];
+  const originalWarn = console.warn;
+  console.warn = (message) => warns.push(String(message));
+  try {
+    global.fetch = async () => ({ ok: false, status: 404, statusText: 'Not Found', headers: new Map(), text: async () => '' });
+    const fresh = makeAdapter();
+    assert.equal(await fresh.getPublishedCalendarEvents('sydney'), null);
+    assert.equal(fresh._publishedCalendarSnapshots.sydney.reason, 'missing');
+    global.fetch = async () => { throw new TypeError('fetch failed'); };
+    const dark = makeAdapter();
+    assert.equal(await dark.getPublishedCalendarEvents('nyc'), null);
+    assert.equal(dark._publishedCalendarSnapshots.nyc.reason, 'outage');
+    const { SharedCore } = require('../shared-core');
+    assert.equal(SharedCore.describeCalendarReadHealth(fresh._publishedCalendarSnapshots).degraded, false);
+    assert.equal(SharedCore.describeCalendarReadHealth(dark._publishedCalendarSnapshots).degraded, true);
+    assert.ok(warns.some((line) => line.includes('no published calendar for sydney yet')));
+    assert.ok(warns.some((line) => line.includes('published calendar unavailable for nyc (outage)')));
+    void notFound;
+  } finally {
+    global.fetch = originalFetch;
+    console.warn = originalWarn;
   }
 });

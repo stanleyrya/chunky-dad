@@ -5,6 +5,65 @@
   },
   "events": [
     {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-12PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.8189101,
+        "lng": -116.5470896
+      },
+      "startDate": "2026-02-21T21:00:00",
+      "endDate": "2026-02-22T12:00:00",
+      "unprocessedDescription": "description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n\raddress: 333 S Palm Canyon Dr Unit, Palm Springs, CA 92262\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84 - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: megawoof|2026-02-22|palm springs",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
+      "uid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Palm Springs",
+      "cover": "$16.84 - $43.15 (as of 2/8)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3",
+      "tea": "SHINY DISCO BALLS IBC WEEKEND",
+      "cadence": null,
+      "address": "333 S Palm Canyon Dr Unit, Palm Springs, CA 92262",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
+      "ticketUrl": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-22570191"
+    },
+    {
       "name": "Sticky Rice",
       "day": "Friday",
       "time": null,
@@ -58,57 +117,53 @@
       "slug": "sticky-rice-4f2be4aa"
     },
     {
-      "name": "Western Xposure XXL",
+      "name": "Western X-Mas: Holiday Bear Retreat 2026",
       "day": "Thursday",
-      "time": null,
+      "time": "10AM-7PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 33.7796835,
         "lng": -116.4689784
       },
-      "startDate": "2026-10-15T00:00:00",
-      "endDate": "2026-10-18T23:59:59",
-      "unprocessedDescription": "bar: CCBC Resort\naddress: Cathedral City, CA\nwebsite: https:\r//www.westernxposure.com/westernxposurexxl\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\ncover: $1-$180\ntimezone: America/Los_Angeles\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nkey: western-xposure-xxl|2026-10-15|ccbc resort\nbearSource: ai\nshortName: WESTERN XPOSURE\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
+      "startDate": "2026-12-24T10:00:00",
+      "endDate": "2026-12-27T19:00:00",
+      "unprocessedDescription": "description: Celebrate the season with your chosen family at We\rstern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\nticketUrl: https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimezone: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bear-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName: WESTERN XMAS",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "sourceUid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
+      "uid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "CCBC Resort",
-      "cover": "$1-$180",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "bar": "CCBC Resort Hotel",
+      "cover": "$28.52-$161.90",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
+      "tea": "Celebrate the season with your chosen family at Western Xposure's new holiday tradition.",
       "cadence": null,
-      "address": "Cathedral City, CA",
-      "website": "https://www.westernxposure.com/westernxposurexxl",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
-      "ticketUrl": "https://xxl2026.eventbrite.com/",
-      "shortName": "WESTERN XPOSURE",
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
+      "shortName": "WESTERN XMAS",
       "bearReview": null,
       "links": [
         {
-          "type": "website",
-          "url": "https://www.westernxposure.com/westernxposurexxl",
-          "label": "🌐 Website"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://xxl2026.eventbrite.com/",
+          "url": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "western-xposure-xxl-27c8c346"
+      "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6"
     },
     {
       "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
@@ -172,63 +227,58 @@
       "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
     },
     {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "9PM-12PM",
+      "name": "Western Xposure's XXL",
+      "day": "Thursday",
+      "time": "9AM-11:59PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 33.8189101,
-        "lng": -116.5470896
+        "lat": 33.7796835,
+        "lng": -116.4689784
       },
-      "startDate": "2026-02-21T21:00:00",
-      "endDate": "2026-02-22T12:00:00",
-      "unprocessedDescription": "description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n\raddress: 333 S Palm Canyon Dr Unit, Palm Springs, CA 92262\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84 - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: megawoof|2026-02-22|palm springs",
+      "startDate": "2026-10-15T09:00:00",
+      "endDate": "2026-10-18T23:59:59",
+      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
-      "uid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
+      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
-      "bar": "Palm Springs",
-      "cover": "$16.84 - $43.15 (as of 2/8)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3",
-      "tea": "SHINY DISCO BALLS IBC WEEKEND",
+      "bar": "CCBC Resort Hotel",
+      "cover": "$1-$180",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
       "cadence": null,
-      "address": "333 S Palm Canyon Dr Unit, Palm Springs, CA 92262",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
-      "ticketUrl": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
-      "shortName": "MEGA-WOOF",
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "shortName": "WESTERN XPOSURE",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
+          "url": "https://www.westernxposure.com/westernxposurexxl",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
+          "url": "https://xxl2026.eventbrite.com/",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-22570191"
+      "slug": "western-xposures-xxl-27c8c346"
     }
   ]
 }

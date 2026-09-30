@@ -55,6 +55,8 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
+        // Long-lived answers to lookups (see getAnswerCacheConfig).
+        this.answerStorageDir = null;
         // Local state dir for adapter-owned JSON stores (bear-verdicts.json);
         // Node-only, same root the page cache lives under.
         this.localStateDir = null;
@@ -68,6 +70,7 @@ class WebAdapter {
                 const os = require('os');
                 this.localStateDir = this.path.join(os.homedir(), '.chunky-dad-scraper');
                 this.pageStorageDir = this.path.join(this.localStateDir, 'storage', 'pages');
+                this.answerStorageDir = this.path.join(this.localStateDir, 'storage', 'answers');
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
@@ -89,6 +92,7 @@ class WebAdapter {
                 this.assertSharedStorageRootUsable(sharedRoot);
                 this.sharedStorageRoot = sharedRoot;
                 this.pageStorageDir = this.path.join(sharedRoot, 'storage', 'pages');
+                this.answerStorageDir = this.path.join(sharedRoot, 'storage', 'answers');
                 console.log(`🟢 Node.js: Shared storage root active: ${sharedRoot} — caches, runs and logs read/write the phone's tree; retention pruning is deferred to the cache owner (the phone)`);
             }
         }
@@ -319,6 +323,41 @@ class WebAdapter {
         };
     }
 
+    // The cache for answers that stay true much longer than a page does —
+    // a geocoder's answer about an address (options.cacheTtlDays on
+    // fetchData). Same envelope and the same key derivation as the page
+    // cache, in a directory of its own (storage/answers) so the page cache's
+    // short prune never reaches it.
+    getAnswerCacheConfig(ttlDays) {
+        const page = this.getPageCacheConfig();
+        const days = Number(ttlDays);
+        return {
+            enabled: page.enabled && !!this.answerStorageDir && Number.isFinite(days) && days > 0,
+            ttlDays: days,
+            storageDir: this.answerStorageDir,
+            // Kept while used: a read marks the entry (see
+            // touchAnswerOnRead), so ttlDays counts from the last use.
+            keepWhileUsed: true
+        };
+    }
+
+    // An answer that was just read is still in use: its file time moves to
+    // now, at most once every LOOKUP_ANSWER_TOUCH_DAYS, so age is "time
+    // since last use" and the prune (file time alone) never takes an answer
+    // a venue still needs. A failed touch is harmless.
+    async touchAnswerOnRead(cachePath, modifiedAtMs) {
+        const core = this.getSharedCoreRef();
+        const days = core && Number(core.LOOKUP_ANSWER_TOUCH_DAYS) > 0 ? Number(core.LOOKUP_ANSWER_TOUCH_DAYS) : 7;
+        if (!Number.isFinite(modifiedAtMs) || (Date.now() - modifiedAtMs) < days * 24 * 60 * 60 * 1000) return false;
+        try {
+            const now = new Date();
+            await this.boundedSharedFsOp(() => this.fs.promises.utimes(cachePath, now, now), `touch ${cachePath}`);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     normalizePageCacheUrl(url) {
         try {
             const normalized = new URL(String(url));
@@ -472,7 +511,7 @@ class WebAdapter {
         }
 
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const cachePath = this.path.join(this.pageStorageDir, hostDir, fileName);
+        const cachePath = this.path.join(pageCacheConfig.storageDir || this.pageStorageDir, hostDir, fileName);
 
         try {
             // stat can also wedge against a dataless stub (the incident's
@@ -495,6 +534,14 @@ class WebAdapter {
             const cached = JSON.parse(cachedText);
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
             if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
+                // A note that records "nothing answered" is about the network
+                // that minute, not about the page: a miss, so the page is
+                // asked for again (SharedCore.isTransportFailureNote).
+                const core = this.getSharedCoreRef();
+                if (core && typeof core.isTransportFailureNote === 'function' && core.isTransportFailureNote(cached)) {
+                    console.log(`🟢 Node.js: Ignoring a cached connection failure for ${normalizedUrl} (noted ${cached.fetchedAt || 'earlier'}) — nothing answered then, asking again`);
+                    return null;
+                }
                 const failureMessage = typeof cached.failure.error === 'string'
                     ? cached.failure.error
                     : (cached.failure.error && typeof cached.failure.error.message === 'string'
@@ -514,6 +561,8 @@ class WebAdapter {
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
+
+            if (pageCacheConfig.keepWhileUsed === true) await this.touchAnswerOnRead(cachePath, stats.mtimeMs);
 
             return {
                 html: cached.html,
@@ -586,7 +635,7 @@ class WebAdapter {
         }
 
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const cacheDir = this.path.join(this.pageStorageDir, hostDir);
+        const cacheDir = this.path.join(pageCacheConfig.storageDir || this.pageStorageDir, hostDir);
         const cachePath = this.path.join(cacheDir, fileName);
         const payload = {
             url: normalizedUrl,
@@ -919,6 +968,12 @@ class WebAdapter {
                     calendarHygiene: Array.isArray(results.calendarHygiene)
                         ? results.calendarHygiene
                         : [],
+                    // Which saved calendars the analysis could read — the
+                    // review deck refuses to default to a run that could not
+                    // (SharedCore.describeCalendarReadHealth).
+                    ...(results.publishedCalendarSnapshots && typeof results.publishedCalendarSnapshots === 'object'
+                        ? { publishedCalendarSnapshots: results.publishedCalendarSnapshots }
+                        : {}),
                     // New-venue candidates ride with the run so the Mac
                     // server's review deck (tools/review-queue.js) can offer
                     // them as cards.
@@ -1108,7 +1163,11 @@ class WebAdapter {
                 console.log(`🟢 Node.js: Page already read this run — no re-read for ${url}`);
                 return memoized;
             }
-            const pageCacheConfig = this.getPageCacheConfig();
+            // options.cacheTtlDays: the caller says how long the answer stays
+            // true (a lookup, not a page) — read from and written to the
+            // answer cache under that life.
+            const answerCacheConfig = Number(options.cacheTtlDays) > 0 ? this.getAnswerCacheConfig(options.cacheTtlDays) : null;
+            const pageCacheConfig = answerCacheConfig && answerCacheConfig.enabled ? answerCacheConfig : this.getPageCacheConfig();
             const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
             // Optional caller hook (options.isCacheableResponse): a response it
             // rejects is neither served from the disk cache nor written to it —
@@ -1122,6 +1181,18 @@ class WebAdapter {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
                     this.writeRunPageMemo(memoKey, cachedPage);
                     return cachedPage;
+                }
+                // An answer still sitting in the page cache (written before
+                // answers had a cache of their own) moves over instead of
+                // being asked for again.
+                if (pageCacheConfig.storageDir) {
+                    const inherited = await this.readCachedPage(url, this.getPageCacheConfig());
+                    if (inherited && isCacheableResponse(inherited)) {
+                        await this.writeCachedPage(url, inherited, pageCacheConfig);
+                        this.logPageCacheHit(url, inherited, this.getPageCacheConfig());
+                        this.writeRunPageMemo(memoKey, inherited);
+                        return inherited;
+                    }
                 }
             }
 
@@ -1909,6 +1980,11 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         if (!this._publishedCalendarSnapshots) this._publishedCalendarSnapshots = {};
         let entry = null;
+        // Why the calendar could not be read, when it could not (see
+        // SharedCore.describeCalendarReadHealth): 'missing' is a city with
+        // no published file yet, 'outage' is nothing answering, 'unreadable'
+        // anything else.
+        let unavailableReason = 'unreadable';
         try {
             const core = this.getSharedCoreRef();
             const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
@@ -1940,12 +2016,21 @@ async saveFailureNote(url, error, metadata = {}) {
             }
         } catch (error) {
             entry = null;
+            const core = this.getSharedCoreRef();
+            const message = error && typeof error.message === 'string' ? error.message : '';
+            const named = message.match(/HTTP\s+(\d{3})/i);
+            const statusCode = error && Number.isFinite(error.statusCode) ? error.statusCode : (named ? Number(named[1]) : null);
+            if (statusCode === 404 || statusCode === 410) unavailableReason = 'missing';
+            else if (statusCode === null && ((core && typeof core.isTransportFailureMessage === 'function' && core.isTransportFailureMessage(message))
+                || /parked for this run \(no answer/i.test(message))) unavailableReason = 'outage';
         }
         if (entry) {
             this._publishedCalendarSnapshots[key] = { status: 'ok', fetchedAt: entry.fetchedAt };
         } else {
-            console.warn(`🖥️ WebAdapter: published calendar unavailable for ${key} — merge analysis degraded to NEW`);
-            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null };
+            console.warn(unavailableReason === 'missing'
+                ? `🖥️ WebAdapter: no published calendar for ${key} yet — its events are analysed as new`
+                : `🖥️ WebAdapter: published calendar unavailable for ${key} (${unavailableReason}) — merge analysis degraded to NEW`);
+            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null, reason: unavailableReason };
         }
         this._publishedCalendarByCity[key] = entry;
         return entry;
@@ -2026,7 +2111,12 @@ async saveFailureNote(url, error, metadata = {}) {
                             location: String((event && event.location) || ''),
                             notes: String((event && event.notes) || ''),
                             url: String((event && event.url) || ''),
-                            isAllDay: Boolean(event && event.isAllDay)
+                            isAllDay: Boolean(event && event.isAllDay),
+                            // The days an all-day record covers, as the
+                            // phone read them (SharedCore.getStoredAllDayDays).
+                            ...(event && event.isAllDay && typeof event.allDayStartDay === 'string'
+                                ? { allDayStartDay: event.allDayStartDay, allDayEndDay: typeof event.allDayEndDay === 'string' ? event.allDayEndDay : event.allDayStartDay }
+                                : {})
                         }))
                         .filter((event) => event.startDate);
                     snapshot = {

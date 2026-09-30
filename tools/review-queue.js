@@ -43,10 +43,18 @@ const RUN_ID_PATTERN = /^\d{8}-\d{6}$/;
 const RUN_CACHE_LIMIT = 4;
 
 // Reject-sheet chips. Free text rides alongside; these make rejections
-// groupable when the log is read back.
+// groupable when the log is read back, and a field chip is what lets a
+// "needs a fix" card come back by itself (FIX_TAG_FIELDS).
+// The vocabulary is the owner's own (store of 2026-09-29: 96 rejections, 34
+// with a typed note, not one chip used): his notes are about the link, the
+// image, the title, the venue, a card that should have merged into a saved
+// event, and a party that repeats. "wrong time" and "wrong date" matched
+// nothing he wrote and are one chip now; "duplicate" and "fragment" are the
+// sheet's own "Not an event" answer. Decisions stored with the older tags
+// keep their meaning (FIX_TAG_FIELDS still names them).
 const REVIEW_REASON_TAGS = [
-    'wrong time', 'wrong date', 'wrong venue', 'wrong title',
-    'not bear', 'duplicate', 'fragment', 'bad image', 'other'
+    'wrong link', 'wrong image', 'wrong title', 'wrong venue',
+    'should merge', 'recurring', 'wrong date or time', 'not bear', 'other'
 ];
 
 function resolveSharedRoot(env = process.env) {
@@ -107,7 +115,12 @@ function describeRunShape(payload) {
         ? payload.parserResults.map((result) => result && result.name).filter(Boolean)
         : [];
     const context = payload && payload.runContext && typeof payload.runContext === 'object' ? payload.runContext : {};
+    // A run that could not read the saved calendars analysed every saved
+    // event as new (SharedCore.describeCalendarReadHealth) — never the
+    // deck's default, and labelled in the picker.
+    const calendars = loadSharedCore().describeCalendarReadHealth(payload && payload.publishedCalendarSnapshots);
     return {
+        calendarsUnread: calendars.degraded ? calendars.cities.length : 0,
         configured: configured.length,
         ran,
         trigger: context.trigger || null,
@@ -120,11 +133,13 @@ function describeRunShape(payload) {
 // produced results (the daily run skips the automation-disabled ones and
 // the template). Unknown shape never excludes a run.
 function isCompleteRunShape(shape) {
+    if (shape && shape.calendarsUnread > 0) return false;
     if (!shape || !Number.isFinite(shape.configured) || shape.configured === 0) return true;
     return shape.ran.length >= Math.ceil(shape.configured / 2);
 }
 
 function describeRunShapeLabel(shape) {
+    if (shape && shape.calendarsUnread > 0) return `calendars unread (${shape.calendarsUnread}) — saved events show as new`;
     if (!shape || isCompleteRunShape(shape)) return '';
     if (shape.ran.length === 1) return `${shape.ran[0]} only`;
     if (shape.ran.length === 0) return 'no parser results';
@@ -191,6 +206,17 @@ function loadWrittenLedger(sharedRoot) {
 // when the phone has not written the list — then nothing is claimed
 // missing. Never inferred from the per-city snapshot files: those exist
 // only for cities a run touched.
+// When the phone last wrote its calendar list (calendar-snapshot/
+// calendars.json): an ISO instant, or '' when the file is absent.
+function getPhoneCalendarListCapturedAt(sharedRoot) {
+    try {
+        const payload = JSON.parse(fs.readFileSync(path.join(sharedRoot, 'calendar-snapshot', 'calendars.json'), 'utf8'));
+        return payload && typeof payload.capturedAt === 'string' ? payload.capturedAt : '';
+    } catch (error) {
+        return '';
+    }
+}
+
 function listPhoneCalendars(sharedRoot, cities) {
     let payload;
     try {
@@ -365,6 +391,21 @@ function clearNotBearRejections(store, core, event) {
     return { store: normalized, removed };
 }
 
+// AN UNDO PUTS BACK WHAT THE SWIPE REPLACED. A card back for a second look
+// already has a decision under its key — the approval of 2026-09-24, or a
+// "needs a fix" note — and the new swipe overwrites it (one decision per
+// key). Undoing that swipe by clearing the key threw the earlier decision
+// away with it: a slip of the thumb and its undo deleted the note the card
+// came back to answer, and with it the line in the fix queue. `previous` is
+// the decision the server handed back when the swipe was stored
+// (`replaced`); anything that is not a decision for this very key is
+// refused and the caller falls back to a plain clear.
+function restoreDecision(store, key, previous) {
+    const normalized = normalizeDecisionStore(store);
+    if (!isDecisionShaped(previous) || previous.key !== key) return { store: normalized, restored: false };
+    return { store: upsertDecision(normalized, previous), restored: true };
+}
+
 function clearDecision(store, key) {
     const normalized = normalizeDecisionStore(store);
     const before = normalized.decisions.length;
@@ -440,9 +481,21 @@ function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     const index = list.findIndex((existing) =>
         core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
         && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing));
+    // The verdict this one overwrites, handed back so an undo can restore it.
+    const replaced = index >= 0 ? list[index] : null;
     if (index >= 0) list[index] = entry;
     else list.push(entry);
-    return { verdicts: list, entry };
+    return { verdicts: list, entry, replaced };
+}
+
+// The undo of a verdict that overwrote an earlier one: the earlier entry
+// goes back as it was stored (its own stamp, its own spelling). See
+// restoreDecision. Refuses anything that is not a stored-verdict shape.
+function restoreBearVerdict(verdicts, core, previous) {
+    const valid = normalizeBearVerdicts([previous])[0];
+    if (!valid || !core.getBearVerdictTitleKey(valid.title, [valid.venue])) return { verdicts: normalizeBearVerdicts(verdicts), restored: false };
+    const result = upsertBearVerdict(verdicts, core, { title: valid.title, bar: valid.venue, address: valid.address, location: valid.location, city: valid.city }, valid.verdict);
+    return { verdicts: result.verdicts.map((entry) => (entry === result.entry ? valid : entry)), restored: true };
 }
 
 // An undo clears the verdict on this title. When there is none and the card
@@ -652,7 +705,14 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         facebook: typeof event.facebook === 'string' ? event.facebook : '',
         website: typeof event.website === 'string' ? event.website : '',
         shortName: typeof event.shortName === 'string' ? event.shortName : '',
-        notesOnlyAlso: Array.isArray(event._changes) && event._changes.includes('notes')
+        notesOnlyAlso: Array.isArray(event._changes) && event._changes.includes('notes'),
+        // The page stated no end: the end on this record is the one default
+        // the pipeline writes so the calendar accepts the event
+        // (SharedCore.applyDefaultEventEnd). The card says so instead of
+        // printing it as the party's closing time.
+        // Stamped on a create; carried in the notes (`endUnknown: true`)
+        // for a saved record whose end is still the default.
+        endDefaulted: event._endDateDefaulted === true || event.endUnknown === true || String(event.endUnknown || "").trim().toLowerCase() === "true"
     };
 }
 
@@ -706,16 +766,21 @@ function findPriorDecision(proposal, decisions, SharedCore) {
 
 // Which fields a "needs a fix" note's tags name — the deck's own vocabulary.
 const FIX_TAG_FIELDS = {
+    'wrong link': ['url', 'ticketUrl'],
+    'wrong image': ['image'],
+    'wrong title': ['title'],
+    'wrong venue': ['bar', 'address', 'location'],
+    'wrong date or time': ['startDate', 'endDate'],
+    // The vocabulary before 2026-09-29, still read from stored decisions.
     'wrong time': ['startDate', 'endDate'],
     'wrong date': ['startDate', 'endDate'],
-    'wrong venue': ['bar', 'address', 'location'],
-    'wrong title': ['title'],
     'bad image': ['image']
 };
 
 // { tags, fields } when EVERY drifted field is one a tag of the note names
 // (and at least one tag is a field tag); null otherwise. Fails closed on an
-// untagged note, on "other"/"duplicate"/"fragment", and on any drift
+// untagged note, on a tag that names no field ("should merge",
+// "recurring", "other", the older "duplicate"/"fragment"), and on any drift
 // outside the named fields.
 function driftCoveredByNoteTags(prior, proposal) {
     const tags = prior && prior.reason && Array.isArray(prior.reason.tags) ? prior.reason.tags : [];
@@ -828,6 +893,74 @@ function stampSeries(cards, SharedCore) {
         const differs = differsOnFullText;
         const cadence = describeSeriesCadence(nights.map((night) => night.day));
         for (const card of members) card.series = { key: series, size: members.length, nights, differs, cadence };
+    }
+}
+
+// THE SAME CHANGE ON DIFFERENT EVENTS is one card too (owner, 2026-09-29:
+// six BeefDip parties each proposed the link change beefdip.com/tags/ →
+// beefdip.com on a card of its own). Updates from one source whose change
+// table is the same — the same fields, from the same saved value to the
+// same new one — fold into one item: one swipe decides them all, each under
+// its own key. Same shape as a folded party (card.series), marked
+// type 'change'; "one at a time" unfolds it and "fold back" folds it again.
+// A card already folded with its party's other nights stays with them, and
+// an update that changes a date is never folded here: a start or an end is
+// a fact about one event.
+function getSameChangeSignature(proposal) {
+    const SharedCore = loadSharedCore();
+    const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+    let fields = Object.keys(changes).sort();
+    // An event that becomes a WHOLE DAY (a real all-day event, or one whose
+    // time is not known) says the same thing on every night it applies to
+    // — "no time listed, saved as a day" — although each night's
+    // end instant differs. Its end-date row is the conversion, so it folds
+    // under that name; a start that moves is still one event's own fact.
+    const becomesAllDay = proposal && Boolean(proposal.wholeDay) && fields.includes('endDate') && !fields.includes('startDate');
+    if (becomesAllDay) fields = fields.filter((field) => field !== 'endDate');
+    if ((fields.length === 0 && !becomesAllDay) || fields.includes('startDate') || fields.includes('endDate')) return '';
+    const value = (raw) => SharedCore.normalizeOwnerReviewValue(raw);
+    if (becomesAllDay) {
+        return [`wholeDay=→${proposal.wholeDay}`].concat(fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`)).join(';');
+    }
+    return fields.map((field) => `${field}=${value(changes[field] && changes[field].from)}→${value(changes[field] && changes[field].to)}`).join(';');
+}
+function describeChangeRows(proposal) {
+    const changes = proposal && proposal.changes && typeof proposal.changes === 'object' ? proposal.changes : {};
+    const text = (value) => String(value === null || value === undefined ? '' : value).trim();
+    const fields = Object.keys(changes).sort();
+    // The all-day conversion is one row in words, not one member's end
+    // instant (see getSameChangeSignature).
+    const becomesAllDay = proposal && Boolean(proposal.wholeDay) && fields.includes('endDate') && !fields.includes('startDate');
+    const rows = fields.filter((field) => !(becomesAllDay && field === 'endDate'))
+        .map((field) => ({ field, from: text(changes[field] && changes[field].from), to: text(changes[field] && changes[field].to) }));
+    if (becomesAllDay) {
+        rows.unshift({ field: 'allDay', from: 'a time the page never stated',
+            to: proposal.wholeDay === 'time-unknown' ? 'time not listed (saved as all-day)' : 'all day' });
+    }
+    return rows;
+}
+function stampSameChange(cards) {
+    const groups = new Map();
+    for (const card of cards) {
+        if (card.kind !== 'merge' || card.series) continue;
+        const signature = getSameChangeSignature(card.proposal);
+        if (!signature) continue;
+        const group = `change|${String(card.proposal && card.proposal.source || '')}|${signature}`;
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group).push(card);
+    }
+    for (const [group, members] of groups) {
+        if (members.length < 2) continue;
+        const nights = members.map((card) => {
+            const title = String(card.proposal && card.proposal.title || '').trim();
+            const day = formatNightLabel(card.proposal);
+            return { key: card.key, day: String(card.key).split('|')[3] || '', label: [title, day].filter(Boolean).join(' · '), values: nightCompareValues(card.proposal) };
+        });
+        for (const night of nights) {
+            if (night.values.description.length > 160) night.values.description = `${night.values.description.slice(0, 160).trim()}…`;
+        }
+        const change = describeChangeRows(members[0].proposal);
+        for (const card of members) card.series = { key: group, type: 'change', size: members.length, nights, differs: [], cadence: null, change };
     }
 }
 
@@ -979,6 +1112,7 @@ function buildDeck(runPayload, store, options = {}) {
         );
     });
     stampSeries(cards, SharedCore);
+    stampSameChange(cards);
 
     const candidates = Array.isArray(payload.newVenueCandidates) ? payload.newVenueCandidates : [];
     candidates.forEach((candidate, index) => {
@@ -1183,17 +1317,24 @@ function buildDeck(runPayload, store, options = {}) {
 // Wednesday" lines with the same words read as thirteen problems
 // (2026-09-27). Rejections of NEW nights of one party (same series key)
 // that carry the same title, source and reason print as one line naming
-// the nights. Merges are never folded here: each carries its own values.
+// the nights. Updates fold only when they are the same update: one source,
+// the same change table (getSameChangeSignature) and the same reason — the
+// note swiped onto a folded same-change card.
 function formatRejectionsText(store) {
     const lines = [];
     const SharedCore = loadSharedCore();
     const rejections = normalizeDecisionStore(store).decisions.filter((decision) => decision.verdict === 'reject');
     const groupOf = (decision) => {
         const snap = decision.snapshot || {};
+        const reason = decision.reason || {};
+        const why = [reason.mode || '', (reason.tags || []).slice().sort(), reason.text || ''];
+        if ((decision.kind || 'new') === 'merge') {
+            const signature = getSameChangeSignature(snap);
+            return signature ? JSON.stringify(['change', snap.source || '', signature].concat(why)) : '';
+        }
         const series = (decision.kind || 'new') === 'new' && (snap.kind || 'new') === 'new' ? SharedCore.getOwnerReviewSeriesKey(decision.key) : '';
         if (!series) return '';
-        const reason = decision.reason || {};
-        return JSON.stringify([series, snap.title || '', snap.source || '', snap.bar || snap.city || '', reason.mode || '', (reason.tags || []).slice().sort(), reason.text || '']);
+        return JSON.stringify([series, snap.title || '', snap.source || '', snap.bar || snap.city || ''].concat(why));
     };
     const groups = new Map();
     for (const decision of rejections) {
@@ -1208,7 +1349,11 @@ function formatRejectionsText(store) {
         const members = groups.get(groupOf(decision)) || [];
         if (members.length > 1 && members[0] !== decision) continue;
         let when = String(snap.startDate || '').slice(0, 10);
-        if (members.length > 1) {
+        const sameChange = members.length > 1 && (decision.kind || 'new') === 'merge';
+        if (sameChange) {
+            const others = members.slice(1).map((member) => `${(member.snapshot || {}).title || ''} ${String((member.snapshot || {}).startDate || '').slice(0, 10)}`.trim());
+            when = `${when} + ${others.length} more with the same change (${others.join(', ')})`;
+        } else if (members.length > 1) {
             const days = members.map((member) => String(member.key).split('|')[3] || '').filter(Boolean).sort();
             const cadence = describeSeriesCadence(days);
             when = `${members.length} nights (${cadence ? `${cadence.text}, ${cadence.from} … ${cadence.to}` : days.join(', ')})`;
@@ -1246,6 +1391,7 @@ module.exports = {
     describeRunShapeLabel,
     describeRunFiles,
     listPhoneCalendars,
+    getPhoneCalendarListCapturedAt,
     loadWrittenLedger,
     findMissingPhoneCalendars,
     readRunFile,
@@ -1258,6 +1404,7 @@ module.exports = {
     buildDecision,
     upsertDecision,
     clearDecision,
+    restoreDecision,
     clearNotBearRejections,
     loadCuratedBars,
     BEAR_VERDICTS_FILE_NAME,
@@ -1267,6 +1414,7 @@ module.exports = {
     saveBearVerdicts,
     buildBearIdentity,
     upsertBearVerdict,
+    restoreBearVerdict,
     clearBearVerdict,
     createDeckCore,
     buildBarProposal,
@@ -1275,5 +1423,9 @@ module.exports = {
     buildImageUseCounts,
     buildDeck,
     describeSeriesCadence,
+    getSameChangeSignature,
+    describeChangeRows,
+    driftCoveredByNoteTags,
+    stampSameChange,
     formatRejectionsText
 };

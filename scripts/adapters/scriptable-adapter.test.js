@@ -11809,3 +11809,202 @@ test('postSavedRunExecutionNotification schedules a local notification and never
     if (original === undefined) delete global.Notification; else global.Notification = original;
   }
 });
+
+// ---------------------------------------------------------------------------
+// The phone reads the tree the Mac writes into. On 2026-09-27 the Mac lost its
+// network for two minutes and noted 59 "permanent" failures there — every one
+// a connection that never got an answer. Such a note says nothing about the
+// page: it is a cache miss on the phone too. A note with a status is kept.
+// ---------------------------------------------------------------------------
+test('page cache: a cached CONNECTION failure is a miss; a cached 404 is still replayed', async () => {
+  const adapter = buildAdapter();
+  adapter.pageStorageDir = '/pages';
+  const notes = {
+    'https://www.bearbrum.com/': {
+      url: 'https://www.bearbrum.com/',
+      fetchedAt: '2026-09-27T15:13:08.626Z',
+      statusCode: null,
+      headers: {},
+      fetchState: 'failed',
+      failure: { nonRetryable: true, context: 'root-page', error: 'HTTP request failed for https://www.bearbrum.com/: fetch failed' }
+    },
+    'https://precinctdtla.com/9-30-26/sissy-4/': {
+      url: 'https://precinctdtla.com/9-30-26/sissy-4/',
+      fetchedAt: '2026-09-27T17:25:11.000Z',
+      statusCode: 404,
+      headers: {},
+      fetchState: 'failed',
+      failure: { nonRetryable: true, context: 'crawl-page', error: 'HTTP request failed for https://precinctdtla.com/9-30-26/sissy-4/: HTTP 404: ' }
+    }
+  };
+  const byPath = {};
+  for (const [url, note] of Object.entries(notes)) {
+    const parts = adapter.getPageCachePathParts(url);
+    byPath[`/pages/${parts.hostDir}/${parts.fileName}`] = JSON.stringify(note);
+  }
+  adapter.fm = {
+    ...fileManagerStub,
+    fileExists: (p) => Object.prototype.hasOwnProperty.call(byPath, p),
+    modificationDate: () => new Date(),
+    readString: (p) => byPath[p]
+  };
+  const config = { enabled: true, ttlDays: 3 };
+  assert.equal(await adapter.readCachedPage('https://www.bearbrum.com/', config), null,
+    'nothing answered then — the page is asked for again');
+  await assert.rejects(
+    adapter.readCachedPage('https://precinctdtla.com/9-30-26/sissy-4/', config),
+    (error) => error.cachedFailure === true && error.statusCode === 404,
+    'what the server answered is still remembered'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Answers to lookups live a year, in a cache of their own (the phone twin of
+// the web adapter's answer cache).
+// ---------------------------------------------------------------------------
+test('answer cache on the phone: a lookup reads and writes storage/answers under its own life; a page keeps the page cache', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
+  adapter.runPolitely = async (url, options, operation) => operation();
+  const reads = [];
+  const writes = [];
+  adapter.readCachedPage = async (url, config) => { reads.push({ url, ttlDays: config.ttlDays, dir: config.storageDir || 'pages' }); return null; };
+  adapter.writeCachedPage = async (url, responseData, config) => { writes.push({ url, ttlDays: config.ttlDays, dir: config.storageDir || 'pages' }); };
+  global.Request = class {
+    constructor(url) { this.url = url; this.response = null; }
+    async loadString() { this.response = { statusCode: 200, headers: {} }; return '[{"lat":"37.77","lon":"-122.41"}]'; }
+  };
+  const lookup = 'https://geocoder.example/search?format=json&q=398+12th+St';
+  try {
+    await adapter.fetchData(lookup, { cacheTtlDays: 365, apiCall: true });
+    await adapter.fetchData('https://venue.example/events', {});
+  } finally {
+    delete global.Request;
+  }
+  const answers = adapter.getAnswerCacheConfig(365);
+  assert.equal(answers.enabled, true);
+  assert.ok(String(answers.storageDir).endsWith('answers'));
+  assert.deepEqual(reads.filter((read) => read.url === lookup).map((read) => [read.ttlDays, read.dir]), [[365, answers.storageDir], [3, 'pages']],
+    'the answer cache first, then the page cache an older build wrote to');
+  assert.deepEqual(writes.map((write) => [write.ttlDays, write.dir]), [[365, answers.storageDir], [3, 'pages']]);
+  assert.equal(adapter.getAnswerCacheConfig(0).enabled, false);
+  assert.equal(answers.keepWhileUsed, true);
+
+  // A read marks the answer used by writing it back, at most once a week.
+  const written = [];
+  adapter.fm = { writeString: (filePath, text) => written.push([filePath, text]) };
+  const days = (count) => new Date(Date.now() - count * 24 * 60 * 60 * 1000);
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(2), '{"html":"[]"}'), false, 'read two days ago: nothing to do');
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(30), '{"html":"[1]"}'), true);
+  assert.deepEqual(written, [['/answers/a.json', '{"html":"[1]"}']], 'written back byte for byte');
+  assert.equal(adapter.touchAnswerOnRead('/answers/a.json', days(30), ''), false, 'never writes an empty file over an answer');
+});
+
+// ---------------------------------------------------------------------------
+// ALL-DAY on the phone's calendar. EventKit keeps an all-day event against
+// the DEVICE's day, so the event's own days are rebuilt at this device's
+// midnight — never written as the event-zone instants, which are the evening
+// before for a zone east of the phone. These assertions read the written
+// dates with local getters, so they hold whatever zone the test runs in.
+// ---------------------------------------------------------------------------
+function allDayEvent(startIso, endIso, timezone, extra = {}) {
+  return { title: 'Bear Day', allDay: true, timezone, startDate: new Date(startIso), endDate: new Date(endIso), ...extra };
+}
+const localParts = (date) => [date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()];
+
+test('all-day write: the event\'s day lands on that same day on the device, in any zone', () => {
+  const adapter = new ScriptableAdapter({ cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles' } } });
+  for (const [label, start, end, zone, firstDay, lastDay] of [
+    ['Los Angeles', '2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', [2037, 10, 1], [2037, 10, 1]],
+    ['London (midnight there is the evening before in New York)', '2037-09-30T23:00:00.000Z', '2037-10-01T22:59:59.000Z', 'Europe/London', [2037, 10, 1], [2037, 10, 1]],
+    ['Tokyo', '2037-09-30T15:00:00.000Z', '2037-10-01T14:59:59.000Z', 'Asia/Tokyo', [2037, 10, 1], [2037, 10, 1]],
+    ['Sydney, four days', '2037-09-30T14:00:00.000Z', '2037-10-04T12:59:59.000Z', 'Australia/Sydney', [2037, 10, 1], [2037, 10, 4]],
+    ['New York across the end of daylight saving', '2037-10-28T04:00:00.000Z', '2037-11-03T04:59:59.000Z', 'America/New_York', [2037, 10, 28], [2037, 11, 2]]
+  ]) {
+    const target = {};
+    assert.equal(adapter.applyAllDayToCalendarEvent(target, allDayEvent(start, end, zone)), true, label);
+    assert.equal(target.isAllDay, true, label);
+    assert.deepEqual(localParts(target.startDate), [...firstDay, 0, 0, 0], `${label}: first day, device midnight`);
+    assert.deepEqual(localParts(target.endDate), [...lastDay, 23, 59, 59], `${label}: last day, 23:59:59`);
+  }
+  // No timezone on the event: the city's.
+  const byCity = {};
+  assert.equal(adapter.applyAllDayToCalendarEvent(byCity, allDayEvent('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', '', { city: 'la' })), true);
+  assert.deepEqual(localParts(byCity.startDate), [2037, 10, 1, 0, 0, 0]);
+  // The note-line spelling of the flag counts.
+  const fromNotes = {};
+  assert.equal(adapter.applyAllDayToCalendarEvent(fromNotes, allDayEvent('2037-10-01T07:00:00.000Z', '2037-10-02T06:59:59.000Z', 'America/Los_Angeles', { allDay: 'true' })), true);
+});
+
+test('all-day write fails closed: a flag the dates do not back, or no zone, writes the timed span and says so', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  try {
+    const start = new Date('2037-10-02T04:00:00.000Z');
+    const end = new Date('2037-10-02T09:00:00.000Z');
+    const timedButFlagged = { startDate: start, endDate: end };
+    assert.equal(adapter.applyAllDayToCalendarEvent(timedButFlagged, { title: 'Party', allDay: true, timezone: 'America/Los_Angeles', startDate: start, endDate: end }), false);
+    assert.equal(timedButFlagged.startDate, start, 'dates untouched');
+    assert.notEqual(timedButFlagged.isAllDay, true);
+    const noZone = { startDate: start, endDate: end };
+    assert.equal(adapter.applyAllDayToCalendarEvent(noZone, { title: 'Nowhere', allDay: true, city: 'atlantis', startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-02T06:59:59.000Z') }), false);
+    assert.equal(noZone.startDate, start);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(lines.filter((line) => line.includes('is marked as a whole-day event but its dates are not a whole day')).length, 2);
+});
+
+test('all-day write: an event whose time is unknown is written all-day too — the calendar has one switch for both kinds', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const target = {};
+  const wrote = adapter.applyAllDayToCalendarEvent(target, {
+    title: 'B BAR', timeUnknown: true, timezone: 'America/Los_Angeles',
+    startDate: new Date('2037-10-01T07:00:00.000Z'), endDate: new Date('2037-10-02T06:59:59.000Z')
+  });
+  assert.equal(wrote, true);
+  assert.equal(target.isAllDay, true);
+  assert.deepEqual([target.startDate.getFullYear(), target.startDate.getMonth(), target.startDate.getDate(), target.startDate.getHours()], [2037, 9, 1, 0]);
+  assert.deepEqual([target.endDate.getMonth(), target.endDate.getDate(), target.endDate.getHours(), target.endDate.getMinutes()], [9, 1, 23, 59]);
+});
+
+test('all-day write: an event that now has a time switches a saved all-day record back to timed', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const saved = { isAllDay: true };
+  assert.equal(adapter.applyAllDayToCalendarEvent(saved, { title: 'Found a time', timezone: 'America/Los_Angeles', startDate: new Date('2037-10-02T04:00:00.000Z'), endDate: new Date('2037-10-02T09:00:00.000Z') }), false);
+  assert.equal(saved.isAllDay, false);
+  const timed = {};
+  adapter.applyAllDayToCalendarEvent(timed, { title: 'Timed', startDate: new Date(), endDate: new Date() });
+  assert.equal('isAllDay' in timed, false, 'a timed record is not touched');
+});
+
+test('all-day read: a stored all-day record is described by the days this device shows it on', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: false, startDate: new Date() }), {});
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, startDate: new Date(2037, 9, 1, 0, 0, 0), endDate: new Date(2037, 9, 1, 23, 59, 59) }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-01' });
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 4) }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-03' }, 'an end on a later midnight is exclusive');
+  assert.deepEqual(adapter.describeStoredAllDay({ isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-02', startDate: new Date('2037-09-30T23:00:00.000Z') }),
+    { isAllDay: true, allDayStartDay: '2037-10-01', allDayEndDay: '2037-10-02' }, 'days already read off the live record are kept');
+  // The pre-write snapshot of a record carries them.
+  const snapshot = adapter.snapshotCalendarRecord({ title: 'Bear Day', identifier: 'X', isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 1, 23, 59, 59), notes: 'allDay: true' });
+  assert.equal(snapshot.isAllDay, true);
+  assert.equal(snapshot.allDayStartDay, '2037-10-01');
+});
+
+test('all-day merge write goes to the live record behind the analysis view', () => {
+  const live = { title: 'Bear Day', isAllDay: true, startDate: new Date(2037, 9, 1), endDate: new Date(2037, 9, 1, 23, 59, 59), notes: 'timezone: Europe/London' };
+  const { SharedCore } = require('../shared-core');
+  const core = new SharedCore({ london: { timezone: 'Europe/London', patterns: ['london'] } }, { eventSchema: require('../event-schema').EventSchema });
+  const view = core.viewStoredAllDayRecord(live, '');
+  assert.notEqual(view, live);
+  assert.equal(view.startDate.toISOString(), '2037-09-30T23:00:00.000Z', 'the view is the London day');
+  assert.equal(SharedCore.getNativeCalendarRecord(view), live, 'the write target is the record itself');
+  assert.equal(Object.keys(view).includes('_nativeRecord'), false, 'never serialized with the run');
+  assert.equal(JSON.stringify(view).includes('_nativeRecord'), false);
+  const timed = { title: 'Timed', startDate: new Date(), endDate: new Date() };
+  assert.equal(core.viewStoredAllDayRecord(timed, 'Europe/London'), timed, 'a timed record passes through untouched');
+  assert.equal(SharedCore.getNativeCalendarRecord(timed), timed);
+});
