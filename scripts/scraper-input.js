@@ -551,7 +551,20 @@ const scraperConfig = {
       // protocol-relative image — all read generically by the JSON-API
       // reader. Empty between parties (0 upcoming on 2026-09-20; five past
       // listings through 2026-07-31 on the /past twin).
-      urls: ["https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming"],
+      // The social's own site (owner, 2026-09-30) lists every upcoming
+      // Sunday on its homepage — one <article class="event-item"
+      // data-event-date> per date with "27 SEP 2026 @ 2p-7p" and a blurb,
+      // themed Sundays named apart ("TOTALLY TERRIFYING 80S HALLOWEEN",
+      // "NAUGHTY SANTA SOCIAL @ 2p-9p") and skipped weeks simply absent.
+      // The /events/* pages are prose about the series, not listings.
+      // Static Astro build: no feed, no JSON-LD, no per-event pages. The
+      // apex southseattlebearsocial.com (the sitemap's host) is a different
+      // build — a Squarespace shell whose robots disallow everything — so
+      // the source is the www.southseattlebears.com host, which answers.
+      urls: [
+        "https://events.ticketleap.com/api/organization-listing/southseattlebearsocial/upcoming",
+        "https://www.southseattlebears.com/",
+      ],
       urlDiscoveryDepth: 0,
     },
     {
