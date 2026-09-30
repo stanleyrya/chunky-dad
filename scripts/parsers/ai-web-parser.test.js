@@ -8064,7 +8064,8 @@ test('a feed row with an RRULE becomes its next dated occurrences, never the ser
   const events = parser.extractEventsFromJsonApiPayload({
     events: [{ title: 'Furry Friday', start: friday.toISOString().replace(/\.\d{3}Z$/, ''), end: new Date(friday.getTime() + 4 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, ''), rrule: 'FREQ=WEEKLY;BYDAY=FR', city: 'Portland' }]
   }, 'https://thebearcalendar.example/feed.json', FEED_CITY_CONFIG);
-  assert.equal(events.length, 6, 'capped occurrences inside the horizon');
+  assert.equal(events.length, 13, 'a weekly night for the whole 90-day horizon');
+  assert.ok(events[12].startDate.getTime() - events[0].startDate.getTime() === 12 * 7 * day, 'thirteen consecutive weeks');
   assert.ok(events.every(e => e.startDate.getTime() >= Date.now() - day), 'no occurrence in the past');
   assert.ok(events.every(e => e.startDate.getUTCDay() === 5 && e.startDate.getUTCHours() === 19), 'each on a Friday at the series\' wall-clock hour');
   assert.equal(events[0].endDate.getTime() - events[0].startDate.getTime(), 4 * 60 * 60 * 1000, 'duration carried');

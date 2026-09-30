@@ -228,7 +228,12 @@ const JSON_API_FEED_WINDOW_PAST_MS = 24 * 60 * 60 * 1000;
 // blob; the rest is fetched by the widget itself. Same page budget as the JSON
 // feeds above, and the same 90-day horizon.
 const WIX_EVENTS_MAX_PAGES = 6;
-const JSON_API_SERIES_MAX_OCCURRENCES = 6;
+// How many dated nights one repeating entry may become: a weekly night for
+// the WHOLE horizon (13 in 90 days). It was 6, so a weekly party read 90
+// days ahead still stopped after six weeks (Lodge NY, 2026-09-29: its
+// weekly nights ended on Nov 8, 21 series sitting at the cap). A nightly
+// series still stops at the same count — two weeks of it, not ninety rows.
+const JSON_API_SERIES_MAX_OCCURRENCES = Math.ceil(JSON_API_FEED_HORIZON_DAYS / 7);
 // An Elfsight calendar entry that ended more than this many days ago is the
 // widget's archive, not an event (see collectElfsightCalendarEvents).
 const ELFSIGHT_ARCHIVE_DAYS = 30;
