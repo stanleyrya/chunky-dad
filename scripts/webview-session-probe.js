@@ -82,7 +82,11 @@ const PROBE_JS = `
   })()`;
 
 // Load, then read three times (right away, 4 s, 10 s): a page that needs
-// its JavaScript shows up in the later reads. Returns the fullest read.
+// its JavaScript shows up in the later reads. Returns the fullest read —
+// and then SHOWS the very same web view (owner, 2026-10-01: "present the
+// page to me so I can make sure it isn't just signed into my account"):
+// what you see is exactly what the headless read saw, cookies and all.
+// Close it to continue.
 async function headlessRead(note, label) {
   const view = new WebView();
   const startedAt = Date.now();
@@ -103,6 +107,12 @@ async function headlessRead(note, label) {
     } catch (error) {
       note(`${label}: evaluateJavaScript failed — ${error.message}`);
     }
+  }
+  note(`${label}: showing you the page as the headless view holds it — close it to continue`);
+  try {
+    await view.present(false);
+  } catch (error) {
+    note(`${label}: could not present the view — ${error.message}`);
   }
   return best;
 }
