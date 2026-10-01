@@ -419,6 +419,12 @@
     "accent": "#c05742"
   },
   {
+    "slug": "cake-sunday-tea-268779c5",
+    "paletteSource": "flyer",
+    "palette": "#153528:19:5 #0c0c0b:15:0 #93644b:14:7 #633c2a:14:6 #159649:5:15",
+    "accent": "#159649"
+  },
+  {
     "slug": "cake-sunday-tea-68a1e9e7",
     "paletteSource": "flyer",
     "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
@@ -509,6 +515,12 @@
     "paletteSource": "flyer",
     "palette": "#442c42:17:5 #130c24:17:5 #8c534b:13:8 #ca815e:10:10 #445485:9:8",
     "accent": "#ca815e"
+  },
+  {
+    "slug": "diva-thicc-32de6298",
+    "paletteSource": "flyer",
+    "palette": "#643c2c:24:6 #935d4b:17:8 #341d1b:15:4 #ecc57d:13:10 #dd3336:8:21",
+    "accent": "#dd3336"
   },
   {
     "slug": "fat-bunny-5b4c768d",
@@ -709,6 +721,12 @@
     "faviconBg": "#030303",
     "faviconFg": "#7a7a7a",
     "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
+    "accent": "#d5ad8c"
+  },
+  {
+    "slug": "gorditos-3edc23e7",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
     "accent": "#d5ad8c"

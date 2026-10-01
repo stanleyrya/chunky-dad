@@ -318,6 +318,15 @@
     "accent": "#3d6eab"
   },
   {
+    "slug": "bulkgoods-la-2099a971",
+    "url": "https://precinctdtla.com",
+    "faviconBg": "#23252b",
+    "faviconFg": "#86878c",
+    "faviconPlate": "#22242a",
+    "paletteSource": "favicon",
+    "palette": "#22242a:89:1 #d4d5da:4:1 #a3a5aa:3:1"
+  },
+  {
     "slug": "chunk-los-angeles-the-return-199f6b9d",
     "url": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
     "faviconBg": "#f6f4f5",

@@ -1,5 +1,15 @@
 [
   {
+    "slug": "bear-it-mtl-apro-ours-7961a42d",
+    "url": "https://www.bearitmtl.com/event/apero-ours/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0302:46:2 #231a0b:17:3 #dcaa95:9:7 #956d57:9:6 #fbc50a:6:17",
+    "accent": "#fbc50a"
+  },
+  {
     "slug": "bear-it-mtl-players-7f327916",
     "url": "https://www.bearitmtl.com/event/players/",
     "faviconBg": "#1a1a1a",

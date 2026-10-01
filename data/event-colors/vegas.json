@@ -10,6 +10,16 @@
     "accent": "#9d40f0"
   },
   {
+    "slug": "club-chub-viva-chub-vegas-5117662b",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:71:0 #f7cb44:9:15 #140b09:5:2 #b61910:4:19 #ed3c9c:3:23",
+    "accent": "#f7cb44"
+  },
+  {
     "slug": "megawoof-00b39ef8",
     "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
     "faviconBg": "#ff5e30",
@@ -46,6 +56,10 @@
   },
   {
     "slug": "megawoof-america-las-vegas-halloween-4e457a25",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
     "paletteSource": "flyer",
     "palette": "#1b0d21:39:4 #441c2b:12:6 #9b403e:12:12 #cd5149:11:16 #e79377:9:11",
     "accent": "#cd5149"

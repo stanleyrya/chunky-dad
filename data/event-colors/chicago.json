@@ -30,6 +30,16 @@
     "accent": "#f2592a"
   },
   {
+    "slug": "bear-happy-hour-7a3c0396",
+    "url": "https://linktr.ee/bearhappyhour",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#131312:31:0 #e2ded4:16:1 #744b34:15:7 #e1ce7b:11:11 #c37439:9:12",
+    "accent": "#c37439"
+  },
+  {
     "slug": "bearaoke-00e30733",
     "url": "https://thesofotap.com",
     "faviconBg": "#000000",

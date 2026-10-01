@@ -1,0 +1,42 @@
+[
+  {
+    "slug": "bear-pub-30cc9422",
+    "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+    "faviconBg": "#ebeceb",
+    "faviconFg": "#333233",
+    "faviconPlate": "#fcfefc",
+    "paletteSource": "flyer",
+    "palette": "#33241c:36:3 #613e2c:32:6 #7e5a3d:12:6 #d3bb6c:11:10 #a48454:10:8",
+    "accent": "#d3bb6c"
+  },
+  {
+    "slug": "bear-pub-3e244770",
+    "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+    "faviconBg": "#ebeceb",
+    "faviconFg": "#333233",
+    "faviconPlate": "#fcfefc",
+    "paletteSource": "flyer",
+    "palette": "#33241c:36:3 #613e2c:32:6 #7e5a3d:12:6 #d3bb6c:11:10 #a48454:10:8",
+    "accent": "#d3bb6c"
+  },
+  {
+    "slug": "bear-pub-509eb035",
+    "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+    "faviconBg": "#ebeceb",
+    "faviconFg": "#333233",
+    "faviconPlate": "#fcfefc",
+    "paletteSource": "flyer",
+    "palette": "#33241c:36:3 #613e2c:32:6 #7e5a3d:12:6 #d3bb6c:11:10 #a48454:10:8",
+    "accent": "#d3bb6c"
+  },
+  {
+    "slug": "bears-go-bowling-468c7db0",
+    "url": "https://www.norwaybears.com/en/2025/01/bears-go-bowling/",
+    "faviconBg": "#ebeceb",
+    "faviconFg": "#333233",
+    "faviconPlate": "#fcfefc",
+    "paletteSource": "flyer",
+    "palette": "#cda58a:19:6 #eceae4:17:1 #6a4c4c:16:4 #9c6945:13:8 #d4353a:10:20",
+    "accent": "#d4353a"
+  }
+]

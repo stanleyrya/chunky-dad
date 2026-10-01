@@ -30,6 +30,16 @@
     "accent": "#f706b5"
   },
   {
+    "slug": "beefmince-new-years-eve-london-0d0a5028",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:63:0 #ea4ece:28:23 #0c010a:4:4 #8d367c:1:14 #b2469e:1:17",
+    "accent": "#ea4ece"
+  },
+  {
     "slug": "beefmince-trunk-den-037f084d",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
@@ -98,6 +108,16 @@
     "paletteSource": "flyer",
     "palette": "#1ac1e6:53:13 #292826:23:0 #236bf5:12:22 #13829d:2:10 #1e4d61:1:6",
     "accent": "#1ac1e6"
+  },
+  {
+    "slug": "turkeymince-0d195b0b",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fb0110:54:25 #fdf5e8:35:2 #e17b75:5:13 #036b1b:3:14 #719636:1:13",
+    "accent": "#fb0110"
   },
   {
     "slug": "twisted-bear-london-the-return-5fafb1d5",

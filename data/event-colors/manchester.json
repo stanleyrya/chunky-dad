@@ -30,6 +30,16 @@
     "accent": "#8d3118"
   },
   {
+    "slug": "leather-disco-36b10500",
+    "url": "https://www.eaglemanchester.com/event-details/leather-disco",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#ca2b9b:21:22 #a2217d:19:19 #ea3acd:15:25 #741963:14:15 #d27cba:10:13",
+    "accent": "#ea3acd"
+  },
+  {
     "slug": "manbears-social-157810dc",
     "url": "https://www.eaglemanchester.com/event-details/manbears-social-2026-12-12-16-00",
     "faviconBg": "#131315",
@@ -58,5 +68,24 @@
     "paletteSource": "flyer",
     "palette": "#e7f1f1:34:1 #e18c7a:14:11 #d4b2ad:13:4 #ca4e36:10:16 #efe993:2:11",
     "accent": "#ca4e36"
+  },
+  {
+    "slug": "manchester-leather-weekend-friday-social-1f0d400c",
+    "url": "https://www.eaglemanchester.com/event-details/manchester-leather-weekend-friday-social",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#120a16:69:3 #2a222d:12:2 #4c444c:6:2 #a52227:4:17",
+    "accent": "#a52227"
+  },
+  {
+    "slug": "the-leather-and-bluf-social-69c60b73",
+    "url": "https://www.eaglemanchester.com/event-details/the-leather-and-bluf-social",
+    "faviconBg": "#131315",
+    "faviconFg": "#a7a7a8",
+    "faviconPlate": "#111113",
+    "paletteSource": "flyer",
+    "palette": "#1a1a15:60:1 #363a34:24:1 #fafbf6:6:1"
   }
 ]

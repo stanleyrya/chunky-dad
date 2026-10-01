@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "happy-brsday-10-jahre-leipzig-bren-63892cbb",
+    "paletteSource": "flyer",
+    "palette": "#5b2433:26:8 #331414:20:5 #73433b:16:7 #9146ab:5:17 #dcc67d:1:10",
+    "accent": "#9146ab"
+  },
+  {
+    "slug": "leipzig-bear-weekend-34b96cb5",
+    "url": "https://www.leipzig-baeren.de/party",
+    "faviconBg": "#654c30",
+    "faviconFg": "#f0e7d0",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fefaf6:44:1 #32291f:15:2 #6f4212:9:9 #d37604:7:15 #fdd479:6:12",
+    "accent": "#d37604"
+  }
+]

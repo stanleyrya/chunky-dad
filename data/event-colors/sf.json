@@ -276,6 +276,16 @@
     "palette": "#000000:66:0 #ffffff:27:0 #a3a3a3:3:0"
   },
   {
+    "slug": "grunt-halloween-5a7be0ca",
+    "url": "https://gruntparty.monster/grunt-halloween",
+    "faviconBg": "#d02a2a",
+    "faviconFg": "#200d0e",
+    "faviconPlate": "#e32323",
+    "paletteSource": "flyer",
+    "palette": "#141915:36:1 #ea212a:21:23 #7a7e3b:14:9 #655933:11:6 #347fa9:8:10",
+    "accent": "#ea212a"
+  },
+  {
     "slug": "grunt-party-sf-6e1e3ec8",
     "url": "https://gruntparty.monster/",
     "faviconBg": "#d02a2a",
@@ -380,6 +390,16 @@
     "paletteSource": "flyer",
     "palette": "#000000:25:0 #9b2314:17:16 #1c1d0a:14:3 #640a0b:11:12 #f2cd86:11:10",
     "accent": "#9b2314"
+  },
+  {
+    "slug": "twisted-bear-san-francisco-367164d6",
+    "url": "https://twisted-bear.com",
+    "faviconBg": "#f7f7f7",
+    "faviconFg": "#101010",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#130d0b:52:1 #342423:11:2 #ad8973:9:5 #7f5d53:8:5 #c1b897:6:5",
+    "accent": "#ad8973"
   },
   {
     "slug": "twisted-bear-san-francisco-debut-003787d5",

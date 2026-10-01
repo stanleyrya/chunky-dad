@@ -10,6 +10,25 @@
     "accent": "#bb43f6"
   },
   {
+    "slug": "beefmince-new-years-day-2f9d6d9f",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:59:0 #050505:35:0 #d6d6d6:2:0"
+  },
+  {
+    "slug": "beefmince-new-years-day-brighton-37f1371b",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ed4dd3:34:24 #c551b1:33:18 #010001:27:0 #873678:2:14 #401936:2:7",
+    "accent": "#ed4dd3"
+  },
+  {
     "slug": "beefmince-x-brighton-788abcce",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",

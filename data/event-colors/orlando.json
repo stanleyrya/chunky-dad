@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "bear-jamboree-21473785",
+    "url": "https://www.bearjamboree.com/",
+    "faviconBg": "#a44e04",
+    "faviconFg": "#522702",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010000:62:1 #2a160b:25:4 #8c5422:6:10 #cb8e4a:5:11 #5b3413:2:7",
+    "accent": "#cb8e4a"
+  },
+  {
+    "slug": "bear-tea-dance-67b9f342",
+    "url": "https://www.bearjamboree.com/bear-tea-dance",
+    "faviconBg": "#a44e04",
+    "faviconFg": "#522702",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cba5ab:18:5 #b3868a:17:5 #e3cbbc:15:3 #6b4a75:8:8 #753e32:6:8",
+    "accent": "#6b4a75"
+  }
+]
