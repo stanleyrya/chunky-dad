@@ -9468,6 +9468,8 @@ class SharedCore {
     static get DEAD_END_CAPABILITY() {
         return DEAD_END_CAPABILITY;
     }
+    static get RATE_LIMIT_PARK_RUNS() { return 3; }
+    static get RATE_LIMIT_PARK_DAYS() { return 30; }
 
     static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
         return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
@@ -9957,7 +9959,9 @@ class SharedCore {
                 }
                 const deadEndHostEntry = this.getSkippableDeadEndHostEntry(url, discoveryOnly);
                 if (deadEndHostEntry) {
-                    await displayAdapter.logInfo(`SYSTEM: Skipping URL on bot-walled host (${Number(deadEndHostEntry.misses) || 0} distinct 401/403 URL(s), zero successful fetches): ${url}`);
+                    await displayAdapter.logInfo(SharedCore.isRateLimitedDeadEndHostEntry(deadEndHostEntry)
+                        ? `SYSTEM: Skipping URL on a host that keeps answering 429 (${deadEndHostEntry.rateLimitDays.length} run days, last ${String(deadEndHostEntry.lastRateLimited).slice(0, 10)}; left alone for ${SharedCore.RATE_LIMIT_PARK_DAYS} days): ${url}`
+                        : `SYSTEM: Skipping URL on bot-walled host (${Number(deadEndHostEntry.misses) || 0} distinct 401/403 URL(s), zero successful fetches): ${url}`);
                     continue;
                 }
                 const unreachable = this.getUnreachableHostSkip(url);
@@ -10564,6 +10568,10 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
+                } else if (failureStatusCode === 429 && currentDepth > 0 && this.deadEndRunContext && this.deadEndRunContext.enabled) {
+                    // Never a fact about the page; a fact about the host
+                    // (see recordDeadEndRateLimit).
+                    this.recordDeadEndRateLimit(this.deadEndRunContext, url);
                 } else if (failureStatusCode === null && /HTTP request failed/i.test(message)
                     && !(error && error.cachedFailure === true)) {
                     // Statusless transport failure from the HTTP adapter
@@ -11204,8 +11212,51 @@ class SharedCore {
 
     isBlockedDeadEndHostEntry(context, entry) {
         if (!entry) return false;
+        if (SharedCore.isRateLimitedDeadEndHostEntry(entry)) return true;
         if (Number(entry.successes) > 0) return false; // fail-closed: any success, ever, immunizes
         return (Number(entry.misses) || 0) >= this.getDeadEndHostMinMisses(context);
+    }
+
+    // A HOST THAT KEEPS SAYING "SLOW DOWN" IS LEFT ALONE. 429 is never a
+    // fact about a page (never learned per URL) but it is a fact about how
+    // the host sees this client: dilf.uk answered 429 to every request —
+    // robots.txt included — on four runs in a row (2026-09-30 → 10-01).
+    // The per-run gate already parks the host after its first 429, so each
+    // run costs it one or two more requests; across runs that is the same
+    // knock on the same door every day. After RATE_LIMIT_PARK_RUNS distinct
+    // run days of 429 with no successful fetch since the first, the host is
+    // not asked for RATE_LIMIT_PARK_DAYS from the last 429 (owner, 2026-10-01).
+    // Successes BEFORE the first 429 do not immunize — the host used to
+    // answer and stopped; a success after it clears everything.
+    static isRateLimitedDeadEndHostEntry(entry) {
+        const days = Array.isArray(entry && entry.rateLimitDays) ? entry.rateLimitDays : [];
+        if (days.length < SharedCore.RATE_LIMIT_PARK_RUNS) return false;
+        const firstMs = Date.parse(days[0]);
+        const lastSuccessMs = entry.lastSuccess ? Date.parse(entry.lastSuccess) : NaN;
+        return !(Number.isFinite(lastSuccessMs) && Number.isFinite(firstMs) && lastSuccessMs >= firstMs);
+    }
+
+    recordDeadEndRateLimit(context, url, nowMs = Date.now()) {
+        const hostKey = this.getDeadEndHostKey(url);
+        if (!hostKey) return;
+        const hosts = this.getDeadEndHostStore(context, true);
+        const nowIso = new Date(nowMs).toISOString();
+        const day = nowIso.slice(0, 10);
+        let entry = hosts[hostKey];
+        if (!entry) {
+            entry = { firstSeen: nowIso, lastSeen: nowIso };
+            hosts[hostKey] = entry;
+        }
+        const blockedBefore = SharedCore.isRateLimitedDeadEndHostEntry(entry);
+        const days = Array.isArray(entry.rateLimitDays) ? entry.rateLimitDays.slice() : [];
+        if (!days.includes(day)) days.push(day);
+        entry.rateLimitDays = days.slice(-5);
+        entry.lastRateLimited = nowIso;
+        entry.lastSeen = nowIso;
+        context.dirty = true;
+        if (!blockedBefore && SharedCore.isRateLimitedDeadEndHostEntry(entry) && !context.learnedHosts.includes(hostKey)) {
+            context.learnedHosts.push(hostKey);
+        }
     }
 
     // The host entry that currently blocks this URL's host, or null. Young
@@ -11218,6 +11269,11 @@ class SharedCore {
         if (!hostKey) return null;
         const entry = hosts[hostKey];
         if (!entry || !this.isBlockedDeadEndHostEntry(context, entry)) return null;
+        if (SharedCore.isRateLimitedDeadEndHostEntry(entry)) {
+            const lastMs = entry.lastRateLimited ? Date.parse(entry.lastRateLimited) : NaN;
+            const parkMs = SharedCore.RATE_LIMIT_PARK_DAYS * 24 * 60 * 60 * 1000;
+            return Number.isFinite(lastMs) && (nowMs - lastMs) < parkMs ? entry : null;
+        }
         const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
         if (!Number.isFinite(lastSeenMs) || (nowMs - lastSeenMs) >= retryMs) return null;
@@ -11311,9 +11367,16 @@ class SharedCore {
             return;
         }
         const hadBotWallMisses = (Number(entry.misses) || 0) > 0;
+        const hadRateLimits = Array.isArray(entry.rateLimitDays) && entry.rateLimitDays.length > 0;
         const lastSuccessMs = entry.lastSuccess ? Date.parse(entry.lastSuccess) : NaN;
         const refreshMs = context.retryDays * 24 * 60 * 60 * 1000;
         const refreshDue = !Number.isFinite(lastSuccessMs) || (nowMs - lastSuccessMs) > refreshMs;
+        if (hadRateLimits) {
+            delete entry.rateLimitDays;
+            delete entry.lastRateLimited;
+            if (!context.recoveredHosts.includes(hostKey)) context.recoveredHosts.push(hostKey);
+            context.dirty = true;
+        }
         if (!hadBotWallMisses && !refreshDue) return;
         entry.successes = (Number(entry.successes) || 0) + 1;
         entry.lastSuccess = nowIso;
@@ -11714,10 +11777,10 @@ class SharedCore {
             }
             if (context.hostSkippedCount > 0) {
                 const hostSamples = context.hostSkippedSamples.length > 0 ? `: ${context.hostSkippedSamples.join(', ')}` : '';
-                await displayAdapter.logInfo(`SYSTEM: Skipped ${context.hostSkippedCount} URL(s) on bot-walled host(s) (only 401/403 responses on record, zero successful fetches; retry after ${context.retryDays}d)${hostSamples}`);
+                await displayAdapter.logInfo(`SYSTEM: Skipped ${context.hostSkippedCount} URL(s) on bot-walled host(s) (only 401/403 responses on record and zero successful fetches, or 429 on 3+ run days — left alone; retry after ${context.retryDays}d)${hostSamples}`);
             }
             if (context.learnedHosts.length > 0) {
-                await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+                await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} host(s) to leave alone — every crawl fetch got 401/403 and none ever succeeded, or 429 on ${SharedCore.RATE_LIMIT_PARK_RUNS}+ run days: ${context.learnedHosts.join(', ')}`);
             }
             if (Number(context.knownEmptyLookups) > 0 || Number(context.emptyLookupsNoted) > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Geocoder: ${Number(context.knownEmptyLookups) || 0} question(s) not asked again (no answer on two earlier runs; asked again after ${context.retryDays}d), ${Number(context.emptyLookupsNoted) || 0} answered "nothing" this run`);
@@ -21161,7 +21224,32 @@ class SharedCore {
     }
 
     // Prepare events for calendar integration with conflict analysis
+    // Is this event's title the name its source gives MOST of its events
+    // in this batch (the plain nights' listing name), as opposed to a name
+    // one night carries alone? A source with a single event has no
+    // "most": its one name is the event's own.
+    isSourceModalTitle(event, events) {
+        const sourceOf = (record) => String((record && record._parserConfig && record._parserConfig.name) || (record && record.source) || '');
+        const source = sourceOf(event);
+        const counts = Object.create(null);
+        let total = 0;
+        for (const record of Array.isArray(events) ? events : []) {
+            if (!record || sourceOf(record) !== source) continue;
+            const key = this.normalizeIdentityText(record.title);
+            if (!key) continue;
+            counts[key] = (counts[key] || 0) + 1;
+            total += 1;
+        }
+        if (total < 2) return false;
+        const own = this.normalizeIdentityText(event && event.title);
+        const max = Math.max(...Object.values(counts));
+        return Boolean(own) && counts[own] === max && counts[own] >= 2;
+    }
+
     async prepareEventsForCalendar(events, calendarAdapter, config = {}, bearOverrideContext = null) {
+        // The whole batch, for the one reader that needs its siblings
+        // (isSourceModalTitle, in buildAnalyzedCalendarEvent).
+        this._preparingBatch = Array.isArray(events) ? events : [];
         // Events are already properly formatted - no need for additional formatting
 
         // Use default merge mode since parser-level mergeMode is handled by field priorities
@@ -21821,6 +21909,29 @@ class SharedCore {
                 analyzedEvent = await this.createFinalEventObject(analysis.sourceEvent, sourceMergeEvent, { httpAdapter: calendarAdapter, globalConfig: config });
                 delete analyzedEvent._existingEvent;
                 analyzedEvent._action = 'new';
+                // A THEMED NIGHT OF A SAVED SERIES KEEPS THE PAGE'S OWN NAME.
+                // The override exists because this night differs from the
+                // series; its name is the first thing that differs. The
+                // merge's title arbitration kept "South Seattle Bear Social"
+                // over "NAUGHTY SANTA SOCIAL" ("a theme, not the official
+                // name") while taking "IT'S GIVING THANKS" the same run —
+                // position bias, not judgement (owner, 2026-10-01). The
+                // page's title stands unless it is the name the page gives
+                // MOST of this source's nights (the plain nights' listing
+                // name, "Weekly Bear Social", which is the series' own
+                // business — see SERIES AUTHORITY), in which case the series
+                // title is kept as before.
+                if (analysis.overrideIdentity) {
+                    const pageTitle = typeof event.title === 'string' ? event.title.trim() : '';
+                    const seriesTitle = typeof analysis.sourceEvent.title === 'string' ? analysis.sourceEvent.title.trim() : '';
+                    const keyOf = (value) => this.normalizeIdentityText(value);
+                    if (pageTitle && keyOf(pageTitle) !== keyOf(seriesTitle) && keyOf(analyzedEvent.title) !== keyOf(pageTitle)
+                        && !this.isSourceModalTitle(event, this._preparingBatch || [])) {
+                        console.log(`🎫 SERIES NIGHT: "${pageTitle}" is this night's own name on the page — the override keeps it over the series title "${seriesTitle}"`);
+                        analyzedEvent.title = pageTitle;
+                        if (analyzedEvent.notes) analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+                    }
+                }
 
                 // Compute a merge diff comparing the base recurring event to the new override
                 // being created. This enables diff display for intent:merge + action:new cases.

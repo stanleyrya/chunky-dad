@@ -8756,6 +8756,43 @@ function botWallFailure(url) {
   return { fail: `HTTP request failed for ${url}: HTTP 403: ` };
 }
 
+test('dead-end store: a host that answers 429 on three run days is left alone for 30 days; a successful fetch clears it', async () => {
+  const RATE_URL_1 = 'https://dilf.example/events/manchester-leather-edition';
+  const RATE_URL_2 = 'https://dilf.example/events/brighton-pride';
+  const rateLimited = (url) => ({ fail: `HTTP request failed for ${url}: HTTP 429: ` });
+  // Two earlier run days already remembered on the host; today is the third.
+  const seeded = { '::hosts': { 'dilf.example': { firstSeen: '2026-09-29T05:00:00.000Z', lastSeen: '2026-09-30T05:00:00.000Z', successes: 3, lastSuccess: '2026-09-20T05:00:00.000Z', rateLimitDays: ['2026-09-29', '2026-09-30'], lastRateLimited: '2026-09-30T05:00:00.000Z' } } };
+  const core1 = deadEndCore();
+  const display1 = createDisplayAdapterStub();
+  const harness1 = createCrawlHarness({ 'https://hub.example/': { additionalLinks: [RATE_URL_1] }, [RATE_URL_1]: rateLimited(RATE_URL_1) });
+  const results1 = await core1.processEvents(deadEndConfig({ store: seeded }), harness1.httpAdapter, display1, harness1.parsers);
+  const host = results1.deadEndStore['::hosts']['dilf.example'];
+  assert.equal(host.rateLimitDays.length, 3, 'today is the third run day');
+  assert.ok(!(core1.getUrlDedupeKey(RATE_URL_1) in results1.deadEndStore), 'a 429 is never a fact about the page');
+  assert.equal(SharedCore.isRateLimitedDeadEndHostEntry(host), true, 'successes from before the first 429 do not immunize');
+  assert.ok(display1.logs.some(line => /Learned 1 host\(s\) to leave alone/.test(line) && line.includes('dilf.example')), display1.logs.filter(l => /host/.test(l)).join('\n'));
+
+  // Next run: a new URL on the host is not asked for.
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const harness2 = createCrawlHarness({ 'https://hub.example/': { additionalLinks: [RATE_URL_2] }, [RATE_URL_2]: rateLimited(RATE_URL_2) });
+  await core2.processEvents(deadEndConfig({ store: results1.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers);
+  assert.ok(!harness2.fetched.includes(RATE_URL_2), 'never fetched: ' + harness2.fetched.join(', '));
+  assert.ok(display2.logs.some(line => /bot-walled host\(s\)/.test(line) && /429/.test(line) && line.includes(RATE_URL_2)), 'the run says a host was left alone: ' + display2.logs.filter(l => /host/i.test(l)).join(' | '));
+
+  // 31 days later the park has lapsed; the host answers → cleared.
+  const context = core2.createDeadEndRunContext ? null : null;
+  const later = Date.parse('2026-11-02T05:00:00.000Z');
+  const lapsed = results1.deadEndStore['::hosts']['dilf.example'];
+  assert.equal(core2.getBlockedDeadEndHostEntry({ store: results1.deadEndStore, retryDays: 30 }, RATE_URL_2, later), null, 'after 30 days the host is asked once more');
+  const ctx = { store: results1.deadEndStore, retryDays: 30, recoveredHosts: [], dirty: false };
+  core2.recordDeadEndHostSuccess(ctx, RATE_URL_2, later);
+  assert.equal('rateLimitDays' in lapsed, false, 'a success forgets the 429s');
+  assert.deepEqual(ctx.recoveredHosts, ['dilf.example']);
+  // Two run days is not a pattern.
+  assert.equal(SharedCore.isRateLimitedDeadEndHostEntry({ rateLimitDays: ['2026-09-29', '2026-09-30'] }), false);
+});
+
 test('dead-end store: a host whose crawl pages only ever 403 is host-blocked — new URLs on it are skipped next run', async () => {
   // Run 1: two distinct eventim deep-links 403 → host learned
   const core1 = deadEndCore();
@@ -27127,6 +27164,44 @@ test('findCuratedBarsNamedInText: a page\'s words name a curated bar by its bare
   assert.deepEqual(names(''), []);
   assert.equal(SharedCore.bareBarNameKey('The Lumber Yard Bar'), 'lumberyard');
   assert.equal(SharedCore.bareBarNameKey('Rockbar'), 'rockbar', 'too short without its venue word');
+});
+
+test('a themed night of a saved series keeps the page\'s own name on its override; a plain night under the listing\'s usual name keeps the series title', async () => {
+  const core = allDayCore();
+  const seriesId = 'CAL-1:social-20260823@chunky.dad';
+  // The series as saved (an ICS import named after the promoter) and the
+  // page's nights, stamped with the promoter as organizer — the shared
+  // brand is what lets a differently named night match the slot
+  // (recordsShareEventBrand), as the real run does through the registry.
+  core.promoters = [{ name: 'South Seattle Bear Social', aliases: ['SSBS'], instagram: 'https://www.instagram.com/southseattlebearsocial', urlPatterns: ['southseattlebearsocial'], bearAffinity: 'always' }];
+  const instance = (iso) => ({ identifier: seriesId, title: 'South Seattle Bear Social', startDate: new Date(iso), endDate: new Date(new Date(iso).getTime() + 5 * 3600000), location: '47.5165235, -122.3548059', notes: 'bar: Lumberyard\ntimezone: America/Los_Angeles\nuid: social-20260823@chunky.dad' });
+  core.noteConfirmedRecurringSeries(seriesId);
+  const night = (title, iso, extra) => ({ title, organizer: 'South Seattle Bear Social', city: 'la', timezone: 'America/Los_Angeles', bar: 'Lumberyard', location: '47.5165235, -122.3548059', startDate: new Date(iso), endDate: new Date(new Date(iso).getTime() + 5 * 3600000), source: 'ai-web', _parserConfig: { name: 'Social' }, ...(extra || {}) });
+  const batch = [
+    night('Weekly Bear Social', '2037-10-04T21:00:00.000Z'),
+    night('Weekly Bear Social', '2037-10-11T21:00:00.000Z'),
+    night('Weekly Bear Social', '2037-10-18T21:00:00.000Z'),
+    night('NAUGHTY SANTA SOCIAL', '2037-12-27T21:00:00.000Z', { endDate: new Date('2037-12-28T05:00:00.000Z') })
+  ];
+  const saved = ['2037-10-04T21:00:00.000Z', '2037-10-11T21:00:00.000Z', '2037-10-18T21:00:00.000Z', '2037-12-27T21:00:00.000Z'].map(instance);
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let out;
+  try { out = await core.prepareEventsForCalendar(batch, buildPrepCalendarAdapter(saved), {}); } finally { console.log = originalLog; }
+  const byDay = Object.fromEntries(out.map((e) => [new Date(e.startDate).toISOString().slice(0, 10), e]));
+  const santa = byDay['2037-12-27'];
+  assert.equal(santa._action, 'new', 'an override of the series occurrence');
+  assert.match(santa.notes, /^overrideUid: social-20260823@chunky.dad$/m);
+  assert.equal(santa.title, 'NAUGHTY SANTA SOCIAL', 'the page names this night; the override keeps that name');
+  assert.ok(lines.some((line) => /SERIES NIGHT: "NAUGHTY SANTA SOCIAL"/.test(line)), lines.filter((l) => /SERIES/.test(l)).join('\n'));
+  // A plain night listed under the page's usual name differs from the
+  // series title too — but that name is the listing's name for MOST of
+  // its nights, which is the series' business, not this night's.
+  const plain = byDay['2037-10-04'];
+  assert.ok(!/SERIES NIGHT: "Weekly Bear Social"/.test(lines.join('\n')), 'the usual listing name never renames a night');
+  assert.notEqual(plain.title, 'Weekly Bear Social');
+  assert.equal(core.isSourceModalTitle(batch[0], batch), true);
+  assert.equal(core.isSourceModalTitle(batch[3], batch), false);
+  assert.equal(core.isSourceModalTitle(batch[3], [batch[3]]), false, 'a lone event has no "most"');
 });
 
 test('whole-day kinds: a festival is all-day; one date at a venue, or anything that runs "til late", is an event whose time is unknown', () => {
