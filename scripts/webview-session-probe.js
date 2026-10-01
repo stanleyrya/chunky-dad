@@ -1,83 +1,61 @@
-// WEBVIEW SESSION PROBE — run by hand on the phone, twice.
+// WEBVIEW SESSION PROBE — tap it in Scriptable; tap it again tomorrow.
 //
-// Decides whether a logged-in site (dilf.uk; never Instagram — see the
-// note below) can be read by the nightly phone script without an account
-// on the Mac: does a Scriptable WebView keep its cookies between runs,
-// and can a WebView that is never presented load a page, run its
-// JavaScript and hand the HTML back?
+// Decides whether a logged-in site (dilf.uk) can be read by the nightly
+// phone script without an account on the Mac: does a Scriptable WebView
+// keep its cookies between runs, and can a WebView that is never
+// presented load a page, run its JavaScript and hand the HTML back?
 //
-// Run 1: asks for the site's login page URL, presents a WebView, you log
-//        in and close it. Then, in the SAME run, a second, never-presented
-//        WebView loads the page URL you give and reports whether it is
-//        logged in (a sign-out link, your name, no login form).
-// Run 2 (tomorrow): same script, answer "no" to logging in — it only
-//        does the headless read. Logged in on run 2 = cookies persist.
-// Findings land in chunky-dad-scraper/probes/webview-session-probe.json.
-// Nothing is written anywhere else; nothing is scraped.
+// No questions asked. Every run:
+//   1. a never-presented WebView loads PAGE_URL and reads it: did the
+//      page render, is it logged in (no password field, a sign-out or
+//      account link);
+//   2. only when that read says NOT logged in: a web view opens on
+//      LOGIN_URL — log in, close it — and step 1 runs again;
+//   3. the verdict is shown and written to
+//      iCloud/Scriptable/chunky-dad-scraper/probes/webview-session-probe.json.
+// The first run answers "can it read headlessly"; a run a day later that
+// comes up logged in without opening the login view answers "do cookies
+// persist". Nothing is scraped, nothing else is written.
 //
-// Instagram: do not point this at it. Automated reads of a logged-in
-// Instagram session are how accounts get banned; Instagram stays a
-// share-sheet source.
+// Instagram and Facebook are deliberately not what this reads: automated
+// logged-in reads there are how accounts get banned; they stay
+// share-sheet sources.
+
+const PAGE_URL = 'https://dilf.uk/events';
+const LOGIN_URL = 'https://dilf.uk/login';
 
 async function main() {
-  const findings = { ranAt: new Date().toISOString(), steps: [] };
+  const findings = { ranAt: new Date().toISOString(), pageUrl: PAGE_URL, steps: [] };
   const note = (line) => { findings.steps.push(line); console.log(line); };
   const fm = FileManager.iCloud();
   const dir = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper/probes');
   const file = fm.joinPath(dir, 'webview-session-probe.json');
   let previous = null;
   try { if (fm.fileExists(file)) { await fm.downloadFileFromiCloud(file); previous = JSON.parse(fm.readString(file)); } } catch (_) { previous = null; }
-
-  const pageUrl = await ask('Page to read (logged in)', previous && previous.pageUrl ? previous.pageUrl : 'https://dilf.uk/events', previous && previous.pageUrl);
-  if (!pageUrl || /instagram\.com|facebook\.com/i.test(pageUrl)) { await say('Not that site', 'Instagram and Facebook stay share-sheet sources. Point the probe at dilf.uk or another small site.'); return; }
-  findings.pageUrl = pageUrl;
-
-  const doLogin = await choose('Log in first?', 'Run 1: yes — a web view opens, log in, then close it.\nRun 2 (a day later): no — just the headless read.', ['Yes, log in', 'No, just read']);
-  if (doLogin === 0) {
-    const loginUrl = await ask('Login page URL', pageUrl, pageUrl);
-    const shown = new WebView();
-    await shown.loadURL(loginUrl);
-    await shown.present(false);
-    note('login web view closed');
-  }
-
-  // The headless read: never presented.
-  const quiet = new WebView();
-  const startedAt = Date.now();
-  await quiet.loadURL(pageUrl);
-  note(`headless loadURL resolved in ${Date.now() - startedAt} ms`);
-  const probeJs = `
-    (function () {
-      var text = document.body ? document.body.innerText : '';
-      var html = document.documentElement ? document.documentElement.outerHTML : '';
-      var links = Array.prototype.map.call(document.querySelectorAll('a[href]'), function (a) { return (a.textContent || '').trim().toLowerCase() + ' → ' + a.getAttribute('href'); });
-      var signOut = links.filter(function (l) { return /log ?out|sign ?out|my account|profile/.test(l); }).slice(0, 5);
-      var loginForm = Boolean(document.querySelector('input[type="password"]'));
-      return JSON.stringify({ title: document.title, textChars: text.length, htmlChars: html.length, links: links.length, signOut: signOut, loginForm: loginForm, cookieChars: (document.cookie || '').length, sample: text.slice(0, 300) });
-    })()`;
-  const readAt = async (label) => {
-    try {
-      const raw = await quiet.evaluateJavaScript(probeJs, false);
-      const result = JSON.parse(raw);
-      note(`${label}: title "${result.title}", ${result.textChars} text chars, ${result.htmlChars} html chars, ${result.links} links, password field ${result.loginForm ? 'PRESENT (not logged in)' : 'absent'}, sign-out/account links ${result.signOut.length ? result.signOut.join(' ; ') : 'none'}, document.cookie ${result.cookieChars} chars`);
-      return result;
-    } catch (error) {
-      note(`${label}: evaluateJavaScript failed — ${error.message}`);
-      return null;
-    }
-  };
-  findings.readImmediately = await readAt('right after load');
-  await wait(4000);
-  findings.readAfter4s = await readAt('4 s later');
-  await wait(6000);
-  findings.readAfter10s = await readAt('10 s later');
-  const last = findings.readAfter10s || findings.readAfter4s || findings.readImmediately;
-  findings.loggedIn = Boolean(last && !last.loginForm && last.signOut.length > 0);
-  findings.pageRendered = Boolean(last && last.textChars > 500);
-  findings.verdict = !last ? 'headless read failed'
-    : `${findings.pageRendered ? 'page rendered headlessly' : 'page did NOT render headlessly (' + last.textChars + ' chars)'}; ${findings.loggedIn ? 'LOGGED IN' : 'not logged in'}${doLogin === 0 ? ' (same run as the login)' : ' (a later run — ' + (findings.loggedIn ? 'cookies PERSIST' : 'cookies did not persist') + ')'}`;
-  findings.loginThisRun = doLogin === 0;
   findings.previousRunAt = previous ? previous.ranAt : null;
+  findings.previousLoggedIn = previous ? previous.loggedIn === true : null;
+
+  findings.firstRead = await headlessRead(note, 'first headless read');
+  let loggedIn = isLoggedIn(findings.firstRead);
+  findings.openedLogin = false;
+  if (!loggedIn) {
+    note('not logged in — opening the login page; log in, then close the web view');
+    const shown = new WebView();
+    await shown.loadURL(LOGIN_URL);
+    await shown.present(false);
+    findings.openedLogin = true;
+    findings.secondRead = await headlessRead(note, 'headless read after login');
+    loggedIn = isLoggedIn(findings.secondRead);
+  }
+  const last = findings.secondRead || findings.firstRead;
+  findings.loggedIn = loggedIn;
+  findings.pageRendered = Boolean(last && last.textChars > 500);
+  findings.cookiesPersisted = previous && previous.loggedIn === true ? !findings.openedLogin && loggedIn : null;
+  findings.verdict = [
+    findings.pageRendered ? 'headless read renders the page' : `headless read did NOT render the page (${last ? last.textChars : 0} text chars)`,
+    loggedIn ? 'logged in' : 'NOT logged in',
+    findings.cookiesPersisted === null ? (findings.openedLogin ? 'run again tomorrow for the cookie answer' : 'first run') : (findings.cookiesPersisted ? 'cookies PERSIST between runs' : 'cookies did NOT persist')
+  ].join('; ');
   note(`verdict: ${findings.verdict}`);
   try {
     if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
@@ -86,37 +64,51 @@ async function main() {
   } catch (error) {
     note(`could not write findings: ${error.message}`);
   }
-  await say(findings.verdict, findings.steps.join('\n'));
-}
-
-function wait(ms) { return new Promise((resolve) => Timer.schedule(ms, false, resolve)); }
-
-async function ask(title, placeholder, defaultValue) {
   const alert = new Alert();
-  alert.title = title;
-  alert.addTextField(placeholder, defaultValue || '');
-  alert.addAction('OK');
-  alert.addCancelAction('Cancel');
-  const choice = await alert.present();
-  if (choice === -1) return '';
-  return alert.textFieldValue(0).trim();
-}
-
-async function choose(title, message, actions) {
-  const alert = new Alert();
-  alert.title = title;
-  alert.message = message;
-  actions.forEach((label) => alert.addAction(label));
-  return alert.present();
-}
-
-async function say(title, message) {
-  const alert = new Alert();
-  alert.title = title;
-  alert.message = message;
+  alert.title = findings.verdict;
+  alert.message = findings.steps.join('\n');
   alert.addAction('OK');
   await alert.present();
 }
+
+const PROBE_JS = `
+  (function () {
+    var text = document.body ? document.body.innerText : '';
+    var html = document.documentElement ? document.documentElement.outerHTML : '';
+    var links = Array.prototype.map.call(document.querySelectorAll('a[href]'), function (a) { return (a.textContent || '').trim().toLowerCase() + ' → ' + a.getAttribute('href'); });
+    var signOut = links.filter(function (l) { return /log ?out|sign ?out|my account|profile/.test(l); }).slice(0, 5);
+    var loginForm = Boolean(document.querySelector('input[type="password"]'));
+    return JSON.stringify({ title: document.title, textChars: text.length, htmlChars: html.length, links: links.length, signOut: signOut, loginForm: loginForm, cookieChars: (document.cookie || '').length, sample: text.slice(0, 300) });
+  })()`;
+
+// Load, then read three times (right away, 4 s, 10 s): a page that needs
+// its JavaScript shows up in the later reads. Returns the fullest read.
+async function headlessRead(note, label) {
+  const view = new WebView();
+  const startedAt = Date.now();
+  try {
+    await view.loadURL(PAGE_URL);
+  } catch (error) {
+    note(`${label}: loadURL failed — ${error.message}`);
+    return null;
+  }
+  note(`${label}: loadURL resolved in ${Date.now() - startedAt} ms`);
+  let best = null;
+  for (const delay of [0, 4000, 6000]) {
+    if (delay) await wait(delay);
+    try {
+      const result = JSON.parse(await view.evaluateJavaScript(PROBE_JS, false));
+      note(`${label} +${Math.round((Date.now() - startedAt) / 1000)}s: "${result.title}", ${result.textChars} text chars, ${result.links} links, password field ${result.loginForm ? 'PRESENT' : 'absent'}, account links ${result.signOut.length ? result.signOut.join(' ; ') : 'none'}, document.cookie ${result.cookieChars} chars`);
+      if (!best || result.textChars >= best.textChars) best = result;
+    } catch (error) {
+      note(`${label}: evaluateJavaScript failed — ${error.message}`);
+    }
+  }
+  return best;
+}
+
+function isLoggedIn(read) { return Boolean(read && !read.loginForm && read.signOut.length > 0); }
+function wait(ms) { return new Promise((resolve) => Timer.schedule(ms, false, resolve)); }
 
 await main();
 Script.complete();
