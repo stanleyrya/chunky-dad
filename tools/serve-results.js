@@ -1278,6 +1278,35 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .sheet .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
 .sheet .actions button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; }
 .empty { text-align:center; color:var(--muted); padding:60px 20px; }
+/* Words, views, list and sources (owner, 2026-10-01: "review events
+   scraped from the same website at a high level", "review them all in
+   list format, then when I click it it goes to that event in the queue",
+   "filter by words … remove items by words"). */
+.tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:560px; margin:10px auto 0; padding:0 14px; }
+.tools input { flex:1 1 160px; min-width:0; font:inherit; font-size:16px; padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.tools .views { display:flex; gap:6px; }
+.tools .bulk { display:flex; gap:6px; flex-wrap:wrap; width:100%; }
+.tools .bulk button, .lrow button, .src button { font:inherit; font-size:12px; font-weight:600; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap; }
+.tools .bulk button.no, .lrow button.no, .src button.no { border-color:var(--no); color:var(--no); }
+.tools .bulk button.ok, .lrow button.ok, .src button.ok { border-color:var(--ok); color:var(--ok); }
+.hidden { display:none !important; }
+.list, .sources { max-width:560px; margin:10px auto 0; padding:0 14px; }
+.lrow { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--line); }
+.lrow:first-child { border-top:none; }
+.lrow .lthumb { width:64px; height:64px; flex:none; border-radius:8px; object-fit:cover; background:var(--line); cursor:pointer; }
+.lrow .lthumb.none { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:22px; }
+.lrow .lbody { flex:1; min-width:0; cursor:pointer; }
+.lrow .lbody h4 { margin:0; font-size:15px; line-height:1.25; }
+.lrow .lbody .lmeta { color:var(--muted); font-size:12px; margin-top:2px; }
+.lrow .lbody .lkind { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--accent); margin-right:6px; }
+.lrow .lacts { display:flex; flex-direction:column; gap:5px; flex:none; }
+.src { padding:12px 0; border-top:1px solid var(--line); }
+.src:first-child { border-top:none; }
+.src h4 { margin:0 0 4px; font-size:15px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.src h4 small { color:var(--muted); font-weight:400; font-size:12px; }
+.src .facts { color:var(--muted); font-size:12px; line-height:1.5; }
+.src .facts b { color:var(--ink); font-weight:600; }
+.src .sacts { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
 .toast { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:30; }
 .toast.show { opacity:1; }
 @media (prefers-reduced-motion: reduce) { .card { transition:none; } }
@@ -1291,6 +1320,13 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <div class="pills" id="filters"></div>
 </div>
 ${missingCalendarNotice}
+<div class="tools">
+  <input id="word" type="search" placeholder="filter by words (-word excludes)" autocapitalize="none" autocorrect="off">
+  <div class="views pills" id="views"></div>
+  <div class="bulk hidden" id="bulk"></div>
+</div>
+<div class="list hidden" id="list"></div>
+<div class="sources hidden" id="sources"></div>
 <div class="stage" id="stage"></div>
 <div class="controls">
   <button class="btn-no" id="btn-reject" type="button">✕ Not yet</button>
@@ -1357,7 +1393,10 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var decided = deck.decided.slice();
   var history = [];
   var filter = 'all';
-  var pending = null; // stack item awaiting the reject sheet
+  var view = 'stack'; // stack | list | sources
+  var words = ''; // the word filter, as typed
+  var sourceOnly = ''; // a source chosen on the sources view ('' = every source)
+  var pending = null; // stack item awaiting the reject sheet, or { bulk: [items] }
   var solo = {}; // series the owner chose to decide night by night
   var lastTouchAt = 0; // when a finger last touched a card (see attachDrag)
   var clearedGone = {}; // waiting notes dropped on this page load
@@ -1372,8 +1411,28 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
   function tabOf(kind) { return kind === 'override' ? 'merge' : kind; }
+  // Every word typed must appear somewhere on the card (title, source,
+  // venue, address, city, links, description); a word led by "-" must
+  // not. Case-insensitive, nothing clever.
+  function haystack(c) {
+    var p = c.proposal || {};
+    return [p.title, p.name, p.source, p.bar, p.address, p.city, p.url, p.ticketUrl, p.website, p.description, c.kind, dayOf(c.key)]
+      .map(function (v) { return String(v || ''); }).join(' | ').toLowerCase();
+  }
+  function matchesWords(c) {
+    if (sourceOnly && String((c.proposal || {}).source || '') !== sourceOnly) return false;
+    var terms = words.toLowerCase().split(' ').filter(Boolean);
+    if (terms.length === 0) return true;
+    var hay = haystack(c);
+    for (var i = 0; i < terms.length; i++) {
+      var t = terms[i];
+      if (t[0] === '-') { if (t.length > 1 && hay.indexOf(t.slice(1)) !== -1) return false; }
+      else if (hay.indexOf(t) === -1) return false;
+    }
+    return true;
+  }
   function visible() {
-    return queue.filter(function (c) { return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter; });
+    return queue.filter(function (c) { return (filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter) && matchesWords(c); });
   }
   // The stack shows ITEMS: a card, or every pending night of one party
   // (card.series) folded into one — one swipe decides them all, each under
@@ -1712,7 +1771,172 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   window.addEventListener('resize', fitStage);
   window.addEventListener('orientationchange', fitStage);
-  function render() { renderFilters(); renderStage(); renderExecute(); renderWaiting(); renderDecided(); fitStage(); }
+  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderWaiting(); renderDecided(); fitStage(); }
+
+  // ---- views: the stack, the same cards as a list, or the sources ----
+  function renderViews() {
+    var html = '';
+    [['stack', 'Stack'], ['list', 'List'], ['sources', 'Sources']].forEach(function (pair) {
+      html += '<span class="pill' + (view === pair[0] ? ' on' : '') + '" data-v="' + pair[0] + '">' + pair[1] + '</span>';
+    });
+    if (sourceOnly) html += '<span class="pill on" id="source-only" title="showing one source — tap to show all">' + escapeHtml(sourceOnly) + ' ×</span>';
+    document.getElementById('views').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('#views .pill[data-v]'), function (el) {
+      el.onclick = function () { view = el.getAttribute('data-v'); render(); window.scrollTo(0, 0); };
+    });
+    var only = document.getElementById('source-only');
+    if (only) only.onclick = function () { sourceOnly = ''; render(); };
+    var onStack = view === 'stack';
+    document.getElementById('stage').classList.toggle('hidden', !onStack);
+    document.querySelector('.controls').classList.toggle('hidden', !onStack);
+    document.getElementById('list').classList.toggle('hidden', view !== 'list');
+    document.getElementById('sources').classList.toggle('hidden', view !== 'sources');
+  }
+  var wordInput = document.getElementById('word');
+  var wordTimer = null;
+  wordInput.oninput = function () {
+    clearTimeout(wordTimer);
+    wordTimer = setTimeout(function () { words = wordInput.value; render(); }, 120);
+  };
+  function titleOf(c) { var p = c.proposal || {}; return c.kind === 'bar' ? (p.name || '') : (p.title || ''); }
+  function whenOf(c) {
+    var p = c.proposal || {};
+    if (!p.startDate) return '';
+    try {
+      var d = new Date(p.startDate);
+      var opts = { weekday: 'short', month: 'short', day: 'numeric' };
+      if (!p.wholeDay) { opts.hour = 'numeric'; opts.minute = '2-digit'; }
+      if (p.timezone) opts.timeZone = p.timezone;
+      return d.toLocaleString('en-US', opts);
+    } catch (e) { return String(p.startDate).slice(0, 10); }
+  }
+  function placeOf(c) { var p = c.proposal || {}; return [p.bar, p.city].filter(Boolean).join(' · '); }
+  // Bring one item to the top of the stack and show the stack: the list
+  // is for finding, the stack is for deciding.
+  function jumpTo(item) {
+    removeFromQueue(item);
+    queue = item.cards.concat(queue);
+    view = 'stack';
+    render();
+    window.scrollTo(0, 0);
+  }
+  function renderList() {
+    if (view !== 'list') return;
+    var list = items();
+    var html = '';
+    if (list.length === 0) html = '<div class="empty">Nothing here' + (words || sourceOnly ? ' for this filter' : '') + '. 🐻</div>';
+    list.forEach(function (item, i) {
+      var c = item.cards[0];
+      var p = c.proposal || {};
+      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
+      html += '<div class="lrow" data-i="' + i + '">'
+        + (p.image ? '<img class="lthumb" data-act="flyer" src="' + escapeHtml(p.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<div class="lthumb none" data-act="go">' + (c.kind === 'bar' ? '🍺' : '🐻') + '</div>')
+        + '<div class="lbody" data-act="go"><h4>' + escapeHtml(titleOf(c)) + '</h4>'
+        + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
+        + (p.source ? '<div class="lmeta">' + escapeHtml(p.source) + '</div>' : '') + '</div>'
+        + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="reject">Not yet…</button></div>'
+        + '</div>';
+    });
+    var root = document.getElementById('list');
+    root.innerHTML = html;
+    root.onclick = function (ev) {
+      var target = ev.target;
+      while (target && target !== root && !target.getAttribute('data-act')) target = target.parentNode;
+      if (!target || target === root) return;
+      var row = target; while (row && !row.classList.contains('lrow')) row = row.parentNode;
+      if (!row) return;
+      var item = items()[Number(row.getAttribute('data-i'))];
+      if (!item) return;
+      var act = target.getAttribute('data-act');
+      if (act === 'flyer') { openFlyer({ querySelector: function () { return target; } }); return; }
+      if (act === 'go') { jumpTo(item); return; }
+      if (act === 'approve') { decide(item, 'approve', null, 'gone-right'); return; }
+      if (act === 'notbear') { notBearItem(item); return; }
+      if (act === 'reject') { pending = item; openSheet(item); return; }
+    };
+  }
+  // One card per source, the facts a wrong-for-the-whole-site mistake
+  // shows up in: how many cards, which hosts the links point at, which
+  // venues and cities — and the decisions that apply to every card at once.
+  function hostOf(url) { var m = String(url || '').match(/^https?:[/][/]([^/?#]+)/i); return m ? m[1].replace(/^www[.]/, '') : ''; }
+  function renderSources() {
+    if (view !== 'sources') return;
+    var groups = {}, order = [];
+    visible().forEach(function (c) {
+      var name = String((c.proposal || {}).source || '') || '(no source)';
+      if (!groups[name]) { groups[name] = { name: name, cards: [], kinds: {}, hosts: {}, places: {} }; order.push(name); }
+      var g = groups[name];
+      g.cards.push(c);
+      g.kinds[tabOf(c.kind)] = (g.kinds[tabOf(c.kind)] || 0) + 1;
+      var p = c.proposal || {};
+      [p.url, p.ticketUrl, p.website].forEach(function (u) { var h = hostOf(u); if (h) g.hosts[h] = (g.hosts[h] || 0) + 1; });
+      var place = placeOf(c); if (place) g.places[place] = (g.places[place] || 0) + 1;
+    });
+    order.sort(function (a, b) { return groups[b].cards.length - groups[a].cards.length; });
+    var top = function (counts, n) { return Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, n).map(function (k) { return '<b>' + escapeHtml(k) + '</b> ×' + counts[k]; }).join(', '); };
+    var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
+    order.forEach(function (name) {
+      var g = groups[name];
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
+        + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
+        + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';
+    });
+    var root = document.getElementById('sources');
+    root.innerHTML = html;
+    root.onclick = function (ev) {
+      var target = ev.target;
+      while (target && target !== root && !target.getAttribute('data-act')) target = target.parentNode;
+      if (!target || target === root) return;
+      var block = target; while (block && !block.classList.contains('src')) block = block.parentNode;
+      var name = block.getAttribute('data-s');
+      var g = groups[name];
+      if (!g) return;
+      var act = target.getAttribute('data-act');
+      if (act === 'list' || act === 'stack') { sourceOnly = name === '(no source)' ? '' : name; view = act; render(); window.scrollTo(0, 0); return; }
+      var group = itemsOf(g.cards);
+      if (act === 'approve') { if (confirm('Approve all ' + g.cards.length + ' cards from ' + name + '?')) decideMany(group, 'approve', null); return; }
+      if (act === 'reject') { pending = { bulk: group, label: g.cards.length + ' cards from ' + name }; openSheet(pending); return; }
+    };
+  }
+  // The folded items of a set of cards (same folding as the stack).
+  function itemsOf(cards) {
+    var keys = {}; cards.forEach(function (c) { keys[c.key] = true; });
+    return items().filter(function (item) { return item.cards.some(function (c) { return keys[c.key]; }); });
+  }
+  // Everything the filter shows, decided at once — "remove items by words".
+  function renderBulk() {
+    var root = document.getElementById('bulk');
+    var active = Boolean(words.trim()) || Boolean(sourceOnly);
+    root.classList.toggle('hidden', !active);
+    if (!active) { root.innerHTML = ''; return; }
+    var list = items();
+    var n = list.reduce(function (sum, item) { return sum + item.cards.length; }, 0);
+    root.innerHTML = '<span class="muted" style="font-size:12px;">' + n + ' card' + (n === 1 ? '' : 's') + ' match</span>'
+      + '<button type="button" class="ok" id="bulk-approve"' + (n ? '' : ' disabled') + '>Approve all</button>'
+      + '<button type="button" class="no" id="bulk-notbear"' + (n ? '' : ' disabled') + '>Not bear, all</button>'
+      + '<button type="button" id="bulk-reject"' + (n ? '' : ' disabled') + '>Not yet, all…</button>';
+    document.getElementById('bulk-approve').onclick = function () { if (confirm('Approve all ' + n + ' matching cards?')) decideMany(items(), 'approve', null); };
+    document.getElementById('bulk-notbear').onclick = function () { if (confirm('Mark all ' + n + ' matching cards not bear? Final.')) decideMany(items(), 'reject', { tags: ['not bear'], text: words.trim() ? 'words: ' + words.trim() : '' }); };
+    document.getElementById('bulk-reject').onclick = function () { pending = { bulk: items(), label: n + ' matching cards' }; openSheet(pending); };
+  }
+  function decideMany(list, verdict, reason) {
+    list.forEach(function (item) {
+      var c = item.cards[0];
+      if (verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1) { notBearItem(item, true); return; }
+      if (c.kind === 'dropped' && verdict === 'reject' && !reason) { decide(item, 'reject', null, 'gone-left'); return; }
+      decide(item, verdict, reason, verdict === 'approve' ? 'gone-right' : 'gone-left');
+    });
+    var n = list.reduce(function (sum, item) { return sum + item.cards.length; }, 0);
+    toast((verdict === 'approve' ? 'Approved ' : 'Decided ') + n + ' card' + (n === 1 ? '' : 's'));
+  }
+  function notBearItem(item, quiet) {
+    var c = item.cards[0];
+    if (c.kind === 'dropped') { decide(item, 'reject', null, 'gone-left'); return; }
+    if (c.kind === 'bar') { if (!quiet) { pending = item; openSheet(item); } return; }
+    decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
+    if (!quiet) toast('Not bear — final');
+  }
   function escapeHtml(text) {
     return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -1861,14 +2085,16 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   var sheet = document.getElementById('sheet');
   var sheetTags = document.getElementById('sheet-tags');
   function openSheet(item) {
-    var card = item.cards[0];
-    var isDropped = card.kind === 'dropped';
+    var card = item.bulk ? item.bulk[0].cards[0] : item.cards[0];
+    var isDropped = !item.bulk && card.kind === 'dropped';
     document.getElementById('sheet-fix').querySelector('b').textContent = isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
     document.getElementById('sheet-fix').querySelector('span').textContent = isDropped
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
       : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
     document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
-    document.getElementById('sheet-title').textContent = (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
+    document.getElementById('sheet-title').textContent = item.bulk
+      ? item.label + ' — the same answer for every one'
+      : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
     sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
@@ -1902,6 +2128,15 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
+    // A bulk answer: every item of the set gets this reason.
+    if (card.bulk) {
+      card.bulk.forEach(function (item) {
+        if (item.cards[0].kind === 'dropped') { decide(item, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
+        decide(item, 'reject', reason, 'gone-left');
+      });
+      toast('Decided ' + card.bulk.length + ' — ' + (mode === 'fix' ? 'waiting on a fix' : mode === 'never' ? 'not an event' : 'not bear'));
+      return;
+    }
     // On a not-bear card, "not bear" is the plain confirmation it always was.
     if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
