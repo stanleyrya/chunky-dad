@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg",
+  "type": "event",
+  "filename": "2026-09-29_belgium-bearpride-bear-folies-2026_15573dad.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "325093",
+  "eventInfo": {
+    "name": "Belgium Bearpride Bear Folies 2026",
+    "startDate": "2026-09-29T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:48.553Z",
+  "etag": "\"ac5fdc9e303428d970f9d6657c5694f2\"",
+  "lastModified": "Sun, 12 Jul 2026 10:19:06 GMT",
+  "flyerOptimized": 1
+}

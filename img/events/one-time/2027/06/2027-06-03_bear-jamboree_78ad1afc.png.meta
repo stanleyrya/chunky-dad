@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+  "type": "event",
+  "filename": "2027-06-03_bear-jamboree_78ad1afc.png",
+  "contentType": "image/png",
+  "contentLength": "56209",
+  "eventInfo": {
+    "name": "Bear Jamboree",
+    "startDate": "2027-06-03T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:57.601Z",
+  "etag": "\"ef5f8273aecdd67ca811fbd2b8f55631\"",
+  "lastModified": "Tue, 14 Jul 2026 21:49:07 GMT",
+  "flyerOptimized": 1
+}

@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png",
+  "type": "event",
+  "filename": "2026-12-10_bear-fuzz-fest_1be0baff.png",
+  "contentType": "image/png",
+  "contentLength": "85693",
+  "eventInfo": {
+    "name": "Bear Fuzz Fest",
+    "startDate": "2026-12-10T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:51.008Z",
+  "etag": "\"03421c91feb4f1a860eb6077be62a308\"",
+  "lastModified": "Sun, 12 Jul 2026 17:25:45 GMT",
+  "flyerOptimized": 1
+}

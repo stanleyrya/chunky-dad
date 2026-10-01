@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/59163fc8b7891bbc.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/59163fc8b7891bbc.png",
+  "type": "event",
+  "filename": "2026-10-01_bearscots-fest-2026_37c1c741.png",
+  "contentType": "image/jpeg",
+  "contentLength": "529924",
+  "eventInfo": {
+    "name": "BearScots FEST 2026",
+    "startDate": "2026-10-01T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:50.349Z",
+  "etag": "\"d6800e24ce325839317d57a0aa1ece46\"",
+  "lastModified": "Thu, 10 Sep 2026 13:30:55 GMT",
+  "flyerOptimized": 1
+}

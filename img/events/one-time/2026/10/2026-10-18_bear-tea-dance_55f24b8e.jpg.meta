@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg",
+  "type": "event",
+  "filename": "2026-10-18_bear-tea-dance_55f24b8e.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "264651",
+  "eventInfo": {
+    "name": "Bear Tea-Dance",
+    "startDate": "2026-10-18T12:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:56.940Z",
+  "etag": "\"edffa41d1a08785a2a42d3ff80338c45\"",
+  "lastModified": "Mon, 24 Aug 2026 06:01:27 GMT",
+  "flyerOptimized": 1
+}

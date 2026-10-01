@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png",
+  "type": "event",
+  "filename": "2026-10-08_bear-frolic_4ae28e35.png",
+  "contentType": "image/jpeg",
+  "contentLength": "240111",
+  "eventInfo": {
+    "name": "Bear Frolic",
+    "startDate": "2026-10-08T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:09:00.107Z",
+  "etag": "\"b89a4bc20c117774009e4c0843a8dba4\"",
+  "lastModified": "Tue, 11 Aug 2026 09:51:20 GMT",
+  "flyerOptimized": 1
+}

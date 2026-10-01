@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790628123/saas/logos/image_1790628117466_x79g06d82.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790628123/saas/logos/image_1790628117466_x79g06d82.webp",
+  "type": "event",
+  "filename": "2026-10-08_bear-happy-hour_5d540ee7.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "429309",
+  "eventInfo": {
+    "name": "Bear Happy Hour",
+    "startDate": "2026-10-08T17:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:48.919Z",
+  "etag": "\"b6df467daa938f52c2c548c0b9686f2b\"",
+  "lastModified": "Mon, 28 Sep 2026 23:56:57 GMT",
+  "flyerOptimized": 1
+}

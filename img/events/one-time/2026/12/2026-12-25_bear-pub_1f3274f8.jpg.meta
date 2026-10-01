@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+  "type": "event",
+  "filename": "2026-12-25_bear-pub_1f3274f8.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "141914",
+  "eventInfo": {
+    "name": "Bear Pub",
+    "startDate": "2026-12-25T20:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:59.217Z",
+  "etag": "\"448b62a749325ccb2057d05027b85a52\"",
+  "lastModified": "Mon, 17 Aug 2026 07:38:35 GMT",
+  "flyerOptimized": 1
+}

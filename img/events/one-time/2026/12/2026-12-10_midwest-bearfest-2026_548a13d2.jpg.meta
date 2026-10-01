@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
+  "type": "event",
+  "filename": "2026-12-10_midwest-bearfest-2026_548a13d2.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "128084",
+  "eventInfo": {
+    "name": "Midwest Bearfest 2026",
+    "startDate": "2026-12-10T00:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:51.277Z",
+  "etag": "\"44b5fce0a1758e6ee5be1a627977f28f\"",
+  "lastModified": "Sun, 12 Jul 2026 17:31:52 GMT",
+  "flyerOptimized": 1
+}

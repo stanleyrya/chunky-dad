@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg",
+  "type": "event",
+  "filename": "2026-10-16_bear-bash-cologne_5c8ea126.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "58182",
+  "eventInfo": {
+    "name": "BEAR BASH COLOGNE",
+    "startDate": "2026-10-16T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:49.779Z",
+  "etag": "\"c00171d0935922595b1032812f3ef219\"",
+  "lastModified": "Mon, 17 Aug 2026 07:19:11 GMT",
+  "flyerOptimized": 1
+}

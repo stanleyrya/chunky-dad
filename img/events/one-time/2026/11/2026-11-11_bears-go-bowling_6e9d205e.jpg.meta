@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg",
+  "type": "event",
+  "filename": "2026-11-11_bears-go-bowling_6e9d205e.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "164185",
+  "eventInfo": {
+    "name": "Bears go Bowling",
+    "startDate": "2026-11-11T18:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:58.238Z",
+  "etag": "\"4b6ece8d0df50a79be71614bf7fb8b67\"",
+  "lastModified": "Mon, 24 Aug 2026 05:53:52 GMT",
+  "flyerOptimized": 1
+}

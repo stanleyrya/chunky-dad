@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg",
+  "type": "event",
+  "filename": "2026-10-10_happy-brsday-10-jahre-leipzig-bren_7ff53e3a.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "227780",
+  "eventInfo": {
+    "name": "Happy Bärsday – 10 Jahre Leipzig Bären",
+    "startDate": "2026-10-10T19:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-01T14:08:51.914Z",
+  "etag": "\"d3c752e1afe1f719d1cf9325e7e94501\"",
+  "lastModified": "Tue, 08 Sep 2026 13:30:18 GMT",
+  "flyerOptimized": 1
+}
