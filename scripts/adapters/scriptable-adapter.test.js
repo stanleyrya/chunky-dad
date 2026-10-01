@@ -11389,6 +11389,65 @@ test('merge table: a short name differing only by a soft hyphen is a no-op row, 
 // leaves the Mac a JSON picture of each touched city's calendar.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The inbox, phone side: pages the Mac asked for, fetched through a headless
+// WebView into the shared page cache.
+// ---------------------------------------------------------------------------
+test('fulfillInboxRequests: each asked page is loaded headlessly and written into the shared page cache; failures stay for next time; the cap and the day gap hold', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
+  const files = {};
+  const store = { version: 1, requests: [
+    { url: 'https://dilf.example/events', host: 'dilf.example', reason: 'HTTP 429', askedAt: new Date().toISOString(), times: 3 },
+    { url: 'https://dilf.example/events/manchester', host: 'dilf.example', reason: 'HTTP 429', askedAt: new Date().toISOString(), times: 1 },
+    { url: 'https://dilf.example/events/brighton', host: 'dilf.example', reason: 'HTTP 429', askedAt: new Date().toISOString(), times: 1, lastTriedAt: new Date(Date.now() - 3600000).toISOString(), lastError: 'page is 0 chars' },
+    { url: 'junk', reason: 'x', askedAt: new Date().toISOString() }
+  ] };
+  const requestsPath = `${fileManagerStub.documentsDirectory()}/chunky-dad-scraper/inbox/requests.json`;
+  files[requestsPath] = JSON.stringify(store);
+  adapter.fm = { ...fileManagerStub,
+    fileExists: (p) => Object.prototype.hasOwnProperty.call(files, p),
+    readString: (p) => files[p] || null,
+    writeString: (p, text) => { files[p] = text; },
+    createDirectory: () => {},
+    isDirectory: () => true
+  };
+  adapter.ensurePageCacheDir = (hostDir, base) => `${base}/${hostDir}`;
+  const originalWebView = global.WebView;
+  const loaded = [];
+  global.WebView = class {
+    async loadURL(url) { this.url = url; loaded.push(url); }
+    async evaluateJavaScript() { return /manchester/.test(this.url) ? '' : `<html><body>${'x'.repeat(400)} ${this.url}</body></html>`; }
+  };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let result;
+  try {
+    result = await adapter.fulfillInboxRequests({ gapMs: 0, settleMs: 0, cap: 5 });
+  } finally { console.log = originalLog; global.WebView = originalWebView; }
+  assert.equal(result.asked, 4);
+  assert.equal(result.fetched, 1, 'the events page');
+  assert.equal(result.failed, 1, 'manchester came back empty');
+  assert.equal(result.skipped, 1, 'brighton was tried within the day — left alone');
+  assert.deepEqual(loaded, ['https://dilf.example/events', 'https://dilf.example/events/manchester'], 'junk and the recent failure are not loaded');
+  const cached = Object.keys(files).filter((p) => /storage\/pages\/dilf\.example\//.test(p));
+  assert.equal(cached.length, 1, 'one page in the shared cache');
+  const page = JSON.parse(files[cached[0]]);
+  assert.equal(page.url, 'https://dilf.example/events');
+  assert.equal(page.fetchState, 'downloaded');
+  assert.equal(page.headers['x-fetched-by'], 'phone-webview');
+  assert.ok(page.html.length > 400);
+  const after = JSON.parse(files[requestsPath]);
+  assert.deepEqual(after.requests.map((r) => r.url), ['https://dilf.example/events/manchester', 'https://dilf.example/events/brighton'], 'fulfilled and junk leave; failures stay with their reason');
+  assert.match(after.requests[0].lastError, /0 chars/);
+  // Cap: two requests, cap 1 → one fetched, one left for next time.
+  files[requestsPath] = JSON.stringify({ version: 1, requests: [{ url: 'https://a.example/1', askedAt: new Date().toISOString() }, { url: 'https://a.example/2', askedAt: new Date().toISOString() }] });
+  loaded.length = 0;
+  global.WebView = class { async loadURL(url) { loaded.push(url); } async evaluateJavaScript() { return '<html>' + 'y'.repeat(300) + '</html>'; } };
+  console.log = () => {};
+  try { result = await adapter.fulfillInboxRequests({ gapMs: 0, settleMs: 0, cap: 1 }); } finally { console.log = originalLog; global.WebView = originalWebView; }
+  assert.equal(result.fetched, 1); assert.equal(result.skipped, 1);
+  assert.equal(JSON.parse(files[requestsPath]).requests.length, 1);
+});
+
 test('writeCalendarSnapshots writes one JSON per touched city with EventKit\'s expanded occurrences', async () => {
   const adapter = new ScriptableAdapter({ cities: { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York' }, la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles' } } });
   const writes = [];

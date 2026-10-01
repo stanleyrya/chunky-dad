@@ -629,6 +629,78 @@ class WebAdapter {
         console.log(`🟢 Node.js: Page cache hit (${agePart}ttl ${pageCacheConfig.ttlDays}d) for ${url}`);
     }
 
+    // Is a fresh page for this URL in the cache, without reading it? Used
+    // by shared-core before a dead-end host skip: a page the phone fetched
+    // for the Mac (see the inbox below) is already here, and the host's
+    // park is about LIVE requests. Sync on purpose — the enqueue filter is.
+    hasFreshCachedPage(url) {
+        try {
+            const pageCacheConfig = this.getPageCacheConfig();
+            if (!pageCacheConfig.enabled) return false;
+            const { hostDir, fileName } = this.getPageCachePathParts(url);
+            const cachePath = this.path.join(pageCacheConfig.storageDir || this.pageStorageDir, hostDir, fileName);
+            const stats = this.fs.statSync(cachePath);
+            if (!stats.isFile() || stats.size === 0) return false;
+            return (Date.now() - stats.mtimeMs) <= pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // THE INBOX: pages the Mac cannot fetch, asked of the phone. A host
+    // that answers the Mac 429 (dilf.uk, 2026-09-30 → 10-01: every run,
+    // robots.txt included) answers the owner's phone normally — the probe
+    // read dilf.uk/events headlessly in 3.6 s, no login. So a URL the
+    // politeness gate parks for 429, or a host the dead-end store leaves
+    // alone for the same reason, is written to
+    // <shared root>/inbox/requests.json; the phone
+    // (scriptable-adapter.fulfillInboxRequests, on its snapshot refresh)
+    // loads each in a never-presented WebView and writes the page into the
+    // SHARED page cache in the cache's own shape, so the next Mac run reads
+    // it as a plain cache hit. Robots refusals are never asked of the phone
+    // — the site's answer is the site's answer. Requests are de-duplicated
+    // by URL, capped, and dropped after INBOX_REQUEST_DAYS.
+    getInboxRequestsPath() {
+        return this.sharedStorageRoot ? this.path.join(this.sharedStorageRoot, 'inbox', 'requests.json') : '';
+    }
+
+    noteInboxRequest(url, reason) {
+        const file = this.getInboxRequestsPath();
+        if (!file || !url || !/^https?:\/\//i.test(String(url))) return false;
+        if (/robots/i.test(String(reason || ''))) return false;
+        try {
+            let store = { version: 1, requests: [] };
+            if (this.fs.existsSync(file)) {
+                try { store = JSON.parse(this.fs.readFileSync(file, 'utf8')); } catch (_) { store = { version: 1, requests: [] }; }
+            }
+            if (!Array.isArray(store.requests)) store.requests = [];
+            const nowMs = Date.now();
+            const keepMs = WebAdapter.INBOX_REQUEST_DAYS * 24 * 60 * 60 * 1000;
+            store.requests = store.requests.filter((entry) => entry && entry.url && Number.isFinite(Date.parse(entry.askedAt)) && (nowMs - Date.parse(entry.askedAt)) < keepMs);
+            const existing = store.requests.find((entry) => entry.url === url);
+            if (existing) {
+                existing.askedAt = new Date(nowMs).toISOString();
+                existing.reason = String(reason || existing.reason || '');
+                existing.times = (Number(existing.times) || 1) + 1;
+            } else {
+                if (store.requests.length >= WebAdapter.INBOX_REQUEST_CAP) return false;
+                const host = (String(url).match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+                store.requests.push({ url, host, reason: String(reason || ''), askedAt: new Date(nowMs).toISOString(), times: 1 });
+            }
+            this.fs.mkdirSync(this.path.dirname(file), { recursive: true });
+            this.fs.writeFileSync(file, JSON.stringify(store, null, 2));
+            if (!this._inboxNoted) this._inboxNoted = new Set();
+            if (!this._inboxNoted.has(url)) {
+                this._inboxNoted.add(url);
+                console.log(`📥 INBOX: asking the phone to fetch ${url} (${reason}) — ${store.requests.length} request(s) waiting`);
+            }
+            return true;
+        } catch (error) {
+            console.log(`📥 INBOX: could not record a request for ${url} (${error.message})`);
+            return false;
+        }
+    }
+
     async writeCachedPage(url, responseData, pageCacheConfig) {
         if (!pageCacheConfig.enabled || !responseData || typeof responseData.html !== 'string' || responseData.html.length === 0) {
             return;
@@ -1265,8 +1337,10 @@ class WebAdapter {
             // keeps its non-retryable stamp through the rewrap below.
             if (error && error.politeness) {
                 console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
+                if (/429/.test(String(error.message || ''))) this.noteInboxRequest(url, 'the host answers the Mac 429');
             } else {
                 console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
+                if (Number(error && error.statusCode) === 429) this.noteInboxRequest(url, 'HTTP 429');
             }
             const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
             if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;
@@ -2738,6 +2812,9 @@ async saveFailureNote(url, error, metadata = {}) {
 }
 
 // Export for both environments
+WebAdapter.INBOX_REQUEST_DAYS = 7;
+WebAdapter.INBOX_REQUEST_CAP = 200;
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { WebAdapter };
 } else if (typeof window !== 'undefined') {

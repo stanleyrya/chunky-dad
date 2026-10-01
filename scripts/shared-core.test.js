@@ -8925,6 +8925,22 @@ test('dead-end store: a host that answers 429 on three run days is left alone fo
   assert.equal(SharedCore.isRateLimitedDeadEndHostEntry({ rateLimitDays: ['2026-09-29', '2026-09-30'] }), false);
 });
 
+test('inbox: a host left alone for 429 still has its cached pages read, and its uncached pages are asked of the phone', () => {
+  const core = deadEndCore();
+  const store = { '::hosts': { 'dilf.example': { firstSeen: '2026-09-29T05:00:00.000Z', lastSeen: '2026-10-01T05:00:00.000Z', rateLimitDays: ['2026-09-29', '2026-09-30', '2026-10-01'], lastRateLimited: new Date().toISOString() } } };
+  core.deadEndRunContext = core.createDeadEndRunContext ? core.createDeadEndRunContext({ deadEndStore: store }, {}) : null;
+  if (!core.deadEndRunContext) { core.deadEndRunContext = { enabled: true, retryDays: 30, store, skippedCount: 0, skippedSamples: [], hostSkippedCount: 0, hostSkippedSamples: [], learnedHosts: [], recoveredHosts: [], dirty: false }; }
+  const asked = [];
+  const httpAdapter = {
+    hasFreshCachedPage: (url) => /events$/.test(url),
+    noteInboxRequest: (url, reason) => { asked.push(url); return true; }
+  };
+  const allowed = core.filterKnownDeadEndUrls(['https://dilf.example/events', 'https://dilf.example/events/manchester'], false, Date.now(), httpAdapter);
+  assert.deepEqual(allowed, ['https://dilf.example/events'], 'the cached page is read; the uncached one is skipped');
+  assert.deepEqual(asked, ['https://dilf.example/events/manchester'], '…and asked of the phone');
+  assert.deepEqual(core.filterKnownDeadEndUrls(['https://dilf.example/events/manchester'], false, Date.now(), null), [], 'no adapter: the park holds as before');
+});
+
 test('dead-end store: a host whose crawl pages only ever 403 is host-blocked — new URLs on it are skipped next run', async () => {
   // Run 1: two distinct eventim deep-links 403 → host learned
   const core1 = deadEndCore();

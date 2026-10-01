@@ -9979,7 +9979,13 @@ class SharedCore {
                     if ([404, 410].includes(Number(deadEndEntry.lastStatus))) this.notePathShapeEvidence(url, 'gone');
                     continue;
                 }
-                const deadEndHostEntry = this.getSkippableDeadEndHostEntry(url, discoveryOnly);
+                // A page the phone fetched for the Mac (the inbox) sits in
+                // the shared cache: a parked host never stops a cache read.
+                const cachedForUs = httpAdapter && typeof httpAdapter.hasFreshCachedPage === 'function' && httpAdapter.hasFreshCachedPage(url);
+                const deadEndHostEntry = cachedForUs ? null : this.getSkippableDeadEndHostEntry(url, discoveryOnly);
+                if (deadEndHostEntry && SharedCore.isRateLimitedDeadEndHostEntry(deadEndHostEntry) && httpAdapter && typeof httpAdapter.noteInboxRequest === 'function') {
+                    httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
+                }
                 if (deadEndHostEntry) {
                     await displayAdapter.logInfo(SharedCore.isRateLimitedDeadEndHostEntry(deadEndHostEntry)
                         ? `SYSTEM: Skipping URL on a host that keeps answering 429 (${deadEndHostEntry.rateLimitDays.length} run days, last ${String(deadEndHostEntry.lastRateLimited).slice(0, 10)}; left alone for ${SharedCore.RATE_LIMIT_PARK_DAYS} days): ${url}`
@@ -10419,7 +10425,7 @@ class SharedCore {
                         ticketLinks.push(normalized);
                         if (ticketLinks.length >= 12) break;
                     }
-                    const enrichUrls = this.filterKnownDeadEndUrls(ticketLinks, discoveryOnly);
+                    const enrichUrls = this.filterKnownDeadEndUrls(ticketLinks, discoveryOnly, Date.now(), httpAdapter);
                     if (enrichUrls.length > 0) {
                         await displayAdapter.logInfo(`SYSTEM: Ticket-link enrichment: following ${enrichUrls.length} ticket link(s) from ${url} for ${pageEventsForEnrich.length} event(s) (enrich-only)`);
                         const ticketEnrichByUrl = {};
@@ -10487,7 +10493,7 @@ class SharedCore {
                     );
                     // Known dead ends younger than the retry window are skipped
                     // before enqueueing (discoveryOnly always fetches everything).
-                    const enqueueUrls = this.filterKnownDeadEndUrls(deduplicatedUrls, discoveryOnly);
+                    const enqueueUrls = this.filterKnownDeadEndUrls(deduplicatedUrls, discoveryOnly, Date.now(), httpAdapter);
                     if (enqueueUrls.length > 0) {
                         // Links followed FROM an event-page (rule-classified event
                         // links + extracted ticketUrls) are enrich-only for the
@@ -11515,12 +11521,15 @@ class SharedCore {
         return false;
     }
 
-    filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
+    filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now(), httpAdapter = null) {
         const context = this.deadEndRunContext;
         const list = Array.isArray(urls) ? urls : [];
         if (!context || !context.enabled || discoveryOnly) {
             return list;
         }
+        // A page already in the cache (the phone fetched it for the Mac —
+        // the inbox) is read, whatever its host's standing.
+        const cached = (url) => Boolean(httpAdapter && typeof httpAdapter.hasFreshCachedPage === 'function' && httpAdapter.hasFreshCachedPage(url));
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
         const allowed = [];
         for (const url of list) {
@@ -11534,7 +11543,11 @@ class SharedCore {
                 }
                 continue;
             }
-            if (this.getBlockedDeadEndHostEntry(context, url, nowMs)) {
+            const blockedHost = cached(url) ? null : this.getBlockedDeadEndHostEntry(context, url, nowMs);
+            if (blockedHost) {
+                if (SharedCore.isRateLimitedDeadEndHostEntry(blockedHost) && httpAdapter && typeof httpAdapter.noteInboxRequest === 'function') {
+                    httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
+                }
                 context.hostSkippedCount += 1;
                 if (context.hostSkippedSamples.length < 3 && !context.hostSkippedSamples.includes(url)) {
                     context.hostSkippedSamples.push(url);

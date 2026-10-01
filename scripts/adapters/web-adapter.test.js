@@ -170,6 +170,37 @@ test('probeRecurringSeries: a stored record is a saved series when the published
   }
 });
 
+test('inbox: the Mac records the pages it cannot fetch for the phone, once per URL, never for a robots refusal; a fresh cached page is seen without reading it', async () => {
+  const shared = withSharedRoot();
+  try {
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 } });
+    const file = path.join(shared.dir, 'inbox', 'requests.json');
+    assert.equal(adapter.noteInboxRequest('https://dilf.example/events', 'HTTP 429'), true);
+    assert.equal(adapter.noteInboxRequest('https://dilf.example/events', 'the host answers the Mac 429'), true, 'the same URL again refreshes the entry');
+    assert.equal(adapter.noteInboxRequest('https://dilf.example/robots.txt', 'robots.txt of dilf.example disallows /'), false, 'a robots refusal is the site\'s answer');
+    assert.equal(adapter.noteInboxRequest('not a url', 'HTTP 429'), false);
+    const store = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(store.requests.length, 1, 'one request per URL');
+    assert.equal(store.requests[0].host, 'dilf.example');
+    assert.equal(store.requests[0].times, 2);
+    // Nothing cached yet; then the phone's shape of a cached page is seen.
+    assert.equal(adapter.hasFreshCachedPage('https://dilf.example/events'), false);
+    const parts = adapter.getPageCachePathParts('https://dilf.example/events');
+    const cacheDir = path.join(adapter.getPageCacheConfig().storageDir || adapter.pageStorageDir, parts.hostDir);
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(path.join(cacheDir, parts.fileName), JSON.stringify({ url: 'https://dilf.example/events', fetchedAt: new Date().toISOString(), statusCode: 200, headers: { 'x-fetched-by': 'phone-webview' }, fetchState: 'downloaded', html: '<html>events</html>' }));
+    assert.equal(adapter.hasFreshCachedPage('https://dilf.example/events'), true, 'the phone\'s page is a cache hit');
+    const stale = new Date(Date.now() - 10 * 86400000);
+    fs.utimesSync(path.join(cacheDir, parts.fileName), stale, stale);
+    assert.equal(adapter.hasFreshCachedPage('https://dilf.example/events'), false, 'past the cache TTL it is not');
+  } finally {
+    shared.restore();
+  }
+  const noRoot = new WebAdapter({ cities: CITIES });
+  noRoot.sharedStorageRoot = null;
+  assert.equal(noRoot.noteInboxRequest('https://dilf.example/events', 'HTTP 429'), false, 'no shared root, no inbox');
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();

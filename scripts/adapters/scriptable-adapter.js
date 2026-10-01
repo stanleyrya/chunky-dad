@@ -16914,6 +16914,95 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
+  // THE INBOX, phone side. The Mac writes the URLs it cannot fetch (a host
+  // that answers it 429 — dilf.uk) to chunky-dad-scraper/inbox/requests.json
+  // (web-adapter.noteInboxRequest). This loads each one in a WebView that
+  // is never presented, waits for the page's own JavaScript, and writes the
+  // page into the SHARED page cache in the cache's own shape (writeCachedPage)
+  // — so the next Mac run reads it as a plain cache hit. Polite: one page at
+  // a time, INBOX_FETCH_GAP_MS apart, at most INBOX_FETCH_CAP per call, and
+  // never the same URL twice within a day. Fulfilled requests leave the
+  // file; failed ones stay for next time, with the reason. Returns
+  // { asked, fetched, failed, skipped, details }.
+  async fulfillInboxRequests(options = {}) {
+    const result = { asked: 0, fetched: 0, failed: 0, skipped: 0, details: [] };
+    const file = this.fm.joinPath(this.baseDir, "inbox/requests.json");
+    try {
+      if (!this.fm.fileExists(file)) return result;
+      try { await this.fm.downloadFileFromiCloud(file); } catch (_) { /* local copy is fine */ }
+      let store = JSON.parse(this.fm.readString(file) || "{}");
+      if (!store || !Array.isArray(store.requests)) return result;
+      result.asked = store.requests.length;
+      if (store.requests.length === 0) return result;
+      const cap = Number.isFinite(options.cap) ? options.cap : ScriptableAdapter.INBOX_FETCH_CAP;
+      const gapMs = Number.isFinite(options.gapMs) ? options.gapMs : ScriptableAdapter.INBOX_FETCH_GAP_MS;
+      const nowMs = Date.now();
+      const left = [];
+      let done = 0;
+      for (const request of store.requests) {
+        const url = request && typeof request.url === "string" ? request.url.trim() : "";
+        if (!url || !/^https?:\/\//i.test(url)) continue; // junk leaves the file
+        if (done >= cap) { left.push(request); result.skipped++; continue; }
+        const lastTryMs = request.lastTriedAt ? Date.parse(request.lastTriedAt) : NaN;
+        if (Number.isFinite(lastTryMs) && nowMs - lastTryMs < 20 * 3600000) { left.push(request); result.skipped++; continue; }
+        if (done > 0) await this.sleepMs(gapMs);
+        done++;
+        const outcome = await this.fetchPageHeadlessly(url, options);
+        if (outcome.html) {
+          await this.writeCachedPage(url, { html: outcome.html, url, statusCode: 200, headers: { "x-fetched-by": "phone-webview" } }, this.getPageCacheConfig());
+          result.fetched++;
+          result.details.push(`${url}: ${outcome.html.length} chars in ${outcome.ms} ms`);
+          console.log(`📥 INBOX: fetched ${url} for the Mac — ${outcome.html.length} chars, into the shared page cache`);
+        } else {
+          result.failed++;
+          request.lastTriedAt = new Date().toISOString();
+          request.lastError = outcome.error || "empty page";
+          left.push(request);
+          result.details.push(`${url}: ${request.lastError}`);
+          console.log(`📥 INBOX: could not fetch ${url} (${request.lastError}) — left for next time`);
+        }
+      }
+      store.requests = left;
+      this.fm.writeString(file, JSON.stringify(store, null, 2));
+    } catch (error) {
+      result.details.push(`inbox: ${error.message}`);
+      console.log(`📥 INBOX: ${error.message}`);
+    }
+    return result;
+  }
+
+  // One page through a never-presented WebView: load, wait for the page's
+  // JavaScript (INBOX_SETTLE_MS, read again while the page still grows),
+  // hand back the rendered HTML. { html, ms } or { error }.
+  async fetchPageHeadlessly(url, options = {}) {
+    const startedAt = Date.now();
+    try {
+      const view = new WebView();
+      await view.loadURL(url);
+      const settleMs = Number.isFinite(options.settleMs) ? options.settleMs : ScriptableAdapter.INBOX_SETTLE_MS;
+      let html = "";
+      let lastLength = -1;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await this.sleepMs(attempt === 0 ? settleMs : Math.round(settleMs / 2));
+        const read = await view.evaluateJavaScript("document.documentElement ? document.documentElement.outerHTML : ''", false);
+        html = typeof read === "string" ? read : "";
+        if (html.length === lastLength) break; // nothing more is arriving
+        lastLength = html.length;
+      }
+      if (!html || html.length < 200) return { error: `page is ${html ? html.length : 0} chars` };
+      return { html, ms: Date.now() - startedAt };
+    } catch (error) {
+      return { error: error && error.message ? error.message : String(error) };
+    }
+  }
+
+  sleepMs(ms) {
+    return new Promise((resolve) => {
+      if (typeof Timer !== "undefined" && typeof Timer.schedule === "function") Timer.schedule(ms, false, resolve);
+      else setTimeout(resolve, ms);
+    });
+  }
+
   async writeCalendarSnapshots(cityKeys, options = {}) {
     const keys = Array.isArray(cityKeys) ? cityKeys : [];
     if (typeof CalendarEvent === "undefined" || typeof Calendar === "undefined") {
@@ -18582,6 +18671,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 // shape. 250 ms therefore caps throttled traffic at ~4 writes/second — far
 // under any tap rate a human produces — while costing nothing that matters,
 // and every line the owner actually needs is forced past it anyway (below).
+ScriptableAdapter.INBOX_FETCH_CAP = 20;
+ScriptableAdapter.INBOX_FETCH_GAP_MS = 3000;
+ScriptableAdapter.INBOX_SETTLE_MS = 4000;
 ScriptableAdapter.LOG_CHECKPOINT_MIN_INTERVAL_MS = 250;
 
 // Bridge actions whose line must reach disk immediately, throttle or not.
