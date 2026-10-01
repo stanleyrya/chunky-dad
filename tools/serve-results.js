@@ -1811,11 +1811,20 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     } catch (e) { return String(p.startDate).slice(0, 10); }
   }
   function placeOf(c) { var p = c.proposal || {}; return [p.bar, p.city].filter(Boolean).join(' · '); }
-  // Bring one item to the top of the stack and show the stack: the list
-  // is for finding, the stack is for deciding.
+  // Jump the stack to THIS POINT of the list (owner: "jump to that part
+  // of the list", not one card pulled out of order): the tapped item
+  // comes first and the stack carries on down the list from there; the
+  // rows above it go to the back, in their own order, so nothing is lost.
   function jumpTo(item) {
-    removeFromQueue(item);
-    queue = item.cards.concat(queue);
+    var list = items();
+    var at = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].key === item.key) { at = i; break; }
+    if (at > 0) {
+      var ahead = {};
+      list.slice(0, at).forEach(function (it) { it.cards.forEach(function (c) { ahead[c.key] = true; }); });
+      var moved = queue.filter(function (c) { return ahead[c.key]; });
+      queue = queue.filter(function (c) { return !ahead[c.key]; }).concat(moved);
+    }
     view = 'stack';
     render();
     window.scrollTo(0, 0);
