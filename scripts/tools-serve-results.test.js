@@ -963,6 +963,11 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     assert.ok(page.body.includes('FURBALL NYC'), 'the card is on the page');
     assert.ok(page.body.includes('scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1'), 'hand-off link for THIS run');
     assert.ok(page.body.includes('href="scriptable:///run?scriptName=display-saved-run&amp;snapshot=1"'), 'the snapshot refresh is always on the page, whether or not a calendar is missing');
+    // Words, views, list and sources (owner, 2026-10-01).
+    assert.ok(page.body.includes('id="word"'), 'the word filter');
+    assert.ok(page.body.includes('id="views"') && page.body.includes('id="list"') && page.body.includes('id="sources"'), 'stack / list / sources views');
+    assert.ok(page.body.includes('id="bulk"'), 'bulk decisions for whatever the filter shows');
+    assert.ok(page.body.includes('function jumpTo(') && page.body.includes('function decideMany('), 'jump from the list to the stack; decide a set at once');
     assert.ok(page.body.includes('window.__reviewDeck = {'), 'deck payload inlined');
     assert.ok(page.body.includes('"wrong venue"'), 'reject chips shipped');
 
