@@ -11984,7 +11984,7 @@ test('series write: RRULE → RecurrenceRule, exactly the shapes shared-core all
     assert.equal(built('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE'), 'complexWeekly([2,[2,4],[]])');
     assert.equal(built('FREQ=MONTHLY;BYDAY=3TH'), 'complexMonthly([1,[5],[],[3]])', 'third Thursday');
     assert.equal(built('FREQ=MONTHLY;BYDAY=-1SA'), 'complexMonthly([1,[7],[],[-1]])', 'last Saturday');
-    assert.equal(built('FREQ=MONTHLY;BYMONTHDAY=15'), 'complexMonthly([1,[],[15],[]])');
+    assert.equal(built('FREQ=MONTHLY;BYMONTHDAY=15'), null, 'day-of-month series wait for a later phase');
     assert.equal(built('FREQ=DAILY;COUNT=4'), 'dailyOccurrenceCount([1,4])');
     assert.equal(built('FREQ=WEEKLY;BYDAY=TH;COUNT=6'), 'complexWeeklyOccurrenceCount([1,[5],[],6])');
     const untilBuilt = adapter.buildRecurrenceRule('FREQ=WEEKLY;UNTIL=20261231T000000Z');
@@ -12007,14 +12007,17 @@ test('series write: "report" says what it would write and writes nothing; "enfor
   global.CalendarEvent = class {
     constructor() { this.identifier = ''; this.rules = []; }
     addRecurrenceRule(rule) { this.rules.push(rule); }
-    async save() { this.identifier = 'SERIES-1'; saved.push(this); for (let i = 0; i < 3; i++) occurrences.push({ identifier: 'SERIES-1', startDate: new Date(this.startDate.getTime() + i * 7 * 86400000) }); }
+    async save() { this.identifier = 'SERIES-1'; saved.push(this); for (let i = 0; i < 3; i++) occurrences.push({ identifier: 'SERIES-1', title: this.title, notes: this.notes, location: this.location, startDate: new Date(this.startDate.getTime() + i * 7 * 86400000), endDate: new Date(this.endDate.getTime() + i * 7 * 86400000) }); }
     static async between() { return occurrences; }
   };
   const calendar = { title: 'chunky-dad-dallas' };
-  const event = { title: 'BEEF', startDate: new Date(Date.now() + 5 * 86400000), endDate: new Date(Date.now() + 5 * 86400000 + 3 * 3600000), location: '', notes: 'bar: Albatross\ntimezone: America/Chicago', recurrenceRule: 'FREQ=MONTHLY;BYDAY=3TH', _seriesWrite: true, _action: 'new' };
+  const event = { title: 'BEEF', bar: 'Albatross', timezone: 'America/Chicago', startDate: new Date(Date.now() + 5 * 86400000), endDate: new Date(Date.now() + 5 * 86400000 + 3 * 3600000), location: '', notes: 'bar: Albatross\ntimezone: America/Chicago', recurrenceRule: 'FREQ=MONTHLY;BYDAY=3TH', _seriesWrite: true, _action: 'new', _ownerReviewApproved: { key: 'series|beef|albatross|FREQ=MONTHLY;BYDAY=3TH' } };
   const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
   try {
     const adapter = new ScriptableAdapter({ cities: {} });
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event, _ownerReviewApproved: undefined }, calendar, { config: { seriesWrites: { mode: 'enforce' } } }), 'withheld', 'no approval, no write — whoever calls');
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event, timezone: '', city: 'nowhere' }, calendar, { config: { seriesWrites: { mode: 'enforce' } } }), 'withheld', 'no zone, no write');
+    assert.equal(saved.length, 0);
     assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, {}), 'reported', 'no mode → report');
     assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, { config: { seriesWrites: { mode: 'report' } } }), 'reported');
     assert.equal(saved.length, 0, 'report mode writes nothing');
@@ -12025,16 +12028,29 @@ test('series write: "report" says what it would write and writes nothing; "enfor
     assert.equal(saved.length, 1);
     assert.equal(saved[0].rules.length, 1, 'one rule on the event');
     assert.equal(saved[0].rules[0].name, 'complexMonthly');
+    assert.equal(saved[0].timeZone, 'America/Chicago', 'the series keeps its own zone');
+    // The calendar now holds the series: a second enforce write is refused
+    // by the uncached read right before the save.
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, { config: { seriesWrites: { mode: 'enforce' } } }), 'withheld', 'already there');
+    assert.equal(saved.length, 1);
     assert.match(saved[0].notes, /^recurrence: FREQ=MONTHLY;BYDAY=3TH$/m, 'the rule rides in the notes');
     assert.match(saved[0].notes, /^bar: Albatross$/m, 'the other notes kept');
     assert.ok(lines.some((line) => /SERIES: created "BEEF"/.test(line) && /3 occurrence\(s\) read back/.test(line)), lines.filter((l) => /SERIES/.test(l)).join('\n'));
     // The executor routes a series create here and counts it.
     const counts = [];
     adapter.getOrCreateCalendar = async () => calendar;
-    await adapter.executeCalendarActions([{ ...event, city: 'dallas' }], { config: { seriesWrites: { mode: 'report' } } });
+    const reported = { ...event, city: 'dallas' };
+    await adapter.executeCalendarActions([reported], { config: { seriesWrites: { mode: 'report' } } });
     assert.equal(adapter.lastExecutionActionCounts.create, 0, 'report mode: nothing created');
     assert.equal(adapter.lastExecutionActionCounts.skip, 1);
+    assert.equal(reported._seriesWriteOutcome, 'reported', 'the row says what happened');
     assert.equal(saved.length, 1, 'still the one from enforce');
+    // Two rows of one series in one execute: one write.
+    occurrences.length = 0; saved.length = 0;
+    const rowA = { ...event, city: 'dallas', title: 'BEEF' }; const rowB = { ...event, city: 'dallas', title: 'BEEF', startDate: new Date(event.startDate.getTime() + 28 * 86400000) };
+    await adapter.executeCalendarActions([rowA, rowB], { config: { seriesWrites: { mode: 'enforce' } } });
+    assert.equal(saved.length, 1, 'the second row is a duplicate of a series this execute wrote');
+    assert.equal(rowB._seriesWriteOutcome, 'duplicate');
   } finally {
     console.log = originalLog;
     global.RecurrenceRule = originalRule;

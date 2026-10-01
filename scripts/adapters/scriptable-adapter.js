@@ -4431,6 +4431,7 @@ class ScriptableAdapter {
 
       const failedEvents = [];
       const actionCounts = { merge: [], skip: [], create: [] };
+      const seriesKeysWritten = new Set();
       let processedCount = 0;
 
       for (const event of analyzedEvents) {
@@ -4533,9 +4534,22 @@ class ScriptableAdapter {
               // recurring event, or — in "report" mode — one log line saying
               // what would be written, and nothing else.
               if (event._seriesWrite === true) {
+                const seriesKey = (event._ownerReviewApproved && event._ownerReviewApproved.key) || "";
+                if (seriesKey && seriesKeysWritten.has(seriesKey)) {
+                  // Another row of a series this execute just wrote.
+                  event._seriesWriteOutcome = "duplicate";
+                  actionCounts.skip.push(event.title);
+                  break;
+                }
                 const outcome = await this.createSeriesCalendarEvent(event, calendar, config);
-                if (outcome === "created") { actionCounts.create.push(event.title); processedCount++; }
-                else actionCounts.skip.push(event.title);
+                event._seriesWriteOutcome = outcome;
+                if (outcome === "created") {
+                  if (seriesKey) seriesKeysWritten.add(seriesKey);
+                  actionCounts.create.push(event.title);
+                  processedCount++;
+                } else {
+                  actionCounts.skip.push(event.title);
+                }
                 break;
               }
               actionCounts.create.push(event.title);
@@ -4825,20 +4839,51 @@ class ScriptableAdapter {
     const rrule = String(event.recurrenceRule || event.recurrence || "").trim().toUpperCase();
     const title = event.title || "Unknown";
     const mode = this.getSeriesWriteMode(config);
+    // Defence in depth: the gate already requires the deck's approval; so
+    // does this, whoever calls it.
+    if (!event._ownerReviewApproved) {
+      console.log(`📱 Scriptable: 🔁 SERIES: "${title}" carries no owner approval — nothing written`);
+      return "withheld";
+    }
     const rule = rrule ? this.buildRecurrenceRule(rrule) : null;
     if (!rule) {
       console.log(`📱 Scriptable: 🔁 SERIES: "${title}" — rule "${rrule || "(none)"}" is not one the phone can write; nothing written`);
       return "withheld";
     }
+    // The series' own zone: without it EventKit would float the nights
+    // in whatever zone the phone is in.
+    const core = this.getIdentityCore();
+    const timezone = event.timezone || (core && typeof core.getCityTimezone === "function" ? core.getCityTimezone(event.city) : "") || "";
+    if (!timezone) {
+      console.log(`📱 Scriptable: 🔁 SERIES: "${title}" has no time zone — nothing written`);
+      return "withheld";
+    }
     const words = SharedCore.describeSeriesRuleInWords ? SharedCore.describeSeriesRuleInWords(rrule) : rrule;
     if (mode !== "enforce") {
-      console.log(`📱 Scriptable: 🔁 SERIES (${mode}): would create "${title}" in ${calendar.title} — ${words} (${rrule}) from ${this.toCalendarWriteDate(event.startDate).toString()}; seriesWrites is "${mode}", so nothing is written`);
+      console.log(`📱 Scriptable: 🔁 SERIES (${mode}): would create "${title}" in ${calendar.title} — ${words} (${rrule}) from ${this.toCalendarWriteDate(event.startDate).toString()} ${timezone}; seriesWrites is "${mode}", so nothing is written`);
       return "reported";
+    }
+    // Asked once more, uncached, right before the write: the calendar as
+    // it is now, not as the run's lookup cached it.
+    try {
+      const startMs = this.toCalendarWriteDate(event.startDate).getTime();
+      const nearby = await CalendarEvent.between(new Date(startMs - 35 * 86400000), new Date(startMs + 70 * 86400000), [calendar]);
+      const saved = core && typeof core.matchesSavedSeriesIdentity === "function"
+        ? nearby.find((candidate) => candidate && core.matchesSavedSeriesIdentity(event, candidate))
+        : null;
+      if (saved) {
+        console.log(`📱 Scriptable: 🔁 SERIES: "${title}" — the calendar already holds "${saved.title}" on ${saved.startDate instanceof Date ? saved.startDate.toDateString() : saved.startDate}; nothing written`);
+        return "withheld";
+      }
+    } catch (error) {
+      console.log(`📱 Scriptable: 🔁 SERIES: "${title}" — could not read the calendar before writing (${error.message}); nothing written`);
+      return "withheld";
     }
     const calendarEvent = new CalendarEvent();
     calendarEvent.title = title;
     calendarEvent.startDate = this.toCalendarWriteDate(event.startDate);
     calendarEvent.endDate = this.resolveCalendarWriteEndDate(event);
+    calendarEvent.timeZone = timezone;
     calendarEvent.location = event.location;
     // The rule in the notes, whatever the notes carried: the doctrine's key.
     const notes = String(event.notes || "");
@@ -16508,7 +16553,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         || (Array.isArray(results.executions) && results.executions.length > 0);
       const selected = [];
       savedEvents.forEach((event, index) => {
-        if (executedBefore && event && event._ownerReviewApproved && typeof event._ownerReviewApproved === "object") {
+        if (executedBefore && event && event._ownerReviewApproved && typeof event._ownerReviewApproved === "object"
+          // A series row an earlier execute only reported is still owed.
+          && !(event._seriesWrite === true && event._seriesWriteOutcome !== "created")) {
           summary.alreadyWritten++;
           return;
         }
@@ -16679,6 +16726,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         ledger,
         freshExecutable
           .filter((event) => event && typeof event === "object" && !failedTitles.has(String(event.title || "")))
+          // A series the phone only reported (seriesWrites: report), could
+          // not write, or had just written on another row is not written:
+          // no ledger row, so the approval stays pending for a later execute.
+          .filter((event) => !(event._seriesWrite === true && event._seriesWriteOutcome !== "created"))
           .map((event) => ({
             key: (event._ownerReviewApproved && event._ownerReviewApproved.key) || core.getOwnerReviewKey(event),
             action: event._action === "merge" ? "updated" : "created",

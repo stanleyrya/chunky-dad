@@ -1026,6 +1026,9 @@ function buildDeck(runPayload, store, options = {}) {
         }
         const event = analyzed[entry.sourceIndex];
         if (!event || !event._ownerReviewApproved) return null;
+        // A series the phone only reported (seriesWrites: report) or could
+        // not write is not executed — the approval still waits.
+        if (event._seriesWrite === true && event._seriesWriteOutcome !== 'created') return null;
         return { at: lastExecutedAt || null, as: event._action === 'merge' ? 'updated' : 'created' };
     };
     const file = (entry, decision) => {
@@ -1065,10 +1068,7 @@ function buildDeck(runPayload, store, options = {}) {
         if (!core.isOwnerReviewCandidate(event)) return;
         const proposal = core.buildOwnerReviewProposal(event);
         if (!proposal) return;
-        if (proposal.kind === 'series') {
-            if (seriesKeysSeen.has(proposal.key)) return;
-            seriesKeysSeen.add(proposal.key);
-        }
+        if (proposal.kind === 'series' && seriesKeysSeen.has(proposal.key)) return;
         const endMs = SharedCore.toEpochMillis(proposal.endDate);
         const startMs = SharedCore.toEpochMillis(proposal.startDate);
         // A series is as current as its next night, not its first.
@@ -1080,6 +1080,8 @@ function buildDeck(runPayload, store, options = {}) {
             counts.pastSkipped++;
             return;
         }
+        // The first CURRENT row of a series carries its card.
+        if (proposal.kind === 'series') seriesKeysSeen.add(proposal.key);
         // A row the phone already re-analyzed and WROTE (its executed run
         // rewrote the file with _ownerReviewApproved on that row) is done,
         // whatever the fresh analysis turned it into — a "new" approved on

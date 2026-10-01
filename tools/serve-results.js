@@ -975,11 +975,15 @@ function renderReviewCard(entry, ctx = {}) {
     // ONE recurring event. Nothing in it comes from EventKit.
     const seriesLines = isSeries
         ? (() => {
-            const nights = (Array.isArray(proposal.seriesNights) ? proposal.seriesNights : []).map((night) => reviewDateParts(night, tz)).filter(Boolean);
+            const nowMs = Date.now();
+            const nights = (Array.isArray(proposal.seriesNights) ? proposal.seriesNights : [])
+                .filter((night) => { const ms = Date.parse(night); return Number.isFinite(ms) && ms >= nowMs; })
+                .map((night) => reviewDateParts(night, tz)).filter(Boolean);
             const start = reviewDateParts(proposal.startDate, tz);
+            const bounded = /COUNT=|UNTIL=/.test(String(proposal.recurrence || ''));
             return `<div class="line">🔁 ${escapeHtmlText(proposal.recurrenceWords || proposal.recurrence || 'repeats')}${start ? ` · ${escapeHtmlText(start.time)}` : ''}${proposal.recurrenceWords ? ` <span class="muted">(${escapeHtmlText(proposal.recurrence || '')})</span>` : ''}</div>`
                 + (nights.length ? `<div class="line muted">next: ${escapeHtmlText(nights.slice(0, 4).map((night) => night.day).join(', '))}${nights.length > 4 ? ', …' : ''}</div>` : '')
-                + '<div class="line muted">one recurring calendar event, no end date — ends when it stops being listed</div>';
+                + `<div class="line muted">one recurring calendar event${bounded ? '' : ', no end date — it runs until you end it on the phone'}</div>`;
         })()
         : '';
     const cityConfig = adapter && adapter.cities && proposal.city ? adapter.cities[proposal.city] : null;

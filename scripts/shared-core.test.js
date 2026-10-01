@@ -4586,9 +4586,22 @@ test('deduplicateEvents collapses a cadence-marked group across renumbered slug 
 // calendar holds nothing of is ONE deck card; approved, the phone writes the
 // recurring event. Everything else about series stays as it was.
 // ---------------------------------------------------------------------------
+// The next third Thursday, 9 PM Chicago (02:00Z next day; 03:00Z in winter).
+function nextThirdThursday(skip = 0) {
+  const now = new Date();
+  for (let month = skip; month < 3 + skip; month++) {
+    const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + month, 1, 12));
+    const offset = (4 - first.getUTCDay() + 7) % 7;
+    const third = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1 + offset + 14, 12));
+    const local = new Date(Date.UTC(third.getUTCFullYear(), third.getUTCMonth(), third.getUTCDate(), 21));
+    const chicagoOffsetHours = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', timeZoneName: 'longOffset' }).formatToParts(local).find((p) => p.type === 'timeZoneName').value.replace('GMT', '')) || -5;
+    const start = new Date(local.getTime() - chicagoOffsetHours * 3600000);
+    if (start.getTime() > Date.now() + 2 * SERIES_DAY_MS) return start;
+  }
+  throw new Error('no third Thursday ahead');
+}
 function buildStatedSeries(overrides = {}) {
-  const start = new Date(Date.now() + 5 * SERIES_DAY_MS);
-  start.setUTCHours(2, 0, 0, 0);
+  const start = nextThirdThursday();
   return {
     title: 'BEEF', city: 'dallas', timezone: 'America/Chicago', bar: 'Albatross', address: '36-19 24th Ave, Astoria, NY',
     startDate: start, endDate: new Date(start.getTime() + 4 * 3600000),
@@ -4647,6 +4660,30 @@ test('series write: never offered when the calendar already holds the series, a 
   failing.getWideWindowCalendarEvents = async () => { throw new Error('offline'); };
   const unsure = (await core.prepareEventsForCalendar([buildStatedSeries()], failing, {}))[0];
   assert.equal(unsure._seriesWrite, undefined, 'no card when the calendar could not be asked');
+  // The adapters' real failure shape: a lookup that answers null.
+  const silent = buildPrepCalendarAdapter([]);
+  silent.getWideWindowCalendarEvents = async () => null;
+  const quiet = (await core.prepareEventsForCalendar([buildStatedSeries()], silent, {}))[0];
+  assert.equal(quiet._seriesWrite, undefined, 'a null lookup is not an empty calendar');
+  // No place at all.
+  const placeless = (await core.prepareEventsForCalendar([buildStatedSeries({ bar: '', address: '', location: '' })], buildWideWindowAdapter([]), {}))[0];
+  assert.equal(placeless._seriesWrite, undefined, 'a series with no place could never be told from its saved nights');
+  // A first night that is not a night of the rule.
+  const offRule = (await core.prepareEventsForCalendar([buildStatedSeries({ recurrenceRule: 'FREQ=WEEKLY;BYDAY=SU' })], buildWideWindowAdapter([]), {}))[0];
+  assert.equal(offRule._seriesWrite, undefined, 'a Thursday is not a night of every-Sunday');
+  // Two rows of one series in a batch: one card, the other a duplicate.
+  const laterStart = nextThirdThursday(1);
+  const twoRows = await core.prepareEventsForCalendar([buildStatedSeries(), buildStatedSeries({ startDate: laterStart, endDate: new Date(laterStart.getTime() + 4 * 3600000) })], buildWideWindowAdapter([]), {});
+  assert.equal(twoRows.filter((e) => e._seriesWrite === true).length, 1, 'one card');
+  assert.equal(twoRows.filter((e) => e._seriesWriteDuplicateOf).length, 1, 'the other row is a duplicate of it');
+  const approvedRows = twoRows.map((e) => ({ ...e, _ownerReviewApproved: { key: 'k' } }));
+  assert.equal(SharedCore.filterEventsForExecution(approvedRows).length, 1, 'approved, only the first row writes: ' + approvedRows.map((e) => SharedCore.describeExecutionDisposition(e)).join(' | '));
+  // A stale stamp on a saved-run row never survives re-analysis.
+  const stale = { ...buildStatedSeries(), _seriesWrite: true, _ownerReviewApproved: { key: 'k' } };
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_seriesWrite') === false, '_seriesWrite is an analysis stamp');
+  const reanalyzed = (await core.prepareEventsForCalendar([stale], buildWideWindowAdapter([], [savedNight]), {}))[0];
+  assert.equal(reanalyzed._seriesWrite, undefined, 'recomputed against the calendar as it is now');
+  assert.deepEqual(SharedCore.filterEventsForExecution([{ ...reanalyzed, _ownerReviewApproved: { key: 'k' } }]), [], 'and the gate stays shut');
 });
 
 test('series rules: the shapes the phone can write, and how each reads in words', () => {
@@ -4655,7 +4692,11 @@ test('series rules: the shapes the phone can write, and how each reads in words'
   assert.equal(ok('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE'), true);
   assert.equal(ok('FREQ=MONTHLY;BYDAY=1FR'), true);
   assert.equal(ok('FREQ=MONTHLY;BYDAY=-1SA'), true);
-  assert.equal(ok('FREQ=MONTHLY;BYMONTHDAY=15'), true);
+  assert.equal(ok('FREQ=MONTHLY;BYMONTHDAY=15'), false, 'day-of-month series wait for a later phase');
+  assert.equal(ok('FREQ=WEEKLY;COUNT=abc'), false);
+  assert.equal(ok('FREQ=WEEKLY;UNTIL=soon'), false);
+  assert.equal(SharedCore.canonicalSeriesRule('RRULE:FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=TH'), 'FREQ=WEEKLY;BYDAY=TH');
+  assert.equal(SharedCore.canonicalSeriesRule('BYDAY=TH;FREQ=WEEKLY'), 'FREQ=WEEKLY;BYDAY=TH');
   assert.equal(ok('FREQ=DAILY;COUNT=4'), true);
   assert.equal(ok('FREQ=WEEKLY;UNTIL=20261231T000000Z'), true);
   assert.equal(ok('FREQ=MONTHLY;BYDAY=FR'), false, 'a monthly weekday needs its position');
@@ -4668,7 +4709,6 @@ test('series rules: the shapes the phone can write, and how each reads in words'
   assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=WEEKLY;INTERVAL=2;BYDAY=FR'), 'every 2 weeks on Friday');
   assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=MONTHLY;BYDAY=1FR'), 'the first Friday of the month');
   assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=MONTHLY;BYDAY=-1SA'), 'the last Saturday of the month');
-  assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=MONTHLY;BYMONTHDAY=22'), 'the 22nd of every month');
   assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=DAILY;COUNT=4'), 'every day, 4 times');
   assert.equal(SharedCore.describeSeriesRuleInWords('FREQ=WEEKLY;BYDAY=TH;UNTIL=20261231T000000Z'), 'every Thursday, until 2026-12-31');
 });

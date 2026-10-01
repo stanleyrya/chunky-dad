@@ -1802,7 +1802,7 @@ class SharedCore {
         // A series card is keyed by its RULE, not a night: one decision
         // covers the series however many rows a run lists for it.
         if (event._seriesWrite === true) {
-            return `series|${titleKey}|${this.getOwnerReviewPlaceKey(event)}|${String(event.recurrenceRule || event.recurrence || '').trim().toUpperCase()}`;
+            return `series|${titleKey}|${this.getOwnerReviewPlaceKey(event)}|${SharedCore.canonicalSeriesRule(event.recurrenceRule || event.recurrence)}`;
         }
         const timezone = event.timezone || this.getCityTimezone(event.city) || null;
         const day = this.normalizeEventDateLocal(event.startDate, timezone) || '';
@@ -2314,7 +2314,14 @@ class SharedCore {
         // A series card is its rule at its place under its name — all three
         // are in the key — so a decision on the key is the decision, whatever
         // night its first row happens to start on this run.
-        if (proposal.kind === 'series') return true;
+        if (proposal.kind === 'series') {
+            // A "needs a fix" comes back when what the owner tagged changed,
+            // exactly as for a single; every other verdict is the decision.
+            if (decision.verdict === 'reject' && SharedCore.getOwnerRejectionMode(decision) === 'fix') {
+                return SharedCore.getOwnerReviewFixDrift(decision, proposal).length === 0;
+            }
+            return true;
+        }
         if (proposal.kind !== 'merge' && proposal.kind !== 'override') {
             // A rejection speaks for the proposal it was made on. When the
             // scraper later shows something else for the same card (a fixed
@@ -18759,16 +18766,20 @@ class SharedCore {
     // series or single, by the dedup's own name + place identity. Used
     // before a series card is offered: fail closed on a lookup error.
     async findSavedNightOfSeries(event, calendarAdapter) {
-        if (!calendarAdapter || typeof calendarAdapter.getWideWindowCalendarEvents !== 'function') return null;
+        // No adapter, no lookup, or a lookup that answered nothing at all
+        // (the adapters return null on an EventKit or network error) — the
+        // calendar could not be asked, so it is not known to be empty.
+        const unknown = (why) => ({ identifier: '', title: `(lookup failed: ${why})`, startDate: null, lookupFailed: true });
+        if (!calendarAdapter || typeof calendarAdapter.getWideWindowCalendarEvents !== 'function') return unknown('no wide-window lookup');
         try {
             const lookup = await calendarAdapter.getWideWindowCalendarEvents(event);
-            const candidates = lookup && Array.isArray(lookup.events) ? lookup.events : [];
-            for (const candidate of candidates) {
+            if (!lookup || !Array.isArray(lookup.events)) return unknown('the calendar did not answer');
+            for (const candidate of lookup.events) {
                 if (candidate && this.matchesSavedSeriesIdentity(event, candidate)) return candidate;
             }
             return null;
         } catch (error) {
-            return { identifier: '', title: `(lookup failed: ${error && error.message ? error.message : error})`, startDate: null };
+            return unknown(error && error.message ? error.message : String(error));
         }
     }
 
@@ -19790,7 +19801,8 @@ class SharedCore {
             // buildAnalyzedCalendarEvent): offered to the owner, and written
             // only once approved on the deck.
             (!SharedCore.isRecurringSeriesEvent(event)
-                || (event?._seriesWrite === true && (offeringToOwner || Boolean(event?._ownerReviewApproved)))) &&
+                || (event?._seriesWrite === true && event?._action === 'new' && !event?._seriesWriteBlockedBy && !event?._seriesWriteDuplicateOf
+                    && (offeringToOwner || Boolean(event?._ownerReviewApproved)))) &&
             // A night that yielded its slot to a rarer party (slot rule).
             !event?._slotYield &&
             // An occurrence-expanded single whose date/identity the owner's
@@ -19855,6 +19867,12 @@ class SharedCore {
         return [
             '_analysis',
             '_action',
+            // Series-write stamps are recomputed by every analysis — a
+            // stale one on a saved-run row must never reach the gate.
+            '_seriesWrite',
+            '_seriesWriteBlockedBy',
+            '_seriesWriteDuplicateOf',
+            '_seriesWriteOutcome',
             '_mergeDiff',
             '_mergeDiffBaselineNotes',
             '_existingEvent',
@@ -20577,28 +20595,42 @@ class SharedCore {
     static describeSeriesRuleSupport(rrule) {
         const parts = SharedCore.parseRruleParts(rrule);
         if (!parts || !parts.FREQ) return { supported: false, reason: 'no rule' };
-        const known = Object.keys(parts).filter(key => !['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY', 'COUNT', 'UNTIL', 'WKST'].includes(key));
+        const known = Object.keys(parts).filter(key => !['FREQ', 'INTERVAL', 'BYDAY', 'COUNT', 'UNTIL', 'WKST'].includes(key));
         if (known.length > 0) return { supported: false, reason: `unsupported part(s): ${known.join(', ')}` };
         if (parts.COUNT && parts.UNTIL) return { supported: false, reason: 'both COUNT and UNTIL' };
+        if (parts.COUNT && !/^[1-9]\d{0,3}$/.test(parts.COUNT)) return { supported: false, reason: `count ${parts.COUNT}` };
+        if (parts.UNTIL && !/^\d{8}(T\d{6}Z?)?$/.test(parts.UNTIL)) return { supported: false, reason: `until ${parts.UNTIL}` };
         const interval = parts.INTERVAL ? Number(parts.INTERVAL) : 1;
         if (!Number.isInteger(interval) || interval < 1 || interval > 52) return { supported: false, reason: `interval ${parts.INTERVAL}` };
         const days = parts.BYDAY ? parts.BYDAY.split(',') : [];
         if (parts.FREQ === 'WEEKLY') {
             if (days.some(day => !/^(SU|MO|TU|WE|TH|FR|SA)$/.test(day))) return { supported: false, reason: `weekly BYDAY ${parts.BYDAY}` };
-            if (parts.BYMONTHDAY) return { supported: false, reason: 'weekly with BYMONTHDAY' };
             return { supported: true };
         }
         if (parts.FREQ === 'MONTHLY') {
-            if (days.length > 1 || (days.length === 1 && !/^-?[1-5](SU|MO|TU|WE|TH|FR|SA)$/.test(days[0]))) return { supported: false, reason: `monthly BYDAY ${parts.BYDAY}` };
-            if (days.length === 1 && parts.BYMONTHDAY) return { supported: false, reason: 'monthly with BYDAY and BYMONTHDAY' };
-            if (parts.BYMONTHDAY && !/^\d{1,2}$/.test(parts.BYMONTHDAY)) return { supported: false, reason: `monthly BYMONTHDAY ${parts.BYMONTHDAY}` };
+            // One weekday with its position ("1FR", "-1SA"): the only monthly
+            // shape both the phone and the expander agree on in phase 1.
+            if (days.length !== 1 || !/^-?[1-5](SU|MO|TU|WE|TH|FR|SA)$/.test(days[0])) return { supported: false, reason: `monthly BYDAY ${parts.BYDAY || '(none)'}` };
             return { supported: true };
         }
         if (parts.FREQ === 'DAILY') {
-            if (parts.BYDAY || parts.BYMONTHDAY) return { supported: false, reason: 'daily with BYDAY/BYMONTHDAY' };
+            if (parts.BYDAY) return { supported: false, reason: 'daily with BYDAY' };
             return { supported: true };
         }
         return { supported: false, reason: `FREQ=${parts.FREQ}` };
+    }
+
+    // One spelling for one rule: parts upper-cased and sorted, INTERVAL=1
+    // and WKST dropped, no RRULE: prefix — so a decision's key meets the
+    // same series whichever way a page wrote the rule.
+    static canonicalSeriesRule(rrule) {
+        const parts = SharedCore.parseRruleParts(rrule);
+        if (!parts) return '';
+        return Object.keys(parts)
+            .filter(key => key !== 'WKST' && !(key === 'INTERVAL' && Number(parts[key]) === 1))
+            .sort((a, b) => (a === 'FREQ' ? -1 : b === 'FREQ' ? 1 : a.localeCompare(b)))
+            .map(key => `${key}=${parts[key]}`)
+            .join(';');
     }
 
     // The rule in words: "every Thursday", "every 2 weeks on Friday", "the
@@ -20629,20 +20661,45 @@ class SharedCore {
         return words;
     }
 
+    // The series' start as the expander reads it: the event's own wall
+    // clock in its zone (never the UTC digits), so nights keep their local
+    // time across DST like the published calendars' series do.
+    seriesStartRecord(event) {
+        const startMs = SharedCore.toEpochMillis(event && event.startDate);
+        if (startMs === null) return null;
+        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        const wall = timezone ? this.getZonedWallParts(event.startDate, timezone) : null;
+        return wall
+            ? { date: new Date(startMs), wall: { year: wall.year, month: wall.month, day: wall.day, hour: wall.hour, minute: wall.minute, second: wall.second || 0 }, tzid: timezone, isDateOnly: false }
+            : new Date(startMs);
+    }
+
+    // Does the rule yield the event's own first night? A Thursday party
+    // stored as Friday 00:30 local is not a night of FREQ=WEEKLY;BYDAY=TH,
+    // and EventKit and the expander would disagree on what to do with it.
+    seriesStartSatisfiesRule(event) {
+        const rrule = String(event && (event.recurrenceRule || event.recurrence) || '').trim().toUpperCase();
+        const seriesStart = this.seriesStartRecord(event);
+        const startMs = SharedCore.toEpochMillis(event && event.startDate);
+        if (!rrule || !seriesStart || startMs === null) return false;
+        try {
+            const occurrences = SharedCore.expandRruleOccurrencesInWindow(rrule, seriesStart, new Date(startMs - 1000), new Date(startMs + 60000)) || [];
+            return occurrences.some(occurrence => SharedCore.toEpochMillis(occurrence && occurrence.date !== undefined ? occurrence.date : occurrence) === startMs);
+        } catch (_) {
+            return false;
+        }
+    }
+
     // What a series card shows and decides on: the rule, its words, and
     // the next nights the rule yields (from the event's own start, in its
     // own zone, 120 days out, at most 6).
     describeSeriesProposal(event) {
-        const rrule = String(event.recurrenceRule || event.recurrence || '').trim().toUpperCase();
-        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        const rrule = SharedCore.canonicalSeriesRule(event.recurrenceRule || event.recurrence);
         const startMs = SharedCore.toEpochMillis(event.startDate);
         const nights = [];
         if (rrule && startMs !== null) {
             try {
-                const wall = timezone ? this.getZonedWallParts(event.startDate, timezone) : null;
-                const seriesStart = wall
-                    ? { date: new Date(startMs), wall: { year: wall.year, month: wall.month, day: wall.day, hour: wall.hour, minute: wall.minute, second: wall.second || 0 }, tzid: timezone, isDateOnly: false }
-                    : new Date(startMs);
+                const seriesStart = this.seriesStartRecord(event);
                 const occurrences = SharedCore.expandRruleOccurrencesInWindow(rrule, seriesStart, new Date(startMs), new Date(startMs + 120 * 86400000)) || [];
                 for (const occurrence of occurrences.slice(0, 6)) {
                     const ms = SharedCore.toEpochMillis(occurrence && occurrence.date !== undefined ? occurrence.date : occurrence);
@@ -21382,6 +21439,7 @@ class SharedCore {
         // The whole batch, for the one reader that needs its siblings
         // (isSourceModalTitle, in buildAnalyzedCalendarEvent).
         this._preparingBatch = Array.isArray(events) ? events : [];
+        this._seriesWriteKeysSeen = new Set();
         // Events are already properly formatted - no need for additional formatting
 
         // Use default merge mode since parser-level mergeMode is handled by field priorities
@@ -22955,17 +23013,22 @@ class SharedCore {
                 // own probe wrote a weekly series and read its four nights
                 // back): a series the page STATES, that the calendar holds
                 // nothing of — no saved series (findSavedSeriesMatch), no
-                // single on any of its nights (the analysis matched nothing)
-                // — with a real start time and a rule the phone can express,
-                // becomes ONE deck card. Approved, the phone creates the
-                // recurring event (scriptable-adapter.buildRecurrenceRule);
-                // the rule rides in the notes (`recurrence:`) so no run ever
-                // reads a rule back from EventKit. Occurrence-expanded
-                // families (per-night pages, posters, links) are untouched:
-                // they stay individual nights by the shape rule above.
-                // Nothing here writes: the gate (filterEventsForExecution)
-                // opens only for the deck's approval, and the phone's
-                // `seriesWrites` mode starts at "report".
+                // night of the party anywhere in the wide window — with a
+                // real start time on a stated place, and a rule the phone can
+                // express, becomes ONE deck card. Approved, the phone creates
+                // the recurring event (scriptable-adapter
+                // .createSeriesCalendarEvent); the rule rides in the notes
+                // (`recurrence:`) so no run ever reads a rule back from
+                // EventKit. Occurrence-expanded families (per-night pages,
+                // posters, links) are untouched: they stay individual nights
+                // by the shape rule above. Nothing here writes: the gate
+                // (filterEventsForExecution) opens only for the deck's
+                // approval, and the phone's `seriesWrites` mode starts at
+                // "report". Recomputed on EVERY analysis — a saved-run row
+                // re-analyzed on the phone starts from scratch here.
+                delete analyzedEvent._seriesWrite;
+                delete analyzedEvent._seriesWriteBlockedBy;
+                delete analyzedEvent._seriesWriteDuplicateOf;
                 if (analysis.action === 'new' && !analysis.existingEvent && !analysis.sourceEvent
                     && !analysis.seriesMatch && !analyzedEvent._seriesMatch
                     && event._recurringNoStartTime !== true
@@ -22973,28 +23036,38 @@ class SharedCore {
                     // Friday", no clock) is not written as a series in phase 1:
                     // its nights stay what they are today.
                     && !SharedCore.isWholeDayEvent(analyzedEvent)
+                    // …nor a series that names no place: the saved-night check
+                    // below matches by name AND place, so a placeless series
+                    // could never be told from its saved nights.
+                    && (String(analyzedEvent.bar || '').trim() || String(analyzedEvent.address || '').trim())
                     && SharedCore.describeSeriesRuleSupport(analyzedEvent.recurrenceRule).supported
                     && !analyzedEvent._timezoneUnresolved) {
-                    // The first night's window held nothing; the OTHER nights
-                    // may already be saved as singles (a source read night by
-                    // night before it stated its rule). Any saved night of
-                    // this party in the wide window blocks the card —
-                    // converting saved singles into a series is a later,
-                    // reviewed step, not a side effect.
-                    const savedNight = await this.findSavedNightOfSeries(event, calendarAdapter);
-                    if (savedNight) {
-                        analyzedEvent._seriesWriteBlockedBy = { identifier: savedNight.identifier || '', title: savedNight.title || '', startDate: savedNight.startDate || null };
-                        console.log(`🔁 SERIES WRITE: "${analyzedEvent.title || 'Unknown'}" states ${analyzedEvent.recurrenceRule} but the calendar already holds a night of it as a single ("${savedNight.title || ''}" ${savedNight.startDate ? String(savedNight.startDate).slice(0, 10) : ''}) — no series card; the nights stay as they are`);
+                    const seriesKey = this.getOwnerReviewKey({ ...analyzedEvent, _seriesWrite: true });
+                    if (!this._seriesWriteKeysSeen) this._seriesWriteKeysSeen = new Set();
+                    if (!this.seriesStartSatisfiesRule(analyzedEvent)) {
+                        console.log(`🔁 SERIES WRITE: "${analyzedEvent.title || 'Unknown'}" states ${analyzedEvent.recurrenceRule} but its first night ${String(analyzedEvent.startDate).slice(0, 10)} is not a night of that rule — no series card`);
+                    } else if (seriesKey && this._seriesWriteKeysSeen.has(seriesKey)) {
+                        // The same series on another row of this batch (one per
+                        // page it appeared on): one card, one write — the first
+                        // row carries both.
+                        analyzedEvent._seriesWriteDuplicateOf = seriesKey;
                     } else {
-                        analyzedEvent._seriesWrite = true;
-                        console.log(`🔁 SERIES WRITE: "${analyzedEvent.title || 'Unknown'}" states ${analyzedEvent.recurrenceRule} and the calendar holds nothing of it — offered to the owner as one series card`);
+                        // The first night's window held nothing; the OTHER nights
+                        // may already be saved as singles (a source read night by
+                        // night before it stated its rule). Any saved night of
+                        // this party in the wide window blocks the card —
+                        // converting saved singles into a series is a later,
+                        // reviewed step, not a side effect.
+                        const savedNight = await this.findSavedNightOfSeries(event, calendarAdapter);
+                        if (savedNight) {
+                            analyzedEvent._seriesWriteBlockedBy = { identifier: savedNight.identifier || '', title: savedNight.title || '', startDate: savedNight.startDate || null };
+                            console.log(`🔁 SERIES WRITE: "${analyzedEvent.title || 'Unknown'}" states ${analyzedEvent.recurrenceRule} but the calendar already holds a night of it ("${savedNight.title || ''}" ${savedNight.startDate ? String(savedNight.startDate).slice(0, 10) : ''}) — no series card; the nights stay as they are`);
+                        } else {
+                            analyzedEvent._seriesWrite = true;
+                            if (seriesKey) this._seriesWriteKeysSeen.add(seriesKey);
+                            console.log(`🔁 SERIES WRITE: "${analyzedEvent.title || 'Unknown'}" states ${analyzedEvent.recurrenceRule} and the calendar holds nothing of it — offered to the owner as one series card`);
+                        }
                     }
-                }
-                // No stated start time (derived-occurrence series): the ICS
-                // export needs a real time — the card gates the 💾 button off
-                // and leaves the Event Builder link (scriptable-adapter).
-                if (event._recurringNoStartTime === true) {
-                    analyzedEvent._recurringNoStartTime = true;
                 }
                 // Override identity is WRITE identity: it names a single
                 // occurrence to replace inside an existing series. A series we
