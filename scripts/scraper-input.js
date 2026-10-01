@@ -825,6 +825,7 @@ const scraperConfig = {
       // exemptHosts: ["example.org"], // never paced/parked (chunky.dad, localhost and the tailnet always are)
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
+    seriesWrites: { mode: "report" }, // Deck-approved SERIES cards (a page-stated rule the calendar holds nothing of): "report" (default) — the phone logs what it would write and writes nothing; "enforce" — the phone creates the recurring event (one event, rule in the notes); "off" — no series writes. Never edits an existing series, never detaches a night (owner, 2026-10-01).
     geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
     promoterRegistry: { mode: "enforce" }, // Curated promoter identity matching — see data/promoters.json; enforce stamps matched metadata + bearAffinity (flipped 2026-07-28: verification battery — 37 matches, 0 false positives, 100% precision)
     // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,

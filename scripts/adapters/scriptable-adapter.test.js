@@ -11956,6 +11956,92 @@ test('all-day write fails closed: a flag the dates do not back, or no zone, writ
   assert.equal(lines.filter((line) => line.includes('is marked as a whole-day event but its dates are not a whole day')).length, 2);
 });
 
+// ---------------------------------------------------------------------------
+// SERIES WRITE (owner, 2026-10-01): a deck-approved series card becomes ONE
+// recurring event — in "enforce" mode; "report" says what it would write.
+// ---------------------------------------------------------------------------
+function stubRecurrenceRule() {
+  const calls = [];
+  const make = (name) => (...args) => { calls.push({ name, args }); return { name, args }; };
+  global.RecurrenceRule = {
+    daily: make('daily'), dailyEndDate: make('dailyEndDate'), dailyOccurrenceCount: make('dailyOccurrenceCount'),
+    weekly: make('weekly'), weeklyEndDate: make('weeklyEndDate'), weeklyOccurrenceCount: make('weeklyOccurrenceCount'),
+    monthly: make('monthly'), monthlyEndDate: make('monthlyEndDate'), monthlyOccurrenceCount: make('monthlyOccurrenceCount'),
+    complexWeekly: make('complexWeekly'), complexWeeklyEndDate: make('complexWeeklyEndDate'), complexWeeklyOccurrenceCount: make('complexWeeklyOccurrenceCount'),
+    complexMonthly: make('complexMonthly'), complexMonthlyEndDate: make('complexMonthlyEndDate'), complexMonthlyOccurrenceCount: make('complexMonthlyOccurrenceCount')
+  };
+  return calls;
+}
+
+test('series write: RRULE → RecurrenceRule, exactly the shapes shared-core allows', () => {
+  const originalRule = global.RecurrenceRule;
+  const calls = stubRecurrenceRule();
+  try {
+    const adapter = new ScriptableAdapter({ cities: {} });
+    const built = (rule) => { calls.length = 0; const out = adapter.buildRecurrenceRule(rule); return out ? `${out.name}(${JSON.stringify(out.args)})` : null; };
+    assert.equal(built('FREQ=WEEKLY;BYDAY=SU'), 'complexWeekly([1,[1],[]])', 'Sunday is 1');
+    assert.equal(built('FREQ=WEEKLY'), 'weekly([1])');
+    assert.equal(built('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE'), 'complexWeekly([2,[2,4],[]])');
+    assert.equal(built('FREQ=MONTHLY;BYDAY=3TH'), 'complexMonthly([1,[5],[],[3]])', 'third Thursday');
+    assert.equal(built('FREQ=MONTHLY;BYDAY=-1SA'), 'complexMonthly([1,[7],[],[-1]])', 'last Saturday');
+    assert.equal(built('FREQ=MONTHLY;BYMONTHDAY=15'), 'complexMonthly([1,[],[15],[]])');
+    assert.equal(built('FREQ=DAILY;COUNT=4'), 'dailyOccurrenceCount([1,4])');
+    assert.equal(built('FREQ=WEEKLY;BYDAY=TH;COUNT=6'), 'complexWeeklyOccurrenceCount([1,[5],[],6])');
+    const untilBuilt = adapter.buildRecurrenceRule('FREQ=WEEKLY;UNTIL=20261231T000000Z');
+    assert.equal(untilBuilt.name, 'weeklyEndDate');
+    assert.equal(untilBuilt.args[1].toISOString(), '2026-12-31T00:00:00.000Z');
+    assert.equal(built('FREQ=MONTHLY;BYDAY=FR'), null, 'unsupported shapes build nothing');
+    assert.equal(built('FREQ=YEARLY'), null);
+    assert.equal(built(''), null);
+  } finally {
+    global.RecurrenceRule = originalRule;
+  }
+});
+
+test('series write: "report" says what it would write and writes nothing; "enforce" saves one recurring event with the rule in its notes and reads the nights back', async () => {
+  const originalRule = global.RecurrenceRule;
+  const originalCalendarEvent = global.CalendarEvent;
+  stubRecurrenceRule();
+  const saved = [];
+  const occurrences = [];
+  global.CalendarEvent = class {
+    constructor() { this.identifier = ''; this.rules = []; }
+    addRecurrenceRule(rule) { this.rules.push(rule); }
+    async save() { this.identifier = 'SERIES-1'; saved.push(this); for (let i = 0; i < 3; i++) occurrences.push({ identifier: 'SERIES-1', startDate: new Date(this.startDate.getTime() + i * 7 * 86400000) }); }
+    static async between() { return occurrences; }
+  };
+  const calendar = { title: 'chunky-dad-dallas' };
+  const event = { title: 'BEEF', startDate: new Date(Date.now() + 5 * 86400000), endDate: new Date(Date.now() + 5 * 86400000 + 3 * 3600000), location: '', notes: 'bar: Albatross\ntimezone: America/Chicago', recurrenceRule: 'FREQ=MONTHLY;BYDAY=3TH', _seriesWrite: true, _action: 'new' };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  try {
+    const adapter = new ScriptableAdapter({ cities: {} });
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, {}), 'reported', 'no mode → report');
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, { config: { seriesWrites: { mode: 'report' } } }), 'reported');
+    assert.equal(saved.length, 0, 'report mode writes nothing');
+    assert.ok(lines.some((line) => /SERIES \(report\): would create "BEEF"/.test(line) && /third Thursday/.test(line)), lines.join('\n'));
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event, recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR' }, calendar, { config: { seriesWrites: { mode: 'enforce' } } }), 'withheld', 'a rule the phone cannot write');
+    assert.equal(saved.length, 0);
+    assert.equal(await adapter.createSeriesCalendarEvent({ ...event }, calendar, { config: { seriesWrites: { mode: 'enforce' } } }), 'created');
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0].rules.length, 1, 'one rule on the event');
+    assert.equal(saved[0].rules[0].name, 'complexMonthly');
+    assert.match(saved[0].notes, /^recurrence: FREQ=MONTHLY;BYDAY=3TH$/m, 'the rule rides in the notes');
+    assert.match(saved[0].notes, /^bar: Albatross$/m, 'the other notes kept');
+    assert.ok(lines.some((line) => /SERIES: created "BEEF"/.test(line) && /3 occurrence\(s\) read back/.test(line)), lines.filter((l) => /SERIES/.test(l)).join('\n'));
+    // The executor routes a series create here and counts it.
+    const counts = [];
+    adapter.getOrCreateCalendar = async () => calendar;
+    await adapter.executeCalendarActions([{ ...event, city: 'dallas' }], { config: { seriesWrites: { mode: 'report' } } });
+    assert.equal(adapter.lastExecutionActionCounts.create, 0, 'report mode: nothing created');
+    assert.equal(adapter.lastExecutionActionCounts.skip, 1);
+    assert.equal(saved.length, 1, 'still the one from enforce');
+  } finally {
+    console.log = originalLog;
+    global.RecurrenceRule = originalRule;
+    global.CalendarEvent = originalCalendarEvent;
+  }
+});
+
 test('all-day write: an event whose time is unknown is written all-day too — the calendar has one switch for both kinds', () => {
   const adapter = new ScriptableAdapter({ cities: {} });
   const target = {};

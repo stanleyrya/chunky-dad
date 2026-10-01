@@ -780,7 +780,7 @@ function renderReviewNotesChangeRows(display = {}, shown = {}) {
 function renderReviewBadges(display = {}) {
     const badges = [];
     if (display.bigDrift) badges.push(`<span class="badge warn drift">🧭 big drift — ${escapeHtmlText(display.bigDrift.reason || 'identity changed')} · withheld until you decide</span>`);
-    if (display.recurring) badges.push('<span class="badge">🔁 recurring — ICS only</span>');
+    if (display.recurring) badges.push(display.seriesWrite ? '<span class="badge">🔁 recurring — the phone writes it once approved</span>' : '<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
     if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
     if (Array.isArray(display.slotWins) && display.slotWins.length > 0) badges.push(`<span class="badge">🪑 takes the slot from ${escapeHtmlText(display.slotWins.join(', '))} — that night is withheld</span>`);
@@ -956,6 +956,7 @@ function renderReviewCard(entry, ctx = {}) {
     const isOverride = entry.kind === 'override';
     const isMerge = entry.kind === 'merge' || isOverride;
     const isDropped = entry.kind === 'dropped';
+    const isSeries = entry.kind === 'series';
     const tz = proposal.timezone || null;
     const endDefaulted = display.endDefaulted === true;
     const wholeDay = proposal.wholeDay === 'all-day' || proposal.wholeDay === 'time-unknown' ? proposal.wholeDay : '';
@@ -968,6 +969,18 @@ function renderReviewCard(entry, ctx = {}) {
         : '';
     const overrideNight = isOverride && proposal.overrideOf
         ? (() => { const parts = reviewDateParts(proposal.overrideOf, tz); return parts ? `<div class="line muted">replaces the series night of ${escapeHtmlText(parts.day)} (${escapeHtmlText(proposal.existingTitle || 'series')})</div>` : ''; })()
+        : '';
+    // A series card: the rule in words, the first night, and the nights
+    // the rule yields next — what the phone would put on the calendar as
+    // ONE recurring event. Nothing in it comes from EventKit.
+    const seriesLines = isSeries
+        ? (() => {
+            const nights = (Array.isArray(proposal.seriesNights) ? proposal.seriesNights : []).map((night) => reviewDateParts(night, tz)).filter(Boolean);
+            const start = reviewDateParts(proposal.startDate, tz);
+            return `<div class="line">🔁 ${escapeHtmlText(proposal.recurrenceWords || proposal.recurrence || 'repeats')}${start ? ` · ${escapeHtmlText(start.time)}` : ''}${proposal.recurrenceWords ? ` <span class="muted">(${escapeHtmlText(proposal.recurrence || '')})</span>` : ''}</div>`
+                + (nights.length ? `<div class="line muted">next: ${escapeHtmlText(nights.slice(0, 4).map((night) => night.day).join(', '))}${nights.length > 4 ? ', …' : ''}</div>` : '')
+                + '<div class="line muted">one recurring calendar event, no end date — ends when it stops being listed</div>';
+        })()
         : '';
     const cityConfig = adapter && adapter.cities && proposal.city ? adapter.cities[proposal.city] : null;
     const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
@@ -993,13 +1006,14 @@ function renderReviewCard(entry, ctx = {}) {
     ].filter(Boolean).join('');
     return `<div class="card-body">
   ${renderReviewThumb(display, proposal.image)}
-  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isOverride ? '🗓️ Override — this night only' : isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
+  <div class="kind-row"><span class="kind ${isMerge ? 'kind-merge' : isDropped ? 'kind-dropped' : 'kind-new'}">${isSeries ? '🔁 New series — one recurring event' : isOverride ? '🗓️ Override — this night only' : isMerge ? '🔀 Update saved event' : isDropped ? '🚫 Dropped as not bear' : '✨ New event'}</span>${isDropped && proposal.occurrences > 1 ? `<span class="muted reason">${proposal.occurrences} occurrences</span>` : display.analysisReason ? `<span class="muted reason">${escapeHtmlText(display.analysisReason)}</span>` : ''}</div>
   ${renderReviewPriorRow(entry.prior)}
   <h2>${escapeHtmlText(proposal.title)}</h2>
   ${existingTitle}
   ${overrideNight}
-  ${renderReviewBadges({ ...display })}
-  <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
+  ${seriesLines}
+  ${renderReviewBadges({ ...display, seriesWrite: isSeries })}
+  <div class="line">📅 ${isSeries ? 'first night: ' : ''}${escapeHtmlText(dateLine)}</div>
   ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
   ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location, barSource: display.barSource })}
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
@@ -1410,7 +1424,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
-  function tabOf(kind) { return kind === 'override' ? 'merge' : kind; }
+  function tabOf(kind) { return kind === 'override' ? 'merge' : kind; } // 'series' is its own tab
   // Every word typed must appear somewhere on the card (title, source,
   // venue, address, city, links, description); a word led by "-" must
   // not. Case-insensitive, nothing clever.
@@ -1563,14 +1577,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, bar: 0, dropped: 0 };
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, dropped: 0 };
     queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {
     var c = counts();
     var html = '';
-    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
+    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
     });
     document.getElementById('filters').innerHTML = html;
@@ -1841,7 +1855,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       html += '<div class="lrow" data-i="' + i + '">'
         + (p.image ? '<img class="lthumb" data-act="flyer" src="' + escapeHtml(p.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<div class="lthumb none" data-act="go">' + (c.kind === 'bar' ? '🍺' : '🐻') + '</div>')
         + '<div class="lbody" data-act="go"><h4>' + escapeHtml(titleOf(c)) + '</h4>'
-        + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
+        + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind === 'series' ? 'series' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
         + (p.source ? '<div class="lmeta">' + escapeHtml(p.source) + '</div>' : '') + '</div>'
         + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="reject">Not yet…</button></div>'
         + '</div>';
@@ -1886,7 +1900,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
     order.forEach(function (name) {
       var g = groups[name];
-      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
       html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
         + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
         + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';

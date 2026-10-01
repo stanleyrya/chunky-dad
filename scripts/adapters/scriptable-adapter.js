@@ -4529,6 +4529,15 @@ class ScriptableAdapter {
               break;
 
             case "new":
+              // A SERIES WRITE (deck-approved, stamp _seriesWrite): one
+              // recurring event, or — in "report" mode — one log line saying
+              // what would be written, and nothing else.
+              if (event._seriesWrite === true) {
+                const outcome = await this.createSeriesCalendarEvent(event, calendar, config);
+                if (outcome === "created") { actionCounts.create.push(event.title); processedCount++; }
+                else actionCounts.skip.push(event.title);
+                break;
+              }
               actionCounts.create.push(event.title);
 
               await this.createCalendarEvent(event, calendar);
@@ -4787,6 +4796,129 @@ class ScriptableAdapter {
   }
 
   // Helper method to create and save a calendar event
+  // SERIES WRITE MODE: config.seriesWrites (global, like geocodeVerification)
+  // — "report" (default): say what would be written, write nothing;
+  // "enforce": write the recurring event; anything else: off. Read off the
+  // run's config envelope (results.config.config on a saved run, or the
+  // config itself).
+  getSeriesWriteMode(config) {
+    const candidates = [config && config.config, config];
+    for (const candidate of candidates) {
+      const raw = candidate && candidate.seriesWrites;
+      const mode = typeof raw === "string" ? raw : raw && typeof raw.mode === "string" ? raw.mode : "";
+      if (mode) return mode.trim().toLowerCase();
+    }
+    return "report";
+  }
+
+  // ONE RECURRING EVENT for a deck-approved series (owner, 2026-10-01,
+  // after the phone's own probe: `addRecurrenceRule` + `save()` wrote a
+  // weekly series and read its nights back). The rule is the one the page
+  // stated (event.recurrenceRule, mirrored by SharedCore
+  // .describeSeriesRuleSupport); it also rides in the notes as
+  // `recurrence:` so no later run needs to read it back from EventKit —
+  // Scriptable cannot. Fails closed: no rule the phone can express, no
+  // calendar, or a save that yields no occurrence → nothing written, said
+  // out loud. Never edits an existing series, never detaches a night.
+  // Returns "created", "reported" or "withheld".
+  async createSeriesCalendarEvent(event, calendar, config) {
+    const rrule = String(event.recurrenceRule || event.recurrence || "").trim().toUpperCase();
+    const title = event.title || "Unknown";
+    const mode = this.getSeriesWriteMode(config);
+    const rule = rrule ? this.buildRecurrenceRule(rrule) : null;
+    if (!rule) {
+      console.log(`📱 Scriptable: 🔁 SERIES: "${title}" — rule "${rrule || "(none)"}" is not one the phone can write; nothing written`);
+      return "withheld";
+    }
+    const words = SharedCore.describeSeriesRuleInWords ? SharedCore.describeSeriesRuleInWords(rrule) : rrule;
+    if (mode !== "enforce") {
+      console.log(`📱 Scriptable: 🔁 SERIES (${mode}): would create "${title}" in ${calendar.title} — ${words} (${rrule}) from ${this.toCalendarWriteDate(event.startDate).toString()}; seriesWrites is "${mode}", so nothing is written`);
+      return "reported";
+    }
+    const calendarEvent = new CalendarEvent();
+    calendarEvent.title = title;
+    calendarEvent.startDate = this.toCalendarWriteDate(event.startDate);
+    calendarEvent.endDate = this.resolveCalendarWriteEndDate(event);
+    calendarEvent.location = event.location;
+    // The rule in the notes, whatever the notes carried: the doctrine's key.
+    const notes = String(event.notes || "");
+    calendarEvent.notes = /^recurrence:/m.test(notes) ? notes : `${notes ? `${notes}\n` : ""}recurrence: ${rrule}`;
+    calendarEvent.calendar = calendar;
+    calendarEvent.addRecurrenceRule(rule);
+    await calendarEvent.save();
+    // Read the nights back the way every later run will: the series is
+    // real when its occurrences answer.
+    let nights = 0;
+    try {
+      const from = new Date(calendarEvent.startDate.getTime() - 60000);
+      const to = new Date(from.getTime() + 120 * 86400000);
+      const seen = await CalendarEvent.between(from, to, [calendar]);
+      nights = seen.filter((occurrence) => occurrence.identifier === calendarEvent.identifier).length;
+    } catch (error) {
+      console.log(`📱 Scriptable: 🔁 SERIES: could not read "${title}" back (${error.message})`);
+    }
+    console.log(`📱 Scriptable: 🔁 SERIES: created "${title}" in ${calendar.title} — ${words} (${rrule}); ${nights} occurrence(s) read back in the next 120 days; identifier ${calendarEvent.identifier}`);
+    if (nights === 0) {
+      console.log(`📱 Scriptable: ⚠️ SERIES: "${title}" saved but no occurrence answered — check the calendar by hand`);
+    }
+    return "created";
+  }
+
+  // RRULE → Scriptable RecurrenceRule, for exactly the shapes
+  // SharedCore.describeSeriesRuleSupport allows; null for anything else.
+  // Scriptable weekdays: 1 = Sunday … 7 = Saturday.
+  buildRecurrenceRule(rrule) {
+    const parts = SharedCore.parseRruleParts(rrule);
+    const support = SharedCore.describeSeriesRuleSupport ? SharedCore.describeSeriesRuleSupport(rrule) : { supported: Boolean(parts) };
+    if (!parts || !support.supported || typeof RecurrenceRule === "undefined") return null;
+    const interval = parts.INTERVAL ? Number(parts.INTERVAL) : 1;
+    const count = parts.COUNT ? Number(parts.COUNT) : null;
+    const until = parts.UNTIL ? this.parseRruleUntil(parts.UNTIL) : null;
+    if (parts.UNTIL && !until) return null;
+    const weekday = { SU: 1, MO: 2, TU: 3, WE: 4, TH: 5, FR: 6, SA: 7 };
+    const simple = (base) => {
+      if (count) return RecurrenceRule[`${base}OccurrenceCount`](interval, count);
+      if (until) return RecurrenceRule[`${base}EndDate`](interval, until);
+      return RecurrenceRule[base](interval);
+    };
+    const complex = (base, days, monthDays, positions) => {
+      if (base === "complexWeekly") {
+        if (count) return RecurrenceRule.complexWeeklyOccurrenceCount(interval, days, positions, count);
+        if (until) return RecurrenceRule.complexWeeklyEndDate(interval, days, positions, until);
+        return RecurrenceRule.complexWeekly(interval, days, positions);
+      }
+      if (count) return RecurrenceRule.complexMonthlyOccurrenceCount(interval, days, monthDays, positions, count);
+      if (until) return RecurrenceRule.complexMonthlyEndDate(interval, days, monthDays, positions, until);
+      return RecurrenceRule.complexMonthly(interval, days, monthDays, positions);
+    };
+    try {
+      if (parts.FREQ === "DAILY") return simple("daily");
+      if (parts.FREQ === "WEEKLY") {
+        const days = parts.BYDAY ? parts.BYDAY.split(",").map((day) => weekday[day]).filter(Boolean) : [];
+        return days.length ? complex("complexWeekly", days, [], []) : simple("weekly");
+      }
+      if (parts.FREQ === "MONTHLY") {
+        const match = parts.BYDAY ? parts.BYDAY.match(/^(-?[1-5])(SU|MO|TU|WE|TH|FR|SA)$/) : null;
+        if (match) return complex("complexMonthly", [weekday[match[2]]], [], [Number(match[1])]);
+        if (parts.BYMONTHDAY) return complex("complexMonthly", [], [Number(parts.BYMONTHDAY)], []);
+        return simple("monthly");
+      }
+    } catch (error) {
+      console.log(`📱 Scriptable: 🔁 SERIES: RecurrenceRule for "${rrule}" failed (${error.message})`);
+      return null;
+    }
+    return null;
+  }
+
+  parseRruleUntil(value) {
+    const match = String(value || "").match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+    if (!match) return null;
+    const date = match[7] || !match[4]
+      ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 23), Number(match[5] || 59), Number(match[6] || 59)))
+      : new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6] || 0));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   async createCalendarEvent(event, calendar) {
     const calendarEvent = new CalendarEvent();
     calendarEvent.title = event.title;

@@ -884,6 +884,33 @@ test('planBarPromotions: an approval at a curated bar\'s address or pin is a ren
 // one default the pipeline writes (SPRING at Camp Out read "12:00 AM –
 // 3:00 AM" off a page that names no hours).
 // ---------------------------------------------------------------------------
+test('buildDeck: a stated series the calendar holds nothing of is ONE series card, keyed by its rule, current by its next night, decided once', () => {
+  const series = (startMs) => newEvent({ title: 'BEEF', bar: 'Albatross', startDate: iso(startMs), endDate: iso(startMs + 4 * 3600 * 1000), recurrenceRule: 'FREQ=MONTHLY;BYDAY=3TH', _recurring: true, _recurringExport: true, _seriesWrite: true });
+  const payload = {
+    summary: { runId: '20300101-051500' }, config: { cities: CITIES }, parserResults: [], bearDroppedEvents: [],
+    analyzedEvents: [
+      // Three rows of one series (one per page it appeared on); the first starts in the past.
+      series(FUTURE - 40 * 86400000), series(FUTURE), series(FUTURE + 35 * 86400000),
+      newEvent({ title: 'FURBALL NYC' })
+    ]
+  };
+  const deck = rq.buildDeck(payload, rq.emptyDecisionStore(), { now: FUTURE - 10 * 86400000, curatedBars: {} });
+  const seriesCards = deck.cards.filter((card) => card.kind === 'series');
+  assert.equal(seriesCards.length, 1, 'one card for the series, not one per row');
+  assert.equal(deck.counts.series, 1);
+  assert.equal(deck.counts.new, 1);
+  const card = seriesCards[0];
+  assert.equal(card.key, 'series|beef|albatross|FREQ=MONTHLY;BYDAY=3TH');
+  assert.equal(card.proposal.recurrenceWords, 'the third Thursday of the month');
+  assert.ok(card.proposal.seriesNights.length >= 2, 'the nights it would put on the calendar');
+  assert.ok(new Date(card.proposal.startDate).getTime() < FUTURE - 10 * 86400000, 'its first night is past, and it is still current — a series is as current as its next night');
+  // A decision on the key covers every row of it.
+  const decided = rq.buildDeck(payload, { version: 1, decisions: [rq.buildDecision({ key: card.key, kind: 'series', verdict: 'approve', snapshot: card.proposal })] }, { now: FUTURE - 10 * 86400000, curatedBars: {} });
+  assert.equal(decided.cards.filter((c) => c.kind === 'series').length, 0);
+  assert.equal(decided.decided.filter((d) => d.kind === 'series').length, 1);
+  assert.equal(rq.buildDecision({ key: card.key, kind: 'series', verdict: 'approve' }).kind, 'series');
+});
+
 test('buildDeck: a defaulted end rides on the card as display.endDefaulted; a stated end does not', () => {
   const payload = {
     summary: { runId: '20300101-051500' }, config: { cities: CITIES }, parserResults: [], bearDroppedEvents: [],

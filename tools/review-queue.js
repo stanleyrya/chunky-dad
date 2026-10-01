@@ -351,7 +351,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -973,7 +973,7 @@ function findMissingPhoneCalendars(payload, entries, phoneCalendars) {
     const cities = (payload && payload.config && payload.config.cities) || {};
     const counts = new Map();
     for (const entry of Array.isArray(entries) ? entries : []) {
-        if (!entry || (entry.kind !== 'new' && entry.kind !== 'merge' && entry.kind !== 'override')) continue;
+        if (!entry || (entry.kind !== 'new' && entry.kind !== 'merge' && entry.kind !== 'override' && entry.kind !== 'series')) continue;
         const city = String((entry.proposal && entry.proposal.city) || '').trim();
         if (!city || phoneCalendars.has(city)) continue;
         const calendarName = cities[city] && typeof cities[city].calendar === 'string' ? cities[city].calendar : '';
@@ -1000,7 +1000,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1030,7 +1030,7 @@ function buildDeck(runPayload, store, options = {}) {
     };
     const file = (entry, decision) => {
         if (decision) {
-            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override';
+            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series';
             const executed = isEventKind ? executedMark(entry, decision) : null;
             // Still waiting for "Execute on phone": an approval the phone has
             // not written, and that is newer than the run's last execution
@@ -1057,13 +1057,25 @@ function buildDeck(runPayload, store, options = {}) {
 
     const extras = { parserNamesByKey: buildParserNamesByKey(payload), imageUseCounts: buildImageUseCounts(payload) };
     const analyzed = Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : [];
+    // One series, one card: a run can list the same stated series on
+    // several rows (one per page it appeared on); the first row carries
+    // the card, the rest are the same decision.
+    const seriesKeysSeen = new Set();
     analyzed.forEach((event, index) => {
         if (!core.isOwnerReviewCandidate(event)) return;
         const proposal = core.buildOwnerReviewProposal(event);
         if (!proposal) return;
+        if (proposal.kind === 'series') {
+            if (seriesKeysSeen.has(proposal.key)) return;
+            seriesKeysSeen.add(proposal.key);
+        }
         const endMs = SharedCore.toEpochMillis(proposal.endDate);
         const startMs = SharedCore.toEpochMillis(proposal.startDate);
-        const lastMs = endMs !== null ? endMs : startMs;
+        // A series is as current as its next night, not its first.
+        const nextNightMs = proposal.kind === 'series' && Array.isArray(proposal.seriesNights)
+            ? proposal.seriesNights.map((night) => SharedCore.toEpochMillis(night)).filter((ms) => ms !== null && ms >= now)[0]
+            : undefined;
+        const lastMs = nextNightMs !== undefined ? nextNightMs : (endMs !== null ? endMs : startMs);
         if (lastMs !== null && lastMs < now) {
             counts.pastSkipped++;
             return;
