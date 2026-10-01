@@ -14142,6 +14142,49 @@ test('a page that places its cards in prose: exactly one curated bar named outsi
   } finally { console.log = originalLog; }
 });
 
+test('page flight data: a listing that says "more" is read through the door its own bundle names, to the end; a robots-closed door means first page only', async () => {
+  const parser = createParser();
+  const row = (n) => ({ id: 'e' + n, slug: 'party-' + n, name: 'Party ' + n, start_date: '2026-11-' + String(10 + n).padStart(2, '0'), start_time: '21:00:00', end_time: '03:00:00', city: { name: 'Sydney' }, place: { name: 'ARQ' }, images: [] });
+  const first = [row(1), row(2)];
+  const tree = ['$', '$L25', null, { initialEvents: first, initialHasMore: true, initialNextOffset: 2, initialCityIds: ['city-1'], cardSize: 'comfortable' }];
+  const chunk = `13:${JSON.stringify(tree)}\n`;
+  const html = `<html><head><script src="/_next/static/chunks/app.js" async></script><script src="https://cdn.other.example/lib.js"></script></head><body><script>self.__next_f.push([1,${JSON.stringify(chunk)}])</script></body></html>`;
+  const data = parser.collectPageFlightData(html);
+  assert.equal(data.rows.length, 2);
+  assert.deepEqual(data.continuation, { hasMore: true, nextOffset: 2, ids: { key: 'initial_city_ids', values: ['city-1'] } });
+  // The bundle, as a Next.js build ships it: the fetch beside its params.
+  const bundle = 'let s=new URLSearchParams({tab:"past",offset:"0",limit:String(20)});fetch(`/api/stats?${s}`);'
+    + 'let e=new URLSearchParams({offset:String(N),limit:String(20),tab:p});B&&e.set("city_id",B);let t=await fetch(`/api/events?${e}`);';
+  const pages = {
+    'https://party.example/_next/static/chunks/app.js': bundle,
+    'https://party.example/api/events?offset=2&limit=2&city_id=city-1': { events: [row(3), row(4)], nextOffset: 4, hasMore: true },
+    'https://party.example/api/events?offset=4&limit=2&city_id=city-1': { events: [row(5), row(4)], nextOffset: 6, hasMore: false }
+  };
+  const { fetched, httpAdapter } = feedStubAdapter(pages);
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let more;
+  try { more = await parser.continuePageFlightRows(html, 'https://party.example/in/sydney', data.rows, data.continuation, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(more.map((r) => r.id), ['e3', 'e4', 'e5'], 'two more pages, the repeated row folded');
+  assert.ok(!fetched.includes('https://cdn.other.example/lib.js'), 'only same-site bundles are read');
+  assert.ok(lines.some((line) => /bundle reads more rows from \/api\/events \(offset, limit, tab, city_id\)/.test(line)), lines.join('\n'));
+  // Same host again: the door is remembered, the bundle is not re-read.
+  const before = fetched.length;
+  await parser.continuePageFlightRows(html, 'https://party.example/in/melbourne', data.rows, { hasMore: true, nextOffset: 2, ids: { key: 'initial_city_ids', values: ['city-1'] } }, httpAdapter);
+  assert.ok(!fetched.slice(before).includes('https://party.example/_next/static/chunks/app.js'));
+  // A door the site's robots.txt closes: the site's answer, once per host.
+  const closed = createParser();
+  const refusing = { async fetchData(url) { if (/app\.js$/.test(url)) return { html: bundle, url }; throw new Error(`HTTP request failed for ${url}: robots.txt of party.example disallows /api/events (Disallow: /api/)`); } };
+  console.log = (line) => lines.push(String(line));
+  let none;
+  try {
+    none = await closed.continuePageFlightRows(html, 'https://party.example/in/sydney', data.rows, data.continuation, refusing);
+    await closed.continuePageFlightRows(html, 'https://party.example/in/melbourne', data.rows, data.continuation, refusing);
+  } finally { console.log = originalLog; }
+  assert.deepEqual(none, []);
+  assert.equal(lines.filter((line) => /closes \/api\/events to crawlers/.test(line)).length, 1, 'said once');
+  assert.equal(lines.filter((line) => /said once per host/.test(line)).length, 1, 'the second page of the host is quiet');
+});
+
 test('date evidence: day-first spellings on the page corroborate the date ("27 SEP 2026", "16.10.26"); an ambiguous numeric day-first does not', () => {
   const parser = createParser();
   const has = (text, value) => parser.hasFieldEvidence(parser.buildAiEvidenceContextFromText(text), value, 'date', { imageEvidenceUrls: new Set() });

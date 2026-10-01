@@ -509,5 +509,7 @@
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    "2026-10-01: each city page ships its first 20 rows as flight data (initialHasMore/initialNextOffset) and loads the rest from /api/events?offset=&limit=&city_id= (read off the page's own bundle); robots.txt says \"Disallow: /api/\", so the scraper reads the first page only (the site's answer). Sydney holds 38 rows, Melbourne/Tokyo/Bangkok also say more."
+  ]
 }

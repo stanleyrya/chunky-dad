@@ -1341,7 +1341,12 @@ class AiWebParser {
             // The page's own data, streamed to the browser as React flight
             // chunks (see collectPageFlightDataRows): read as feed rows, with
             // the same builder, completeness gate and enrichment as a feed.
-            const pageDataRows = jsonApiPayload === null ? this.collectPageFlightDataRows(html) : [];
+            const pageFlight = jsonApiPayload === null ? this.collectPageFlightData(html) : { rows: [], continuation: null };
+            const pageDataRows = pageFlight.rows;
+            if (pageDataRows.length > 0 && pageFlight.continuation && pageFlight.continuation.hasMore === true) {
+                const more = await this.continuePageFlightRows(html, sourceUrl, pageDataRows, pageFlight.continuation, httpAdapter);
+                for (const row of more) pageDataRows.push(row);
+            }
             const pageDataEvents = pageDataRows
                 .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
                 .filter(event => event && (event.bar || event.address || event.city));
@@ -13551,8 +13556,17 @@ class AiWebParser {
     // recognizer the JSON-API route uses) is read as feed rows through the
     // same builder. No site names, no key names beyond the recognizer's.
     collectPageFlightDataRows(html) {
+        return this.collectPageFlightData(html).rows;
+    }
+
+    // The rows, plus what the object holding them says about MORE: a
+    // "has more" flag, the next offset, and the id lists beside them
+    // (whereto.party: initialHasMore / initialNextOffset / initialCityIds).
+    // Key names are matched by their words, never by a site's spelling.
+    collectPageFlightData(html) {
         const text = String(html || '');
-        if (!text.includes('__next_f.push')) return [];
+        const empty = { rows: [], continuation: null };
+        if (!text.includes('__next_f.push')) return empty;
         const chunks = [];
         const pushPattern = /__next_f\.push\(\[\s*\d+\s*,\s*("(?:[^"\\]|\\.)*")\s*\]\)/g;
         let match;
@@ -13566,8 +13580,23 @@ class AiWebParser {
         if (chunks.length === 0) return [];
         const rows = [];
         const seen = new Set();
+        let continuation = null;
         const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-        const visit = (node, depth) => {
+        const readContinuation = (holder) => {
+            if (!holder || continuation) return;
+            const found = { hasMore: null, nextOffset: null, ids: null };
+            for (const key of Object.keys(holder)) {
+                const normalized = this.normalizeJsonApiKey(key);
+                const value = holder[key];
+                if (/(^|_)has_?more$/.test(normalized) && typeof value === 'boolean') found.hasMore = value;
+                else if (/(^|_)next_?(offset|cursor|page)$/.test(normalized) && (typeof value === 'number' || typeof value === 'string')) found.nextOffset = value;
+                else if (/ids?$/.test(normalized) && Array.isArray(value) && value.length > 0 && value.every(item => typeof item === 'string' || typeof item === 'number')) {
+                    found.ids = { key: normalized, values: value.map(String) };
+                }
+            }
+            if (found.hasMore !== null || found.nextOffset !== null) continuation = found;
+        };
+        const visit = (node, depth, holder) => {
             if (!node || typeof node !== 'object' || depth > 60) return;
             if (Array.isArray(node)) {
                 if (node.length >= 2 && node.every(isPlainObject) && node.every(item => this.jsonApiObjectLooksEventLike(item))) {
@@ -13577,12 +13606,13 @@ class AiWebParser {
                         seen.add(key);
                         rows.push(item);
                     }
+                    readContinuation(holder);
                     return;
                 }
-                for (const item of node) visit(item, depth + 1);
+                for (const item of node) visit(item, depth + 1, null);
                 return;
             }
-            for (const key of Object.keys(node)) visit(node[key], depth + 1);
+            for (const key of Object.keys(node)) visit(node[key], depth + 1, node);
         };
         // The stream is `id:payload\n` records — except a text record
         // (`id:T<hex byte length>,<text>`), which is length-delimited and
@@ -13622,9 +13652,151 @@ class AiWebParser {
             } catch (_) {
                 continue;
             }
-            visit(parsed, 0);
+            visit(parsed, 0, null);
         }
-        return rows;
+        return { rows, continuation: rows.length > 0 ? continuation : null };
+    }
+
+    // THE PAGE SAYS THERE IS MORE; ITS OWN BUNDLE SAYS WHERE. A listing
+    // that ships its first rows as flight data and the rest behind a
+    // "load more" button (whereto.party: 20 rows, initialHasMore true,
+    // initialNextOffset 20 — Sydney holds 38) states the offset to ask
+    // from; the request itself is written in the page's own script
+    // bundle: fetch(`/api/events?${params}`) beside a URLSearchParams
+    // naming offset, limit and an id parameter. Read the same way the SPA
+    // door reads a JavaScript shell's bundle: same-site chunks the page
+    // references, page-cached (hash-named, so once per build); the one
+    // path whose words say "event" and whose params the page can fill —
+    // offset from the page, limit from the rows shipped, the id parameter
+    // from the id list beside them (matched by a shared word, "city").
+    // Pages are asked in order until the answer says no more, at most
+    // JSON_API_FEED_MAX_PAGES. Remembered per host for the run. Returns
+    // the extra rows (never the first page's again).
+    async continuePageFlightRows(html, pageUrl, rows, continuation, httpAdapter) {
+        if (!continuation || continuation.hasMore !== true || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
+        const offset = Number(continuation.nextOffset);
+        if (!Number.isFinite(offset) || offset <= 0) return [];
+        const origin = (String(pageUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        if (!origin) return [];
+        const hostKey = origin.replace(/^https?:\/\//i, '').toLowerCase();
+        if (!this.flightDoorsByHost) this.flightDoorsByHost = new Map();
+        let door = this.flightDoorsByHost.get(hostKey);
+        if (door === undefined) {
+            door = await this.findFlightDoorInBundles(html, pageUrl, httpAdapter);
+            this.flightDoorsByHost.set(hostKey, door);
+        }
+        if (!door) {
+            if (!this.flightDoorsSilenced) this.flightDoorsSilenced = new Set();
+            if (!this.flightDoorsSilenced.has(hostKey)) {
+                this.flightDoorsSilenced.add(hostKey);
+                console.log(`📦 PAGE DATA: ${pageUrl} says more rows exist (offset ${offset}) but no read endpoint is open to the page — first page only (said once per host)`);
+            }
+            return [];
+        }
+        const extra = [];
+        const seen = new Set(rows.map(row => String(row.id || row.slug || '')));
+        let next = offset;
+        let calls = 0;
+        const limit = Math.max(rows.length, 1);
+        while (calls < JSON_API_FEED_MAX_PAGES) {
+            const params = [];
+            for (const name of door.params) {
+                if (/offset|cursor|page/.test(name)) params.push(`${name}=${encodeURIComponent(String(next))}`);
+                else if (/limit|size|count|per/.test(name)) params.push(`${name}=${limit}`);
+                else if (/id/.test(name) && continuation.ids) {
+                    const word = name.replace(/_?ids?$/, '');
+                    if (!word || continuation.ids.key.includes(word)) params.push(`${name}=${encodeURIComponent(continuation.ids.values.join(','))}`);
+                }
+            }
+            const url = `${origin}${door.path}?${params.join('&')}`;
+            let body = '';
+            try {
+                const response = await httpAdapter.fetchData(url, { headers: { Accept: 'application/json, text/plain, */*' } });
+                body = response && typeof response.html === 'string' ? response.html : '';
+            } catch (error) {
+                const message = error && error.message ? error.message : String(error);
+                // The site's own robots.txt closing its read endpoint is the
+                // site's answer (whereto.party: "Disallow: /api/"): the first
+                // page is what it publishes to a crawler, and the door is not
+                // asked again this run on any of its pages.
+                if (/robots\.txt/i.test(message)) {
+                    this.flightDoorsByHost.set(hostKey, null);
+                    console.log(`📦 PAGE DATA: ${hostKey} closes ${door.path} to crawlers in its robots.txt — first page only, on every page of this host`);
+                    return extra;
+                }
+                console.log(`📦 PAGE DATA: ${url} did not answer (${message}) — ${extra.length} extra row(s) kept`);
+                break;
+            }
+            calls++;
+            let parsed = null;
+            try { parsed = JSON.parse(body); } catch (_) { parsed = null; }
+            const rowArray = parsed ? this.findJsonApiRowArray(parsed) : null;
+            const page = rowArray ? rowArray.rows.filter(row => this.jsonApiObjectLooksEventLike(row)) : [];
+            let added = 0;
+            for (const row of page) {
+                const key = String(row.id || row.slug || '');
+                if (key && seen.has(key)) continue;
+                if (key) seen.add(key);
+                extra.push(row);
+                added++;
+            }
+            const more = parsed && typeof parsed === 'object' && Object.keys(parsed).some(key => /(^|_)has_?more$/.test(this.normalizeJsonApiKey(key)) && parsed[key] === true);
+            const nextKey = parsed && typeof parsed === 'object' ? Object.keys(parsed).find(key => /(^|_)next_?(offset|cursor|page)$/.test(this.normalizeJsonApiKey(key))) : null;
+            const nextValue = nextKey ? Number(parsed[nextKey]) : NaN;
+            if (added === 0 || !more || !Number.isFinite(nextValue) || nextValue <= next) break;
+            next = nextValue;
+        }
+        console.log(`📦 PAGE DATA: ${pageUrl} says more rows exist (offset ${offset}) — ${door.path} answered ${extra.length} more row(s) in ${calls} call(s)`);
+        return extra;
+    }
+
+    // The read endpoint and its parameter names, from the page's own
+    // same-site script bundles: a fetch of a /api/… path with the
+    // URLSearchParams it is built from. null when no bundle states one.
+    async findFlightDoorInBundles(html, pageUrl, httpAdapter) {
+        const text = String(html || '');
+        const origin = (String(pageUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        const scripts = [];
+        const pattern = /<script\b[^>]*\ssrc=["']([^"']+)["'][^>]*>/gi;
+        let match;
+        while ((match = pattern.exec(text)) !== null && scripts.length < 24) {
+            const src = this.normalizeUrl(match[1], pageUrl);
+            if (!src || !src.startsWith(origin) || scripts.includes(src)) continue;
+            scripts.push(src);
+        }
+        const candidates = new Map();
+        for (const scriptUrl of scripts) {
+            let bundle = '';
+            try {
+                const response = await httpAdapter.fetchData(scriptUrl, { headers: { Accept: '*/*' } });
+                bundle = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            const fetchPattern = /fetch\(\s*`(\/(?:api|_api|rest|v\d+|data)\/[^`?$\s]{1,120})\?\$\{\w+\}`\s*\)/g;
+            let found;
+            while ((found = fetchPattern.exec(bundle)) !== null) {
+                const path = found[1];
+                const before = bundle.slice(Math.max(0, found.index - 700), found.index);
+                const paramsMatch = before.match(/URLSearchParams\(\{([^}]*)\}\)/g);
+                const lastParams = paramsMatch ? paramsMatch[paramsMatch.length - 1] : '';
+                const names = [];
+                for (const part of (lastParams.match(/\{([^}]*)\}/) || ['', ''])[1].split(',')) {
+                    const name = part.split(':')[0].trim().replace(/^["']|["']$/g, '');
+                    if (/^[a-z_][a-z0-9_]*$/i.test(name) && !names.includes(name)) names.push(name);
+                }
+                for (const setter of before.matchAll(/\.set\(\s*["']([a-z0-9_]+)["']/gi)) {
+                    if (!names.includes(setter[1])) names.push(setter[1]);
+                }
+                if (names.length === 0 || !names.some(name => /offset|cursor|page/.test(name))) continue;
+                const score = (path.toLowerCase().match(/(event|listing|schedule|calendar|party|show)/g) || []).length;
+                const existing = candidates.get(path);
+                if (!existing || existing.params.length < names.length) candidates.set(path, { path, params: names, score });
+            }
+        }
+        const best = Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0] || null;
+        if (best) console.log(`📦 PAGE DATA: ${pageUrl}'s bundle reads more rows from ${best.path} (${best.params.join(', ')})`);
+        return best && best.score > 0 ? best : null;
     }
 
     // Trimmed body that IS a JSON document ({...} or [...]) → parsed value;
