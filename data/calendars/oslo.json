@@ -3,5 +3,174 @@
     "calendarTimezone": "Europe/Oslo",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Bears go Bowling",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-11T18:00:00",
+      "endDate": "2026-11-11T20:00:00",
+      "unprocessedDescription": "bar: Oslo Bar & Bowling, Torggata 16, 0181 Oslo, Norge\naddr\ress: Oslo\nwebsite: https://www.norwaybears.com/en/2025/01/bears-go-bowling/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Oslo%20Bar%20%26%20Bowling%2C%20Torggata%2016%2C%200181%20Oslo%2C%20Norge%2C%20Oslo\nkey: bears-go-bowling|2026-11-11|oslo bar & bowling, torggata 16, 0181 oslo, norge\nbearSource: keyword\nshortName: BEARS GO BOWLING",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Oslo",
+      "wasUTC": true,
+      "sourceUid": "81971130-85A2-4F64-8A7F-689FB726A171",
+      "uid": "81971130-85A2-4F64-8A7F-689FB726A171",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Oslo Bar & Bowling, Torggata 16, 0181 Oslo, Norge",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg",
+      "cadence": null,
+      "address": "Oslo",
+      "website": "https://www.norwaybears.com/en/2025/01/bears-go-bowling/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Oslo%20Bar%20%26%20Bowling%2C%20Torggata%2016%2C%200181%20Oslo%2C%20Norge%2C%20Oslo",
+      "shortName": "BEARS GO BOWLING",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.norwaybears.com/en/2025/01/bears-go-bowling/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Oslo%20Bar%20%26%20Bowling%2C%20Torggata%2016%2C%200181%20Oslo%2C%20Norge%2C%20Oslo",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-go-bowling-468c7db0"
+    },
+    {
+      "name": "Bear Pub",
+      "day": "Friday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-27T20:00:00",
+      "endDate": "2026-11-28T00:00:00",
+      "unprocessedDescription": "bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww\rw.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pub|2026-11-27|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR PUB",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Oslo",
+      "wasUTC": true,
+      "sourceUid": "091B6F90-55E4-4D00-89C1-4622527BAF4B",
+      "uid": "091B6F90-55E4-4D00-89C1-4622527BAF4B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia Bar Diner Club",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "cadence": null,
+      "address": "Oslo",
+      "website": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+      "shortName": "BEAR PUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-pub-3e244770"
+    },
+    {
+      "name": "Bear Pub",
+      "day": "Friday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-25T20:00:00",
+      "endDate": "2026-12-26T00:00:00",
+      "unprocessedDescription": "bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww\rw.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pub|2026-12-25|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR PUB",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Oslo",
+      "wasUTC": true,
+      "sourceUid": "DA82DED1-923C-40E3-8559-132B20F11311",
+      "uid": "DA82DED1-923C-40E3-8559-132B20F11311",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia Bar Diner Club",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "cadence": null,
+      "address": "Oslo",
+      "website": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+      "shortName": "BEAR PUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-pub-30cc9422"
+    },
+    {
+      "name": "Bear Pub",
+      "day": "Friday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-30T20:00:00",
+      "endDate": "2026-10-31T00:00:00",
+      "unprocessedDescription": "bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww\rw.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pub|2026-10-30|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR PUB",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Oslo",
+      "wasUTC": true,
+      "sourceUid": "035E30D6-36CE-4120-96F4-7498BCB88250",
+      "uid": "035E30D6-36CE-4120-96F4-7498BCB88250",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia Bar Diner Club",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "cadence": null,
+      "address": "Oslo",
+      "website": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+      "shortName": "BEAR PUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-pub-509eb035"
+    }
+  ]
 }

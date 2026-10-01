@@ -5,4 +5,97 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-oslo
 X-WR-TIMEZONE:Europe/Oslo
+BEGIN:VEVENT
+DTSTART:20261111T170000Z
+DTEND:20261111T190000Z
+DTSTAMP:20261001T140823Z
+UID:81971130-85A2-4F64-8A7F-689FB726A171
+CREATED:20261001T131459Z
+DESCRIPTION:bar: Oslo Bar & Bowling\, Torggata 16\, 0181 Oslo\, Norge\naddr
+ ess: Oslo\nwebsite: https://www.norwaybears.com/en/2025/01/bears-go-bowling
+ /\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public
+ /event-images/2cac9255c7658e0d.jpg\nimageSource: json-api\ntimezone: Europe
+ /Oslo\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1
+ /object/public/event-images/2cac9255c7658e0d.jpg\naddressSource: page\ngmap
+ s: https://www.google.com/maps/search/?api=1&query=Oslo%20Bar%20%26%20Bowli
+ ng%2C%20Torggata%2016%2C%200181%20Oslo%2C%20Norge%2C%20Oslo\nkey: bears-go-
+ bowling|2026-11-11|oslo bar & bowling\, torggata 16\, 0181 oslo\, norge\nbe
+ arSource: keyword\nshortName: BEARS GO BOWLING
+LAST-MODIFIED:20261001T131459Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears go Bowling
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261127T190000Z
+DTEND:20261127T230000Z
+DTSTAMP:20261001T140823Z
+UID:091B6F90-55E4-4D00-89C1-4622527BAF4B
+CREATED:20261001T131457Z
+DESCRIPTION:bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww
+ w.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhcire
+ dwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33
+ a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pu
+ b|2026-11-27|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR P
+ UB
+LAST-MODIFIED:20261001T131458Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Pub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261225T190000Z
+DTEND:20261225T230000Z
+DTSTAMP:20261001T140823Z
+UID:DA82DED1-923C-40E3-8559-132B20F11311
+CREATED:20261001T131458Z
+DESCRIPTION:bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww
+ w.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhcire
+ dwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33
+ a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pu
+ b|2026-12-25|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR P
+ UB
+LAST-MODIFIED:20261001T131459Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Pub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261030T190000Z
+DTEND:20261030T230000Z
+DTSTAMP:20261001T140823Z
+UID:035E30D6-36CE-4120-96F4-7498BCB88250
+CREATED:20261001T131457Z
+DESCRIPTION:bar: Ophelia Bar Diner Club\naddress: Oslo\nwebsite: https://ww
+ w.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/\nimage: https://acqvlhcire
+ dwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33
+ a7.jpg\nimageSource: json-api\ntimezone: Europe/Oslo\nimageHorizontal: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ f8c40731005a33a7.jpg\naddressSource: page\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Ophelia%20Bar%20Diner%20Club%2C%20Oslo\nkey: bear-pu
+ b|2026-10-30|ophelia bar diner club\nbearSource: keyword\nshortName: BEAR P
+ UB
+LAST-MODIFIED:20261001T131457Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Pub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

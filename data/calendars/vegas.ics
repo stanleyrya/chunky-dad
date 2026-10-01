@@ -6,9 +6,65 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-vegas
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20251102T040000Z
+DTEND:20251102T110000Z
+DTSTAMP:20261001T140823Z
+UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
+CREATED:20250830T012218Z
+DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
+ HALLOWOOF  LAS VEGAS. FULL DETAILS COMING SOON\nbar: Dust Las Vegas\naddres
+ s: 855 East Twain Avenue\, Las Vegas\, NV 89169\ntimezone: America/Los_Ange
+ les\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventb
+ rite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-las-vega
+ s-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 10/1)\nimage: https:
+ //img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1119746233%2F1850137
+ 22403%2F1%2Foriginal.20250910-090426?crop=focalpoint&fit=crop&h=230&w=460&a
+ uto=format%2Ccompress&q=75&sharp=10&fp-x=0.00562374813779&fp-y=0.0039299610
+ 8949&s=b5b7632d3b98e604c53a0466d40046ce\nshortName: MEGA-WOOF\ninstagram: h
+ ttps://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_F
+ yIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
+LAST-MODIFIED:20251002T003901Z
+LOCATION:36.1214368\, -115.144945
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250831T040000Z
+DTEND:20250831T090000Z
+DTSTAMP:20261001T140823Z
+UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
+CREATED:20250823T205551Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
+  BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las V
+ egas\, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite
+ .com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1
+ 531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-
+ vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 
+ - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?cr
+ op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
+ x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\nin
+ stagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=Ch
+ IJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbri
+ te
+LAST-MODIFIED:20250830T170548Z
+LOCATION:36.1214368\, -115.144945
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260906T040000Z
 DTEND:20260906T070000Z
-DTSTAMP:20260927T220619Z
+DTSTAMP:20261001T140823Z
 UID:9F44CB92-0CF6-4DB8-A186-E66E3729AF79
 CREATED:20260731T165257Z
 DESCRIPTION:description: DADDIES AT WORK – Labor Day Weekend | Las Vegas Th
@@ -40,93 +96,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261101T040000Z
-DTEND:20261101T100000Z
-DTSTAMP:20260927T220619Z
-UID:62A6FE16-EE4B-4007-B515-8333D2AC84CD
-CREATED:20260927T214755Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - HALLOWEEN\nbar: Dus
- t Las Vegas\naddress: 855\, E Twain Ave Unit 114\, Las Vegas\, NV 89169\nti
- cketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-halloween-
- tickets-2002096523597\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1194139225%2F185013722403%2F1%2Foriginal.20260922-204244?cr
- op=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&
- fp-y=0.5&s=f508409d3e3b40fdfb689255c5e3bb5a\nimageSource: jsonld\ncover: $1
- 1.58-$22.10\ntimezone: America/Los_Angeles\nimageVertical: https://img.evbu
- c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194139225%2F185013722403%2F1%
- 2Foriginal.20260922-204244?crop=focalpoint&fit=crop&w=940&auto=format%2Ccom
- press&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=f508409d3e3b40fdfb689255c5e3bb5a\nb
- arSource: curated\naddressSource: page\nwebsite: https://www.eventbrite.com
- /e/megawoof-america-las-vegas-halloween-tickets-2002096523597\ngmaps: https
- ://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%2C%2
- 0E%20Twain%20Ave%20Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169\npinSource: 
- curated
-LAST-MODIFIED:20260927T214755Z
-LOCATION:36.1213962\, -115.1450910
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - LAS VEGAS - HALLOWEEN
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250831T040000Z
-DTEND:20250831T090000Z
-DTSTAMP:20260927T220619Z
-UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
-CREATED:20250823T205551Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
-  BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las V
- egas\, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite
- .com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1
- 531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-
- vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 
- - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?cr
- op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
- x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\nin
- stagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.goo
- gle.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=Ch
- IJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbri
- te
-LAST-MODIFIED:20250830T170548Z
-LOCATION:36.1214368\, -115.144945
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20270616T070000Z
-DTEND:20270622T065959Z
-DTSTAMP:20260927T220619Z
-UID:258202F5-59E9-47C5-8965-09EAD374E76D
-CREATED:20260919T161246Z
-DESCRIPTION:bar: Tuscany Suites & Casino\naddress: 255 East Flamingo Road\,
-  Las Vegas\, Nevada\nwebsite: https://www.biggervegas.com/\nimage: https://
- acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/382e
- ded4ab0a93d3.png\nimageSource: json-api\ncover: $229-$249\ntimezone: Americ
- a/Los_Angeles\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/s
- earch/?api=1&query=Tuscany%20Suites%20%26%20Casino%2C%20255%20East%20Flamin
- go%20Road%2C%20Las%20Vegas%2C%20Nevada\npinSource: geocoded-exact\nbarSourc
- e: geo-poi\nkey: biggervegas-2027|2027-06-16|tuscany suites & casino\nbearS
- ource: config\nshortName: BIGGERV-EGAS
-LAST-MODIFIED:20260919T161246Z
-LOCATION:36.1131556\, -115.1599087
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BiggerVegas 2027
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260524T040000Z
 DTEND:20260524T090000Z
-DTSTAMP:20260927T220619Z
+DTSTAMP:20261001T140823Z
 UID:88E347BD-4E10-44E2-966A-19CAACE20C42
 CREATED:20260512T171307Z
 DESCRIPTION:description: MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -\nbar
@@ -153,30 +125,93 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251102T040000Z
-DTEND:20251102T110000Z
-DTSTAMP:20260927T220619Z
-UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
-CREATED:20250830T012218Z
-DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
- HALLOWOOF  LAS VEGAS. FULL DETAILS COMING SOON\nbar: Dust Las Vegas\naddres
- s: 855 East Twain Avenue\, Las Vegas\, NV 89169\ntimezone: America/Los_Ange
- les\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventb
- rite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-las-vega
- s-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 10/1)\nimage: https:
- //img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1119746233%2F1850137
- 22403%2F1%2Foriginal.20250910-090426?crop=focalpoint&fit=crop&h=230&w=460&a
- uto=format%2Ccompress&q=75&sharp=10&fp-x=0.00562374813779&fp-y=0.0039299610
- 8949&s=b5b7632d3b98e604c53a0466d40046ce\nshortName: MEGA-WOOF\ninstagram: h
- ttps://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/ma
- ps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_F
- yIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
-LAST-MODIFIED:20251002T003901Z
-LOCATION:36.1214368\, -115.144945
+DTSTART:20261101T040000Z
+DTEND:20261101T100000Z
+DTSTAMP:20261001T140823Z
+UID:62A6FE16-EE4B-4007-B515-8333D2AC84CD
+CREATED:20260927T214755Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - HALLOWEEN\nbar: Dus
+ t Las Vegas\naddress: 855\, E Twain Ave Unit 114\, Las Vegas\, NV 89169\nti
+ cketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-halloween-
+ tickets-2002096523597\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1194139225%2F185013722403%2F1%2Foriginal.20260922-204244?cr
+ op=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&
+ fp-y=0.5&s=f508409d3e3b40fdfb689255c5e3bb5a\ncover: $11.58-$22.10\ntimezone
+ : America/Los_Angeles\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fc
+ dn.evbuc.com%2Fimages%2F1194139225%2F185013722403%2F1%2Foriginal.20260922-2
+ 04244?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&f
+ p-x=0.5&fp-y=0.5&s=f508409d3e3b40fdfb689255c5e3bb5a\nwebsite: https://linkt
+ r.ee/megawoof_america\nshortName: MEGA­WOOF\ninstagram: https://www.instagr
+ am.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: 
+ megawoof-america-las-vegas-halloween|2026-11-01|dust las vegas\nbearSource:
+  keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbar
+ Source: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Dus
+ t%20Las%20Vegas%2C%20855%2C%20E%20Twain%20Ave%20Unit%20114%2C%20Las%20Vegas
+ %2C%20NV%2089169
+LAST-MODIFIED:20261001T131415Z
+LOCATION:36.1213962\, -115.1450910
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
+SUMMARY:MEGAWOOF AMERICA - LAS VEGAS - HALLOWEEN
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270620T230000Z
+DTEND:20270621T040000Z
+DTSTAMP:20261001T140823Z
+UID:688F9BD2-EEB5-4068-9C35-AAEDD756DED5
+CREATED:20261001T131414Z
+DESCRIPTION:description: Join us Sunday\, June 20\, 2027\, from 4–9 PM at P
+ iranha Nightclub for one last unforgettable celebration filled with big bod
+ ies\, hot dancers\, great music\, and pure Vegas energy. Close out the week
+ end with your Chub and Bear community at Club Chub—where every body belongs
+ .Club Chub presents Viva Chub Vegas\, the official finale party for BiggerC
+ ity’s Bigger Vegas! After an incredible weekend in Las Vegas\, we’re closin
+ g it out the only way Club Chub knows how—with big energy\, big bodies\, ho
+ t dancers\, amazing music\, and a packed dance floor.\nbar: Piranha Nightcl
+ ub\naddress: 4633 Paradise Road\, Las Vegas\, NV 89169\ntimezone: America/L
+ os_Angeles\nticketUrl: https://www.sickening.events/e/club-chub-viva-chub-v
+ egas/tickets\nimage: https://static.wixstatic.com/media/f91121_c787d62400c5
+ 475ba1d32213041e6e7e~mv2.jpg\npinSource: page\naddressSource: page\nwebsite
+ : https://sickening.events/e/club-chub-viva-chub-vegas\ngmaps: https://www.
+ google.com/maps/search/?api=1&query=Piranha%20Nightclub%2C%204633%20Paradis
+ e%20Road%2C%20Las%20Vegas%2C%20NV%2089169\nshortName: CLUB CHUB\ninstagram:
+  https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.
+ com\nkey: club-chub-viva-chub-vegas|2027-06-20|piranha nightclub\ncover: $3
+ 0-$35\nimageSource: page\nbarSource: page-adjacent
+LAST-MODIFIED:20261001T131414Z
+LOCATION:36.105642515649\, -115.151381573323
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CLUB CHUB: Viva Chub Vegas
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20270616T070000Z
+DTEND:20270622T065959Z
+DTSTAMP:20261001T140823Z
+UID:258202F5-59E9-47C5-8965-09EAD374E76D
+CREATED:20260919T161246Z
+DESCRIPTION:bar: Tuscany Suites & Casino\naddress: 255 East Flamingo Road\,
+  Las Vegas\, Nevada\nwebsite: https://www.biggervegas.com/\nimage: https://
+ acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/382e
+ ded4ab0a93d3.png\nimageSource: json-api\ncover: $229-$249\ntimezone: Americ
+ a/Los_Angeles\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=Tuscany%20Suites%20%26%20Casino%2C%20255%20East%20Flamin
+ go%20Road%2C%20Las%20Vegas%2C%20Nevada\npinSource: geocoded-exact\nbarSourc
+ e: geo-poi\nkey: biggervegas-2027|2027-06-16|tuscany suites & casino\nbearS
+ ource: config\nshortName: BIGGERV-EGAS
+LAST-MODIFIED:20260919T161246Z
+LOCATION:36.1131556\, -115.1599087
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BiggerVegas 2027
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR

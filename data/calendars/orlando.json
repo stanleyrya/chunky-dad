@@ -3,5 +3,100 @@
     "calendarTimezone": "America/New_York",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Bear Tea-Dance",
+      "day": "Sunday",
+      "time": "12PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 28.5437437,
+        "lng": -81.3792958
+      },
+      "startDate": "2026-10-18T12:00:00",
+      "endDate": "2026-10-18T18:00:00",
+      "unprocessedDescription": "bar: Anthem Orlando\naddress: Orlando, FL\nwebsite: https://ww\rw.bearjamboree.com/bear-tea-dance\nticketUrl: https://www.bearjamboree.com/tickets\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg\nimageSource: json-api\ntimezone: America/New_York\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Anthem%20Orlando%2C%20Orlando%2C%20FL\npinSource: curated\nkey: bear-tea-dance|2026-10-18|anthem orlando\nbearSource: keyword\nshortName: BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "87567182-B9D4-4FC5-9098-33440F2400B1",
+      "uid": "87567182-B9D4-4FC5-9098-33440F2400B1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Anthem Orlando",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg",
+      "cadence": null,
+      "address": "Orlando, FL",
+      "website": "https://www.bearjamboree.com/bear-tea-dance",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Anthem%20Orlando%2C%20Orlando%2C%20FL",
+      "ticketUrl": "https://www.bearjamboree.com/tickets",
+      "shortName": "BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearjamboree.com/bear-tea-dance",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Anthem%20Orlando%2C%20Orlando%2C%20FL",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearjamboree.com/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-tea-dance-67b9f342"
+    },
+    {
+      "name": "Bear Jamboree",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-06-03T00:00:00",
+      "endDate": "2027-06-08T00:00:00",
+      "unprocessedDescription": "bar: Crowne Plaza Lake Buena Vista\naddress: Orlando, FL\nwebs\rite: https://www.bearjamboree.com/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nimageSource: json-api\ntimezone: America/New_York\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL\nkey: bear-jamboree|2027-06-03|crowne plaza lake buena vista\nallDay: true\nbearSource: keyword\nshortName: BEAR JAMBOREE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
+      "uid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crowne Plaza Lake Buena Vista",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+      "cadence": null,
+      "address": "Orlando, FL",
+      "website": "https://www.bearjamboree.com/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
+      "shortName": "BEAR JAMBOREE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearjamboree.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-jamboree-21473785"
+    }
+  ]
 }

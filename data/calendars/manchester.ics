@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20261114T160000Z
 DTEND:20261114T200000Z
-DTSTAMP:20260919T140628Z
+DTSTAMP:20261001T140823Z
 UID:E9C492CE-BB9F-4C9B-BC5D-E1865D97CC5A
 CREATED:20260918T134818Z
 DESCRIPTION:description: The Manbears Social takes place in The Black Eagle
@@ -34,7 +34,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261212T160000Z
 DTEND:20261212T200000Z
-DTSTAMP:20260919T140628Z
+DTSTAMP:20261001T140823Z
 UID:C5103763-B331-4CF3-B2E5-229C506676AB
 CREATED:20260918T134819Z
 DESCRIPTION:description: The Manbears Social takes place in The Black Eagle
@@ -58,58 +58,29 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260920T190000Z
-DTEND:20260921T000000Z
-DTSTAMP:20260919T140628Z
-UID:AAB63504-390D-4D67-81B7-4EA010EA9D67
-CREATED:20260918T134816Z
-DESCRIPTION:description: From 8pm every week\, straight after Sunday Servic
- e\, your host - Moodybear\, takes your requests and lets you get on stage t
- o sing your heart out! Get down early\, get your song requests in and finis
- h the weekend off with a bang!\nbar: The Eagle Bar\naddress: 15 Bloom St\, 
- Manchester M1 3HZ\, UK\ntimezone: Europe/London\nwebsite: https://www.eagle
- manchester.com/event-details/beareoke-2026-09-20-20-00\ncadence: FREQ=WEEKL
- Y\;BYDAY=SU\nkey: beareoke|2026-09-20|the eagle bar\nimage: https://static.
- wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\nimage
- Horizontal: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f1
- 1407dee4692~mv2.webp\nbearSource: keyword\nshortName: BEAREOKE\npinSource: 
- geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: page-a
- djacent\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Eagle
- %20Bar%2C%2015%20Bloom%20St%2C%20Manchester%20M1%203HZ%2C%20UK
-LAST-MODIFIED:20260919T131039Z
+DTSTART:20261002T180000Z
+DTEND:20261003T030000Z
+DTSTAMP:20261001T140823Z
+UID:4F574378-2553-4C4C-B34D-DEE2285909FA
+CREATED:20261001T131419Z
+DESCRIPTION:description: A monthly staple in our diary - but October's Leat
+ her Social is a Manchester Leather Weekend special. Held in our Lodge Bar i
+ t's the perfect place start your weekend and meet up with old friends and m
+ ake some new ones too!\ntimezone: Europe/London\nbar: The Eagle Bar\naddres
+ s: 15 Bloom St\, Manchester M1 3HZ\, UK\nwebsite: https://www.eaglemanchest
+ er.com/event-details/manchester-leather-weekend-friday-social\nimage: https
+ ://static.wixstatic.com/media/741c1a_5372d40aa70844ad86e06ee29c72eb7f~mv2.j
+ pg\nimageSource: json-api\nimageHorizontal: https://static.wixstatic.com/me
+ dia/741c1a_5372d40aa70844ad86e06ee29c72eb7f~mv2.jpg\nbarSource: curated\npi
+ nSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=The%20Eagle%20Bar%2C%2015%20Bloom%20St%2C%20Manchester%20M1
+ %203HZ%2C%20UK\nkey: manchester-leather-weekend-friday-social|2026-10-02|th
+ e eagle bar\nbearSource: keyword\nshortName: MANCHESTER
+LAST-MODIFIED:20261001T131419Z
 LOCATION:53.4776757\, -2.2369046
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Beareoke
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261002T220000Z
-DTEND:20261003T040000Z
-DTSTAMP:20260919T140628Z
-UID:E08B3371-F8D3-4A32-AE94-722642B9B1C4
-CREATED:20260918T134817Z
-DESCRIPTION:description: MANCHESTER LEATHER WEEKEND OPENING PARTY! DILF ret
- urns to Eagle for THE OFFICIAL OPENING PARTY OF MANCHESTER LEATHER WEEKEND 
- 2026! Leathermen from all over the world will be joining us\, as well as DI
- LF's usual mix of sexy Bears\, Cubs\, Dads\, Lads\, Rubbermen\, Jocks\, Pup
- s\, and more!\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Blo
- om St\, Manchester M1 3HZ\, UK\nwebsite: https://www.eaglemanchester.com/ev
- ent-details/dilf-manchester-leather-edition-3\nticketUrl: https://dilf.uk/e
- vents/dilf-manchester-leather-edition--ev_8437481\nimage: https://static.wi
- xstatic.com/media/741c1a_37fdc2c1ddf04e0a8da08406236d930b~mv2.jpg\nimageSou
- rce: json-api\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3
- 7fdc2c1ddf04e0a8da08406236d930b~mv2.jpg\npinSource: page\naddressSource: pa
- ge\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.
- 2369046\nkey: dilf-manchester-leather-edition|2026-10-02|the eagle bar\nbea
- rSource: keyword\nshortName: DILF MANCHESTER
-LAST-MODIFIED:20260918T134817Z
-LOCATION:53.4776757\, -2.2369046
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DILF Manchester: Leather Edition
+SUMMARY:Manchester Leather Weekend - Friday Social
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -117,7 +88,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260927T190000Z
 DTEND:20260928T000000Z
-DTSTAMP:20260919T140628Z
+DTSTAMP:20261001T140823Z
 UID:91362F50-9FFC-413B-A7E1-E75F56ED0DD1
 CREATED:20260918T134817Z
 DESCRIPTION:description: From 8pm every week\, straight after Sunday Servic
@@ -145,7 +116,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261010T150000Z
 DTEND:20261010T190000Z
-DTSTAMP:20260919T140628Z
+DTSTAMP:20261001T140823Z
 UID:1C6CCDFC-EE80-488C-ACE2-10BEA8F0C60E
 CREATED:20260918T134818Z
 DESCRIPTION:description: The Manbears Social takes place in The Black Eagle
@@ -165,6 +136,117 @@ LOCATION:53.4776757\, -2.2369046
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Manbears Social
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261003T183000Z
+DTEND:20261004T050000Z
+DTSTAMP:20261001T140823Z
+UID:B37990D0-735B-4485-BDEF-DABA3A0EF476
+CREATED:20261001T131420Z
+DESCRIPTION:description: Our regular monthly social with added BLUF but all
+  are welcome! This event is held at our Lodge Bar.\nbar: The Eagle Bar\nadd
+ ress: 15 Bloom St\, Manchester M1 3HZ\, UK\nimage: https://static.wixstatic
+ .com/media/741c1a_b2aa02cf8ded42fe93a0d2ad099467c5~mv2.jpg\ntimezone: Europ
+ e/London\nimageHorizontal: https://static.wixstatic.com/media/741c1a_b2aa02
+ cf8ded42fe93a0d2ad099467c5~mv2.jpg\npinSource: page\naddressSource: page\nw
+ ebsite: https://www.eaglemanchester.com/event-details/the-leather-and-bluf-
+ social\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Eagle%
+ 20Bar%2C%2015%20Bloom%20St%2C%20Manchester%20M1%203HZ%2C%20UK\nkey: the-lea
+ ther-and-bluf-social|2026-10-03|the eagle bar\nimageSource: json-api\nbarSo
+ urce: curated\nbearSource: keyword\nshortName: LEATHER
+LAST-MODIFIED:20261001T131420Z
+LOCATION:53.4776757\, -2.2369046
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Leather and BLUF Social
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T190000Z
+DTEND:20260921T000000Z
+DTSTAMP:20261001T140823Z
+UID:AAB63504-390D-4D67-81B7-4EA010EA9D67
+CREATED:20260918T134816Z
+DESCRIPTION:description: From 8pm every week\, straight after Sunday Servic
+ e\, your host - Moodybear\, takes your requests and lets you get on stage t
+ o sing your heart out! Get down early\, get your song requests in and finis
+ h the weekend off with a bang!\nbar: The Eagle Bar\naddress: 15 Bloom St\, 
+ Manchester M1 3HZ\, UK\ntimezone: Europe/London\nwebsite: https://www.eagle
+ manchester.com/event-details/beareoke-2026-09-20-20-00\ncadence: FREQ=WEEKL
+ Y\;BYDAY=SU\nkey: beareoke|2026-09-20|the eagle bar\nimage: https://static.
+ wixstatic.com/media/741c1a_d6cabdb211d9484f849f11407dee4692~mv2.webp\nimage
+ Horizontal: https://static.wixstatic.com/media/741c1a_d6cabdb211d9484f849f1
+ 1407dee4692~mv2.webp\nbearSource: keyword\nshortName: BEAREOKE\npinSource: 
+ geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: page-a
+ djacent\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Eagle
+ %20Bar%2C%2015%20Bloom%20St%2C%20Manchester%20M1%203HZ%2C%20UK
+LAST-MODIFIED:20260919T131039Z
+LOCATION:53.4776757\, -2.2369046
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beareoke
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261002T220000Z
+DTEND:20261003T040000Z
+DTSTAMP:20261001T140823Z
+UID:E08B3371-F8D3-4A32-AE94-722642B9B1C4
+CREATED:20260918T134817Z
+DESCRIPTION:description: MANCHESTER LEATHER WEEKEND OPENING PARTY! DILF ret
+ urns to Eagle for THE OFFICIAL OPENING PARTY OF MANCHESTER LEATHER WEEKEND 
+ 2026! Leathermen from all over the world will be joining us\, as well as DI
+ LF's usual mix of sexy Bears\, Cubs\, Dads\, Lads\, Rubbermen\, Jocks\, Pup
+ s\, and more!\ntimezone: Europe/London\nbar: The Eagle Bar\naddress: 15 Blo
+ om St\, Manchester M1 3HZ\, UK\nwebsite: https://www.eaglemanchester.com/ev
+ ent-details/dilf-manchester-leather-edition-3\nticketUrl: https://dilf.uk/e
+ vents/dilf-manchester-leather-edition--ev_8437481\nimage: https://static.wi
+ xstatic.com/media/741c1a_37fdc2c1ddf04e0a8da08406236d930b~mv2.jpg\nimageSou
+ rce: json-api\nimageHorizontal: https://static.wixstatic.com/media/741c1a_3
+ 7fdc2c1ddf04e0a8da08406236d930b~mv2.jpg\npinSource: page\naddressSource: pa
+ ge\ngmaps: https://www.google.com/maps/search/?api=1&query=53.4776757%2C-2.
+ 2369046\nkey: dilf-manchester-leather-edition|2026-10-02|the eagle bar\nbea
+ rSource: keyword\nshortName: DILF MANCHESTER
+LAST-MODIFIED:20260918T134817Z
+LOCATION:53.4776757\, -2.2369046
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DILF Manchester: Leather Edition
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T200000Z
+DTEND:20261005T020000Z
+DTSTAMP:20261001T140823Z
+UID:CB89D42E-BC50-4C84-8CC7-2DC034A602C9
+CREATED:20261001T131420Z
+DESCRIPTION:description: The famous Manchester Leather Weekend disco return
+ s to Eagle on Sunday 4th October! A staple in the MLW diary and the best wa
+ y to end the weekend. Entry is included with your MLW wristband but separat
+ e and on the door tickets are also available.\ntimezone: Europe/London\nbar
+ : The Eagle Bar\naddress: 15 Bloom St\, Manchester M1 3HZ\, UK\nwebsite: ht
+ tps://www.eaglemanchester.com/event-details/leather-disco\nimage: https://s
+ tatic.wixstatic.com/media/741c1a_2d21588fcf9f474ba27ae4f367b5b43e~mv2.jpg\n
+ imageSource: json-api\nimageHorizontal: https://static.wixstatic.com/media/
+ 741c1a_2d21588fcf9f474ba27ae4f367b5b43e~mv2.jpg\nbarSource: curated\npinSou
+ rce: page\naddressSource: page\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=The%20Eagle%20Bar%2C%2015%20Bloom%20St%2C%20Manchester%20M1%203
+ HZ%2C%20UK\nkey: leather-disco|2026-10-04|the eagle bar\nbearSource: keywor
+ d\nshortName: LEATHER DISCO
+LAST-MODIFIED:20261001T131421Z
+LOCATION:53.4776757\, -2.2369046
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Leather Disco
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

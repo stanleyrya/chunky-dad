@@ -5,4 +5,47 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-leipzig
 X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261009
+DTEND;VALUE=DATE:20261012
+DTSTAMP:20261001T140823Z
+UID:08BA2794-AF5C-49F3-A925-EE5B03A8E1D1
+CREATED:20261001T131400Z
+DESCRIPTION:address: Leipzig\nwebsite: https://www.leipzig-baeren.de/party\
+ nticketUrl: https://www.leipzig-baeren.de/party/#ticketshop\ntimezone: Euro
+ pe/Berlin\naddressSource: page\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=Leipzig\nkey: leipzig-bear-weekend|2026-10-08|\nallDay: true\nb
+ earSource: keyword\nshortName: LEIPZIG BEAR
+LAST-MODIFIED:20261001T131400Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Leipzig Bear Weekend
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261010T170000Z
+DTEND:20261010T200000Z
+DTSTAMP:20261001T140823Z
+UID:E06F3FD1-FB4A-470E-BB58-A1E7B35D076A
+CREATED:20261001T131401Z
+DESCRIPTION:bar: WUEST – Pittlerwerke\naddress: Leipzig\, Saxony\nticketUrl
+ : https://www.leipzig-baeren.de/party/#ticketshop\nimage: https://acqvlhcir
+ edwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f4
+ 31d.jpg\nimageSource: json-api\ncover: $18\ntimezone: Europe/Berlin\nimageH
+ orizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/publi
+ c/event-images/271f3db2171f431d.jpg\naddressSource: page\ngmaps: https://ww
+ w.google.com/maps/search/?api=1&query=WUEST%20%E2%80%93%20Pittlerwerke%2C%2
+ 0Leipzig%2C%20Saxony\nkey: happy-bärsday-–-10-jahre-leipzig-bären|2026-10-1
+ 0|wuest – pittlerwerke\nbearSource: ai\nshortName: HAPPY BÄRSDAY\nendUnknow
+ n: true
+LAST-MODIFIED:20261001T131401Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Happy Bärsday – 10 Jahre Leipzig Bären
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

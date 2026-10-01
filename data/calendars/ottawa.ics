@@ -5,4 +5,28 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-ottawa
 X-WR-TIMEZONE:America/Toronto
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261008
+DTEND;VALUE=DATE:20261013
+DTSTAMP:20261001T140823Z
+UID:5C8EBE8C-5E45-441B-9260-1D1BF9701288
+CREATED:20261001T131500Z
+DESCRIPTION:bar: Courtyard Ottawa Downtown\naddress: Ottawa\, ON\nwebsite: 
+ https://ottawabears.com/bear-frolic/\nticketUrl: https://ottawabears.com/be
+ ar-frolic/#tickets\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage
+ /v1/object/public/event-images/49af59253fc77b35.png\nimageSource: json-api\
+ ntimezone: America/Toronto\nimageHorizontal: https://acqvlhciredwtlbpisso.s
+ upabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png\naddr
+ essSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Cou
+ rtyard%20Ottawa%20Downtown%2C%20Ottawa%2C%20ON\nkey: bear-frolic|2026-10-08
+ |courtyard ottawa downtown\nallDay: true\nbearSource: keyword\nshortName: B
+ EAR FROLIC
+LAST-MODIFIED:20261001T131500Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Frolic
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -3,5 +3,95 @@
     "calendarTimezone": "Europe/Berlin",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Leipzig Bear Weekend",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-09T00:00:00",
+      "endDate": "2026-10-12T00:00:00",
+      "unprocessedDescription": "address: Leipzig\nwebsite: https://www.leipzig-baeren.de/party\\\rnticketUrl: https://www.leipzig-baeren.de/party/#ticketshop\ntimezone: Europe/Berlin\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Leipzig\nkey: leipzig-bear-weekend|2026-10-08|\nallDay: true\nbearSource: keyword\nshortName: LEIPZIG BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": false,
+      "sourceUid": "08BA2794-AF5C-49F3-A925-EE5B03A8E1D1",
+      "uid": "08BA2794-AF5C-49F3-A925-EE5B03A8E1D1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cadence": null,
+      "address": "Leipzig",
+      "website": "https://www.leipzig-baeren.de/party",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Leipzig",
+      "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
+      "shortName": "LEIPZIG BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.leipzig-baeren.de/party",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Leipzig",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.leipzig-baeren.de/party/#ticketshop",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "leipzig-bear-weekend-34b96cb5"
+    },
+    {
+      "name": "Happy Bärsday – 10 Jahre Leipzig Bären",
+      "day": "Saturday",
+      "time": "7PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-10T19:00:00",
+      "endDate": "2026-10-10T22:00:00",
+      "unprocessedDescription": "bar: WUEST – Pittlerwerke\naddress: Leipzig, Saxony\nticketUrl\r: https://www.leipzig-baeren.de/party/#ticketshop\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg\nimageSource: json-api\ncover: $18\ntimezone: Europe/Berlin\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=WUEST%20%E2%80%93%20Pittlerwerke%2C%20Leipzig%2C%20Saxony\nkey: happy-bärsday-–-10-jahre-leipzig-bären|2026-10-10|wuest – pittlerwerke\nbearSource: ai\nshortName: HAPPY BÄRSDAY\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "E06F3FD1-FB4A-470E-BB58-A1E7B35D076A",
+      "uid": "E06F3FD1-FB4A-470E-BB58-A1E7B35D076A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "WUEST – Pittlerwerke",
+      "cover": "$18",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg",
+      "cadence": null,
+      "address": "Leipzig, Saxony",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=WUEST%20%E2%80%93%20Pittlerwerke%2C%20Leipzig%2C%20Saxony",
+      "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
+      "shortName": "HAPPY BÄRSDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=WUEST%20%E2%80%93%20Pittlerwerke%2C%20Leipzig%2C%20Saxony",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.leipzig-baeren.de/party/#ticketshop",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "happy-brsday-10-jahre-leipzig-bren-63892cbb"
+    }
+  ]
 }

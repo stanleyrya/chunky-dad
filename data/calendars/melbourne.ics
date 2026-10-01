@@ -5,4 +5,50 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-melbourne
 X-WR-TIMEZONE:Australia/Melbourne
+BEGIN:VEVENT
+DTSTART:20261127T100000Z
+DTEND:20261127T170000Z
+DTSTAMP:20261001T140823Z
+UID:D0E0E34E-DD0D-4582-8FFD-29270862C88F
+CREATED:20261001T131455Z
+DESCRIPTION:bar: New Guernica\nticketUrl: https://events.humanitix.com/beef
+ 27nov\nimage: https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e
+ 9-6a96290370ce.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\ni
+ mageVertical: https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e
+ 9-6a96290370ce.jpg\nbarSource: curated\ngmaps: https://www.google.com/maps/
+ search/?api=1&query=New%20Guernica%2C%2064-68%20Smith%20Street%2C%20Melbour
+ ne\naddress: 64-68 Smith Street\, Melbourne\naddressSource: curated\npinSou
+ rce: curated\nkey: beefcake-leather-🥩-melbourne-new-guernica|2026-11-27|ne
+ w guernica\nbearSource: keyword\nshortName: BEEFCAKE
+LAST-MODIFIED:20261001T131455Z
+LOCATION:-37.8062453\, 144.9833075
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFCAKE Leather 🥩 Melbourne
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261030T100000Z
+DTEND:20261030T170000Z
+DTSTAMP:20261001T140823Z
+UID:C038A663-A698-4B9D-9879-CFC746677A2D
+CREATED:20261001T131454Z
+DESCRIPTION:bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com
+ /per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-2
+ 30b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/
+ Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855
+ -230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search
+ /?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-
+ halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THI
+ CK 'N' JUICY
+LAST-MODIFIED:20261001T131455Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK 'N' JUICY Horny Halloween
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

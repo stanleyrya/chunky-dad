@@ -5,4 +5,29 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sydney
 X-WR-TIMEZONE:Australia/Sydney
+BEGIN:VEVENT
+DTSTART:20261002T110000Z
+DTEND:20261002T180000Z
+DTSTAMP:20261001T140823Z
+UID:EC84B336-7030-4AA5-AE00-9B1E1AB4E56A
+CREATED:20261001T131413Z
+DESCRIPTION:bar: ARQ Sydney\nticketUrl: https://events.humanitix.com/syd2oc
+ t?_gl=1*nl844*_ga*MTgyNzE3MDI1My4xNzg1ODM5MDIz*_ga_QPY91K4DL9*czE3ODU4MzkwM
+ jIkbzEkZzEkdDE3ODU4MzkxMTckajYwJGwwJGgw\nimage: https://cdn.whereto.party/m
+ edia/events/e86d7e67-fea9-4456-91c1-bd359e6df28d.webp\ntimezone: Australia/
+ Sydney\nimageVertical: https://cdn.whereto.party/media/events/e86d7e67-fea9
+ -4456-91c1-bd359e6df28d.webp\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=-33.8814084%2C151.2172668\naddress: 16 Flinders Street\, Sydney\,
+  New South Wales\naddressSource: curated\npinSource: curated\nkey: thick-n-
+ juicy-sydney-october-long-weekend|2026-10-02|arq sydney\nimageSource: json-
+ api\nbearSource: keyword\nshortName: THICK 'N' JUICY
+LAST-MODIFIED:20261001T131413Z
+LOCATION:-33.8814084\, 151.2172668
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK 'N' JUICY Sydney - October Long Weekend
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

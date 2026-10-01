@@ -5,4 +5,51 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-orlando
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20261018T160000Z
+DTEND:20261018T220000Z
+DTSTAMP:20261001T140823Z
+UID:87567182-B9D4-4FC5-9098-33440F2400B1
+CREATED:20261001T131416Z
+DESCRIPTION:bar: Anthem Orlando\naddress: Orlando\, FL\nwebsite: https://ww
+ w.bearjamboree.com/bear-tea-dance\nticketUrl: https://www.bearjamboree.com/
+ tickets\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/
+ public/event-images/34895a5d035c0215.jpg\nimageSource: json-api\ntimezone: 
+ America/New_York\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/s
+ torage/v1/object/public/event-images/34895a5d035c0215.jpg\nbarSource: curat
+ ed\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=Anthem%20Orlando%2C%20Orlando%2C%20FL\npinSource: curated\nkey: bear-t
+ ea-dance|2026-10-18|anthem orlando\nbearSource: keyword\nshortName: BEAR
+LAST-MODIFIED:20261001T131416Z
+LOCATION:28.5437437\, -81.3792958
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Tea-Dance
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20270603
+DTEND;VALUE=DATE:20270608
+DTSTAMP:20261001T140823Z
+UID:85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E
+CREATED:20261001T131416Z
+DESCRIPTION:bar: Crowne Plaza Lake Buena Vista\naddress: Orlando\, FL\nwebs
+ ite: https://www.bearjamboree.com/\nimage: https://acqvlhciredwtlbpisso.sup
+ abase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nimageS
+ ource: json-api\ntimezone: America/New_York\nimageVertical: https://acqvlhc
+ iredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a4
+ 7f41c.png\naddressSource: page\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL\nkey
+ : bear-jamboree|2027-06-03|crowne plaza lake buena vista\nallDay: true\nbea
+ rSource: keyword\nshortName: BEAR JAMBOREE
+LAST-MODIFIED:20261001T131416Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Jamboree
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

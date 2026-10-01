@@ -5,4 +5,27 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-brussels
 X-WR-TIMEZONE:Europe/Brussels
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260929
+DTEND;VALUE=DATE:20261005
+DTSTAMP:20261001T140823Z
+UID:AE32D070-3393-4E71-A4C0-4812331E8AA8
+CREATED:20261001T131452Z
+DESCRIPTION:address: Brussels\nwebsite: https://www.belgiumbearpride.be/\nt
+ icketUrl: https://www.more.com/be-en/tickets/happenings/festival/belgium-be
+ arpride-bearweek2026-bear-folies/\nimage: https://acqvlhciredwtlbpisso.supa
+ base.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg\nimageSo
+ urce: json-api\ntimezone: Europe/Brussels\nimageHorizontal: https://acqvlhc
+ iredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0
+ a5be5.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=Brussels%2C%20Bruxelles\nkey: belgium-bearpride-bear-folies-202
+ 6|2026-09-28|\nallDay: true\nbearSource: keyword\nshortName: BEARPRIDE
+LAST-MODIFIED:20261001T131452Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Belgium Bearpride Bear Folies 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

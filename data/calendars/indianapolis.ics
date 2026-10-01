@@ -5,4 +5,29 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-indianapolis
 X-WR-TIMEZONE:America/Indiana/Indianapolis
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261210
+DTEND;VALUE=DATE:20261215
+DTSTAMP:20261001T140823Z
+UID:1DD532FE-CA6A-4B59-BE91-C52A2AF5C445
+CREATED:20261001T131429Z
+DESCRIPTION:bar: Wyndham Westfield\naddress: Westfield\, IN\nwebsite: https
+ ://midwestbearfest.com/\nticketUrl: https://www.eventbrite.com/e/midwest-be
+ arfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registrat
+ ion-1978842438001?aff=ebdssbdestsearch\nimage: https://acqvlhciredwtlbpisso
+ .supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\nim
+ ageSource: json-api\ncover: $169-$199\ntimezone: America/Indiana/Indianapol
+ is\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/ob
+ ject/public/event-images/2c910c6b3682697c.jpg\naddressSource: page\ngmaps: 
+ https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20We
+ stfield%2C%20IN\nkey: midwest-bearfest-2026|2026-12-10|wyndham westfield\na
+ llDay: true\nbearSource: keyword\nshortName: MIDWEST BEARFEST
+LAST-MODIFIED:20261001T131430Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Midwest Bearfest 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

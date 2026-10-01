@@ -5,4 +5,28 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-cologne
 X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VEVENT
+DTSTART:20261016T190000Z
+DTEND:20261017T030000Z
+DTSTAMP:20261001T140823Z
+UID:38373BE1-5D90-4ADF-8F30-D91D9E3C2AE2
+CREATED:20261001T131423Z
+DESCRIPTION:bar: Pullermanns\naddress: Cologne\, North Rhine-Westphalia\nti
+ cketUrl: https://www.facebook.com/events/2577149372800975\nimage: https://a
+ cqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290
+ a1042ce7533.jpg\nimageSource: json-api\ntimezone: Europe/Berlin\nimageHoriz
+ ontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/ev
+ ent-images/a4290a1042ce7533.jpg\nbarSource: curated\naddressSource: page\ng
+ maps: https://www.google.com/maps/search/?api=1&query=Pullermanns%2C%20Colo
+ gne%2C%20North%20Rhine-Westphalia\npinSource: curated\nkey: bear-bash-colog
+ ne|2026-10-16|pullermanns\nbearSource: keyword\nshortName: BEAR BASH
+LAST-MODIFIED:20261001T131423Z
+LOCATION:50.9332999\, 6.9593916
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR BASH COLOGNE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

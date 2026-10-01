@@ -5,4 +5,27 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-gettysburg
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261210
+DTEND;VALUE=DATE:20261214
+DTSTAMP:20261001T140823Z
+UID:B8B8D8E1-74BB-421A-9635-22292DEC63BC
+CREATED:20261001T131421Z
+DESCRIPTION:bar: Eisenhower Hotel and Conference Center\naddress: Gettysbur
+ g\, PA\nwebsite: https://bearfuzzfest.com/\nticketUrl: https://sickening.ev
+ ents/e/bear-fuzz-fest-2026\nimage: https://acqvlhciredwtlbpisso.supabase.co
+ /storage/v1/object/public/event-images/21d2f68f477cc2a3.png\nimageSource: j
+ son-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://ww
+ w.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference
+ %20Center%2C%20Gettysburg%2C%20PA\nkey: bear-fuzz-fest|2026-12-10|eisenhowe
+ r hotel and conference center\nallDay: true\nbearSource: keyword\nshortName
+ : BEAR FUZZ FEST
+LAST-MODIFIED:20261001T131421Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Fuzz Fest
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

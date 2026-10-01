@@ -3,5 +3,53 @@
     "calendarTimezone": "America/New_York",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Bear Fuzz Fest",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-10T00:00:00",
+      "endDate": "2026-12-14T00:00:00",
+      "unprocessedDescription": "bar: Eisenhower Hotel and Conference Center\naddress: Gettysbur\rg, PA\nwebsite: https://bearfuzzfest.com/\nticketUrl: https://sickening.events/e/bear-fuzz-fest-2026\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA\nkey: bear-fuzz-fest|2026-12-10|eisenhower hotel and conference center\nallDay: true\nbearSource: keyword\nshortName: BEAR FUZZ FEST",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "B8B8D8E1-74BB-421A-9635-22292DEC63BC",
+      "uid": "B8B8D8E1-74BB-421A-9635-22292DEC63BC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eisenhower Hotel and Conference Center",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png",
+      "cadence": null,
+      "address": "Gettysburg, PA",
+      "website": "https://bearfuzzfest.com/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA",
+      "ticketUrl": "https://sickening.events/e/bear-fuzz-fest-2026",
+      "shortName": "BEAR FUZZ FEST",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearfuzzfest.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://sickening.events/e/bear-fuzz-fest-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-fuzz-fest-25ad87cd"
+    }
+  ]
 }

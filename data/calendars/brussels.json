@@ -3,5 +3,53 @@
     "calendarTimezone": "Europe/Brussels",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Belgium Bearpride Bear Folies 2026",
+      "day": "Tuesday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-09-29T00:00:00",
+      "endDate": "2026-10-05T00:00:00",
+      "unprocessedDescription": "address: Brussels\nwebsite: https://www.belgiumbearpride.be/\nt\ricketUrl: https://www.more.com/be-en/tickets/happenings/festival/belgium-bearpride-bearweek2026-bear-folies/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg\nimageSource: json-api\ntimezone: Europe/Brussels\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Brussels%2C%20Bruxelles\nkey: belgium-bearpride-bear-folies-2026|2026-09-28|\nallDay: true\nbearSource: keyword\nshortName: BEARPRIDE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Brussels",
+      "wasUTC": false,
+      "sourceUid": "AE32D070-3393-4E71-A4C0-4812331E8AA8",
+      "uid": "AE32D070-3393-4E71-A4C0-4812331E8AA8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg",
+      "cadence": null,
+      "address": "Brussels",
+      "website": "https://www.belgiumbearpride.be/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Brussels%2C%20Bruxelles",
+      "ticketUrl": "https://www.more.com/be-en/tickets/happenings/festival/belgium-bearpride-bearweek2026-bear-folies/",
+      "shortName": "BEARPRIDE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.belgiumbearpride.be/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Brussels%2C%20Bruxelles",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.more.com/be-en/tickets/happenings/festival/belgium-bearpride-bearweek2026-bear-folies/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "belgium-bearpride-bear-folies-2026-4d8e734e"
+    }
+  ]
 }

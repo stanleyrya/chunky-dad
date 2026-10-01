@@ -3,5 +3,96 @@
     "calendarTimezone": "Australia/Melbourne",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BEEFCAKE Leather 🥩 Melbourne",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -37.8062453,
+        "lng": 144.9833075
+      },
+      "startDate": "2026-11-27T21:00:00",
+      "endDate": "2026-11-28T04:00:00",
+      "unprocessedDescription": "bar: New Guernica\nticketUrl: https://events.humanitix.com/beef\r27nov\nimage: https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e9-6a96290370ce.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\nimageVertical: https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e9-6a96290370ce.jpg\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=New%20Guernica%2C%2064-68%20Smith%20Street%2C%20Melbourne\naddress: 64-68 Smith Street, Melbourne\naddressSource: curated\npinSource: curated\nkey: beefcake-leather-🥩-melbourne-new-guernica|2026-11-27|new guernica\nbearSource: keyword\nshortName: BEEFCAKE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Melbourne",
+      "wasUTC": true,
+      "sourceUid": "D0E0E34E-DD0D-4582-8FFD-29270862C88F",
+      "uid": "D0E0E34E-DD0D-4582-8FFD-29270862C88F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "New Guernica",
+      "image": "https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e9-6a96290370ce.jpg",
+      "imageVertical": "https://cdn.whereto.party/media/events/c55d22aa-ed47-4db2-a8e9-6a96290370ce.jpg",
+      "cadence": null,
+      "address": "64-68 Smith Street, Melbourne",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=New%20Guernica%2C%2064-68%20Smith%20Street%2C%20Melbourne",
+      "ticketUrl": "https://events.humanitix.com/beef27nov",
+      "shortName": "BEEFCAKE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=New%20Guernica%2C%2064-68%20Smith%20Street%2C%20Melbourne",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/beef27nov",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefcake-leather-melbourne-06f7ca5c"
+    },
+    {
+      "name": "THICK 'N' JUICY Horny Halloween",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T04:00:00",
+      "unprocessedDescription": "bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com\r/per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THICK 'N' JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Melbourne",
+      "wasUTC": true,
+      "sourceUid": "C038A663-A698-4B9D-9879-CFC746677A2D",
+      "uid": "C038A663-A698-4B9D-9879-CFC746677A2D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Chasers Nightclub",
+      "image": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
+      "imageHorizontal": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
+      "ticketUrl": "https://events.humanitix.com/per24oct/tickets",
+      "shortName": "THICK 'N' JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/per24oct/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-horny-halloween-0c4511e2"
+    }
+  ]
 }

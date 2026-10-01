@@ -3,5 +3,46 @@
     "calendarTimezone": "Europe/London",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BearScots FEST 2026",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-01T00:00:00",
+      "endDate": "2026-10-05T00:00:00",
+      "unprocessedDescription": "address: Edinburgh\nwebsite: https://www.bearscots.org.uk/\nima\rge: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/59163fc8b7891bbc.png\nimageSource: json-api\ntimezone: Europe/London\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Edinburgh\nkey: bearscots-fest-2026|2026-09-30|\nallDay: true\nbearSource: keyword\nshortName: BEARSCOTS FEST",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": false,
+      "sourceUid": "50D18BFE-A6ED-4892-A8C8-74C5B58CA72A",
+      "uid": "50D18BFE-A6ED-4892-A8C8-74C5B58CA72A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/59163fc8b7891bbc.png",
+      "cadence": null,
+      "address": "Edinburgh",
+      "website": "https://www.bearscots.org.uk/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Edinburgh",
+      "shortName": "BEARSCOTS FEST",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearscots.org.uk/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Edinburgh",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bearscots-fest-2026-3d382220"
+    }
+  ]
 }

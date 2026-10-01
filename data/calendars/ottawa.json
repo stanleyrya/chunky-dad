@@ -3,5 +3,54 @@
     "calendarTimezone": "America/Toronto",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Bear Frolic",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-08T00:00:00",
+      "endDate": "2026-10-13T00:00:00",
+      "unprocessedDescription": "bar: Courtyard Ottawa Downtown\naddress: Ottawa, ON\nwebsite: \rhttps://ottawabears.com/bear-frolic/\nticketUrl: https://ottawabears.com/bear-frolic/#tickets\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png\nimageSource: json-api\ntimezone: America/Toronto\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Courtyard%20Ottawa%20Downtown%2C%20Ottawa%2C%20ON\nkey: bear-frolic|2026-10-08|courtyard ottawa downtown\nallDay: true\nbearSource: keyword\nshortName: BEAR FROLIC",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Toronto",
+      "wasUTC": false,
+      "sourceUid": "5C8EBE8C-5E45-441B-9260-1D1BF9701288",
+      "uid": "5C8EBE8C-5E45-441B-9260-1D1BF9701288",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Courtyard Ottawa Downtown",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png",
+      "cadence": null,
+      "address": "Ottawa, ON",
+      "website": "https://ottawabears.com/bear-frolic/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Courtyard%20Ottawa%20Downtown%2C%20Ottawa%2C%20ON",
+      "ticketUrl": "https://ottawabears.com/bear-frolic/#tickets",
+      "shortName": "BEAR FROLIC",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://ottawabears.com/bear-frolic/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Courtyard%20Ottawa%20Downtown%2C%20Ottawa%2C%20ON",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://ottawabears.com/bear-frolic/#tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-frolic-599746c7"
+    }
+  ]
 }

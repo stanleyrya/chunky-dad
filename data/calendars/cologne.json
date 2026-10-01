@@ -3,5 +3,53 @@
     "calendarTimezone": "Europe/Berlin",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BEAR BASH COLOGNE",
+      "day": "Friday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 50.9332999,
+        "lng": 6.9593916
+      },
+      "startDate": "2026-10-16T21:00:00",
+      "endDate": "2026-10-17T05:00:00",
+      "unprocessedDescription": "bar: Pullermanns\naddress: Cologne, North Rhine-Westphalia\nti\rcketUrl: https://www.facebook.com/events/2577149372800975\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg\nimageSource: json-api\ntimezone: Europe/Berlin\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Pullermanns%2C%20Cologne%2C%20North%20Rhine-Westphalia\npinSource: curated\nkey: bear-bash-cologne|2026-10-16|pullermanns\nbearSource: keyword\nshortName: BEAR BASH",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "38373BE1-5D90-4ADF-8F30-D91D9E3C2AE2",
+      "uid": "38373BE1-5D90-4ADF-8F30-D91D9E3C2AE2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Pullermanns",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg",
+      "cadence": null,
+      "address": "Cologne, North Rhine-Westphalia",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Pullermanns%2C%20Cologne%2C%20North%20Rhine-Westphalia",
+      "ticketUrl": "https://www.facebook.com/events/2577149372800975",
+      "shortName": "BEAR BASH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Pullermanns%2C%20Cologne%2C%20North%20Rhine-Westphalia",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.facebook.com/events/2577149372800975",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-bash-cologne-51198ee2"
+    }
+  ]
 }

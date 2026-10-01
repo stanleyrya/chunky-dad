@@ -3,5 +3,55 @@
     "calendarTimezone": "America/Indiana/Indianapolis",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Midwest Bearfest 2026",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-10T00:00:00",
+      "endDate": "2026-12-15T00:00:00",
+      "unprocessedDescription": "bar: Wyndham Westfield\naddress: Westfield, IN\nwebsite: https\r://midwestbearfest.com/\nticketUrl: https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\nimageSource: json-api\ncover: $169-$199\ntimezone: America/Indiana/Indianapolis\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN\nkey: midwest-bearfest-2026|2026-12-10|wyndham westfield\nallDay: true\nbearSource: keyword\nshortName: MIDWEST BEARFEST",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Indiana/Indianapolis",
+      "wasUTC": false,
+      "sourceUid": "1DD532FE-CA6A-4B59-BE91-C52A2AF5C445",
+      "uid": "1DD532FE-CA6A-4B59-BE91-C52A2AF5C445",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wyndham Westfield",
+      "cover": "$169-$199",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
+      "cadence": null,
+      "address": "Westfield, IN",
+      "website": "https://midwestbearfest.com/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN",
+      "ticketUrl": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch",
+      "shortName": "MIDWEST BEARFEST",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://midwestbearfest.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "midwest-bearfest-2026-22a99521"
+    }
+  ]
 }

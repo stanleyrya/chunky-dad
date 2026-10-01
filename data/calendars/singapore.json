@@ -3,5 +3,48 @@
     "calendarTimezone": "Asia/Singapore",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BEAR MARKET — START YOUR ENGINES",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-03T21:00:00",
+      "endDate": "2026-10-04T03:00:00",
+      "unprocessedDescription": "bar: TUFF CLUB @ Oxley Tower\nimage: https://cdn.whereto.party/\rmedia/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg\nimageSource: json-api\ntimezone: Asia/Singapore\nimageVertical: https://cdn.whereto.party/media/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg\ngmaps: https://www.google.com/maps/search/?api=1&query=TUFF%20CLUB%20%40%20Oxley%20Tower%2C%20singapore\nkey: bear-market-—-start-your-engines|2026-10-03|tuff club @ oxley tower\nwebsite: https://bear-market-tickets.eventbrite.sg/\nbearSource: keyword\nshortName: BEAR MARKET",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Asia/Singapore",
+      "wasUTC": true,
+      "sourceUid": "31CBB2BB-4339-4706-8667-1F0A868A413E",
+      "uid": "31CBB2BB-4339-4706-8667-1F0A868A413E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "TUFF CLUB @ Oxley Tower",
+      "image": "https://cdn.whereto.party/media/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg",
+      "imageVertical": "https://cdn.whereto.party/media/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg",
+      "cadence": null,
+      "address": null,
+      "website": "https://bear-market-tickets.eventbrite.sg/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=TUFF%20CLUB%20%40%20Oxley%20Tower%2C%20singapore",
+      "shortName": "BEAR MARKET",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bear-market-tickets.eventbrite.sg/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=TUFF%20CLUB%20%40%20Oxley%20Tower%2C%20singapore",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-market-start-your-engines-11cf3e8e"
+    }
+  ]
 }

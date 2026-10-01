@@ -5,4 +5,24 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-edinburgh
 X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261001
+DTEND;VALUE=DATE:20261005
+DTSTAMP:20261001T140823Z
+UID:50D18BFE-A6ED-4892-A8C8-74C5B58CA72A
+CREATED:20261001T131456Z
+DESCRIPTION:address: Edinburgh\nwebsite: https://www.bearscots.org.uk/\nima
+ ge: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event
+ -images/59163fc8b7891bbc.png\nimageSource: json-api\ntimezone: Europe/Londo
+ n\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&qu
+ ery=Edinburgh\nkey: bearscots-fest-2026|2026-09-30|\nallDay: true\nbearSour
+ ce: keyword\nshortName: BEARSCOTS FEST
+LAST-MODIFIED:20261001T131456Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BearScots FEST 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

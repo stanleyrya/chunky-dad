@@ -5,4 +5,26 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-singapore
 X-WR-TIMEZONE:Asia/Singapore
+BEGIN:VEVENT
+DTSTART:20261003T130000Z
+DTEND:20261003T190000Z
+DTSTAMP:20261001T140823Z
+UID:31CBB2BB-4339-4706-8667-1F0A868A413E
+CREATED:20261001T131359Z
+DESCRIPTION:bar: TUFF CLUB @ Oxley Tower\nimage: https://cdn.whereto.party/
+ media/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg\nimageSource: json-a
+ pi\ntimezone: Asia/Singapore\nimageVertical: https://cdn.whereto.party/medi
+ a/events/ff231401-23f4-425b-8624-e66b8ae16ad7.jpeg\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=TUFF%20CLUB%20%40%20Oxley%20Tower%2C%20sing
+ apore\nkey: bear-market-—-start-your-engines|2026-10-03|tuff club @ oxley t
+ ower\nwebsite: https://bear-market-tickets.eventbrite.sg/\nbearSource: keyw
+ ord\nshortName: BEAR MARKET
+LAST-MODIFIED:20261001T131359Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR MARKET — START YOUR ENGINES
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -3,5 +3,53 @@
     "calendarTimezone": "Australia/Sydney",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "THICK 'N' JUICY Sydney - October Long Weekend",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -33.8814084,
+        "lng": 151.2172668
+      },
+      "startDate": "2026-10-02T21:00:00",
+      "endDate": "2026-10-03T04:00:00",
+      "unprocessedDescription": "bar: ARQ Sydney\nticketUrl: https://events.humanitix.com/syd2oc\rt?_gl=1*nl844*_ga*MTgyNzE3MDI1My4xNzg1ODM5MDIz*_ga_QPY91K4DL9*czE3ODU4MzkwMjIkbzEkZzEkdDE3ODU4MzkxMTckajYwJGwwJGgw\nimage: https://cdn.whereto.party/media/events/e86d7e67-fea9-4456-91c1-bd359e6df28d.webp\ntimezone: Australia/Sydney\nimageVertical: https://cdn.whereto.party/media/events/e86d7e67-fea9-4456-91c1-bd359e6df28d.webp\ngmaps: https://www.google.com/maps/search/?api=1&query=-33.8814084%2C151.2172668\naddress: 16 Flinders Street, Sydney, New South Wales\naddressSource: curated\npinSource: curated\nkey: thick-n-juicy-sydney-october-long-weekend|2026-10-02|arq sydney\nimageSource: json-api\nbearSource: keyword\nshortName: THICK 'N' JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Sydney",
+      "wasUTC": true,
+      "sourceUid": "EC84B336-7030-4AA5-AE00-9B1E1AB4E56A",
+      "uid": "EC84B336-7030-4AA5-AE00-9B1E1AB4E56A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "ARQ Sydney",
+      "image": "https://cdn.whereto.party/media/events/e86d7e67-fea9-4456-91c1-bd359e6df28d.webp",
+      "imageVertical": "https://cdn.whereto.party/media/events/e86d7e67-fea9-4456-91c1-bd359e6df28d.webp",
+      "cadence": null,
+      "address": "16 Flinders Street, Sydney, New South Wales",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=-33.8814084%2C151.2172668",
+      "ticketUrl": "https://events.humanitix.com/syd2oct?_gl=1*nl844*_ga*MTgyNzE3MDI1My4xNzg1ODM5MDIz*_ga_QPY91K4DL9*czE3ODU4MzkwMjIkbzEkZzEkdDE3ODU4MzkxMTckajYwJGwwJGgw",
+      "shortName": "THICK 'N' JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=-33.8814084%2C151.2172668",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/syd2oct?_gl=1*nl844*_ga*MTgyNzE3MDI1My4xNzg1ODM5MDIz*_ga_QPY91K4DL9*czE3ODU4MzkwMjIkbzEkZzEkdDE3ODU4MzkxMTckajYwJGwwJGgw",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-sydney-october-long-weekend-628b5e4f"
+    }
+  ]
 }

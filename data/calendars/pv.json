@@ -5,79 +5,137 @@
   },
   "events": [
     {
-      "name": "Bearsgiving 2026",
-      "day": "Friday",
-      "time": null,
+      "name": "FURBALL POOL PARTY",
+      "day": "Wednesday",
+      "time": "12PM-7PM",
       "eventType": "routine",
       "recurring": false,
-      "startDate": "2026-11-27T00:00:00",
-      "endDate": "2026-11-29T23:59:59",
-      "unprocessedDescription": "address: Puerto Vallarta, Jalisco\nticketUrl: https://bearadis\remx.com/en/festivals/bearsgiving\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg\nimageSource: json-api\ncover: $9-$230\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco\nkey: bearsgiving-2026|2026-11-27|\nbearSource: keyword",
+      "coordinates": {
+        "lat": 20.6483408,
+        "lng": -105.1980403
+      },
+      "startDate": "2027-01-27T12:00:00",
+      "endDate": "2027-01-27T19:00:00",
+      "unprocessedDescription": "description: Straight from New York—home to one of the most ico\rnic bear party brands in the USA—Furball brings its signature energy, dirty grooves, and bigger-than-life vibes to Puerto Vallarta.\nExpect a packed pool, nonstop beats, and a sea of bears, muscle, and friends under the sun.\nBring your Furball attitude. Leave everything else behind. DJ Matt Consola will bring the heat all day.\nbar: CC Slaughters\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-pool-party|2027-01-27|delfin beach resort\nbearSource: keyword\naddress: LÁZARO CÁRDENAS 254, PV MX\nwebsite: https://www.furball.nyc\npinSource: curated\naddressSource: page\nimageSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "72EFB160-A79F-4681-B5D1-24BF667B5FF7",
-      "uid": "72EFB160-A79F-4681-B5D1-24BF667B5FF7",
+      "sourceUid": "07B0F9A5-C206-412E-B246-BF0E501F9D43",
+      "uid": "07B0F9A5-C206-412E-B246-BF0E501F9D43",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "cover": "$9-$230",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
+      "bar": "CC Slaughters",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Straight from New York—home to one of the most iconic bear party brands in the USA—Furball brings its signature energy, dirty grooves, and bigger-than-life vibes to Puerto Vallarta.",
       "cadence": null,
-      "address": "Puerto Vallarta, Jalisco",
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco",
-      "ticketUrl": "https://bearadisemx.com/en/festivals/bearsgiving",
+      "address": "LÁZARO CÁRDENAS 254, PV MX",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "shortName": "FUR­BALL",
       "bearReview": null,
       "links": [
         {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco",
+          "url": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://bearadisemx.com/en/festivals/bearsgiving",
+          "url": "https://beefdip.com/tags/",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearsgiving-2026-6d123f30"
+      "slug": "furball-pool-party-692b7f78"
     },
     {
-      "name": "Welcome T-Dance",
-      "day": "Saturday",
-      "time": "3PM-12AM",
+      "name": "Bearadise IBFF Bear Week 2027",
+      "day": "Friday",
+      "time": "4PM-11:30PM",
       "eventType": "routine",
       "recurring": false,
-      "coordinates": {
-        "lat": 20.5973207,
-        "lng": -105.2392083
-      },
-      "startDate": "2027-01-23T15:00:00",
-      "endDate": "2027-01-24T00:00:00",
-      "unprocessedDescription": "description: BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT\nb\rar: Blue Chairs Resort\naddress: 4 Malecon, Puerto Vallarta, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\naddressSource: geo-poi\nwebsite: https://beefdip.com\ngmaps: https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco\npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: welcome-t-dance|2027-01-23|blue chairs resort\nbearSource: keyword",
+      "startDate": "2027-01-22T16:00:00",
+      "endDate": "2027-01-31T23:30:00",
+      "unprocessedDescription": "bar: Majahuitas\naddress: Puerto Vallarta, Jalisco\nticketUrl:\r https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg\nimageSource: json-api\ncover: $225\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco\nkey: bearadise-ibff-bear-week-2027|2027-01-22|majahuitas\nbearSource: keyword\nshortName: BEARADISE IBFF",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "0178A334-0562-44EC-99D3-5370DFF0C29F",
-      "uid": "0178A334-0562-44EC-99D3-5370DFF0C29F",
+      "sourceUid": "DEB2EF89-219B-4873-A9F0-128850B81271",
+      "uid": "DEB2EF89-219B-4873-A9F0-128850B81271",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Blue Chairs Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT",
+      "bar": "Majahuitas",
+      "cover": "$225",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
       "cadence": null,
-      "address": "4 Malecon, Puerto Vallarta, Jalisco",
+      "address": "Puerto Vallarta, Jalisco",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco",
+      "ticketUrl": "https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027",
+      "shortName": "BEARADISE IBFF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearadise-ibff-bear-week-2027-414b6776"
+    },
+    {
+      "name": "HYDRATE POOL PARTY",
+      "day": "Sunday",
+      "time": "12PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-31T12:00:00",
+      "endDate": "2027-01-31T19:00:00",
+      "unprocessedDescription": "description: Recover, recharge, and relive the best week of y\rour life. Smooth daytime beats by DJ Giaco, infinity pool views, food & drink specials.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111, PV\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp\naddressSource: page\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: hydrate-pool-party|2027-01-31|hotel delfin\nimageSource: page\nwebsite: https://beefdip.com\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "457F4B61-0A85-49FD-B672-0937C2E675D5",
+      "uid": "457F4B61-0A85-49FD-B672-0937C2E675D5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Delfin",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20HYDRATE.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "Recover, recharge, and relive the best week of your life. Smooth daytime beats by DJ Giaco, infinity pool views, food & drink specials.",
+      "cadence": null,
+      "address": "Calle Rodolfo Gomez 111, PV",
       "website": "https://beefdip.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin",
       "shortName": "BEEF­DIP",
       "bearReview": null,
       "links": [
@@ -88,107 +146,59 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "welcome-t-dance-3c6cd27e"
+      "slug": "hydrate-pool-party-4a80e925"
     },
     {
-      "name": "Drag Brunch + Rooftop Pool",
+      "name": "WELCOME PARTY",
       "day": "Sunday",
-      "time": "11AM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-31T11:00:00",
-      "endDate": "2027-01-31T19:00:00",
-      "unprocessedDescription": "description: Two brunch seatings available\\: 11\\:00 AM and 1\\\r:00 PM\nExpect fierce drag performances, delicious brunch, laughs, and vacation vibes.\nAnd yes… the rooftop pool opens at 1\\:00 PM\nCome for brunch, stay for the pool—sun, cocktails, and an elevated afternoon at The Tryst.\nbar: The Tryst Hotel\nwebsite: http://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: drag-brunch-rooftop-pool|2027-01-31|the tryst hotel\nbearSource: ai\ntimezone: America/Mexico_City",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "E7A1168A-C5EA-4DBA-9375-24484BD73E43",
-      "uid": "E7A1168A-C5EA-4DBA-9375-24484BD73E43",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Tryst Hotel",
-      "favicon": "https://beefdip.com",
-      "tea": "Two brunch seatings available: 11:00 AM and 1:00 PM",
-      "cadence": null,
-      "address": null,
-      "website": "http://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "http://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "drag-brunch-rooftop-pool-6bde928f"
-    },
-    {
-      "name": "MAD.BEAR RED BALL",
-      "day": "Tuesday",
-      "time": "10PM-5AM",
+      "time": "3PM-12AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 20.6483408,
-        "lng": -105.1980403
+        "lat": 20.5973207,
+        "lng": -105.2392083
       },
-      "startDate": "2027-01-26T22:00:00",
-      "endDate": "2027-01-27T05:00:00",
-      "unprocessedDescription": "description: DJ Division 4 brings Sydney fire to Vallarta. Red \rlights, hot bodies, and relentless beats until dawn. Come burn up the dance floor.\nbar: CC Slaughters\naddress: Lázaro Cárdenas 254\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\naddressSource: page\nwebsite: https://beefdip.com/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-red-ball|2027-01-27|cc slaughters\nbearSource: keyword",
+      "startDate": "2027-01-24T15:00:00",
+      "endDate": "2027-01-25T00:00:00",
+      "unprocessedDescription": "description: The official kickoff! As the sun sets over Bandera\rs Bay, DJ Giaco fires up the decks and resident drag queens bring the drama. Expect rooftop beats, stunning views, and the thrill of reuniting with the global bear family.\nbar: Blue Chairs Resort\naddress: 4 Malecon, Puerto Vallarta, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: welcome-party|2027-01-24|blue chairs resort\nwebsite: https://beefdip.com\nbearSource: ai\npinSource: curated\naddressSource: geo-poi\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "92931656-EB15-4AE0-80EB-1D3F9AC2B955",
-      "uid": "92931656-EB15-4AE0-80EB-1D3F9AC2B955",
+      "sourceUid": "4AA8B150-948A-4511-8DE5-59B86DCD915E",
+      "uid": "4AA8B150-948A-4511-8DE5-59B86DCD915E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp",
+      "bar": "Blue Chairs Resort",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
       "favicon": "https://beefdip.com",
-      "tea": "DJ Division 4 brings Sydney fire to Vallarta. Red lights, hot bodies, and relentless beats until dawn. Come burn up the dance floor.",
+      "tea": "The official kickoff! As the sun sets over Banderas Bay, DJ Giaco fires up the decks and resident drag queens bring the drama. Expect rooftop beats, stunning views, and the thrill of reuniting with the global bear family.",
       "cadence": null,
-      "address": "Lázaro Cárdenas 254",
-      "website": "https://beefdip.com/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-      "ticketUrl": "https://beefdip.com/tags/",
+      "address": "4 Malecon, Puerto Vallarta, Jalisco",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
       "shortName": "BEEF­DIP",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://beefdip.com/",
+          "url": "https://beefdip.com",
           "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://beefdip.com/tags/",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "madbear-red-ball-64450d6f"
+      "slug": "welcome-party-6cf6baa0"
     },
     {
       "name": "BOOZE CRUISE",
@@ -249,7 +259,7 @@
       "recurring": false,
       "startDate": "2026-01-29T12:00:00",
       "endDate": "2026-01-29T19:00:00",
-      "unprocessedDescription": "description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea\rch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: tidal-wave|2026-01-29|delfin beach resort\nbearSource: keyword",
+      "unprocessedDescription": "description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea\rch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: tidal-wave|2026-01-29|delfin beach resort\nwebsite: https://beefdip.com\nbearSource: keyword\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
@@ -267,338 +277,53 @@
       "tea": "THE BEEFDIP FUNDRAISER POOL PARTY",
       "cadence": null,
       "address": "Calle Rodolfo Gomez 111",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
       "shortName": "BEEF­DIP",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://beefdip.com/tags/",
+          "url": "https://beefdip.com",
           "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
+          "url": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
           "label": "🗺️ Google Maps"
         }
       ],
       "slug": "tidal-wave-43219c30"
     },
     {
-      "name": "FURBALL GEAR NIGHT",
+      "name": "MAD.BEAR FOAM POOL PARTY",
       "day": "Friday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.6483408,
-        "lng": -105.1980403
-      },
-      "startDate": "2027-01-29T22:00:00",
-      "endDate": "2027-01-30T05:00:00",
-      "unprocessedDescription": "bar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nticke\rtUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\nwebsite: https://www.furball.nyc\ntimezone: America/Mexico_City\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-gear-night|2027-01-30|cc slaughters\nbearSource: keyword\ndescription: MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRODUCER CHRIS COX PLAYING HOUSE, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "803706A1-C0E5-4190-A58C-42E8AE5E5545",
-      "uid": "803706A1-C0E5-4190-A58C-42E8AE5E5545",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRODUCER CHRIS COX PLAYING HOUSE, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS",
-      "cadence": null,
-      "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
-      "ticketUrl": "https://beefdip.com/tags/",
-      "shortName": "FUR­BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://beefdip.com/tags/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-gear-night-4d404df0"
-    },
-    {
-      "name": "PAPA DIRK ROOFTOP CIGAR SOCIAL",
-      "day": "Thursday",
-      "time": "8PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-28T20:00:00",
-      "endDate": "2027-01-28T22:00:00",
-      "unprocessedDescription": "description: A new chill-out moment. Learn, puff, and mingle \rwith Papa Dirk at a relaxed rooftop social.\nbar: Blue Chairs Rooftop Bar\naddress: MALECÓN 4, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp\nwebsite: https://beefdip.com\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: papa-dirk-rooftop-cigar-social|2027-01-29|blue chairs rooftop bar\nbearSource: ai\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "0FC50D96-BE09-483F-A401-6A71C70977F9",
-      "uid": "0FC50D96-BE09-483F-A401-6A71C70977F9",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Blue Chairs Rooftop Bar",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "A new chill-out moment. Learn, puff, and mingle with Papa Dirk at a relaxed rooftop social.",
-      "cadence": null,
-      "address": "MALECÓN 4, ZONA ROMÁNTICA",
-      "website": "https://beefdip.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
-      "ticketUrl": "https://beefdip.com/tags/",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://beefdip.com/tags/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "papa-dirk-rooftop-cigar-social-08f1157b"
-    },
-    {
-      "name": "DINNER UNDER THE STARS",
-      "day": "Monday",
-      "time": "12PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-25T12:00:00",
-      "endDate": "2027-01-25T21:00:00",
-      "unprocessedDescription": "description: Take a breather and savor flavors at Vallarta’s ne\rw Tryst Hotel restaurant. A perfect reset before going back out.\nbar: The Tryst Hotel Restaurant\ntimezone: America/Mexico_City\nwebsite: https://beefdip.com/tags/\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: dinner-under-the-stars-tryst|2027-01-25|the tryst hotel restaurant\nbearSource: ai\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D",
-      "uid": "E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Tryst Hotel Restaurant",
-      "favicon": "https://beefdip.com",
-      "tea": "Take a breather and savor flavors at Vallarta’s new Tryst Hotel restaurant. A perfect reset before going back out.",
-      "cadence": null,
-      "address": null,
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "dinner-under-the-stars-12356a88"
-    },
-    {
-      "name": "Bearadise IBFF Bear Week 2027",
-      "day": "Friday",
-      "time": "4PM-11:30PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-22T16:00:00",
-      "endDate": "2027-01-31T23:30:00",
-      "unprocessedDescription": "bar: Majahuitas\naddress: Puerto Vallarta, Jalisco\nticketUrl:\r https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg\nimageSource: json-api\ncover: $225\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco\nkey: bearadise-ibff-bear-week-2027|2027-01-22|majahuitas\nbearSource: keyword\nshortName: BEARADISE IBFF",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "DEB2EF89-219B-4873-A9F0-128850B81271",
-      "uid": "DEB2EF89-219B-4873-A9F0-128850B81271",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Majahuitas",
-      "cover": "$225",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
-      "cadence": null,
-      "address": "Puerto Vallarta, Jalisco",
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco",
-      "ticketUrl": "https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027",
-      "shortName": "BEARADISE IBFF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Majahuitas%2C%20Puerto%20Vallarta%2C%20Jalisco",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearadise-ibff-bear-week-2027-414b6776"
-    },
-    {
-      "name": "PRE WELCOME PARTY",
-      "day": "Saturday",
-      "time": "9PM-12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-23T21:00:00",
-      "endDate": "2027-01-24T00:00:00",
-      "unprocessedDescription": "description: Kick off early with a sneak preview of BeefDip ene\rrgy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury, style, and rooftop vibes set the scene for bears from all over the world to meet before the madness begins.\nbar: The Tryst Hotel RoofTop\nwebsite: http://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: pre-welcome-party|2027-01-23|the tryst hotel rooftop\nbearSource: keyword\ntimezone: America/Mexico_City",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "91A74D31-4AB8-4FC2-B65B-A08647D661EA",
-      "uid": "91A74D31-4AB8-4FC2-B65B-A08647D661EA",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Tryst Hotel RoofTop",
-      "favicon": "https://beefdip.com",
-      "tea": "Kick off early with a sneak preview of BeefDip energy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury, style, and rooftop vibes set the scene for bears from all over the world to meet before the madness begins.",
-      "cadence": null,
-      "address": null,
-      "website": "http://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "http://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "pre-welcome-party-28882b0e"
-    },
-    {
-      "name": "White Party",
-      "day": "Saturday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.6483408,
-        "lng": -105.1980403
-      },
-      "startDate": "2027-01-23T22:00:00",
-      "endDate": "2027-01-24T05:00:00",
-      "unprocessedDescription": "description: MUSIC BY GRAMMY AWARD WINNING PRODUCER TRACY YOUNG\r FEATURING THE BEEFDIP DANCERS\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20White%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: https://beefdip.com\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: white-party|2027-01-24|cc slaughters\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "916C5FDB-AA7D-4630-902A-8E5CF3308C44",
-      "uid": "916C5FDB-AA7D-4630-902A-8E5CF3308C44",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20White%20Party.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "MUSIC BY GRAMMY AWARD WINNING PRODUCER TRACY YOUNG FEATURING THE BEEFDIP DANCERS",
-      "cadence": null,
-      "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://beefdip.com",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "white-party-50b21550"
-    },
-    {
-      "name": "BEARAOKE",
-      "day": "Tuesday",
-      "time": "9PM-12AM",
+      "time": "12PM-6PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 20.5973207,
         "lng": -105.2392083
       },
-      "startDate": "2027-01-26T21:00:00",
-      "endDate": "2027-01-27T00:00:00",
-      "unprocessedDescription": "description: Sing loud, sing proud! Take the mic, earn a free\r tequila shot, and maybe score the night’s grand prize. Hosted with laughs, shots, and plenty of sass.\nbar: Blue Chairs Resort\naddress: MALECÓN 4, ZONA ROMÁNTICA\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Bearaoke-Talent.webp\nimageSource: page\naddressSource: page\nwebsite: https://beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: bearaoke|2027-01-27|blue chairs resort\nbearSource: keyword",
+      "startDate": "2027-01-29T12:00:00",
+      "endDate": "2027-01-29T18:00:00",
+      "unprocessedDescription": "description: A foamy fiesta with our friends from Mad.Bear Spai\rn. DJ Benjamin Koll and DJ Nalgaroth bring the heat.\nbar: Blue Chairs Resort\naddress: LÁZARO CÁRDENAS 254, PV MX\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20MadBear%20Foam%20Party.webp\nwebsite: https://beefdip.com/\ntimezone: America/Mexico_City\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-foam-pool-party|2027-01-29|blue chairs resort\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "09E342B6-783B-4CC2-9E51-47EFCC02A23D",
-      "uid": "09E342B6-783B-4CC2-9E51-47EFCC02A23D",
+      "sourceUid": "12A249A3-C5EE-41A2-A583-F7FE4ADCA58C",
+      "uid": "12A249A3-C5EE-41A2-A583-F7FE4ADCA58C",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Blue Chairs Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Bearaoke-Talent.webp",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20MadBear%20Foam%20Party.webp",
       "favicon": "https://beefdip.com",
-      "tea": "Sing loud, sing proud! Take the mic, earn a free tequila shot, and maybe score the night’s grand prize. Hosted with laughs, shots, and plenty of sass.",
+      "tea": "A foamy fiesta with our friends from Mad.Bear Spain. DJ Benjamin Koll and DJ Nalgaroth bring the heat.",
       "cadence": null,
-      "address": "MALECÓN 4, ZONA ROMÁNTICA",
+      "address": "LÁZARO CÁRDENAS 254, PV MX",
       "website": "https://beefdip.com/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
       "ticketUrl": "https://beefdip.com/tags/",
@@ -621,55 +346,7 @@
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearaoke-0ef1f997"
-    },
-    {
-      "name": "WELCOME PARTY",
-      "day": "Sunday",
-      "time": "3PM-12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.5973207,
-        "lng": -105.2392083
-      },
-      "startDate": "2027-01-24T15:00:00",
-      "endDate": "2027-01-25T00:00:00",
-      "unprocessedDescription": "description: The official kickoff! As the sun sets over Bandera\rs Bay, DJ Giaco fires up the decks and resident drag queens bring the drama. Expect rooftop beats, stunning views, and the thrill of reuniting with the global bear family.\nbar: Blue Chairs Resort\naddress: 4 Malecon, Puerto Vallarta, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nwebsite: https://beefdip.com/tags/\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: welcome-party|2027-01-24|blue chairs resort\nbearSource: ai\npinSource: curated\naddressSource: geo-poi\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "4AA8B150-948A-4511-8DE5-59B86DCD915E",
-      "uid": "4AA8B150-948A-4511-8DE5-59B86DCD915E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Blue Chairs Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "The official kickoff! As the sun sets over Banderas Bay, DJ Giaco fires up the decks and resident drag queens bring the drama. Expect rooftop beats, stunning views, and the thrill of reuniting with the global bear family.",
-      "cadence": null,
-      "address": "4 Malecon, Puerto Vallarta, Jalisco",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "welcome-party-6cf6baa0"
+      "slug": "madbear-foam-pool-party-59683591"
     },
     {
       "name": "JUNGLE LUST – NEON BEACH PARTY",
@@ -764,292 +441,46 @@
       "slug": "-cocktail-party-72c51e09"
     },
     {
-      "name": "SPLASH! Classic Anthems Pool Party",
-      "day": "Tuesday",
-      "time": "11AM-7PM",
+      "name": "Bearsgiving 2026",
+      "day": "Friday",
+      "time": null,
       "eventType": "routine",
       "recurring": false,
-      "startDate": "2027-01-26T11:00:00",
-      "endDate": "2027-01-26T19:00:00",
-      "unprocessedDescription": "description: DJ Giaco serves iconic hits and fresh beats all da\ry at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — SPLASH! is pure joy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: splash-classic-anthems-pool-party|2027-01-26|hotel delfin\nbearSource: ai",
+      "startDate": "2026-11-27T00:00:00",
+      "endDate": "2026-11-29T23:59:59",
+      "unprocessedDescription": "address: Puerto Vallarta, Jalisco\nticketUrl: https://bearadis\remx.com/en/festivals/bearsgiving\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg\nimageSource: json-api\ncover: $9-$230\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco\nkey: bearsgiving-2026|2026-11-27|\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "765F235D-ADFF-4EBD-902F-F9D7571BB187",
-      "uid": "765F235D-ADFF-4EBD-902F-F9D7571BB187",
+      "sourceUid": "72EFB160-A79F-4681-B5D1-24BF667B5FF7",
+      "uid": "72EFB160-A79F-4681-B5D1-24BF667B5FF7",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Hotel Delfin",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "DJ Giaco serves iconic hits and fresh beats all day at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — SPLASH! is pure joy.",
+      "cover": "$9-$230",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
       "cadence": null,
-      "address": "Calle Rodolfo Gomez 111",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
-      "shortName": "BEEF­DIP",
+      "address": "Puerto Vallarta, Jalisco",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco",
+      "ticketUrl": "https://bearadisemx.com/en/festivals/bearsgiving",
       "bearReview": null,
       "links": [
         {
-          "type": "website",
-          "url": "https://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "splash-classic-anthems-pool-party-67eb2dec"
-    },
-    {
-      "name": "WET & WILD – POOL & BEACH PARTY",
-      "day": "Saturday",
-      "time": "12PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-30T12:00:00",
-      "endDate": "2027-01-30T19:00:00",
-      "unprocessedDescription": "description: Our biggest pool party of the week, definitely ho\rnors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111, PV\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\naddressSource: page\nwebsite: https://beefdip.com\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wet-wild-–-pool-beach-party|2027-01-30|hotel delfin\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "57855554-F352-4A55-8D0C-146E7F30E1AD",
-      "uid": "57855554-F352-4A55-8D0C-146E7F30E1AD",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Hotel Delfin",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "Our biggest pool party of the week, definitely honors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.",
-      "cadence": null,
-      "address": "Calle Rodolfo Gomez 111, PV",
-      "website": "https://beefdip.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV",
-      "ticketUrl": "https://beefdip.com/tags/",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV",
+          "url": "https://www.google.com/maps/search/?api=1&query=Puerto%20Vallarta%2C%20Jalisco",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://beefdip.com/tags/",
+          "url": "https://bearadisemx.com/en/festivals/bearsgiving",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "wet-wild-pool-beach-party-0bb8bf2f"
-    },
-    {
-      "name": "FOAM POOL PARTY",
-      "day": "Monday",
-      "time": "12PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.5973207,
-        "lng": -105.2392083
-      },
-      "startDate": "2027-01-25T12:00:00",
-      "endDate": "2027-01-26T05:00:00",
-      "unprocessedDescription": "description: Dive into waves of beats and bubbles as DJ Divisio\rn 4 (Australia) unleashes a high-energy soundtrack. Sun, foam, friends — the ultimate poolside playground.\nbar: Blue Chairs Resort\naddress: MALECÓN 4, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20FlowerPower.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp\nwebsite: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: foam-pool-party|2027-01-25|blue chairs resort\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "3D6B9B6F-A474-41A5-B7F3-63768FB1700E",
-      "uid": "3D6B9B6F-A474-41A5-B7F3-63768FB1700E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Blue Chairs Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20FlowerPower.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "Dive into waves of beats and bubbles as DJ Division 4 (Australia) unleashes a high-energy soundtrack. Sun, foam, friends — the ultimate poolside playground.",
-      "cadence": null,
-      "address": "MALECÓN 4, ZONA ROMÁNTICA",
-      "website": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-      "ticketUrl": "https://beefdip.com/tags/",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://beefdip.com/tags/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "foam-pool-party-06eda3c4"
-    },
-    {
-      "name": "THE BLACK BALL",
-      "day": "Saturday",
-      "time": "10PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.6483408,
-        "lng": -105.1980403
-      },
-      "startDate": "2027-01-30T22:00:00",
-      "endDate": "2027-01-31T01:00:00",
-      "unprocessedDescription": "description: Leather. Fetish. Freedom. DJ Jose Spinnin Cortes d\relivers dark, sexy house with performances by the BeefDip Dancers.\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nbarSource: curated\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: the-black-ball|2027-01-31|cc slaughters\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "3EF2A697-311A-4656-82D1-935346E6DD71",
-      "uid": "3EF2A697-311A-4656-82D1-935346E6DD71",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "Leather. Fetish. Freedom. DJ Jose Spinnin Cortes delivers dark, sexy house with performances by the BeefDip Dancers.",
-      "cadence": null,
-      "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "the-black-ball-70adad84"
-    },
-    {
-      "name": "SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY",
-      "day": "Sunday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 20.6483408,
-        "lng": -105.1980403
-      },
-      "startDate": "2027-01-31T22:00:00",
-      "endDate": "2027-02-01T05:00:00",
-      "unprocessedDescription": "description: Underwear, Jockstrap & Singlet Party\nbar: CC Sla\rughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\naddressSource: page\nwebsite: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: sweat-–-singlet-underwear-jockstrap-party|2027-02-01|cc slaughters\nimageSource: page\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "92F85CD7-9A03-4F71-AFDE-06D029A42E79",
-      "uid": "92F85CD7-9A03-4F71-AFDE-06D029A42E79",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "Underwear, Jockstrap & Singlet Party",
-      "cadence": null,
-      "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "sweat-singlet-underwear-jockstrap-party-22959658"
-    },
-    {
-      "name": "TIDAL WAVE",
-      "day": "Thursday",
-      "time": "12PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-01-28T12:00:00",
-      "endDate": "2027-01-28T19:00:00",
-      "unprocessedDescription": "description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea\rch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: tidal-wave|2027-01-28|delfin beach resort\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F",
-      "uid": "3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Delfin Beach Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp",
-      "favicon": "https://beefdip.com",
-      "tea": "THE BEEFDIP FUNDRAISER POOL PARTY",
-      "cadence": null,
-      "address": "Calle Rodolfo Gomez 111",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
-      "shortName": "BEEF­DIP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefdip.com/tags/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20Puerto%20Vallarta",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "tidal-wave-0b71e4c3"
+      "slug": "bearsgiving-2026-6d123f30"
     },
     {
       "name": "CARNAVAL NIGHT: MARDI GRAS",
@@ -1107,6 +538,349 @@
       "slug": "carnaval-night-mardi-gras-42e2fbed"
     },
     {
+      "name": "FOAM POOL PARTY",
+      "day": "Monday",
+      "time": "12PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.5973207,
+        "lng": -105.2392083
+      },
+      "startDate": "2027-01-25T12:00:00",
+      "endDate": "2027-01-26T05:00:00",
+      "unprocessedDescription": "description: Dive into waves of beats and bubbles as DJ Divisio\rn 4 (Australia) unleashes a high-energy soundtrack. Sun, foam, friends — the ultimate poolside playground.\nbar: Blue Chairs Resort\naddress: MALECÓN 4, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20FlowerPower.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp\nwebsite: https://beefdip.com/\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: foam-pool-party|2027-01-25|blue chairs resort\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "3D6B9B6F-A474-41A5-B7F3-63768FB1700E",
+      "uid": "3D6B9B6F-A474-41A5-B7F3-63768FB1700E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Blue Chairs Resort",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Bearland%20FlowerPower.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26%20Foam%20Pool%20Party.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "Dive into waves of beats and bubbles as DJ Division 4 (Australia) unleashes a high-energy soundtrack. Sun, foam, friends — the ultimate poolside playground.",
+      "cadence": null,
+      "address": "MALECÓN 4, ZONA ROMÁNTICA",
+      "website": "https://beefdip.com/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "foam-pool-party-06eda3c4"
+    },
+    {
+      "name": "WET & WILD – POOL & BEACH PARTY",
+      "day": "Saturday",
+      "time": "12PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.6483408,
+        "lng": -105.1980403
+      },
+      "startDate": "2027-01-30T12:00:00",
+      "endDate": "2027-01-30T19:00:00",
+      "unprocessedDescription": "description: Our biggest pool party of the week, definitely ho\rnors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wet-wild-–-pool-beach-party|2027-01-30|cc slaughters\nimageSource: page\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "EABC3808-0E0D-466A-910C-872639C83676",
+      "uid": "EABC3808-0E0D-466A-910C-872639C83676",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CC Slaughters",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "Our biggest pool party of the week, definitely honors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.",
+      "cadence": null,
+      "address": "LÁZARO CÁRDENAS 254, PV MX",
+      "website": "https://beefdip.com/tags/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com/tags/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "wet-wild-pool-beach-party-6b59383d"
+    },
+    {
+      "name": "PAPA DIRK ROOFTOP CIGAR SOCIAL",
+      "day": "Thursday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-28T20:00:00",
+      "endDate": "2027-01-28T22:00:00",
+      "unprocessedDescription": "description: A new chill-out moment. Learn, puff, and mingle \rwith Papa Dirk at a relaxed rooftop social.\nbar: Blue Chairs Rooftop Bar\naddress: MALECÓN 4, ZONA ROMÁNTICA\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp\nwebsite: https://beefdip.com\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: papa-dirk-rooftop-cigar-social|2027-01-29|blue chairs rooftop bar\nbearSource: ai\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "0FC50D96-BE09-483F-A401-6A71C70977F9",
+      "uid": "0FC50D96-BE09-483F-A401-6A71C70977F9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Blue Chairs Rooftop Bar",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20Cigar%20Social.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "A new chill-out moment. Learn, puff, and mingle with Papa Dirk at a relaxed rooftop social.",
+      "cadence": null,
+      "address": "MALECÓN 4, ZONA ROMÁNTICA",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Rooftop%20Bar%2C%20MALEC%C3%93N%204%2C%20ZONA%20ROM%C3%81NTICA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://beefdip.com/tags/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "papa-dirk-rooftop-cigar-social-08f1157b"
+    },
+    {
+      "name": "DINNER UNDER THE STARS",
+      "day": "Monday",
+      "time": "12PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-25T12:00:00",
+      "endDate": "2027-01-25T21:00:00",
+      "unprocessedDescription": "description: Take a breather and savor flavors at Vallarta’s ne\rw Tryst Hotel restaurant. A perfect reset before going back out.\nbar: The Tryst Hotel Restaurant\ntimezone: America/Mexico_City\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: dinner-under-the-stars-tryst|2027-01-25|the tryst hotel restaurant\nwebsite: https://beefdip.com\nbearSource: ai\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D",
+      "uid": "E6CC80CE-F0F3-46EB-B51B-F81A0F1C7D2D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Tryst Hotel Restaurant",
+      "favicon": "https://beefdip.com",
+      "tea": "Take a breather and savor flavors at Vallarta’s new Tryst Hotel restaurant. A perfect reset before going back out.",
+      "cadence": null,
+      "address": null,
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20Restaurant",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "dinner-under-the-stars-12356a88"
+    },
+    {
+      "name": "FURBALL GEAR NIGHT",
+      "day": "Friday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.6483408,
+        "lng": -105.1980403
+      },
+      "startDate": "2027-01-29T22:00:00",
+      "endDate": "2027-01-30T05:00:00",
+      "unprocessedDescription": "bar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nticke\rtUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp\nwebsite: https://www.furball.nyc\ntimezone: America/Mexico_City\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-gear-night|2027-01-30|cc slaughters\nbearSource: keyword\ndescription: MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRODUCER CHRIS COX PLAYING HOUSE, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "803706A1-C0E5-4190-A58C-42E8AE5E5545",
+      "uid": "803706A1-C0E5-4190-A58C-42E8AE5E5545",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CC Slaughters",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "MUSIC BY GRAMMY AWARD NOMINATED & BILLBOARD #1 PRODUCER CHRIS COX PLAYING HOUSE, AND CLASSIC ANTHEMS THE BEEFDIP DANCERS",
+      "cadence": null,
+      "address": "LÁZARO CÁRDENAS 254, PV MX",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://beefdip.com/tags/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-gear-night-4d404df0"
+    },
+    {
+      "name": "Welcome T-Dance",
+      "day": "Saturday",
+      "time": "3PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.5973207,
+        "lng": -105.2392083
+      },
+      "startDate": "2027-01-23T15:00:00",
+      "endDate": "2027-01-24T00:00:00",
+      "unprocessedDescription": "description: BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT\nb\rar: Blue Chairs Resort\naddress: 4 Malecon, Puerto Vallarta, Jalisco\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp\naddressSource: geo-poi\nwebsite: https://beefdip.com\ngmaps: https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco\npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: welcome-t-dance|2027-01-23|blue chairs resort\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "0178A334-0562-44EC-99D3-5370DFF0C29F",
+      "uid": "0178A334-0562-44EC-99D3-5370DFF0C29F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Blue Chairs Resort",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25%20Welcome%20Party.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "BEEF DIP BEAR WEEK & BLUE CHAIRS RESORT PRESENT",
+      "cadence": null,
+      "address": "4 Malecon, Puerto Vallarta, Jalisco",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Blue%20Chairs%20Resort%2C%204%20Malecon%2C%20Puerto%20Vallarta%2C%20Jalisco",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "welcome-t-dance-3c6cd27e"
+    },
+    {
+      "name": "White Party",
+      "day": "Saturday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.6483408,
+        "lng": -105.1980403
+      },
+      "startDate": "2027-01-23T22:00:00",
+      "endDate": "2027-01-24T05:00:00",
+      "unprocessedDescription": "description: MUSIC BY GRAMMY AWARD WINNING PRODUCER TRACY YOUNG\r FEATURING THE BEEFDIP DANCERS\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20White%20Party.webp\nimageSource: page\naddressSource: page\nwebsite: https://beefdip.com\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: white-party|2027-01-24|cc slaughters\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "916C5FDB-AA7D-4630-902A-8E5CF3308C44",
+      "uid": "916C5FDB-AA7D-4630-902A-8E5CF3308C44",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CC Slaughters",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20White%20Party.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "MUSIC BY GRAMMY AWARD WINNING PRODUCER TRACY YOUNG FEATURING THE BEEFDIP DANCERS",
+      "cadence": null,
+      "address": "LÁZARO CÁRDENAS 254, PV MX",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "white-party-50b21550"
+    },
+    {
       "name": "WHITE PARTY",
       "day": "Wednesday",
       "time": "10PM-5AM",
@@ -1160,52 +934,321 @@
       "slug": "white-party-139c66d0"
     },
     {
-      "name": "WET & WILD – POOL & BEACH PARTY",
+      "name": "THE BLACK BALL",
       "day": "Saturday",
-      "time": "12PM-7PM",
+      "time": "10PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 20.6483408,
         "lng": -105.1980403
       },
-      "startDate": "2027-01-30T12:00:00",
-      "endDate": "2027-01-30T19:00:00",
-      "unprocessedDescription": "description: Our biggest pool party of the week, definitely ho\rnors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\naddressSource: page\nwebsite: https://beefdip.com/tags/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wet-wild-–-pool-beach-party|2027-01-30|cc slaughters\nimageSource: page\nbarSource: curated\nbearSource: keyword",
+      "startDate": "2027-01-30T22:00:00",
+      "endDate": "2027-01-31T01:00:00",
+      "unprocessedDescription": "description: Leather. Fetish. Freedom. DJ Jose Spinnin Cortes d\relivers dark, sexy house with performances by the BeefDip Dancers.\nbar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: the-black-ball|2027-01-31|cc slaughters\nwebsite: https://beefdip.com\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "EABC3808-0E0D-466A-910C-872639C83676",
-      "uid": "EABC3808-0E0D-466A-910C-872639C83676",
+      "sourceUid": "3EF2A697-311A-4656-82D1-935346E6DD71",
+      "uid": "3EF2A697-311A-4656-82D1-935346E6DD71",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Black%20Ball.webp",
       "favicon": "https://beefdip.com",
-      "tea": "Our biggest pool party of the week, definitely honors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.",
+      "tea": "Leather. Fetish. Freedom. DJ Jose Spinnin Cortes delivers dark, sexy house with performances by the BeefDip Dancers.",
       "cadence": null,
       "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://beefdip.com/tags/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
       "shortName": "BEEF­DIP",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://beefdip.com/tags/",
+          "url": "https://beefdip.com",
           "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+          "url": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "wet-wild-pool-beach-party-6b59383d"
+      "slug": "the-black-ball-70adad84"
+    },
+    {
+      "name": "BEARAOKE",
+      "day": "Tuesday",
+      "time": "9PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 20.5973207,
+        "lng": -105.2392083
+      },
+      "startDate": "2027-01-26T21:00:00",
+      "endDate": "2027-01-27T00:00:00",
+      "unprocessedDescription": "description: Sing loud, sing proud! Take the mic, earn a free\r tequila shot, and maybe score the night’s grand prize. Hosted with laughs, shots, and plenty of sass.\nbar: Blue Chairs Resort\naddress: MALECÓN 4, ZONA ROMÁNTICA\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Bearaoke-Talent.webp\nimageSource: page\naddressSource: page\nwebsite: https://beefdip.com/\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: bearaoke|2027-01-27|blue chairs resort\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "09E342B6-783B-4CC2-9E51-47EFCC02A23D",
+      "uid": "09E342B6-783B-4CC2-9E51-47EFCC02A23D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Blue Chairs Resort",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Bearaoke-Talent.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "Sing loud, sing proud! Take the mic, earn a free tequila shot, and maybe score the night’s grand prize. Hosted with laughs, shots, and plenty of sass.",
+      "cadence": null,
+      "address": "MALECÓN 4, ZONA ROMÁNTICA",
+      "website": "https://beefdip.com/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://beefdip.com/tags/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearaoke-0ef1f997"
+    },
+    {
+      "name": "TIDAL WAVE",
+      "day": "Thursday",
+      "time": "12PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-28T12:00:00",
+      "endDate": "2027-01-28T19:00:00",
+      "unprocessedDescription": "description: THE BEEFDIP FUNDRAISER POOL PARTY\nbar: Delfin Bea\rch Resort\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: tidal-wave|2027-01-28|delfin beach resort\nwebsite: https://beefdip.com\nbearSource: keyword\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F",
+      "uid": "3EC2960B-3E09-4B6F-AF4E-0C60BFDA691F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Delfin Beach Resort",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29%20TIDAL%20WAVE%20FIX.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "THE BEEFDIP FUNDRAISER POOL PARTY",
+      "cadence": null,
+      "address": "Calle Rodolfo Gomez 111",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Delfin%20Beach%20Resort%2C%20Calle%20Rodolfo%20Gomez%20111",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "tidal-wave-0b71e4c3"
+    },
+    {
+      "name": "Bearadise Love Boat - Bearsgiving 2026",
+      "day": "Friday",
+      "time": "2:30PM-7:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-27T14:30:00",
+      "endDate": "2026-11-27T19:30:00",
+      "unprocessedDescription": "bar: Majahuitas Beach Club\naddress: Puerto Vallarta, Jalisco\\\rnticketUrl: https://bearadisemx.com/en/love-boat\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp\nimageSource: json-api\ncover: $215\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco\nkey: bearadise-love-boat-bearsgiving-2026|2026-11-27|majahuitas beach club\nbearSource: keyword\nshortName: BEARADISE LOVE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "3BD804A4-9548-4006-848B-2823AB4D3B32",
+      "uid": "3BD804A4-9548-4006-848B-2823AB4D3B32",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Majahuitas Beach Club",
+      "cover": "$215",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp",
+      "cadence": null,
+      "address": "Puerto Vallarta, Jalisco",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco",
+      "ticketUrl": "https://bearadisemx.com/en/love-boat",
+      "shortName": "BEARADISE LOVE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearadisemx.com/en/love-boat",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearadise-love-boat-bearsgiving-2026-4ebbcc1c"
+    },
+    {
+      "name": "PRE WELCOME PARTY",
+      "day": "Saturday",
+      "time": "9PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-23T21:00:00",
+      "endDate": "2027-01-24T00:00:00",
+      "unprocessedDescription": "description: Kick off early with a sneak preview of BeefDip ene\rrgy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury, style, and rooftop vibes set the scene for bears from all over the world to meet before the madness begins.\naddress: Zona Romántica\ntimezone: America/Mexico_City\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: pre-welcome-party|2027-01-24|the tryst hotel\nwebsite: https://beefdip.com\nbearSource: keyword\nbar: The Tryst Hotel RoofTop\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop%2C%20Zona%20Rom%C3%A1ntica",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "91A74D31-4AB8-4FC2-B65B-A08647D661EA",
+      "uid": "91A74D31-4AB8-4FC2-B65B-A08647D661EA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Tryst Hotel RoofTop",
+      "favicon": "https://beefdip.com",
+      "tea": "Kick off early with a sneak preview of BeefDip energy at the brand-new Tryst Hotel in the heart of Zona Romántica. Luxury, style, and rooftop vibes set the scene for bears from all over the world to meet before the madness begins.",
+      "cadence": null,
+      "address": "Zona Romántica",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop%2C%20Zona%20Rom%C3%A1ntica",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel%20RoofTop%2C%20Zona%20Rom%C3%A1ntica",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "pre-welcome-party-28882b0e"
+    },
+    {
+      "name": "SPLASH! Classic Anthems Pool Party",
+      "day": "Tuesday",
+      "time": "11AM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-26T11:00:00",
+      "endDate": "2027-01-26T19:00:00",
+      "unprocessedDescription": "description: DJ Giaco serves iconic hits and fresh beats all da\ry at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — SPLASH! is pure joy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111\ntimezone: America/Mexico_City\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: splash-classic-anthems-pool-party|2027-01-26|hotel delfin\nwebsite: https://beefdip.com\nbearSource: ai\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "765F235D-ADFF-4EBD-902F-F9D7571BB187",
+      "uid": "765F235D-ADFF-4EBD-902F-F9D7571BB187",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Delfin",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20Splash%20Pool%20Party.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "DJ Giaco serves iconic hits and fresh beats all day at Vallarta’s poolside hotspot. Dance in the water or soak up the sun — SPLASH! is pure joy.",
+      "cadence": null,
+      "address": "Calle Rodolfo Gomez 111",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "splash-classic-anthems-pool-party-67eb2dec"
+    },
+    {
+      "name": "Drag Brunch + Rooftop Pool",
+      "day": "Sunday",
+      "time": "11AM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-31T11:00:00",
+      "endDate": "2027-01-31T19:00:00",
+      "unprocessedDescription": "description: Two brunch seatings available\\: 11\\:00 AM and 1\\\r:00 PM\nExpect fierce drag performances, delicious brunch, laughs, and vacation vibes.\nAnd yes… the rooftop pool opens at 1\\:00 PM\nCome for brunch, stay for the pool—sun, cocktails, and an elevated afternoon at The Tryst.\nbar: The Tryst Hotel\nwebsite: http://beefdip.com/tags/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: drag-brunch-rooftop-pool|2027-01-31|the tryst hotel\nbearSource: ai\ntimezone: America/Mexico_City",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "E7A1168A-C5EA-4DBA-9375-24484BD73E43",
+      "uid": "E7A1168A-C5EA-4DBA-9375-24484BD73E43",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Tryst Hotel",
+      "favicon": "https://beefdip.com",
+      "tea": "Two brunch seatings available: 11:00 AM and 1:00 PM",
+      "cadence": null,
+      "address": null,
+      "website": "http://beefdip.com/tags/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "http://beefdip.com/tags/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Tryst%20Hotel",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "drag-brunch-rooftop-pool-6bde928f"
     },
     {
       "name": "FLOWER POWER DISCO",
@@ -1262,55 +1305,93 @@
       "slug": "flower-power-disco-44bb0bf7"
     },
     {
-      "name": "FURBALL POOL PARTY",
-      "day": "Wednesday",
-      "time": "12PM-7PM",
+      "name": "SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY",
+      "day": "Sunday",
+      "time": "10PM-5AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 20.6483408,
         "lng": -105.1980403
       },
-      "startDate": "2027-01-27T12:00:00",
-      "endDate": "2027-01-27T19:00:00",
-      "unprocessedDescription": "description: Straight from New York—home to one of the most ico\rnic bear party brands in the USA—Furball brings its signature energy, dirty grooves, and bigger-than-life vibes to Puerto Vallarta.\nExpect a packed pool, nonstop beats, and a sea of bears, muscle, and friends under the sun.\nBring your Furball attitude. Leave everything else behind. DJ Matt Consola will bring the heat all day.\nbar: CC Slaughters\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-pool-party|2027-01-27|delfin beach resort\nbearSource: keyword\naddress: LÁZARO CÁRDENAS 254, PV MX\nwebsite: https://www.furball.nyc\npinSource: curated\naddressSource: page\nimageSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
+      "startDate": "2027-01-31T22:00:00",
+      "endDate": "2027-02-01T05:00:00",
+      "unprocessedDescription": "bar: CC Slaughters\naddress: LÁZARO CÁRDENAS 254, PV MX\nimage\r: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp\nwebsite: https://beefdip.com\ntimezone: America/Mexico_City\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: sweat-–-singlet-underwear-jockstrap-party|2027-02-01|cc slaughters\nbearSource: keyword\ndescription: SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "07B0F9A5-C206-412E-B246-BF0E501F9D43",
-      "uid": "07B0F9A5-C206-412E-B246-BF0E501F9D43",
+      "sourceUid": "92F85CD7-9A03-4F71-AFDE-06D029A42E79",
+      "uid": "92F85CD7-9A03-4F71-AFDE-06D029A42E79",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "CC Slaughters",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp",
-      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28%20FURBALL%20Pool%20Party.webp",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Straight from New York—home to one of the most iconic bear party brands in the USA—Furball brings its signature energy, dirty grooves, and bigger-than-life vibes to Puerto Vallarta.",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01%20Sweat.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY",
       "cadence": null,
       "address": "LÁZARO CÁRDENAS 254, PV MX",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
-      "ticketUrl": "https://beefdip.com/tags/",
-      "shortName": "FUR­BALL",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
+      "shortName": "BEEF­DIP",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.furball.nyc",
+          "url": "https://beefdip.com",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=20.6483408%2C-105.1980403",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sweat-singlet-underwear-jockstrap-party-22959658"
+    },
+    {
+      "name": "WET & WILD – POOL & BEACH PARTY",
+      "day": "Saturday",
+      "time": "12PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-30T12:00:00",
+      "endDate": "2027-01-30T19:00:00",
+      "unprocessedDescription": "description: Our biggest pool party of the week, definitely ho\rnors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.\nbar: Hotel Delfin\naddress: Calle Rodolfo Gomez 111, PV\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp\naddressSource: page\nwebsite: https://beefdip.com\ntimezone: America/Mexico_City\ngmaps: https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: wet-wild-–-pool-beach-party|2027-01-30|hotel delfin\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Mexico_City",
+      "wasUTC": true,
+      "sourceUid": "57855554-F352-4A55-8D0C-146E7F30E1AD",
+      "uid": "57855554-F352-4A55-8D0C-146E7F30E1AD",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Delfin",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31%20Wet%20&%20Wild.webp",
+      "favicon": "https://beefdip.com",
+      "tea": "Our biggest pool party of the week, definitely honors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.",
+      "cadence": null,
+      "address": "Calle Rodolfo Gomez 111, PV",
+      "website": "https://beefdip.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "shortName": "BEEF­DIP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefdip.com",
+          "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CC%20Slaughters%2C%20L%C3%81ZARO%20C%C3%81RDENAS%20254%2C%20PV%20MX",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Delfin%2C%20Calle%20Rodolfo%20Gomez%20111%2C%20PV",
           "label": "🗺️ Google Maps"
         },
         {
@@ -1319,39 +1400,40 @@
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "furball-pool-party-692b7f78"
+      "slug": "wet-wild-pool-beach-party-0bb8bf2f"
     },
     {
-      "name": "MAD.BEAR FOAM POOL PARTY",
-      "day": "Friday",
-      "time": "12PM-6PM",
+      "name": "MAD.BEAR RED BALL",
+      "day": "Tuesday",
+      "time": "10PM-5AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 20.5973207,
-        "lng": -105.2392083
+        "lat": 20.6483408,
+        "lng": -105.1980403
       },
-      "startDate": "2027-01-29T12:00:00",
-      "endDate": "2027-01-29T18:00:00",
-      "unprocessedDescription": "description: A foamy fiesta with our friends from Mad.Bear Spai\rn. DJ Benjamin Koll and DJ Nalgaroth bring the heat.\nbar: Blue Chairs Resort\naddress: LÁZARO CÁRDENAS 254, PV MX\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20MadBear%20Foam%20Party.webp\nwebsite: https://beefdip.com/\ntimezone: America/Mexico_City\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-foam-pool-party|2027-01-29|blue chairs resort\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+      "startDate": "2027-01-26T22:00:00",
+      "endDate": "2027-01-27T05:00:00",
+      "unprocessedDescription": "description: DJ Division 4 brings Sydney fire to Vallarta. Red \rlights, hot bodies, and relentless beats until dawn. Come burn up the dance floor.\nbar: CC Slaughters\naddress: Lázaro Cárdenas 254\ntimezone: America/Mexico_City\nticketUrl: https://beefdip.com/tags/\nimage: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\nimageSource: page\nimageVertical: https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp\naddressSource: page\nwebsite: https://beefdip.com/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og\npinSource: curated\nshortName: BEEF­DIP\nfavicon: https://beefdip.com\nkey: mad-bear-red-ball|2027-01-27|cc slaughters\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Mexico_City",
       "wasUTC": true,
-      "sourceUid": "12A249A3-C5EE-41A2-A583-F7FE4ADCA58C",
-      "uid": "12A249A3-C5EE-41A2-A583-F7FE4ADCA58C",
+      "sourceUid": "92931656-EB15-4AE0-80EB-1D3F9AC2B955",
+      "uid": "92931656-EB15-4AE0-80EB-1D3F9AC2B955",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Blue Chairs Resort",
-      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30%20MadBear%20Foam%20Party.webp",
+      "bar": "CC Slaughters",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp",
+      "imageVertical": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27%20MadBear%20Red%20Ball.webp",
       "favicon": "https://beefdip.com",
-      "tea": "A foamy fiesta with our friends from Mad.Bear Spain. DJ Benjamin Koll and DJ Nalgaroth bring the heat.",
+      "tea": "DJ Division 4 brings Sydney fire to Vallarta. Red lights, hot bodies, and relentless beats until dawn. Come burn up the dance floor.",
       "cadence": null,
-      "address": "LÁZARO CÁRDENAS 254, PV MX",
+      "address": "Lázaro Cárdenas 254",
       "website": "https://beefdip.com/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
       "ticketUrl": "https://beefdip.com/tags/",
       "shortName": "BEEF­DIP",
       "bearReview": null,
@@ -1363,7 +1445,7 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=20.5973207%2C-105.2392083",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
           "label": "🗺️ Google Maps"
         },
         {
@@ -1372,51 +1454,7 @@
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "madbear-foam-pool-party-59683591"
-    },
-    {
-      "name": "Bearadise Love Boat - Bearsgiving 2026",
-      "day": "Friday",
-      "time": "2:30PM-7:30PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-11-27T14:30:00",
-      "endDate": "2026-11-27T19:30:00",
-      "unprocessedDescription": "bar: Majahuitas Beach Club\naddress: Puerto Vallarta, Jalisco\\\rnticketUrl: https://bearadisemx.com/en/love-boat\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp\nimageSource: json-api\ncover: $215\ntimezone: America/Mexico_City\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco\nkey: bearadise-love-boat-bearsgiving-2026|2026-11-27|majahuitas beach club\nbearSource: keyword\nshortName: BEARADISE LOVE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Mexico_City",
-      "wasUTC": true,
-      "sourceUid": "3BD804A4-9548-4006-848B-2823AB4D3B32",
-      "uid": "3BD804A4-9548-4006-848B-2823AB4D3B32",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Majahuitas Beach Club",
-      "cover": "$215",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp",
-      "cadence": null,
-      "address": "Puerto Vallarta, Jalisco",
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco",
-      "ticketUrl": "https://bearadisemx.com/en/love-boat",
-      "shortName": "BEARADISE LOVE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Majahuitas%20Beach%20Club%2C%20Puerto%20Vallarta%2C%20Jalisco",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://bearadisemx.com/en/love-boat",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearadise-love-boat-bearsgiving-2026-4ebbcc1c"
+      "slug": "madbear-red-ball-64450d6f"
     }
   ]
 }
