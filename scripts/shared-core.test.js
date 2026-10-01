@@ -27111,6 +27111,24 @@ test('all-day: where a scraped event meets its calendar record', () => {
   assert.equal(SharedCore.getOwnerReviewChangeFields().includes('allDay'), false, 'housekeeping, not a card of its own');
 });
 
+test('findCuratedBarsNamedInText: a page\'s words name a curated bar by its bare name, never by a stem shared with another bar', () => {
+  const core = new SharedCore({ seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] }, nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, { eventSchema: EventSchema });
+  core.bars = {
+    seattle: [{ name: 'The Lumber Yard Bar', city: 'seattle', address: '9630 16th Ave SW, Seattle, WA 98106' }, { name: 'Seattle Eagle', city: 'seattle' }],
+    nyc: [{ name: 'Rockbar', city: 'nyc' }, { name: 'Eagle NYC', city: 'nyc' }, { name: 'The Eagle', city: 'nyc' }]
+  };
+  const names = (text) => core.findCuratedBarsNamedInText(text).map((hit) => `${hit.city}:${hit.bar.name}`);
+  assert.deepEqual(names('The Weekly Bear Social — Every Sunday at Lumberyard from 2p-7p'), ['seattle:The Lumber Yard Bar'], '"Lumberyard" is "The Lumber Yard Bar" bare');
+  assert.deepEqual(names('see you at the lumber yard bar!'), ['seattle:The Lumber Yard Bar']);
+  assert.deepEqual(names('Fridays at Rockbar'), ['nyc:Rockbar'], 'a short name keeps its venue word');
+  assert.deepEqual(names('Fridays at Rock'), [], '"rock" is not Rockbar');
+  assert.deepEqual(names('meet at the Eagle on Friday'), [], '"eagle" is a stem of Seattle Eagle and Eagle NYC — a family, not a bar');
+  assert.deepEqual(names('Seattle Eagle hosts, then Lumberyard'), ['seattle:Seattle Eagle', 'seattle:The Lumber Yard Bar'], 'two bars are two hits for the caller to refuse');
+  assert.deepEqual(names(''), []);
+  assert.equal(SharedCore.bareBarNameKey('The Lumber Yard Bar'), 'lumberyard');
+  assert.equal(SharedCore.bareBarNameKey('Rockbar'), 'rockbar', 'too short without its venue word');
+});
+
 test('whole-day kinds: a festival is all-day; one date at a venue, or anything that runs "til late", is an event whose time is unknown', () => {
   const core = allDayCore();
   const kind = (event) => {

@@ -4345,6 +4345,66 @@ class SharedCore {
         return matches[0];
     }
 
+    // THE CURATED BARS A TEXT NAMES — for a page that places its own cards
+    // in prose ("Every Sunday at Lumberyard from 2p-7p"). The page's words
+    // are read as word windows (one to five words, a leading "the"
+    // dropped) and a window names a bar when its bare key equals the bar's:
+    // the normalized key with one trailing venue word (bar, pub, club,
+    // lounge, tavern, saloon, nightclub) dropped on BOTH sides, so
+    // "Lumberyard" meets "The Lumber Yard Bar"; the word is kept when what
+    // is left is too short to be a name ("Rockbar" stays "rockbar"). Still
+    // exact after that — never substring, never fuzzy — and a bare key
+    // that is a stem of ANOTHER curated bar anywhere ("eagle" ⊂
+    // "dallaseagle") names nothing, the same guard findCuratedBarCityByName
+    // applies. Returns distinct { city, bar } hits; the caller decides what
+    // more than one means.
+    static bareBarNameKey(name, normalizedKey = null) {
+        const key = normalizedKey !== null ? normalizedKey : String(name || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, '');
+        const stripped = key.replace(/(bar|pub|club|lounge|tavern|saloon|nightclub)$/, '');
+        return stripped.length >= 5 ? stripped : key;
+    }
+
+    findCuratedBarsNamedInText(text) {
+        const source = String(text === null || text === undefined ? '' : text);
+        if (!source.trim() || !this.bars || typeof this.bars !== 'object') return [];
+        const byBareKey = new Map();
+        const allBareKeys = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string') continue;
+                const bare = SharedCore.bareBarNameKey(bar.name, this.normalizeBarNameKey(bar.name));
+                if (!bare) continue;
+                if (!byBareKey.has(bare)) byBareKey.set(bare, []);
+                byBareKey.get(bare).push({ city: cityKey, bar });
+                allBareKeys.push({ bare, name: bar.name });
+            }
+        }
+        if (byBareKey.size === 0) return [];
+        const words = source.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        const hits = [];
+        const seen = new Set();
+        for (let index = 0; index < words.length; index++) {
+            for (let length = 1; length <= 5 && index + length <= words.length; length++) {
+                const window = words.slice(index, index + length);
+                if (window[0] === 'the' && window.length > 1) window.shift();
+                const bare = SharedCore.bareBarNameKey(null, window.join(''));
+                const named = byBareKey.get(bare);
+                if (!named) continue;
+                // A stem of another curated bar's name is a family, not a bar.
+                if (allBareKeys.some(entry => entry.bare !== bare && entry.bare.includes(bare))) continue;
+                for (const hit of named) {
+                    const id = `${hit.city}|${hit.bar.name}`;
+                    if (seen.has(id)) continue;
+                    seen.add(id);
+                    hits.push(hit);
+                }
+            }
+        }
+        return hits;
+    }
+
     // Cross-city lookup by DOOR, for an event whose city is unknown and
     // whose venue name is not a curated name in full: the page gave a venue
     // name AND a numbered street line, and one curated bar answers to both —

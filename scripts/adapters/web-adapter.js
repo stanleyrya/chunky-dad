@@ -2299,6 +2299,60 @@ async saveFailureNote(url, error, metadata = {}) {
         }
     }
 
+    // Node-side mirror of ScriptableAdapter.probeRecurringSeries: is this
+    // stored record an occurrence of a saved SERIES? Without it the Mac's
+    // analysis read a scraped single that landed on a series occurrence as
+    // a plain merge ("update the Dec 27 Sunday to 9 PM") while the phone,
+    // which has the probe, turns the same record into an override event at
+    // execution — the deck promised one write and the phone did another
+    // (South Seattle Bear Social, 2026-09-30: the owner's imported weekly
+    // series vs the site's themed Sundays). Same two layers as the phone:
+    //   1. the identifier's ICS uid is a series VEVENT (RRULE, no
+    //      RECURRENCE-ID) in the city's published calendar → true; a uid
+    //      the published calendar knows as a single → false;
+    //   2. else the phone snapshot holds two or more occurrences carrying
+    //      this identifier (SharedCore.resolveSeriesProbeDecision) → true.
+    // Cached per identifier; fails open to false.
+    async probeRecurringSeries(existingEvent, scrapedEvent = null) {
+        try {
+            const identifier = existingEvent && existingEvent.identifier ? String(existingEvent.identifier).trim() : '';
+            if (!identifier) return false;
+            if (!this._seriesProbeCache) this._seriesProbeCache = {};
+            if (Object.prototype.hasOwnProperty.call(this._seriesProbeCache, identifier)) return this._seriesProbeCache[identifier];
+            // getSharedCoreRef hands back the SharedCore class (its statics).
+            const core = this.getSharedCoreRef();
+            const city = (scrapedEvent && scrapedEvent.city) || (existingEvent && existingEvent.city) || '';
+            const title = (existingEvent && existingEvent.title) || (scrapedEvent && scrapedEvent.title) || 'Unknown';
+            let decision = null;
+            const uid = core && typeof core.extractIcsUidFromIdentifier === 'function'
+                ? core.extractIcsUidFromIdentifier(identifier)
+                : null;
+            if (uid && city) {
+                const records = await this.getPublishedCalendarRecords(city);
+                const known = Array.isArray(records) ? records.filter(record => record && record.uid === uid) : [];
+                if (known.length > 0) {
+                    decision = known.some(record => record.rrule && !record.recurrenceId);
+                    if (decision) console.log(`🔁 RECURRING: series confirmed via published calendar ICS for "${title}"`);
+                }
+            }
+            if (decision === null && city) {
+                const snapshot = await this.getPhoneCalendarSnapshot(city);
+                const occurrences = snapshot && Array.isArray(snapshot.events) ? snapshot.events : [];
+                const probe = core && typeof core.resolveSeriesProbeDecision === 'function'
+                    ? core.resolveSeriesProbeDecision(occurrences, identifier)
+                    : { isSeries: false, instanceCount: 0 };
+                if (probe.isSeries) {
+                    decision = true;
+                    console.log(`🔁 RECURRING: series confirmed via the phone snapshot for "${title}" (${probe.instanceCount} occurrences share its identifier)`);
+                }
+            }
+            this._seriesProbeCache[identifier] = decision === true;
+            return this._seriesProbeCache[identifier];
+        } catch (error) {
+            return false;
+        }
+    }
+
     // Node-side mirror of ScriptableAdapter.getPublishedCalendarRecords: the
     // parsed VEVENT records already fetched for getExistingEvents. Null on
     // any failure (callers fail open).
