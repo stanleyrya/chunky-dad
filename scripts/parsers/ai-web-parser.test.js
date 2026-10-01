@@ -14107,6 +14107,41 @@ test('a venue closure notice is not an event; markup inside HTML comments is not
   assert.equal(timed.startDate.toISOString(), '2026-05-10T01:00:00.000Z', 'a timed row keeps its clock');
 });
 
+test('a page that places its cards in prose: exactly one curated bar named outside the cards places every card that states no venue, in that bar\'s city and zone', () => {
+  const parser = createParser();
+  parser.core = new SharedCore({ seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] }, nyc: { timezone: 'America/New_York', patterns: ['nyc'] } }, { eventSchema: EventSchema });
+  parser.core.bars = { seattle: [{ name: 'The Lumber Yard Bar', city: 'seattle' }], nyc: [{ name: 'Rockbar', city: 'nyc' }] };
+  const page = (hero) => ({ url: 'https://social.example/', html: `<html><header><a href="/">Social</a> at Rockbar NYC</header><body><section><h1>${hero}</h1></section><article><h2>Weekly Bear Social</h2><h4>27 SEP 2026 @ 2p-7p</h4><p>Come join the bears.</p></article></body><footer>ran with love in Seattle WA</footer></html>` });
+  const card = (extra) => ({ title: 'Weekly Bear Social', description: 'Come join the bears.', startDate: new Date(Date.UTC(2026, 8, 27, 14, 0)), endDate: new Date(Date.UTC(2026, 8, 27, 19, 0)), _timezoneUnresolved: true, ...extra });
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  try {
+    // The hero names one curated bar; the header's Rockbar is chrome and does not count.
+    const a = card(); const withVenue = card({ bar: 'Somewhere Else' }); const withCity = card({ city: 'nyc' });
+    assert.equal(parser.placeEventsAtPageStatedVenue([a, withVenue, withCity], page('Every Sunday at Lumberyard from 2p-7p'), {}), 2);
+    assert.equal(a.bar, 'The Lumber Yard Bar');
+    assert.equal(a.city, 'seattle');
+    assert.equal(a.barSource, 'page-prose');
+    assert.equal(a.timezone, 'America/Los_Angeles');
+    assert.equal(a._timezoneUnresolved, undefined, 'the wall clock is re-anchored once the zone is known');
+    assert.equal(a.startDate.toISOString(), '2026-09-27T21:00:00.000Z', '2 PM Seattle');
+    assert.equal(withVenue.bar, 'Somewhere Else', 'a card that states its venue keeps it');
+    assert.equal(withCity.bar, 'The Lumber Yard Bar');
+    assert.equal(withCity.city, 'nyc', 'a stated city is never overwritten');
+    // Two bars in the prose → nothing; none → nothing; aggregator → nothing.
+    const b = card();
+    assert.equal(parser.placeEventsAtPageStatedVenue([b], page('Sundays at Lumberyard, Fridays at Rockbar'), {}), 0);
+    assert.equal(b.bar, undefined);
+    assert.equal(parser.placeEventsAtPageStatedVenue([card()], page('Every Sunday somewhere'), {}), 0);
+    assert.equal(parser.placeEventsAtPageStatedVenue([card()], page('Every Sunday at Lumberyard'), { siteRole: 'aggregator' }), 0);
+    // The bar named only inside a card's own words is that card's business.
+    const c = card({ description: 'This week at Lumberyard' });
+    assert.equal(parser.placeEventsAtPageStatedVenue([c, card()], page('Upcoming'), {}), 0, 'no mention outside the cards');
+    const d = card({ description: 'This week at Lumberyard' }); const e = card();
+    assert.equal(parser.placeEventsAtPageStatedVenue([d, e], page('Every Sunday at Lumberyard'), {}), 0, 'a card names it too — not stated once for all');
+    assert.ok(lines.some((line) => /PAGE VENUE/.test(line)));
+  } finally { console.log = originalLog; }
+});
+
 test('date evidence: day-first spellings on the page corroborate the date ("27 SEP 2026", "16.10.26"); an ambiguous numeric day-first does not', () => {
   const parser = createParser();
   const has = (text, value) => parser.hasFieldEvidence(parser.buildAiEvidenceContextFromText(text), value, 'date', { imageEvidenceUrls: new Set() });

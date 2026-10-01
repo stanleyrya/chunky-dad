@@ -174,14 +174,14 @@
       ],
       "sourceRung": "static",
       "confidence": "high",
-      "note": "The homepage hero states the rule (\"Every Sunday at Lumberyard from 2p-7p\"); the \"Upcoming Socials\" list prints each Sunday as its own <article class=\"event-item\" data-event-date> card. Sundays the list leaves out are simply absent (2026-11-15 is not listed; the three themed Sundays below are listed under their own names instead of this one). The venue and city are stated only in the hero and the footer (\"A Bear Social Happy Hour ran with ❤️ in Seattle WA\"), never on a card. The Lumber Yard Bar is the curated Seattle bar; the page spells it \"Lumberyard\".",
+      "note": "The homepage hero states the rule (\"Every Sunday at Lumberyard from 2p-7p\"); the \"Upcoming Socials\" list prints each Sunday as its own <article class=\"event-item\" data-event-date> card. Sundays the list leaves out are simply absent (2026-11-15 is not listed; the three themed Sundays below are listed under their own names instead of this one). The venue and city are stated only in the hero and the footer (\"A Bear Social Happy Hour ran with ❤️ in Seattle WA\"), never on a card. The Lumber Yard Bar is the curated Seattle bar; the page spells it \"Lumberyard\". 2026-09-30: the page-prose venue rule (placeEventsAtPageStatedVenue) places the cards at The Lumber Yard Bar from the hero sentence; the calendar already holds this series (ICS import, uid south-seattle-bear-social-20260823T012058Z@chunky.dad), so the plain Sundays match it and are never written, and the themed Sundays become override events for their dates.",
       "evidence": {
         "url": "https://www.southseattlebears.com/",
         "quote": "The Weekly Bear Social Every Sunday at Lumberyard from 2p-7p"
       },
       "expect": {
         "extracted": true,
-        "note": "Each listed Sunday is read as its own dated event (the scraper never writes a series); run 2026-09-30 on the branch: all 13 cards dated and timed, none with a venue or city — the cards state neither."
+        "note": "Each listed Sunday is read as its own dated event; placed at The Lumber Yard Bar by the page-prose venue rule; the plain Sundays match the saved series and are withheld, the themed Sundays become override events."
       },
       "bearVerdict": null
     },
@@ -259,7 +259,5 @@
     }
   ],
   "traps": [],
-  "openQuestions": [
-    "The cards state no venue and no city; the hero (\"Every Sunday at Lumberyard\") and footer (\"in Seattle WA\") do. Whether a listing page's own prose may place its cards is an owner decision (2026-09-30)."
-  ]
+  "openQuestions": []
 }

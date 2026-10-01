@@ -141,6 +141,35 @@ test('getWideWindowCalendarEvents mirrors the probe window off the published cal
   });
 });
 
+test('probeRecurringSeries: a stored record is a saved series when the published ICS says so by uid, or the phone snapshot holds several occurrences of it', async () => {
+  await withFetchStub(LA_ICS_FIXTURE, async () => {
+    const adapter = makeAdapter();
+    const series = { identifier: 'ABC-123:chub-la@test', title: 'Club Chub' };
+    assert.equal(await adapter.probeRecurringSeries(series, { city: 'la', title: 'Club Chub' }), true, 'RRULE on that uid');
+    const single = { identifier: 'ABC-123:duro-la@test', title: 'Duro' };
+    assert.equal(await adapter.probeRecurringSeries(single, { city: 'la', title: 'Duro' }), false, 'a uid the published calendar knows as a single');
+    assert.equal(await adapter.probeRecurringSeries({ identifier: '' }, { city: 'la' }), false, 'no identifier, no series');
+  });
+  // Layer 2: the phone snapshot, when the published calendar knows nothing of the uid.
+  const shared = withSharedRoot();
+  try {
+    const now = Date.now();
+    const occurrence = (daysOut) => ({ identifier: 'DEF-456:weekly@phone', title: 'Weekly Thing', startDate: new Date(now + daysOut * 86400000).toISOString(), endDate: new Date(now + daysOut * 86400000 + 3600000).toISOString(), location: '', notes: '', url: '', isAllDay: false });
+    fs.writeFileSync(path.join(shared.dir, 'calendar-snapshot', 'la.json'), JSON.stringify({
+      version: 1, cityKey: 'la', calendarName: 'chunky-dad-la', capturedAt: new Date(now - 60000).toISOString(),
+      windowStart: new Date(now - 35 * 86400000).toISOString(), windowEnd: new Date(now + 120 * 86400000).toISOString(),
+      events: [occurrence(1), occurrence(8), occurrence(15), { ...occurrence(3), identifier: 'GHI-789:once@phone', title: 'Once' }]
+    }));
+    await withFetchStub(LA_ICS_FIXTURE, async () => {
+      const adapter = new WebAdapter({ cities: CITIES });
+      assert.equal(await adapter.probeRecurringSeries({ identifier: 'DEF-456:weekly@phone', title: 'Weekly Thing' }, { city: 'la' }), true, 'three snapshot occurrences share the identifier');
+      assert.equal(await adapter.probeRecurringSeries({ identifier: 'GHI-789:once@phone', title: 'Once' }, { city: 'la' }), false, 'one occurrence is not a series');
+    });
+  } finally {
+    shared.restore();
+  }
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();

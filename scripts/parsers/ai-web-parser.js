@@ -1605,6 +1605,9 @@ class AiWebParser {
                 // corpus here, so the adjacency check never runs (fail open).
                 structuredEvents.forEach(event => this.stampBarSourceProvenance(event, null, effectiveHtmlData));
                 const keptStructuredEvents = this.filterEventsByDiscoveryAllowlist(structuredEvents, sourceUrl, parserConfig);
+                // A page that places its cards in its own prose (see
+                // placeEventsAtPageStatedVenue).
+                this.placeEventsAtPageStatedVenue(keptStructuredEvents, effectiveHtmlData, parserConfig);
                 // Attribute the events to this page's site so the post-crawl
                 // venue-site address consensus can fill their blanks.
                 this.tagEventsWithVenueSitePage(keptStructuredEvents, effectiveHtmlData);
@@ -1818,6 +1821,9 @@ class AiWebParser {
             }
 
             const keptEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
+            // A page that places its cards in its own prose (see
+            // placeEventsAtPageStatedVenue).
+            this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
             // Attribute the events to this page's site so the post-crawl
             // venue-site address consensus can fill their blanks.
             this.tagEventsWithVenueSitePage(keptEvents, effectiveHtmlData);
@@ -29171,6 +29177,82 @@ TEXT:
             if (!entry.addresses[key]) entry.addresses[key] = { display: address, pages: new Set() };
             entry.addresses[key].pages.add(pageUrl);
         }
+    }
+
+    // A PAGE THAT PLACES ITS OWN CARDS IN PROSE. A promoter's listing says
+    // where its nights are once, above the list — southseattlebears.com:
+    // "The Weekly Bear Social — Every Sunday at Lumberyard from 2p-7p" and
+    // thirteen cards that name a date, a time and a blurb, never a venue
+    // (owner, 2026-09-30, choosing this over a hand-kept home venue per
+    // promoter: "the page-prose rule"). The page's own content — chrome
+    // (header, nav, footer) stripped — is read for curated bar names
+    // (SharedCore.findCuratedBarsNamedInText); when it names EXACTLY ONE
+    // curated bar, every card of this page that states no venue is placed
+    // there: bar, city (when the card has none), timezone, and its wall
+    // clock re-anchored in that zone. Fails closed: two bars or none → no
+    // card moves; a card that states its own venue keeps it; never on an
+    // aggregator (it lists everybody's events) and never on a venue's own
+    // site (the venue-site machinery owns those). The curated entry brings
+    // address and pin downstream, as for any curated bar.
+    placeEventsAtPageStatedVenue(events, htmlData, parserConfig) {
+        if (!Array.isArray(events) || events.length === 0 || !this.core) return 0;
+        if (typeof this.core.findCuratedBarsNamedInText !== 'function') return 0;
+        // normalizeSiteRoleValue knows venue/organizer only; an aggregator
+        // is the raw config word (SharedCore.isAggregatorRecord reads it the
+        // same way).
+        const configuredRoleRaw = parserConfig && typeof parserConfig.siteRole === 'string' ? parserConfig.siteRole.trim().toLowerCase() : '';
+        const configuredRole = this.normalizeSiteRoleValue(configuredRoleRaw);
+        const pageRole = this.getPageSiteRole(htmlData);
+        if (configuredRoleRaw === 'aggregator') return 0;
+        if (configuredRole === 'venue' || pageRole === 'venue') return 0;
+        const unplaced = events.filter(event => event && typeof event === 'object'
+            && !(typeof event.bar === 'string' && event.bar.trim())
+            && !(typeof event.address === 'string' && event.address.trim()));
+        if (unplaced.length === 0) return 0;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return 0;
+        const bodyText = this.stripTags(this.splitPageChrome(html).body.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' '));
+        const named = this.core.findCuratedBarsNamedInText(bodyText);
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (named.length === 0) return 0;
+        if (named.length > 1) {
+            console.log(`🏠 PAGE VENUE: ${pageUrl} names ${named.length} curated bars in its own words (${named.map(hit => hit.bar.name).join(', ')}) — no card placed by the page`);
+            return 0;
+        }
+        const { city, bar } = named[0];
+        // Stated ONCE, FOR ALL the cards — above them, not inside one. A
+        // card whose own words name the bar speaks for itself (extraction
+        // reads it there), and a page where the only mention sits inside
+        // one card is not placing the others (beefdip.com/tags/, replay
+        // 2026-09-30: an index page whose fragments mention Blue Chairs
+        // Resort would have placed four unrelated cards there).
+        const namedInsideACard = events.some(event => {
+            const own = [event && event.title, event && event.description].filter(value => typeof value === 'string').join('\n');
+            return own.trim() !== '' && this.core.findCuratedBarsNamedInText(own).some(hit => hit.city === city && hit.bar.name === bar.name);
+        });
+        if (namedInsideACard) {
+            console.log(`🏠 PAGE VENUE: ${pageUrl} names "${bar.name}" inside a card's own words, not once for all its cards — no card placed by the page`);
+            return 0;
+        }
+        const timezone = typeof this.core.getCityTimezone === 'function' ? this.core.getCityTimezone(city) : '';
+        let placed = 0;
+        for (const event of unplaced) {
+            event.bar = bar.name;
+            event.barSource = 'page-prose';
+            event._barFromPageProse = true;
+            const eventCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (!eventCity || eventCity === 'unknown') {
+                event.city = city;
+                event._citySource = 'page-venue';
+            }
+            if (!event.timezone && timezone && String(event.city).toLowerCase() === city) event.timezone = timezone;
+            if (event._timezoneUnresolved === true && typeof this.core.resolveWallClockDates === 'function') {
+                this.core.resolveWallClockDates(event);
+            }
+            placed++;
+        }
+        console.log(`🏠 PAGE VENUE: ${pageUrl} names one curated bar in its own words — "${bar.name}" (${city}); ${placed} card(s) stating no venue placed there`);
+        return placed;
     }
 
     // Stamp each produced event with its page's registrable host (internal
