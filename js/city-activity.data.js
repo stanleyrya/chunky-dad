@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-09-30",
+ "generatedAt": "2026-10-01",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-09-30",
     "2026-10-01",
     "2026-10-02",
     "2026-10-03",
@@ -74,6 +73,7 @@ window.CITY_ACTIVITY = {
     "2026-12-23",
     "2026-12-24",
     "2026-12-25",
+    "2026-12-26",
     "2026-12-27",
     "2026-12-29"
    ],
@@ -85,7 +85,9 @@ window.CITY_ACTIVITY = {
     "2026-10-11",
     "2026-11-07",
     "2026-11-08",
-    "2026-12-13"
+    "2026-11-29",
+    "2026-12-13",
+    "2026-12-27"
    ],
    "recurring": 2,
    "festivalUntil": null
@@ -161,6 +163,7 @@ window.CITY_ACTIVITY = {
    "dates": [
     "2026-10-17",
     "2026-11-21",
+    "2026-12-19",
     "2026-12-31",
     "2027-08-29"
    ],
@@ -169,10 +172,10 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-09-30",
     "2026-10-02",
     "2026-10-04",
     "2026-10-07",
+    "2026-10-08",
     "2026-10-09",
     "2026-10-10",
     "2026-10-11",
@@ -239,7 +242,8 @@ window.CITY_ACTIVITY = {
   "vegas": {
    "dates": [
     "2026-10-31",
-    "2027-06-16"
+    "2027-06-16",
+    "2027-06-20"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -265,7 +269,9 @@ window.CITY_ACTIVITY = {
     "2026-10-02",
     "2026-10-03",
     "2026-10-17",
+    "2026-10-24",
     "2026-11-06",
+    "2026-11-14",
     "2026-12-04"
    ],
    "recurring": 1,
@@ -295,16 +301,19 @@ window.CITY_ACTIVITY = {
   "boston": {
    "dates": [
     "2026-10-04",
+    "2026-10-07",
     "2026-10-09",
     "2026-10-10",
     "2026-10-15",
     "2026-10-18",
     "2026-10-24",
     "2026-10-25",
+    "2026-11-04",
     "2026-11-15",
     "2026-11-19",
     "2026-11-28",
     "2026-11-29",
+    "2026-12-02",
     "2026-12-17",
     "2026-12-20",
     "2026-12-26"
@@ -438,7 +447,8 @@ window.CITY_ACTIVITY = {
   },
   "montreal": {
    "dates": [
-    "2026-10-03"
+    "2026-10-03",
+    "2026-10-15"
    ],
    "recurring": 0,
    "festivalUntil": "2027-04-11"
@@ -466,6 +476,8 @@ window.CITY_ACTIVITY = {
   "manchester": {
    "dates": [
     "2026-10-02",
+    "2026-10-03",
+    "2026-10-04",
     "2026-10-10",
     "2026-11-14",
     "2026-12-12"
@@ -475,7 +487,8 @@ window.CITY_ACTIVITY = {
   },
   "brighton": {
    "dates": [
-    "2026-12-05"
+    "2026-12-05",
+    "2027-01-01"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -534,12 +547,17 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "sydney": {
-   "dates": [],
+   "dates": [
+    "2026-10-02"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "melbourne": {
-   "dates": [],
+   "dates": [
+    "2026-10-30",
+    "2026-11-27"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -549,12 +567,19 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "oslo": {
-   "dates": [],
+   "dates": [
+    "2026-10-30",
+    "2026-11-11",
+    "2026-11-27",
+    "2026-12-25"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "ottawa": {
-   "dates": [],
+   "dates": [
+    "2026-10-08"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -564,12 +589,17 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "orlando": {
-   "dates": [],
+   "dates": [
+    "2026-10-18",
+    "2027-06-03"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "edinburgh": {
-   "dates": [],
+   "dates": [
+    "2026-10-01"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -579,12 +609,17 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "leipzig": {
-   "dates": [],
+   "dates": [
+    "2026-10-09",
+    "2026-10-10"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "cologne": {
-   "dates": [],
+   "dates": [
+    "2026-10-16"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -599,7 +634,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "singapore": {
-   "dates": [],
+   "dates": [
+    "2026-10-03"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -614,12 +651,16 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "indianapolis": {
-   "dates": [],
+   "dates": [
+    "2026-12-10"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "gettysburg": {
-   "dates": [],
+   "dates": [
+    "2026-12-10"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
