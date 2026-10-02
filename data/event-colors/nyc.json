@@ -1309,6 +1309,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-the-bear-party-395abf4d",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-39ed3375",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",

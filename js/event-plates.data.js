@@ -2,7 +2,7 @@
 // faviconPlate per event-website domain; the homepage reads it to tint
 // each bear-run icon's plate (see js/compact-card-renderer.js).
 window.EVENT_PLATES = {
- "generatedAt": "2026-10-01",
+ "generatedAt": "2026-10-02",
  "domains": {
   "furball.nyc": "#ffffff",
   "atlantaeagle.com": "#ffffff",
