@@ -337,6 +337,16 @@ test('getFlyerCandidates: a separate wide image still wins, and a lone slot is s
   assert.equal(loader.getFlyerCandidates({}, 'landscape').length, 0);
 });
 
+test('isSiteHostedImageUrl: a picture under chunky.dad/img/ is the repo\'s own file — used as it is, never downloaded or rewritten to a derived local path', () => {
+  const { isSiteHostedImageUrl } = require('../js/filename-utils.js');
+  assert.equal(isSiteHostedImageUrl('https://chunky.dad/img/inbox/2026-11-14-bearracuda-la-8485c386.jpg'), true);
+  assert.equal(isSiteHostedImageUrl('https://www.chunky.dad/img/events/x/y.jpg'), true);
+  assert.equal(isSiteHostedImageUrl('https://chunky.dad/advice/'), false, 'not a picture');
+  assert.equal(isSiteHostedImageUrl('https://cdn.example.com/img/a.jpg'), false, 'another host');
+  assert.equal(isSiteHostedImageUrl('img/inbox/a.jpg'), false, 'a relative path is not an address');
+  assert.equal(isSiteHostedImageUrl(''), false);
+});
+
 test('getFlyerCandidates: local img/events paths still resolve via the stamped source URLs', () => {
   // parseEventData rewrites cached slots to img/events paths whose filename is a
   // hash of the FULL url, so the two delivery variants of one file land on two

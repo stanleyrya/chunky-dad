@@ -1209,6 +1209,31 @@ function resolvePendingPictures(sharedRoot, options) {
     return changed;
 }
 
+// The record is a cache of "inbox address → website address": a
+// published entry is dropped PUBLISHED_PICTURE_KEEP_DAYS after it went
+// up (the event is long past; a re-shared picture is simply published
+// again), a pending one PENDING_PICTURE_KEEP_DAYS after its push (a PR
+// nobody merged). Returns the number dropped.
+const PUBLISHED_PICTURE_KEEP_DAYS = 120;
+const PENDING_PICTURE_KEEP_DAYS = 60;
+function prunePublishedPictures(sharedRoot, options = {}) {
+    const fsLike = options.fs || fs;
+    const now = Number.isFinite(options.now) ? options.now : Date.now();
+    const store = loadPublishedPictures(sharedRoot, fsLike);
+    let dropped = 0;
+    for (const [address, record] of Object.entries(store.pictures)) {
+        if (!record || typeof record !== 'object') { delete store.pictures[address]; dropped++; continue; }
+        const stamp = Date.parse(record.url ? record.publishedAt : record.pushedAt);
+        const keepMs = (record.url ? PUBLISHED_PICTURE_KEEP_DAYS : PENDING_PICTURE_KEEP_DAYS) * 86400000;
+        if (Number.isFinite(stamp) && now - stamp > keepMs) { delete store.pictures[address]; dropped++; }
+    }
+    if (dropped > 0) {
+        savePublishedPictures(sharedRoot, store, fsLike);
+        console.log(`Review: dropped ${dropped} old inbox picture record(s)`);
+    }
+    return dropped;
+}
+
 // Every approved decision whose snapshot picture is an inbox address and
 // has no record yet: publish it now; and every pending record: ask after
 // its PR. Called at deck build, so a step that failed at approve time is
@@ -1222,6 +1247,7 @@ function publishApprovedPictures(store, options) {
     const now = Number.isFinite(options.now) ? options.now : Date.now();
     const attempts = options.attempts || publishAttempts;
     const result = { published: [], failed: [], resolved: 0 };
+    prunePublishedPictures(sharedRoot, options);
     const pending = Object.values(loadPublishedPictures(sharedRoot, options.fs || fs).pictures).some((record) => record && !record.url && record.pr);
     if (pending && now - (attempts.get('resolve') || 0) >= PUBLISH_RETRY_MS) {
         attempts.set('resolve', now);
@@ -1902,6 +1928,7 @@ module.exports = {
     publishSharedPicture,
     publishApprovedPictures,
     resolvePendingPictures,
+    prunePublishedPictures,
     PICTURES_BRANCH,
     DEFAULT_SHARED_ROOT,
     DECISIONS_FILE_NAME,

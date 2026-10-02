@@ -576,6 +576,14 @@ test('inbox pictures: approving a card pushes a web-sized copy to the pictures b
   prState = { state: 'CLOSED', mergedAt: null };
   reviewQueue.resolvePendingPictures(root, { repoRoot: repo, run });
   assert.equal(reviewQueue.loadPublishedPictures(root).pictures['https://inbox.chunky.dad/file/three.png'], undefined, 'closed unmerged → dropped, offered again later');
+  // Old records go: a published one 120 days after it went up, a pending one 60 days after its push.
+  const aged = reviewQueue.loadPublishedPictures(root);
+  aged.pictures['https://inbox.chunky.dad/file/old.png'] = { url: 'https://chunky.dad/img/inbox/old.jpg', path: 'img/inbox/old.jpg', publishedAt: '2029-01-01T00:00:00.000Z' };
+  aged.pictures['https://inbox.chunky.dad/file/stale.png'] = { url: null, path: 'img/inbox/stale.jpg', pr: { number: 5 }, pushedAt: '2029-01-01T00:00:00.000Z' };
+  reviewQueue.savePublishedPictures(root, aged);
+  assert.equal(reviewQueue.prunePublishedPictures(root, { now: Date.parse('2030-01-01T00:00:00Z') }), 2);
+  assert.equal(Object.keys(reviewQueue.loadPublishedPictures(root).pictures).length, 2, 'the two live records stay');
+  assert.equal(reviewQueue.prunePublishedPictures(root, { now: Date.parse('2030-01-01T00:00:00Z') }), 0);
   assert.throws(() => reviewQueue.publishSharedPicture({ ...common, address: 'https://inbox.chunky.dad/file/gone.png' }), /is gone/);
   fs.rmSync(root, { recursive: true, force: true });
   fs.rmSync(repo, { recursive: true, force: true });
