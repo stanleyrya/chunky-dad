@@ -610,7 +610,10 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         || host(event.url || event.website);
     const image = EventSchema.pickImageForOrientation(event, 'portrait', {
         classifyOrientation: (url) => core.classifyImageOrientation(url)
-    }) || (typeof event.image === 'string' ? event.image : '');
+    }) || (typeof event.image === 'string' ? event.image : '')
+        // Held back from the calendar (SharedCore.holdSharedPicturesBack):
+        // still what the owner reviews.
+        || (typeof event._sharedPicture === 'string' ? event._sharedPicture : '');
     const seriesMatch = event._seriesMatch && typeof event._seriesMatch === 'object' ? event._seriesMatch : null;
     // The merge's own reason per changed stored field (one wording with the
     // results card: SharedCore.describeMergeDecision), and which notes keys
@@ -988,6 +991,32 @@ function findMissingPhoneCalendars(payload, entries, phoneCalendars) {
 // One saved run + the decision store → { runId, cards, decided, counts }.
 // cards = proposals with no covering decision (past events dropped);
 // decided = proposals a stored decision already covers (with that decision).
+// The browser's address for a picture from the shared inbox
+// (https://inbox.chunky.dad/file/<name>, a host that does not exist): the
+// review server serves the file itself at /inbox/file/<name>. Any other
+// address is returned as it is.
+function reviewImageUrl(url) {
+    const SharedCore = loadSharedCore();
+    const parsed = SharedCore.parseSharedInboxUrl(url);
+    return parsed && parsed.kind === 'file' ? `/inbox/file/${encodeURIComponent(parsed.name)}` : String(url || '');
+}
+
+// The bytes behind /inbox/file/<name>: the file as it sits in <shared
+// root>/inbox/ or, once a run has consumed it, inbox/done/. Null when there
+// is no such file. The name is one path segment (parseSharedInboxUrl's
+// rule), so nothing outside the inbox is ever read.
+function readSharedInboxFile(sharedRoot, name, fsLike = fs) {
+    const clean = String(name || '');
+    if (!clean || clean === '.' || clean === '..' || /[\\/]/.test(clean)) return null;
+    for (const dir of [path.join(sharedRoot, 'inbox'), path.join(sharedRoot, 'inbox', 'done')]) {
+        const file = path.join(dir, clean);
+        try {
+            if (fsLike.statSync(file).isFile()) return { file, buffer: fsLike.readFileSync(file) };
+        } catch (_) { /* not here */ }
+    }
+    return null;
+}
+
 function buildDeck(runPayload, store, options = {}) {
     const payload = runPayload && typeof runPayload === 'object' ? runPayload : {};
     const now = Number.isFinite(options.now) ? options.now : Date.now();
@@ -1181,7 +1210,7 @@ function buildDeck(runPayload, store, options = {}) {
             source: String(event.source || ''),
             url: String(event.url || event.website || ''),
             ticketUrl: String(event.ticketUrl || ''),
-            image: String(event.image || ''),
+            image: String(event.image || event._sharedPicture || ''),
             cover: String(event.cover || ''),
             description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
             dropReason: String(entry.reason || ''),
@@ -1297,6 +1326,11 @@ function buildDeck(runPayload, store, options = {}) {
         }));
 
     const lastExecution = executions.length > 0 ? executions[executions.length - 1] : null;
+    // A picture that lives in the owner's inbox is served by this server.
+    for (const entry of cards.concat(decided)) {
+        if (entry.display && SharedCore.isSharedInboxUrl(entry.display.image)) entry.display.image = reviewImageUrl(entry.display.image);
+        if (entry.proposal && SharedCore.isSharedInboxUrl(entry.proposal.image)) entry.proposal = { ...entry.proposal, image: reviewImageUrl(entry.proposal.image) };
+    }
     return {
         runId,
         waitingGone,
@@ -1391,6 +1425,8 @@ function formatRejectionsText(store) {
 
 module.exports = {
     NIGHT_COMPARE_FIELDS,
+    reviewImageUrl,
+    readSharedInboxFile,
     DEFAULT_SHARED_ROOT,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,

@@ -16938,6 +16938,13 @@ test('buildFlyerOnlySegments: one segment per text-bearing flyer, chrome and non
     assert.equal(segment._flyerOnlySegment, true);
     assert.deepEqual(segment.lines, [], 'flyer segments carry no invented page text');
   }
+  // A picture the owner put in the shared inbox is a flyer by declaration:
+  // a screenshot of a post is read whatever the model called it.
+  const shared = parser.buildFlyerOnlySegments([
+    { url: 'https://inbox.chunky.dad/file/IMG_0042.HEIC', text: 'BEAR NIGHT Saturday 10pm at the Eagle', imageClassification: 'screenshot' },
+    { url: 'https://inbox.chunky.dad/file/blank.png', text: 'hi', imageClassification: 'screenshot' }
+  ], 'https://inbox.chunky.dad/page/IMG_0042.HEIC');
+  assert.deepEqual(shared.map(s => s.imageHintUrls), [['https://inbox.chunky.dad/file/IMG_0042.HEIC']], 'the classification gate is skipped, the text floor is not');
 });
 
 test('zero-text multi-event page with OCR flyers extracts one event per flyer instead of whole-page fallback (Lumberyard /mothly-events)', async () => {

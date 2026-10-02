@@ -396,62 +396,147 @@ function patchLoadConfiguration(WebAdapter) {
 }
 
 // ---------------------------------------------------------------------------
-// SHARED PAGES (the share-sheet inbox). A page the owner shares from the
-// phone — a Safari "Send to chunky.dad" shortcut that runs inside the
-// logged-in tab and saves { url, html, title, savedAt } as a JSON file into
-// iCloud/Scriptable/chunky-dad-scraper/inbox/pages/ — is a page the Mac can
-// never fetch itself (Instagram, Facebook events, anything behind his
-// login). Each file is written into the SHARED page cache under its own URL
-// (so the run reads it as a cache hit, through the normal extraction, OCR
-// and bear check) and the URLs become one extra parser for this run,
-// "Shared pages", depth 0. Consumed files move to inbox/pages/done/
-// (pruned after SHARED_PAGES_KEEP_DAYS); files with no url or no html are
-// left where they are and named in the log. Nothing is fetched live here.
+// THE SHARED INBOX (one folder, sorted by file type). Anything the owner
+// drops into iCloud/Scriptable/chunky-dad-scraper/inbox/ from the phone —
+// Files › Save, the share sheet, the "Send to chunky.dad" shortcut — is
+// read by the next Mac run, by what the file is:
+//   *.json           { url, html, title, savedAt } — a page saved from a
+//                    logged-in tab (Instagram, Facebook events, anything
+//                    behind his login): written into the SHARED page cache
+//                    under its own URL, so the run reads it as a cache hit.
+//   *.html / *.htm   a saved page; its URL is the page's canonical / og:url
+//                    link, else an inbox address of its own.
+//   *.png *.jpg *.jpeg *.webp *.gif *.heic *.heif
+//                    a flyer or a screenshot of a post: wrapped in a page of
+//                    its own (https://inbox.chunky.dad/page/<name>, picture
+//                    at /file/<name> — WebAdapter answers both from disk) so
+//                    OCR reads it like any flyer; the picture itself is
+//                    never written to the calendar (SharedCore.
+//                    holdSharedPicturesBack), the deck shows it. HEIC (what
+//                    the phone saves photos and screenshots as) is first
+//                    re-encoded as a JPEG beside it through sips — the
+//                    vision model reads JPEG/PNG/WebP, not HEIC.
+//   *.txt / *.url / *.webloc
+//                    links, one per line (or the one inside): fetched by
+//                    the run itself.
+// Everything readable joins ONE extra parser for this run, "Shared pages",
+// depth 0. Consumed files move to inbox/done/ (pruned after
+// SHARED_PAGES_KEEP_DAYS — the pictures must outlive their run's OCR);
+// requests.json (the phone-fetch list, scriptable-adapter
+// fulfillInboxRequests) and anything unreadable stay where they are and
+// are named in the log. Nothing is fetched live here.
 // ---------------------------------------------------------------------------
 const SHARED_PAGES_PARSER_NAME = 'Shared pages';
 const SHARED_PAGES_KEEP_DAYS = 14;
+const SHARED_INBOX_PICTURE_PATTERN = /\.(?:png|jpe?g|webp|gif|hei[cf])$/i;
+const SHARED_INBOX_LINK_FILE_PATTERN = /\.(?:txt|url|webloc)$/i;
+const SHARED_INBOX_RESERVED = new Set(['requests.json', 'done', '.DS_Store']);
+// sips (macOS) re-encodes a HEIC as a JPEG next to it; the HEIC stays and
+// is moved to done/ with everything else.
+function convertHeicToJpeg(inPath, outPath) {
+    const { execFile } = require('child_process');
+    return new Promise((resolve, reject) => {
+        execFile('/usr/bin/sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '90', inPath, '--out', outPath], { timeout: 30000 }, (error) => (error ? reject(error) : resolve(outPath)));
+    });
+}
 async function addSharedPagesParser(config, adapter, env = process.env, fsLike = fs) {
     const sharedRoot = String((env && env.CHUNKY_SHARED_STORAGE_DIR) || '').trim();
     if (!sharedRoot || !config || !Array.isArray(config.parsers)) return [];
     const parserFilter = String((env && env.CHUNKY_RUN_PARSER) || '').trim();
     if (parserFilter && parserFilter !== SHARED_PAGES_PARSER_NAME) return [];
-    const dir = path.join(sharedRoot, 'inbox', 'pages');
-    let names = [];
-    try {
-        names = fsLike.readdirSync(dir).filter((name) => /\.json$/i.test(name));
-    } catch (_) {
-        return [];
+    const { SharedCore } = require('../scripts/shared-core');
+    const { WebAdapter } = require('../scripts/adapters/web-adapter');
+    const dir = path.join(sharedRoot, 'inbox');
+    // The old inbox/pages/ folder (one release) is read the same way.
+    const folders = [dir, path.join(dir, 'pages')];
+    const files = [];
+    for (const folder of folders) {
+        let names = [];
+        try { names = fsLike.readdirSync(folder); } catch (_) { continue; }
+        for (const name of names.sort()) {
+            if (SHARED_INBOX_RESERVED.has(name) || name.startsWith('.') || (folder === dir && name === 'pages')) continue;
+            const file = path.join(folder, name);
+            try { if (!fsLike.statSync(file).isFile()) continue; } catch (_) { continue; }
+            files.push({ folder, name, file });
+        }
     }
+    if (files.length === 0) return [];
     const doneDir = path.join(dir, 'done');
     const urls = [];
     const skipped = [];
-    for (const name of names.sort()) {
-        const file = path.join(dir, name);
-        let entry = null;
-        try {
-            entry = JSON.parse(fsLike.readFileSync(file, 'utf8'));
-        } catch (error) {
-            skipped.push(`${name}: not JSON`);
+    const kinds = { page: 0, picture: 0, link: 0 };
+    const cachePage = async (url, html, savedAt, by) => {
+        if (!adapter || typeof adapter.writeCachedPage !== 'function') return;
+        // The run's own config is not applied yet at this point (the cache
+        // looks disabled); the shared page cache is addressed by the
+        // adapter's storage dir regardless, so the write is explicit.
+        const cacheConfig = typeof adapter.getPageCacheConfig === 'function' ? adapter.getPageCacheConfig() : {};
+        await adapter.writeCachedPage(url, { html, url, statusCode: 200, headers: { 'x-fetched-by': by, 'x-shared-at': String(savedAt || '') } }, { ...cacheConfig, enabled: true, ttlDays: Number(cacheConfig.ttlDays) > 0 ? cacheConfig.ttlDays : 3 });
+    };
+    const addUrl = (url) => { if (!urls.includes(url)) urls.push(url); };
+    for (const { name, file } of files) {
+        let consumed = false;
+        const toMove = [{ name, file }];
+        if (/\.json$/i.test(name)) {
+            let entry = null;
+            try { entry = JSON.parse(fsLike.readFileSync(file, 'utf8')); } catch (_) { skipped.push(`${name}: not JSON`); continue; }
+            const url = entry && typeof entry.url === 'string' ? entry.url.trim() : '';
+            const html = entry && typeof entry.html === 'string' ? entry.html : '';
+            if (!/^https?:\/\//i.test(url) || html.length < 200) {
+                skipped.push(`${name}: ${!url ? 'no url' : html.length < 200 ? `html is ${html.length} chars` : 'bad url'}`);
+                continue;
+            }
+            await cachePage(url, html, entry.savedAt, 'share-sheet');
+            addUrl(url);
+            kinds.page++;
+            consumed = true;
+        } else if (/\.html?$/i.test(name)) {
+            const html = fsLike.readFileSync(file, 'utf8');
+            if (html.length < 200) { skipped.push(`${name}: html is ${html.length} chars`); continue; }
+            const stated = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i) || html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
+            const url = stated && /^https?:\/\//i.test(stated[1]) ? stated[1].trim() : SharedCore.sharedInboxUrl('page', name);
+            await cachePage(url, html, fsLike.statSync(file).mtime.toISOString(), 'shared-inbox');
+            addUrl(url);
+            kinds.page++;
+            consumed = true;
+        } else if (SHARED_INBOX_PICTURE_PATTERN.test(name)) {
+            let pictureName = name;
+            if (/\.hei[cf]$/i.test(name)) {
+                const jpegName = name.replace(/\.hei[cf]$/i, '.jpg');
+                try {
+                    await convertHeicToJpeg(file, path.join(path.dirname(file), jpegName));
+                    pictureName = jpegName;
+                    toMove.push({ name: jpegName, file: path.join(path.dirname(file), jpegName) });
+                } catch (error) {
+                    skipped.push(`${name}: HEIC could not be re-encoded (${error.message})`);
+                    continue;
+                }
+            }
+            const url = SharedCore.sharedInboxUrl('page', pictureName);
+            await cachePage(url, WebAdapter.buildSharedPicturePage(pictureName), fsLike.statSync(file).mtime.toISOString(), 'shared-inbox');
+            addUrl(url);
+            kinds.picture++;
+            consumed = true;
+        } else if (SHARED_INBOX_LINK_FILE_PATTERN.test(name)) {
+            const text = fsLike.readFileSync(file, 'utf8');
+            const links = [];
+            for (const match of text.matchAll(/https?:\/\/[^\s<>"']+/g)) links.push(match[0].replace(/[),.;]+$/, ''));
+            if (links.length === 0) { skipped.push(`${name}: no link inside`); continue; }
+            links.forEach(addUrl);
+            kinds.link += links.length;
+            consumed = true;
+        } else {
+            skipped.push(`${name}: not a page, picture or link file`);
             continue;
         }
-        const url = entry && typeof entry.url === 'string' ? entry.url.trim() : '';
-        const html = entry && typeof entry.html === 'string' ? entry.html : '';
-        if (!/^https?:\/\//i.test(url) || html.length < 200) {
-            skipped.push(`${name}: ${!url ? 'no url' : html.length < 200 ? `html is ${html.length} chars` : 'bad url'}`);
-            continue;
+        if (consumed) {
+            for (const moved of toMove) {
+                try {
+                    fsLike.mkdirSync(doneDir, { recursive: true });
+                    fsLike.renameSync(moved.file, path.join(doneDir, moved.name));
+                } catch (_) { /* a file that will not move is read again next run — harmless, the cache copy is the same */ }
+            }
         }
-        if (adapter && typeof adapter.writeCachedPage === 'function') {
-            // The run's own config is not applied yet at this point (the
-            // cache looks disabled); the shared page cache is addressed by
-            // the adapter's storage dir regardless, so the write is explicit.
-            const cacheConfig = typeof adapter.getPageCacheConfig === 'function' ? adapter.getPageCacheConfig() : {};
-            await adapter.writeCachedPage(url, { html, url, statusCode: 200, headers: { 'x-fetched-by': 'share-sheet', 'x-shared-at': String(entry.savedAt || '') } }, { ...cacheConfig, enabled: true, ttlDays: Number(cacheConfig.ttlDays) > 0 ? cacheConfig.ttlDays : 3 });
-        }
-        if (!urls.includes(url)) urls.push(url);
-        try {
-            fsLike.mkdirSync(doneDir, { recursive: true });
-            fsLike.renameSync(file, path.join(doneDir, name));
-        } catch (_) { /* a file that will not move is read again next run — harmless, the cache copy is the same */ }
     }
     // Old consumed files go.
     try {
@@ -461,7 +546,7 @@ async function addSharedPagesParser(config, adapter, env = process.env, fsLike =
             if (Date.now() - fsLike.statSync(file).mtimeMs > keepMs) fsLike.unlinkSync(file);
         }
     } catch (_) { /* no done dir yet */ }
-    if (skipped.length > 0) console.log(`run-once: 📨 shared pages left in the inbox (${skipped.length}): ${skipped.join('; ')}`);
+    if (skipped.length > 0) console.log(`run-once: 📨 files left in the inbox (${skipped.length}): ${skipped.join('; ')}`);
     if (urls.length === 0) return [];
     config.parsers.push({
         name: SHARED_PAGES_PARSER_NAME,
@@ -470,7 +555,7 @@ async function addSharedPagesParser(config, adapter, env = process.env, fsLike =
         enabled: true,
         automationEnabled: true
     });
-    console.log(`run-once: 📨 ${urls.length} shared page(s) from the inbox read as the "${SHARED_PAGES_PARSER_NAME}" parser: ${urls.join(', ')}`);
+    console.log(`run-once: 📨 ${urls.length} address(es) from the inbox (${kinds.page} page(s), ${kinds.picture} picture(s), ${kinds.link} link(s)) read as the "${SHARED_PAGES_PARSER_NAME}" parser: ${urls.join(', ')}`);
     return urls;
 }
 

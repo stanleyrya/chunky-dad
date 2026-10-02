@@ -38,6 +38,7 @@
 //   notes-only housekeeping merges). This server still never writes a
 //   calendar. Endpoints: GET /review · GET /review/deck.json ·
 //   POST /review/decide · GET /review/decisions.json · GET /review/rejections
+//   · GET /inbox/file/<name> (a picture from the shared inbox, for the deck)
 //
 // House style: no `new URL` / URLSearchParams anywhere (matches the iOS-shared
 // scripts even though this file is Node-only). Pure helpers are exported for
@@ -2840,7 +2841,22 @@ async function handleRequest(state, req, res) {
         return sendText(res, 200, reviewQueue.formatRejectionsText(store));
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections');
+    // A picture the owner dropped into the shared inbox (a flyer
+    // screenshot): the deck shows it from here, since its pipeline address
+    // (https://inbox.chunky.dad/file/<name>) resolves nowhere. Read-only;
+    // one path segment, inside the inbox folder only.
+    if (pathname.startsWith('/inbox/file/') && req.method === 'GET') {
+        let name = '';
+        try { name = decodeURIComponent(pathname.slice('/inbox/file/'.length)); } catch (_) { name = ''; }
+        const found = name ? reviewQueue.readSharedInboxFile(reviewQueue.resolveSharedRoot(), name) : null;
+        if (!found) return sendText(res, 404, 'No such file in the inbox');
+        const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', avif: 'image/avif', pdf: 'application/pdf', json: 'application/json; charset=utf-8', html: 'text/html; charset=utf-8', htm: 'text/html; charset=utf-8', txt: 'text/plain; charset=utf-8' };
+        const extension = (name.match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
+        res.writeHead(200, { 'Content-Type': types[extension] || 'application/octet-stream', 'Content-Length': found.buffer.length, 'Cache-Control': 'private, max-age=3600' });
+        return res.end(found.buffer);
+    }
+
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {

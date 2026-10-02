@@ -23889,6 +23889,30 @@ test('owner review key: title tokens + place + LOCAL day, case/punctuation folde
   assert.equal(SharedCore.getOwnerReviewBarKey({ key: 'nyc|thewoods' }), 'bar|nyc|thewoods');
 });
 
+test('shared inbox pictures: the address scheme round-trips one name and refuses paths; a picture that lives only in the inbox is held back from the calendar before analysis and still shown on the proposal', async () => {
+  assert.equal(SharedCore.sharedInboxUrl('file', 'flyer night.png'), 'https://inbox.chunky.dad/file/flyer%20night.png');
+  assert.equal(SharedCore.sharedInboxUrl('page', 'IMG_0042.HEIC'), 'https://inbox.chunky.dad/page/IMG_0042.HEIC');
+  assert.deepEqual(SharedCore.parseSharedInboxUrl('https://inbox.chunky.dad/file/flyer%20night.png'), { kind: 'file', name: 'flyer night.png' });
+  assert.deepEqual(SharedCore.parseSharedInboxUrl('https://inbox.chunky.dad/page/IMG_0042.HEIC'), { kind: 'page', name: 'IMG_0042.HEIC' });
+  assert.equal(SharedCore.parseSharedInboxUrl('https://inbox.chunky.dad/file/..%2Fsecret'), null, 'a slash inside the name is refused');
+  assert.equal(SharedCore.parseSharedInboxUrl('https://inbox.chunky.dad/file/..'), null);
+  assert.equal(SharedCore.parseSharedInboxUrl('https://inbox.chunky.dad/other/x.png'), null);
+  assert.equal(SharedCore.parseSharedInboxUrl('https://cdn.example.com/file/x.png'), null);
+  assert.equal(SharedCore.isSharedInboxUrl('https://inbox.chunky.dad/file/x.png'), true);
+  assert.equal(SharedCore.isSharedInboxUrl('https://chunky.dad/inbox.chunky.dad/file/x.png'), false);
+
+  const core = createReviewCore();
+  const held = reviewNewEvent({ image: 'https://inbox.chunky.dad/file/flyer.png', imageVertical: 'https://inbox.chunky.dad/file/flyer.png' });
+  const kept = reviewNewEvent({ image: 'https://cdn.example.com/flyer.png' });
+  assert.equal(core.holdSharedPicturesBack([held, kept, null]), 2);
+  assert.equal('image' in held, false, 'the field is gone, not blank — nothing to write');
+  assert.equal('imageVertical' in held, false);
+  assert.equal(held._sharedPicture, 'https://inbox.chunky.dad/file/flyer.png');
+  assert.equal(kept.image, 'https://cdn.example.com/flyer.png', 'a published picture is untouched');
+  assert.equal(core.buildOwnerReviewProposal(held).image, 'https://inbox.chunky.dad/file/flyer.png', 'the deck still shows it');
+  assert.equal(core.buildOwnerReviewProposal(kept).image, 'https://cdn.example.com/flyer.png');
+});
+
 test('owner review proposal: a merge shows only stored-field changes (never notes); a new event shows none', () => {
   const core = createReviewCore();
   const merge = core.buildOwnerReviewProposal(reviewMergeEvent());

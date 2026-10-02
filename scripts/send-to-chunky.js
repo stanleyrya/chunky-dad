@@ -11,9 +11,11 @@
 //
 // This script takes that JSON (as text or already parsed), checks it has a
 // url and a page, and writes it to
-//   iCloud/Scriptable/chunky-dad-scraper/inbox/pages/<timestamp>.json
-// where the next Mac run reads it as a "Shared pages" source
-// (tools/run-once.js addSharedPagesParser). Nothing else is touched. Not
+//   iCloud/Scriptable/chunky-dad-scraper/inbox/<timestamp>.json
+// — the one inbox folder the next Mac run sorts by file type
+// (tools/run-once.js addSharedPagesParser): a .json is a saved page, a
+// picture (.png/.jpg/.heic…, saved there straight from Files or the share
+// sheet) is a flyer to read, a .txt is links. Nothing else is touched. Not
 // part of the scraper's updater set unless the owner adds it.
 
 function readInput() {
@@ -53,7 +55,7 @@ async function main() {
     outcome = `${entry.url}\n\nOnly the address arrived, not the page. Share from Safari through the shortcut (its JavaScript step reads the logged-in page).`;
   } else {
     const fm = FileManager.iCloud();
-    const dir = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper/inbox/pages');
+    const dir = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper/inbox');
     if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
     const file = fm.joinPath(dir, `${stamp()}.json`);
     const record = { url: entry.url, title: String(entry.title || ''), html: entry.html, savedAt: entry.savedAt || new Date().toISOString(), via: 'share-sheet' };

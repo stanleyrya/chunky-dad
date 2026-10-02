@@ -1185,6 +1185,19 @@ class LocationNormalizer extends BaseNormalizer {
         if (!raw || raw.toLowerCase() === 'unknown') return '';
         if (this.isConfiguredCityKey(raw)) return '';
         const title = event.title || 'unknown';
+        // A "city" copied out of the event's own street line ("s. broadway"
+        // from "PRECINCT 357 S. BROADWAY" on a flyer with no other place
+        // words, 2026-10-02) is a street, not a place the page named: it is
+        // dropped outright, so the curated door (bar + street) can still
+        // say where this is, instead of being parked as a stated city that
+        // would make the curated bar a "namesake".
+        const fold = (text) => String(text || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+        const foldedCity = fold(raw);
+        if (foldedCity && fold(event.address).includes(foldedCity)) {
+            event.city = 'unknown';
+            console.log(`🗺️ LocationNormalizer: Dropped city "${raw}" for "${title}" — it is part of the street line "${event.address}", not a place name; left for the curated door to decide`);
+            return '';
+        }
         event._unrecognizedCity = raw;
         event.city = 'unknown';
         console.log(`🗺️ LocationNormalizer: Refused unrecognized city "${raw}" for "${title}" — no configured calendar exists for it; failing closed to "unknown" so curated signals can resolve the real city`);
