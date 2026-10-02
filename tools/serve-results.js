@@ -1308,6 +1308,12 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .btn-no { background:var(--no); } .btn-ok { background:var(--ok); } .btn-skip { background:var(--skip); flex:0 1 auto; padding:10px 12px; }
 .controls .btn-notbear { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:600; font-size:13px; padding:11px 10px; }
 .controls button:disabled { opacity:.35; cursor:default; }
+.controls .btn-ask { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:600; font-size:13px; padding:11px 10px; flex:0 1 auto; }
+.sheet.ask-only #sheet-tags, .sheet.ask-only .sheet-modes, .sheet.ask-only .sheet-fix-note { display:none; }
+.sheet.ask-only .sheet-friend { margin-top:6px; }
+.sheet.ask-only #sheet-ask { display:none; }
+#sheet-ask-go { display:none; }
+.sheet.ask-only #sheet-ask-go { display:inline-block; background:var(--accent); color:#fff; font-weight:700; flex:1; }
 .meta { text-align:center; color:var(--muted); font-size:13px; padding:0 14px 8px; }
 .meta button { font:inherit; background:none; border:none; color:var(--accent); cursor:pointer; padding:0 6px; }
 .execute { display:block; max-width:560px; margin:8px auto 0; padding:0 14px; }
@@ -1391,10 +1397,11 @@ ${missingCalendarNotice}
 <div class="controls">
   <button class="btn-no" id="btn-reject" type="button">✕ Not yet</button>
   <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)">Not bear</button>
+  <button class="btn-ask" id="btn-ask" type="button" title="Not sure? Put it on a friend's list — they answer from a link (key: f)">🙋 Ask</button>
   <button class="btn-skip" id="btn-skip" type="button">↷ Skip</button>
   <button class="btn-ok" id="btn-approve" type="button">✓ Approve</button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · → approve · ␣ skip · n not bear</div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · → approve · ␣ skip · n not bear · f ask a friend</div>
 <div class="execute" id="execute"></div>
 ${snapshotBlock}
 <details class="decided waiting" id="waiting-wrap" hidden>
@@ -1413,7 +1420,7 @@ ${snapshotBlock}
 </details>
 <div class="sheet" id="sheet">
   <div class="panel">
-    <h3>Not yet — why? <span class="muted" id="sheet-title"></span></h3>
+    <h3><span id="sheet-heading">Not yet — why?</span> <span class="muted" id="sheet-title"></span></h3>
     <div class="sheet-fix-note">What is wrong? Tap what applies, then pick an answer.</div>
     <div class="chips" id="sheet-tags"></div>
     <div class="sheet-modes">
@@ -1426,6 +1433,7 @@ ${snapshotBlock}
     <textarea id="sheet-text" placeholder="Anything else (optional)"></textarea>
     <div class="actions">
       <button type="button" id="sheet-cancel" style="background:var(--line); color:var(--ink);">Cancel</button>
+      <button type="button" id="sheet-ask-go">Add to their list</button>
     </div>
   </div>
 </div>
@@ -1708,7 +1716,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var nights = list.reduce(function (n, item) { return n + item.cards.length; }, 0);
     document.getElementById('left').textContent = list.length + ' left' + (nights !== list.length ? ' (' + nights + ' nights)' : '');
     var disabled = list.length === 0;
-    ['btn-reject', 'btn-skip', 'btn-approve'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
+    ['btn-reject', 'btn-skip', 'btn-approve', 'btn-ask'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
   function renderExecute() {
@@ -1860,7 +1868,11 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       html += '<span class="pill' + (view === pair[0] ? ' on' : '') + '" data-v="' + pair[0] + '">' + pair[1] + '</span>';
     });
     if (sourceOnly) html += '<span class="pill on" id="source-only" title="showing one source — tap to show all">' + escapeHtml(sourceOnly) + ' ×</span>';
+    // Cards on a friend's list: one tap to where they are sent from.
+    if (friends.length) html += '<span class="pill" id="friends-pill" title="Cards on a friend’s list — send them a link from here">🙋 Friends ' + friends.length + '</span>';
     document.getElementById('views').innerHTML = html;
+    var friendsPill = document.getElementById('friends-pill');
+    if (friendsPill) friendsPill.onclick = function () { var wrap = document.getElementById('friends-wrap'); wrap.open = true; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     Array.prototype.forEach.call(document.querySelectorAll('#views .pill[data-v]'), function (el) {
       el.onclick = function () { view = el.getAttribute('data-v'); render(); window.scrollTo(0, 0); };
     });
@@ -1923,7 +1935,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
         + '<div class="lbody" data-act="go"><h4>' + escapeHtml(titleOf(c)) + '</h4>'
         + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind === 'series' ? 'series' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
         + (p.source ? '<div class="lmeta">' + escapeHtml(p.source) + '</div>' : '') + '</div>'
-        + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="reject">Not yet…</button></div>'
+        + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="ask">🙋</button><button type="button" data-act="reject">Not yet…</button></div>'
         + '</div>';
     });
     var root = document.getElementById('list');
@@ -1942,6 +1954,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (act === 'approve') { decide(item, 'approve', null, 'gone-right'); return; }
       if (act === 'notbear') { notBearItem(item); return; }
       if (act === 'reject') { pending = item; openSheet(item); return; }
+      if (act === 'ask') { askItem(item); return; }
     };
   }
   // One card per source, the facts a wrong-for-the-whole-site mistake
@@ -2187,7 +2200,10 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
+    document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
+    document.getElementById('sheet-heading').textContent = 'Not yet — why?';
     sheet.classList.remove('ask');
+    sheet.classList.remove('ask-only');
     sheet.classList.add('open');
     sheet.querySelector('.panel').scrollTop = 0;
     fitSheet();
@@ -2207,14 +2223,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     window.visualViewport.addEventListener('resize', fitSheet);
     window.visualViewport.addEventListener('scroll', fitSheet);
   }
-  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); sheet.classList.remove('ask'); fitSheet(); pending = null; render(); }
+  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); sheet.classList.remove('ask'); sheet.classList.remove('ask-only'); fitSheet(); pending = null; render(); }
   // "Ask a friend": the name row opens under the modes; Ask flags every
   // card of the item for that friend and moves it to the Friends section.
   var friendName = document.getElementById('sheet-friend-name');
   function renderFriendChips() {
     var chips = document.getElementById('sheet-friend-chips');
     chips.innerHTML = knownFriends.map(function (name) { return '<span class="chip" data-name="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>'; }).join('');
-    Array.prototype.forEach.call(chips.querySelectorAll('.chip'), function (el) { el.onclick = function () { friendName.value = el.getAttribute('data-name'); }; });
+    Array.prototype.forEach.call(chips.querySelectorAll('.chip'), function (el) { el.onclick = function () { friendName.value = el.getAttribute('data-name'); friendName.dispatchEvent(new Event('input')); }; });
   }
   document.getElementById('sheet-ask-mode').onclick = function () {
     sheet.classList.add('ask');
@@ -2222,6 +2238,27 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     if (!friendName.value && knownFriends.length) friendName.value = knownFriends[0];
     setTimeout(function () { friendName.focus(); }, 50);
   };
+  // 🙋 Ask (owner, 2026-10-03: "I was assuming some button or swipe"):
+  // the same sheet with only the friend row — who, and an optional
+  // question for them. The card goes on that friend's list.
+  function askItem(item) {
+    if (!item) return;
+    pending = item;
+    openSheet(item);
+    sheet.classList.add('ask');
+    sheet.classList.add('ask-only');
+    document.getElementById('sheet-heading').textContent = '🙋 Ask a friend';
+    document.getElementById('sheet-text').placeholder = 'Your question for them (optional) — e.g. still at this bar?';
+    renderFriendChips();
+    if (!friendName.value && knownFriends.length) friendName.value = knownFriends[0];
+    friendName.dispatchEvent(new Event('input'));
+    setTimeout(function () { friendName.focus(); }, 50);
+  }
+  function askTop() { askItem(topItem()); }
+  document.getElementById('sheet-ask-go').onclick = function () { document.getElementById('sheet-ask').click(); };
+  // The big button names the friend as it is typed.
+  friendName.addEventListener('input', function () { var n = friendName.value.trim(); document.getElementById('sheet-ask-go').textContent = n ? 'Add to ' + n + '’s list' : 'Add to their list'; });
+  document.getElementById('btn-ask').onclick = askTop;
   document.getElementById('sheet-ask').onclick = function () {
     if (!pending) return closeSheet();
     var name = friendName.value.trim();
@@ -2242,7 +2279,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
         });
       });
     });
-    chain.then(function () { toast('Asked ' + name + ' about ' + cards.length + (cards.length === 1 ? ' card' : ' cards')); render(); })
+    chain.then(function () { toast('On ' + name + '’s list (' + cards.length + (cards.length === 1 ? ' card' : ' cards') + ') — send it from 🙋 Friends'); render(); })
       .catch(function (e) { toast('Could not save the ask: ' + e.message); render(); });
   };
   function renderFriends() {
@@ -2270,6 +2307,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
           share.disabled = false;
           if (!j.count) { toast('Nothing to send — everything is answered'); return; }
           var text = 'A few events to check (' + j.count + ')';
+          linkLine.innerHTML = 'Link for ' + escapeHtml(name) + ' (' + j.count + ' card' + (j.count === 1 ? '' : 's') + '): <a href="' + escapeHtml(j.url) + '" target="_blank" rel="noopener">open it</a> · long-press to copy';
           if (navigator.share) {
             navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
           } else if (navigator.clipboard) {
@@ -2484,6 +2522,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(false); }
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
     else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); notBearTop(); }
+    else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); askTop(); }
     else if (e.key === 'z' || e.key === 'Z') { undoLast(); }
   });
 
