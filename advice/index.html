@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>A few events to check · chunky.dad</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<!--
+  PHONE A FRIEND (owner, 2026-10-02). Stanley flags events he is not sure
+  about on his review deck; the deck builds a link to this page with the
+  cards in the hash (#j1.<base64url JSON>); a friend answers each one
+  here and sends a link back whose hash carries only the answers
+  (#r1.<base64url JSON>). No server anywhere: the page reads the hash,
+  keeps the answers on the page, and makes the reply link itself. Opened
+  with a reply hash, the page shows the answers and a "Copy for the deck"
+  button — that is how the answers get back into the deck
+  (tools/serve-results.js POST /review/advice).
+-->
+<style>
+  :root { --primary: #667eea; --accent: #ff6b6b; --ink: #222; --muted: #666; --line: #e3e6f3; --paper: #fff; --page: #f6f7fd; --ok: #2e9e5b; --no: #d9534f; --maybe: #c48a00; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #eee; --muted: #aaa; --line: #33364a; --paper: #1b1d2a; --page: #121420; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.45 Poppins, -apple-system, system-ui, sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px 16px 120px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 0 0 14px; display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
+  .card.answered { border-color: var(--primary); }
+  .thumb { width: 96px; height: 120px; border-radius: 10px; object-fit: cover; background: var(--line); }
+  .thumb.none { display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .card h2 { font-size: 17px; margin: 0 0 4px; line-height: 1.25; }
+  .line { font-size: 14px; color: var(--muted); margin: 0 0 2px; }
+  .q { font-size: 14px; margin: 6px 0 0; font-weight: 600; }
+  .acts { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts button { flex: 1 1 30%; min-width: 92px; padding: 10px 8px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; }
+  .acts button.on.y { border-color: var(--ok); background: var(--ok); color: #fff; }
+  .acts button.on.n { border-color: var(--no); background: var(--no); color: #fff; }
+  .acts button.on.u { border-color: var(--maybe); background: var(--maybe); color: #fff; }
+  .note { grid-column: 1 / -1; width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--page); color: var(--ink); font: inherit; font-size: 15px; }
+  .links { grid-column: 1 / -1; display: flex; gap: 14px; font-size: 14px; }
+  a { color: var(--primary); }
+  .send { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .send .inner { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+  .send .count { color: var(--muted); font-size: 14px; flex: 1; }
+  .btn { padding: 12px 16px; border-radius: 12px; border: 0; background: var(--primary); color: #fff; font: inherit; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .btn.quiet { background: var(--line); color: var(--ink); }
+  .reply { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .reply li { margin: 4px 0; }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap"><div class="empty">Loading…</div></div>
+<div class="send" id="send" hidden><div class="inner"><span class="count" id="count"></span><button class="btn quiet" id="copy" type="button">Copy reply</button><a class="btn" id="sms" href="#">Send back</a></div></div>
+<div class="toast" id="toast"></div>
+<script>
+(function () {
+  // ---- hash codec: #j1.<base64url(JSON)> (the ask) · #r1.<base64url(JSON)> (the reply)
+  function b64urlEncode(text) {
+    var bytes = new TextEncoder().encode(text), bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64urlDecode(text) {
+    var bin = atob(String(text).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((text.length + 3) % 4));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function readHash() {
+    var hash = location.hash.replace(/^#/, '');
+    var m = hash.match(/^(j1|r1)\.([A-Za-z0-9_-]+)$/);
+    if (!m) return null;
+    try { return { kind: m[1], data: JSON.parse(b64urlDecode(m[2])) }; } catch (e) { return null; }
+  }
+  var wrap = document.getElementById('wrap');
+  var toastEl = document.getElementById('toast');
+  function toast(text) { toastEl.textContent = text; toastEl.classList.add('show'); setTimeout(function () { toastEl.classList.remove('show'); }, 1600); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function when(card) {
+    if (!card.d) return '';
+    try {
+      var opts = { weekday: 'short', month: 'short', day: 'numeric' };
+      if (!card.w) { opts.hour = 'numeric'; opts.minute = '2-digit'; }
+      if (card.z) opts.timeZone = card.z;
+      return new Date(card.d).toLocaleString('en-US', opts);
+    } catch (e) { return String(card.d).slice(0, 10); }
+  }
+  // One-event ICS as a data link: the friend keeps what they liked.
+  function icsFor(card) {
+    function stamp(iso) { return String(iso).replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+    var start = card.d ? stamp(new Date(card.d).toISOString()) : '';
+    var end = card.e ? stamp(new Date(card.e).toISOString()) : (card.d ? stamp(new Date(new Date(card.d).getTime() + 3 * 3600000).toISOString()) : '');
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//chunky.dad//advice//EN', 'BEGIN:VEVENT',
+      'UID:advice-' + (card.i || 0) + '-' + Date.now() + '@chunky.dad',
+      'DTSTAMP:' + stamp(new Date().toISOString()),
+      start ? (card.w ? 'DTSTART;VALUE=DATE:' + start.slice(0, 8) : 'DTSTART:' + start) : '',
+      end ? (card.w ? 'DTEND;VALUE=DATE:' + end.slice(0, 8) : 'DTEND:' + end) : '',
+      'SUMMARY:' + String(card.t || '').replace(/[,;\\]/g, '\\$&'),
+      'LOCATION:' + [card.b, card.a, card.y].filter(Boolean).join(', ').replace(/[,;\\]/g, '\\$&'),
+      card.u ? 'URL:' + card.u : '',
+      'END:VEVENT', 'END:VCALENDAR'].filter(Boolean);
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(lines.join('\r\n'));
+  }
+
+  // A new hash on the same page (a reply link opened over an ask) is a new page.
+  window.addEventListener('hashchange', function () { location.reload(); });
+  var ask = readHash();
+  if (!ask) {
+    wrap.innerHTML = '<div class="empty">This page needs a link from the review deck — nothing to show.</div>';
+    return;
+  }
+
+  // ---- a reply opened on Stanley's side: show the answers, hand them to the deck
+  if (ask.kind === 'r1') {
+    var r = ask.data;
+    var rows = (r.a || []).map(function (a) {
+      var word = a[1] === 'y' ? '✅ yes' : a[1] === 'n' ? '🚫 no' : '🤔 not sure';
+      return '<li>' + esc(a[3] || ('card ' + (a[0] + 1))) + ' — ' + word + (a[2] ? ' — “' + esc(a[2]) + '”' : '') + '</li>';
+    }).join('');
+    wrap.innerHTML = '<h1>' + esc(r.f || 'A friend') + ' answered</h1><p class="lead">' + (r.a || []).length + ' answer' + ((r.a || []).length === 1 ? '' : 's') + '. Paste this link into the deck under “Friends › Paste their reply”.</p><div class="reply"><ul>' + rows + '</ul></div><p><button class="btn" id="copy-reply" type="button">Copy this link</button></p>';
+    document.getElementById('copy-reply').onclick = function () {
+      navigator.clipboard.writeText(location.href).then(function () { toast('Copied'); }, function () { prompt('Copy this link', location.href); });
+    };
+    return;
+  }
+
+  // ---- the ask: cards to answer
+  var data = ask.data;
+  var cards = Array.isArray(data.c) ? data.c : [];
+  var answers = {};
+  var notes = {};
+  document.title = 'A few events to check · chunky.dad';
+  var html = '<h1>' + esc(data.from || 'Stanley') + ' is asking' + (data.f ? ' ' + esc(data.f) : '') + '</h1><p class="lead">' + (data.q ? esc(data.q) : 'Is this a bear event, and is the card right? Tap an answer on each one, add a note if you know more, then “Send back”.') + '</p>';
+  cards.forEach(function (card, idx) {
+    html += '<div class="card" data-i="' + idx + '">'
+      + (card.p ? '<img class="thumb" src="' + esc(card.p) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.className=\'thumb none\'; this.outerHTML=\'<div class=&quot;thumb none&quot;>🐻</div>\'">' : '<div class="thumb none">🐻</div>')
+      + '<div><h2>' + esc(card.t) + '</h2>'
+      + (card.d ? '<div class="line">📅 ' + esc(when(card)) + '</div>' : '')
+      + ((card.b || card.y) ? '<div class="line">📍 ' + esc([card.b, card.a, card.y].filter(Boolean).join(' · ')) + '</div>' : '')
+      + (card.s ? '<div class="line">from ' + esc(card.s) + '</div>' : '')
+      + (card.n ? '<div class="q">' + esc(card.n) + '</div>' : '')
+      + '</div>'
+      + '<div class="acts"><button type="button" class="y" data-a="y">✅ Bear</button><button type="button" class="n" data-a="n">🚫 Not bear</button><button type="button" class="u" data-a="u">🤔 Not sure</button></div>'
+      + '<input class="note" type="text" placeholder="Anything you know (optional)" autocapitalize="sentences">'
+      + '<div class="links">' + (card.u ? '<a href="' + esc(card.u) + '" target="_blank" rel="noopener">Event page ↗</a>' : '') + (card.d ? '<a href="' + icsFor(card) + '" download="' + esc(String(card.t || 'event').replace(/[^\w-]+/g, '-')) + '.ics">Add to my calendar</a>' : '') + '</div>'
+      + '</div>';
+  });
+  wrap.innerHTML = html;
+
+  var send = document.getElementById('send');
+  var count = document.getElementById('count');
+  var sms = document.getElementById('sms');
+  send.hidden = false;
+  function replyLink() {
+    var list = Object.keys(answers).map(function (k) { var i = Number(k); return [i, answers[k], notes[k] || '', String(cards[i] && cards[i].t || '').slice(0, 40)]; });
+    var payload = { e: data.e || '', f: data.f || '', a: list };
+    return location.origin + location.pathname + '#r1.' + b64urlEncode(JSON.stringify(payload));
+  }
+  function refresh() {
+    var n = Object.keys(answers).length;
+    count.textContent = n + ' of ' + cards.length + ' answered';
+    var link = replyLink();
+    sms.href = 'sms:' + (data.to ? encodeURIComponent(data.to) : '') + '&body=' + encodeURIComponent(link);
+    sms.setAttribute('data-link', link);
+  }
+  Array.prototype.forEach.call(wrap.querySelectorAll('.card'), function (el) {
+    var i = el.getAttribute('data-i');
+    Array.prototype.forEach.call(el.querySelectorAll('.acts button'), function (btn) {
+      btn.onclick = function () {
+        Array.prototype.forEach.call(el.querySelectorAll('.acts button'), function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+        answers[i] = btn.getAttribute('data-a');
+        el.classList.add('answered');
+        refresh();
+      };
+    });
+    el.querySelector('.note').oninput = function (e) { notes[i] = e.target.value.trim(); if (answers[i]) refresh(); };
+  });
+  document.getElementById('copy').onclick = function () {
+    var link = replyLink();
+    navigator.clipboard.writeText(link).then(function () { toast('Reply link copied — send it to ' + (data.from || 'Stanley')); }, function () { prompt('Copy this link', link); });
+  };
+  refresh();
+})();
+</script>
+</body>
+</html>

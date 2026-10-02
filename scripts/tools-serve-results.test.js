@@ -581,6 +581,101 @@ test('inbox pictures: approving a card pushes a web-sized copy to the pictures b
   fs.rmSync(repo, { recursive: true, force: true });
 });
 
+test('phone a friend: an ask leaves the stack for the Friends section; one link per friend carries the cards in its hash (public pictures only, capped); the reply link resolves through the export to advice rows; the card returns with the advice', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const reviewQueue = require(path.join(__dirname, '..', 'tools', 'review-queue.js'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-friend-'));
+  const file = reviewQueue.getFriendAdvicePath(root);
+  let store = reviewQueue.loadFriendAdvice(file);
+  assert.deepEqual(store, { version: 1, asks: [], exports: [], advice: [] });
+  const snapshot = { title: 'FURBALL NYC', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', url: 'https://furball.nyc/', image: 'https://inbox.chunky.dad/file/x.png', source: 'Furball' };
+  assert.throws(() => reviewQueue.recordFriendAsk(store, { key: 'event|furball|rockbar|2030-10-03', friend: '  ' }), /needs a friend/);
+  store = reviewQueue.recordFriendAsk(store, { key: 'event|furball|rockbar|2030-10-03', kind: 'new', friend: ' Matt ', question: 'still at Rockbar?', snapshot }, Date.parse('2030-10-01T00:00:00Z'));
+  store = reviewQueue.recordFriendAsk(store, { key: 'event|other|eagle|2030-10-05', kind: 'new', friend: 'Matt', snapshot: { ...snapshot, title: 'OTHER', image: 'https://cdn.example.com/f.jpg' } });
+  store = reviewQueue.recordFriendAsk(store, { key: 'event|la|eagle|2030-10-05', kind: 'new', friend: 'Roger', snapshot: { ...snapshot, title: 'LA THING' } });
+  assert.equal(store.asks.length, 3);
+  assert.deepEqual(reviewQueue.knownFriends(store).sort(), ['Matt', 'Roger']);
+  reviewQueue.saveFriendAdvice(file, store);
+
+  const link = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt', base: 'https://chunky.dad/advice/', now: Date.parse('2030-10-02T00:00:00Z') });
+  assert.equal(link.count, 2);
+  assert.match(link.url, /^https:\/\/chunky\.dad\/advice\/#j1\.[A-Za-z0-9_-]+$/);
+  const payload = JSON.parse(Buffer.from(link.url.split('#j1.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert.equal(payload.f, 'Matt');
+  assert.equal(payload.e, link.exportId);
+  assert.deepEqual(payload.c.map((c) => c.t), ['FURBALL NYC', 'OTHER']);
+  assert.equal(payload.c[0].p, undefined, 'an inbox picture that is not on the website is left out');
+  assert.equal(payload.c[1].p, 'https://cdn.example.com/f.jpg');
+  assert.equal(payload.c[0].n, 'still at Rockbar?');
+  assert.equal(payload.c[0].b, 'Rockbar');
+  assert.ok(link.url.length < 1200, `two cards fit in ${link.url.length} chars`);
+  reviewQueue.saveFriendAdvice(file, link.store);
+  assert.equal(reviewQueue.loadFriendAdvice(file).exports[0].keys.length, 2);
+
+  // The friend's page builds #r1.<base64url JSON { e, f, a: [[i, y|n|u, note, title]] }>.
+  const replyPayload = { e: link.exportId, f: 'Matt', a: [[0, 'n', 'that is the leather night', 'FURBALL NYC'], [1, 'y', '', 'OTHER']] };
+  const replyLink = 'https://chunky.dad/advice/#r1.' + Buffer.from(JSON.stringify(replyPayload)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  assert.equal(reviewQueue.parseFriendReply('https://chunky.dad/advice/#j1.abc'), null, 'an ask link is not a reply');
+  assert.equal(reviewQueue.parseFriendReply('hello'), null);
+  const reply = reviewQueue.parseFriendReply('  ' + replyLink + ' ');
+  assert.equal(reply.friend, 'Matt');
+  assert.deepEqual(reply.answers.map((a) => a.answer), ['no', 'yes']);
+  const bare = reviewQueue.parseFriendReply('r1.' + replyLink.split('#r1.')[1]);
+  assert.equal(bare.exportId, link.exportId, 'the bare code works too');
+  const recorded = reviewQueue.recordFriendReply(reviewQueue.loadFriendAdvice(file), reply, Date.parse('2030-10-03T00:00:00Z'));
+  assert.equal(recorded.recorded.length, 2);
+  assert.equal(recorded.unknown, 0);
+  assert.equal(recorded.recorded[0].key, 'event|furball|rockbar|2030-10-03');
+  assert.equal(recorded.recorded[0].note, 'that is the leather night');
+  reviewQueue.saveFriendAdvice(file, recorded.store);
+  const unknown = reviewQueue.recordFriendReply(reviewQueue.loadFriendAdvice(file), { exportId: 'nope', friend: 'Matt', answers: [{ index: 0, answer: 'yes', note: '' }] });
+  assert.equal(unknown.unknown, 1, 'an export that is gone cannot be resolved');
+
+  const byKey = reviewQueue.friendAdviceByKey(reviewQueue.loadFriendAdvice(file));
+  assert.deepEqual(byKey.get('event|furball|rockbar|2030-10-03').advice.map((a) => a.friend + ':' + a.answer), ['Matt:no']);
+  assert.deepEqual(byKey.get('event|furball|rockbar|2030-10-03').asked, [], 'answered → no longer waiting');
+  assert.equal(byKey.get('event|la|eagle|2030-10-05').asked[0].friend, 'Roger', 'Roger has not answered');
+  // Matt answered everything: the next link has nothing to send.
+  assert.equal(reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt' }).count, 0);
+  const cleared = reviewQueue.clearFriendAsk(reviewQueue.loadFriendAdvice(file), 'event|la|eagle|2030-10-05', 'Roger');
+  assert.equal(cleared.removed, 1);
+  reviewQueue.saveFriendAdvice(file, cleared.store);
+
+  // The deck stamps the rows and the page carries them.
+  const run = reviewRunFixture('20300101-051500');
+  const deck = reviewQueue.buildDeck(run, { version: 1, decisions: [] }, { runId: run.summary.runId, friendAdvice: reviewQueue.loadFriendAdvice(file), now: Date.parse('2030-10-01T00:00:00Z') });
+  const card = deck.cards.find((c) => c.key === 'event|furball|rockbar|2030-10-03');
+  assert.deepEqual(card.advice.map((a) => a.answer), ['no']);
+  const html = renderReviewPage(deck, { runs: [], scriptName: "display-saved-run", ctx: {} });
+  assert.ok(html.includes('🙋 Matt: 🚫 not bear — “that is the leather night”'), 'the advice row is on the card');
+  assert.ok(html.includes('id="sheet-ask-mode"') && html.includes('id="friends-wrap"'), 'the ask mode and the Friends section are on the page');
+
+  // Routes.
+  const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = root;
+  try {
+    const state = createServerState();
+    const asked = await request(state, 'POST', '/review/ask', JSON.stringify({ key: 'event|x|y|2030-10-09', kind: 'new', friend: 'Roger', question: 'bear?', snapshot: { title: 'X' } }));
+    assert.equal(asked.status, 200);
+    const linked = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
+    assert.equal(linked.count, 1);
+    assert.ok(linked.url.startsWith('https://chunky.dad/advice/#j1.'));
+    const bad = await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'not a link' }));
+    assert.equal(bad.status, 400);
+    const answer = { e: linked.exportId, f: 'Roger', a: [[0, 'u', 'ask Matt', 'X']] };
+    const got = JSON.parse((await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'https://chunky.dad/advice/#r1.' + Buffer.from(JSON.stringify(answer)).toString('base64url') }))).body);
+    assert.equal(got.recorded.length, 1);
+    assert.equal(got.recorded[0].answer, 'unsure');
+    const page = await request(state, 'GET', '/advice/');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('#r1.'), 'the friend page is served for links built against this server');
+  } finally {
+    if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('run-once: shapeRunOnceConfig stamps automation runtime and always re-forces dryRun last', () => {
   const config = {
     parsers: [

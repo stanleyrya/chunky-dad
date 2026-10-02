@@ -1025,11 +1025,35 @@ function renderReviewCard(entry, ctx = {}) {
   ${chips ? `<div class="chips">${chips}</div>` : ''}
   ${renderReviewLinkHistory(entry, proposal, display)}
   ${renderReviewBearRow(display, proposal)}
+  ${renderReviewFriendRows(entry)}
+  ${renderReviewPictureRow(entry)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display, changes)) : ''}
   ${isMerge ? renderReviewDriftFacts(display) : ''}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
+}
+
+// What friends said about this card (phone a friend), and who was asked
+// and has not answered yet. Advice is evidence; the swipe stays the owner's.
+function renderReviewFriendRows(entry = {}) {
+    const advice = Array.isArray(entry.advice) ? entry.advice : [];
+    const asked = Array.isArray(entry.asked) ? entry.asked : [];
+    const word = (answer) => answer === 'yes' ? '✅ bear' : answer === 'no' ? '🚫 not bear' : '🤔 not sure';
+    const rows = advice.map((row) => `<div class="line friend">🙋 ${escapeHtmlText(row.friend)}: ${word(row.answer)}${row.note ? ` — “${escapeHtmlText(row.note)}”` : ''}</div>`);
+    if (asked.length > 0) rows.push(`<div class="line muted">🙋 asked ${escapeHtmlText(asked.map((a) => a.friend).join(', '))} — no answer yet</div>`);
+    return rows.join('\n');
+}
+
+// An inbox picture on its way to the website (see review-queue
+// publishSharedPicture): review-only until approved, then waiting on the
+// pictures PR, then on the website.
+function renderReviewPictureRow(entry = {}) {
+    const picture = entry.picture && typeof entry.picture === 'object' ? entry.picture : null;
+    if (!picture) return '';
+    if (picture.state === 'published') return `<div class="line muted">🖼️ picture is on the website</div>`;
+    if (picture.state === 'pr') return `<div class="line muted">🖼️ picture waits for the pictures PR${picture.pr && picture.pr.number ? ` <a href="${escapeHtmlText(String(picture.pr.url || ''))}">#${escapeHtmlText(String(picture.pr.number))}</a>` : ''} — merge it before executing to put it on the event</div>`;
+    return `<div class="line muted">🖼️ picture from your inbox — shown here only; approving sends it to the website through a PR</div>`;
 }
 
 function renderReviewEmptyPage(message, options = {}) {
@@ -1060,6 +1084,9 @@ function renderReviewPage(deck, options = {}) {
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
         fixTarget: entry.fixTarget || null,
         series: entry.series || null,
+        asked: entry.asked || [],
+        advice: entry.advice || [],
+        picture: entry.picture || null,
         html: renderReviewCard(entry, ctx)
     }));
     const decided = deck.decided.map((entry) => ({
@@ -1078,6 +1105,9 @@ function renderReviewPage(deck, options = {}) {
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
         fixTarget: entry.fixTarget || null,
         noteKey: entry.noteKey || '',
+        asked: entry.asked || [],
+        advice: entry.advice || [],
+        picture: entry.picture || null,
         html: renderReviewCard(entry, ctx)
     }));
     const payload = {
@@ -1090,7 +1120,9 @@ function renderReviewPage(deck, options = {}) {
         counts: deck.counts,
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
-        executeLink: scriptLink
+        executeLink: scriptLink,
+        friends: Array.isArray(deck.friends) ? deck.friends : [],
+        adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE
     };
     // The newest 20 runs, plus the deck's own run when it is older than that
     // (the picker must always show what is on screen).
@@ -1233,6 +1265,15 @@ a { color:var(--accent); }
 .sheet.fix-first .sheet-modes .mode:not(.mode-fix) { opacity:.45; }
 .sheet.fix-first .sheet-modes .mode-fix { border-width:2px; }
 .sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
+.sheet-friend { display:none; gap:6px; flex-wrap:wrap; align-items:center; margin:0 0 10px; }
+.sheet.ask .sheet-friend { display:flex; }
+.sheet-friend input { flex:1 1 140px; font:inherit; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+.line.friend { color:var(--ink); font-weight:600; }
+.friends .who { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0 4px; font-weight:600; }
+.friends .who button, .friends .reply button { font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; background:var(--accent); color:#fff; padding:5px 10px; cursor:pointer; }
+.friends .reply { display:flex; gap:8px; margin:8px 0 4px; }
+.friends .reply input { flex:1; font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+.friends .link { font-size:12px; color:var(--muted); word-break:break-all; margin:4px 0; }
 .waiting li .status { font-size:12px; color:var(--muted); }
 .series-note { margin-top:4px; color:var(--muted); font-size:12px; }
 .series .change-row { margin-top:6px; font-size:13px; overflow-wrap:anywhere; }
@@ -1361,6 +1402,11 @@ ${snapshotBlock}
   <p class="waiting-note">Sent back with a note. Each comes back to the stack by itself when the scraper's card for it changes — nothing to hunt for. "Bring back" returns it now.</p>
   <ul id="waiting"></ul>
 </details>
+<details class="decided friends" id="friends-wrap" hidden>
+  <summary>🙋 Friends <span id="friends-count"></span></summary>
+  <p class="waiting-note">Cards you asked a friend about. "Share" makes one link to the page on chunky.dad with the cards in it (no server — the cards travel in the link); the friend answers there and sends a link back. Paste that link below and the cards return to the stack with the advice on them.</p>
+  <div id="friends"></div>
+</details>
 <details class="decided" id="decided-wrap">
   <summary>Decided <span id="decided-count"></span> · <button type="button" id="btn-copy-rejections" onclick="event.preventDefault(); copyRejections();">Copy rejections</button></summary>
   <ul id="decided"></ul>
@@ -1374,7 +1420,9 @@ ${snapshotBlock}
       <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
       <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
       <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
+      <button type="button" class="mode mode-ask" id="sheet-ask-mode"><b>🙋 Ask a friend</b><span>Not sure? A friend who knows the city answers from a page; their answer lands on this card, the swipe stays yours.</span></button>
     </div>
+    <div class="sheet-friend" id="sheet-friend"><input id="sheet-friend-name" type="text" placeholder="Friend's name" autocapitalize="words"><span class="chips" id="sheet-friend-chips"></span><button type="button" id="sheet-ask" style="background:var(--accent); color:#fff;">Ask</button></div>
     <textarea id="sheet-text" placeholder="Anything else (optional)"></textarea>
     <div class="actions">
       <button type="button" id="sheet-cancel" style="background:var(--line); color:var(--ink);">Cancel</button>
@@ -1408,8 +1456,15 @@ function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
 window.__reviewDeck = ${jsonForInlineScript(payload)};
 (function () {
   var deck = window.__reviewDeck;
-  var queue = deck.cards.slice();
+  // A card asked of a friend and not answered waits in the Friends
+  // section, not the stack.
+  function awaitingFriend(c) { return (c.asked || []).length > 0 && (c.advice || []).length === 0; }
+  // Every card with an open ask is listed under Friends (the link is
+  // built from them); only one with no answer at all leaves the stack.
+  var friends = deck.cards.filter(function (c) { return (c.asked || []).length > 0; });
+  var queue = deck.cards.filter(function (c) { return !awaitingFriend(c); });
   var decided = deck.decided.slice();
+  var knownFriends = (deck.friends || []).slice();
   var history = [];
   var filter = 'all';
   var view = 'stack'; // stack | list | sources
@@ -1673,8 +1728,14 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     var lastLine = last && last.at
       ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + (held ? ' · ' + escapeHtml(held) : '') + '.</small>'
       : '';
+    // Approved cards whose inbox picture is still in the pictures PR: an
+    // execute now writes them without the picture.
+    var picturesWaiting = decided.filter(function (d) { return d.verdict === 'approve' && d.pendingExecute && d.picture && d.picture.state === 'pr'; });
+    var pictureLine = picturesWaiting.length
+      ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
+      : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + lastLine;
+      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
     } else {
       el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
@@ -1790,7 +1851,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   }
   window.addEventListener('resize', fitStage);
   window.addEventListener('orientationchange', fitStage);
-  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderWaiting(); renderDecided(); fitStage(); }
+  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
 
   // ---- views: the stack, the same cards as a list, or the sources ----
   function renderViews() {
@@ -2126,6 +2187,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
+    sheet.classList.remove('ask');
     sheet.classList.add('open');
     sheet.querySelector('.panel').scrollTop = 0;
     fitSheet();
@@ -2145,7 +2207,114 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     window.visualViewport.addEventListener('resize', fitSheet);
     window.visualViewport.addEventListener('scroll', fitSheet);
   }
-  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); fitSheet(); pending = null; render(); }
+  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); sheet.classList.remove('ask'); fitSheet(); pending = null; render(); }
+  // "Ask a friend": the name row opens under the modes; Ask flags every
+  // card of the item for that friend and moves it to the Friends section.
+  var friendName = document.getElementById('sheet-friend-name');
+  function renderFriendChips() {
+    var chips = document.getElementById('sheet-friend-chips');
+    chips.innerHTML = knownFriends.map(function (name) { return '<span class="chip" data-name="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>'; }).join('');
+    Array.prototype.forEach.call(chips.querySelectorAll('.chip'), function (el) { el.onclick = function () { friendName.value = el.getAttribute('data-name'); }; });
+  }
+  document.getElementById('sheet-ask-mode').onclick = function () {
+    sheet.classList.add('ask');
+    renderFriendChips();
+    if (!friendName.value && knownFriends.length) friendName.value = knownFriends[0];
+    setTimeout(function () { friendName.focus(); }, 50);
+  };
+  document.getElementById('sheet-ask').onclick = function () {
+    if (!pending) return closeSheet();
+    var name = friendName.value.trim();
+    if (!name) { toast('Who? Type a name'); friendName.focus(); return; }
+    var text = document.getElementById('sheet-text').value.trim();
+    var itemsToAsk = pending.bulk ? pending.bulk : [pending];
+    var cards = [];
+    itemsToAsk.forEach(function (item) { item.cards.forEach(function (c) { cards.push(c); }); });
+    sheet.classList.remove('open'); sheet.classList.remove('ask'); fitSheet(); pending = null;
+    var chain = Promise.resolve();
+    cards.forEach(function (c) {
+      chain = chain.then(function () {
+        return postTo('/review/ask', { key: c.key, kind: c.kind, friend: name, question: text, snapshot: c.proposal }).then(function (j) {
+          if (j.friends) knownFriends = j.friends;
+          c.asked = (c.asked || []).filter(function (a) { return a.friend !== name; }).concat([{ friend: name, askedAt: new Date().toISOString(), question: text }]);
+          if (awaitingFriend(c)) queue = queue.filter(function (q) { return q.key !== c.key; });
+          if (!friends.some(function (f) { return f.key === c.key; })) friends.push(c);
+        });
+      });
+    });
+    chain.then(function () { toast('Asked ' + name + ' about ' + cards.length + (cards.length === 1 ? ' card' : ' cards')); render(); })
+      .catch(function (e) { toast('Could not save the ask: ' + e.message); render(); });
+  };
+  function renderFriends() {
+    var wrap = document.getElementById('friends-wrap');
+    var box = document.getElementById('friends');
+    wrap.hidden = friends.length === 0;
+    document.getElementById('friends-count').textContent = '(' + friends.length + ')';
+    var byFriend = {};
+    friends.forEach(function (c) {
+      (c.asked || []).forEach(function (a) { (byFriend[a.friend] = byFriend[a.friend] || []).push(c); });
+    });
+    box.innerHTML = '';
+    Object.keys(byFriend).sort().forEach(function (name) {
+      var group = document.createElement('div');
+      var who = document.createElement('div');
+      who.className = 'who';
+      who.innerHTML = '<span>' + escapeHtml(name) + ' · ' + byFriend[name].length + '</span>';
+      var share = document.createElement('button');
+      share.type = 'button'; share.textContent = 'Share link with ' + name;
+      var linkLine = document.createElement('div');
+      linkLine.className = 'link';
+      share.onclick = function () {
+        share.disabled = true;
+        postTo('/review/friend-link', { friend: name }).then(function (j) {
+          share.disabled = false;
+          if (!j.count) { toast('Nothing to send — everything is answered'); return; }
+          var text = 'A few events to check (' + j.count + ')';
+          if (navigator.share) {
+            navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
+          } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(j.url).then(function () { toast('Link copied — ' + j.count + ' cards, send it to ' + name); }, function () { linkLine.textContent = j.url; });
+          } else { linkLine.textContent = j.url; }
+        }).catch(function (e) { share.disabled = false; toast('Could not build the link: ' + e.message); });
+      };
+      who.appendChild(share);
+      group.appendChild(who);
+      var ul = document.createElement('ul');
+      byFriend[name].forEach(function (c) {
+        var li = document.createElement('li');
+        var night = c.key && c.key.split('|').length === 4 ? ' · ' + escapeHtml(dayOf(c.key)) : '';
+        var q = (c.asked || []).filter(function (a) { return a.friend === name && a.question; }).map(function (a) { return a.question; })[0] || '';
+        li.innerHTML = '<span class="v">🙋</span><div class="t"><div>' + escapeHtml(titleOf(c)) + ' <span class="r">' + escapeHtml(c.kind) + night + '</span></div>' + (q ? '<div class="r">' + escapeHtml(q) + '</div>' : '') + '</div>';
+        var back = document.createElement('button');
+        back.type = 'button'; back.textContent = 'Bring back';
+        back.onclick = function () {
+          postTo('/review/ask', { verdict: 'clear', key: c.key, friend: name }).then(function () {
+            c.asked = (c.asked || []).filter(function (a) { return a.friend !== name; });
+            if (!(c.asked || []).length) friends = friends.filter(function (f) { return f.key !== c.key; });
+            if (!awaitingFriend(c) && !queue.some(function (q) { return q.key === c.key; }) && deck.cards.some(function (d) { return d.key === c.key; })) queue.unshift(c);
+            render();
+          }).catch(function (e) { toast('Could not take it back: ' + e.message); });
+        };
+        li.appendChild(back);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+      group.appendChild(linkLine);
+      box.appendChild(group);
+    });
+    var reply = document.createElement('div');
+    reply.className = 'reply';
+    reply.innerHTML = '<input type="text" id="friend-reply" placeholder="Paste the link they sent back" autocapitalize="none" autocorrect="off"><button type="button" id="friend-reply-go">Add their answers</button>';
+    box.appendChild(reply);
+    document.getElementById('friend-reply-go').onclick = function () {
+      var text = document.getElementById('friend-reply').value.trim();
+      if (!text) return;
+      postTo('/review/advice', { text: text }).then(function (j) {
+        toast((j.friend || 'Your friend') + ' answered ' + j.recorded.length + (j.recorded.length === 1 ? ' card' : ' cards') + (j.unknown ? ' (' + j.unknown + ' unknown)' : ''));
+        setTimeout(function () { location.reload(); }, 900);
+      }).catch(function (e) { toast(e.message); });
+    };
+  }
   document.getElementById('sheet-cancel').onclick = closeSheet;
   function answerSheet(mode) {
     if (!pending) return closeSheet();
@@ -2484,7 +2653,10 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const cities = (run.payload && run.payload.config && run.payload.config.cities) || {};
     const phoneCalendars = reviewQueue.listPhoneCalendars(sharedRoot, cities);
     const writtenLedger = reviewQueue.loadWrittenLedger(sharedRoot);
-    let deck = reviewQueue.buildDeck(run.payload, store, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
+    const friendAdvice = reviewQueue.loadFriendAdvice(reviewQueue.getFriendAdvicePath(sharedRoot));
+    const publishedPictures = reviewQueue.loadPublishedPictures(sharedRoot).pictures;
+    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, ...(phoneCalendars ? { phoneCalendars } : {}) };
+    let deck = reviewQueue.buildDeck(run.payload, store, deckOptions);
     // The deck closes its own loops (audit 2026-09-22): notes whose fix is
     // saved or whose night has passed are dropped from the store, and a
     // card that came back changed in exactly the fields a note named is
@@ -2503,7 +2675,7 @@ function buildReviewDeckForRun(sharedRoot, run) {
         const saved = reviewQueue.saveDecisions(reviewQueue.getDecisionsPath(sharedRoot), next);
         if (answered.length > 0) console.log(`Review: dropped ${answered.length} answered "needs a fix" note(s): ${answered.join(', ')}`);
         if (autoApprovals.length > 0) console.log(`Review: auto-approved ${autoApprovals.length} card(s) whose fix arrived as asked: ${autoApprovals.map((d) => d.key).join(', ')}`);
-        deck = reviewQueue.buildDeck(run.payload, saved, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
+        deck = reviewQueue.buildDeck(run.payload, saved, deckOptions);
     }
     // Inbox pictures: a push that failed at approve time is tried again
     // here, and a pending picture whose PR was merged gets its website
@@ -2513,8 +2685,17 @@ function buildReviewDeckForRun(sharedRoot, run) {
     } catch (error) {
         console.log(`Review: inbox picture retry failed: ${error.message}`);
     }
+    deck.friends = reviewQueue.knownFriends(friendAdvice);
+    deck.adviceBase = resolveAdvicePageBase();
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
+}
+
+// Where the friend's page lives: the website, or (CHUNKY_ADVICE_BASE) a
+// copy for testing — this server serves the same file at /advice/.
+function resolveAdvicePageBase() {
+    const raw = String(process.env.CHUNKY_ADVICE_BASE || '').trim();
+    return raw || reviewQueue.ADVICE_PAGE_DEFAULT_BASE;
 }
 
 // Pending-card count for the header bar on /: cheap when the run is cached
@@ -2799,6 +2980,76 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // PHONE A FRIEND — the Mac is friend-advice.json's only writer.
+    // Flag a card for a friend (verdict 'clear' takes it back).
+    if (pathname === '/review/ask' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch (error) { return sendJson(res, 400, { ok: false, error: 'body must be JSON' }); }
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const file = reviewQueue.getFriendAdvicePath(sharedRoot);
+        try {
+            let store = reviewQueue.loadFriendAdvice(file);
+            if (body && body.verdict === 'clear') {
+                const cleared = reviewQueue.clearFriendAsk(store, String(body.key || ''), body.friend);
+                store = reviewQueue.saveFriendAdvice(file, cleared.store);
+                console.log(`Review: took ${body.key} back from ${body.friend || 'every friend'}`);
+                return sendJson(res, 200, { ok: true, removed: cleared.removed });
+            }
+            store = reviewQueue.saveFriendAdvice(file, reviewQueue.recordFriendAsk(store, body || {}));
+            console.log(`Review: asked ${body.friend} about ${body.key}`);
+            return sendJson(res, 200, { ok: true, asks: store.asks.length, friends: reviewQueue.knownFriends(store) });
+        } catch (error) {
+            return sendJson(res, /needs a/.test(error.message) ? 400 : 500, { ok: false, error: error.message });
+        }
+    }
+
+    // One link for everything a friend was asked and has not answered.
+    if (pathname === '/review/friend-link' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch (error) { return sendJson(res, 400, { ok: false, error: 'body must be JSON' }); }
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const file = reviewQueue.getFriendAdvicePath(sharedRoot);
+        try {
+            const built = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: body && body.friend, question: body && body.question, base: resolveAdvicePageBase() });
+            if (built.count > 0) reviewQueue.saveFriendAdvice(file, built.store);
+            console.log(`Review: link for ${body.friend} — ${built.count} card(s), ${built.url.length} chars`);
+            return sendJson(res, 200, { ok: true, url: built.url, count: built.count, exportId: built.exportId });
+        } catch (error) {
+            return sendJson(res, /needs a/.test(error.message) ? 400 : 500, { ok: false, error: error.message });
+        }
+    }
+
+    // A friend's reply (the page's link back, or its hash) → advice rows.
+    if (pathname === '/review/advice' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch (error) { return sendJson(res, 400, { ok: false, error: 'body must be JSON' }); }
+        const reply = reviewQueue.parseFriendReply(body && body.text);
+        if (!reply) return sendJson(res, 400, { ok: false, error: 'that is not a reply link from the friend page' });
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const file = reviewQueue.getFriendAdvicePath(sharedRoot);
+        try {
+            const result = reviewQueue.recordFriendReply(reviewQueue.loadFriendAdvice(file), reply);
+            reviewQueue.saveFriendAdvice(file, result.store);
+            console.log(`Review: ${reply.friend || 'a friend'} answered ${result.recorded.length} card(s)${result.unknown ? `, ${result.unknown} unknown` : ''}`);
+            return sendJson(res, 200, { ok: true, friend: reply.friend, recorded: result.recorded, unknown: result.unknown });
+        } catch (error) {
+            return sendJson(res, 500, { ok: false, error: error.message });
+        }
+    }
+
+    // The friend's page itself, for links built against this server
+    // (CHUNKY_ADVICE_BASE) — the same file the website serves at /advice/.
+    if ((pathname === '/advice/' || pathname === '/advice' || pathname === '/advice/index.html') && req.method === 'GET') {
+        try {
+            return sendHtml(res, 200, fs.readFileSync(path.join(repoRoot, 'advice', 'index.html'), 'utf8'));
+        } catch (error) {
+            return sendText(res, 404, 'advice/index.html is not in this checkout');
+        }
+    }
+
     // 🐻 / 🚫 from the deck: the phone's own verdict store, same identity
     // and entry shape as a results-sheet tap.
     if (pathname === '/review/bear' && req.method === 'POST') {
@@ -2877,7 +3128,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
