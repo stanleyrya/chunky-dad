@@ -1388,44 +1388,80 @@ function friendCardPayload(index, ask) {
 
 // One link for everything a friend has been asked and has not answered,
 // recorded as an export so the reply's card indexes resolve to keys.
-// Returns { store, exportId, url, count } — count 0 means nothing to send.
+// The link (#j2.) carries, per card, the deck's OWN card HTML
+// (options.htmlByKey — serve-results renderFriendCardHtml), deflated: the
+// friend sees exactly the owner's card. ~750 characters a card; cards are
+// added until the link would pass ADVICE_LINK_MAX_CHARS, the rest wait for
+// the next link. Returns { store, exportId, url, count, left }.
+const ADVICE_LINK_MAX_CHARS = 24000;
 function buildFriendLink(store, options) {
     const clean = normalizeFriendAdviceStore(store);
     const friend = cleanFriendName(options.friend);
     if (!friend) throw new Error('a link needs a friend');
     const base = String(options.base || ADVICE_PAGE_DEFAULT_BASE);
     const now = Number.isFinite(options.now) ? options.now : Date.now();
+    const htmlByKey = options.htmlByKey instanceof Map ? options.htmlByKey : new Map();
     const answered = new Set(clean.advice.filter((entry) => entry.friend === friend).map((entry) => entry.key));
-    const asks = clean.asks.filter((entry) => entry.friend === friend && !answered.has(entry.key)).slice(0, ADVICE_LINK_CARD_CAP);
-    if (asks.length === 0) return { store: clean, exportId: '', url: '', count: 0 };
+    const open = clean.asks.filter((entry) => entry.friend === friend && !answered.has(entry.key));
+    if (open.length === 0) return { store: clean, exportId: '', url: '', count: 0, left: 0 };
     const exportId = `${new Date(now).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 7)}`;
-    const payload = {
-        e: exportId,
-        f: friend,
-        from: options.from || 'Stanley',
-        c: asks.map((ask, index) => friendCardPayload(index, ask))
-    };
-    if (options.to) payload.to = String(options.to);
-    if (options.question) payload.q = String(options.question).slice(0, 300);
-    clean.exports.push({ id: exportId, friend, at: new Date(now).toISOString(), keys: asks.map((ask) => ask.key) });
+    const zlib = require('zlib');
+    const head = { e: exportId, f: friend, from: options.from || 'Stanley' };
+    if (options.to) head.to = String(options.to);
+    if (options.question) head.q = String(options.question).slice(0, 300);
+    const encode = (cards) => `${base}#j2.${zlib.deflateRawSync(Buffer.from(JSON.stringify({ ...head, c: cards }), 'utf8'), { level: 9 }).toString('base64url')}`;
+    const cards = [];
+    const keys = [];
+    let url = '';
+    for (const ask of open.slice(0, ADVICE_LINK_CARD_CAP)) {
+        const p = ask.snapshot && typeof ask.snapshot === 'object' ? ask.snapshot : {};
+        const card = {
+            k: ask.kind || 'new',
+            t: String(p.title || p.name || '').slice(0, 120),
+            p: { title: String(p.title || p.name || '').slice(0, 120), startDate: p.startDate || null, timezone: p.timezone || null, wholeDay: p.wholeDay || '', bar: p.bar || '', city: p.city || '' },
+            h: htmlByKey.get(ask.key) || `<h2>${String(p.title || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</h2>`
+        };
+        if (ask.question) {
+            // The question tops the card, inside its padding.
+            const line = `<div class="line"><b>❓ ${ask.question.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</b></div>`;
+            card.h = card.h.startsWith('<div class="card-body">') ? card.h.replace('<div class="card-body">', `<div class="card-body">${line}`) : line + card.h;
+        }
+        const next = encode(cards.concat([card]));
+        if (cards.length > 0 && next.length > ADVICE_LINK_MAX_CHARS) break;
+        cards.push(card);
+        keys.push(ask.key);
+        url = next;
+    }
+    clean.exports.push({ id: exportId, friend, at: new Date(now).toISOString(), keys });
     // Old exports go once their asks are long gone.
     clean.exports = clean.exports.filter((entry) => now - Date.parse(entry.at) < 120 * 86400000);
-    return { store: clean, exportId, url: `${base}#j1.${base64UrlEncode(JSON.stringify(payload))}`, count: asks.length };
+    return { store: clean, exportId, url, count: cards.length, left: open.length - cards.length };
 }
 
 // A reply as the friend's page makes it: a link (or just its hash, or the
-// bare code) whose hash is #r1.<base64url JSON { e, f, a: [[index, y|n|u,
-// note, title], …] }>. Null when it is not one.
+// bare code). #r2.<base64url JSON { e, f, a: [[index, approve|reject,
+// mode, tags, note], …] }> is the deck's own answer (mode: fix, not-bear,
+// never, or '' ); #r1. (the first page, [[index, y|n|u, note, title]]) is
+// still read. Null when it is not one.
 function parseFriendReply(text) {
     const raw = String(text || '').trim();
-    const match = raw.match(/(?:^|#)(r1)\.([A-Za-z0-9_-]+)\s*$/);
+    const match = raw.match(/(?:^|#)(r1|r2)\.([A-Za-z0-9_-]+)\s*$/);
     if (!match) return null;
     let parsed;
     try { parsed = JSON.parse(base64UrlDecode(match[2])); } catch (_) { return null; }
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.a)) return null;
-    const answers = parsed.a
-        .filter((row) => Array.isArray(row) && Number.isInteger(row[0]) && ['y', 'n', 'u'].includes(row[1]))
-        .map((row) => ({ index: row[0], answer: row[1] === 'y' ? 'yes' : row[1] === 'n' ? 'no' : 'unsure', note: typeof row[2] === 'string' ? row[2].trim().slice(0, 300) : '', title: typeof row[3] === 'string' ? row[3] : '' }));
+    const note = (value) => (typeof value === 'string' ? value.trim().slice(0, 300) : '');
+    let answers;
+    if (match[1] === 'r2') {
+        const word = (verdict, mode) => verdict === 'approve' ? 'yes' : mode === 'not-bear' ? 'no' : mode === 'fix' ? 'fix' : mode === 'never' ? 'not-event' : 'off';
+        answers = parsed.a
+            .filter((row) => Array.isArray(row) && Number.isInteger(row[0]) && ['approve', 'reject'].includes(row[1]))
+            .map((row) => ({ index: row[0], answer: word(row[1], row[2]), tags: Array.isArray(row[3]) ? row[3].filter((t) => typeof t === 'string').slice(0, 8) : [], note: note(row[4]), title: '' }));
+    } else {
+        answers = parsed.a
+            .filter((row) => Array.isArray(row) && Number.isInteger(row[0]) && ['y', 'n', 'u'].includes(row[1]))
+            .map((row) => ({ index: row[0], answer: row[1] === 'y' ? 'yes' : row[1] === 'n' ? 'no' : 'unsure', tags: [], note: note(row[2]), title: typeof row[3] === 'string' ? row[3] : '' }));
+    }
     return { exportId: typeof parsed.e === 'string' ? parsed.e : '', friend: cleanFriendName(parsed.f), answers };
 }
 
@@ -1443,7 +1479,7 @@ function recordFriendReply(store, reply, now = Date.now()) {
         const key = exported.keys[answer.index];
         if (!key) { result.unknown++; continue; }
         clean.advice = clean.advice.filter((entry) => !(entry.key === key && entry.friend === friend));
-        const row = { key, friend, answer: answer.answer, note: answer.note, receivedAt: new Date(now).toISOString(), exportId: exported.id };
+        const row = { key, friend, answer: answer.answer, tags: Array.isArray(answer.tags) ? answer.tags : [], note: answer.note, receivedAt: new Date(now).toISOString(), exportId: exported.id };
         clean.advice.push(row);
         result.recorded.push(row);
     }
@@ -1456,7 +1492,7 @@ function friendAdviceByKey(store) {
     const clean = normalizeFriendAdviceStore(store);
     const byKey = new Map();
     const get = (key) => { if (!byKey.has(key)) byKey.set(key, { asked: [], advice: [] }); return byKey.get(key); };
-    for (const row of clean.advice) get(row.key).advice.push({ friend: row.friend, answer: row.answer, note: row.note, receivedAt: row.receivedAt });
+    for (const row of clean.advice) get(row.key).advice.push({ friend: row.friend, answer: row.answer, tags: Array.isArray(row.tags) ? row.tags : [], note: row.note, receivedAt: row.receivedAt });
     for (const ask of clean.asks) {
         const entry = get(ask.key);
         if (entry.advice.some((row) => row.friend === ask.friend)) continue;
@@ -1907,6 +1943,7 @@ module.exports = {
     FRIEND_ADVICE_FILE_NAME,
     ADVICE_PAGE_DEFAULT_BASE,
     ADVICE_LINK_CARD_CAP,
+    ADVICE_LINK_MAX_CHARS,
     getFriendAdvicePath,
     emptyFriendAdviceStore,
     loadFriendAdvice,
