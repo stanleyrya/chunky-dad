@@ -1821,7 +1821,7 @@ window.__startDeck = function () {
       var li = document.createElement('li');
       var reason = d.reason ? [(d.reason.tags || []).join(', '), d.reason.text].filter(Boolean).join(' — ') : '';
       var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
-      var via = d.via ? '<div class="r">↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night</div>' : '';
+      var via = d.via ? '<div class="r">' + (String(d.via).indexOf('series|') === 0 ? '↪ with the series card — you decided the party there' : '↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night') + '</div>' : '';
       var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
       li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
       var btn = document.createElement('button');

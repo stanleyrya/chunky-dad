@@ -2144,6 +2144,15 @@ class SharedCore {
         return parts.length === 4 && parts[0] === 'event' ? parts.slice(0, 3).join('|') : '';
     }
 
+    // The PARTY a card is about — its title and place — whether the card is
+    // one night (event|title|place|day) or the series (series|title|place|
+    // rule). Both keys build those two parts the same way
+    // (getOwnerReviewKey). Used only for verdicts about the party itself.
+    static getOwnerReviewPartyKey(key) {
+        const parts = String(key || '').split('|');
+        return parts.length === 4 && (parts[0] === 'event' || parts[0] === 'series') ? parts.slice(1, 3).join('|') : '';
+    }
+
     // What differs between a decided night and ANOTHER night of the same
     // party: the fields the owner saw, minus the dates (a sibling night is
     // exactly that) and with links compared by host (each night may have
@@ -2298,6 +2307,19 @@ class SharedCore {
         if (!decision.key || !proposal.key) return false;
         if (decision.verdict !== 'approve' && decision.verdict !== 'reject') return false;
         if (decision.key !== proposal.key) {
+            // "Not bear" and "not an event" are about the PARTY: one said on
+            // its series card speaks for every single night of it, and one
+            // said on a night speaks for its series card (owner, 2026-10-01
+            // review: a series "not bear" left the party's nights on the
+            // deck). Approvals and fixes never cross between the two — a
+            // series and a night are different proposals.
+            const partyMode = SharedCore.getOwnerRejectionMode(decision);
+            if ((partyMode === 'not-bear' || partyMode === 'never')
+                && (proposal.kind === 'series' || decision.kind === 'series' || String(decision.key).startsWith('series|'))
+                && (proposal.kind === 'new' || proposal.kind === 'series')) {
+                const party = SharedCore.getOwnerReviewPartyKey(proposal.key);
+                if (party && party === SharedCore.getOwnerReviewPartyKey(decision.key)) return true;
+            }
             // Another night of the same party (same title and place, a
             // different day) — the owner does not decide DADDY POP sixteen
             // times. "Not bear" is about the party; an approval or any other

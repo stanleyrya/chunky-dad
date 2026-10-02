@@ -25004,6 +25004,29 @@ test('final trim pass: a saved title that fits and says more than the cut is kep
   assert.equal(overlongSaved.title, 'Urban Bear Weekend');
 });
 
+test('series ↔ nights: "not bear" or "not an event" said on a series card covers every single night of the party, and the other way round; approvals and fixes do not cross', () => {
+  const night = { kind: 'new', key: 'event|daddy pop|eaglewiltonmanors|2030-10-03' };
+  const otherNight = { kind: 'new', key: 'event|daddy pop|eaglewiltonmanors|2030-10-10' };
+  const series = { kind: 'series', key: 'series|daddy pop|eaglewiltonmanors|FREQ=WEEKLY;BYDAY=FR' };
+  const elsewhere = { kind: 'new', key: 'event|daddy pop|rockbar|2030-10-03' };
+  assert.equal(SharedCore.getOwnerReviewPartyKey(series.key), 'daddy pop|eaglewiltonmanors');
+  assert.equal(SharedCore.getOwnerReviewPartyKey(night.key), 'daddy pop|eaglewiltonmanors');
+  assert.equal(SharedCore.getOwnerReviewPartyKey('bar|nyc|julius'), '');
+  const notBearOnSeries = { key: series.key, kind: 'series', verdict: 'reject', reason: { tags: ['not bear'], text: '' } };
+  const neverOnSeries = { key: series.key, kind: 'series', verdict: 'reject', reason: { tags: [], text: '', mode: 'never' } };
+  assert.equal(SharedCore.ownerDecisionCovers(notBearOnSeries, night), true, 'the series "not bear" covers a night');
+  assert.equal(SharedCore.ownerDecisionCovers(notBearOnSeries, otherNight), true);
+  assert.equal(SharedCore.ownerDecisionCovers(neverOnSeries, night), true);
+  assert.equal(SharedCore.ownerDecisionCovers(notBearOnSeries, elsewhere), false, 'another place is another party');
+  const notBearOnNight = { key: night.key, kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' } };
+  assert.equal(SharedCore.ownerDecisionCovers(notBearOnNight, series), true, 'a night\'s "not bear" covers the series card');
+  // Approvals and fixes stay where they were said.
+  assert.equal(SharedCore.ownerDecisionCovers({ key: series.key, kind: 'series', verdict: 'approve', snapshot: {} }, night), false);
+  assert.equal(SharedCore.ownerDecisionCovers({ key: series.key, kind: 'series', verdict: 'reject', reason: { tags: ['wrong venue'], text: '', mode: 'fix' } }, night), false);
+  assert.equal(SharedCore.ownerDecisionCovers({ key: night.key, kind: 'new', verdict: 'approve', snapshot: {} }, series), false);
+  assert.equal(SharedCore.findOwnerDecision(night, [notBearOnSeries]), notBearOnSeries);
+});
+
 test('series coverage: a decision on one night of a party speaks for its other nights while they look the same', () => {
   const core = createReviewCore();
   const friday = core.buildOwnerReviewProposal(reviewNewEvent({ title: 'DADDY POP', bar: 'Eagle Wilton Manors', address: '2209 Wilton Dr', city: 'fort-lauderdale', url: 'https://eaglebarwm.com/event/daddy-pop/2030-10-03/', image: 'https://eaglebarwm.com/daddy-pop-1.png' }));
