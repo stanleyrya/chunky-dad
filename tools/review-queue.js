@@ -1246,6 +1246,211 @@ function publishApprovedPictures(store, options) {
     return result;
 }
 
+// PHONE A FRIEND (owner, 2026-10-02: "for the events I'm not sure of, I
+// can flag them for a friend of mine… a website-hosted version that uses
+// url parameters for saving state… the friends send me the link back").
+// A card the owner flags with a friend's name is an ASK, kept here in
+// <shared root>/friend-advice.json (Mac-only writer) and out of the stack.
+// "Share with <friend>" builds ONE link to the static page
+// chunky.dad/advice/ (advice/index.html, no backend): the cards ride in
+// the hash as #j1.<base64url JSON>, trimmed to what the friend needs
+// (title, when, where, link, a public picture, the question). That link
+// is an EXPORT, recorded with its card keys so the reply — the page's
+// own link back, #r1.<base64url JSON> with one answer per card index —
+// resolves to keys again. A reply pasted into the deck becomes ADVICE
+// rows on the cards (friend, yes/no/not sure, note); the card returns to
+// the stack with the advice on it. The swipe stays the owner's.
+const FRIEND_ADVICE_FILE_NAME = 'friend-advice.json';
+const ADVICE_PAGE_DEFAULT_BASE = 'https://chunky.dad/advice/';
+const ADVICE_LINK_CARD_CAP = 25;
+
+function getFriendAdvicePath(sharedRoot) {
+    return path.join(sharedRoot, FRIEND_ADVICE_FILE_NAME);
+}
+
+function emptyFriendAdviceStore() {
+    return { version: 1, asks: [], exports: [], advice: [] };
+}
+
+function normalizeFriendAdviceStore(store) {
+    const base = emptyFriendAdviceStore();
+    if (!store || typeof store !== 'object') return base;
+    for (const key of ['asks', 'exports', 'advice']) base[key] = Array.isArray(store[key]) ? store[key].filter((entry) => entry && typeof entry === 'object') : [];
+    return base;
+}
+
+function loadFriendAdvice(file, fsLike = fs) {
+    try {
+        return normalizeFriendAdviceStore(JSON.parse(fsLike.readFileSync(file, 'utf8')));
+    } catch (_) {
+        return emptyFriendAdviceStore();
+    }
+}
+
+function saveFriendAdvice(file, store, fsLike = fs) {
+    const clean = normalizeFriendAdviceStore(store);
+    fsLike.mkdirSync(path.dirname(file), { recursive: true });
+    const temp = `${file}.${process.pid}.tmp`;
+    fsLike.writeFileSync(temp, JSON.stringify(clean, null, 2));
+    fsLike.renameSync(temp, file);
+    return clean;
+}
+
+function cleanFriendName(name) {
+    return String(name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+}
+
+// Flag a card for a friend (one ask per card + friend; asking again
+// refreshes the question). `snapshot` is the proposal as the deck shows it.
+function recordFriendAsk(store, ask, now = Date.now()) {
+    const clean = normalizeFriendAdviceStore(store);
+    const key = typeof ask.key === 'string' ? ask.key.trim() : '';
+    const friend = cleanFriendName(ask.friend);
+    if (!key) throw new Error('an ask needs a key');
+    if (!friend) throw new Error('an ask needs a friend');
+    const question = typeof ask.question === 'string' ? ask.question.trim().slice(0, 300) : '';
+    const existing = clean.asks.find((entry) => entry.key === key && entry.friend === friend);
+    if (existing) {
+        existing.question = question;
+        existing.askedAt = new Date(now).toISOString();
+        if (ask.snapshot && typeof ask.snapshot === 'object') existing.snapshot = ask.snapshot;
+    } else {
+        clean.asks.push({ key, kind: typeof ask.kind === 'string' ? ask.kind : 'new', friend, question, askedAt: new Date(now).toISOString(), snapshot: ask.snapshot && typeof ask.snapshot === 'object' ? ask.snapshot : null });
+    }
+    return clean;
+}
+
+// Take a card back from a friend (or from every friend when none is named).
+function clearFriendAsk(store, key, friend = '') {
+    const clean = normalizeFriendAdviceStore(store);
+    const name = cleanFriendName(friend);
+    const before = clean.asks.length;
+    clean.asks = clean.asks.filter((entry) => !(entry.key === key && (!name || entry.friend === name)));
+    return { store: clean, removed: before - clean.asks.length };
+}
+
+function base64UrlEncode(text) {
+    return Buffer.from(String(text), 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlDecode(text) {
+    const clean = String(text || '').replace(/-/g, '+').replace(/_/g, '/');
+    return Buffer.from(clean + '==='.slice((clean.length + 3) % 4), 'base64').toString('utf8');
+}
+
+// What the friend's page needs of a card — nothing the page cannot show.
+// A picture is included only when it is public (an inbox picture that
+// has not reached the website yet is left out).
+function friendCardPayload(index, ask) {
+    const SharedCore = loadSharedCore();
+    const p = ask.snapshot && typeof ask.snapshot === 'object' ? ask.snapshot : {};
+    const image = typeof p.image === 'string' && /^https?:\/\//i.test(p.image) && !SharedCore.isSharedInboxUrl(p.image) ? p.image : '';
+    const card = { i: index, t: String(p.title || p.name || '').slice(0, 120) };
+    if (p.startDate) card.d = p.startDate;
+    if (p.endDate) card.e = p.endDate;
+    if (p.timezone) card.z = p.timezone;
+    if (p.wholeDay) card.w = 1;
+    if (p.bar) card.b = String(p.bar).slice(0, 80);
+    if (p.address) card.a = String(p.address).slice(0, 120);
+    if (p.city) card.y = String(p.city).slice(0, 40);
+    if (p.url || p.website) card.u = String(p.url || p.website).slice(0, 300);
+    if (image) card.p = image.slice(0, 300);
+    if (p.source) card.s = String(p.source).slice(0, 60);
+    if (ask.question) card.n = ask.question;
+    return card;
+}
+
+// One link for everything a friend has been asked and has not answered,
+// recorded as an export so the reply's card indexes resolve to keys.
+// Returns { store, exportId, url, count } — count 0 means nothing to send.
+function buildFriendLink(store, options) {
+    const clean = normalizeFriendAdviceStore(store);
+    const friend = cleanFriendName(options.friend);
+    if (!friend) throw new Error('a link needs a friend');
+    const base = String(options.base || ADVICE_PAGE_DEFAULT_BASE);
+    const now = Number.isFinite(options.now) ? options.now : Date.now();
+    const answered = new Set(clean.advice.filter((entry) => entry.friend === friend).map((entry) => entry.key));
+    const asks = clean.asks.filter((entry) => entry.friend === friend && !answered.has(entry.key)).slice(0, ADVICE_LINK_CARD_CAP);
+    if (asks.length === 0) return { store: clean, exportId: '', url: '', count: 0 };
+    const exportId = `${new Date(now).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 7)}`;
+    const payload = {
+        e: exportId,
+        f: friend,
+        from: options.from || 'Stanley',
+        c: asks.map((ask, index) => friendCardPayload(index, ask))
+    };
+    if (options.to) payload.to = String(options.to);
+    if (options.question) payload.q = String(options.question).slice(0, 300);
+    clean.exports.push({ id: exportId, friend, at: new Date(now).toISOString(), keys: asks.map((ask) => ask.key) });
+    // Old exports go once their asks are long gone.
+    clean.exports = clean.exports.filter((entry) => now - Date.parse(entry.at) < 120 * 86400000);
+    return { store: clean, exportId, url: `${base}#j1.${base64UrlEncode(JSON.stringify(payload))}`, count: asks.length };
+}
+
+// A reply as the friend's page makes it: a link (or just its hash, or the
+// bare code) whose hash is #r1.<base64url JSON { e, f, a: [[index, y|n|u,
+// note, title], …] }>. Null when it is not one.
+function parseFriendReply(text) {
+    const raw = String(text || '').trim();
+    const match = raw.match(/(?:^|#)(r1)\.([A-Za-z0-9_-]+)\s*$/);
+    if (!match) return null;
+    let parsed;
+    try { parsed = JSON.parse(base64UrlDecode(match[2])); } catch (_) { return null; }
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.a)) return null;
+    const answers = parsed.a
+        .filter((row) => Array.isArray(row) && Number.isInteger(row[0]) && ['y', 'n', 'u'].includes(row[1]))
+        .map((row) => ({ index: row[0], answer: row[1] === 'y' ? 'yes' : row[1] === 'n' ? 'no' : 'unsure', note: typeof row[2] === 'string' ? row[2].trim().slice(0, 300) : '', title: typeof row[3] === 'string' ? row[3] : '' }));
+    return { exportId: typeof parsed.e === 'string' ? parsed.e : '', friend: cleanFriendName(parsed.f), answers };
+}
+
+// A reply becomes advice rows (one per answered card), keyed through the
+// export it answers. Returns { store, recorded: [{ key, friend, answer,
+// note }], unknown: n } — unknown counts answers whose export is gone.
+function recordFriendReply(store, reply, now = Date.now()) {
+    const clean = normalizeFriendAdviceStore(store);
+    const result = { store: clean, recorded: [], unknown: 0 };
+    if (!reply || !Array.isArray(reply.answers)) return result;
+    const exported = clean.exports.find((entry) => entry.id === reply.exportId);
+    if (!exported) { result.unknown = reply.answers.length; return result; }
+    const friend = reply.friend || exported.friend;
+    for (const answer of reply.answers) {
+        const key = exported.keys[answer.index];
+        if (!key) { result.unknown++; continue; }
+        clean.advice = clean.advice.filter((entry) => !(entry.key === key && entry.friend === friend));
+        const row = { key, friend, answer: answer.answer, note: answer.note, receivedAt: new Date(now).toISOString(), exportId: exported.id };
+        clean.advice.push(row);
+        result.recorded.push(row);
+    }
+    return result;
+}
+
+// What the deck shows per card: who was asked (and has not answered) and
+// what came back. Keyed by card key.
+function friendAdviceByKey(store) {
+    const clean = normalizeFriendAdviceStore(store);
+    const byKey = new Map();
+    const get = (key) => { if (!byKey.has(key)) byKey.set(key, { asked: [], advice: [] }); return byKey.get(key); };
+    for (const row of clean.advice) get(row.key).advice.push({ friend: row.friend, answer: row.answer, note: row.note, receivedAt: row.receivedAt });
+    for (const ask of clean.asks) {
+        const entry = get(ask.key);
+        if (entry.advice.some((row) => row.friend === ask.friend)) continue;
+        entry.asked.push({ friend: ask.friend, askedAt: ask.askedAt, question: ask.question });
+    }
+    return byKey;
+}
+
+// Friends the owner has asked before, most recent first — the deck's
+// suggestions. Never a hand-kept list.
+function knownFriends(store) {
+    const clean = normalizeFriendAdviceStore(store);
+    const seen = new Map();
+    for (const entry of clean.asks.concat(clean.advice)) {
+        const at = Date.parse(entry.askedAt || entry.receivedAt) || 0;
+        if (!seen.has(entry.friend) || seen.get(entry.friend) < at) seen.set(entry.friend, at);
+    }
+    return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+}
+
 function buildDeck(runPayload, store, options = {}) {
     const payload = runPayload && typeof runPayload === 'object' ? runPayload : {};
     const now = Number.isFinite(options.now) ? options.now : Date.now();
@@ -1554,6 +1759,22 @@ function buildDeck(runPayload, store, options = {}) {
             seriesPresent: presentSeries.has(SharedCore.getOwnerReviewSeriesKey(decision.key))
         }));
 
+    // Friends: who was asked about a card and what came back; a card
+    // asked and unanswered waits in the Friends section, not the stack.
+    const adviceByKey = friendAdviceByKey(options.friendAdvice || null);
+    // Inbox pictures: where the card's picture is on its way to the website.
+    const publishedPictures = options.publishedPictures && typeof options.publishedPictures === 'object' ? options.publishedPictures : {};
+    for (const entry of cards.concat(decided)) {
+        const friends = adviceByKey.get(entry.key);
+        if (friends) { entry.asked = friends.asked; entry.advice = friends.advice; }
+        const address = entry.proposal && SharedCore.isSharedInboxUrl(entry.proposal.image) ? entry.proposal.image : '';
+        if (address) {
+            const record = publishedPictures[address] || null;
+            entry.picture = record && record.url ? { state: 'published', url: record.url }
+                : record && record.pr ? { state: 'pr', pr: record.pr }
+                : { state: 'review-only' };
+        }
+    }
     const lastExecution = executions.length > 0 ? executions[executions.length - 1] : null;
     // A picture that lives in the owner's inbox is served by this server.
     // The proposal keeps the inbox address (it is the snapshot the
@@ -1657,6 +1878,20 @@ function formatRejectionsText(store) {
 
 module.exports = {
     NIGHT_COMPARE_FIELDS,
+    FRIEND_ADVICE_FILE_NAME,
+    ADVICE_PAGE_DEFAULT_BASE,
+    ADVICE_LINK_CARD_CAP,
+    getFriendAdvicePath,
+    emptyFriendAdviceStore,
+    loadFriendAdvice,
+    saveFriendAdvice,
+    recordFriendAsk,
+    clearFriendAsk,
+    buildFriendLink,
+    parseFriendReply,
+    recordFriendReply,
+    friendAdviceByKey,
+    knownFriends,
     reviewImageUrl,
     isSharedInboxAddress,
     readSharedInboxFile,
