@@ -9525,24 +9525,43 @@ class SharedCore {
         return { kind: match[1].toLowerCase(), name };
     }
 
-    // A picture that lives only in the owner's inbox cannot be published:
-    // the website would show a broken image and the calendar would carry a
-    // dead link. Before analysis the address moves to `_sharedPicture`
-    // (metadata — never written, shown by the deck) and the field is
-    // emptied. Runs on both platforms, so a record saved by the Mac with
-    // the inbox address still arrives at the phone's write without it.
-    holdSharedPicturesBack(events) {
+    // A picture that lives only in the owner's inbox cannot be written as
+    // it is: the website would show a broken image and the calendar would
+    // carry a dead link. Before analysis, on both platforms:
+    //   - PUBLISHED (the review server put it on the website when the
+    //     owner approved the card — <shared root>/inbox/published.json,
+    //     adapter.loadPublishedPictures): the field becomes the website
+    //     address, a remote picture like any other;
+    //   - not (yet): the address moves to `_sharedPicture` (metadata —
+    //     never written, shown by the deck) and the field is emptied.
+    // `published` maps inbox address → { url }.
+    holdSharedPicturesBack(events, published = null) {
         let held = 0;
+        let swapped = 0;
+        const lookup = (address) => {
+            if (!published || typeof published !== 'object') return '';
+            const entry = published instanceof Map ? published.get(address) : published[address];
+            const url = entry && typeof entry === 'object' ? entry.url : entry;
+            return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : '';
+        };
         for (const event of Array.isArray(events) ? events : []) {
             if (!event || typeof event !== 'object') continue;
             for (const field of IMAGE_MERGE_FIELDS) {
                 if (!SharedCore.isSharedInboxUrl(event[field])) continue;
-                if (field === 'image' || !event._sharedPicture) event._sharedPicture = String(event[field]);
-                delete event[field];
-                held++;
+                const address = String(event[field]);
+                if (field === 'image' || !event._sharedPicture) event._sharedPicture = address;
+                const url = lookup(address);
+                if (url) {
+                    event[field] = url;
+                    swapped++;
+                } else {
+                    delete event[field];
+                    held++;
+                }
             }
         }
-        if (held > 0) console.log(`🖼️ Pictures from the shared inbox held back from ${held} field(s) — shown for review, never written`);
+        if (swapped > 0) console.log(`🖼️ Pictures from the shared inbox now on the website: ${swapped} field(s) carry the published address`);
+        if (held > 0) console.log(`🖼️ Pictures from the shared inbox held back from ${held} field(s) — shown for review, written once published`);
         return held;
     }
 
@@ -21528,8 +21547,11 @@ class SharedCore {
         // that is the head of a picture's address — isCutPictureAddress).
         this.notePictureAddresses(events);
         // A picture that exists only in the owner's inbox is for review, not
-        // for the calendar.
-        this.holdSharedPicturesBack(events);
+        // for the calendar — until the review server has published it.
+        const publishedPictures = calendarAdapter && typeof calendarAdapter.loadPublishedPictures === 'function'
+            ? await calendarAdapter.loadPublishedPictures()
+            : null;
+        this.holdSharedPicturesBack(events, publishedPictures);
 
         // Curated festival awareness: one drift line per festival per pass,
         // and a batch pre-pass mapping source hosts whose pages produced an

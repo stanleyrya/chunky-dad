@@ -1017,6 +1017,235 @@ function readSharedInboxFile(sharedRoot, name, fsLike = fs) {
     return null;
 }
 
+function isSharedInboxAddress(url) {
+    return loadSharedCore().isSharedInboxUrl(url);
+}
+
+// PUBLISHING AN INBOX PICTURE (owner, 2026-10-02: "we save images to the
+// website and locally host after processing" → "auto publish PR then").
+// When a card whose picture lives in the inbox is approved, the picture
+// is re-encoded to a web size (longest side PUBLISHED_PICTURE_MAX_SIDE,
+// JPEG — a phone HEIC is 1.5 MB and the repo's history is already mostly
+// images) and committed as img/inbox/<date>-<slug>-<hash>.jpg on the
+// rolling branch PICTURES_BRANCH, with one pull request open for it
+// (openPicturePullRequest). Git plumbing only: the site checkout's
+// working tree and HEAD are never touched. The record in <shared
+// root>/inbox/published.json starts PENDING (branch, pr, path); when the
+// owner merges, the next deck build sees the PR merged (resolvePending
+// Pictures) and fills in the website address — the one thing both the
+// Mac run and the phone read (adapter.loadPublishedPictures →
+// SharedCore.holdSharedPicturesBack), so an event is written with the
+// picture only once the picture is on the website. Idempotent per
+// address; a failed step records nothing and is tried again at the next
+// deck build (publishApprovedPictures); the approval stands either way.
+const PUBLISHED_PICTURES_FILE = path.join('inbox', 'published.json');
+const PUBLISHED_PICTURE_MAX_SIDE = 1280;
+const SITE_ORIGIN = 'https://chunky.dad';
+const PICTURES_BRANCH = 'inbox-pictures';
+
+function getPublishedPicturesPath(sharedRoot) {
+    return path.join(sharedRoot, PUBLISHED_PICTURES_FILE);
+}
+
+function loadPublishedPictures(sharedRoot, fsLike = fs) {
+    try {
+        const parsed = JSON.parse(fsLike.readFileSync(getPublishedPicturesPath(sharedRoot), 'utf8'));
+        return parsed && typeof parsed.pictures === 'object' && parsed.pictures ? { version: 1, pictures: parsed.pictures } : { version: 1, pictures: {} };
+    } catch (_) {
+        return { version: 1, pictures: {} };
+    }
+}
+
+function savePublishedPictures(sharedRoot, store, fsLike = fs) {
+    const file = getPublishedPicturesPath(sharedRoot);
+    fsLike.mkdirSync(path.dirname(file), { recursive: true });
+    const temp = `${file}.${process.pid}.tmp`;
+    fsLike.writeFileSync(temp, JSON.stringify(store, null, 2));
+    fsLike.renameSync(temp, file);
+    return store;
+}
+
+function pictureSlug(text) {
+    return String(text || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'event';
+}
+
+// Default tool runner — tests pass their own.
+function runCommand(file, args, options = {}) {
+    const { execFileSync } = require('child_process');
+    return String(execFileSync(file, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000, ...options }));
+}
+
+// Re-encode `source` as a web-sized JPEG at `target` (sips, macOS).
+function reencodePictureForWeb(source, target, run = runCommand) {
+    run('/usr/bin/sips', ['-Z', String(PUBLISHED_PICTURE_MAX_SIDE), '-s', 'format', 'jpeg', '-s', 'formatOptions', '78', source, '--out', target]);
+    return target;
+}
+
+// The open pull request for the pictures branch, { number, url } or null.
+function findOpenPicturePullRequest(repoRoot, run = runCommand) {
+    const text = run('gh', ['pr', 'list', '--head', PICTURES_BRANCH, '--state', 'open', '--json', 'number,url', '--limit', '1'], { cwd: repoRoot });
+    let list = [];
+    try { list = JSON.parse(text || '[]'); } catch (_) { list = []; }
+    return Array.isArray(list) && list[0] && list[0].number ? { number: Number(list[0].number), url: String(list[0].url || '') } : null;
+}
+
+// Put ONE file on the pictures branch and make sure its PR exists.
+// Plumbing: the blob is written into the object store, a temporary index
+// is read from the branch tip (or main, when the branch has no open PR —
+// a merged branch starts over), the path is added, a tree and a commit
+// are written, and the commit is pushed to the branch. Returns
+// { commit, branch, pr: { number, url } }.
+function putPictureOnBranch(repoRoot, filePath, relativePath, message, run = runCommand) {
+    const git = (args, options = {}) => run('git', ['-C', repoRoot, ...args], options).trim();
+    git(['fetch', '--quiet', 'origin', 'main']);
+    let openPr = findOpenPicturePullRequest(repoRoot, run);
+    let base = 'refs/remotes/origin/main';
+    if (openPr) {
+        try {
+            git(['fetch', '--quiet', 'origin', PICTURES_BRANCH]);
+            base = `refs/remotes/origin/${PICTURES_BRANCH}`;
+        } catch (_) {
+            openPr = null;
+        }
+    }
+    const blob = git(['hash-object', '-w', '--', filePath]);
+    const indexFile = path.join(require('os').tmpdir(), `chunky-pictures-index-${process.pid}-${Date.now()}`);
+    const env = { ...process.env, GIT_INDEX_FILE: indexFile };
+    let tree;
+    try {
+        git(['read-tree', base], { env });
+        git(['update-index', '--add', '--cacheinfo', `100644,${blob},${relativePath}`], { env });
+        tree = git(['write-tree'], { env });
+    } finally {
+        try { fs.unlinkSync(indexFile); } catch (_) {}
+    }
+    const commit = git(['commit-tree', tree, '-p', base, '-m', message]);
+    git(['push', '--quiet', 'origin', `${commit}:refs/heads/${PICTURES_BRANCH}`]);
+    const pr = openPr || openPicturePullRequest(repoRoot, run);
+    return { commit, branch: PICTURES_BRANCH, pr };
+}
+
+function openPicturePullRequest(repoRoot, run = runCommand) {
+    const body = [
+        'Pictures dropped into the shared inbox and approved on the review deck (tools/review-queue.js publishSharedPicture).',
+        'Each is a web-sized JPEG under img/inbox/. Once merged, the next deck build records the website address and the phone writes the event with it.',
+        '',
+        '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
+    ].join('\n');
+    const url = run('gh', ['pr', 'create', '--head', PICTURES_BRANCH, '--base', 'main', '--title', '🖼️ Inbox pictures', '--body', body], { cwd: repoRoot }).trim();
+    const number = Number((url.match(/\/pull\/(\d+)/) || [])[1]) || null;
+    return { number, url };
+}
+
+// Publish one inbox picture for an approved card: the record from
+// published.json — pending ({ pr, branch, path, url: null }) right after
+// the push, complete ({ url }) once resolvePendingPictures saw the PR
+// merged. Throws when the file is gone, the re-encode fails or the push
+// fails; nothing is recorded then.
+function publishSharedPicture(options) {
+    const { sharedRoot, repoRoot, address, title, startDate } = options;
+    const fsLike = options.fs || fs;
+    const run = options.run || runCommand;
+    const SharedCore = loadSharedCore();
+    const parsed = SharedCore.parseSharedInboxUrl(address);
+    if (!parsed || parsed.kind !== 'file') throw new Error(`not an inbox picture address: ${address}`);
+    const store = loadPublishedPictures(sharedRoot, fsLike);
+    if (store.pictures[address] && (store.pictures[address].url || store.pictures[address].pr)) return store.pictures[address];
+    const found = readSharedInboxFile(sharedRoot, parsed.name, fsLike);
+    if (!found) throw new Error(`inbox picture is gone: ${parsed.name}`);
+    const hash = require('crypto').createHash('sha1').update(found.buffer).digest('hex').slice(0, 8);
+    const day = Number.isFinite(Date.parse(startDate)) ? new Date(startDate).toISOString().slice(0, 10) : 'undated';
+    const fileName = `${day}-${pictureSlug(title)}-${hash}.jpg`;
+    const relativePath = path.posix.join('img', 'inbox', fileName);
+    const tmpDir = fsLike.mkdtempSync(path.join(require('os').tmpdir(), 'chunky-picture-'));
+    const target = path.join(tmpDir, fileName);
+    let put;
+    try {
+        reencodePictureForWeb(found.file, target, run);
+        put = putPictureOnBranch(repoRoot, target, relativePath, `🖼️ Inbox picture: ${String(title || parsed.name).slice(0, 72)}`, run);
+    } finally {
+        try { fsLike.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+    }
+    const record = { url: null, path: relativePath, title: String(title || ''), from: parsed.name, branch: put.branch, commit: put.commit, pr: put.pr, pushedAt: new Date().toISOString(), publishedAt: null };
+    store.pictures[address] = record;
+    savePublishedPictures(sharedRoot, store, fsLike);
+    return record;
+}
+
+// Pending records whose PR has been merged get their website address;
+// one whose PR was closed unmerged is dropped (published again next time
+// as a new PR). Returns the number of records changed.
+function resolvePendingPictures(sharedRoot, options) {
+    const fsLike = options.fs || fs;
+    const run = options.run || runCommand;
+    const store = loadPublishedPictures(sharedRoot, fsLike);
+    const states = new Map();
+    let changed = 0;
+    for (const [address, record] of Object.entries(store.pictures)) {
+        if (!record || record.url || !record.pr || !record.pr.number) continue;
+        const number = record.pr.number;
+        if (!states.has(number)) {
+            try {
+                const text = run('gh', ['pr', 'view', String(number), '--json', 'state,mergedAt'], { cwd: options.repoRoot });
+                states.set(number, JSON.parse(text));
+            } catch (error) {
+                states.set(number, null);
+            }
+        }
+        const state = states.get(number);
+        if (!state) continue;
+        if (state.state === 'MERGED') {
+            record.url = `${SITE_ORIGIN}/${record.path}`;
+            record.publishedAt = state.mergedAt || new Date().toISOString();
+            changed++;
+            console.log(`Review: inbox picture ${record.path} is on the website (PR #${number} merged)`);
+        } else if (state.state === 'CLOSED') {
+            delete store.pictures[address];
+            changed++;
+            console.log(`Review: inbox picture ${record.path} dropped — PR #${number} was closed unmerged; it will be offered again`);
+        }
+    }
+    if (changed > 0) savePublishedPictures(sharedRoot, store, fsLike);
+    return changed;
+}
+
+// Every approved decision whose snapshot picture is an inbox address and
+// has no record yet: publish it now; and every pending record: ask after
+// its PR. Called at deck build, so a step that failed at approve time is
+// retried; each address is tried at most once per PUBLISH_RETRY_MS per
+// process. Returns { published, failed, resolved }.
+const PUBLISH_RETRY_MS = 10 * 60 * 1000;
+const publishAttempts = new Map();
+function publishApprovedPictures(store, options) {
+    const { sharedRoot, repoRoot } = options;
+    const SharedCore = loadSharedCore();
+    const now = Number.isFinite(options.now) ? options.now : Date.now();
+    const attempts = options.attempts || publishAttempts;
+    const result = { published: [], failed: [], resolved: 0 };
+    const pending = Object.values(loadPublishedPictures(sharedRoot, options.fs || fs).pictures).some((record) => record && !record.url && record.pr);
+    if (pending && now - (attempts.get('resolve') || 0) >= PUBLISH_RETRY_MS) {
+        attempts.set('resolve', now);
+        try { result.resolved = resolvePendingPictures(sharedRoot, options); } catch (error) { console.log(`Review: could not ask after the pictures PR: ${error.message}`); }
+    }
+    const published = loadPublishedPictures(sharedRoot, options.fs || fs).pictures;
+    for (const decision of normalizeDecisionStore(store).decisions) {
+        if (!decision || decision.verdict !== 'approve' || !decision.snapshot) continue;
+        const address = String(decision.snapshot.image || '');
+        if (!SharedCore.isSharedInboxUrl(address) || published[address]) continue;
+        if (now - (attempts.get(address) || 0) < PUBLISH_RETRY_MS) continue;
+        attempts.set(address, now);
+        try {
+            const record = publishSharedPicture({ sharedRoot, repoRoot, address, title: decision.snapshot.title, startDate: decision.snapshot.startDate, fs: options.fs, run: options.run });
+            result.published.push({ key: decision.key, ...record });
+            console.log(`Review: inbox picture for ${decision.key} pushed → PR ${record.pr && record.pr.url ? record.pr.url : '?'}`);
+        } catch (error) {
+            result.failed.push({ key: decision.key, address, error: error.message });
+            console.log(`Review: inbox picture for ${decision.key} NOT published (${error.message}) — tried again at the next deck build`);
+        }
+    }
+    return result;
+}
+
 function buildDeck(runPayload, store, options = {}) {
     const payload = runPayload && typeof runPayload === 'object' ? runPayload : {};
     const now = Number.isFinite(options.now) ? options.now : Date.now();
@@ -1327,9 +1556,12 @@ function buildDeck(runPayload, store, options = {}) {
 
     const lastExecution = executions.length > 0 ? executions[executions.length - 1] : null;
     // A picture that lives in the owner's inbox is served by this server.
+    // The proposal keeps the inbox address (it is the snapshot the
+    // approval records and publishSharedPicture publishes); the deck shows
+    // the picture through imageView.
     for (const entry of cards.concat(decided)) {
         if (entry.display && SharedCore.isSharedInboxUrl(entry.display.image)) entry.display.image = reviewImageUrl(entry.display.image);
-        if (entry.proposal && SharedCore.isSharedInboxUrl(entry.proposal.image)) entry.proposal = { ...entry.proposal, image: reviewImageUrl(entry.proposal.image) };
+        if (entry.proposal && SharedCore.isSharedInboxUrl(entry.proposal.image)) entry.proposal = { ...entry.proposal, imageView: reviewImageUrl(entry.proposal.image) };
     }
     return {
         runId,
@@ -1426,7 +1658,16 @@ function formatRejectionsText(store) {
 module.exports = {
     NIGHT_COMPARE_FIELDS,
     reviewImageUrl,
+    isSharedInboxAddress,
     readSharedInboxFile,
+    PUBLISHED_PICTURE_MAX_SIDE,
+    getPublishedPicturesPath,
+    loadPublishedPictures,
+    savePublishedPictures,
+    publishSharedPicture,
+    publishApprovedPictures,
+    resolvePendingPictures,
+    PICTURES_BRANCH,
     DEFAULT_SHARED_ROOT,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,

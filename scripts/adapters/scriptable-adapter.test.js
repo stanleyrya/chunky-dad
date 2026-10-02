@@ -11191,6 +11191,24 @@ test('loadOwnerDecisions reads the Mac-written store (either shape), downloads f
   assert.deepEqual(await adapter.loadOwnerDecisions(), []);
 });
 
+test('loadPublishedPictures reads inbox/published.json (Mac-written), downloads from iCloud first, and never throws', async () => {
+  const adapter = buildAdapter();
+  const downloads = [];
+  adapter.fm = {
+    ...fileManagerStub,
+    fileExists: () => true,
+    downloadFileFromiCloud: async (filePath) => { downloads.push(filePath); },
+    readString: () => JSON.stringify({ version: 1, pictures: { 'https://inbox.chunky.dad/file/a.jpg': { url: 'https://chunky.dad/img/inbox/a.jpg' } } })
+  };
+  const pictures = await adapter.loadPublishedPictures();
+  assert.equal(pictures['https://inbox.chunky.dad/file/a.jpg'].url, 'https://chunky.dad/img/inbox/a.jpg');
+  assert.ok(downloads[0].endsWith('/chunky-dad-scraper/inbox/published.json'));
+  adapter.fm = { ...fileManagerStub, fileExists: () => true, readString: () => '{oops' };
+  assert.equal(await adapter.loadPublishedPictures(), null, 'corrupt store → null, never a throw');
+  adapter.fm = { ...fileManagerStub, fileExists: () => false };
+  assert.equal(await adapter.loadPublishedPictures(), null);
+});
+
 const REVIEW_RUN_START = '2030-10-04T02:00:00.000Z';
 
 function reviewedNew(title) {

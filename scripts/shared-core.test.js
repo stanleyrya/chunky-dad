@@ -23911,6 +23911,25 @@ test('shared inbox pictures: the address scheme round-trips one name and refuses
   assert.equal(kept.image, 'https://cdn.example.com/flyer.png', 'a published picture is untouched');
   assert.equal(core.buildOwnerReviewProposal(held).image, 'https://inbox.chunky.dad/file/flyer.png', 'the deck still shows it');
   assert.equal(core.buildOwnerReviewProposal(kept).image, 'https://cdn.example.com/flyer.png');
+
+  // Once the review server has put the picture on the website
+  // (inbox/published.json), the field carries the website address.
+  const published = reviewNewEvent({ image: 'https://inbox.chunky.dad/file/flyer.png' });
+  const stillPending = reviewNewEvent({ image: 'https://inbox.chunky.dad/file/other.png' });
+  core.holdSharedPicturesBack([published, stillPending], {
+    'https://inbox.chunky.dad/file/flyer.png': { url: 'https://chunky.dad/img/inbox/2030-10-04-furball-nyc-abcd1234.jpg', pr: { number: 7 } },
+    'https://inbox.chunky.dad/file/other.png': { url: null, pr: { number: 7 } }
+  });
+  assert.equal(published.image, 'https://chunky.dad/img/inbox/2030-10-04-furball-nyc-abcd1234.jpg');
+  assert.equal(published._sharedPicture, 'https://inbox.chunky.dad/file/flyer.png');
+  assert.equal('image' in stillPending, false, 'a pending PR is not a website address');
+
+  // prepareEventsForCalendar asks the adapter for the store.
+  const adapter = { loadPublishedPictures: async () => ({ 'https://inbox.chunky.dad/file/flyer.png': { url: 'https://chunky.dad/img/inbox/x.jpg' } }), getExistingEvents: async () => [], loadBearVerdicts: async () => [] };
+  const viaPrepare = reviewNewEvent({ image: 'https://inbox.chunky.dad/file/flyer.png' });
+  let prepared = null;
+  try { prepared = await core.prepareEventsForCalendar([viaPrepare], adapter, {}); } catch (_) { prepared = null; }
+  assert.equal(viaPrepare.image, 'https://chunky.dad/img/inbox/x.jpg', 'swapped before analysis');
 });
 
 test('owner review proposal: a merge shows only stored-field changes (never notes); a new event shows none', () => {

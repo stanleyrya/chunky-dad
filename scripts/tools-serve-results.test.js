@@ -499,6 +499,88 @@ test('review server: /inbox/file/<name> serves a picture from the shared inbox (
   }
 });
 
+test('inbox pictures: approving a card pushes a web-sized copy to the pictures branch + one PR (plumbing only, nothing in the checkout touched), records it PENDING; merged → website address; closed → dropped; idempotent; failures record nothing', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-pictures-'));
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-pictures-repo-'));
+  fs.mkdirSync(path.join(root, 'inbox', 'done'), { recursive: true });
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync(path.join(root, 'inbox', 'done', 'IMG_0042.jpg'), png);
+  const reviewQueue = require(path.join(__dirname, '..', 'tools', 'review-queue.js'));
+  const calls = [];
+  let prOpen = null;
+  let prState = null;
+  const run = (file, args) => {
+    calls.push([file, ...args].join(' '));
+    if (file === '/usr/bin/sips') { fs.copyFileSync(args[args.length - 3], args[args.length - 1]); return ''; }
+    if (file === 'gh' && args[1] === 'list') return JSON.stringify(prOpen ? [prOpen] : []);
+    if (file === 'gh' && args[1] === 'create') { prOpen = { number: 1860, url: 'https://github.com/x/y/pull/1860' }; return prOpen.url + '\n'; }
+    if (file === 'gh' && args[1] === 'view') return JSON.stringify(prState);
+    const sub = args[2];
+    if (sub === 'hash-object') return 'b10b' + '0'.repeat(36);
+    if (sub === 'write-tree') return '7ree' + '0'.repeat(36);
+    if (sub === 'commit-tree') return 'c0de' + '0'.repeat(36);
+    if (sub === 'push' && process.env.CHUNKY_TEST_PUSH_FAILS) throw new Error('push rejected');
+    return '';
+  };
+  const address = 'https://inbox.chunky.dad/file/IMG_0042.jpg';
+  const common = { sharedRoot: root, repoRoot: repo, address, title: 'BEARRACUDA LA', startDate: '2030-11-14T08:00:00.000Z', run };
+
+  process.env.CHUNKY_TEST_PUSH_FAILS = '1';
+  assert.throws(() => reviewQueue.publishSharedPicture(common), /push rejected/);
+  assert.deepEqual(reviewQueue.loadPublishedPictures(root).pictures, {}, 'a failed push records nothing');
+  delete process.env.CHUNKY_TEST_PUSH_FAILS;
+
+  const record = reviewQueue.publishSharedPicture(common);
+  assert.equal(record.url, null, 'pending until the PR is merged');
+  assert.equal(record.pr.number, 1860);
+  assert.equal(record.branch, 'inbox-pictures');
+  assert.match(record.path, /^img\/inbox\/2030-11-14-bearracuda-la-[0-9a-f]{8}\.jpg$/);
+  assert.ok(calls.some((c) => /^\/usr\/bin\/sips -Z 1280 -s format jpeg/.test(c)), 'web-sized JPEG');
+  assert.ok(calls.some((c) => c.includes('read-tree refs/remotes/origin/main')), 'no open PR → the branch starts from main');
+  assert.ok(calls.some((c) => c.includes(`update-index --add --cacheinfo 100644,b10b${'0'.repeat(36)},${record.path}`)));
+  assert.ok(calls.some((c) => c.includes(`push --quiet origin c0de${'0'.repeat(36)}:refs/heads/inbox-pictures`)));
+  assert.ok(calls.some((c) => /^gh pr create --head inbox-pictures --base main/.test(c)));
+  assert.ok(!calls.some((c) => /git -C \S+ (checkout|commit |add |merge)/.test(c)), 'the checkout is never touched');
+  assert.equal(fs.readdirSync(repo).length, 0, 'nothing written into the checkout');
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].pr.number, 1860, 'recorded');
+  const again = reviewQueue.publishSharedPicture(common);
+  assert.equal(again.commit, record.commit, 'idempotent');
+
+  // A second picture while the PR is open rides the same branch + PR.
+  fs.writeFileSync(path.join(root, 'inbox', 'two.png'), png);
+  const second = reviewQueue.publishSharedPicture({ ...common, address: 'https://inbox.chunky.dad/file/two.png', title: 'Second' });
+  assert.equal(second.pr.number, 1860);
+  assert.ok(calls.some((c) => c.includes('read-tree refs/remotes/origin/inbox-pictures')), 'the open PR\'s branch is the base');
+
+  // Deck build: pending → merged fills the website address; closed drops.
+  prState = { state: 'OPEN', mergedAt: null };
+  const attempts = new Map();
+  let out = reviewQueue.publishApprovedPictures({ version: 1, decisions: [] }, { sharedRoot: root, repoRoot: repo, run, attempts });
+  assert.equal(out.resolved, 0);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].url, null);
+  prState = { state: 'MERGED', mergedAt: '2030-10-05T00:00:00.000Z' };
+  out = reviewQueue.publishApprovedPictures({ version: 1, decisions: [] }, { sharedRoot: root, repoRoot: repo, run, attempts, now: Date.now() + 11 * 60 * 1000 });
+  assert.equal(out.resolved, 2);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].url, `https://chunky.dad/${record.path}`);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].publishedAt, '2030-10-05T00:00:00.000Z');
+
+  // An approved decision whose picture was never pushed (approve-time failure) is published at deck build.
+  fs.writeFileSync(path.join(root, 'inbox', 'three.png'), png);
+  prOpen = null;
+  const decisions = { version: 1, decisions: [{ key: 'event|x|y|2030-10-04', kind: 'new', verdict: 'approve', stampedAt: '2030-10-01T00:00:00.000Z', snapshot: { title: 'Three', startDate: '2030-10-04T02:00:00.000Z', image: 'https://inbox.chunky.dad/file/three.png' } }] };
+  out = reviewQueue.publishApprovedPictures(decisions, { sharedRoot: root, repoRoot: repo, run, attempts: new Map() });
+  assert.equal(out.published.length, 1);
+  assert.equal(out.published[0].pr.number, 1860, 'a new PR (the old one merged → branch restarted from main)');
+  prState = { state: 'CLOSED', mergedAt: null };
+  reviewQueue.resolvePendingPictures(root, { repoRoot: repo, run });
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures['https://inbox.chunky.dad/file/three.png'], undefined, 'closed unmerged → dropped, offered again later');
+  assert.throws(() => reviewQueue.publishSharedPicture({ ...common, address: 'https://inbox.chunky.dad/file/gone.png' }), /is gone/);
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(repo, { recursive: true, force: true });
+});
+
 test('run-once: shapeRunOnceConfig stamps automation runtime and always re-forces dryRun last', () => {
   const config = {
     parsers: [

@@ -2505,6 +2505,14 @@ function buildReviewDeckForRun(sharedRoot, run) {
         if (autoApprovals.length > 0) console.log(`Review: auto-approved ${autoApprovals.length} card(s) whose fix arrived as asked: ${autoApprovals.map((d) => d.key).join(', ')}`);
         deck = reviewQueue.buildDeck(run.payload, saved, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
     }
+    // Inbox pictures: a push that failed at approve time is tried again
+    // here, and a pending picture whose PR was merged gets its website
+    // address — each at most once per 10 min.
+    try {
+        reviewQueue.publishApprovedPictures(reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot)), { sharedRoot, repoRoot });
+    } catch (error) {
+        console.log(`Review: inbox picture retry failed: ${error.message}`);
+    }
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
@@ -2771,7 +2779,20 @@ async function handleRequest(state, req, res) {
             const replaced = store.decisions.find((entry) => entry.key === decision.key) || null;
             store = reviewQueue.saveDecisions(decisionsPath, reviewQueue.upsertDecision(store, decision));
             console.log(`Review: ${decision.verdict} ${decision.kind} ${decision.key}${decision.reason ? ` — ${[decision.reason.tags.join(', '), decision.reason.text].filter(Boolean).join(' / ')}` : ''}`);
-            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length });
+            // An approved card whose picture lives in the inbox: push the
+            // picture to the pictures PR now; once merged, the phone writes
+            // the event with its website address.
+            let picture = null;
+            if (decision.verdict === 'approve' && decision.snapshot && reviewQueue.isSharedInboxAddress(decision.snapshot.image)) {
+                try {
+                    picture = reviewQueue.publishSharedPicture({ sharedRoot, repoRoot, address: decision.snapshot.image, title: decision.snapshot.title, startDate: decision.snapshot.startDate });
+                    console.log(`Review: inbox picture for ${decision.key} → ${picture.url || (picture.pr && picture.pr.url) || 'pushed'}`);
+                } catch (error) {
+                    picture = { error: error.message };
+                    console.log(`Review: inbox picture for ${decision.key} NOT published (${error.message}) — tried again at the next deck build`);
+                }
+            }
+            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length, ...(picture ? { picture } : {}) });
         } catch (error) {
             const status = /must be|needs a/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });

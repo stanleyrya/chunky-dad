@@ -831,6 +831,29 @@ class WebAdapter {
         return { html, url, statusCode: 200, headers };
     }
 
+    // Pictures from the inbox the review server has put on the website
+    // (<shared root>/inbox/published.json, written by tools/review-queue
+    // publishSharedPicture when the owner approves a card): inbox address →
+    // { url, path, publishedAt }. Null when there is none; read by
+    // SharedCore.holdSharedPicturesBack.
+    getPublishedPicturesPath() {
+        const dir = this.getSharedInboxDir();
+        return dir ? this.path.join(dir, 'published.json') : '';
+    }
+
+    async loadPublishedPictures() {
+        const file = this.getPublishedPicturesPath();
+        if (!file) return null;
+        try {
+            if (!this.fs.existsSync(file)) return null;
+            const parsed = JSON.parse(await this.fs.promises.readFile(file, 'utf8'));
+            return parsed && typeof parsed.pictures === 'object' && parsed.pictures ? parsed.pictures : null;
+        } catch (error) {
+            console.log(`🟢 Node.js: Published pictures store read failed (${error.message}) — inbox pictures stay held back`);
+            return null;
+        }
+    }
+
     // The bytes of an inbox picture, for the vision model. HEIC never gets
     // here: run-once's intake re-encodes it as a JPEG beside the original.
     async readSharedInboxImage(url) {

@@ -229,6 +229,9 @@ test('shared inbox addresses: a /page/ address is the picture page built from di
     assert.equal(Buffer.from(base64, 'base64').subarray(0, 4).toString('hex'), '89504e47', 'the PNG bytes, from done/');
     await assert.rejects(() => adapter.fetchImageAsBase64('https://inbox.chunky.dad/file/gone.png', 5, 1024), /gone/);
     assert.equal(wireCalls, 0, 'nothing fetched');
+    assert.equal(await adapter.loadPublishedPictures(), null, 'no store yet');
+    fs.writeFileSync(path.join(inbox, 'published.json'), JSON.stringify({ version: 1, pictures: { 'https://inbox.chunky.dad/file/flyer night.png': { url: 'https://chunky.dad/img/inbox/a.jpg' } } }));
+    assert.equal((await adapter.loadPublishedPictures())['https://inbox.chunky.dad/file/flyer night.png'].url, 'https://chunky.dad/img/inbox/a.jpg');
     assert.equal(WebAdapter.buildSharedPicturePage('a"b<c>.png').includes('href'), false);
     assert.ok(WebAdapter.buildSharedPicturePage('a"b<c>.png').includes('<img src="https://inbox.chunky.dad/file/a%22b%3Cc%3E.png"'));
   } finally {
