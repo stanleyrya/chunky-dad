@@ -201,6 +201,45 @@ test('inbox: the Mac records the pages it cannot fetch for the phone, once per U
   assert.equal(noRoot.noteInboxRequest('https://dilf.example/events', 'HTTP 429'), false, 'no shared root, no inbox');
 });
 
+test('shared inbox addresses: a /page/ address is the picture page built from disk, a /file/ address is the file; nothing goes on the wire; OCR reads the picture bytes; a consumed file is still read from done/', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  let wireCalls = 0;
+  global.fetch = async () => { wireCalls += 1; throw new Error('the wire must not be touched'); };
+  try {
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 }, politeness: {} });
+    const inbox = path.join(shared.dir, 'inbox');
+    fs.mkdirSync(path.join(inbox, 'done'), { recursive: true });
+    // A 2×2 PNG (valid), consumed by a run already.
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
+    fs.writeFileSync(path.join(inbox, 'done', 'flyer night.png'), png);
+    fs.writeFileSync(path.join(inbox, 'links.txt'), 'https://example.com/a');
+
+    const page = await adapter.fetchData('https://inbox.chunky.dad/page/flyer%20night.png');
+    assert.equal(page.statusCode, 200);
+    assert.ok(page.html.includes('<img src="https://inbox.chunky.dad/file/flyer%20night.png"'), page.html);
+    assert.equal(page.headers['x-fetched-by'], 'shared-inbox');
+    assert.equal(adapter.hasFreshCachedPage('https://inbox.chunky.dad/page/flyer%20night.png'), true, 'cached like any page');
+    const text = await adapter.fetchData('https://inbox.chunky.dad/file/links.txt');
+    assert.equal(text.html, 'https://example.com/a');
+    await assert.rejects(() => adapter.fetchData('https://inbox.chunky.dad/page/gone.png'), /Shared inbox file is gone/);
+    await assert.rejects(() => adapter.fetchData('https://inbox.chunky.dad/page/..%2Fsecret'), /gone|not an inbox/i, 'a path is not a name');
+
+    const base64 = await adapter.fetchImageAsBase64('https://inbox.chunky.dad/file/flyer%20night.png', 5, 1024);
+    assert.equal(Buffer.from(base64, 'base64').subarray(0, 4).toString('hex'), '89504e47', 'the PNG bytes, from done/');
+    await assert.rejects(() => adapter.fetchImageAsBase64('https://inbox.chunky.dad/file/gone.png', 5, 1024), /gone/);
+    assert.equal(wireCalls, 0, 'nothing fetched');
+    assert.equal(await adapter.loadPublishedPictures(), null, 'no store yet');
+    fs.writeFileSync(path.join(inbox, 'published.json'), JSON.stringify({ version: 1, pictures: { 'https://inbox.chunky.dad/file/flyer night.png': { url: 'https://chunky.dad/img/inbox/a.jpg' } } }));
+    assert.equal((await adapter.loadPublishedPictures())['https://inbox.chunky.dad/file/flyer night.png'].url, 'https://chunky.dad/img/inbox/a.jpg');
+    assert.equal(WebAdapter.buildSharedPicturePage('a"b<c>.png').includes('href'), false);
+    assert.ok(WebAdapter.buildSharedPicturePage('a"b<c>.png').includes('<img src="https://inbox.chunky.dad/file/a%22b%3Cc%3E.png"'));
+  } finally {
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
 test('browser fetch: a GET answered 429 is tried once more in a real browser; what it renders is the page, cached and memoized; browser failure falls back to the inbox', async () => {
   const shared = withSharedRoot();
   const originalFetch = global.fetch;

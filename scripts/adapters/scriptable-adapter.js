@@ -1782,6 +1782,33 @@ class ScriptableAdapter {
     return this.fm.joinPath(this.baseDir, "owner-decisions.json");
   }
 
+  // Pictures from the inbox the review server has put on the website
+  // (inbox/published.json, Mac-only writer): inbox address → { url }. Read
+  // by SharedCore.holdSharedPicturesBack so an approved card's picture is
+  // written as its website address. Null when there is none.
+  getPublishedPicturesFilePath() {
+    return this.fm.joinPath(this.baseDir, "inbox/published.json");
+  }
+
+  async loadPublishedPictures() {
+    const path = this.getPublishedPicturesFilePath();
+    try {
+      if (!this.fm.fileExists(path)) return null;
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      return parsed && typeof parsed.pictures === "object" && parsed.pictures
+        ? parsed.pictures
+        : null;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Published pictures store read failed (${error.message}) — inbox pictures stay held back`,
+      );
+      return null;
+    }
+  }
+
   async loadOwnerDecisions() {
     const path = this.getOwnerDecisionsFilePath();
     try {

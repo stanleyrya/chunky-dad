@@ -3721,6 +3721,23 @@ function createCityGateNormalizer(bars) {
   return new LocationNormalizer(core);
 }
 
+test('unrecognized city: a "city" copied out of the street line is dropped, not parked — the curated door still places the flyer', () => {
+  const normalizer = createCityGateNormalizer({ la: [EAGLE_LA_BAR] });
+  const event = {
+    title: 'ONYX',
+    bar: 'Eagle',
+    address: '4219 Santa Monica Blvd',
+    city: 'santa monica',
+    startDate: '2026-08-09T16:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event._unrecognizedCity, undefined, 'a street is not a stated city');
+  assert.ok(lines.some(line => line.includes('Dropped city "santa monica" for "ONYX" — it is part of the street line')), lines.join('\n'));
+  assert.ok(!lines.some(line => line.includes('is a namesake, not this venue')), 'the door is not refused on the strength of a street');
+  assert.equal(event.city, 'la', `the bar + street line decide: ${lines.join('\n')}`);
+});
+
 test('unrecognized city: literal ONYX repro — "socal / southwest" is refused and the curated bar restores "la"', () => {
   const normalizer = createCityGateNormalizer({ la: [EAGLE_LA_BAR] });
   const event = {

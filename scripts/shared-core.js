@@ -2264,7 +2264,9 @@ class SharedCore {
             source: parserName || String(event.source || ''),
             url: String(event.url || event.website || ''),
             ticketUrl: String(event.ticketUrl || ''),
-            image: String(event.image || ''),
+            // A picture held back from the calendar (holdSharedPicturesBack)
+            // is still the picture the owner reviews.
+            image: String(event.image || event._sharedPicture || ''),
             cover: String(event.cover || ''),
             description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
             // Saved as a whole day (see applyAllDayConvention) — 'all-day'
@@ -9492,6 +9494,76 @@ class SharedCore {
     }
     static get RATE_LIMIT_PARK_RUNS() { return 3; }
     static get RATE_LIMIT_PARK_DAYS() { return 30; }
+
+    // THE SHARED INBOX'S ADDRESSES. A file the owner drops into
+    // iCloud/Scriptable/chunky-dad-scraper/inbox/ (a flyer screenshot, a
+    // saved page) has no address on the web, and the whole pipeline — page
+    // cache, OCR cache, image pairing, dedup — is keyed by URL. So each file
+    // is given one under a host that does not exist:
+    //   https://inbox.chunky.dad/file/<name>   the bytes (read from disk)
+    //   https://inbox.chunky.dad/page/<name>   the page that shows them
+    // Nothing is ever fetched from that host (WebAdapter.fetchData and
+    // fetchImageAsBase64 read the inbox folder instead); a record whose
+    // picture lives there keeps it only for review — see
+    // holdSharedPicturesBack.
+    static get SHARED_INBOX_HOST() { return 'inbox.chunky.dad'; }
+    static sharedInboxUrl(kind, name) {
+        return `https://${SharedCore.SHARED_INBOX_HOST}/${kind === 'page' ? 'page' : 'file'}/${encodeURIComponent(String(name || ''))}`;
+    }
+    static isSharedInboxUrl(url) {
+        return new RegExp(`^https?://${SharedCore.SHARED_INBOX_HOST.replace(/\./g, '\\.')}/`, 'i').test(String(url || ''));
+    }
+    // { kind: 'file'|'page', name } for an inbox address, else null. The
+    // name is one path segment: a slash or ".." inside it is refused.
+    static parseSharedInboxUrl(url) {
+        if (!SharedCore.isSharedInboxUrl(url)) return null;
+        const match = String(url).match(/^https?:\/\/[^/]+\/(file|page)\/([^/?#]+)$/i);
+        if (!match) return null;
+        let name = '';
+        try { name = decodeURIComponent(match[2]); } catch (_) { return null; }
+        if (!name || name === '.' || name === '..' || /[\\/]/.test(name)) return null;
+        return { kind: match[1].toLowerCase(), name };
+    }
+
+    // A picture that lives only in the owner's inbox cannot be written as
+    // it is: the website would show a broken image and the calendar would
+    // carry a dead link. Before analysis, on both platforms:
+    //   - PUBLISHED (the review server put it on the website when the
+    //     owner approved the card — <shared root>/inbox/published.json,
+    //     adapter.loadPublishedPictures): the field becomes the website
+    //     address, a remote picture like any other;
+    //   - not (yet): the address moves to `_sharedPicture` (metadata —
+    //     never written, shown by the deck) and the field is emptied.
+    // `published` maps inbox address → { url }.
+    holdSharedPicturesBack(events, published = null) {
+        let held = 0;
+        let swapped = 0;
+        const lookup = (address) => {
+            if (!published || typeof published !== 'object') return '';
+            const entry = published instanceof Map ? published.get(address) : published[address];
+            const url = entry && typeof entry === 'object' ? entry.url : entry;
+            return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : '';
+        };
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object') continue;
+            for (const field of IMAGE_MERGE_FIELDS) {
+                if (!SharedCore.isSharedInboxUrl(event[field])) continue;
+                const address = String(event[field]);
+                if (field === 'image' || !event._sharedPicture) event._sharedPicture = address;
+                const url = lookup(address);
+                if (url) {
+                    event[field] = url;
+                    swapped++;
+                } else {
+                    delete event[field];
+                    held++;
+                }
+            }
+        }
+        if (swapped > 0) console.log(`🖼️ Pictures from the shared inbox now on the website: ${swapped} field(s) carry the published address`);
+        if (held > 0) console.log(`🖼️ Pictures from the shared inbox held back from ${held} field(s) — shown for review, written once published`);
+        return held;
+    }
 
     static get DEAD_END_CAPABILITY_RETRIES_PER_HOST() {
         return DEAD_END_CAPABILITY_RETRIES_PER_HOST;
@@ -21474,6 +21546,12 @@ class SharedCore {
         // The run's pictures, for the cut-picture link check (a saved link
         // that is the head of a picture's address — isCutPictureAddress).
         this.notePictureAddresses(events);
+        // A picture that exists only in the owner's inbox is for review, not
+        // for the calendar — until the review server has published it.
+        const publishedPictures = calendarAdapter && typeof calendarAdapter.loadPublishedPictures === 'function'
+            ? await calendarAdapter.loadPublishedPictures()
+            : null;
+        this.holdSharedPicturesBack(events, publishedPictures);
 
         // Curated festival awareness: one drift line per festival per pass,
         // and a batch pre-pass mapping source hosts whose pages produced an

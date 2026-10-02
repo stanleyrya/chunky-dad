@@ -17024,9 +17024,21 @@ class AiWebParser {
         if (!ocrResult || typeof ocrResult.url !== 'string' || !ocrResult.url) return false;
         const text = typeof ocrResult.text === 'string' ? ocrResult.text.trim() : '';
         if (text.length < 12) return false;
+        // A picture the owner put in the inbox is a flyer by declaration —
+        // a screenshot of a post is read whatever the model calls it.
+        if (this.isOwnerSharedPictureUrl(ocrResult.url)) return true;
         const classification = String(ocrResult.imageClassification || '').toLowerCase().trim();
         if (classification && !/flyer|poster/.test(classification)) return false;
         return true;
+    }
+
+    // An address under the shared inbox's host (SharedCore.SHARED_INBOX_HOST
+    // — the owner's own files, see run-once addSharedPagesParser).
+    isOwnerSharedPictureUrl(url) {
+        const core = this.core && typeof this.core.constructor === 'function' && typeof this.core.constructor.isSharedInboxUrl === 'function'
+            ? this.core.constructor
+            : (typeof SharedCore !== 'undefined' && typeof SharedCore.isSharedInboxUrl === 'function' ? SharedCore : null);
+        return core ? core.isSharedInboxUrl(url) : /^https?:\/\/inbox\.chunky\.dad\//i.test(String(url || ''));
     }
 
     // One identity key per flyer, aligned with ocrExcludedUrlKeys (stripped

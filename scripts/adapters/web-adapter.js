@@ -771,6 +771,100 @@ class WebAdapter {
         return this.sharedStorageRoot ? this.path.join(this.sharedStorageRoot, 'inbox', 'requests.json') : '';
     }
 
+    // THE INBOX'S OWN FILES. Anything the owner drops into <shared
+    // root>/inbox/ (a flyer screenshot, a page saved from a logged-in tab —
+    // see run-once addSharedPagesParser) is addressed inside the pipeline
+    // under SharedCore.SHARED_INBOX_HOST, a host that does not exist:
+    // https://inbox.chunky.dad/file/<name> is the file, /page/<name> the
+    // page that shows it. Those addresses are answered from disk here —
+    // fetchData and fetchImageAsBase64 never put them on the wire. A file
+    // a run has consumed sits in inbox/done/ for a while, so a picture is
+    // still readable after its page was handed to the parser.
+    getSharedInboxDir() {
+        return this.sharedStorageRoot ? this.path.join(this.sharedStorageRoot, 'inbox') : '';
+    }
+
+    isSharedInboxUrl(url) {
+        const core = this.getSharedCoreRef();
+        return Boolean(core && typeof core.isSharedInboxUrl === 'function' && core.isSharedInboxUrl(url));
+    }
+
+    // { file, buffer } for a name in the inbox (or its done/ folder), else
+    // null. One path segment only — never a path.
+    readSharedInboxFile(name) {
+        const dir = this.getSharedInboxDir();
+        const clean = String(name || '');
+        if (!dir || !clean || clean === '.' || clean === '..' || /[\\/]/.test(clean)) return null;
+        for (const folder of [dir, this.path.join(dir, 'done')]) {
+            const file = this.path.join(folder, clean);
+            try {
+                if (this.fs.statSync(file).isFile()) return { file, buffer: this.fs.readFileSync(file) };
+            } catch (_) { /* not here */ }
+        }
+        return null;
+    }
+
+    // The page that shows one inbox picture: nothing but the picture, so
+    // the parser's zero-text path (buildFlyerOnlySegments) reads the flyer
+    // itself as the corpus.
+    static buildSharedPicturePage(name) {
+        const core = typeof SharedCore !== 'undefined' ? SharedCore : require('../shared-core').SharedCore;
+        const escape = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const fileUrl = core.sharedInboxUrl('file', name);
+        return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(name)}</title></head><body><img src="${escape(fileUrl)}" alt=""></body></html>`;
+    }
+
+    // An inbox address answered from disk, in fetchData's response shape;
+    // null for any other address. A /page/ address is the picture page
+    // built fresh; a /file/ address is the file's text. Throws when the
+    // file is gone (consumed and pruned) — never falls through to the wire.
+    readSharedInboxPage(url) {
+        const core = this.getSharedCoreRef();
+        const parsed = core && typeof core.parseSharedInboxUrl === 'function' ? core.parseSharedInboxUrl(url) : null;
+        if (!parsed) return null;
+        const found = this.readSharedInboxFile(parsed.name);
+        if (!found) throw new Error(`Shared inbox file is gone: ${parsed.name} (${url})`);
+        const headers = { 'x-fetched-by': 'shared-inbox', 'content-type': parsed.kind === 'page' || /\.html?$/i.test(parsed.name) ? 'text/html' : 'application/octet-stream' };
+        const html = parsed.kind === 'page' && !/\.html?$/i.test(parsed.name)
+            ? WebAdapter.buildSharedPicturePage(parsed.name)
+            : found.buffer.toString('utf8');
+        return { html, url, statusCode: 200, headers };
+    }
+
+    // Pictures from the inbox the review server has put on the website
+    // (<shared root>/inbox/published.json, written by tools/review-queue
+    // publishSharedPicture when the owner approves a card): inbox address →
+    // { url, path, publishedAt }. Null when there is none; read by
+    // SharedCore.holdSharedPicturesBack.
+    getPublishedPicturesPath() {
+        const dir = this.getSharedInboxDir();
+        return dir ? this.path.join(dir, 'published.json') : '';
+    }
+
+    async loadPublishedPictures() {
+        const file = this.getPublishedPicturesPath();
+        if (!file) return null;
+        try {
+            if (!this.fs.existsSync(file)) return null;
+            const parsed = JSON.parse(await this.fs.promises.readFile(file, 'utf8'));
+            return parsed && typeof parsed.pictures === 'object' && parsed.pictures ? parsed.pictures : null;
+        } catch (error) {
+            console.log(`🟢 Node.js: Published pictures store read failed (${error.message}) — inbox pictures stay held back`);
+            return null;
+        }
+    }
+
+    // The bytes of an inbox picture, for the vision model. HEIC never gets
+    // here: run-once's intake re-encodes it as a JPEG beside the original.
+    async readSharedInboxImage(url) {
+        const core = this.getSharedCoreRef();
+        const parsed = core && typeof core.parseSharedInboxUrl === 'function' ? core.parseSharedInboxUrl(url) : null;
+        if (!parsed || parsed.kind !== 'file') return null;
+        const found = this.readSharedInboxFile(parsed.name);
+        if (!found) throw new Error(`Shared inbox file is gone: ${parsed.name}`);
+        return found.buffer;
+    }
+
     noteInboxRequest(url, reason) {
         const file = this.getInboxRequestsPath();
         if (!file || !url || !/^https?:\/\//i.test(String(url))) return false;
@@ -1382,6 +1476,15 @@ class WebAdapter {
                 }
             }
 
+            // An inbox address (the owner's own files) is answered from disk.
+            if (this.isSharedInboxUrl(url)) {
+                const inboxPage = this.readSharedInboxPage(url);
+                if (!inboxPage) throw new Error(`Not an inbox address (one name under /file/ or /page/): ${url}`);
+                if (canUseCache) await this.writeCachedPage(url, inboxPage, pageCacheConfig);
+                this.writeRunPageMemo(memoKey, inboxPage);
+                return inboxPage;
+            }
+
             const fetchUrl = this.config.corsProxy
                 ? `${this.config.corsProxy}${encodeURIComponent(url)}`
                 : url;
@@ -1699,10 +1802,16 @@ class WebAdapter {
     async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024, imageMeta = null) {
         if (this.isNode) {
             try {
-                const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const buffer = await response.arrayBuffer();
-                const payload = await this.downscaleImageBufferForOcr(Buffer.from(buffer), maxDimension, url, imageMeta);
+                let bytes;
+                if (this.isSharedInboxUrl(url)) {
+                    bytes = await this.readSharedInboxImage(url);
+                    if (!bytes) throw new Error(`not an inbox file address`);
+                } else {
+                    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    bytes = Buffer.from(await response.arrayBuffer());
+                }
+                const payload = await this.downscaleImageBufferForOcr(bytes, maxDimension, url, imageMeta);
                 return payload.toString('base64');
             } catch (error) {
                 throw new Error(`Failed to fetch image as base64: ${error.message}`);

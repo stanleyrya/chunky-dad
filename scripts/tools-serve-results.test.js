@@ -410,38 +410,175 @@ test('tailLines keeps only the last N lines', () => {
 // ---------------------------------------------------------------------------
 const runOnce = require(path.join(__dirname, '..', 'tools', 'run-once.js'));
 
-test('run-once: shared pages from the inbox become one "Shared pages" parser, written into the page cache under their own URLs; bad files stay, consumed ones move to done/', async () => {
+test('run-once: the inbox is ONE folder sorted by file type — saved pages, pictures and link files become one "Shared pages" parser; pictures get a page of their own; bad files stay, consumed ones move to done/', async () => {
   const fs = require('fs');
   const os = require('os');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-inbox-'));
-  const dir = path.join(root, 'inbox', 'pages');
-  fs.mkdirSync(dir, { recursive: true });
+  const dir = path.join(root, 'inbox');
+  fs.mkdirSync(path.join(dir, 'pages'), { recursive: true });
   fs.writeFileSync(path.join(dir, '2026-10-02T09-00.json'), JSON.stringify({ url: 'https://www.instagram.com/p/abc123/', title: 'Goldiloxx', html: '<html><body>' + 'flyer '.repeat(80) + '</body></html>', savedAt: '2026-10-02T09:00:00.000Z' }));
-  fs.writeFileSync(path.join(dir, '2026-10-02T09-05.json'), JSON.stringify({ url: 'https://www.facebook.com/events/42/', html: '<html>' + 'x'.repeat(300) + '</html>' }));
+  // The old pages/ folder is still read (one release).
+  fs.writeFileSync(path.join(dir, 'pages', '2026-10-02T09-05.json'), JSON.stringify({ url: 'https://www.facebook.com/events/42/', html: '<html>' + 'x'.repeat(300) + '</html>' }));
   fs.writeFileSync(path.join(dir, 'empty.json'), JSON.stringify({ url: 'https://www.instagram.com/p/short/', html: '<html></html>' }));
   fs.writeFileSync(path.join(dir, 'nourl.json'), JSON.stringify({ html: 'x'.repeat(300) }));
   fs.writeFileSync(path.join(dir, 'junk.json'), 'not json');
+  // A real 2×2 PNG, and (on a Mac) a HEIC made from it: the HEIC is
+  // re-encoded as a JPEG beside it, the JPEG is what gets a page.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync(path.join(dir, 'flyer night.png'), png);
+  const heic = process.platform === 'darwin';
+  if (heic) require('child_process').execFileSync('/usr/bin/sips', ['-s', 'format', 'heic', path.join(dir, 'flyer night.png'), '--out', path.join(dir, 'IMG_0042.HEIC')], { stdio: 'ignore' });
+  else fs.writeFileSync(path.join(dir, 'IMG_0042.jpg'), Buffer.from([0xff, 0xd8, 0xff]));
+  fs.writeFileSync(path.join(dir, 'saved.html'), '<html><head><link rel="canonical" href="https://dilf.uk/events/123"></head><body>' + 'words '.repeat(60) + '</body></html>');
+  fs.writeFileSync(path.join(dir, 'links.txt'), 'https://dilf.uk/events\nnot a link\nhttps://www.example.com/party.');
+  fs.writeFileSync(path.join(dir, 'requests.json'), JSON.stringify({ version: 1, requests: [{ url: 'https://dilf.uk/x' }] }));
+  fs.writeFileSync(path.join(dir, 'notes.pdf'), 'pdf');
   const cached = [];
-  const adapter = { getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }), writeCachedPage: async (url, page) => { cached.push({ url, by: page.headers['x-fetched-by'], chars: page.html.length }); } };
+  const adapter = { getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }), writeCachedPage: async (url, page) => { cached.push({ url, by: page.headers['x-fetched-by'], html: page.html }); } };
   const config = { parsers: [{ name: 'Furball' }], config: {} };
   const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
   let urls;
   try {
     urls = await runOnce.addSharedPagesParser(config, adapter, { CHUNKY_SHARED_STORAGE_DIR: root });
   } finally { console.log = originalLog; }
-  assert.deepEqual(urls, ['https://www.instagram.com/p/abc123/', 'https://www.facebook.com/events/42/']);
-  assert.deepEqual(cached.map((c) => c.by), ['share-sheet', 'share-sheet']);
+  assert.deepEqual(urls, [
+    'https://www.instagram.com/p/abc123/',
+    'https://inbox.chunky.dad/page/IMG_0042.jpg',
+    'https://inbox.chunky.dad/page/flyer%20night.png',
+    'https://dilf.uk/events',
+    'https://www.example.com/party',
+    'https://dilf.uk/events/123',
+    'https://www.facebook.com/events/42/'
+  ]);
+  const picturePage = cached.find((c) => c.url === 'https://inbox.chunky.dad/page/flyer%20night.png');
+  assert.ok(picturePage && picturePage.by === 'shared-inbox', 'a picture gets a page of its own in the cache');
+  assert.ok(picturePage.html.includes('<img src="https://inbox.chunky.dad/file/flyer%20night.png"'), picturePage.html);
+  assert.equal(cached.find((c) => c.url === 'https://dilf.uk/events/123').by, 'shared-inbox', 'a saved .html is cached under its canonical link');
+  assert.equal(cached.find((c) => c.url === 'https://www.instagram.com/p/abc123/').by, 'share-sheet');
   const parser = config.parsers.find((p) => p.name === runOnce.SHARED_PAGES_PARSER_NAME);
   assert.ok(parser, 'the extra parser');
   assert.equal(parser.urlDiscoveryDepth, 0);
   assert.deepEqual(parser.urls, urls);
-  assert.deepEqual(fs.readdirSync(path.join(dir, 'done')).sort(), ['2026-10-02T09-00.json', '2026-10-02T09-05.json'], 'consumed files move to done/');
-  assert.deepEqual(fs.readdirSync(dir).filter((n) => n.endsWith('.json')).sort(), ['empty.json', 'junk.json', 'nourl.json'], 'the rest stay');
-  assert.ok(lines.some((line) => /shared pages left in the inbox \(3\)/.test(line)), lines.join('\n'));
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'done')).sort(), ['2026-10-02T09-00.json', '2026-10-02T09-05.json', ...(heic ? ['IMG_0042.HEIC'] : []), 'IMG_0042.jpg', 'flyer night.png', 'links.txt', 'saved.html'], 'consumed files move to done/ (pictures too — OCR reads them from there)');
+  assert.equal(fs.readFileSync(path.join(dir, 'done', 'IMG_0042.jpg')).subarray(0, 2).toString('hex'), 'ffd8', 'the JPEG twin');
+  assert.deepEqual(fs.readdirSync(dir).filter((n) => !['done', 'pages'].includes(n)).sort(), ['empty.json', 'junk.json', 'notes.pdf', 'nourl.json', 'requests.json'], 'the rest stay; requests.json is the phone-fetch list, never consumed');
+  assert.ok(lines.some((line) => /files left in the inbox \(4\)/.test(line)), lines.join('\n'));
+  assert.ok(lines.some((line) => /3 page\(s\), 2 picture\(s\), 2 link\(s\)/.test(line)), lines.join('\n'));
   // A parser filter for another parser leaves the inbox alone; no inbox dir, nothing.
   assert.deepEqual(await runOnce.addSharedPagesParser({ parsers: [], config: {} }, adapter, { CHUNKY_SHARED_STORAGE_DIR: root, CHUNKY_RUN_PARSER: 'Furball' }), []);
   assert.deepEqual(await runOnce.addSharedPagesParser({ parsers: [], config: {} }, adapter, { CHUNKY_SHARED_STORAGE_DIR: path.join(root, 'nowhere') }), []);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('review server: /inbox/file/<name> serves a picture from the shared inbox (or its done/ folder) read-only, refuses paths, and the deck rewrites inbox addresses to it', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-inbox-serve-'));
+  fs.mkdirSync(path.join(root, 'inbox', 'done'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'inbox', 'done', 'flyer night.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  fs.writeFileSync(path.join(root, 'secret.txt'), 'no');
+  const reviewQueue = require(path.join(__dirname, '..', 'tools', 'review-queue.js'));
+  assert.equal(reviewQueue.reviewImageUrl('https://inbox.chunky.dad/file/flyer%20night.png'), '/inbox/file/flyer%20night.png');
+  assert.equal(reviewQueue.reviewImageUrl('https://cdn.example.com/a.jpg'), 'https://cdn.example.com/a.jpg');
+  assert.equal(reviewQueue.reviewImageUrl('https://inbox.chunky.dad/page/flyer.png'), 'https://inbox.chunky.dad/page/flyer.png', 'only the file address is served');
+  assert.ok(reviewQueue.readSharedInboxFile(root, 'flyer night.png'), 'found in done/');
+  assert.equal(reviewQueue.readSharedInboxFile(root, '../secret.txt'), null);
+  assert.equal(reviewQueue.readSharedInboxFile(root, 'missing.png'), null);
+  const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = root;
+  try {
+    const state = createServerState();
+    const hit = await request(state, 'GET', '/inbox/file/flyer%20night.png');
+    assert.equal(hit.status, 200);
+    assert.equal(hit.headers['Content-Type'], 'image/png');
+    assert.equal((await request(state, 'GET', '/inbox/file/..%2Fsecret.txt')).status, 404);
+    assert.equal((await request(state, 'GET', '/inbox/file/missing.png')).status, 404);
+  } finally {
+    if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('inbox pictures: approving a card pushes a web-sized copy to the pictures branch + one PR (plumbing only, nothing in the checkout touched), records it PENDING; merged → website address; closed → dropped; idempotent; failures record nothing', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-pictures-'));
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-pictures-repo-'));
+  fs.mkdirSync(path.join(root, 'inbox', 'done'), { recursive: true });
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync(path.join(root, 'inbox', 'done', 'IMG_0042.jpg'), png);
+  const reviewQueue = require(path.join(__dirname, '..', 'tools', 'review-queue.js'));
+  const calls = [];
+  let prOpen = null;
+  let prState = null;
+  const run = (file, args) => {
+    calls.push([file, ...args].join(' '));
+    if (file === '/usr/bin/sips') { fs.copyFileSync(args[args.length - 3], args[args.length - 1]); return ''; }
+    if (file === 'gh' && args[1] === 'list') return JSON.stringify(prOpen ? [prOpen] : []);
+    if (file === 'gh' && args[1] === 'create') { prOpen = { number: 1860, url: 'https://github.com/x/y/pull/1860' }; return prOpen.url + '\n'; }
+    if (file === 'gh' && args[1] === 'view') return JSON.stringify(prState);
+    const sub = args[2];
+    if (sub === 'hash-object') return 'b10b' + '0'.repeat(36);
+    if (sub === 'write-tree') return '7ree' + '0'.repeat(36);
+    if (sub === 'commit-tree') return 'c0de' + '0'.repeat(36);
+    if (sub === 'push' && process.env.CHUNKY_TEST_PUSH_FAILS) throw new Error('push rejected');
+    return '';
+  };
+  const address = 'https://inbox.chunky.dad/file/IMG_0042.jpg';
+  const common = { sharedRoot: root, repoRoot: repo, address, title: 'BEARRACUDA LA', startDate: '2030-11-14T08:00:00.000Z', run };
+
+  process.env.CHUNKY_TEST_PUSH_FAILS = '1';
+  assert.throws(() => reviewQueue.publishSharedPicture(common), /push rejected/);
+  assert.deepEqual(reviewQueue.loadPublishedPictures(root).pictures, {}, 'a failed push records nothing');
+  delete process.env.CHUNKY_TEST_PUSH_FAILS;
+
+  const record = reviewQueue.publishSharedPicture(common);
+  assert.equal(record.url, null, 'pending until the PR is merged');
+  assert.equal(record.pr.number, 1860);
+  assert.equal(record.branch, 'inbox-pictures');
+  assert.match(record.path, /^img\/inbox\/2030-11-14-bearracuda-la-[0-9a-f]{8}\.jpg$/);
+  assert.ok(calls.some((c) => /^\/usr\/bin\/sips -Z 1280 -s format jpeg/.test(c)), 'web-sized JPEG');
+  assert.ok(calls.some((c) => c.includes('read-tree refs/remotes/origin/main')), 'no open PR → the branch starts from main');
+  assert.ok(calls.some((c) => c.includes(`update-index --add --cacheinfo 100644,b10b${'0'.repeat(36)},${record.path}`)));
+  assert.ok(calls.some((c) => c.includes(`push --quiet origin c0de${'0'.repeat(36)}:refs/heads/inbox-pictures`)));
+  assert.ok(calls.some((c) => /^gh pr create --head inbox-pictures --base main/.test(c)));
+  assert.ok(!calls.some((c) => /git -C \S+ (checkout|commit |add |merge)/.test(c)), 'the checkout is never touched');
+  assert.equal(fs.readdirSync(repo).length, 0, 'nothing written into the checkout');
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].pr.number, 1860, 'recorded');
+  const again = reviewQueue.publishSharedPicture(common);
+  assert.equal(again.commit, record.commit, 'idempotent');
+
+  // A second picture while the PR is open rides the same branch + PR.
+  fs.writeFileSync(path.join(root, 'inbox', 'two.png'), png);
+  const second = reviewQueue.publishSharedPicture({ ...common, address: 'https://inbox.chunky.dad/file/two.png', title: 'Second' });
+  assert.equal(second.pr.number, 1860);
+  assert.ok(calls.some((c) => c.includes('read-tree refs/remotes/origin/inbox-pictures')), 'the open PR\'s branch is the base');
+
+  // Deck build: pending → merged fills the website address; closed drops.
+  prState = { state: 'OPEN', mergedAt: null };
+  const attempts = new Map();
+  let out = reviewQueue.publishApprovedPictures({ version: 1, decisions: [] }, { sharedRoot: root, repoRoot: repo, run, attempts });
+  assert.equal(out.resolved, 0);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].url, null);
+  prState = { state: 'MERGED', mergedAt: '2030-10-05T00:00:00.000Z' };
+  out = reviewQueue.publishApprovedPictures({ version: 1, decisions: [] }, { sharedRoot: root, repoRoot: repo, run, attempts, now: Date.now() + 11 * 60 * 1000 });
+  assert.equal(out.resolved, 2);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].url, `https://chunky.dad/${record.path}`);
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures[address].publishedAt, '2030-10-05T00:00:00.000Z');
+
+  // An approved decision whose picture was never pushed (approve-time failure) is published at deck build.
+  fs.writeFileSync(path.join(root, 'inbox', 'three.png'), png);
+  prOpen = null;
+  const decisions = { version: 1, decisions: [{ key: 'event|x|y|2030-10-04', kind: 'new', verdict: 'approve', stampedAt: '2030-10-01T00:00:00.000Z', snapshot: { title: 'Three', startDate: '2030-10-04T02:00:00.000Z', image: 'https://inbox.chunky.dad/file/three.png' } }] };
+  out = reviewQueue.publishApprovedPictures(decisions, { sharedRoot: root, repoRoot: repo, run, attempts: new Map() });
+  assert.equal(out.published.length, 1);
+  assert.equal(out.published[0].pr.number, 1860, 'a new PR (the old one merged → branch restarted from main)');
+  prState = { state: 'CLOSED', mergedAt: null };
+  reviewQueue.resolvePendingPictures(root, { repoRoot: repo, run });
+  assert.equal(reviewQueue.loadPublishedPictures(root).pictures['https://inbox.chunky.dad/file/three.png'], undefined, 'closed unmerged → dropped, offered again later');
+  assert.throws(() => reviewQueue.publishSharedPicture({ ...common, address: 'https://inbox.chunky.dad/file/gone.png' }), /is gone/);
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(repo, { recursive: true, force: true });
 });
 
 test('run-once: shapeRunOnceConfig stamps automation runtime and always re-forces dryRun last', () => {

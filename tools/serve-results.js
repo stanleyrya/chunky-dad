@@ -38,6 +38,7 @@
 //   notes-only housekeeping merges). This server still never writes a
 //   calendar. Endpoints: GET /review · GET /review/deck.json ·
 //   POST /review/decide · GET /review/decisions.json · GET /review/rejections
+//   · GET /inbox/file/<name> (a picture from the shared inbox, for the deck)
 //
 // House style: no `new URL` / URLSearchParams anywhere (matches the iOS-shared
 // scripts even though this file is Node-only). Pure helpers are exported for
@@ -2504,6 +2505,14 @@ function buildReviewDeckForRun(sharedRoot, run) {
         if (autoApprovals.length > 0) console.log(`Review: auto-approved ${autoApprovals.length} card(s) whose fix arrived as asked: ${autoApprovals.map((d) => d.key).join(', ')}`);
         deck = reviewQueue.buildDeck(run.payload, saved, { runId: run.runId, core, bearVerdicts, executions, writtenLedger, ...(phoneCalendars ? { phoneCalendars } : {}) });
     }
+    // Inbox pictures: a push that failed at approve time is tried again
+    // here, and a pending picture whose PR was merged gets its website
+    // address — each at most once per 10 min.
+    try {
+        reviewQueue.publishApprovedPictures(reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot)), { sharedRoot, repoRoot });
+    } catch (error) {
+        console.log(`Review: inbox picture retry failed: ${error.message}`);
+    }
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
@@ -2770,7 +2779,20 @@ async function handleRequest(state, req, res) {
             const replaced = store.decisions.find((entry) => entry.key === decision.key) || null;
             store = reviewQueue.saveDecisions(decisionsPath, reviewQueue.upsertDecision(store, decision));
             console.log(`Review: ${decision.verdict} ${decision.kind} ${decision.key}${decision.reason ? ` — ${[decision.reason.tags.join(', '), decision.reason.text].filter(Boolean).join(' / ')}` : ''}`);
-            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length });
+            // An approved card whose picture lives in the inbox: push the
+            // picture to the pictures PR now; once merged, the phone writes
+            // the event with its website address.
+            let picture = null;
+            if (decision.verdict === 'approve' && decision.snapshot && reviewQueue.isSharedInboxAddress(decision.snapshot.image)) {
+                try {
+                    picture = reviewQueue.publishSharedPicture({ sharedRoot, repoRoot, address: decision.snapshot.image, title: decision.snapshot.title, startDate: decision.snapshot.startDate });
+                    console.log(`Review: inbox picture for ${decision.key} → ${picture.url || (picture.pr && picture.pr.url) || 'pushed'}`);
+                } catch (error) {
+                    picture = { error: error.message };
+                    console.log(`Review: inbox picture for ${decision.key} NOT published (${error.message}) — tried again at the next deck build`);
+                }
+            }
+            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length, ...(picture ? { picture } : {}) });
         } catch (error) {
             const status = /must be|needs a/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });
@@ -2840,7 +2862,22 @@ async function handleRequest(state, req, res) {
         return sendText(res, 200, reviewQueue.formatRejectionsText(store));
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections');
+    // A picture the owner dropped into the shared inbox (a flyer
+    // screenshot): the deck shows it from here, since its pipeline address
+    // (https://inbox.chunky.dad/file/<name>) resolves nowhere. Read-only;
+    // one path segment, inside the inbox folder only.
+    if (pathname.startsWith('/inbox/file/') && req.method === 'GET') {
+        let name = '';
+        try { name = decodeURIComponent(pathname.slice('/inbox/file/'.length)); } catch (_) { name = ''; }
+        const found = name ? reviewQueue.readSharedInboxFile(reviewQueue.resolveSharedRoot(), name) : null;
+        if (!found) return sendText(res, 404, 'No such file in the inbox');
+        const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', avif: 'image/avif', pdf: 'application/pdf', json: 'application/json; charset=utf-8', html: 'text/html; charset=utf-8', htm: 'text/html; charset=utf-8', txt: 'text/plain; charset=utf-8' };
+        const extension = (name.match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
+        res.writeHead(200, { 'Content-Type': types[extension] || 'application/octet-stream', 'Content-Length': found.buffer.length, 'Cache-Control': 'private, max-age=3600' });
+        return res.end(found.buffer);
+    }
+
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
