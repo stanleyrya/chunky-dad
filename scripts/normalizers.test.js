@@ -3738,6 +3738,41 @@ test('unrecognized city: a "city" copied out of the street line is dropped, not 
   assert.equal(event.city, 'la', `the bar + street line decide: ${lines.join('\n')}`);
 });
 
+test('a promoter\'s name in the venue field is not a venue: at exactly one curated bar\'s door, that bar is the venue; anything less is left alone', () => {
+  const PRECINCT = { name: 'Precinct LA', city: 'la', address: '357 South Broadway, Los Angeles, CA 90013', coordinates: '34.0498, -118.2493' };
+  const promoters = [{ name: 'Bearracuda', aliases: ['Bearracuda Events'] }];
+  const make = (bars) => new LocationNormalizer(new SharedCore(CITY_GATE_CITIES, { eventSchema: EventSchema, bars, promoters }));
+  // Bearracuda's flyer, run 2026-10-02: the brand came back as the bar.
+  const flyer = { title: '7 Day Load', bar: 'Bearracuda LA', address: '357 S. BROADWAY', city: 'unknown', startDate: '2026-11-14T00:00:00.000Z', _timezoneUnresolved: true };
+  const lines = captureConsoleLog(() => { make({ la: [PRECINCT, EAGLE_LA_BAR] }).normalize(flyer); });
+  assert.equal(flyer.bar, 'Precinct LA', lines.join('\n'));
+  assert.equal(flyer.city, 'la');
+  assert.equal(flyer.barSource, 'curated');
+  assert.equal(flyer._promoterBar, 'Bearracuda LA');
+  assert.ok(lines.some((l) => l.includes('the venue "Bearracuda LA" is the promoter\'s name')));
+  // The bare brand and the alias count too.
+  const bare = { title: 'X', bar: 'Bearracuda', address: '357 S Broadway', city: 'la' };
+  make({ la: [PRECINCT] }).replacePromoterBarAtCuratedDoor(bare);
+  assert.equal(bare.bar, 'Precinct LA');
+  // More than brand + a place: a party name, not the promoter — untouched.
+  const party = { title: 'X', bar: 'Bearracuda Beach Party', address: '357 S Broadway', city: 'la' };
+  assert.equal(make({ la: [PRECINCT] }).replacePromoterBarAtCuratedDoor(party), false);
+  // Not a promoter at all — untouched.
+  const other = { title: 'X', bar: 'Some Club', address: '357 S Broadway', city: 'la' };
+  assert.equal(make({ la: [PRECINCT] }).replacePromoterBarAtCuratedDoor(other), false);
+  // No street number, or a door no curated bar has — untouched.
+  assert.equal(make({ la: [PRECINCT] }).replacePromoterBarAtCuratedDoor({ bar: 'Bearracuda LA', address: 'Broadway', city: 'la' }), false);
+  assert.equal(make({ la: [PRECINCT] }).replacePromoterBarAtCuratedDoor({ bar: 'Bearracuda LA', address: '1 Main St', city: 'la' }), false);
+  // The same door in two cities and no city on the event — ambiguous, untouched.
+  const twin = { name: 'Other Bar', city: 'nyc', address: '357 South Broadway, New York, NY', coordinates: '40.7, -74.0' };
+  const unsure = { bar: 'Bearracuda LA', address: '357 S Broadway', city: 'unknown' };
+  assert.equal(make({ la: [PRECINCT], nyc: [twin] }).replacePromoterBarAtCuratedDoor(unsure), false);
+  // …but with the event's city known, only that city's doors count.
+  const known = { bar: 'Bearracuda LA', address: '357 S Broadway', city: 'la' };
+  assert.equal(make({ la: [PRECINCT], nyc: [twin] }).replacePromoterBarAtCuratedDoor(known), true);
+  assert.equal(known.bar, 'Precinct LA');
+});
+
 test('unrecognized city: literal ONYX repro — "socal / southwest" is refused and the curated bar restores "la"', () => {
   const normalizer = createCityGateNormalizer({ la: [EAGLE_LA_BAR] });
   const event = {

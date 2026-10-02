@@ -733,6 +733,9 @@ class LocationNormalizer extends BaseNormalizer {
         // precisely so they get their chance (see refuseUnrecognizedCity).
         const refusedCity = this.refuseUnrecognizedCity(event);
 
+        // A promoter's name in the venue field, at a curated bar's door.
+        this.replacePromoterBarAtCuratedDoor(event);
+
         // Curated-bar → city backfill: an event whose page never names its
         // city (run 20260724-161423: massive.club events came out
         // city "unknown") can still resolve when its bar is a curated bar.
@@ -1202,6 +1205,91 @@ class LocationNormalizer extends BaseNormalizer {
         event.city = 'unknown';
         console.log(`🗺️ LocationNormalizer: Refused unrecognized city "${raw}" for "${title}" — no configured calendar exists for it; failing closed to "unknown" so curated signals can resolve the real city`);
         return raw;
+    }
+
+    // A PROMOTER'S NAME IS NOT A VENUE (2026-10-03). A flyer prints the
+    // brand big ("BEARRACUDA LA") and the venue small ("PRECINCT 357 S.
+    // BROADWAY"); the model sometimes hands the brand back as the bar.
+    // Two facts decide it, nothing guessed:
+    //   - the bar is a curated PROMOTER's name (data/promoters.json, name or
+    //     alias), optionally followed by a place label — a configured city
+    //     key or pattern, or a 2–3 letter abbreviation ("LA", "NYC") — and
+    //     is not itself a curated bar;
+    //   - the event's numbered street line is the street line of exactly
+    //     ONE curated bar (in the event's city when it has one; anywhere
+    //     when it does not — and then only when every curated bar at that
+    //     line is in one city).
+    // Then the venue is that curated bar: bar (and a blank city) are set,
+    // stamped barSource 'curated' (it is a curated bar now) and
+    // _promoterBar = the old value.
+    // Anything less — no registry, an ambiguous door, a name that is more
+    // than brand + place — leaves the event as it is.
+    replacePromoterBarAtCuratedDoor(event) {
+        const core = this.core;
+        if (!event || !core || !core.bars || typeof core.bars !== 'object') return false;
+        if (typeof core.getPromoterRegistryIndex !== 'function' || typeof core.areSameStreetLine !== 'function') return false;
+        const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        if (!barName || !address || typeof core.parseAddressForComparison !== 'function' || !core.parseAddressForComparison(address)) return false;
+        if (typeof core.findCuratedBarCityByName === 'function') {
+            const named = core.findCuratedBarCityByName(barName);
+            if (named && !named.ambiguousCities && !named.genericStem && named.city) return false;
+        }
+        const words = String(barName).toLowerCase().replace(/[^a-z0-9&\s]/g, ' ').split(/\s+/).filter(Boolean);
+        const entries = (core.getPromoterRegistryIndex().entries || []);
+        const promoterKeys = [];
+        for (const indexed of entries) {
+            const entry = indexed && indexed.entry ? indexed.entry : indexed;
+            const names = [entry && entry.name, ...(entry && Array.isArray(entry.aliases) ? entry.aliases : [])];
+            for (const name of names) {
+                const key = typeof core.normalizePromoterNameKey === 'function' ? core.normalizePromoterNameKey(name) : '';
+                if (key && key.length >= 4) promoterKeys.push(key);
+            }
+        }
+        if (promoterKeys.length === 0) return false;
+        const cityWords = new Set();
+        for (const [key, city] of Object.entries(core.cities || {})) {
+            cityWords.add(key.toLowerCase());
+            for (const pattern of (city && Array.isArray(city.patterns) ? city.patterns : [])) cityWords.add(String(pattern).toLowerCase());
+            if (city && typeof city.name === 'string') cityWords.add(city.name.toLowerCase());
+        }
+        const isPlaceLabel = (rest) => {
+            if (rest.length === 0) return true;
+            if (rest.length > 3) return false;
+            const phrase = rest.join(' ');
+            if (cityWords.has(phrase) || cityWords.has(rest.join('-'))) return true;
+            return rest.length === 1 && /^[a-z]{2,3}$/.test(rest[0]);
+        };
+        let brand = '';
+        for (let cut = words.length; cut >= 1 && !brand; cut--) {
+            const key = core.normalizeBarNameKey(words.slice(0, cut).join(' '));
+            if (promoterKeys.includes(key) && isPlaceLabel(words.slice(cut))) brand = words.slice(0, cut).join(' ');
+        }
+        if (!brand) return false;
+        const eventCity = typeof event.city === 'string' && event.city.trim() && event.city.trim().toLowerCase() !== 'unknown' ? event.city.trim().toLowerCase() : '';
+        const doors = [];
+        for (const cityKey of Object.keys(core.bars)) {
+            if (eventCity && cityKey !== eventCity) continue;
+            for (const bar of (Array.isArray(core.bars[cityKey]) ? core.bars[cityKey] : [])) {
+                if (!bar || typeof bar.name !== 'string' || typeof bar.address !== 'string') continue;
+                if (core.areSameStreetLine(address, bar.address)) doors.push({ city: cityKey, bar });
+            }
+        }
+        const title = event.title || 'unknown';
+        if (doors.length !== 1) {
+            if (doors.length > 1) console.log(`🗺️ LocationNormalizer: "${barName}" is the promoter's name, not a venue, but ${doors.length} curated bars answer to "${address}" — left as it is`);
+            return false;
+        }
+        const door = doors[0];
+        event._promoterBar = barName;
+        event.bar = door.bar.name;
+        event.barSource = 'curated';
+        if (!eventCity) {
+            event.city = door.city;
+            event._citySource = 'curated-door';
+        }
+        console.log(`🗺️ LocationNormalizer: "${title}": the venue "${barName}" is the promoter's name — ${address} is the door of the curated "${door.bar.name}" (${door.city}); that is the venue`);
+        return true;
     }
 
     // Outcome line for a refused city, emitted after the curated backfill
