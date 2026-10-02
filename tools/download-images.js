@@ -7,7 +7,7 @@ const http = require('http');
 const { URL } = require('url');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl, isPlatformFaviconUrl } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl, isPlatformFaviconUrl, isSiteHostedImageUrl } = require('../js/filename-utils.js');
 
 /**
  * Adjust Eventbrite image URLs to get uncropped versions
@@ -1363,6 +1363,13 @@ async function extractImageUrls() {
       for (const imageField of ['image', 'imageVertical', 'imageHorizontal']) {
         if (!event[imageField]) continue;
         const cleanUrl = cleanImageUrl(event[imageField]);
+        // A picture the site already hosts (img/inbox/, published from the
+        // review deck) is used as it is — a download here would be a second
+        // copy of a file the repo already holds.
+        if (isSiteHostedImageUrl(cleanUrl)) {
+          console.log(`🏠 Site-hosted image (${imageField}): ${event.name} — already in the repo, not downloaded`);
+          continue;
+        }
         if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
           // Adjust Eventbrite image URLs to get uncropped versions
           const adjustedUrl = adjustEventbriteImageUrl(cleanUrl);

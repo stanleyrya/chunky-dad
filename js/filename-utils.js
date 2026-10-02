@@ -241,6 +241,27 @@ function isImageUrl(url) {
 }
 
 /**
+ * A picture the website already hosts (https://chunky.dad/img/…): the
+ * inbox pictures the review deck publishes land under img/inbox/. Such a
+ * picture is used as it is — never downloaded into img/events/ again
+ * (tools/download-images.js) and never rewritten to a derived local path
+ * (dynamic-calendar-loader convertImageUrlToLocal), both of which would
+ * make a second copy of a file the repo already holds.
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isSiteHostedImageUrl(url) {
+    if (!url) return false;
+    try {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.toLowerCase().replace(/^www\./, '');
+        return host === 'chunky.dad' && /^\/img\//.test(parsedUrl.pathname);
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Hostnames whose favicon is the PLATFORM's logo, not the event's or venue's
  * identity: social networks, map/search hosts, and — the reason this exists —
  * ticketing and aggregator platforms. An event whose `website` happens to be
@@ -466,7 +487,8 @@ if (typeof module !== 'undefined' && module.exports) {
         detectFileExtension,
         slugify,
         simpleHash,
-        isImageUrl
+        isImageUrl,
+        isSiteHostedImageUrl
     };
 }
 
@@ -489,6 +511,7 @@ if (typeof window !== 'undefined') {
         detectFileExtension,
         slugify,
         simpleHash,
-        isImageUrl
+        isImageUrl,
+        isSiteHostedImageUrl
     };
 }

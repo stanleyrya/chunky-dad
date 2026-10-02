@@ -1025,6 +1025,9 @@ class DynamicCalendarLoader extends CalendarCore {
             IMAGE_SLOT_FIELDS.forEach(field => {
                 const originalImageUrl = eventData[field];
                 if (!originalImageUrl) return;
+                // A picture the site hosts itself (img/inbox/, published from
+                // the review deck) has no derived local copy: used as it is.
+                if (window.FilenameUtils && typeof window.FilenameUtils.isSiteHostedImageUrl === 'function' && window.FilenameUtils.isSiteHostedImageUrl(originalImageUrl)) return;
                 if (this.dataSource === 'cached') {
                     // Remember where this slot CAME FROM before the rewrite.
                     // The local filename is a hash of the full URL, so two
