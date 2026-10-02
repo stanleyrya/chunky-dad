@@ -6,9 +6,52 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-melbourne
 X-WR-TIMEZONE:Australia/Melbourne
 BEGIN:VEVENT
+DTSTART:20261030T100000Z
+DTEND:20261030T170000Z
+DTSTAMP:20261002T200730Z
+UID:C038A663-A698-4B9D-9879-CFC746677A2D
+CREATED:20261001T131454Z
+DESCRIPTION:bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com
+ /per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-2
+ 30b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/
+ Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855
+ -230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search
+ /?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-
+ halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THI
+ CK 'N' JUICY
+LAST-MODIFIED:20261001T131455Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK 'N' JUICY Horny Halloween
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261114T100000Z
+DTEND:20261114T160000Z
+DTSTAMP:20261002T200730Z
+UID:BC550FE3-0481-4467-8D48-9B0503F30627
+CREATED:20261002T200638Z
+DESCRIPTION:ticketUrl: https://events.humanitix.com/chunk/tickets\nimage: h
+ ttps://cdn.whereto.party/media/events/65743530-87fa-4431-9b0f-5399395d4bf4.
+ jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\ngmaps: https://w
+ ww.google.com/maps/search/?api=1&query=melbourne\nshortName: CHUNK\ninstagr
+ am: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.
+ com\nkey: chunk-bear-minimum-underwear-party|2026-11-14|\nwebsite: https://
+ www.chunk-party.com\nbearSource: keyword
+LAST-MODIFIED:20261002T200638Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK: BEAR MINIMUM | UNDERWEAR PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261127T100000Z
 DTEND:20261127T170000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261002T200730Z
 UID:D0E0E34E-DD0D-4582-8FFD-29270862C88F
 CREATED:20261001T131455Z
 DESCRIPTION:bar: New Guernica\nticketUrl: https://events.humanitix.com/beef
@@ -25,28 +68,6 @@ LOCATION:-37.8062453\, 144.9833075
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFCAKE Leather 🥩 Melbourne
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261030T100000Z
-DTEND:20261030T170000Z
-DTSTAMP:20261001T140823Z
-UID:C038A663-A698-4B9D-9879-CFC746677A2D
-CREATED:20261001T131454Z
-DESCRIPTION:bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com
- /per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-2
- 30b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/
- Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855
- -230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search
- /?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-
- halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THI
- CK 'N' JUICY
-LAST-MODIFIED:20261001T131455Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:THICK 'N' JUICY Horny Halloween
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

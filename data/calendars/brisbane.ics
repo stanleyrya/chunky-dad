@@ -5,4 +5,54 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-brisbane
 X-WR-TIMEZONE:Australia/Brisbane
+BEGIN:VEVENT
+DTSTART:20261113T110000Z
+DTEND:20261113T170000Z
+DTSTAMP:20261002T200730Z
+UID:8972EE3F-354F-4583-A8C5-BB39945D69EF
+CREATED:20261002T200641Z
+DESCRIPTION:bar: Wonderland Brisbane\nticketUrl: https://events.humanitix.c
+ om/bri13nov\nimage: https://cdn.whereto.party/media/events/758ff60d-f75c-44
+ d4-8916-101e0184bb85.jpg\nimageSource: json-api\ntimezone: Australia/Brisba
+ ne\nimageVertical: https://cdn.whereto.party/media/events/758ff60d-f75c-44d
+ 4-8916-101e0184bb85.jpg\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=-27.4589399%2C153.0347011\naddress: 633 Ann Street\, Brisbane\, Queens
+ land\naddressSource: curated\npinSource: curated\nkey: thick-n-juicy-❤️‍🔥-
+ brisbane-wonderland|2026-11-13|wonderland brisbane\nbearSource: keyword\nsh
+ ortName: THICK 'N' JUICY
+LAST-MODIFIED:20261002T200641Z
+LOCATION:-27.4589399\, 153.0347011
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK 'N' JUICY ❤️‍🔥 Brisbane
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261024T053000Z
+DTEND:20261024T080000Z
+DTSTAMP:20261002T200730Z
+UID:AA7DC755-D1A9-47D0-9723-96221D2DEDDD
+CREATED:20261002T200640Z
+DESCRIPTION:bar: West End Recreation Hub\nticketUrl: https://events.humanit
+ ix.com/come-aboard-to-daddy-melt-boat-parade-on-the-lady-brisbane-with-come
+ -to-daddy/tickets\nimage: https://cdn.whereto.party/media/events/ef8c05b3-c
+ 24b-448a-8d86-f31b34db7317.webp\nimageSource: json-api\ntimezone: Australia
+ /Brisbane\nimageHorizontal: https://cdn.whereto.party/media/events/ef8c05b3
+ -c24b-448a-8d86-f31b34db7317.webp\ngmaps: https://www.google.com/maps/searc
+ h/?api=1&query=West%20End%20Recreation%20Hub%2C%20Riverside%20Drive%20Bikew
+ ay%2C%20Brisbane%2C%20Queensland\naddress: Riverside Drive Bikeway\, Brisba
+ ne\, Queensland\naddressSource: geo-poi\npinSource: geocoded-approx\nbarSou
+ rce: geo-poi\nkey: come-aboard-to-daddy|2026-10-24|west end recreation hub\
+ nbearSource: keyword\nshortName: COME ABOARD
+LAST-MODIFIED:20261002T200640Z
+LOCATION:-27.4827400\, 152.9991929
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Come Aboard To Daddy
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

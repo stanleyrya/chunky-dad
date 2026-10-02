@@ -5,4 +5,31 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-bangkok
 X-WR-TIMEZONE:Asia/Bangkok
+BEGIN:VEVENT
+DTSTART:20261003T150000Z
+DTEND:20261003T200000Z
+DTSTAMP:20261002T200731Z
+UID:31E6FC62-06A5-4A06-B681-71476F8EFF32
+CREATED:20261002T200642Z
+DESCRIPTION:bar: HORN\nticketUrl: https://www.ticketmelon.com/hornbkk/camph
+ ornoct\nimage: https://cdn.whereto.party/media/events/dabb8f90-e8a2-4f39-95
+ 23-8343b37f208c.jpeg\nimageSource: json-api\ntimezone: Asia/Bangkok\nimageV
+ ertical: https://cdn.whereto.party/media/events/dabb8f90-e8a2-4f39-9523-834
+ 3b37f208c.jpeg\nbarSource: curated\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=HORN%2C%2071-73%20%E0%B8%8B%E0%B8%AD%E0%B8%A2%E0%B8%AA%E0%B
+ 8%B5%E0%B8%A5%E0%B8%A1%204%2C%20%E0%B8%81%E0%B8%A3%E0%B8%B8%E0%B8%87%E0%B9%
+ 80%E0%B8%97%E0%B8%9E%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%99%E0%B8%84%E0%B8%A3\
+ naddress: 71-73 ซอยสีลม 4\, กรุงเทพมหานคร\naddressSource: curated\npinSourc
+ e: curated\nkey: camp-horn|2026-10-03|horn\nbearReview: unsure — ai\\: The 
+ title 'CAMP HORN' and lack of description provide no bear-specific wording 
+ or evidence of bear community targeting.
+LAST-MODIFIED:20261002T200642Z
+LOCATION:13.7284617\, 100.5329437
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CAMP HORN
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -3,8 +3,8 @@
     "adelaide": {
       "name": "Adelaide",
       "status": "success",
-      "dataLength": 200,
-      "eventCount": 0
+      "dataLength": 1097,
+      "eventCount": 1
     },
     "amsterdam": {
       "name": "Amsterdam",
@@ -39,8 +39,8 @@
     "bangkok": {
       "name": "Bangkok",
       "status": "success",
-      "dataLength": 193,
-      "eventCount": 0
+      "dataLength": 1484,
+      "eventCount": 1
     },
     "berlin": {
       "name": "Berlin",
@@ -75,8 +75,8 @@
     "brisbane": {
       "name": "Brisbane",
       "status": "success",
-      "dataLength": 200,
-      "eventCount": 0
+      "dataLength": 2492,
+      "eventCount": 2
     },
     "brussels": {
       "name": "Brussels",
@@ -219,8 +219,8 @@
     "melbourne": {
       "name": "Melbourne",
       "status": "success",
-      "dataLength": 2230,
-      "eventCount": 2
+      "dataLength": 3124,
+      "eventCount": 3
     },
     "mexico-city": {
       "name": "Mexico City",
@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 186291,
-      "eventCount": 167
+      "dataLength": 187219,
+      "eventCount": 168
     },
     "orlando": {
       "name": "Orlando",
@@ -285,8 +285,8 @@
     "perth": {
       "name": "Perth",
       "status": "success",
-      "dataLength": 194,
-      "eventCount": 0
+      "dataLength": 1284,
+      "eventCount": 1
     },
     "philly": {
       "name": "Philadelphia",

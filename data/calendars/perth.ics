@@ -5,4 +5,28 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-perth
 X-WR-TIMEZONE:Australia/Perth
+BEGIN:VEVENT
+DTSTART:20261024T120000Z
+DTEND:20261024T180000Z
+DTSTAMP:20261002T200731Z
+UID:ED4370A7-3502-4BBB-BA62-F308007F8521
+CREATED:20261002T200639Z
+DESCRIPTION:bar: The Court\nticketUrl: https://events.humanitix.com/per24oc
+ t/tickets\nimage: https://cdn.whereto.party/media/events/006ee680-1926-4560
+ -a28f-b46db7b4d9fd.webp\nimageSource: json-api\ntimezone: Australia/Perth\n
+ imageVertical: https://cdn.whereto.party/media/events/006ee680-1926-4560-a2
+ 8f-b46db7b4d9fd.webp\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=The%20Court%2C%20Perth%2C%20Western%20Australia\naddress: The Court\, Per
+ th\, Western Australia\naddressSource: geo-poi\npinSource: geocoded-approx\
+ nbarSource: geo-poi\nkey: thick-n-juicy-horny-halloween|2026-10-24|the cour
+ t\nbearSource: keyword\nshortName: THICK 'N' JUICY
+LAST-MODIFIED:20261002T200639Z
+LOCATION:-31.9338388\, 115.9419930
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK 'N' JUICY Horny Halloween
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

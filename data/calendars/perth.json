@@ -3,5 +3,53 @@
     "calendarTimezone": "Australia/Perth",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "THICK 'N' JUICY Horny Halloween",
+      "day": "Saturday",
+      "time": "8PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -31.9338388,
+        "lng": 115.941993
+      },
+      "startDate": "2026-10-24T20:00:00",
+      "endDate": "2026-10-25T02:00:00",
+      "unprocessedDescription": "bar: The Court\nticketUrl: https://events.humanitix.com/per24oc\rt/tickets\nimage: https://cdn.whereto.party/media/events/006ee680-1926-4560-a28f-b46db7b4d9fd.webp\nimageSource: json-api\ntimezone: Australia/Perth\nimageVertical: https://cdn.whereto.party/media/events/006ee680-1926-4560-a28f-b46db7b4d9fd.webp\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Court%2C%20Perth%2C%20Western%20Australia\naddress: The Court, Perth, Western Australia\naddressSource: geo-poi\npinSource: geocoded-approx\nbarSource: geo-poi\nkey: thick-n-juicy-horny-halloween|2026-10-24|the court\nbearSource: keyword\nshortName: THICK 'N' JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Perth",
+      "wasUTC": true,
+      "sourceUid": "ED4370A7-3502-4BBB-BA62-F308007F8521",
+      "uid": "ED4370A7-3502-4BBB-BA62-F308007F8521",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Court",
+      "image": "https://cdn.whereto.party/media/events/006ee680-1926-4560-a28f-b46db7b4d9fd.webp",
+      "imageVertical": "https://cdn.whereto.party/media/events/006ee680-1926-4560-a28f-b46db7b4d9fd.webp",
+      "cadence": null,
+      "address": "The Court, Perth, Western Australia",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Court%2C%20Perth%2C%20Western%20Australia",
+      "ticketUrl": "https://events.humanitix.com/per24oct/tickets",
+      "shortName": "THICK 'N' JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Court%2C%20Perth%2C%20Western%20Australia",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/per24oct/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-horny-halloween-417579bc"
+    }
+  ]
 }

@@ -5,6 +5,102 @@
   },
   "events": [
     {
+      "name": "THICK 'N' JUICY Horny Halloween",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T04:00:00",
+      "unprocessedDescription": "bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com\r/per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THICK 'N' JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Melbourne",
+      "wasUTC": true,
+      "sourceUid": "C038A663-A698-4B9D-9879-CFC746677A2D",
+      "uid": "C038A663-A698-4B9D-9879-CFC746677A2D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Chasers Nightclub",
+      "image": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
+      "imageHorizontal": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
+      "ticketUrl": "https://events.humanitix.com/per24oct/tickets",
+      "shortName": "THICK 'N' JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/per24oct/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-horny-halloween-0c4511e2"
+    },
+    {
+      "name": "CHUNK: BEAR MINIMUM | UNDERWEAR PARTY",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-14T21:00:00",
+      "endDate": "2026-11-15T03:00:00",
+      "unprocessedDescription": "ticketUrl: https://events.humanitix.com/chunk/tickets\nimage: h\rttps://cdn.whereto.party/media/events/65743530-87fa-4431-9b0f-5399395d4bf4.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\ngmaps: https://www.google.com/maps/search/?api=1&query=melbourne\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-bear-minimum-underwear-party|2026-11-14|\nwebsite: https://www.chunk-party.com\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Melbourne",
+      "wasUTC": true,
+      "sourceUid": "BC550FE3-0481-4467-8D48-9B0503F30627",
+      "uid": "BC550FE3-0481-4467-8D48-9B0503F30627",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://cdn.whereto.party/media/events/65743530-87fa-4431-9b0f-5399395d4bf4.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.chunk-party.com",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=melbourne",
+      "ticketUrl": "https://events.humanitix.com/chunk/tickets",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=melbourne",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/chunk/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-bear-minimum-underwear-party-5e61da7e"
+    },
+    {
       "name": "BEEFCAKE Leather 🥩 Melbourne",
       "day": "Friday",
       "time": "9PM-4AM",
@@ -50,49 +146,6 @@
         }
       ],
       "slug": "beefcake-leather-melbourne-06f7ca5c"
-    },
-    {
-      "name": "THICK 'N' JUICY Horny Halloween",
-      "day": "Friday",
-      "time": "9PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-10-30T21:00:00",
-      "endDate": "2026-10-31T04:00:00",
-      "unprocessedDescription": "bar: Chasers Nightclub\nticketUrl: https://events.humanitix.com\r/per24oct/tickets\nimage: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\nimageSource: json-api\ntimezone: Australia/Melbourne\nimageHorizontal: https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne\nkey: thick-n-juicy-horny-halloween|2026-10-30|chasers nightclub\nbearSource: keyword\nshortName: THICK 'N' JUICY",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Australia/Melbourne",
-      "wasUTC": true,
-      "sourceUid": "C038A663-A698-4B9D-9879-CFC746677A2D",
-      "uid": "C038A663-A698-4B9D-9879-CFC746677A2D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Chasers Nightclub",
-      "image": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
-      "imageHorizontal": "https://cdn.whereto.party/media/events/3ce41855-230b-4868-83c0-f587ee1a6982.jpg",
-      "cadence": null,
-      "address": null,
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
-      "ticketUrl": "https://events.humanitix.com/per24oct/tickets",
-      "shortName": "THICK 'N' JUICY",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Chasers%20Nightclub%2C%20melbourne",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.humanitix.com/per24oct/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "thick-n-juicy-horny-halloween-0c4511e2"
     }
   ]
 }

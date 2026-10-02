@@ -3,5 +3,100 @@
     "calendarTimezone": "Australia/Brisbane",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "THICK 'N' JUICY ❤️‍🔥 Brisbane",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -27.4589399,
+        "lng": 153.0347011
+      },
+      "startDate": "2026-11-13T21:00:00",
+      "endDate": "2026-11-14T03:00:00",
+      "unprocessedDescription": "bar: Wonderland Brisbane\nticketUrl: https://events.humanitix.c\rom/bri13nov\nimage: https://cdn.whereto.party/media/events/758ff60d-f75c-44d4-8916-101e0184bb85.jpg\nimageSource: json-api\ntimezone: Australia/Brisbane\nimageVertical: https://cdn.whereto.party/media/events/758ff60d-f75c-44d4-8916-101e0184bb85.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=-27.4589399%2C153.0347011\naddress: 633 Ann Street, Brisbane, Queensland\naddressSource: curated\npinSource: curated\nkey: thick-n-juicy-❤️‍🔥-brisbane-wonderland|2026-11-13|wonderland brisbane\nbearSource: keyword\nshortName: THICK 'N' JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Brisbane",
+      "wasUTC": true,
+      "sourceUid": "8972EE3F-354F-4583-A8C5-BB39945D69EF",
+      "uid": "8972EE3F-354F-4583-A8C5-BB39945D69EF",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wonderland Brisbane",
+      "image": "https://cdn.whereto.party/media/events/758ff60d-f75c-44d4-8916-101e0184bb85.jpg",
+      "imageVertical": "https://cdn.whereto.party/media/events/758ff60d-f75c-44d4-8916-101e0184bb85.jpg",
+      "cadence": null,
+      "address": "633 Ann Street, Brisbane, Queensland",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=-27.4589399%2C153.0347011",
+      "ticketUrl": "https://events.humanitix.com/bri13nov",
+      "shortName": "THICK 'N' JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=-27.4589399%2C153.0347011",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/bri13nov",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-brisbane-31ee2f02"
+    },
+    {
+      "name": "Come Aboard To Daddy",
+      "day": "Saturday",
+      "time": "3:30PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -27.48274,
+        "lng": 152.9991929
+      },
+      "startDate": "2026-10-24T15:30:00",
+      "endDate": "2026-10-24T18:00:00",
+      "unprocessedDescription": "bar: West End Recreation Hub\nticketUrl: https://events.humanit\rix.com/come-aboard-to-daddy-melt-boat-parade-on-the-lady-brisbane-with-come-to-daddy/tickets\nimage: https://cdn.whereto.party/media/events/ef8c05b3-c24b-448a-8d86-f31b34db7317.webp\nimageSource: json-api\ntimezone: Australia/Brisbane\nimageHorizontal: https://cdn.whereto.party/media/events/ef8c05b3-c24b-448a-8d86-f31b34db7317.webp\ngmaps: https://www.google.com/maps/search/?api=1&query=West%20End%20Recreation%20Hub%2C%20Riverside%20Drive%20Bikeway%2C%20Brisbane%2C%20Queensland\naddress: Riverside Drive Bikeway, Brisbane, Queensland\naddressSource: geo-poi\npinSource: geocoded-approx\nbarSource: geo-poi\nkey: come-aboard-to-daddy|2026-10-24|west end recreation hub\nbearSource: keyword\nshortName: COME ABOARD",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Brisbane",
+      "wasUTC": true,
+      "sourceUid": "AA7DC755-D1A9-47D0-9723-96221D2DEDDD",
+      "uid": "AA7DC755-D1A9-47D0-9723-96221D2DEDDD",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "West End Recreation Hub",
+      "image": "https://cdn.whereto.party/media/events/ef8c05b3-c24b-448a-8d86-f31b34db7317.webp",
+      "imageHorizontal": "https://cdn.whereto.party/media/events/ef8c05b3-c24b-448a-8d86-f31b34db7317.webp",
+      "cadence": null,
+      "address": "Riverside Drive Bikeway, Brisbane, Queensland",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=West%20End%20Recreation%20Hub%2C%20Riverside%20Drive%20Bikeway%2C%20Brisbane%2C%20Queensland",
+      "ticketUrl": "https://events.humanitix.com/come-aboard-to-daddy-melt-boat-parade-on-the-lady-brisbane-with-come-to-daddy/tickets",
+      "shortName": "COME ABOARD",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=West%20End%20Recreation%20Hub%2C%20Riverside%20Drive%20Bikeway%2C%20Brisbane%2C%20Queensland",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/come-aboard-to-daddy-melt-boat-parade-on-the-lady-brisbane-with-come-to-daddy/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "come-aboard-to-daddy-4922050d"
+    }
+  ]
 }

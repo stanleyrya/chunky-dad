@@ -5,4 +5,25 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-adelaide
 X-WR-TIMEZONE:Australia/Adelaide
+BEGIN:VEVENT
+DTSTART:20261106T103000Z
+DTEND:20261106T173000Z
+DTSTAMP:20261002T200731Z
+UID:FF82019B-C422-4F5F-9CDE-C650FA353C7A
+CREATED:20261002T200639Z
+DESCRIPTION:ticketUrl: https://moshtix.com.au/v2/event/think-n-juicy-adelai
+ de-6-november-2026/199143\nimage: https://cdn.whereto.party/media/events/b3
+ 33c05c-357d-421d-b90f-fe5b6ef68c0e.jpg\nimageSource: json-api\ntimezone: Au
+ stralia/Adelaide\nimageVertical: https://cdn.whereto.party/media/events/b33
+ 3c05c-357d-421d-b90f-fe5b6ef68c0e.jpg\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=adelaide\nkey: thick-‘n’-juicy-feast-festival|2026-11-06
+ |\nbearSource: keyword\nshortName: THICK ‘N’ JUICY
+LAST-MODIFIED:20261002T200639Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THICK ‘N’ JUICY Feast Festival
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

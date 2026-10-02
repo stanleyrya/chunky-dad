@@ -3,5 +3,48 @@
     "calendarTimezone": "Australia/Adelaide",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "THICK ‘N’ JUICY Feast Festival",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-06T21:00:00",
+      "endDate": "2026-11-07T04:00:00",
+      "unprocessedDescription": "ticketUrl: https://moshtix.com.au/v2/event/think-n-juicy-adelai\rde-6-november-2026/199143\nimage: https://cdn.whereto.party/media/events/b333c05c-357d-421d-b90f-fe5b6ef68c0e.jpg\nimageSource: json-api\ntimezone: Australia/Adelaide\nimageVertical: https://cdn.whereto.party/media/events/b333c05c-357d-421d-b90f-fe5b6ef68c0e.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=adelaide\nkey: thick-‘n’-juicy-feast-festival|2026-11-06|\nbearSource: keyword\nshortName: THICK ‘N’ JUICY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Adelaide",
+      "wasUTC": true,
+      "sourceUid": "FF82019B-C422-4F5F-9CDE-C650FA353C7A",
+      "uid": "FF82019B-C422-4F5F-9CDE-C650FA353C7A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://cdn.whereto.party/media/events/b333c05c-357d-421d-b90f-fe5b6ef68c0e.jpg",
+      "imageVertical": "https://cdn.whereto.party/media/events/b333c05c-357d-421d-b90f-fe5b6ef68c0e.jpg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=adelaide",
+      "ticketUrl": "https://moshtix.com.au/v2/event/think-n-juicy-adelaide-6-november-2026/199143",
+      "shortName": "THICK ‘N’ JUICY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=adelaide",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://moshtix.com.au/v2/event/think-n-juicy-adelaide-6-november-2026/199143",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "thick-n-juicy-feast-festival-26803290"
+    }
+  ]
 }
