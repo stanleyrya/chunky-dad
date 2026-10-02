@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-01",
+ "generatedAt": "2026-10-02",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-01",
     "2026-10-02",
     "2026-10-03",
     "2026-10-04",
@@ -75,7 +74,8 @@ window.CITY_ACTIVITY = {
     "2026-12-25",
     "2026-12-26",
     "2026-12-27",
-    "2026-12-29"
+    "2026-12-29",
+    "2026-12-30"
    ],
    "recurring": 6,
    "festivalUntil": null
@@ -94,7 +94,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-01",
     "2026-10-02",
     "2026-10-04",
     "2026-10-08",
@@ -556,13 +555,17 @@ window.CITY_ACTIVITY = {
   "melbourne": {
    "dates": [
     "2026-10-30",
+    "2026-11-14",
     "2026-11-27"
    ],
    "recurring": 0,
    "festivalUntil": null
   },
   "brisbane": {
-   "dates": [],
+   "dates": [
+    "2026-10-24",
+    "2026-11-13"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -597,9 +600,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "edinburgh": {
-   "dates": [
-    "2026-10-01"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -665,12 +666,16 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "adelaide": {
-   "dates": [],
+   "dates": [
+    "2026-11-06"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "perth": {
-   "dates": [],
+   "dates": [
+    "2026-10-24"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
