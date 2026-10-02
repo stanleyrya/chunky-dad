@@ -647,6 +647,113 @@ class WebAdapter {
         }
     }
 
+    // A REAL BROWSER FOR A HOST THAT REFUSES A PLAIN REQUEST. dilf.uk answers
+    // curl 429 whatever the User-Agent and headless Chrome 200 (2026-10-01,
+    // one request each): the refusal is about the client's shape, not the
+    // machine. So a GET that came back 429 is tried once more in Chrome —
+    // the installed one (config.browserFetch.executablePath or the macOS
+    // default), headless, one page per launch, closed in finally — and the
+    // rendered document is the page. Pacing of its own: BROWSER_FETCH_GAP_MS
+    // between launches, at most BROWSER_FETCH_CAP per run, 45 s per page.
+    // Off with config.browserFetch.mode "off"; absent Chrome = off. The
+    // phone's inbox remains the fallback.
+    getBrowserFetchConfig() {
+        const raw = this.config && this.config.browserFetch && typeof this.config.browserFetch === 'object' ? this.config.browserFetch : {};
+        const mode = typeof raw.mode === 'string' ? raw.mode.trim().toLowerCase() : 'enforce';
+        const executablePath = typeof raw.executablePath === 'string' && raw.executablePath
+            ? raw.executablePath
+            : (process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+        return { mode, executablePath, cap: Number.isFinite(Number(raw.cap)) ? Number(raw.cap) : WebAdapter.BROWSER_FETCH_CAP };
+    }
+
+    // Is the browser route open this run? (Mode on, Chrome present, cap
+    // not reached.) shared-core asks before skipping a host it is leaving
+    // alone for 429: with a browser to hand, the page is tried, not skipped.
+    canFetchWithBrowser() {
+        if (!this.isNode) return false;
+        const settings = this.getBrowserFetchConfig();
+        if (settings.mode === 'off') return false;
+        const state = this._browserFetch || { count: 0, unavailable: '' };
+        if (state.unavailable || state.count >= settings.cap) return false;
+        try { return this.fs.existsSync(settings.executablePath); } catch (_) { return false; }
+    }
+
+    async fetchWithBrowser(url, options = {}) {
+        if (!this.isNode) return null;
+        const settings = this.getBrowserFetchConfig();
+        if (settings.mode === 'off') return null;
+        if (!this._browserFetch) this._browserFetch = { count: 0, lastAt: 0, unavailable: '' };
+        const state = this._browserFetch;
+        if (state.unavailable) return null;
+        if (state.count >= settings.cap) {
+            console.log(`🧭 BROWSER: ${url} not tried — ${settings.cap} browser fetches already this run`);
+            return null;
+        }
+        try {
+            if (!this.fs.existsSync(settings.executablePath)) {
+                state.unavailable = `no browser at ${settings.executablePath}`;
+                console.log(`🧭 BROWSER: ${state.unavailable} — plain requests only`);
+                return null;
+            }
+            const wait = WebAdapter.BROWSER_FETCH_GAP_MS - (Date.now() - state.lastAt);
+            if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+            state.count += 1;
+            state.lastAt = Date.now();
+            const startedAt = Date.now();
+            const puppeteer = await this.loadPuppeteer();
+            if (!puppeteer) {
+                state.unavailable = 'puppeteer is not installed';
+                console.log(`🧭 BROWSER: ${state.unavailable} — plain requests only`);
+                return null;
+            }
+            const browser = await puppeteer.launch({ executablePath: settings.executablePath, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
+            try {
+                const page = await browser.newPage();
+                // The browser's own User-Agent with the scraper's token on
+                // the end: a real browser, and it still says who it is.
+                // dilf.uk: our plain UA in Chrome → 429; Chrome's UA + the
+                // token → 200 (one request each, 2026-10-01).
+                const token = this.config.userAgent || 'chunky-dad-scraper/1.0 (+https://chunky.dad)';
+                const browserAgent = typeof browser.userAgent === 'function' ? await browser.userAgent() : '';
+                await page.setUserAgent(browserAgent ? `${browserAgent} ${token}` : token);
+                const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: WebAdapter.BROWSER_FETCH_TIMEOUT_MS });
+                const status = response ? response.status() : 0;
+                if (status >= 400 || status === 0) {
+                    console.log(`🧭 BROWSER: ${url} answered HTTP ${status || 'nothing'} to a real browser too`);
+                    return null;
+                }
+                const html = await page.content();
+                if (!html || html.length < 200) {
+                    console.log(`🧭 BROWSER: ${url} rendered ${html ? html.length : 0} chars — not a page`);
+                    return null;
+                }
+                console.log(`🧭 BROWSER: ${url} refused a plain request but served a real browser — ${html.length} chars in ${Date.now() - startedAt} ms (${state.count}/${settings.cap} this run)`);
+                return { html, url, statusCode: status, headers: { 'x-fetched-by': 'mac-browser', 'content-type': 'text/html' } };
+            } finally {
+                await browser.close().catch(() => {});
+            }
+        } catch (error) {
+            console.log(`🧭 BROWSER: ${url} — ${error && error.message ? error.message : error}`);
+            return null;
+        }
+    }
+
+    async loadPuppeteer() {
+        if (this._puppeteer !== undefined) return this._puppeteer;
+        this._puppeteer = null;
+        for (const name of ['puppeteer-core', 'puppeteer']) {
+            try {
+                const loaded = await import(name);
+                this._puppeteer = loaded && (loaded.default || loaded);
+                if (this._puppeteer && typeof this._puppeteer.launch === 'function') break;
+                this._puppeteer = null;
+            } catch (_) {
+                this._puppeteer = null;
+            }
+        }
+        return this._puppeteer;
+    }
+
     // THE INBOX: pages the Mac cannot fetch, asked of the phone. A host
     // that answers the Mac 429 (dilf.uk, 2026-09-30 → 10-01: every run,
     // robots.txt included) answers the owner's phone normally — the probe
@@ -667,7 +774,8 @@ class WebAdapter {
     noteInboxRequest(url, reason) {
         const file = this.getInboxRequestsPath();
         if (!file || !url || !/^https?:\/\//i.test(String(url))) return false;
-        if (/robots/i.test(String(reason || ''))) return false;
+        // Pages only: a robots refusal, robots.txt itself, an API call.
+        if (/robots/i.test(String(reason || '')) || /\/robots\.txt(?:[?#]|$)/i.test(String(url))) return false;
         try {
             let store = { version: 1, requests: [] };
             if (this.fs.existsSync(file)) {
@@ -1224,12 +1332,18 @@ class WebAdapter {
 
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
+        // Declared ahead of the try: the browser retry in the catch below
+        // caches and memoizes what it brings back like any other page.
+        let memoKey = null;
+        let canUseCache = false;
+        let pageCacheConfig = null;
+        let isCacheableResponse = () => true;
         try {
             // options.fresh: the caller needs what the site says NOW (a form
             // nonce, a page behind a gate it just passed) — no memo, no disk
             // cache on the way in; the answer still refreshes both.
             const wantsFresh = options.fresh === true;
-            const memoKey = this.getRunPageMemoKey(url, options);
+            memoKey = this.getRunPageMemoKey(url, options);
             const memoized = wantsFresh ? null : this.readRunPageMemo(memoKey);
             if (memoized) {
                 console.log(`🟢 Node.js: Page already read this run — no re-read for ${url}`);
@@ -1239,13 +1353,13 @@ class WebAdapter {
             // true (a lookup, not a page) — read from and written to the
             // answer cache under that life.
             const answerCacheConfig = Number(options.cacheTtlDays) > 0 ? this.getAnswerCacheConfig(options.cacheTtlDays) : null;
-            const pageCacheConfig = answerCacheConfig && answerCacheConfig.enabled ? answerCacheConfig : this.getPageCacheConfig();
-            const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
+            pageCacheConfig = answerCacheConfig && answerCacheConfig.enabled ? answerCacheConfig : this.getPageCacheConfig();
+            canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
             // Optional caller hook (options.isCacheableResponse): a response it
             // rejects is neither served from the disk cache nor written to it —
             // used by the geocode path so an empty Nominatim body can't poison a
             // venue for the whole TTL. Callers that don't pass it are unaffected.
-            const isCacheableResponse = (responseData) =>
+            isCacheableResponse = (responseData) =>
                 typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse(responseData) !== false;
             if (canUseCache && !wantsFresh) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
@@ -1335,12 +1449,28 @@ class WebAdapter {
             // A refusal by the politeness gate (parked host, budget, robots)
             // never left the machine: it is a skip, reported as one, and it
             // keeps its non-retryable stamp through the rewrap below.
+            // A 429 to a plain request is, on the hosts seen so far, "you are
+            // not a browser" (dilf.uk: curl with a Safari UA 429, headless
+            // Chrome 200 in 2.2 s) — so a real browser is asked next, through
+            // its own pacing; the phone's inbox is the fallback when the
+            // browser fails too. A page the browser brought back is a page.
+            const rateLimited = Number(error && error.statusCode) === 429
+                || (error && error.politeness && /429/.test(String(error.message || '')));
+            // Pages only: never robots.txt, never an API call, never a POST.
+            if (rateLimited && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
+                const browserPage = await this.fetchWithBrowser(url, options);
+                if (browserPage) {
+                    if (canUseCache && isCacheableResponse(browserPage)) await this.writeCachedPage(url, browserPage, pageCacheConfig);
+                    this.writeRunPageMemo(memoKey, browserPage);
+                    return browserPage;
+                }
+            }
             if (error && error.politeness) {
                 console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
-                if (/429/.test(String(error.message || ''))) this.noteInboxRequest(url, 'the host answers the Mac 429');
+                if (/429/.test(String(error.message || '')) && !options.apiCall) this.noteInboxRequest(url, 'the host answers the Mac 429');
             } else {
                 console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
-                if (Number(error && error.statusCode) === 429) this.noteInboxRequest(url, 'HTTP 429');
+                if (Number(error && error.statusCode) === 429 && !options.apiCall) this.noteInboxRequest(url, 'HTTP 429');
             }
             const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
             if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;
@@ -2812,6 +2942,9 @@ async saveFailureNote(url, error, metadata = {}) {
 }
 
 // Export for both environments
+WebAdapter.BROWSER_FETCH_CAP = 20;
+WebAdapter.BROWSER_FETCH_GAP_MS = 3000;
+WebAdapter.BROWSER_FETCH_TIMEOUT_MS = 45000;
 WebAdapter.INBOX_REQUEST_DAYS = 7;
 WebAdapter.INBOX_REQUEST_CAP = 200;
 

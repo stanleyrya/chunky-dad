@@ -8939,6 +8939,11 @@ test('inbox: a host left alone for 429 still has its cached pages read, and its 
   assert.deepEqual(allowed, ['https://dilf.example/events'], 'the cached page is read; the uncached one is skipped');
   assert.deepEqual(asked, ['https://dilf.example/events/manchester'], '…and asked of the phone');
   assert.deepEqual(core.filterKnownDeadEndUrls(['https://dilf.example/events/manchester'], false, Date.now(), null), [], 'no adapter: the park holds as before');
+  // With a browser to hand, the parked host's pages are tried, not asked of the phone.
+  const asked2 = [];
+  const browserAdapter = { hasFreshCachedPage: () => false, canFetchWithBrowser: () => true, noteInboxRequest: (url) => { asked2.push(url); return true; } };
+  assert.deepEqual(core.filterKnownDeadEndUrls(['https://dilf.example/events/manchester'], false, Date.now(), browserAdapter), ['https://dilf.example/events/manchester']);
+  assert.deepEqual(asked2, [], 'the browser goes first; the phone is the fallback');
 });
 
 test('dead-end store: a host whose crawl pages only ever 403 is host-blocked — new URLs on it are skipped next run', async () => {

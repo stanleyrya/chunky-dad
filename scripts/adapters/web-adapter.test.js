@@ -201,6 +201,61 @@ test('inbox: the Mac records the pages it cannot fetch for the phone, once per U
   assert.equal(noRoot.noteInboxRequest('https://dilf.example/events', 'HTTP 429'), false, 'no shared root, no inbox');
 });
 
+test('browser fetch: a GET answered 429 is tried once more in a real browser; what it renders is the page, cached and memoized; browser failure falls back to the inbox', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  try {
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 }, politeness: {}, browserFetch: { executablePath: process.execPath } });
+    global.fetch = async () => ({ ok: false, status: 429, statusText: 'Too Many Requests', headers: new Headers(), body: null });
+    const launches = [];
+    adapter.loadPuppeteer = async () => ({
+      launch: async (settings) => {
+        launches.push(settings.executablePath);
+        return {
+          newPage: async () => ({
+            setUserAgent: async () => {},
+            goto: async (url) => ({ status: () => (/forbidden/.test(url) ? 403 : 200) }),
+            content: async () => `<html><body>${'rendered '.repeat(40)}</body></html>`
+          }),
+          close: async () => {}
+        };
+      }
+    });
+    const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+    let page;
+    try {
+      page = await adapter.fetchData('https://dilf.example/events');
+    } finally { console.log = originalLog; }
+    assert.ok(page && page.html.includes('rendered'), 'the browser\'s page is the page');
+    assert.equal(page.headers['x-fetched-by'], 'mac-browser');
+    assert.equal(launches.length, 1);
+    assert.ok(lines.some((line) => /BROWSER: .*served a real browser/.test(line)), lines.join('\n'));
+    assert.equal(adapter.hasFreshCachedPage('https://dilf.example/events'), true, 'cached like any page');
+    assert.ok(!fs.existsSync(path.join(shared.dir, 'inbox', 'requests.json')), 'no inbox request when the browser served it');
+    // The host is parked for the run after its 429; the next URL on it is
+    // refused by the gate and goes straight to the browser.
+    console.log = () => {};
+    let second;
+    try { second = await adapter.fetchData('https://dilf.example/events/brighton'); } finally { console.log = originalLog; }
+    assert.ok(second && second.html.includes('rendered'));
+    assert.equal(launches.length, 2);
+    // A page the browser cannot get either: the inbox hears about it.
+    console.log = () => {};
+    await assert.rejects(() => adapter.fetchData('https://dilf.example/forbidden'));
+    console.log = originalLog;
+    const store = JSON.parse(fs.readFileSync(path.join(shared.dir, 'inbox', 'requests.json'), 'utf8'));
+    assert.deepEqual(store.requests.map((r) => r.url), ['https://dilf.example/forbidden']);
+    // Off switch and the per-run cap.
+    const off = new WebAdapter({ cities: CITIES, politeness: {}, browserFetch: { mode: 'off' } });
+    assert.equal(off.canFetchWithBrowser(), false);
+    adapter._browserFetch.count = WebAdapter.BROWSER_FETCH_CAP;
+    assert.equal(adapter.canFetchWithBrowser(), false, 'cap reached');
+  } finally {
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();

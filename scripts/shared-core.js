@@ -9982,8 +9982,14 @@ class SharedCore {
                 // A page the phone fetched for the Mac (the inbox) sits in
                 // the shared cache: a parked host never stops a cache read.
                 const cachedForUs = httpAdapter && typeof httpAdapter.hasFreshCachedPage === 'function' && httpAdapter.hasFreshCachedPage(url);
-                const deadEndHostEntry = cachedForUs ? null : this.getSkippableDeadEndHostEntry(url, discoveryOnly);
-                if (deadEndHostEntry && SharedCore.isRateLimitedDeadEndHostEntry(deadEndHostEntry) && httpAdapter && typeof httpAdapter.noteInboxRequest === 'function') {
+                const browserOpen = httpAdapter && typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser();
+                const parkedPeek = this.deadEndRunContext && this.deadEndRunContext.enabled && !discoveryOnly
+                    ? this.getBlockedDeadEndHostEntry(this.deadEndRunContext, url)
+                    : null;
+                const rateLimitedHost = Boolean(parkedPeek && SharedCore.isRateLimitedDeadEndHostEntry(parkedPeek));
+                // A real browser is tried instead of the skip (fetchData).
+                const deadEndHostEntry = cachedForUs || (rateLimitedHost && browserOpen) ? null : this.getSkippableDeadEndHostEntry(url, discoveryOnly);
+                if (deadEndHostEntry && rateLimitedHost && httpAdapter && typeof httpAdapter.noteInboxRequest === 'function') {
                     httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
                 }
                 if (deadEndHostEntry) {
@@ -11543,11 +11549,15 @@ class SharedCore {
                 }
                 continue;
             }
-            const blockedHost = cached(url) ? null : this.getBlockedDeadEndHostEntry(context, url, nowMs);
+            let blockedHost = cached(url) ? null : this.getBlockedDeadEndHostEntry(context, url, nowMs);
+            // A host left alone for 429 is tried through a real browser when
+            // the adapter has one (web-adapter.fetchWithBrowser); only when
+            // it has none is the page asked of the phone instead.
+            if (blockedHost && SharedCore.isRateLimitedDeadEndHostEntry(blockedHost) && httpAdapter) {
+                if (typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser()) blockedHost = null;
+                else if (typeof httpAdapter.noteInboxRequest === 'function') httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
+            }
             if (blockedHost) {
-                if (SharedCore.isRateLimitedDeadEndHostEntry(blockedHost) && httpAdapter && typeof httpAdapter.noteInboxRequest === 'function') {
-                    httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
-                }
                 context.hostSkippedCount += 1;
                 if (context.hostSkippedSamples.length < 3 && !context.hostSkippedSamples.includes(url)) {
                     context.hostSkippedSamples.push(url);
