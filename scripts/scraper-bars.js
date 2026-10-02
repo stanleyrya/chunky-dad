@@ -75,6 +75,12 @@ const scraperBars = {
       "coordinates": "13.727938343038128, 100.53224466713601",
       "instagram": "https://www.instagram.com/bar.ber.bar/",
       "googleMaps": "https://maps.app.goo.gl/V96bZYM6qBm8tqQs5"
+    },
+    {
+      "name": "HORN",
+      "city": "bangkok",
+      "address": "71-73 ซอยสีลม 4, กรุงเทพมหานคร",
+      "coordinates": "13.7284617, 100.5329437"
     }
   ],
   "birmingham": [
