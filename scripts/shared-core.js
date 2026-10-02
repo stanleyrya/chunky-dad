@@ -932,6 +932,12 @@ class SharedCore {
     // 'heuristic', 'none') so callers can treat text-heuristic results as weak and
     // optionally re-check them with AI.
     classifyPageWithSignal(url, html) {
+        // A page from the owner's inbox (a picture he dropped there — see
+        // run-once addSharedPagesParser) is an event page by declaration:
+        // it holds no text, so the text model's second opinion called one
+        // "ad" ("a static image file") and the parser skipped it
+        // (2026-10-02). The strong signal keeps the AI opinion off it.
+        if (SharedCore.isSharedInboxUrl(url)) return { classification: 'event-page', signal: 'shared-inbox' };
         // 0. A raw JSON body with event-shaped objects is classified by what
         //    it holds. URL rules describe a site's HTML pages — a host-wide
         //    "link-aggregator" rule written for thebearcalendar.com/events/

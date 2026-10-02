@@ -470,6 +470,56 @@ test('run-once: the inbox is ONE folder sorted by file type — saved pages, pic
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test('inbox pictures: a screenshot of a post is cropped to its flyer when the vision model places it plausibly; a bare flyer, an implausible box, a missing answer or a failing tool leave the picture as it is', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-crop-'));
+  const file = path.join(dir, 'IMG_0099.PNG');
+  fs.writeFileSync(file, 'png');
+  const calls = [];
+  const sips = async (args) => {
+    calls.push(args.join(' '));
+    if (args[0] === '-g') return 'pixelWidth: 1170\npixelHeight: 2640\n';
+    if (args[0] === '-c') fs.writeFileSync(args[args.length - 1], 'jpeg');
+    return '';
+  };
+  const lines = []; const originalLog = console.log; console.log = (line) => lines.push(String(line));
+  try {
+    // Qwen-VL's native 0–1000 grid: [0, 174, 998, 733] on a 1170×2640 screenshot.
+    const cropped = await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: true, app: 'Instagram', bbox_2d: [0, 174, 998, 733] }) });
+    assert.equal(cropped, path.join(dir, 'IMG_0099-flyer.jpg'));
+    assert.ok(calls.some((c) => /^-c 1476 1168 --cropOffset 459 0 -s format jpeg/.test(c)), calls.join('\n'));
+    assert.ok(lines.some((l) => /is a screenshot \(Instagram\): cropped to the flyer, 1168x1476 at 0,459/.test(l)), lines.join('\n'));
+    // A bare flyer: nothing happens.
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: false, app: '' }) }), '');
+    // A screenshot whose box is a sliver, or wider than the image allows: kept.
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: true, bbox_2d: [0, 100, 1000, 150] }) }), '');
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: true, bbox_2d: [0, 0, 1000, 1000] }) }), '', 'the whole image is not a crop');
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: true, bbox_2d: [0, 100, 300, 900] }) }), '', 'narrower than half the width');
+    assert.ok(lines.some((l) => /implausible/.test(l)));
+    // No answer, a broken answer, a tool that throws: kept, never a throw.
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => null }), '');
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, locate: async () => ({ screenshot: true, bbox_2d: 'nope' }) }), '');
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips: async () => { throw new Error('sips gone'); }, locate: async () => ({ screenshot: true, bbox_2d: [0, 174, 998, 733] }) }), '');
+    assert.ok(lines.some((l) => /not cropped \(sips gone\)/.test(l)));
+    // No core / no OCR config → the default locator answers null → kept.
+    assert.equal(await runOnce.cropScreenshotToFlyer({ file, sips, adapter: {} }), '');
+
+    // Through the intake: the crop is the picture that gets a page; both files move to done/.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-crop-inbox-'));
+    fs.mkdirSync(path.join(root, 'inbox'));
+    fs.writeFileSync(path.join(root, 'inbox', 'shot.png'), 'png');
+    const cached = [];
+    const adapter = { getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }), writeCachedPage: async (url) => { cached.push(url); } };
+    const config = { parsers: [], config: {} };
+    const urls = await runOnce.addSharedPagesParser(config, adapter, { CHUNKY_SHARED_STORAGE_DIR: root }, fs, { sips, locateFlyer: async () => ({ screenshot: true, app: 'Instagram', bbox_2d: [0, 174, 998, 733] }) });
+    assert.deepEqual(urls, ['https://inbox.chunky.dad/page/shot-flyer.jpg']);
+    assert.deepEqual(fs.readdirSync(path.join(root, 'inbox', 'done')).sort(), ['shot-flyer.jpg', 'shot.png']);
+    fs.rmSync(root, { recursive: true, force: true });
+  } finally { console.log = originalLog; }
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('review server: /inbox/file/<name> serves a picture from the shared inbox (or its done/ folder) read-only, refuses paths, and the deck rewrites inbox addresses to it', async () => {
   const fs = require('fs');
   const os = require('os');
