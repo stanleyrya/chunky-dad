@@ -410,6 +410,40 @@ test('tailLines keeps only the last N lines', () => {
 // ---------------------------------------------------------------------------
 const runOnce = require(path.join(__dirname, '..', 'tools', 'run-once.js'));
 
+test('run-once: shared pages from the inbox become one "Shared pages" parser, written into the page cache under their own URLs; bad files stay, consumed ones move to done/', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-inbox-'));
+  const dir = path.join(root, 'inbox', 'pages');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, '2026-10-02T09-00.json'), JSON.stringify({ url: 'https://www.instagram.com/p/abc123/', title: 'Goldiloxx', html: '<html><body>' + 'flyer '.repeat(80) + '</body></html>', savedAt: '2026-10-02T09:00:00.000Z' }));
+  fs.writeFileSync(path.join(dir, '2026-10-02T09-05.json'), JSON.stringify({ url: 'https://www.facebook.com/events/42/', html: '<html>' + 'x'.repeat(300) + '</html>' }));
+  fs.writeFileSync(path.join(dir, 'empty.json'), JSON.stringify({ url: 'https://www.instagram.com/p/short/', html: '<html></html>' }));
+  fs.writeFileSync(path.join(dir, 'nourl.json'), JSON.stringify({ html: 'x'.repeat(300) }));
+  fs.writeFileSync(path.join(dir, 'junk.json'), 'not json');
+  const cached = [];
+  const adapter = { getPageCacheConfig: () => ({ enabled: true, ttlDays: 3 }), writeCachedPage: async (url, page) => { cached.push({ url, by: page.headers['x-fetched-by'], chars: page.html.length }); } };
+  const config = { parsers: [{ name: 'Furball' }], config: {} };
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let urls;
+  try {
+    urls = await runOnce.addSharedPagesParser(config, adapter, { CHUNKY_SHARED_STORAGE_DIR: root });
+  } finally { console.log = originalLog; }
+  assert.deepEqual(urls, ['https://www.instagram.com/p/abc123/', 'https://www.facebook.com/events/42/']);
+  assert.deepEqual(cached.map((c) => c.by), ['share-sheet', 'share-sheet']);
+  const parser = config.parsers.find((p) => p.name === runOnce.SHARED_PAGES_PARSER_NAME);
+  assert.ok(parser, 'the extra parser');
+  assert.equal(parser.urlDiscoveryDepth, 0);
+  assert.deepEqual(parser.urls, urls);
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'done')).sort(), ['2026-10-02T09-00.json', '2026-10-02T09-05.json'], 'consumed files move to done/');
+  assert.deepEqual(fs.readdirSync(dir).filter((n) => n.endsWith('.json')).sort(), ['empty.json', 'junk.json', 'nourl.json'], 'the rest stay');
+  assert.ok(lines.some((line) => /shared pages left in the inbox \(3\)/.test(line)), lines.join('\n'));
+  // A parser filter for another parser leaves the inbox alone; no inbox dir, nothing.
+  assert.deepEqual(await runOnce.addSharedPagesParser({ parsers: [], config: {} }, adapter, { CHUNKY_SHARED_STORAGE_DIR: root, CHUNKY_RUN_PARSER: 'Furball' }), []);
+  assert.deepEqual(await runOnce.addSharedPagesParser({ parsers: [], config: {} }, adapter, { CHUNKY_SHARED_STORAGE_DIR: path.join(root, 'nowhere') }), []);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test('run-once: shapeRunOnceConfig stamps automation runtime and always re-forces dryRun last', () => {
   const config = {
     parsers: [

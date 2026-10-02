@@ -270,6 +270,17 @@ class SavedRunDisplay {
         const written = await adapter.writeCalendarSnapshots(cityKeys);
         const summary = SavedRunDisplay.describeSnapshotRefresh(cityKeys, written, cities, Date.now() - startedAt);
         console.log(`📱 Display: ${summary.line}`);
+        // The inbox: pages the Mac asked the phone to fetch (hosts that
+        // answer the Mac 429), read here through a headless web view into
+        // the shared page cache. Part of "the phone does its part".
+        if (typeof adapter.fulfillInboxRequests === 'function') {
+            const inbox = await adapter.fulfillInboxRequests();
+            if (inbox.asked > 0) {
+                const line = `Inbox: ${inbox.fetched} page(s) fetched for the Mac${inbox.failed ? `, ${inbox.failed} failed` : ''}${inbox.skipped ? `, ${inbox.skipped} left for next time` : ''}`;
+                console.log(`📱 Display: ${line}`);
+                summary.message += `\n\n${line}${inbox.details.length ? `\n${inbox.details.slice(0, 6).join('\n')}` : ''}`;
+            }
+        }
         try {
             const alert = new Alert();
             alert.title = summary.title;

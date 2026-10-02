@@ -388,8 +388,90 @@ function patchLoadConfiguration(WebAdapter) {
     const originalLoadConfiguration = WebAdapter.prototype.loadConfiguration;
     WebAdapter.prototype.loadConfiguration = async function patchedLoadConfiguration(...args) {
         const config = await originalLoadConfiguration.apply(this, args);
+        // The inbox's parser joins the list BEFORE the parser filter is applied,
+        // so CHUNKY_RUN_PARSER="Shared pages" can run it alone.
+        await addSharedPagesParser(config, this, process.env);
         return shapeRunOnceConfig(config, process.env);
     };
+}
+
+// ---------------------------------------------------------------------------
+// SHARED PAGES (the share-sheet inbox). A page the owner shares from the
+// phone — a Safari "Send to chunky.dad" shortcut that runs inside the
+// logged-in tab and saves { url, html, title, savedAt } as a JSON file into
+// iCloud/Scriptable/chunky-dad-scraper/inbox/pages/ — is a page the Mac can
+// never fetch itself (Instagram, Facebook events, anything behind his
+// login). Each file is written into the SHARED page cache under its own URL
+// (so the run reads it as a cache hit, through the normal extraction, OCR
+// and bear check) and the URLs become one extra parser for this run,
+// "Shared pages", depth 0. Consumed files move to inbox/pages/done/
+// (pruned after SHARED_PAGES_KEEP_DAYS); files with no url or no html are
+// left where they are and named in the log. Nothing is fetched live here.
+// ---------------------------------------------------------------------------
+const SHARED_PAGES_PARSER_NAME = 'Shared pages';
+const SHARED_PAGES_KEEP_DAYS = 14;
+async function addSharedPagesParser(config, adapter, env = process.env, fsLike = fs) {
+    const sharedRoot = String((env && env.CHUNKY_SHARED_STORAGE_DIR) || '').trim();
+    if (!sharedRoot || !config || !Array.isArray(config.parsers)) return [];
+    const parserFilter = String((env && env.CHUNKY_RUN_PARSER) || '').trim();
+    if (parserFilter && parserFilter !== SHARED_PAGES_PARSER_NAME) return [];
+    const dir = path.join(sharedRoot, 'inbox', 'pages');
+    let names = [];
+    try {
+        names = fsLike.readdirSync(dir).filter((name) => /\.json$/i.test(name));
+    } catch (_) {
+        return [];
+    }
+    const doneDir = path.join(dir, 'done');
+    const urls = [];
+    const skipped = [];
+    for (const name of names.sort()) {
+        const file = path.join(dir, name);
+        let entry = null;
+        try {
+            entry = JSON.parse(fsLike.readFileSync(file, 'utf8'));
+        } catch (error) {
+            skipped.push(`${name}: not JSON`);
+            continue;
+        }
+        const url = entry && typeof entry.url === 'string' ? entry.url.trim() : '';
+        const html = entry && typeof entry.html === 'string' ? entry.html : '';
+        if (!/^https?:\/\//i.test(url) || html.length < 200) {
+            skipped.push(`${name}: ${!url ? 'no url' : html.length < 200 ? `html is ${html.length} chars` : 'bad url'}`);
+            continue;
+        }
+        if (adapter && typeof adapter.writeCachedPage === 'function') {
+            // The run's own config is not applied yet at this point (the
+            // cache looks disabled); the shared page cache is addressed by
+            // the adapter's storage dir regardless, so the write is explicit.
+            const cacheConfig = typeof adapter.getPageCacheConfig === 'function' ? adapter.getPageCacheConfig() : {};
+            await adapter.writeCachedPage(url, { html, url, statusCode: 200, headers: { 'x-fetched-by': 'share-sheet', 'x-shared-at': String(entry.savedAt || '') } }, { ...cacheConfig, enabled: true, ttlDays: Number(cacheConfig.ttlDays) > 0 ? cacheConfig.ttlDays : 3 });
+        }
+        if (!urls.includes(url)) urls.push(url);
+        try {
+            fsLike.mkdirSync(doneDir, { recursive: true });
+            fsLike.renameSync(file, path.join(doneDir, name));
+        } catch (_) { /* a file that will not move is read again next run — harmless, the cache copy is the same */ }
+    }
+    // Old consumed files go.
+    try {
+        const keepMs = SHARED_PAGES_KEEP_DAYS * 24 * 60 * 60 * 1000;
+        for (const name of fsLike.readdirSync(doneDir)) {
+            const file = path.join(doneDir, name);
+            if (Date.now() - fsLike.statSync(file).mtimeMs > keepMs) fsLike.unlinkSync(file);
+        }
+    } catch (_) { /* no done dir yet */ }
+    if (skipped.length > 0) console.log(`run-once: 📨 shared pages left in the inbox (${skipped.length}): ${skipped.join('; ')}`);
+    if (urls.length === 0) return [];
+    config.parsers.push({
+        name: SHARED_PAGES_PARSER_NAME,
+        urls,
+        urlDiscoveryDepth: 0,
+        enabled: true,
+        automationEnabled: true
+    });
+    console.log(`run-once: 📨 ${urls.length} shared page(s) from the inbox read as the "${SHARED_PAGES_PARSER_NAME}" parser: ${urls.join(', ')}`);
+    return urls;
 }
 
 // NETWORK PREFLIGHT (NO PARTIAL RUNS). The scheduled job can fire while the
@@ -525,6 +607,8 @@ module.exports = {
     safeStringify,
     isAutomationEnv,
     shapeRunOnceConfig,
+    addSharedPagesParser,
+    SHARED_PAGES_PARSER_NAME,
     assertSharedStorageRootUsable,
     installConsoleTee,
     ensureThreadpoolHeadroom,
