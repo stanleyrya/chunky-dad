@@ -656,30 +656,47 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   assert.deepEqual(reviewQueue.knownFriends(store).sort(), ['Matt', 'Roger']);
   reviewQueue.saveFriendAdvice(file, store);
 
-  const link = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt', base: 'https://chunky.dad/advice/', now: Date.parse('2030-10-02T00:00:00Z') });
+  const htmlByKey = new Map([['event|furball|rockbar|2030-10-03', '<h2>FURBALL NYC</h2>' + '<div class="line">x</div>'.repeat(40)]]);
+  const link = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt', base: 'https://chunky.dad/advice/', now: Date.parse('2030-10-02T00:00:00Z'), htmlByKey });
   assert.equal(link.count, 2);
-  assert.match(link.url, /^https:\/\/chunky\.dad\/advice\/#j1\.[A-Za-z0-9_-]+$/);
-  const payload = JSON.parse(Buffer.from(link.url.split('#j1.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert.equal(link.left, 0);
+  assert.match(link.url, /^https:\/\/chunky\.dad\/advice\/#j2\.[A-Za-z0-9_-]+$/);
+  const payload = JSON.parse(require('zlib').inflateRawSync(Buffer.from(link.url.split('#j2.')[1], 'base64url')).toString('utf8'));
   assert.equal(payload.f, 'Matt');
   assert.equal(payload.e, link.exportId);
   assert.deepEqual(payload.c.map((c) => c.t), ['FURBALL NYC', 'OTHER']);
-  assert.equal(payload.c[0].p, undefined, 'an inbox picture that is not on the website is left out');
-  assert.equal(payload.c[1].p, 'https://cdn.example.com/f.jpg');
-  assert.equal(payload.c[0].n, 'still at Rockbar?');
-  assert.equal(payload.c[0].b, 'Rockbar');
-  assert.ok(link.url.length < 1200, `two cards fit in ${link.url.length} chars`);
+  assert.ok(payload.c[0].h.includes('<h2>FURBALL NYC</h2>'), 'the deck\'s own card HTML rides in the link');
+  assert.ok(payload.c[0].h.startsWith('<div class="line"><b>❓ still at Rockbar?</b></div>'), 'the question tops the card');
+  assert.equal(payload.c[1].h, '<h2>OTHER</h2>', 'a card the deck could not render still shows its title');
+  assert.ok(link.url.length < 1500, `two cards (one 1 KB of repetitive HTML) fit in ${link.url.length} chars`);
+  // Past the size budget, cards wait for the next link.
+  let big = reviewQueue.emptyFriendAdviceStore();
+  const bigHtml = new Map();
+  for (let i = 0; i < 25; i++) {
+    big = reviewQueue.recordFriendAsk(big, { key: `event|k${i}|x|2030-10-0${i % 9 + 1}`, friend: 'Roger', snapshot: { title: `K${i}` } });
+    bigHtml.set(`event|k${i}|x|2030-10-0${i % 9 + 1}`, require('crypto').randomBytes(900).toString('hex'));
+  }
+  const capped = reviewQueue.buildFriendLink(big, { friend: 'Roger', htmlByKey: bigHtml });
+  assert.ok(capped.url.length <= reviewQueue.ADVICE_LINK_MAX_CHARS, `${capped.url.length} chars`);
+  assert.ok(capped.count > 0 && capped.left > 0 && capped.count + capped.left === 25, `${capped.count} sent, ${capped.left} wait`);
+  assert.equal(capped.store.exports.at(-1).keys.length, capped.count, 'the export holds exactly the cards sent');
   reviewQueue.saveFriendAdvice(file, link.store);
   assert.equal(reviewQueue.loadFriendAdvice(file).exports[0].keys.length, 2);
 
-  // The friend's page builds #r1.<base64url JSON { e, f, a: [[i, y|n|u, note, title]] }>.
-  const replyPayload = { e: link.exportId, f: 'Matt', a: [[0, 'n', 'that is the leather night', 'FURBALL NYC'], [1, 'y', '', 'OTHER']] };
-  const replyLink = 'https://chunky.dad/advice/#r1.' + Buffer.from(JSON.stringify(replyPayload)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  // The friend's page (the deck in friend mode) builds #r2.<base64url JSON { e, f, a: [[i, approve|reject, mode, tags, note]] }>.
+  const replyPayload = { e: link.exportId, f: 'Matt', a: [[0, 'reject', 'not-bear', [], 'that is the leather night'], [1, 'approve', '', [], '']] };
+  const replyLink = 'https://chunky.dad/advice/#r2.' + Buffer.from(JSON.stringify(replyPayload)).toString('base64url');
+  const fixReply = reviewQueue.parseFriendReply('#r2.' + Buffer.from(JSON.stringify({ e: 'x', f: 'Matt', a: [[0, 'reject', 'fix', ['wrong venue'], 'moved to the Eagle'], [1, 'reject', 'never', [], ''], [2, 'reject', '', [], ''], [3, 'maybe', '', [], '']] })).toString('base64url'));
+  assert.deepEqual(fixReply.answers.map((a) => a.answer), ['fix', 'not-event', 'off'], 'unknown verdicts are dropped');
+  assert.deepEqual(fixReply.answers[0].tags, ['wrong venue']);
+  const oldReply = reviewQueue.parseFriendReply('#r1.' + Buffer.from(JSON.stringify({ e: 'x', f: 'Matt', a: [[0, 'u', 'hmm', 'T']] })).toString('base64url'));
+  assert.equal(oldReply.answers[0].answer, 'unsure', 'the first page\'s replies still read');
   assert.equal(reviewQueue.parseFriendReply('https://chunky.dad/advice/#j1.abc'), null, 'an ask link is not a reply');
   assert.equal(reviewQueue.parseFriendReply('hello'), null);
   const reply = reviewQueue.parseFriendReply('  ' + replyLink + ' ');
   assert.equal(reply.friend, 'Matt');
   assert.deepEqual(reply.answers.map((a) => a.answer), ['no', 'yes']);
-  const bare = reviewQueue.parseFriendReply('r1.' + replyLink.split('#r1.')[1]);
+  const bare = reviewQueue.parseFriendReply('r2.' + replyLink.split('#r2.')[1]);
   assert.equal(bare.exportId, link.exportId, 'the bare code works too');
   const recorded = reviewQueue.recordFriendReply(reviewQueue.loadFriendAdvice(file), reply, Date.parse('2030-10-03T00:00:00Z'));
   assert.equal(recorded.recorded.length, 2);
@@ -707,11 +724,17 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   assert.deepEqual(card.advice.map((a) => a.answer), ['no']);
   const html = renderReviewPage(deck, { runs: [], scriptName: "display-saved-run", ctx: {} });
   assert.ok(html.includes('🙋 Matt: 🚫 not bear — “that is the leather night”'), 'the advice row is on the card');
+  // advice/index.html is what the deck renders in friend mode — a deck change without a rebuild fails here.
+  assert.equal(fs.readFileSync(path.join(__dirname, '..', 'advice', 'index.html'), 'utf8'), require('../tools/serve-results').renderFriendPage(),
+    'advice/index.html is stale — run: node tools/build-advice-page.js');
+  const friendPage = require('../tools/serve-results').renderFriendPage();
+  const friendScript = friendPage.slice(friendPage.indexOf('window.__reviewDeck = '));
+  assert.doesNotThrow(() => new Function(friendScript.slice(0, friendScript.indexOf('</script>'))), 'the friend page script parses');
   assert.ok(html.includes('id="sheet-ask-mode"') && html.includes('id="friends-wrap"'), 'the ask mode and the Friends section are on the page');
   assert.ok(html.includes('id="btn-ask"') && html.includes('data-act="ask"') && html.includes('id="sheet-ask-go"'), 'a 🙋 Ask button of its own on the stack and in the list, and a big "Add to their list" in the sheet');
   assert.ok(html.includes('class="stamp ask">🙋 ASK A FRIEND') && html.includes('lockedD'), 'pulling a card down asks a friend');
-  const deckScript = html.slice(html.indexOf('window.__reviewDeck'));
-  assert.doesNotThrow(() => new Function(deckScript.slice(deckScript.indexOf('(function () {'), deckScript.indexOf('</script>'))), 'the deck script parses (a stray escape inside the template literal breaks the whole page)');
+  const deckScript = html.slice(html.indexOf('window.__reviewDeck = '));
+  assert.doesNotThrow(() => new Function(deckScript.slice(0, deckScript.indexOf('</script>'))), 'the deck script parses (a stray escape inside the template literal breaks the whole page)');
 
   // Routes.
   const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
@@ -722,16 +745,19 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
     assert.equal(asked.status, 200);
     const linked = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
     assert.equal(linked.count, 1);
-    assert.ok(linked.url.startsWith('https://chunky.dad/advice/#j1.'));
+    assert.ok(linked.url.startsWith('https://chunky.dad/advice/#j2.'));
+    const sent = JSON.parse(require('zlib').inflateRawSync(Buffer.from(linked.url.split('#j2.')[1], 'base64url')).toString('utf8'));
+    assert.ok(sent.c[0].h.includes('class="card-body"') || sent.c[0].h.includes('<h2>'), 'the card is rendered by the deck\'s own renderer');
     const bad = await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'not a link' }));
     assert.equal(bad.status, 400);
-    const answer = { e: linked.exportId, f: 'Roger', a: [[0, 'u', 'ask Matt', 'X']] };
-    const got = JSON.parse((await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'https://chunky.dad/advice/#r1.' + Buffer.from(JSON.stringify(answer)).toString('base64url') }))).body);
+    const answer = { e: linked.exportId, f: 'Roger', a: [[0, 'reject', 'fix', ['wrong date or time'], 'ask Matt']] };
+    const got = JSON.parse((await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'https://chunky.dad/advice/#r2.' + Buffer.from(JSON.stringify(answer)).toString('base64url') }))).body);
     assert.equal(got.recorded.length, 1);
-    assert.equal(got.recorded[0].answer, 'unsure');
+    assert.equal(got.recorded[0].answer, 'fix');
+    assert.deepEqual(got.recorded[0].tags, ['wrong date or time']);
     const page = await request(state, 'GET', '/advice/');
     assert.equal(page.status, 200);
-    assert.ok(page.body.includes('#r1.'), 'the friend page is served for links built against this server');
+    assert.ok(page.body.includes('window.__loadFriendDeck') && page.body.includes('class="friend-mode"'), 'the friend page is the deck in friend mode, rendered live');
   } finally {
     if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
     fs.rmSync(root, { recursive: true, force: true });
@@ -1732,7 +1758,7 @@ test('the review page fits the stack to the screen, lets the reject sheet scroll
 
   // The stack: sized from what the header, the buttons and the hint leave.
   assert.ok(html.includes('height:var(--stage-h, min(68vh, 640px));'), 'the old height is the fallback, not the rule');
-  for (const piece of ['function fitStage() {', "window.innerHeight - header.offsetHeight - controls.offsetHeight - hint.offsetHeight", "setProperty('--stage-h'", "window.addEventListener('resize', fitStage);"]) assert.ok(html.includes(piece), piece);
+  for (const piece of ['function fitStage() {', "window.innerHeight - above - controls.offsetHeight - hint.offsetHeight", "stage.getBoundingClientRect().top", "setProperty('--stage-h'", "window.addEventListener('resize', fitStage);"]) assert.ok(html.includes(piece), piece);
   assert.ok(/function render\(\) \{[^}]*fitStage\(\); \}/.test(html), 'measured after every render — the pills may have wrapped');
   assert.ok(html.includes('max-height:calc(var(--stage-h, 68vh) * 0.59)'), 'the flyer takes its share of the card, not of the screen');
   // The Results link shares the first row with the run picker.
