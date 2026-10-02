@@ -23902,6 +23902,7 @@ test('shared inbox pictures: the address scheme round-trips one name and refuses
   assert.equal(SharedCore.isSharedInboxUrl('https://chunky.dad/inbox.chunky.dad/file/x.png'), false);
 
   const core = createReviewCore();
+  assert.deepEqual(core.classifyPageWithSignal('https://inbox.chunky.dad/page/IMG_0042.jpg', '<html><body><img src="https://inbox.chunky.dad/file/IMG_0042.jpg"></body></html>'), { classification: 'event-page', signal: 'shared-inbox' }, 'an inbox page is an event page by declaration — never the AI\'s "ad"');
   const held = reviewNewEvent({ image: 'https://inbox.chunky.dad/file/flyer.png', imageVertical: 'https://inbox.chunky.dad/file/flyer.png' });
   const kept = reviewNewEvent({ image: 'https://cdn.example.com/flyer.png' });
   assert.equal(core.holdSharedPicturesBack([held, kept, null]), 2);

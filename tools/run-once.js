@@ -384,13 +384,29 @@ function installConsoleTee(lines) {
 // Only applied when run-once IS the process entry point — requiring this file
 // for its helpers must not mutate WebAdapter for the requiring process.
 // ---------------------------------------------------------------------------
+// What the inbox's screenshot crop needs from the run's config: a core to
+// talk to the AI with, and the OCR (vision) server block. Nothing when the
+// config lacks either — the pictures then stay as they are.
+function buildSharedPagesOptions(config) {
+    try {
+        const ocrConfig = config && config.config && config.config.ocr && typeof config.config.ocr === 'object' ? config.config.ocr : null;
+        if (!ocrConfig || ocrConfig.enabled === false || !ocrConfig.endpoint) return {};
+        const { SharedCore } = require('../scripts/shared-core');
+        const { EventSchema } = require('../scripts/event-schema');
+        return { core: new SharedCore(config.cities || {}, { eventSchema: EventSchema }), ocrConfig };
+    } catch (error) {
+        console.log(`run-once: 📨 screenshot crop unavailable (${error.message}) — inbox pictures stay as they are`);
+        return {};
+    }
+}
+
 function patchLoadConfiguration(WebAdapter) {
     const originalLoadConfiguration = WebAdapter.prototype.loadConfiguration;
     WebAdapter.prototype.loadConfiguration = async function patchedLoadConfiguration(...args) {
         const config = await originalLoadConfiguration.apply(this, args);
         // The inbox's parser joins the list BEFORE the parser filter is applied,
         // so CHUNKY_RUN_PARSER="Shared pages" can run it alone.
-        await addSharedPagesParser(config, this, process.env);
+        await addSharedPagesParser(config, this, process.env, fs, buildSharedPagesOptions(config));
         return shapeRunOnceConfig(config, process.env);
     };
 }
@@ -415,7 +431,12 @@ function patchLoadConfiguration(WebAdapter) {
 //                    holdSharedPicturesBack), the deck shows it. HEIC (what
 //                    the phone saves photos and screenshots as) is first
 //                    re-encoded as a JPEG beside it through sips — the
-//                    vision model reads JPEG/PNG/WebP, not HEIC.
+//                    vision model reads JPEG/PNG/WebP, not HEIC. A
+//                    SCREENSHOT of a post (status bar, app header, likes,
+//                    caption around the flyer) is cropped to the flyer
+//                    first — cropScreenshotToFlyer asks the vision model
+//                    where the flyer is; the crop is the picture used, the
+//                    original rides along to done/.
 //   *.txt / *.url / *.webloc
 //                    links, one per line (or the one inside): fetched by
 //                    the run itself.
@@ -433,13 +454,79 @@ const SHARED_INBOX_LINK_FILE_PATTERN = /\.(?:txt|url|webloc)$/i;
 const SHARED_INBOX_RESERVED = new Set(['requests.json', 'done', '.DS_Store']);
 // sips (macOS) re-encodes a HEIC as a JPEG next to it; the HEIC stays and
 // is moved to done/ with everything else.
-function convertHeicToJpeg(inPath, outPath) {
+function runSips(args) {
     const { execFile } = require('child_process');
     return new Promise((resolve, reject) => {
-        execFile('/usr/bin/sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '90', inPath, '--out', outPath], { timeout: 30000 }, (error) => (error ? reject(error) : resolve(outPath)));
+        execFile('/usr/bin/sips', args, { timeout: 30000 }, (error, stdout) => (error ? reject(error) : resolve(String(stdout || ''))));
     });
 }
-async function addSharedPagesParser(config, adapter, env = process.env, fsLike = fs) {
+function convertHeicToJpeg(inPath, outPath) {
+    return runSips(['-s', 'format', 'jpeg', '-s', 'formatOptions', '90', inPath, '--out', outPath]).then(() => outPath);
+}
+
+// SCREENSHOT → FLYER (owner, 2026-10-02: "is it possible to crop the
+// screenshots?"). A screenshot of a post carries the phone's status bar,
+// the app's header, likes and caption around the flyer. The vision model
+// (the OCR server) is asked whether the picture is such a screenshot and
+// where the flyer sits — Qwen-VL answers `bbox_2d` on a 0–1000 grid; on a
+// mocked Instagram screenshot it was within 3 px of the true edges, and a
+// bare flyer answers "not a screenshot". The box is trusted only when it
+// is plausible (SCREENSHOT_CROP_MIN_AREA..MAX_AREA of the picture, at
+// least SCREENSHOT_CROP_MIN_WIDTH of its width); then sips crops a copy
+// `<stem>-flyer.jpg` beside the original. Returns the crop's path, or ''
+// when the picture stays as it is (not a screenshot, no answer, implausible
+// box, vision server down). Never throws — the original is always usable.
+const SCREENSHOT_CROP_MIN_AREA = 0.2;
+const SCREENSHOT_CROP_MAX_AREA = 0.95;
+const SCREENSHOT_CROP_MIN_WIDTH = 0.5;
+const SCREENSHOT_CROP_PROMPT = 'Is this image a screenshot of a phone app (status bar, app header, like/share buttons, caption or comments around a picture) that contains an event flyer or poster? '
+    + 'Answer with JSON only: {"screenshot": true|false, "app": "<app name or empty>", "bbox_2d": [x1, y1, x2, y2]} where bbox_2d locates the flyer/poster picture itself '
+    + '(not the status bar, header, buttons or caption) in your native 0-1000 coordinate grid. If the whole image IS the flyer, answer screenshot false.';
+async function cropScreenshotToFlyer(options) {
+    const { file, adapter, core, ocrConfig } = options;
+    const fsLike = options.fs || fs;
+    const sips = options.sips || runSips;
+    const locate = options.locate || (async () => {
+        if (!core || !ocrConfig || !ocrConfig.endpoint || typeof adapter.fetchImageAsBase64 !== 'function') return null;
+        const { SharedCore } = require('../scripts/shared-core');
+        const base64 = await adapter.fetchImageAsBase64(SharedCore.sharedInboxUrl('file', path.basename(file)), 30, 1024);
+        const raw = await core.callAiGenerate({ ...ocrConfig, numPredict: 200, think: false }, SCREENSHOT_CROP_PROMPT, 'screenshot-crop', adapter, null, base64);
+        if (!raw) return null;
+        const match = String(raw).match(/\{[\s\S]*\}/);
+        if (!match) return null;
+        try { return JSON.parse(match[0]); } catch (_) { return null; }
+    });
+    try {
+        const answer = await locate();
+        if (!answer || answer.screenshot !== true) return '';
+        const box = Array.isArray(answer.bbox_2d) ? answer.bbox_2d.map(Number) : null;
+        if (!box || box.length !== 4 || box.some((n) => !Number.isFinite(n))) { console.log(`run-once: 📨 ${path.basename(file)} is a screenshot (${answer.app || 'app'}) but the flyer's box is unreadable — kept as it is`); return ''; }
+        const probe = await sips(['-g', 'pixelWidth', '-g', 'pixelHeight', file]);
+        const width = Number((probe.match(/pixelWidth:\s*(\d+)/) || [])[1]);
+        const height = Number((probe.match(/pixelHeight:\s*(\d+)/) || [])[1]);
+        if (!width || !height) return '';
+        const x1 = Math.max(0, Math.min(1000, Math.min(box[0], box[2]))) / 1000 * width;
+        const x2 = Math.max(0, Math.min(1000, Math.max(box[0], box[2]))) / 1000 * width;
+        const y1 = Math.max(0, Math.min(1000, Math.min(box[1], box[3]))) / 1000 * height;
+        const y2 = Math.max(0, Math.min(1000, Math.max(box[1], box[3]))) / 1000 * height;
+        const cropWidth = Math.round(x2 - x1);
+        const cropHeight = Math.round(y2 - y1);
+        const area = (cropWidth * cropHeight) / (width * height);
+        if (area < SCREENSHOT_CROP_MIN_AREA || area > SCREENSHOT_CROP_MAX_AREA || cropWidth < SCREENSHOT_CROP_MIN_WIDTH * width) {
+            console.log(`run-once: 📨 ${path.basename(file)} is a screenshot (${answer.app || 'app'}) but the flyer's box is implausible (${cropWidth}x${cropHeight} of ${width}x${height}) — kept as it is`);
+            return '';
+        }
+        const outPath = path.join(path.dirname(file), `${path.basename(file).replace(/\.[^.]+$/, '')}-flyer.jpg`);
+        await sips(['-c', String(cropHeight), String(cropWidth), '--cropOffset', String(Math.round(y1)), String(Math.round(x1)), '-s', 'format', 'jpeg', '-s', 'formatOptions', '90', file, '--out', outPath]);
+        if (!fsLike.existsSync(outPath)) return '';
+        console.log(`run-once: 📨 ${path.basename(file)} is a screenshot (${answer.app || 'app'}): cropped to the flyer, ${cropWidth}x${cropHeight} at ${Math.round(x1)},${Math.round(y1)} → ${path.basename(outPath)}`);
+        return outPath;
+    } catch (error) {
+        console.log(`run-once: 📨 ${path.basename(file)} not cropped (${error.message}) — kept as it is`);
+        return '';
+    }
+}
+async function addSharedPagesParser(config, adapter, env = process.env, fsLike = fs, options = {}) {
     const sharedRoot = String((env && env.CHUNKY_SHARED_STORAGE_DIR) || '').trim();
     if (!sharedRoot || !config || !Array.isArray(config.parsers)) return [];
     const parserFilter = String((env && env.CHUNKY_RUN_PARSER) || '').trim();
@@ -501,16 +588,24 @@ async function addSharedPagesParser(config, adapter, env = process.env, fsLike =
             consumed = true;
         } else if (SHARED_INBOX_PICTURE_PATTERN.test(name)) {
             let pictureName = name;
+            let pictureFile = file;
             if (/\.hei[cf]$/i.test(name)) {
                 const jpegName = name.replace(/\.hei[cf]$/i, '.jpg');
                 try {
                     await convertHeicToJpeg(file, path.join(path.dirname(file), jpegName));
                     pictureName = jpegName;
-                    toMove.push({ name: jpegName, file: path.join(path.dirname(file), jpegName) });
+                    pictureFile = path.join(path.dirname(file), jpegName);
+                    toMove.push({ name: jpegName, file: pictureFile });
                 } catch (error) {
                     skipped.push(`${name}: HEIC could not be re-encoded (${error.message})`);
                     continue;
                 }
+            }
+            // A screenshot of a post is cropped to its flyer.
+            const cropped = await cropScreenshotToFlyer({ file: pictureFile, adapter, core: options.core, ocrConfig: options.ocrConfig, locate: options.locateFlyer, sips: options.sips, fs: fsLike });
+            if (cropped) {
+                pictureName = path.basename(cropped);
+                toMove.push({ name: pictureName, file: cropped });
             }
             const url = SharedCore.sharedInboxUrl('page', pictureName);
             await cachePage(url, WebAdapter.buildSharedPicturePage(pictureName), fsLike.statSync(file).mtime.toISOString(), 'shared-inbox');
@@ -693,6 +788,7 @@ module.exports = {
     isAutomationEnv,
     shapeRunOnceConfig,
     addSharedPagesParser,
+    cropScreenshotToFlyer,
     SHARED_PAGES_PARSER_NAME,
     assertSharedStorageRootUsable,
     installConsoleTee,
