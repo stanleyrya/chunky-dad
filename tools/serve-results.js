@@ -1303,6 +1303,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .stamp { position:absolute; top:22px; padding:6px 12px; border:3px solid; border-radius:8px; font-weight:800; font-size:22px; letter-spacing:.08em; opacity:0; transform:rotate(-12deg); pointer-events:none; }
 .stamp.ok { left:18px; color:var(--ok); border-color:var(--ok); }
 .stamp.no { right:18px; color:var(--no); border-color:var(--no); transform:rotate(12deg); }
+.stamp.ask { left:50%; top:18px; color:var(--accent); border-color:var(--accent); transform:translateX(-50%) rotate(-3deg); font-size:18px; white-space:nowrap; }
 .controls { display:flex; justify-content:center; align-items:center; gap:8px; padding:16px 10px 6px; }
 .controls button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:12px 14px; color:#fff; cursor:pointer; min-width:0; white-space:nowrap; flex:1 1 auto; max-width:150px; }
 .btn-no { background:var(--no); } .btn-ok { background:var(--ok); } .btn-skip { background:var(--skip); flex:0 1 auto; padding:10px 12px; }
@@ -1401,7 +1402,7 @@ ${missingCalendarNotice}
   <button class="btn-skip" id="btn-skip" type="button">↷ Skip</button>
   <button class="btn-ok" id="btn-approve" type="button">✓ Approve</button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · → approve · ␣ skip · n not bear · f ask a friend</div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · f ask a friend</div>
 <div class="execute" id="execute"></div>
 ${snapshotBlock}
 <details class="decided waiting" id="waiting-wrap" hidden>
@@ -1674,7 +1675,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (!el) {
         el = document.createElement('div');
         el.setAttribute('data-key', item.key);
-        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div>';
+        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>';
         el.className = 'card behind2';
         stage.appendChild(el);
         bindSplit(el, item);
@@ -2397,7 +2398,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
   // description → expand.
   function attachDrag(el, card) {
     var startX = 0, startY = 0, dx = 0, dy = 0, active = false, moved = false, lockedH = false, lockedV = false;
-    var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no');
+    // PULL DOWN = ask a friend (owner, 2026-10-03: "one swipe option, get
+    // creative, but don't do right"). Only from a card scrolled to its top
+    // — there a downward pull has nothing to scroll, so it is free; a card
+    // scrolled down scrolls back up as before, and up always scrolls.
+    var lockedD = false, atTop = false;
+    var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no'), askStamp = el.querySelector('.stamp.ask');
     var frame = null;
     // A left swipe has three directions: UP-left = not bear (done, no
     // sheet), DOWN-left = needs a fix (the sheet opens on that answer), and
@@ -2413,6 +2419,12 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     }
     function paint() {
       frame = null;
+      if (lockedD) {
+        var pull = Math.max(0, dy);
+        el.style.transform = 'translate3d(0,' + (pull * 0.75) + 'px,0) scale(' + (1 - Math.min(pull, 300) / 2500) + ')';
+        if (askStamp) askStamp.style.opacity = Math.max(0, Math.min(1, pull / 120));
+        return;
+      }
       // Leftwards the card follows the finger's height, so the diagonal reads.
       el.style.transform = 'translate3d(' + dx + 'px,' + (dy * (dx < 0 ? 0.7 : 0.3)) + 'px,0) rotate(' + (dx / 18) + 'deg)';
       if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
@@ -2429,6 +2441,7 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       el.removeAttribute('data-dx'); el.removeAttribute('data-dy');
       if (okStamp) okStamp.style.opacity = 0;
       if (noStamp) noStamp.style.opacity = 0;
+      if (askStamp) askStamp.style.opacity = 0;
     }
     // A FINGER may start a swipe anywhere on the card, links included: the
     // route line, the chips and the change rows are links, and with the
@@ -2442,7 +2455,9 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     function begin(x, y, target, finger) {
       var skip = finger ? 'select, textarea, input' : 'a, button, select, textarea, input, summary';
       if (target && target.closest && target.closest(skip)) return false;
-      active = true; moved = false; lockedH = false; lockedV = false;
+      active = true; moved = false; lockedH = false; lockedV = false; lockedD = false;
+      var body = el.querySelector('.card-body');
+      atTop = !body || body.scrollTop <= 0;
       startX = x; startY = y; dx = 0; dy = 0;
       el.classList.add('dragging');
       return true;
@@ -2450,8 +2465,16 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
     function move(x, y, e) {
       if (!active) return;
       dx = x - startX; dy = y - startY;
-      if (!lockedH && !lockedV && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-        if (Math.abs(dx) > Math.abs(dy)) lockedH = true; else lockedV = true;
+      if (!lockedH && !lockedV && !lockedD && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        if (Math.abs(dx) > Math.abs(dy)) lockedH = true;
+        else if (dy > 0 && atTop && Math.abs(dy) > Math.abs(dx) * 1.5) lockedD = true;
+        else lockedV = true;
+      }
+      if (lockedD) {
+        moved = true;
+        if (e && e.cancelable) e.preventDefault();
+        if (!frame) frame = requestAnimationFrame(paint);
+        return;
       }
       if (!lockedH) return;
       moved = true;
@@ -2470,6 +2493,11 @@ window.__reviewDeck = ${jsonForInlineScript(payload)};
       if (!active) return;
       active = false;
       if (frame) { cancelAnimationFrame(frame); frame = null; paint(); }
+      if (lockedD) {
+        el.classList.remove('dragging'); reset();
+        if (!cancelled && dy > 120) askTop();
+        return;
+      }
       if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
       if (!cancelled && lockedH && dx < -110) {
         var zone = leftZone();

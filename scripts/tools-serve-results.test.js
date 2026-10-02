@@ -709,6 +709,7 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   assert.ok(html.includes('🙋 Matt: 🚫 not bear — “that is the leather night”'), 'the advice row is on the card');
   assert.ok(html.includes('id="sheet-ask-mode"') && html.includes('id="friends-wrap"'), 'the ask mode and the Friends section are on the page');
   assert.ok(html.includes('id="btn-ask"') && html.includes('data-act="ask"') && html.includes('id="sheet-ask-go"'), 'a 🙋 Ask button of its own on the stack and in the list, and a big "Add to their list" in the sheet');
+  assert.ok(html.includes('class="stamp ask">🙋 ASK A FRIEND') && html.includes('lockedD'), 'pulling a card down asks a friend');
   const deckScript = html.slice(html.indexOf('window.__reviewDeck'));
   assert.doesNotThrow(() => new Function(deckScript.slice(deckScript.indexOf('(function () {'), deckScript.indexOf('</script>'))), 'the deck script parses (a stray escape inside the template literal breaks the whole page)');
 
