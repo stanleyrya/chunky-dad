@@ -755,6 +755,29 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
     assert.equal(got.recorded.length, 1);
     assert.equal(got.recorded[0].answer, 'fix');
     assert.deepEqual(got.recorded[0].tags, ['wrong date or time']);
+    // One tap: the friend's reply link opens THIS server and records the answers.
+    const tapLink = (code) => '/review/advice?r=r2.' + Buffer.from(JSON.stringify(code)).toString('base64url');
+    const linked2 = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
+    assert.equal(linked2.count, 0, 'Roger answered everything already');
+    const ask2 = await request(state, 'POST', '/review/ask', JSON.stringify({ key: 'event|y|z|2030-10-12', kind: 'new', friend: 'Roger', snapshot: { title: 'Y' } }));
+    assert.equal(ask2.status, 200);
+    const fakeReq = { method: 'POST', url: '/review/friend-link', headers: { host: 'rybook.example.ts.net:8734' } };
+    assert.equal(require('../tools/serve-results').resolveReplyBase(fakeReq), 'http://rybook.example.ts.net:8734/review/advice', 'replies come back to the address the owner uses');
+    assert.equal(require('../tools/serve-results').resolveReplyBase({ headers: { host: 'localhost:8734' } }), '', 'never localhost — no phone can reach it');
+    const linked3 = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
+    const tapped = await request(state, 'GET', tapLink({ e: linked3.exportId, f: 'Roger', a: [[0, 'approve', '', [], '']] }));
+    assert.equal(tapped.status, 200);
+    assert.ok(tapped.body.includes('Roger answered 1 card') && tapped.body.includes('url=/review'), tapped.body.slice(0, 300));
+    assert.equal((await request(state, 'GET', '/review/advice?r=nope')).status, 400);
+    assert.equal(reviewQueue.parseFriendReply('http://x:8734/review/advice?r=r2.' + Buffer.from(JSON.stringify({ e: 'q', f: 'A', a: [[0, 'approve', '', [], '']] })).toString('base64url')).exportId, 'q', 'the ?r= form parses');
+    // Icons and the home-screen manifest.
+    const icon = await request(state, 'GET', '/favicons/review-icon-180.png');
+    assert.equal(icon.status, 200);
+    assert.equal(icon.headers['Content-Type'], 'image/png');
+    assert.equal((await request(state, 'GET', '/favicons/..%2Fpackage.json')).status, 404);
+    const manifest = JSON.parse((await request(state, 'GET', '/review/manifest.webmanifest')).body);
+    assert.equal(manifest.display, 'standalone');
+    assert.equal(manifest.start_url, '/review');
     const page = await request(state, 'GET', '/advice/');
     assert.equal(page.status, 200);
     assert.ok(page.body.includes('window.__loadFriendDeck') && page.body.includes('class="friend-mode"'), 'the friend page is the deck in friend mode, rendered live');

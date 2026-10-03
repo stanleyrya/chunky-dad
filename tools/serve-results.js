@@ -1039,7 +1039,7 @@ function renderReviewCard(entry, ctx = {}) {
 function renderReviewFriendRows(entry = {}) {
     const advice = Array.isArray(entry.advice) ? entry.advice : [];
     const asked = Array.isArray(entry.asked) ? entry.asked : [];
-    const word = (answer) => ({ yes: '✅ looks right', no: '🚫 not bear', fix: '🔧 needs a fix', 'not-event': '🗑 not an event', off: '✕ something’s off', unsure: '🤔 not sure' }[answer] || '🤔 not sure');
+    const word = (answer) => ({ yes: '✅ looks right', no: '🚫 not bear', fix: '🔧 needs a fix', 'not-event': '🗑 not an event', off: '✕ not right', unsure: '🤔 not sure' }[answer] || '🤔 not sure');
     const rows = advice.map((row) => `<div class="line friend">🙋 ${escapeHtmlText(row.friend)}: ${word(row.answer)}${Array.isArray(row.tags) && row.tags.length ? ` (${escapeHtmlText(row.tags.join(', '))})` : ''}${row.note ? ` — “${escapeHtmlText(row.note)}”` : ''}</div>`);
     if (asked.length > 0) rows.push(`<div class="line muted">🙋 asked ${escapeHtmlText(asked.map((a) => a.friend).join(', '))} — no answer yet</div>`);
     return rows.join('\n');
@@ -1173,6 +1173,12 @@ function renderReviewPage(deck, options = {}) {
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${options.friendMode === true ? '\n<meta name="robots" content="noindex">' : ''}
 <title>${options.friendMode === true ? 'A few events to check' : 'Review'} · chunky.dad</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="${options.friendMode === true ? '/favicons/apple-touch-icon.png' : '/favicons/review-icon-180.png'}">
+${options.friendMode === true ? '' : '<link rel="manifest" href="/review/manifest.webmanifest">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Review">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'}
+<meta name="theme-color" content="#151412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root { --bg:#f4f2ee; --card:#ffffff; --ink:#1d1b18; --muted:#6f6a62; --line:#e2ddd4; --accent:#ff6b35; --ok:#2f9e5f; --no:#d0453c; --skip:#8a8378; --shadow:0 12px 32px rgba(40,30,10,0.18); }
 @media (prefers-color-scheme: dark) { :root { --bg:#151412; --card:#23211d; --ink:#f2efe9; --muted:#a39d92; --line:#3a362f; --shadow:0 12px 32px rgba(0,0,0,0.55); } }
@@ -1192,7 +1198,9 @@ a { color:var(--accent); }
    a row of its own under the pills, and the age line and pills follow. */
 @media (max-width: 700px) { .top .top-age { flex-basis:100%; } }
 @media (min-width: 701px) { .top > a { order:9; } }
-.top h1 { font-size:17px; margin:0; }
+.top h1 { font:700 18px/1.2 Poppins, -apple-system, system-ui, sans-serif; margin:0; display:flex; align-items:center; gap:8px; letter-spacing:-.01em; }
+.top h1 .logo { width:28px; height:28px; border-radius:8px; }
+.card h2 { font-family:Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
 .top select { font:inherit; font-size:16px; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
 .pills { display:flex; gap:6px; flex-wrap:wrap; }
 .pill { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer; }
@@ -1204,10 +1212,16 @@ a { color:var(--accent); }
    any screen shorter than ~770px — iPhone Safari with its toolbars showing
    is 664px — and the flyer, sized in vh, took the card with it. */
 .stage { position:relative; max-width:560px; margin:14px auto 0; padding:0 14px; height:var(--stage-h, min(68vh, 640px)); }
+/* A card dragged or thrown sideways must never widen the page: iOS grows
+   the layout to fit it and the whole screen stretches and bounces. */
+html, body { overflow-x:clip; overscroll-behavior-x:none; }
+body { overscroll-behavior-y:none; }
 .card { position:absolute; inset:0 14px; background:var(--card); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; transition:transform .25s ease, opacity .25s ease; will-change:transform; }
 .card.dragging { transition:none; }
-.card.behind { opacity:.85; pointer-events:none; }
-.card.behind2 { opacity:.6; pointer-events:none; }
+.card.behind { pointer-events:none; }
+.card.behind2 { pointer-events:none; }
+/* The cards underneath are only edges: their words never show through. */
+.card.behind > *, .card.behind2 > * { visibility:hidden; }
 .card.gone-right, .card.gone-left, .card.gone-down { pointer-events:none; }
 .card.behind, .card.behind2 { transform:translate3d(0,10px,0) scale(.96); }
 .card.behind2 { transform:translate3d(0,20px,0) scale(.92); }
@@ -1320,18 +1334,24 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .stamp.ok { left:18px; color:var(--ok); border-color:var(--ok); }
 .stamp.no { right:18px; color:var(--no); border-color:var(--no); transform:rotate(12deg); }
 .stamp.ask { left:50%; top:18px; color:var(--accent); border-color:var(--accent); transform:translateX(-50%) rotate(-3deg); font-size:18px; white-space:nowrap; }
-.controls { display:flex; justify-content:center; align-items:center; gap:8px; padding:16px 10px 6px; }
-.controls button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:12px 14px; color:#fff; cursor:pointer; min-width:0; white-space:nowrap; flex:1 1 auto; max-width:150px; }
-.btn-no { background:var(--no); } .btn-ok { background:var(--ok); } .btn-skip { background:var(--skip); flex:0 1 auto; padding:10px 12px; }
-.controls .btn-notbear { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:600; font-size:13px; padding:11px 10px; }
+.controls { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:4px; max-width:520px; margin:0 auto; padding:12px 10px 4px; }
+/* One round button and a caption per answer, every column the same width:
+   nothing can run out of its button at any phone width. */
+.controls button { display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; padding:0; border:none; background:none; color:var(--muted); font:600 11px/1.2 Poppins, -apple-system, system-ui, sans-serif; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.controls .ic { width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); box-shadow:0 4px 14px rgba(0,0,0,.18); transition:transform .12s ease; }
+.controls .lb { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.controls button:active .ic { transform:scale(.92); }
+.controls .btn-no .ic { background:var(--no); border-color:transparent; color:#fff; width:60px; height:60px; font-size:24px; }
+.controls .btn-ok .ic { background:var(--ok); border-color:transparent; color:#fff; width:60px; height:60px; font-size:24px; }
+.controls .btn-skip .ic, .controls .btn-ask .ic { width:46px; height:46px; font-size:19px; }
 .controls button:disabled { opacity:.35; cursor:default; }
-.controls .btn-ask { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:600; font-size:13px; padding:11px 10px; flex:0 1 auto; }
 .sheet.ask-only #sheet-tags, .sheet.ask-only .sheet-modes, .sheet.ask-only .sheet-fix-note { display:none; }
 .sheet.ask-only .sheet-friend { margin-top:6px; }
 .sheet.ask-only #sheet-ask { display:none; }
 #sheet-ask-go { display:none; }
 .sheet.ask-only #sheet-ask-go { display:inline-block; background:var(--accent); color:#fff; font-weight:700; flex:1; }
 .meta { text-align:center; color:var(--muted); font-size:13px; padding:0 14px 8px; }
+@media (pointer: coarse) { .meta .keys { display:none; } }
 .meta button { font:inherit; background:none; border:none; color:var(--accent); cursor:pointer; padding:0 6px; }
 .execute { display:block; max-width:560px; margin:8px auto 0; padding:0 14px; }
 .execute a, .execute span { display:block; text-align:center; padding:12px; border-radius:12px; font-weight:700; text-decoration:none; }
@@ -1407,7 +1427,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 </style></head>
 <body${options.friendMode === true ? ' class="friend-mode"' : ''}>
 <div class="top">
-  <h1>🃏 Review</h1>
+  <h1><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="28" height="28"><span id="top-title">Review</span></h1>
   <select id="run-select" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
   <a href="/" style="margin-left:auto; font-size:13px;">Results</a>
   <span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span>
@@ -1425,11 +1445,11 @@ ${missingCalendarNotice}
 <div class="sources hidden" id="sources"></div>
 <div class="stage" id="stage"></div>
 <div class="controls">
-  <button class="btn-no" id="btn-reject" type="button">✕ Not yet</button>
-  <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)">Not bear</button>
-  <button class="btn-ask" id="btn-ask" type="button" title="Not sure? Put it on a friend's list — they answer from a link (key: f)">🙋 Ask</button>
-  <button class="btn-skip" id="btn-skip" type="button">↷ Skip</button>
-  <button class="btn-ok" id="btn-approve" type="button">✓ Approve</button>
+  <button class="btn-no" id="btn-reject" type="button"><span class="ic">✕</span><span class="lb">Not yet</span></button>
+  <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)"><span class="ic">🚫</span><span class="lb">Not bear</span></button>
+  <button class="btn-ask" id="btn-ask" type="button" title="Not sure? Put it on a friend's list — they answer from a link (key: f)"><span class="ic">🙋</span><span class="lb">Ask</span></button>
+  <button class="btn-skip" id="btn-skip" type="button"><span class="ic">↷</span><span class="lb">Skip</span></button>
+  <button class="btn-ok" id="btn-approve" type="button"><span class="ic">✓</span><span class="lb">Approve</span></button>
 </div>
 <div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · f ask a friend</span></div>
 <div class="execute" id="execute"></div>
@@ -1517,9 +1537,10 @@ window.__loadFriendDeck = function () {
       deck.from = data.from || 'Stanley';
       deck.exportId = data.e || '';
       deck.smsTo = data.to || '';
-      document.querySelector('.top h1').textContent = '🐻 ' + deck.from + ' asked you';
+      deck.back = /^https?:[/][/]/.test(data.back || '') ? data.back : '';
+      document.getElementById('top-title').textContent = deck.from + ' asked you';
       document.title = deck.from + ' asked you · chunky.dad';
-      document.getElementById('friend-intro').textContent = data.q || ('Is each one a bear event, and is the card right? Swipe right if it looks right, left if something is off, then Send back.');
+      document.getElementById('friend-intro').textContent = data.q || ('Is each one a bear event, and is the card right? Swipe right if it looks right, left if it’s not, then Send back.');
       window.__startDeck();
     }).catch(function () { fail('This link could not be read — ask for a new one.'); });
   } catch (e) { fail('This link could not be read — ask for a new one.'); }
@@ -2132,13 +2153,15 @@ window.__startDeck = function () {
     var bytes = new TextEncoder().encode(json), bin = '';
     for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     var code = btoa(bin).split('+').join('-').split('/').join('_').replace(/=+$/, '');
+    // One tap for the owner: straight to his deck when the link says where it is.
+    if (deck.back) return deck.back + '?r=r2.' + code;
     return location.origin + location.pathname + '#r2.' + code;
   }
   function renderFriendSend() {
     if (!friendMode) return;
     var n = Object.keys(friendAnswers).length;
     document.getElementById('friend-count').textContent = n + ' of ' + deck.cards.length + ' answered';
-    document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent(friendReplyLink());
+    document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent('My answers 🐻 ' + friendReplyLink());
   }
   function postTo(path, body) {
     if (friendMode) return Promise.resolve(friendRecord(path, body));
@@ -2169,7 +2192,7 @@ window.__startDeck = function () {
     var w = Math.max(window.innerWidth, 420);
     var target = direction === 'gone-right' ? 'translate3d(' + (w + 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(18deg)'
       : direction === 'gone-left' ? 'translate3d(' + (-w - 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(-18deg)'
-      : 'translate3d(0,' + Math.round(window.innerHeight * 0.9) + 'px,0) scale(.9)';
+      : 'translate3d(0,60px,0) scale(.88)';
     el.className = 'card ' + direction;
     requestAnimationFrame(function () { el.style.transform = target; el.style.opacity = '0'; });
     setTimeout(function () { if (el.parentNode) el.remove(); }, 360);
@@ -2300,7 +2323,7 @@ window.__startDeck = function () {
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = friendMode ? 'What’s off?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -2524,7 +2547,7 @@ window.__startDeck = function () {
       frame = null;
       if (lockedD) {
         var pull = Math.max(0, dy);
-        el.style.transform = 'translate3d(0,' + (pull * 0.75) + 'px,0) scale(' + (1 - Math.min(pull, 300) / 2500) + ')';
+        el.style.transform = 'translate3d(0,' + Math.min(pull * 0.6, 150) + 'px,0) scale(' + (1 - Math.min(pull, 300) / 2500) + ')';
         if (askStamp) askStamp.style.opacity = Math.max(0, Math.min(1, pull / 120));
         return;
       }
@@ -2670,8 +2693,8 @@ window.__startDeck = function () {
   };
 
   if (friendMode) {
-    document.getElementById('btn-approve').textContent = '✓ Looks right';
-    document.getElementById('btn-reject').textContent = '✕ Something’s off';
+    document.querySelector('#btn-approve .lb').textContent = 'Looks right';
+    document.querySelector('#btn-reject .lb').textContent = 'Not right';
     document.getElementById('friend-copy').onclick = function () {
       var link = friendReplyLink();
       if (navigator.clipboard) navigator.clipboard.writeText(link).then(function () { toast('Reply copied — send it to ' + deck.from); }, function () { window.prompt('Copy this link', link); });
@@ -2909,6 +2932,30 @@ function renderFriendCardHtml(sharedRoot, store, friend) {
         out.set(ask.key, html);
     }
     return out;
+}
+
+// Where a friend's reply comes back to: this server, by the address the
+// owner is using it at (the tailnet name on his phone), or
+// CHUNKY_REVIEW_BASE. A localhost address is useless on anyone's phone,
+// so then the reply falls back to the website page (paste it on the deck).
+function resolveReplyBase(req) {
+    const configured = String(process.env.CHUNKY_REVIEW_BASE || '').trim().replace(/[/]+$/, '');
+    if (configured) return `${configured}/review/advice`;
+    const host = String((req && req.headers && req.headers.host) || '').trim();
+    if (!host || /^(localhost|127[.]|0[.]0[.]0[.]0|\[::1\])/i.test(host)) return '';
+    return `http://${host}/review/advice`;
+}
+
+// The page a friend's reply link opens on the owner's phone: what was
+// recorded, then the deck.
+function renderAdviceLandingPage(message, ok = false) {
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Friend's answers · chunky.dad</title>${ok ? '<meta http-equiv="refresh" content="2;url=/review">' : ''}
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#151412;color:#f2efe9;font:16px/1.45 -apple-system,system-ui,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
+img{width:72px;height:72px}h1{font:700 22px/1.2 Poppins,-apple-system,sans-serif;margin:14px 0 8px}a{color:#ff6b35}</style></head>
+<body><div><img src="/favicons/favicon-96x96.png" alt=""><h1>${ok ? '🙋 Got it' : 'Hmm'}</h1><p>${escapeHtmlText(message)}</p><p><a href="/review">Open the deck</a></p></div></body></html>`;
 }
 
 // Where the friend's page lives: the website, or (CHUNKY_ADVICE_BASE) a
@@ -3234,13 +3281,54 @@ async function handleRequest(state, req, res) {
         try {
             const store = reviewQueue.loadFriendAdvice(file);
             const htmlByKey = renderFriendCardHtml(sharedRoot, store, body && body.friend);
-            const built = reviewQueue.buildFriendLink(store, { friend: body && body.friend, question: body && body.question, base: resolveAdvicePageBase(), htmlByKey });
+            const built = reviewQueue.buildFriendLink(store, { friend: body && body.friend, question: body && body.question, base: resolveAdvicePageBase(), htmlByKey, back: resolveReplyBase(req) });
             if (built.count > 0) reviewQueue.saveFriendAdvice(file, built.store);
             console.log(`Review: link for ${body.friend} — ${built.count} card(s), ${built.url.length} chars${built.left ? `, ${built.left} wait for the next link` : ''}`);
             return sendJson(res, 200, { ok: true, url: built.url, count: built.count, left: built.left, exportId: built.exportId });
         } catch (error) {
             return sendJson(res, /needs a/.test(error.message) ? 400 : 500, { ok: false, error: error.message });
         }
+    }
+
+    // ONE TAP FROM THE FRIEND'S MESSAGE (owner, 2026-10-03: "something
+    // that connects back to my computer with one click"). The friend's
+    // "Send back" sends this server's own address with the answers in
+    // ?r=r2.<code>; opening it records them (recordFriendReply replaces a
+    // friend's row per card, so a second tap changes nothing) and opens
+    // the deck.
+    if (pathname === '/review/advice' && req.method === 'GET') {
+        const reply = reviewQueue.parseFriendReply(String(query.r || ''));
+        if (!reply) return sendHtml(res, 400, renderAdviceLandingPage('That link did not carry a reply — ask for it again, or paste it under Friends on the deck.'));
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const file = reviewQueue.getFriendAdvicePath(sharedRoot);
+        const result = reviewQueue.recordFriendReply(reviewQueue.loadFriendAdvice(file), reply);
+        reviewQueue.saveFriendAdvice(file, result.store);
+        console.log(`Review: ${reply.friend || 'a friend'} answered ${result.recorded.length} card(s) by link${result.unknown ? `, ${result.unknown} unknown` : ''}`);
+        const who = reply.friend || 'Your friend';
+        return sendHtml(res, 200, renderAdviceLandingPage(result.recorded.length
+            ? `${who} answered ${result.recorded.length} card${result.recorded.length === 1 ? '' : 's'} — their answers are on the cards.`
+            : `${who}'s link had nothing new${result.unknown ? ' (it answers a link the deck no longer knows)' : ''}.`, true));
+    }
+
+    // The site's own icons (and the deck's home-screen icon), read-only.
+    if (pathname.startsWith('/favicons/') && req.method === 'GET') {
+        const name = pathname.slice('/favicons/'.length);
+        if (!/^[A-Za-z0-9._-]+$/.test(name)) return sendText(res, 404, 'Not found');
+        const file = path.join(repoRoot, 'favicons', name);
+        if (!fs.existsSync(file)) return sendText(res, 404, 'Not found');
+        const types = { png: 'image/png', ico: 'image/x-icon', webmanifest: 'application/manifest+json', svg: 'image/svg+xml' };
+        const body = fs.readFileSync(file);
+        res.writeHead(200, { 'Content-Type': types[(name.split('.').pop() || '').toLowerCase()] || 'application/octet-stream', 'Content-Length': body.length, 'Cache-Control': 'public, max-age=86400' });
+        return res.end(body);
+    }
+
+    // Add to Home Screen: the deck opens full-screen under its own icon.
+    if (pathname === '/review/manifest.webmanifest' && req.method === 'GET') {
+        return sendBody(res, 200, 'application/manifest+json', JSON.stringify({
+            name: 'chunky.dad review', short_name: 'Review', start_url: '/review', scope: '/', display: 'standalone',
+            background_color: '#151412', theme_color: '#151412',
+            icons: [{ src: '/favicons/review-icon-180.png', sizes: '180x180', type: 'image/png' }, { src: '/favicons/review-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }]
+        }));
     }
 
     // A friend's reply (the page's link back, or its hash) → advice rows.
@@ -3419,6 +3507,7 @@ module.exports = {
     renderReviewCard,
     renderReviewPage,
     renderFriendPage,
+    resolveReplyBase,
   renderFriendPage,
     renderReviewEmptyPage,
     createServerState,

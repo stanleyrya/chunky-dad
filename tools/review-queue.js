@@ -1409,6 +1409,8 @@ function buildFriendLink(store, options) {
     const head = { e: exportId, f: friend, from: options.from || 'Stanley' };
     if (options.to) head.to = String(options.to);
     if (options.question) head.q = String(options.question).slice(0, 300);
+    // Where the reply goes: the owner's own deck (one tap opens it there).
+    if (typeof options.back === 'string' && /^https?:\/\//i.test(options.back)) head.back = options.back;
     const encode = (cards) => `${base}#j2.${zlib.deflateRawSync(Buffer.from(JSON.stringify({ ...head, c: cards }), 'utf8'), { level: 9 }).toString('base64url')}`;
     const cards = [];
     const keys = [];
@@ -1445,7 +1447,7 @@ function buildFriendLink(store, options) {
 // still read. Null when it is not one.
 function parseFriendReply(text) {
     const raw = String(text || '').trim();
-    const match = raw.match(/(?:^|#)(r1|r2)\.([A-Za-z0-9_-]+)\s*$/);
+    const match = raw.match(/(?:^|[#=])(r1|r2)\.([A-Za-z0-9_-]+)\s*$/);
     if (!match) return null;
     let parsed;
     try { parsed = JSON.parse(base64UrlDecode(match[2])); } catch (_) { return null; }
