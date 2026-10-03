@@ -19,7 +19,7 @@
     "sync-data": "npm run sync-bars && npm run download-images && npm run extract-favicon-colors",
     "setup-hooks": "bash .github/hooks/setup-hooks.sh",
     "postinstall": "npm run setup-hooks",
-    "build-advice-page": "node tools/build-advice-page.js"
+    "build-phone-a-friend-page": "node tools/build-phone-a-friend-page.js"
   },
   "keywords": [
     "static",

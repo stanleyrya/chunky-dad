@@ -1278,7 +1278,7 @@ function publishApprovedPictures(store, options) {
 // A card the owner flags with a friend's name is an ASK, kept here in
 // <shared root>/friend-advice.json (Mac-only writer) and out of the stack.
 // "Share with <friend>" builds ONE link to the static page
-// chunky.dad/advice/ (advice/index.html, no backend): the cards ride in
+// chunky.dad/phone-a-friend/ (phone-a-friend/index.html, no backend): the cards ride in
 // the hash as #j1.<base64url JSON>, trimmed to what the friend needs
 // (title, when, where, link, a public picture, the question). That link
 // is an EXPORT, recorded with its card keys so the reply — the page's
@@ -1287,7 +1287,7 @@ function publishApprovedPictures(store, options) {
 // rows on the cards (friend, yes/no/not sure, note); the card returns to
 // the stack with the advice on it. The swipe stays the owner's.
 const FRIEND_ADVICE_FILE_NAME = 'friend-advice.json';
-const ADVICE_PAGE_DEFAULT_BASE = 'https://chunky.dad/advice/';
+const ADVICE_PAGE_DEFAULT_BASE = 'https://chunky.dad/phone-a-friend/';
 const ADVICE_LINK_CARD_CAP = 25;
 
 function getFriendAdvicePath(sharedRoot) {
@@ -1406,9 +1406,11 @@ function buildFriendLink(store, options) {
     if (open.length === 0) return { store: clean, exportId: '', url: '', count: 0, left: 0 };
     const exportId = `${new Date(now).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 7)}`;
     const zlib = require('zlib');
-    const head = { e: exportId, f: friend, from: options.from || 'Stanley' };
+    const head = { e: exportId, f: friend };
     if (options.to) head.to = String(options.to);
     if (options.question) head.q = String(options.question).slice(0, 300);
+    // Where the reply goes: the owner's own deck (one tap opens it there).
+    if (typeof options.back === 'string' && /^https?:\/\//i.test(options.back)) head.back = options.back;
     const encode = (cards) => `${base}#j2.${zlib.deflateRawSync(Buffer.from(JSON.stringify({ ...head, c: cards }), 'utf8'), { level: 9 }).toString('base64url')}`;
     const cards = [];
     const keys = [];
@@ -1445,7 +1447,7 @@ function buildFriendLink(store, options) {
 // still read. Null when it is not one.
 function parseFriendReply(text) {
     const raw = String(text || '').trim();
-    const match = raw.match(/(?:^|#)(r1|r2)\.([A-Za-z0-9_-]+)\s*$/);
+    const match = raw.match(/(?:^|[#=])(r1|r2)\.([A-Za-z0-9_-]+)\s*$/);
     if (!match) return null;
     let parsed;
     try { parsed = JSON.parse(base64UrlDecode(match[2])); } catch (_) { return null; }

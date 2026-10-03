@@ -8914,8 +8914,10 @@ test('dead-end store: a host that answers 429 on three run days is left alone fo
 
   // 31 days later the park has lapsed; the host answers → cleared.
   const context = core2.createDeadEndRunContext ? null : null;
-  const later = Date.parse('2026-11-02T05:00:00.000Z');
+  // Relative to the 429 the run just recorded (it stamps the real clock):
+  // a fixed date was 31 days later only on the day the test was written.
   const lapsed = results1.deadEndStore['::hosts']['dilf.example'];
+  const later = Date.parse(lapsed.lastRateLimited) + 31 * 86400000;
   assert.equal(core2.getBlockedDeadEndHostEntry({ store: results1.deadEndStore, retryDays: 30 }, RATE_URL_2, later), null, 'after 30 days the host is asked once more');
   const ctx = { store: results1.deadEndStore, retryDays: 30, recoveredHosts: [], dirty: false };
   core2.recordDeadEndHostSuccess(ctx, RATE_URL_2, later);
