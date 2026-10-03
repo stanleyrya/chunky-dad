@@ -409,6 +409,26 @@
     "accent": "#f76c0e"
   },
   {
+    "slug": "kok-halloween-75fb34ab",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3b3b34:18:1 #232324:17:0 #7b2315:13:12 #c39544:12:11 #f6cb3c:9:16",
+    "accent": "#f6cb3c"
+  },
+  {
+    "slug": "lumbersexual-flannel-68be12ca",
+    "url": "https://thesofotap.com",
+    "faviconBg": "#000000",
+    "faviconFg": "#000000",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#93755c:18:5 #bdb4a2:16:3 #0a1916:16:2 #aa2420:4:17",
+    "accent": "#aa2420"
+  },
+  {
     "slug": "market-day-1-35c3f1a2",
     "url": "https://northalsted.com/main-events/northalsted-market-days/",
     "faviconBg": "#477789",

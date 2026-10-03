@@ -55,5 +55,35 @@
     "paletteSource": "flyer",
     "palette": "#0d0a1b:28:4 #020102:20:1 #331c2a:19:4 #bf6739:9:13 #cac40e:6:17",
     "accent": "#cac40e"
+  },
+  {
+    "slug": "gear-night-with-dj-woolfie-1810eb9e",
+    "url": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
+    "faviconBg": "#ffffff",
+    "faviconFg": "#fefefe",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1a1a1a:60:0 #ececec:9:0 #545454:9:0 #a31d23:4:17",
+    "accent": "#a31d23"
+  },
+  {
+    "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46",
+    "url": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
+    "faviconBg": "#ffffff",
+    "faviconFg": "#fefefe",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1a1a1a:57:0 #283346:12:4 #57595b:9:0 #94aa85:7:6",
+    "accent": "#94aa85"
+  },
+  {
+    "slug": "three-years-31d21eb3",
+    "url": "https://www.thedallaseagle.com",
+    "faviconBg": "#ffffff",
+    "faviconFg": "#fefefe",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#dddfe1:26:0 #1c1e21:19:1 #6b8a85:12:4 #11ea5b:7:24",
+    "accent": "#11ea5b"
   }
 ]

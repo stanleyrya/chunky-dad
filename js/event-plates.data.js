@@ -2,7 +2,7 @@
 // faviconPlate per event-website domain; the homepage reads it to tint
 // each bear-run icon's plate (see js/compact-card-renderer.js).
 window.EVENT_PLATES = {
- "generatedAt": "2026-10-02",
+ "generatedAt": "2026-10-03",
  "domains": {
   "furball.nyc": "#ffffff",
   "atlantaeagle.com": "#ffffff",
@@ -54,9 +54,9 @@ window.EVENT_PLATES = {
   "leipzig-baeren.de": "#ffffff",
   "eaglemanchester.com": "#111113",
   "phoenixbarnola.com": "#000000",
+  "eagle-ny.com": "#ffffff",
   "whitney.org": "#ffffff",
   "animal.nyc": "#ffffff",
-  "eagle-ny.com": "#ffffff",
   "fuzzy.nyc": "#eba1cc",
   "3dollarbillbk.com": "#3c3225",
   "rockbarnyc.com": "#000000",
@@ -72,13 +72,14 @@ window.EVENT_PLATES = {
   "campoutpoconos.com": "#ffffff",
   "eagleportland.com": "#ffffff",
   "redroom.club": "#ffffff",
+  "bearadisemx.com": "#ec008c",
   "xlbears.org": "#ffffff",
   "thelumberyardbar.com": "#010100",
   "dieselseattle.com": "#f6f6f6",
   "lonestarsf.com": "#000000",
   "bosf.org": "#006a9f",
-  "powerhousebar.com": "#ffffff",
   "sf-eagle.com": "#ffffff",
+  "powerhousebar.com": "#ffffff",
   "gruntparty.monster": "#e32323",
   "scandalsitges.com": "#ffffff",
   "bearsevents.com": "#ffffff",
@@ -86,8 +87,8 @@ window.EVENT_PLATES = {
   "entradium.com": "#0a0b0c",
   "popairparty.com": "#ffffff",
   "en.praguebears.cz": "#632502",
-  "spaexcess.com": "#ffffff",
   "blackeagletoronto.com": "#ffffff",
+  "spaexcess.com": "#ffffff",
   "biggervegas.com": "#ffffff"
  }
 };

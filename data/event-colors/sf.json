@@ -107,6 +107,136 @@
     "accent": "#ff2319"
   },
   {
+    "slug": "beer-bust-04dd0dc2",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025305/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-081fa7dd",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025313/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-1b2664fc",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025312/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-2da8fe44",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025307/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-2fdc7d38",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025308/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-32fa7866",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025304/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-3ec4e315",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025309/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-4ea10926",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025315/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-5ac12ec9",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025310/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-5c4b4673",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-614e9d66",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025311/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-77d2a29d",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025306/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-79bd9adb",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025314/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
     "slug": "chub-rub-552df5bd",
     "url": "https://powerhousebar.com/event/chub-rub/2026-10-17/",
     "faviconBg": "#131719",
