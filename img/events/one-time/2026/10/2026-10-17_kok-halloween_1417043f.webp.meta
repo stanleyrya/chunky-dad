@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790105505/saas/logos/image_1790105500887_y8103taqq.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790105505/saas/logos/image_1790105500887_y8103taqq.webp",
+  "type": "event",
+  "filename": "2026-10-17_kok-halloween_1417043f.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "272070",
+  "eventInfo": {
+    "name": "KoK Halloween",
+    "startDate": "2026-10-17T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-10-03T13:41:48.808Z",
+  "etag": "\"45c250f95dcefa61217a86e3450d34bf\"",
+  "lastModified": "Wed, 23 Sep 2026 01:15:12 GMT",
+  "flyerOptimized": 1
+}
