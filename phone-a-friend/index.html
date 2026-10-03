@@ -267,7 +267,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)"></select>
     <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
-    <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send to Stanley</span></a>
+    <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
 <div class="subbar"><span class="muted top-age" style="font-size:12px;"></span><div class="pills" id="filters"></div></div>
@@ -356,7 +356,7 @@ window.__loadFriendDeck = function () {
   var deck = window.__reviewDeck;
   var m = String(location.hash || '').match(/^#j2[.]([A-Za-z0-9_-]+)$/);
   function fail(text) { document.getElementById('stage').innerHTML = '<div class="empty" style="padding:40px 16px; text-align:center;">' + text + '</div>'; }
-  if (!m) { fail('This page needs a link from Stanley’s review deck.'); return; }
+  if (!m) { fail('This page needs a phone-a-friend link.'); return; }
   try {
     var b64 = m[1].split('-').join('+').split('_').join('/');
     while (b64.length % 4) b64 += '=';
@@ -370,11 +370,9 @@ window.__loadFriendDeck = function () {
       });
       deck.decided = [];
       deck.friend = data.f || '';
-      deck.from = data.from || 'Stanley';
       deck.exportId = data.e || '';
       deck.smsTo = data.to || '';
       deck.back = /^https?:[/][/]/.test(data.back || '') ? data.back : '';
-      document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from;
       window.__startDeck();
     }).catch(function () { fail('This link could not be read — ask for a new one.'); });
   } catch (e) { fail('This link could not be read — ask for a new one.'); }
@@ -1006,7 +1004,7 @@ window.__startDeck = function () {
   function renderFriendSend() {
     if (!friendMode) return;
     var n = Object.keys(friendAnswers).length;
-    document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from + ' · ' + n + '/' + deck.cards.length;
+    document.getElementById('friend-send-label').textContent = 'Send back · ' + n + '/' + deck.cards.length;
     document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent('My answers 🐻 ' + friendReplyLink());
   }
   function postTo(path, body) {

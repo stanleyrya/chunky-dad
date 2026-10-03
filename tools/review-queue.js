@@ -1406,7 +1406,7 @@ function buildFriendLink(store, options) {
     if (open.length === 0) return { store: clean, exportId: '', url: '', count: 0, left: 0 };
     const exportId = `${new Date(now).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 7)}`;
     const zlib = require('zlib');
-    const head = { e: exportId, f: friend, from: options.from || 'Stanley' };
+    const head = { e: exportId, f: friend };
     if (options.to) head.to = String(options.to);
     if (options.question) head.q = String(options.question).slice(0, 300);
     // Where the reply goes: the owner's own deck (one tap opens it there).
