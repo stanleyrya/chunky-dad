@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>chunky.dad/phone-a-friend</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+
+<meta name="theme-color" content="#151412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+/* The tool pages' look (testing/event-builder.html): one dark scheme,
+   the site's purple header, navy panels, an orange primary. */
+:root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --panel:#141826; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --ok:#2f9e5f; --no:#d0453c; --skip:#8e94b6; --shadow:0 14px 32px rgba(0,0,0,0.45); }
+* { box-sizing:border-box; }
+html { background:var(--bg); }
+body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; }
+html, body { margin:0; color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
+/* iOS Safari zoom traps: a double-tap on a button (two quick swipes or
+   taps on Approve/Reject) is a double-tap-to-zoom unless the element opts
+   out with touch-action:manipulation, and focusing any form control whose
+   font is under 16px auto-zooms the page in (and back out on blur) — the
+   reject sheet's textarea did exactly that. Pinch-zoom stays allowed. */
+html, body, button, a, .controls, .sheet, .top { touch-action:manipulation; }
+select, textarea, input { font-size:16px; }
+a { color:var(--accent); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 12px 26px rgba(0,0,0,.35); }
+.top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; min-width:0; }
+.top .brand-name { font:700 21px/1.1 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
+.top .tool-page-label { font:600 11px/1 Poppins, -apple-system, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.88); white-space:nowrap; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.14); }
+.top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto; }
+.action-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; font:600 13px/1 Poppins, -apple-system, system-ui, sans-serif; padding:9px 13px; min-height:36px; border-radius:12px; text-decoration:none; cursor:pointer; white-space:nowrap; }
+.action-button i { font-size:15px; line-height:1; }
+.primary-button { border:none; color:#1b1308; background:linear-gradient(135deg, var(--accent-soft), var(--accent)); box-shadow:0 10px 24px rgba(0,0,0,.35); }
+.secondary-button { color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
+.subbar { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; max-width:560px; margin:10px auto 0; padding:0 14px; }
+@media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
+/* Every row of the header is a row the card does not get: on a phone the
+   Results link shares the first row with the run picker instead of taking
+   a row of its own under the pills, and the age line and pills follow. */
+
+.top h1 { margin:0; min-width:0; }
+.top h1 .logo { width:34px; height:34px; }
+.card h2 { font-family:Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
+.top select.action-button { font-size:14px; appearance:none; -webkit-appearance:none; padding-right:28px; background:rgba(15,20,34,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c4c8e4'/%3E%3C/svg%3E") no-repeat right 10px center; }
+.pills { display:flex; gap:6px; flex-wrap:wrap; }
+.pill { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer; }
+.pill.on { border-color:var(--accent); color:var(--ink); font-weight:600; }
+.pill b { color:var(--ink); }
+/* The stack's height is what the screen has left once the header, the
+   buttons and the hint line are on it (fitStage in the page script sets
+   --stage-h). A fixed 68vh put the Approve / Not yet row below the fold on
+   any screen shorter than ~770px — iPhone Safari with its toolbars showing
+   is 664px — and the flyer, sized in vh, took the card with it. */
+.stage { position:relative; max-width:560px; margin:14px auto 0; padding:0 14px; height:var(--stage-h, min(68vh, 640px)); }
+/* A card dragged or thrown sideways must never widen the page: iOS grows
+   the layout to fit it and the whole screen stretches and bounces. */
+html, body { overflow-x:clip; overscroll-behavior-x:none; }
+body { overscroll-behavior-y:none; }
+.card { position:absolute; inset:0 14px; background:var(--card); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; transition:transform .25s ease, opacity .25s ease; will-change:transform; }
+.card.dragging { transition:none; }
+.card.behind { pointer-events:none; }
+.card.behind2 { pointer-events:none; }
+/* The cards underneath are only edges: their words never show through. */
+.card.behind > *, .card.behind2 > * { visibility:hidden; }
+.card.gone-right, .card.gone-left, .card.gone-down { pointer-events:none; }
+.card.behind, .card.behind2 { transform:translate3d(0,10px,0) scale(.96); }
+.card.behind2 { transform:translate3d(0,20px,0) scale(.92); }
+@media (prefers-reduced-motion: reduce) { .card { transition:none; } }
+.card-body { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 18px; }
+.thumb { margin:-14px -16px 12px; background:#0d0c0b; display:flex; justify-content:center; position:relative; cursor:zoom-in; }
+.card { -webkit-touch-callout:none; }
+.thumb img { display:block; max-width:100%; width:auto; height:auto; max-height:40vh; max-height:calc(var(--stage-h, 68vh) * 0.59); object-fit:contain; }
+.thumb.portrait img { max-height:46vh; max-height:calc(var(--stage-h, 68vh) * 0.68); }
+.thumb.landscape img { width:100%; max-height:32vh; max-height:calc(var(--stage-h, 68vh) * 0.47); }
+.thumb.placeholder img { filter:grayscale(1); opacity:.5; }
+.thumb-badge { position:absolute; left:10px; bottom:10px; font-size:11px; background:rgba(0,0,0,.65); color:#fff; padding:2px 8px; border-radius:999px; }
+.kind-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+.kind-row .reason { font-size:12px; }
+.badges { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
+.badge.warn { color:var(--no); border-color:var(--no); }
+.utc { font-size:12px; color:var(--muted); margin:0 0 3px 22px; }
+.route a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+.chgs { margin:10px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.chgs-head { display:flex; justify-content:space-between; padding:5px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg); }
+.chg { display:grid; grid-template-columns:84px 1fr; gap:3px 10px; padding:8px 10px; border-top:1px solid var(--line); font-size:14px; }
+.chg-k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding-top:2px; }
+.chg-v { word-break:break-word; }
+.chg .was { color:var(--muted); }
+.chg .arrow { margin:0 6px; color:var(--muted); }
+.chg .now { color:var(--ok); font-weight:600; }
+.chg .now a { color:var(--ok); }
+.chg .none { color:var(--muted); font-style:italic; font-weight:400; }
+.chg-n { grid-column:2; font-size:12px; color:var(--muted); }
+.chg-n.warn { color:var(--no); font-weight:600; }
+.chg-n.why { color:var(--ink); opacity:.8; }
+.chg-notes .now { color:var(--ink); }
+.badge.drift { font-weight:600; }
+.drift { margin:10px 0; border:1px solid var(--no); border-radius:10px; overflow:hidden; }
+.drift-head { padding:5px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--no); background:var(--bg); font-weight:600; }
+.fact { display:grid; grid-template-columns:96px 1fr; gap:3px 10px; padding:7px 10px; border-top:1px solid var(--line); font-size:13px; }
+.fact-k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding-top:2px; }
+.fact-v { word-break:break-word; }
+.fact-v.warn { color:var(--no); font-weight:600; }
+.fact-v .none { color:var(--muted); font-style:italic; }
+.evidence { margin:8px 0 0; padding-left:18px; font-size:12px; color:var(--muted); }
+.notes { margin-top:10px; font-size:12px; }
+.notes summary { cursor:pointer; color:var(--muted); }
+.notes table { width:100%; border-collapse:collapse; margin-top:6px; }
+.notes th, .notes td { text-align:left; vertical-align:top; padding:3px 6px; border-top:1px solid var(--line); word-break:break-word; }
+.notes th { color:var(--muted); font-weight:600; width:30%; }
+.map { margin:10px -16px 0; height:170px; pointer-events:none; background:var(--bg); }
+.map iframe { width:100%; height:100%; border:0; }
+.desc-more { font-size:12px; color:var(--accent); cursor:pointer; margin-top:2px; }
+.desc:not(.clamped) + .desc-more { display:none; }
+.lightbox { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(5,6,10,.93); padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); cursor:zoom-out; }
+.lightbox.open { display:flex; }
+.lightbox img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; border-radius:12px; box-shadow:0 18px 60px rgba(0,0,0,.6); }
+.kind { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px; margin-bottom:8px; }
+.kind-new { background:rgba(47,158,95,.14); color:var(--ok); }
+.kind-merge { background:rgba(255,107,53,.16); color:var(--accent); }
+.kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
+.kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
+.curated { color:var(--ok); font-weight:700; }
+.bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
+.series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
+.series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.series .nights .chip { font-size:12px; padding:2px 8px; }
+.sheet-modes { display:grid; gap:8px; margin:10px 0 12px; }
+.sheet-modes .mode { display:flex; flex-direction:column; gap:2px; text-align:left; font:inherit; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+.sheet-modes .mode b { font-size:16px; }
+.sheet-modes .mode span { font-size:12px; color:var(--muted); }
+.sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
+.sheet.fix-first .sheet-modes .mode:not(.mode-fix) { opacity:.45; }
+.sheet.fix-first .sheet-modes .mode-fix { border-width:2px; }
+.sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
+.sheet-friend { display:none; gap:6px; flex-wrap:wrap; align-items:center; margin:0 0 10px; }
+.sheet.ask .sheet-friend { display:flex; }
+.sheet-friend input { flex:1 1 140px; font:inherit; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+.line.friend { color:var(--ink); font-weight:600; }
+.friends .who { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0 4px; font-weight:600; }
+.friends .who button, .friends .reply button { font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; background:var(--accent); color:#fff; padding:5px 10px; cursor:pointer; }
+.friends .reply { display:flex; gap:8px; margin:8px 0 4px; }
+.friends .reply input { flex:1; font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+.friends .link { font-size:12px; color:var(--muted); word-break:break-all; margin:4px 0; }
+.waiting li .status { font-size:12px; color:var(--muted); }
+.series-note { margin-top:4px; color:var(--muted); font-size:12px; }
+.series .change-row { margin-top:6px; font-size:13px; overflow-wrap:anywhere; }
+.series-join { font:inherit; font-size:12px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:2px 8px; cursor:pointer; }
+.series .nights a.chip { text-decoration:none; color:inherit; }
+.night-compare { margin-top:6px; font-size:12px; }
+.night-compare summary { cursor:pointer; color:var(--muted); }
+.night-table { overflow-x:auto; margin-top:4px; }
+.night-table table { border-collapse:collapse; width:100%; }
+.night-table th, .night-table td { text-align:left; vertical-align:top; padding:3px 8px 3px 0; border-top:1px solid var(--line); white-space:nowrap; }
+.night-table th { color:var(--muted); font-weight:500; border-top:none; }
+.night-table td a { color:inherit; }
+.night-thumb { width:36px; height:36px; object-fit:cover; border-radius:4px; display:block; }
+.series-split { font:inherit; font-size:12px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:2px 8px; cursor:pointer; }
+.prior { margin:0 0 8px; padding:6px 10px; border:1px dashed var(--no); border-radius:10px; font-size:13px; }
+.bear-stored { font-weight:600; }
+h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
+.line { margin:3px 0; }
+.muted { color:var(--muted); }
+.label { margin-top:12px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.chip { font-size:13px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); text-decoration:none; color:var(--ink); background:var(--bg); }
+.chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+.desc { margin-top:10px; white-space:pre-line; color:var(--ink); }
+.desc.clamped { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.sources { margin:4px 0 0; padding-left:18px; }
+.stamp { position:absolute; top:22px; padding:6px 12px; border:3px solid; border-radius:8px; font-weight:800; font-size:22px; letter-spacing:.08em; opacity:0; transform:rotate(-12deg); pointer-events:none; }
+.stamp.ok { left:18px; color:var(--ok); border-color:var(--ok); }
+.stamp.no { right:18px; color:var(--no); border-color:var(--no); transform:rotate(12deg); }
+.stamp.ask { left:50%; top:18px; color:var(--accent); border-color:var(--accent); transform:translateX(-50%) rotate(-3deg); font-size:18px; white-space:nowrap; }
+.controls { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:4px; max-width:520px; margin:0 auto; padding:12px 10px 4px; }
+/* One round button and a caption per answer, every column the same width:
+   nothing can run out of its button at any phone width. */
+.controls button { display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; padding:0; border:none; background:none; color:var(--muted); font:600 11px/1.2 Poppins, -apple-system, system-ui, sans-serif; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.controls .ic { width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); box-shadow:0 4px 14px rgba(0,0,0,.18); transition:transform .12s ease; }
+.controls .lb { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.controls button:active .ic { transform:scale(.92); }
+.controls .btn-no .ic { background:var(--no); border-color:transparent; color:#fff; width:60px; height:60px; font-size:24px; }
+.controls .btn-ok .ic { background:var(--ok); border-color:transparent; color:#fff; width:60px; height:60px; font-size:24px; }
+.controls .btn-skip .ic, .controls .btn-ask .ic { width:46px; height:46px; font-size:19px; }
+.controls button:disabled { opacity:.35; cursor:default; }
+.sheet.ask-only #sheet-tags, .sheet.ask-only .sheet-modes, .sheet.ask-only .sheet-fix-note { display:none; }
+.sheet.ask-only .sheet-friend { margin-top:6px; }
+.sheet.ask-only #sheet-ask { display:none; }
+#sheet-ask-go { display:none; }
+.sheet.ask-only #sheet-ask-go { display:inline-block; background:var(--accent); color:#fff; font-weight:700; flex:1; }
+.meta { text-align:center; color:var(--muted); font-size:13px; padding:0 14px 8px; }
+@media (pointer: coarse) { .meta .keys { display:none; } }
+.meta button { font:inherit; background:none; border:none; color:var(--accent); cursor:pointer; padding:0 6px; }
+.execute { display:block; max-width:560px; margin:8px auto 0; padding:0 14px; }
+.execute a, .execute span { display:block; text-align:center; padding:12px; border-radius:12px; font-weight:700; text-decoration:none; }
+.execute a { background:var(--accent); color:#fff; }
+.execute span { background:var(--card); color:var(--muted); border:1px dashed var(--line); }
+.execute small { display:block; text-align:center; color:var(--muted); font-weight:400; margin-top:6px; }
+.snapshot { display:block; max-width:560px; margin:10px auto 0; padding:0 14px; }
+.snapshot a { display:block; text-align:center; padding:10px; border-radius:12px; font-weight:600; text-decoration:none; color:var(--ink); background:var(--card); border:1px solid var(--line); }
+.snapshot small { display:block; text-align:center; color:var(--muted); font-weight:400; margin-top:6px; }
+.decided { max-width:560px; margin:18px auto 40px; padding:0 14px; }
+.decided summary { cursor:pointer; font-weight:600; }
+.decided ul { list-style:none; padding:0; margin:8px 0 0; }
+.decided li { display:flex; gap:8px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line); }
+.decided .v { font-size:18px; width:24px; flex:none; }
+.decided .t { flex:1; min-width:0; }
+.decided .r { color:var(--muted); font-size:13px; }
+.decided .r.ok { color:var(--ok); }
+.decided button { font:inherit; font-size:13px; background:none; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:3px 8px; cursor:pointer; }
+.sheet { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-end; z-index:20; }
+.sheet.open { display:flex; }
+/* The panel is 607px tall and the keyboard leaves ~330–510px: it scrolls
+   inside whatever is visible (fitSheet pins .sheet to the visual viewport),
+   so "Needs a fix" is never off the top of the screen with no way back. */
+.sheet .panel { width:100%; max-width:560px; max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; margin:0 auto; background:var(--card); border-radius:18px 18px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
+.sheet h3 { margin:0 0 10px; font-size:16px; }
+.sheet textarea { width:100%; min-height:72px; font:inherit; font-size:16px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-top:10px; }
+.sheet .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+.sheet .actions button { font:inherit; font-weight:700; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; }
+.empty { text-align:center; color:var(--muted); padding:60px 20px; }
+/* Words, views, list and sources (owner, 2026-10-01: "review events
+   scraped from the same website at a high level", "review them all in
+   list format, then when I click it it goes to that event in the queue",
+   "filter by words … remove items by words"). */
+.tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:560px; margin:10px auto 0; padding:0 14px; }
+.tools input { flex:1 1 160px; min-width:0; font:inherit; font-size:16px; padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.tools .views { display:flex; gap:6px; }
+.tools .bulk { display:flex; gap:6px; flex-wrap:wrap; width:100%; }
+.tools .bulk button, .lrow button, .src button { font:inherit; font-size:12px; font-weight:600; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap; }
+.tools .bulk button.no, .lrow button.no, .src button.no { border-color:var(--no); color:var(--no); }
+.tools .bulk button.ok, .lrow button.ok, .src button.ok { border-color:var(--ok); color:var(--ok); }
+.hidden { display:none !important; }
+.list, .sources { max-width:560px; margin:10px auto 0; padding:0 14px; }
+.lrow { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--line); }
+.lrow:first-child { border-top:none; }
+.lrow .lthumb { width:64px; height:64px; flex:none; border-radius:8px; object-fit:cover; background:var(--line); cursor:pointer; }
+.lrow .lthumb.none { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:22px; }
+.lrow .lbody { flex:1; min-width:0; cursor:pointer; }
+.lrow .lbody h4 { margin:0; font-size:15px; line-height:1.25; }
+.lrow .lbody .lmeta { color:var(--muted); font-size:12px; margin-top:2px; }
+.lrow .lbody .lkind { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--accent); margin-right:6px; }
+.lrow .lacts { display:flex; flex-direction:column; gap:5px; flex:none; }
+.src { padding:12px 0; border-top:1px solid var(--line); }
+.src:first-child { border-top:none; }
+.src h4 { margin:0 0 4px; font-size:15px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.src h4 small { color:var(--muted); font-weight:400; font-size:12px; }
+.src .facts { color:var(--muted); font-size:12px; line-height:1.5; }
+.src .facts b { color:var(--ink); font-weight:600; }
+.src .sacts { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+.toast { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:30; }
+.toast.show { opacity:1; }
+@media (prefers-reduced-motion: reduce) { .card { transition:none; } }
+/* Friend mode (renderFriendPage): the same deck, nothing that needs the Mac. */
+.friend-mode #run-select, .friend-mode #results-link, .friend-mode .subbar, .friend-mode .tools, .friend-mode .missing-cal,
+.friend-mode #btn-ask, .friend-mode #sheet-ask-mode, .friend-mode .sheet-friend, .friend-mode .execute, .friend-mode .snapshot, .friend-mode #waiting-wrap, .friend-mode #friends-wrap, .friend-mode #decided-wrap, .friend-mode .meta .keys { display:none !important; }
+#friend-sms { display:none; }
+.friend-mode #friend-sms { display:inline-flex; }
+</style></head>
+<body class="friend-mode">
+<header class="top">
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">Phone a friend</span></a></h1>
+  <div class="tool-buttons">
+    <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)"></select>
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+    <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send to Stanley</span></a>
+  </div>
+</header>
+<div class="subbar"><span class="muted top-age" style="font-size:12px;"></span><div class="pills" id="filters"></div></div>
+
+<div class="tools">
+  <input id="word" type="search" placeholder="filter by words (-word excludes)" autocapitalize="none" autocorrect="off">
+  <div class="views pills" id="views"></div>
+  <div class="bulk hidden" id="bulk"></div>
+</div>
+<div class="list hidden" id="list"></div>
+<div class="sources hidden" id="sources"></div>
+<div class="stage" id="stage"></div>
+<div class="controls">
+  <button class="btn-no" id="btn-reject" type="button"><span class="ic">✕</span><span class="lb">Not yet</span></button>
+  <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)"><span class="ic">🚫</span><span class="lb">Not bear</span></button>
+  <button class="btn-ask" id="btn-ask" type="button" title="Not sure? Put it on a friend's list — they answer from a link (key: f)"><span class="ic">🙋</span><span class="lb">Ask</span></button>
+  <button class="btn-skip" id="btn-skip" type="button"><span class="ic">↷</span><span class="lb">Skip</span></button>
+  <button class="btn-ok" id="btn-approve" type="button"><span class="ic">✓</span><span class="lb">Approve</span></button>
+</div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · f ask a friend</span></div>
+<div class="execute" id="execute"></div>
+<div class="snapshot"><a href="scriptable:///run?scriptName=display-saved-run&amp;snapshot=1">🔄 Refresh the phone's calendar snapshot</a><small>Opens Scriptable: reads the phone's calendars and rewrites the snapshot the Mac analyses against — no scrape, no calendar write.</small></div>
+<details class="decided waiting" id="waiting-wrap" hidden>
+  <summary>🔧 Waiting on a fix <span id="waiting-count"></span></summary>
+  <p class="waiting-note">Sent back with a note. Each comes back to the stack by itself when the scraper's card for it changes — nothing to hunt for. "Bring back" returns it now.</p>
+  <ul id="waiting"></ul>
+</details>
+<details class="decided friends" id="friends-wrap" hidden>
+  <summary>🙋 Friends <span id="friends-count"></span></summary>
+  <p class="waiting-note">Cards you asked a friend about. "Share" makes one link to the page on chunky.dad with the cards in it (no server — the cards travel in the link); the friend answers there and sends a link back. Paste that link below and the cards return to the stack with the advice on them.</p>
+  <div id="friends"></div>
+</details>
+<details class="decided" id="decided-wrap">
+  <summary>Decided <span id="decided-count"></span> · <button type="button" id="btn-copy-rejections" onclick="event.preventDefault(); copyRejections();">Copy rejections</button></summary>
+  <ul id="decided"></ul>
+</details>
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <h3><span id="sheet-heading">Not yet — why?</span> <span class="muted" id="sheet-title"></span></h3>
+    <div class="sheet-fix-note">What is wrong? Tap what applies, then pick an answer.</div>
+    <div class="chips" id="sheet-tags"></div>
+    <div class="sheet-modes">
+      <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
+      <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
+      <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
+      <button type="button" class="mode mode-ask" id="sheet-ask-mode"><b>🙋 Ask a friend</b><span>Not sure? A friend who knows the city answers from a page; their answer lands on this card, the swipe stays yours.</span></button>
+    </div>
+    <div class="sheet-friend" id="sheet-friend"><input id="sheet-friend-name" type="text" placeholder="Friend's name" autocapitalize="words"><span class="chips" id="sheet-friend-chips"></span><button type="button" id="sheet-ask" style="background:var(--accent); color:#fff;">Ask</button></div>
+    <textarea id="sheet-text" placeholder="Anything else (optional)"></textarea>
+    <div class="actions">
+      <button type="button" id="sheet-cancel" style="background:var(--line); color:var(--ink);">Cancel</button>
+      <button type="button" id="sheet-ask-go">Add to their list</button>
+    </div>
+  </div>
+</div>
+<div class="lightbox" id="lightbox" onclick="closeFlyer()"><img alt=""></div>
+<div class="toast" id="toast"></div>
+<script>
+// A tap is a touch AND, a few milliseconds later, the click the browser
+// makes up for it — aimed at whatever is under the finger by then. The
+// flyer opened on the touch and that click landed on the lightbox it had
+// just opened, which closes on a click: the flyer flashed and was gone.
+// The lightbox ignores a close that arrives with the tap that opened it.
+var flyerOpenedAt = 0;
+function openFlyer(el) {
+  var img = el && el.querySelector ? el.querySelector('img') : null;
+  if (!img || !img.src) return;
+  var box = document.getElementById('lightbox');
+  box.querySelector('img').src = img.src;
+  box.classList.add('open');
+  flyerOpenedAt = Date.now();
+}
+function closeFlyer() {
+  if (Date.now() - flyerOpenedAt < 400) return;
+  document.getElementById('lightbox').classList.remove('open');
+}
+function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
+</script>
+<script>
+window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
+// FRIEND MODE: the cards ride in the link as #j2.<base64url(deflate-raw
+// JSON)> — the deck's own card HTML, so a friend sees exactly the card
+// the owner sees (tools/review-queue buildFriendLink). Decoded here, then
+// the deck starts as usual.
+window.__loadFriendDeck = function () {
+  var deck = window.__reviewDeck;
+  var m = String(location.hash || '').match(/^#j2[.]([A-Za-z0-9_-]+)$/);
+  function fail(text) { document.getElementById('stage').innerHTML = '<div class="empty" style="padding:40px 16px; text-align:center;">' + text + '</div>'; }
+  if (!m) { fail('This page needs a link from Stanley’s review deck.'); return; }
+  try {
+    var b64 = m[1].split('-').join('+').split('_').join('/');
+    while (b64.length % 4) b64 += '=';
+    var bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    new Response(stream).text().then(function (text) {
+      var data = JSON.parse(text);
+      deck.cards = (data.c || []).map(function (c, i) {
+        return { id: 'c' + i, kind: c.k || 'new', key: 'c' + i, proposal: c.p || { title: c.t || '' }, html: c.h || '', series: null, asked: [], advice: [] };
+      });
+      deck.decided = [];
+      deck.friend = data.f || '';
+      deck.from = data.from || 'Stanley';
+      deck.exportId = data.e || '';
+      deck.smsTo = data.to || '';
+      deck.back = /^https?:[/][/]/.test(data.back || '') ? data.back : '';
+      document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from;
+      window.__startDeck();
+    }).catch(function () { fail('This link could not be read — ask for a new one.'); });
+  } catch (e) { fail('This link could not be read — ask for a new one.'); }
+};
+window.__startDeck = function () {
+  var deck = window.__reviewDeck;
+  var friendMode = deck.friendMode === true;
+  // Friend mode: what was answered, by card key ('c' + index).
+  var friendAnswers = {};
+  // A card asked of a friend and not answered waits in the Friends
+  // section, not the stack.
+  function awaitingFriend(c) { return (c.asked || []).length > 0 && (c.advice || []).length === 0; }
+  // Every card with an open ask is listed under Friends (the link is
+  // built from them); only one with no answer at all leaves the stack.
+  var friends = deck.cards.filter(function (c) { return (c.asked || []).length > 0; });
+  var queue = deck.cards.filter(function (c) { return !awaitingFriend(c); });
+  var decided = deck.decided.slice();
+  var knownFriends = (deck.friends || []).slice();
+  var history = [];
+  var filter = 'all';
+  var view = 'stack'; // stack | list | sources
+  var words = ''; // the word filter, as typed
+  var sourceOnly = ''; // a source chosen on the sources view ('' = every source)
+  var pending = null; // stack item awaiting the reject sheet, or { bulk: [items] }
+  var solo = {}; // series the owner chose to decide night by night
+  var lastTouchAt = 0; // when a finger last touched a card (see attachDrag)
+  var clearedGone = {}; // waiting notes dropped on this page load
+  var stage = document.getElementById('stage');
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+  function tabOf(kind) { return kind === 'override' ? 'merge' : kind; } // 'series' is its own tab
+  // Every word typed must appear somewhere on the card (title, source,
+  // venue, address, city, links, description); a word led by "-" must
+  // not. Case-insensitive, nothing clever.
+  function haystack(c) {
+    var p = c.proposal || {};
+    return [p.title, p.name, p.source, p.bar, p.address, p.city, p.url, p.ticketUrl, p.website, p.description, c.kind, dayOf(c.key)]
+      .map(function (v) { return String(v || ''); }).join(' | ').toLowerCase();
+  }
+  function matchesWords(c) {
+    if (sourceOnly && String((c.proposal || {}).source || '') !== sourceOnly) return false;
+    var terms = words.toLowerCase().split(' ').filter(Boolean);
+    if (terms.length === 0) return true;
+    var hay = haystack(c);
+    for (var i = 0; i < terms.length; i++) {
+      var t = terms[i];
+      if (t[0] === '-') { if (t.length > 1 && hay.indexOf(t.slice(1)) !== -1) return false; }
+      else if (hay.indexOf(t) === -1) return false;
+    }
+    return true;
+  }
+  function visible() {
+    return queue.filter(function (c) { return (filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter) && matchesWords(c); });
+  }
+  // The stack shows ITEMS: a card, or every pending night of one party
+  // (card.series) folded into one — one swipe decides them all, each under
+  // its own key. "one at a time" unfolds a party for this page load.
+  function items() {
+    var out = [], seen = {};
+    visible().forEach(function (c) {
+      var s = c.series && !solo[c.series.key] ? c.series.key : null;
+      if (!s) { out.push({ key: c.key, cards: [c] }); return; }
+      if (seen[s]) { seen[s].cards.push(c); return; }
+      seen[s] = { key: 'series:' + s, series: c.series, cards: [c] };
+      out.push(seen[s]);
+    });
+    return out;
+  }
+  function nightLabel(c) {
+    var nights = c.series && c.series.nights ? c.series.nights : [];
+    for (var i = 0; i < nights.length; i++) if (nights[i].key === c.key) return nights[i].label || nights[i].day;
+    return c.key.split('|')[3] || '';
+  }
+  // The night-by-night values the server compared (series.nights[].values)
+  // and which of them differ (series.differs). Every night is saved as its
+  // own event with its own values — the strip says so, names what differs,
+  // and "compare" lays the nights side by side.
+  var NIGHT_FIELDS = [{"key":"time","label":"time"},{"key":"title","label":"title"},{"key":"bar","label":"venue"},{"key":"address","label":"address"},{"key":"url","label":"link"},{"key":"ticketUrl","label":"ticket link"},{"key":"image","label":"image"},{"key":"cover","label":"cover"},{"key":"description","label":"description"}];
+  function nightOf(c) {
+    var nights = c.series && c.series.nights ? c.series.nights : [];
+    for (var i = 0; i < nights.length; i++) if (nights[i].key === c.key) return nights[i];
+    return null;
+  }
+  function shortLink(url) {
+    var text = String(url || '').replace(/^https?:[/][/](www[.])?/, '');
+    return text.length > 46 ? text.slice(0, 22) + '…' + text.slice(-22) : text;
+  }
+  function nightCell(field, value) {
+    if (!value) return '<span class="muted">—</span>';
+    if (field === 'image') return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener"><img class="night-thumb" src="' + escapeHtml(value) + '" alt="" loading="lazy"></a>';
+    if (field === 'url' || field === 'ticketUrl') return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener">' + escapeHtml(shortLink(value)) + '</a>';
+    return escapeHtml(value);
+  }
+  function nightChip(c, differs) {
+    var night = nightOf(c);
+    var values = night && night.values ? night.values : {};
+    var own = differs.indexOf('ticketUrl') !== -1 ? values.ticketUrl : (differs.indexOf('url') !== -1 ? values.url : '');
+    var label = escapeHtml(nightLabel(c));
+    return own
+      ? '<a class="chip" href="' + escapeHtml(own) + '" target="_blank" rel="noopener" title="the page of this night">' + label + ' ↗</a>'
+      : '<span class="chip">' + label + '</span>';
+  }
+  function seriesCompare(item, differs) {
+    if (differs.length === 0) return '';
+    var fields = NIGHT_FIELDS.filter(function (f) { return differs.indexOf(f.key) !== -1; });
+    var head = '<tr><th>night</th>' + fields.map(function (f) { return '<th>' + escapeHtml(f.label) + '</th>'; }).join('') + '</tr>';
+    var rows = item.cards.map(function (c) {
+      var night = nightOf(c);
+      var values = night && night.values ? night.values : {};
+      return '<tr><td>' + escapeHtml(nightLabel(c)) + '</td>' + fields.map(function (f) { return '<td>' + nightCell(f.key, values[f.key]) + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    return '<details class="night-compare"><summary>compare the ' + item.cards.length + ' nights</summary><div class="night-table"><table>' + head + rows + '</table></div></details>';
+  }
+  // The rhythm of the nights ON THIS CARD (the server's own function, so
+  // the card and the fix queue say the same thing): "every Wednesday".
+  var describeSeriesCadence = function describeSeriesCadence(days) {
+    var list = (Array.isArray(days) ? days : []).filter(function (day) { return /^\d{4}-\d{2}-\d{2}$/.test(String(day)); });
+    list = list.filter(function (day, index) { return list.indexOf(day) === index; }).sort();
+    if (list.length < 3) return null;
+    var noon = function (day) { return Date.parse(day + 'T12:00:00Z'); };
+    var step = Math.round((noon(list[1]) - noon(list[0])) / 86400000);
+    for (var i = 2; i < list.length; i++) {
+        if (Math.round((noon(list[i]) - noon(list[i - 1])) / 86400000) !== step) return null;
+    }
+    if (step !== 7 && step !== 14) return null;
+    var weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(noon(list[0])).getUTCDay()];
+    return { text: (step === 7 ? 'every ' : 'every other ') + weekday, stepDays: step, weekday: weekday, from: list[0], to: list[list.length - 1], nights: list.length };
+};
+  function dayOf(key) { return String(key || '').split('|')[3] || ''; }
+  function cadenceText(keys) {
+    var cadence = describeSeriesCadence(keys.map(dayOf));
+    return cadence ? cadence.text : '';
+  }
+  // What an item's members are called: nights of one party, or events
+  // that carry the same change.
+  function unitOf(series, count) {
+    return series && series.type === 'change' ? (count === 1 ? 'event' : 'events') : (count === 1 ? 'night' : 'nights');
+  }
+  var CHANGE_LABELS = { allDay: 'time', url: 'link', ticketUrl: 'ticket link', image: 'image', bar: 'venue', address: 'address', location: 'pin', title: 'title', cover: 'cover', description: 'description' };
+  function changeRows(series) {
+    return (series.change || []).map(function (row) {
+      var isLink = row.field === 'url' || row.field === 'ticketUrl' || row.field === 'image';
+      var show = function (value) { return value ? escapeHtml(isLink ? shortLink(value) : value) : '<span class="muted">empty</span>'; };
+      return '<div class="change-row"><b>' + escapeHtml(CHANGE_LABELS[row.field] || row.field) + '</b> ' + show(row.from) + ' → ' + show(row.to) + '</div>';
+    }).join('');
+  }
+  function changeStrip(item) {
+    return '<div class="series"><b>🔀 ' + item.cards.length + ' events, same change</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
+      + changeRows(item.series)
+      + '<div class="series-note">Each event is saved under its own decision. The card below shows the first one.</div><div class="nights">'
+      + item.cards.slice().sort(function (a, b) { var x = String(a.proposal && a.proposal.startDate || ''), y = String(b.proposal && b.proposal.startDate || ''); return x < y ? -1 : x > y ? 1 : 0; })
+        .map(function (c) { return '<span class="chip">' + escapeHtml(nightLabel(c)) + '</span>'; }).join('') + '</div></div>';
+  }
+  // A folded item the owner took apart ("one at a time") says so on each of
+  // its cards and offers the way back: how many of its members are still
+  // on the stack, and "fold back" to decide them with one swipe again.
+  function siblingsOnStack(card) {
+    if (!card.series) return 0;
+    return visible().filter(function (c) { return c.series && c.series.key === card.series.key; }).length;
+  }
+  function joinStrip(item) {
+    var card = item.cards[0];
+    if (item.cards.length !== 1 || !card.series || !solo[card.series.key]) return '';
+    var count = siblingsOnStack(card);
+    if (count < 2) return '';
+    var what = card.series.type === 'change' ? 'events with the same change' : 'nights of this party';
+    return '<div class="series series-solo">One of <b>' + count + ' ' + what + '</b>, decided one at a time · <button type="button" class="series-join">fold back</button></div>';
+  }
+  function seriesStrip(item) {
+    if (item.cards.length === 1) return joinStrip(item);
+    if (!item.series || item.cards.length < 2) return '';
+    if (item.series.type === 'change') return changeStrip(item);
+    var differs = (item.series.differs || []).filter(function (key) {
+      // Judged on the nights still on this card, not the whole party.
+      var seen = {}, count = 0;
+      item.cards.forEach(function (c) { var n = nightOf(c); var v = n && n.values ? n.values[key] : ''; if (!seen['v' + v]) { seen['v' + v] = true; count++; } });
+      return count > 1;
+    });
+    var labels = NIGHT_FIELDS.filter(function (f) { return differs.indexOf(f.key) !== -1; }).map(function (f) { return f.label; });
+    var note = labels.length
+      ? 'Each night is saved as its own event. Per night: <b>' + escapeHtml(labels.join(', ')) + '</b> — the card below shows the first night.'
+      : 'Each night is saved as its own event. The nights are identical apart from the date.';
+    var rhythm = cadenceText(item.cards.map(function (c) { return c.key; }));
+    return '<div class="series"><b>🗓 ' + item.cards.length + ' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '') + '</b> — one swipe decides them all · <button type="button" class="series-split">one at a time</button>'
+      + '<div class="series-note">' + note + '</div><div class="nights">'
+      + item.cards.map(function (c) { return nightChip(c, differs); }).join('') + '</div>' + seriesCompare(item, differs) + '</div>';
+  }
+  function bindSplit(el, item) {
+    var split = el.querySelector('.series-split');
+    if (split) split.onclick = function () { solo[item.series.key] = true; toast('Deciding ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) + ' one at a time'); render(); };
+    var join = el.querySelector('.series-join');
+    var series = item.cards[0].series;
+    if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
+  }
+  function counts() {
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, dropped: 0 };
+    queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
+    return out;
+  }
+  function renderFilters() {
+    var c = counts();
+    var html = '';
+    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
+      html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
+    });
+    document.getElementById('filters').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('#filters .pill'), function (el) {
+      el.onclick = function () { filter = el.getAttribute('data-f'); render(); };
+    });
+  }
+  // The stack is KEYED: a card already on the stage keeps its element and
+  // only its class changes (behind2 → behind → top), so the promotion is one
+  // CSS transition instead of a rebuilt DOM — rebuilding mid-fly-out is what
+  // dropped frames. Elements mid-flight (gone-*) are left to finish and
+  // removed afterwards.
+  function renderStage() {
+    var list = items();
+    var keep = {};
+    list.slice(0, 3).forEach(function (item, i) {
+      keep[item.key] = i;
+      var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
+      if (!el) {
+        el = document.createElement('div');
+        el.setAttribute('data-key', item.key);
+        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>';
+        el.className = 'card behind2';
+        stage.appendChild(el);
+        bindSplit(el, item);
+        void el.offsetWidth; // commit the entry state so the promotion animates
+      } else if (item.cards.length === 1 && item.cards[0].series && solo[item.cards[0].series.key]) {
+        // The count on a split card follows the stack (its siblings get
+        // decided one by one); the last one left carries no strip.
+        var soloStrip = el.querySelector('.series-solo');
+        var fresh = joinStrip(item);
+        if (soloStrip && soloStrip.outerHTML !== fresh) { if (fresh) soloStrip.outerHTML = fresh; else soloStrip.remove(); bindSplit(el, item); }
+      } else if (item.series) {
+        var strip = el.querySelector('.series');
+        if (strip && strip.querySelectorAll('.nights .chip').length !== item.cards.length) { strip.outerHTML = seriesStrip(item); bindSplit(el, item); }
+        // Nights coming back one by one (an undo): the card was drawn when
+        // only the first had returned, so it has no strip yet.
+        if (!strip && item.cards.length > 1) {
+          var heading = el.querySelector('h2');
+          if (heading) { heading.insertAdjacentHTML('beforebegin', seriesStrip(item)); bindSplit(el, item); }
+        }
+      }
+      el.className = 'card' + (i === 1 ? ' behind' : i === 2 ? ' behind2' : '');
+      el.style.zIndex = String(3 - i); // the top card paints last
+      if (i === 0 && el.getAttribute('data-drag') !== '1') { attachDrag(el, item); el.setAttribute('data-drag', '1'); }
+    });
+    Array.prototype.forEach.call(stage.querySelectorAll('.card'), function (el) {
+      var key = el.getAttribute('data-key');
+      if (keep[key] !== undefined || /gone-/.test(el.className)) return;
+      el.remove();
+    });
+    var empty = stage.querySelector('.empty');
+    if (list.length === 0 && !empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Nothing left to review' + (queue.length ? ' in this filter' : ' in this run') + '. 🐻';
+      stage.appendChild(empty);
+    } else if (list.length > 0 && empty) {
+      empty.remove();
+    }
+    var nights = list.reduce(function (n, item) { return n + item.cards.length; }, 0);
+    document.getElementById('left').textContent = list.length + ' left' + (nights !== list.length ? ' (' + nights + ' nights)' : '');
+    var disabled = list.length === 0;
+    ['btn-reject', 'btn-skip', 'btn-approve', 'btn-ask'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
+    document.getElementById('btn-undo').disabled = history.length === 0;
+  }
+  function renderExecute() {
+    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && d.pendingExecute; }).length;
+    var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
+    var el = document.getElementById('execute');
+    var last = deck.lastExecution;
+    // The phone's own tally of the approvals it was handed (the run file's
+    // executions[].ownerReview): what its checks held back and what it sent
+    // back for another look were in the payload and never on the page —
+    // 2026-09-27 read "41 written" for 56 approvals, 14 of them withheld.
+    var review = last && last.ownerReview && typeof last.ownerReview === 'object' ? last.ownerReview : null;
+    var held = review ? [
+      Number(review.withheld) > 0 ? review.withheld + ' approved but withheld by the checks on the phone' : '',
+      Number(review.awaiting) > 0 ? review.awaiting + ' back for review' : ''
+    ].filter(Boolean).join(', ') : '';
+    var lastLine = last && last.at
+      ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + (held ? ' · ' + escapeHtml(held) : '') + '.</small>'
+      : '';
+    // Approved cards whose inbox picture is still in the pictures PR: an
+    // execute now writes them without the picture.
+    var picturesWaiting = decided.filter(function (d) { return d.verdict === 'approve' && d.pendingExecute && d.picture && d.picture.state === 'pr'; });
+    var pictureLine = picturesWaiting.length
+      ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
+      : '';
+    if (approved > 0 && deck.executeLink) {
+      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+    } else {
+      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
+    }
+  }
+  function renderDecided() {
+    var ul = document.getElementById('decided');
+    document.getElementById('decided-count').textContent = '(' + decided.length + ')';
+    ul.innerHTML = '';
+    decided.slice().reverse().forEach(function (d) {
+      var li = document.createElement('li');
+      var reason = d.reason ? [(d.reason.tags || []).join(', '), d.reason.text].filter(Boolean).join(' — ') : '';
+      var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
+      var via = d.via ? '<div class="r">' + (String(d.via).indexOf('series|') === 0 ? '↪ with the series card — you decided the party there' : '↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night') + '</div>' : '';
+      var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
+      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = d.via ? 'Decide alone' : 'Undo';
+      btn.onclick = function () { undoDecision(d); };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+  // "Needs a fix" rejections: the ones still covering a card on this run,
+  // and the ones this run no longer proposes at all (deck.waitingGone).
+  function renderWaiting() {
+    var wrap = document.getElementById('waiting-wrap');
+    var ul = document.getElementById('waiting');
+    var rows = decided.filter(function (d) { return d.rejectionMode === 'fix' && !d.via; });
+    var gone = (deck.waitingGone || []).filter(function (g) { return !clearedGone[g.key]; });
+    wrap.hidden = rows.length + gone.length === 0;
+    ul.innerHTML = '';
+    function noteOf(reason) { return reason ? [(reason.tags || []).join(', '), reason.text].filter(Boolean).join(' — ') : ''; }
+    // One note swiped onto a folded series is stored once per night and is
+    // still one note: NEW nights of one party (same title, place) carrying
+    // the same words are one row, and its button acts on every night.
+    function foldNotes(list) {
+      var out = [], seen = {};
+      list.forEach(function (d) {
+        var parts = String(d.key || '').split('|');
+        var party = d.kind === 'new' && parts.length === 4 && parts[0] === 'event' ? parts.slice(0, 3).join('|') + '|' + (d.title || '') + '|' + noteOf(d.reason) : '';
+        if (party && seen[party]) { seen[party].members.push(d); return; }
+        var row = { first: d, members: [d] };
+        if (party) seen[party] = row;
+        out.push(row);
+      });
+      return out;
+    }
+    function nightsOf(row) {
+      if (row.members.length === 1) {
+        var key = row.first.key;
+        return key && key.split('|').length === 4 ? ' · ' + escapeHtml(dayOf(key)) : '';
+      }
+      var days = row.members.map(function (d) { return dayOf(d.key); }).sort();
+      var rhythm = cadenceText(row.members.map(function (d) { return d.key; }));
+      return ' · ' + row.members.length + ' nights' + (rhythm ? ', ' + escapeHtml(rhythm) : '') + ' · ' + escapeHtml(days[0]) + ' → ' + escapeHtml(days[days.length - 1]);
+    }
+    // Counted as listed: one note on twelve nights is one row, so the
+    // heading said "(26)" over eleven rows. The nights ride along.
+    var waitingRows = foldNotes(rows.slice().reverse());
+    var goneRows = foldNotes(gone.map(function (g) { return { key: g.key, kind: g.kind || 'new', title: g.title, reason: g.reason, bar: g.bar, seriesPresent: g.seriesPresent }; }));
+    var listed = waitingRows.length + goneRows.length;
+    var nightsWaiting = rows.length + gone.length;
+    document.getElementById('waiting-count').textContent = '(' + listed + (nightsWaiting !== listed ? ' · ' + nightsWaiting + ' nights' : '') + ')';
+    waitingRows.forEach(function (row) {
+      var d = row.first;
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + nightsOf(row) + '</span></div>'
+        + (noteOf(d.reason) ? '<div class="r">' + escapeHtml(noteOf(d.reason)) + '</div>' : '')
+        + '<div class="status">unchanged since you sent it back' + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</div></div>';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = row.members.length > 1 ? 'Bring back ' + row.members.length : 'Bring back';
+      btn.onclick = function () {
+        var chain = Promise.resolve();
+        row.members.forEach(function (member) { chain = chain.then(function () { return undoDecision(member); }); });
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    goneRows.forEach(function (row) {
+      var g = row.first;
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="v">🔧</span><div class="t"><div>' + escapeHtml(g.title || g.key) + ' <span class="r">' + escapeHtml(g.bar || '') + nightsOf(row) + '</span></div>'
+        + (noteOf(g.reason) ? '<div class="r">' + escapeHtml(noteOf(g.reason)) + '</div>' : '')
+        + '<div class="status">' + (g.seriesPresent
+          ? (row.members.length > 1 ? 'these nights are' : 'this night is') + ' not in this run — other nights of the party are on the deck'
+          : 'not in this run under this title, place and day — a fix that changed one of those brings it back as a new card') + '</div></div>';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = row.members.length > 1 ? 'Drop note (' + row.members.length + ')' : 'Drop note';
+      btn.onclick = function () {
+        var chain = Promise.resolve();
+        row.members.forEach(function (member) {
+          chain = chain.then(function () { return post({ key: member.key, verdict: 'clear' }).then(function () { clearedGone[member.key] = true; }); });
+        });
+        chain.then(function () { toast(row.members.length > 1 ? 'Note dropped from ' + row.members.length + ' nights' : 'Note dropped'); render(); })
+          .catch(function (error) { toast('Failed: ' + error.message); render(); });
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+  // What is left of the screen for the stack: its height minus the header
+  // (which wraps to more rows on a narrow phone), the button row and the
+  // hint line. Re-measured whenever the screen changes — a rotated phone,
+  // Safari's toolbars sliding away, the filter pills wrapping.
+  function fitStage() {
+    var header = document.querySelector('.top');
+    var controls = document.querySelector('.controls');
+    var hint = document.querySelector('.meta');
+    if (!header || !controls || !hint || !window.innerHeight) return;
+    // From where the stack actually starts: whatever sits above it (the
+    // word filter; the friend page's intro and send bar) counts too.
+    var stageTop = stage.getBoundingClientRect().top + (window.scrollY || 0);
+    var above = stageTop > 0 ? stageTop : header.offsetHeight;
+    var room = Math.floor(window.innerHeight - above - controls.offsetHeight - hint.offsetHeight - 14);
+    document.documentElement.style.setProperty('--stage-h', Math.max(280, Math.min(640, room)) + 'px');
+  }
+  window.addEventListener('resize', fitStage);
+  window.addEventListener('orientationchange', fitStage);
+  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
+
+  // ---- views: the stack, the same cards as a list, or the sources ----
+  function renderViews() {
+    var html = '';
+    [['stack', 'Stack'], ['list', 'List'], ['sources', 'Sources']].forEach(function (pair) {
+      html += '<span class="pill' + (view === pair[0] ? ' on' : '') + '" data-v="' + pair[0] + '">' + pair[1] + '</span>';
+    });
+    if (sourceOnly) html += '<span class="pill on" id="source-only" title="showing one source — tap to show all">' + escapeHtml(sourceOnly) + ' ×</span>';
+    // Cards on a friend's list: one tap to where they are sent from.
+    if (friends.length) html += '<span class="pill" id="friends-pill" title="Cards on a friend’s list — send them a link from here">🙋 Friends ' + friends.length + '</span>';
+    document.getElementById('views').innerHTML = html;
+    var friendsPill = document.getElementById('friends-pill');
+    if (friendsPill) friendsPill.onclick = function () { var wrap = document.getElementById('friends-wrap'); wrap.open = true; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    Array.prototype.forEach.call(document.querySelectorAll('#views .pill[data-v]'), function (el) {
+      el.onclick = function () { view = el.getAttribute('data-v'); render(); window.scrollTo(0, 0); };
+    });
+    var only = document.getElementById('source-only');
+    if (only) only.onclick = function () { sourceOnly = ''; render(); };
+    var onStack = view === 'stack';
+    document.getElementById('stage').classList.toggle('hidden', !onStack);
+    document.querySelector('.controls').classList.toggle('hidden', !onStack);
+    document.getElementById('list').classList.toggle('hidden', view !== 'list');
+    document.getElementById('sources').classList.toggle('hidden', view !== 'sources');
+  }
+  var wordInput = document.getElementById('word');
+  var wordTimer = null;
+  wordInput.oninput = function () {
+    clearTimeout(wordTimer);
+    wordTimer = setTimeout(function () { words = wordInput.value; render(); }, 120);
+  };
+  function titleOf(c) { var p = c.proposal || {}; return c.kind === 'bar' ? (p.name || '') : (p.title || ''); }
+  function whenOf(c) {
+    var p = c.proposal || {};
+    if (!p.startDate) return '';
+    try {
+      var d = new Date(p.startDate);
+      var opts = { weekday: 'short', month: 'short', day: 'numeric' };
+      if (!p.wholeDay) { opts.hour = 'numeric'; opts.minute = '2-digit'; }
+      if (p.timezone) opts.timeZone = p.timezone;
+      return d.toLocaleString('en-US', opts);
+    } catch (e) { return String(p.startDate).slice(0, 10); }
+  }
+  function placeOf(c) { var p = c.proposal || {}; return [p.bar, p.city].filter(Boolean).join(' · '); }
+  // Jump the stack to THIS POINT of the list (owner: "jump to that part
+  // of the list", not one card pulled out of order): the tapped item
+  // comes first and the stack carries on down the list from there; the
+  // rows above it go to the back, in their own order, so nothing is lost.
+  function jumpTo(item) {
+    var list = items();
+    var at = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].key === item.key) { at = i; break; }
+    if (at > 0) {
+      var ahead = {};
+      list.slice(0, at).forEach(function (it) { it.cards.forEach(function (c) { ahead[c.key] = true; }); });
+      var moved = queue.filter(function (c) { return ahead[c.key]; });
+      queue = queue.filter(function (c) { return !ahead[c.key]; }).concat(moved);
+    }
+    view = 'stack';
+    render();
+    window.scrollTo(0, 0);
+  }
+  function renderList() {
+    if (view !== 'list') return;
+    var list = items();
+    var html = '';
+    if (list.length === 0) html = '<div class="empty">Nothing here' + (words || sourceOnly ? ' for this filter' : '') + '. 🐻</div>';
+    list.forEach(function (item, i) {
+      var c = item.cards[0];
+      var p = c.proposal || {};
+      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
+      html += '<div class="lrow" data-i="' + i + '">'
+        + (p.image ? '<img class="lthumb" data-act="flyer" src="' + escapeHtml(p.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<div class="lthumb none" data-act="go">' + (c.kind === 'bar' ? '🍺' : '🐻') + '</div>')
+        + '<div class="lbody" data-act="go"><h4>' + escapeHtml(titleOf(c)) + '</h4>'
+        + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind === 'series' ? 'series' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
+        + (p.source ? '<div class="lmeta">' + escapeHtml(p.source) + '</div>' : '') + '</div>'
+        + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="ask">🙋</button><button type="button" data-act="reject">Not yet…</button></div>'
+        + '</div>';
+    });
+    var root = document.getElementById('list');
+    root.innerHTML = html;
+    root.onclick = function (ev) {
+      var target = ev.target;
+      while (target && target !== root && !target.getAttribute('data-act')) target = target.parentNode;
+      if (!target || target === root) return;
+      var row = target; while (row && !row.classList.contains('lrow')) row = row.parentNode;
+      if (!row) return;
+      var item = items()[Number(row.getAttribute('data-i'))];
+      if (!item) return;
+      var act = target.getAttribute('data-act');
+      if (act === 'flyer') { openFlyer({ querySelector: function () { return target; } }); return; }
+      if (act === 'go') { jumpTo(item); return; }
+      if (act === 'approve') { decide(item, 'approve', null, 'gone-right'); return; }
+      if (act === 'notbear') { notBearItem(item); return; }
+      if (act === 'reject') { pending = item; openSheet(item); return; }
+      if (act === 'ask') { askItem(item); return; }
+    };
+  }
+  // One card per source, the facts a wrong-for-the-whole-site mistake
+  // shows up in: how many cards, which hosts the links point at, which
+  // venues and cities — and the decisions that apply to every card at once.
+  function hostOf(url) { var m = String(url || '').match(/^https?:[/][/]([^/?#]+)/i); return m ? m[1].replace(/^www[.]/, '') : ''; }
+  function renderSources() {
+    if (view !== 'sources') return;
+    var groups = {}, order = [];
+    visible().forEach(function (c) {
+      var name = String((c.proposal || {}).source || '') || '(no source)';
+      if (!groups[name]) { groups[name] = { name: name, cards: [], kinds: {}, hosts: {}, places: {} }; order.push(name); }
+      var g = groups[name];
+      g.cards.push(c);
+      g.kinds[tabOf(c.kind)] = (g.kinds[tabOf(c.kind)] || 0) + 1;
+      var p = c.proposal || {};
+      [p.url, p.ticketUrl, p.website].forEach(function (u) { var h = hostOf(u); if (h) g.hosts[h] = (g.hosts[h] || 0) + 1; });
+      var place = placeOf(c); if (place) g.places[place] = (g.places[place] || 0) + 1;
+    });
+    order.sort(function (a, b) { return groups[b].cards.length - groups[a].cards.length; });
+    var top = function (counts, n) { return Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, n).map(function (k) { return '<b>' + escapeHtml(k) + '</b> ×' + counts[k]; }).join(', '); };
+    var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
+    order.forEach(function (name) {
+      var g = groups[name];
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
+        + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
+        + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';
+    });
+    var root = document.getElementById('sources');
+    root.innerHTML = html;
+    root.onclick = function (ev) {
+      var target = ev.target;
+      while (target && target !== root && !target.getAttribute('data-act')) target = target.parentNode;
+      if (!target || target === root) return;
+      var block = target; while (block && !block.classList.contains('src')) block = block.parentNode;
+      var name = block.getAttribute('data-s');
+      var g = groups[name];
+      if (!g) return;
+      var act = target.getAttribute('data-act');
+      if (act === 'list' || act === 'stack') { sourceOnly = name === '(no source)' ? '' : name; view = act; render(); window.scrollTo(0, 0); return; }
+      var group = itemsOf(g.cards);
+      if (act === 'approve') { if (confirm('Approve all ' + g.cards.length + ' cards from ' + name + '?')) decideMany(group, 'approve', null); return; }
+      if (act === 'reject') { pending = { bulk: group, label: g.cards.length + ' cards from ' + name }; openSheet(pending); return; }
+    };
+  }
+  // The folded items of a set of cards (same folding as the stack).
+  function itemsOf(cards) {
+    var keys = {}; cards.forEach(function (c) { keys[c.key] = true; });
+    return items().filter(function (item) { return item.cards.some(function (c) { return keys[c.key]; }); });
+  }
+  // Everything the filter shows, decided at once — "remove items by words".
+  function renderBulk() {
+    var root = document.getElementById('bulk');
+    var active = Boolean(words.trim()) || Boolean(sourceOnly);
+    root.classList.toggle('hidden', !active);
+    if (!active) { root.innerHTML = ''; return; }
+    var list = items();
+    var n = list.reduce(function (sum, item) { return sum + item.cards.length; }, 0);
+    root.innerHTML = '<span class="muted" style="font-size:12px;">' + n + ' card' + (n === 1 ? '' : 's') + ' match</span>'
+      + '<button type="button" class="ok" id="bulk-approve"' + (n ? '' : ' disabled') + '>Approve all</button>'
+      + '<button type="button" class="no" id="bulk-notbear"' + (n ? '' : ' disabled') + '>Not bear, all</button>'
+      + '<button type="button" id="bulk-reject"' + (n ? '' : ' disabled') + '>Not yet, all…</button>';
+    document.getElementById('bulk-approve').onclick = function () { if (confirm('Approve all ' + n + ' matching cards?')) decideMany(items(), 'approve', null); };
+    document.getElementById('bulk-notbear').onclick = function () { if (confirm('Mark all ' + n + ' matching cards not bear? Final.')) decideMany(items(), 'reject', { tags: ['not bear'], text: words.trim() ? 'words: ' + words.trim() : '' }); };
+    document.getElementById('bulk-reject').onclick = function () { pending = { bulk: items(), label: n + ' matching cards' }; openSheet(pending); };
+  }
+  function decideMany(list, verdict, reason) {
+    list.forEach(function (item) {
+      var c = item.cards[0];
+      if (verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1) { notBearItem(item, true); return; }
+      if (c.kind === 'dropped' && verdict === 'reject' && !reason) { decide(item, 'reject', null, 'gone-left'); return; }
+      decide(item, verdict, reason, verdict === 'approve' ? 'gone-right' : 'gone-left');
+    });
+    var n = list.reduce(function (sum, item) { return sum + item.cards.length; }, 0);
+    toast((verdict === 'approve' ? 'Approved ' : 'Decided ') + n + ' card' + (n === 1 ? '' : 's'));
+  }
+  function notBearItem(item, quiet) {
+    var c = item.cards[0];
+    if (c.kind === 'dropped') { decide(item, 'reject', null, 'gone-left'); return; }
+    if (c.kind === 'bar') { if (!quiet) { pending = item; openSheet(item); } return; }
+    decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
+    if (!quiet) toast('Not bear — final');
+  }
+  function escapeHtml(text) {
+    return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Friend mode has no server: a decision is kept on the page and becomes
+  // part of the reply link (friendReplyLink).
+  function friendRecord(path, body) {
+    var key = body && body.key;
+    if (key) {
+      var r = (body && body.reason) || {};
+      var tags = (r.tags || []);
+      if (body.verdict === 'clear') delete friendAnswers[key];
+      else if (path === '/review/bear') friendAnswers[key] = body.verdict === 'bear' ? { v: 'approve', m: '', t: [], x: '' } : { v: 'reject', m: 'not-bear', t: [], x: (friendAnswers[key] || {}).x || '' };
+      else if (path === '/review/decide') friendAnswers[key] = { v: body.verdict, m: body.verdict === 'reject' ? (tags.indexOf('not bear') !== -1 ? 'not-bear' : (r.mode || '')) : '', t: tags.filter(function (t) { return t !== 'not bear'; }), x: r.text || '' };
+      renderFriendSend();
+    }
+    return { ok: true };
+  }
+  function friendReplyLink() {
+    var rows = Object.keys(friendAnswers).map(function (key) { var a = friendAnswers[key]; return [Number(key.slice(1)), a.v, a.m, a.t, a.x]; });
+    var json = JSON.stringify({ e: deck.exportId, f: deck.friend, a: rows });
+    var bytes = new TextEncoder().encode(json), bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    var code = btoa(bin).split('+').join('-').split('/').join('_').replace(/=+$/, '');
+    // One tap for the owner: straight to his deck when the link says where it is.
+    if (deck.back) return deck.back + '?r=r2.' + code;
+    return location.origin + location.pathname + '#r2.' + code;
+  }
+  function renderFriendSend() {
+    if (!friendMode) return;
+    var n = Object.keys(friendAnswers).length;
+    document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from + ' · ' + n + '/' + deck.cards.length;
+    document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent('My answers 🐻 ' + friendReplyLink());
+  }
+  function postTo(path, body) {
+    if (friendMode) return Promise.resolve(friendRecord(path, body));
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; }); });
+  }
+  function post(body) { return postTo('/review/decide', body); }
+  function postBear(card, verdict, restore) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined }); }
+  function topItem() { return items()[0] || null; }
+  function removeFromQueue(item) {
+    var keys = {};
+    item.cards.forEach(function (c) { keys[c.key] = true; });
+    queue = queue.filter(function (c) { return !keys[c.key]; });
+  }
+
+  // Fly-out starts from wherever the finger left the card (the drag's
+  // inline transform is folded into the exit, never snapped to centre
+  // first), the next card is promoted in the same frame, and the save goes
+  // to the server in the background — a slow tailnet round trip used to
+  // freeze the stack. A failed save puts the card back on top.
+  function flyOut(el, direction) {
+    if (!el) return;
+    var dx = Number(el.getAttribute('data-dx') || 0);
+    var dy = Number(el.getAttribute('data-dy') || 0);
+    el.classList.remove('dragging');
+    el.style.transition = 'transform .32s cubic-bezier(.2,.7,.2,1), opacity .28s ease-out';
+    el.style.zIndex = '9';
+    var w = Math.max(window.innerWidth, 420);
+    var target = direction === 'gone-right' ? 'translate3d(' + (w + 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(18deg)'
+      : direction === 'gone-left' ? 'translate3d(' + (-w - 120) + 'px,' + (dy * 0.3 - 20) + 'px,0) rotate(-18deg)'
+      : 'translate3d(0,60px,0) scale(.88)';
+    el.className = 'card ' + direction;
+    requestAnimationFrame(function () { el.style.transform = target; el.style.opacity = '0'; });
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 360);
+  }
+
+  // One card's save — a dropped card's swipe is a bear verdict: right =
+  // "that IS bear" (rescued by the next run), left = "not bear, confirmed".
+  // "Not bear" as a reject reason on a kept card records the verdict too,
+  // so the next run drops the party without asking again.
+  function saveOne(card, verdict, reason) {
+    var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
+    // A not-bear card sent back with a note. "Needs a fix" says the party
+    // IS bear (the next run keeps it) and parks the note under the event's
+    // own key, so the kept card waits there until it changes. "Not an
+    // event" confirms the drop and keeps the note for the fix queue.
+    var droppedNote = card.kind === 'dropped' && verdict === 'reject' && reason && (reason.mode === 'fix' || reason.mode === 'never') && card.fixTarget ? reason.mode : '';
+    // What this swipe overwrote (the server hands it back): an undo puts
+    // it back instead of leaving the key empty — a card on its second look
+    // keeps the decision, and the note, it came back with.
+    var replaced = { decision: null, bear: null };
+    function keepDecision(result) { replaced.decision = result && result.replaced ? result.replaced : null; return result; }
+    function keepBear(result) { replaced.bear = result && result.replaced ? result.replaced : null; return result; }
+    var request = droppedNote
+      ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
+          return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
+        })
+      : card.kind === 'dropped'
+      ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
+      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null }).then(keepDecision)
+          .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
+    return request.then(function () {
+      var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
+      decided.push(record);
+      return record;
+    });
+  }
+  // The whole item flies at once; its nights save one after another in
+  // the background (a slow tailnet round trip used to freeze the stack).
+  // A failed save puts the unsaved nights back on top.
+  function decide(item, verdict, reason, direction) {
+    var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
+    flyOut(el, direction);
+    removeFromQueue(item);
+    var card = item.cards[0];
+    var records = [];
+    var entry = { item: item, records: records };
+    // Before the render: it is what enables the Undo button (the first
+    // decision of a page load used to leave it disabled).
+    history.push(entry);
+    render();
+    var left = item.cards.slice();
+    var chain = Promise.resolve();
+    item.cards.forEach(function (c) {
+      chain = chain.then(function () { return saveOne(c, verdict, reason).then(function (record) { records.push(record); left.shift(); }); });
+    });
+    chain.then(function () {
+      var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
+      var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
+      if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
+      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      renderDecided(); renderExecute(); renderWaiting();
+    }).catch(function (error) {
+      toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
+      if (records.length === 0) history = history.filter(function (h) { return h !== entry; });
+      queue = left.concat(queue);
+      render(); renderDecided(); renderExecute();
+    });
+  }
+  function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
+  function rejectTop(fixFirst) {
+    var c = topItem(); if (!c) return;
+    // Reached by a down-left swipe: the sheet opens on "needs a fix".
+    sheet.classList.toggle('fix-first', fixFirst === true);
+    // A not-bear card gets the same three answers: some of them ARE bear
+    // and need a fix, which a bare "confirmed" could never say.
+    pending = c; openSheet(c);
+  }
+  function skipTop() {
+    var c = topItem(); if (!c) return;
+    var el = stage.querySelector('.card[data-key="' + CSS.escape(c.key) + '"]');
+    flyOut(el, 'gone-down');
+    removeFromQueue(c); queue = queue.concat(c.cards);
+    render();
+  }
+  function requeue(record) {
+    decided = decided.filter(function (d) { return d.key !== record.key; });
+    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, fixTarget: record.fixTarget || null, html: record.html, series: record.series || null });
+    history.forEach(function (h) { h.records = h.records.filter(function (r) { return r.key !== record.key; }); });
+    history = history.filter(function (h) { return h.records.length > 0; });
+  }
+  function undoDecision(record) {
+    // Covered by another night's decision: nothing stored under this key —
+    // the card comes back to be decided alone (that decision then wins).
+    if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
+    var was = record.replaced || {};
+    var request = record.kind === 'dropped'
+      ? postBear(record, 'clear', was.bear).then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear', restore: was.decision || undefined }) : result; })
+      : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
+          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
+    return request.then(function (result) {
+      requeue(record);
+      toast(result && result.restored ? 'Undone — your earlier decision is back' : 'Undone');
+      render();
+    }).catch(function (error) { toast('Undo failed: ' + error.message); });
+  }
+  function undoLast() {
+    var last = history[history.length - 1];
+    if (!last) return;
+    var chain = Promise.resolve();
+    last.records.slice().forEach(function (record) { chain = chain.then(function () { return undoDecision(record); }); });
+  }
+
+  // Reject sheet
+  var sheet = document.getElementById('sheet');
+  var sheetTags = document.getElementById('sheet-tags');
+  function openSheet(item) {
+    var card = item.bulk ? item.bulk[0].cards[0] : item.cards[0];
+    var isDropped = !item.bulk && card.kind === 'dropped';
+    document.getElementById('sheet-fix').querySelector('b').textContent = isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isDropped
+      ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
+      : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
+    document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
+    document.getElementById('sheet-title').textContent = item.bulk
+      ? item.label + ' — the same answer for every one'
+      : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
+    sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
+    document.getElementById('sheet-text').value = '';
+    document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
+    document.getElementById('sheet-heading').textContent = friendMode ? 'What’s not right?' : 'Not yet — why?';
+    if (friendMode) {
+      document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
+      document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
+      document.getElementById('sheet-never').querySelector('span').textContent = 'Not a real event — a duplicate, a fragment, junk.';
+    }
+    sheet.classList.remove('ask');
+    sheet.classList.remove('ask-only');
+    sheet.classList.add('open');
+    sheet.querySelector('.panel').scrollTop = 0;
+    fitSheet();
+    setTimeout(function () { document.getElementById('sheet-text').focus(); }, 50);
+  }
+  // iOS lays a fixed element out against the whole screen and draws the
+  // keyboard over its lower half. The visual viewport is the part still
+  // showing: the open sheet is pinned to it, and the panel scrolls inside.
+  function fitSheet() {
+    var view = window.visualViewport;
+    if (!view || !sheet.classList.contains('open')) { sheet.style.top = ''; sheet.style.bottom = ''; sheet.style.height = ''; return; }
+    sheet.style.top = Math.round(view.offsetTop) + 'px';
+    sheet.style.bottom = 'auto';
+    sheet.style.height = Math.round(view.height) + 'px';
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitSheet);
+    window.visualViewport.addEventListener('scroll', fitSheet);
+  }
+  function closeSheet() { sheet.classList.remove('open'); sheet.classList.remove('fix-first'); sheet.classList.remove('ask'); sheet.classList.remove('ask-only'); fitSheet(); pending = null; render(); }
+  // "Ask a friend": the name row opens under the modes; Ask flags every
+  // card of the item for that friend and moves it to the Friends section.
+  var friendName = document.getElementById('sheet-friend-name');
+  function renderFriendChips() {
+    var chips = document.getElementById('sheet-friend-chips');
+    chips.innerHTML = knownFriends.map(function (name) { return '<span class="chip" data-name="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>'; }).join('');
+    Array.prototype.forEach.call(chips.querySelectorAll('.chip'), function (el) { el.onclick = function () { friendName.value = el.getAttribute('data-name'); friendName.dispatchEvent(new Event('input')); }; });
+  }
+  document.getElementById('sheet-ask-mode').onclick = function () {
+    sheet.classList.add('ask');
+    renderFriendChips();
+    if (!friendName.value && knownFriends.length) friendName.value = knownFriends[0];
+    setTimeout(function () { friendName.focus(); }, 50);
+  };
+  // 🙋 Ask (owner, 2026-10-03: "I was assuming some button or swipe"):
+  // the same sheet with only the friend row — who, and an optional
+  // question for them. The card goes on that friend's list.
+  function askItem(item) {
+    if (!item) return;
+    pending = item;
+    openSheet(item);
+    sheet.classList.add('ask');
+    sheet.classList.add('ask-only');
+    document.getElementById('sheet-heading').textContent = '🙋 Ask a friend';
+    document.getElementById('sheet-text').placeholder = 'Your question for them (optional) — e.g. still at this bar?';
+    renderFriendChips();
+    if (!friendName.value && knownFriends.length) friendName.value = knownFriends[0];
+    friendName.dispatchEvent(new Event('input'));
+    setTimeout(function () { friendName.focus(); }, 50);
+  }
+  function askTop() { if (friendMode) return; askItem(topItem()); }
+  document.getElementById('sheet-ask-go').onclick = function () { document.getElementById('sheet-ask').click(); };
+  // The big button names the friend as it is typed.
+  friendName.addEventListener('input', function () { var n = friendName.value.trim(); document.getElementById('sheet-ask-go').textContent = n ? 'Add to ' + n + '’s list' : 'Add to their list'; });
+  document.getElementById('btn-ask').onclick = askTop;
+  document.getElementById('sheet-ask').onclick = function () {
+    if (!pending) return closeSheet();
+    var name = friendName.value.trim();
+    if (!name) { toast('Who? Type a name'); friendName.focus(); return; }
+    var text = document.getElementById('sheet-text').value.trim();
+    var itemsToAsk = pending.bulk ? pending.bulk : [pending];
+    var cards = [];
+    itemsToAsk.forEach(function (item) { item.cards.forEach(function (c) { cards.push(c); }); });
+    sheet.classList.remove('open'); sheet.classList.remove('ask'); fitSheet(); pending = null;
+    var chain = Promise.resolve();
+    cards.forEach(function (c) {
+      chain = chain.then(function () {
+        return postTo('/review/ask', { key: c.key, kind: c.kind, friend: name, question: text, snapshot: c.proposal }).then(function (j) {
+          if (j.friends) knownFriends = j.friends;
+          c.asked = (c.asked || []).filter(function (a) { return a.friend !== name; }).concat([{ friend: name, askedAt: new Date().toISOString(), question: text }]);
+          if (awaitingFriend(c)) queue = queue.filter(function (q) { return q.key !== c.key; });
+          if (!friends.some(function (f) { return f.key === c.key; })) friends.push(c);
+        });
+      });
+    });
+    chain.then(function () { toast('On ' + name + '’s list (' + cards.length + (cards.length === 1 ? ' card' : ' cards') + ') — send it from 🙋 Friends'); render(); })
+      .catch(function (e) { toast('Could not save the ask: ' + e.message); render(); });
+  };
+  function renderFriends() {
+    var wrap = document.getElementById('friends-wrap');
+    var box = document.getElementById('friends');
+    wrap.hidden = friends.length === 0;
+    document.getElementById('friends-count').textContent = '(' + friends.length + ')';
+    var byFriend = {};
+    friends.forEach(function (c) {
+      (c.asked || []).forEach(function (a) { (byFriend[a.friend] = byFriend[a.friend] || []).push(c); });
+    });
+    box.innerHTML = '';
+    Object.keys(byFriend).sort().forEach(function (name) {
+      var group = document.createElement('div');
+      var who = document.createElement('div');
+      who.className = 'who';
+      who.innerHTML = '<span>' + escapeHtml(name) + ' · ' + byFriend[name].length + '</span>';
+      var share = document.createElement('button');
+      share.type = 'button'; share.textContent = 'Share link with ' + name;
+      var linkLine = document.createElement('div');
+      linkLine.className = 'link';
+      share.onclick = function () {
+        share.disabled = true;
+        postTo('/review/friend-link', { friend: name }).then(function (j) {
+          share.disabled = false;
+          if (!j.count) { toast('Nothing to send — everything is answered'); return; }
+          var text = 'A few events to check (' + j.count + ')';
+          linkLine.innerHTML = 'Link for ' + escapeHtml(name) + ' (' + j.count + ' card' + (j.count === 1 ? '' : 's') + '): <a href="' + escapeHtml(j.url) + '" target="_blank" rel="noopener">open it</a> · long-press to copy';
+          if (navigator.share) {
+            navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
+          } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(j.url).then(function () { toast('Link copied — ' + j.count + ' cards, send it to ' + name); }, function () { linkLine.textContent = j.url; });
+          } else { linkLine.textContent = j.url; }
+        }).catch(function (e) { share.disabled = false; toast('Could not build the link: ' + e.message); });
+      };
+      who.appendChild(share);
+      group.appendChild(who);
+      var ul = document.createElement('ul');
+      byFriend[name].forEach(function (c) {
+        var li = document.createElement('li');
+        var night = c.key && c.key.split('|').length === 4 ? ' · ' + escapeHtml(dayOf(c.key)) : '';
+        var q = (c.asked || []).filter(function (a) { return a.friend === name && a.question; }).map(function (a) { return a.question; })[0] || '';
+        li.innerHTML = '<span class="v">🙋</span><div class="t"><div>' + escapeHtml(titleOf(c)) + ' <span class="r">' + escapeHtml(c.kind) + night + '</span></div>' + (q ? '<div class="r">' + escapeHtml(q) + '</div>' : '') + '</div>';
+        var back = document.createElement('button');
+        back.type = 'button'; back.textContent = 'Bring back';
+        back.onclick = function () {
+          postTo('/review/ask', { verdict: 'clear', key: c.key, friend: name }).then(function () {
+            c.asked = (c.asked || []).filter(function (a) { return a.friend !== name; });
+            if (!(c.asked || []).length) friends = friends.filter(function (f) { return f.key !== c.key; });
+            if (!awaitingFriend(c) && !queue.some(function (q) { return q.key === c.key; }) && deck.cards.some(function (d) { return d.key === c.key; })) queue.unshift(c);
+            render();
+          }).catch(function (e) { toast('Could not take it back: ' + e.message); });
+        };
+        li.appendChild(back);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+      group.appendChild(linkLine);
+      box.appendChild(group);
+    });
+    var reply = document.createElement('div');
+    reply.className = 'reply';
+    reply.innerHTML = '<input type="text" id="friend-reply" placeholder="Paste the link they sent back" autocapitalize="none" autocorrect="off"><button type="button" id="friend-reply-go">Add their answers</button>';
+    box.appendChild(reply);
+    document.getElementById('friend-reply-go').onclick = function () {
+      var text = document.getElementById('friend-reply').value.trim();
+      if (!text) return;
+      postTo('/review/advice', { text: text }).then(function (j) {
+        toast((j.friend || 'Your friend') + ' answered ' + j.recorded.length + (j.recorded.length === 1 ? ' card' : ' cards') + (j.unknown ? ' (' + j.unknown + ' unknown)' : ''));
+        setTimeout(function () { location.reload(); }, 900);
+      }).catch(function (e) { toast(e.message); });
+    };
+  }
+  document.getElementById('sheet-cancel').onclick = closeSheet;
+  function answerSheet(mode) {
+    if (!pending) return closeSheet();
+    var tags = Array.prototype.map.call(sheetTags.querySelectorAll('.chip.on'), function (el) { return el.getAttribute('data-tag'); });
+    var text = document.getElementById('sheet-text').value.trim();
+    var card = pending;
+    sheet.classList.remove('open'); fitSheet(); pending = null;
+    // "Not bear" rides as the tag every reader already understands (the
+    // phone, older decisions, the bear verdict); the other two as a mode.
+    var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
+    // A bulk answer: every item of the set gets this reason.
+    if (card.bulk) {
+      card.bulk.forEach(function (item) {
+        if (item.cards[0].kind === 'dropped') { decide(item, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
+        decide(item, 'reject', reason, 'gone-left');
+      });
+      toast('Decided ' + card.bulk.length + ' — ' + (mode === 'fix' ? 'waiting on a fix' : mode === 'never' ? 'not an event' : 'not bear'));
+      return;
+    }
+    // On a not-bear card, "not bear" is the plain confirmation it always was.
+    if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
+    decide(card, 'reject', reason, 'gone-left');
+    toast(mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
+  }
+  document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
+  document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
+  document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
+  function notBearTop() {
+    var c = topItem(); if (!c) return;
+    if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    if (c.cards[0].kind === 'bar') { pending = c; openSheet(c); return; }
+    decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
+    toast('Not bear — final');
+  }
+  document.getElementById('btn-notbear').onclick = notBearTop;
+
+  // Drag — touch + mouse (iOS Safari delivers pointer events but starts
+  // its own scroll first, so horizontal swipes died as pointercancel).
+  // Vertical intent scrolls the card body natively (touch-action: pan-y);
+  // horizontal intent is claimed with preventDefault on a non-passive
+  // touchmove. A touch that never moved is a tap: flyer → lightbox,
+  // description → expand.
+  function attachDrag(el, card) {
+    var startX = 0, startY = 0, dx = 0, dy = 0, active = false, moved = false, lockedH = false, lockedV = false;
+    // PULL DOWN = ask a friend (owner, 2026-10-03: "one swipe option, get
+    // creative, but don't do right"). Only from a card scrolled to its top
+    // — there a downward pull has nothing to scroll, so it is free; a card
+    // scrolled down scrolls back up as before, and up always scrolls.
+    var lockedD = false, atTop = false;
+    var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no'), askStamp = el.querySelector('.stamp.ask');
+    var frame = null;
+    // A left swipe has three directions: UP-left = not bear (done, no
+    // sheet), DOWN-left = needs a fix (the sheet opens on that answer), and
+    // level = the sheet as before. The angle has to be deliberate — a level
+    // swipe always wobbles a little — and the stamp names the answer while
+    // the finger is still down, so nothing is a surprise on release.
+    function leftZone() {
+      if (dx >= 0) return '';
+      var reach = Math.abs(dx);
+      if (dy < -50 && -dy > reach * 0.35) return 'notbear';
+      if (dy > 30 && dy > reach * 0.2) return 'fix';
+      return 'ask';
+    }
+    function paint() {
+      frame = null;
+      if (lockedD) {
+        var pull = Math.max(0, dy);
+        el.style.transform = 'translate3d(0,' + Math.min(pull * 0.6, 150) + 'px,0) scale(' + (1 - Math.min(pull, 300) / 2500) + ')';
+        if (askStamp) askStamp.style.opacity = Math.max(0, Math.min(1, pull / 120));
+        return;
+      }
+      // Leftwards the card follows the finger's height, so the diagonal reads.
+      el.style.transform = 'translate3d(' + dx + 'px,' + (dy * (dx < 0 ? 0.7 : 0.3)) + 'px,0) rotate(' + (dx / 18) + 'deg)';
+      if (okStamp) okStamp.style.opacity = Math.max(0, Math.min(1, dx / 90));
+      if (noStamp) {
+        noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+        var zone = leftZone();
+        var label = zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
+        if (noStamp.textContent !== label) noStamp.textContent = label;
+      }
+    }
+    function reset() {
+      if (frame) { cancelAnimationFrame(frame); frame = null; }
+      el.style.transform = '';
+      el.removeAttribute('data-dx'); el.removeAttribute('data-dy');
+      if (okStamp) okStamp.style.opacity = 0;
+      if (noStamp) noStamp.style.opacity = 0;
+      if (askStamp) askStamp.style.opacity = 0;
+    }
+    // A FINGER may start a swipe anywhere on the card, links included: the
+    // route line, the chips and the change rows are links, and with the
+    // card scrolled to its change table 14% of it (up to 24%) was a place
+    // where a swipe simply did nothing (2026-09-29, 27 cards). A touch
+    // that does not move is still the browser's own tap on that link; one
+    // that travels far enough to decide never becomes a click. A MOUSE
+    // keeps the old rule — a press on a link is the start of a click or of
+    // the browser's link drag, and the card follows the pointer, so the
+    // release would land on the same link.
+    function begin(x, y, target, finger) {
+      var skip = finger ? 'select, textarea, input' : 'a, button, select, textarea, input, summary';
+      if (target && target.closest && target.closest(skip)) return false;
+      active = true; moved = false; lockedH = false; lockedV = false; lockedD = false;
+      var body = el.querySelector('.card-body');
+      atTop = !body || body.scrollTop <= 0;
+      startX = x; startY = y; dx = 0; dy = 0;
+      el.classList.add('dragging');
+      return true;
+    }
+    function move(x, y, e) {
+      if (!active) return;
+      dx = x - startX; dy = y - startY;
+      if (!lockedH && !lockedV && !lockedD && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        if (Math.abs(dx) > Math.abs(dy)) lockedH = true;
+        else if (dy > 0 && atTop && Math.abs(dy) > Math.abs(dx) * 1.5) lockedD = true;
+        else lockedV = true;
+      }
+      if (lockedD) {
+        moved = true;
+        if (e && e.cancelable) e.preventDefault();
+        if (!frame) frame = requestAnimationFrame(paint);
+        return;
+      }
+      if (!lockedH) return;
+      moved = true;
+      if (e && e.cancelable) e.preventDefault();
+      el.setAttribute('data-dx', String(dx)); el.setAttribute('data-dy', String(dy));
+      if (!frame) frame = requestAnimationFrame(paint);
+    }
+    function tap(target) {
+      if (!target || !target.closest) return;
+      if (target.closest('a, button, summary')) return; // the browser's own tap
+      if (target.closest('.thumb')) { openFlyer(target.closest('.thumb')); return; }
+      var desc = target.closest('.desc, .desc-more');
+      if (desc) { toggleDesc(el.querySelector('.desc')); }
+    }
+    function end(target, cancelled) {
+      if (!active) return;
+      active = false;
+      if (frame) { cancelAnimationFrame(frame); frame = null; paint(); }
+      if (lockedD) {
+        el.classList.remove('dragging'); reset();
+        if (!cancelled && dy > 120) askTop();
+        return;
+      }
+      if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
+      if (!cancelled && lockedH && dx < -110) {
+        var zone = leftZone();
+        if (zone === 'notbear') { notBearTop(); return; }
+        el.classList.remove('dragging'); reset(); rejectTop(zone === 'fix'); return;
+      }
+      el.classList.remove('dragging');
+      reset();
+      if (!cancelled && !moved && !lockedV) tap(target);
+    }
+    // The same made-up mouse events (mousedown, mouseup) follow every
+    // touch: handled as a second tap they toggled the description open and
+    // shut again in one go. A mouse press right after a touch is not a mouse.
+    el.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      lastTouchAt = Date.now();
+      begin(t.clientX, t.clientY, e.target, true);
+    }, { passive: true });
+    el.addEventListener('touchmove', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      move(t.clientX, t.clientY, e);
+    }, { passive: false });
+    el.addEventListener('touchend', function (e) { lastTouchAt = Date.now(); end(e.target, false); });
+    el.addEventListener('touchcancel', function (e) { lastTouchAt = Date.now(); end(e.target, true); });
+    el.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      if (Date.now() - lastTouchAt < 800) return;
+      if (!begin(e.clientX, e.clientY, e.target, false)) return;
+      var onMove = function (ev) { move(ev.clientX, ev.clientY, ev); };
+      var onUp = function (ev) {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        end(ev.target, false);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  document.getElementById('btn-approve').onclick = approveTop;
+  document.getElementById('btn-reject').onclick = function () { rejectTop(false); };
+  document.getElementById('btn-skip').onclick = skipTop;
+  document.getElementById('btn-undo').onclick = undoLast;
+  document.addEventListener('keydown', function (e) {
+    var lightbox = document.getElementById('lightbox');
+    if (lightbox.classList.contains('open')) { if (e.key === 'Escape') closeFlyer(); return; }
+    if (sheet.classList.contains('open')) { if (e.key === 'Escape') closeSheet(); return; }
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); approveTop(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(false); }
+    else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); notBearTop(); }
+    else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); askTop(); }
+    else if (e.key === 'z' || e.key === 'Z') { undoLast(); }
+  });
+
+  window.copyRejections = function () {
+    fetch('/review/rejections').then(function (r) { return r.text(); }).then(function (text) {
+      if (!text.trim()) { toast('No rejections yet'); return; }
+      function done(ok) { toast(ok ? 'Rejections copied' : 'Copy failed'); if (!ok) window.prompt('Copy manually:', text); }
+      if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); }); return; }
+      fallback();
+      function fallback() {
+        try { var area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.left = '-9999px'; document.body.appendChild(area); area.select(); var ok = document.execCommand('copy'); document.body.removeChild(area); done(ok); } catch (error) { done(false); }
+      }
+    });
+  };
+
+  if (friendMode) {
+    document.querySelector('#btn-approve .lb').textContent = 'Looks right';
+    document.querySelector('#btn-reject .lb').textContent = 'Not right';
+    // ONE send button: the phone's share sheet (Messages, WhatsApp,
+    // Copy…) where there is one, else straight to Messages.
+    document.getElementById('friend-sms').onclick = function (e) {
+      if (!Object.keys(friendAnswers).length) { e.preventDefault(); toast('Swipe a card first'); return; }
+      if (!navigator.share) return;
+      e.preventDefault();
+      navigator.share({ text: 'My answers 🐻', url: friendReplyLink() }).catch(function () {});
+    };
+    renderFriendSend();
+  }
+  render();
+};
+if (window.__reviewDeck.friendMode) window.__loadFriendDeck(); else window.__startDeck();
+</script>
+</body></html>

@@ -1278,7 +1278,7 @@ function publishApprovedPictures(store, options) {
 // A card the owner flags with a friend's name is an ASK, kept here in
 // <shared root>/friend-advice.json (Mac-only writer) and out of the stack.
 // "Share with <friend>" builds ONE link to the static page
-// chunky.dad/advice/ (advice/index.html, no backend): the cards ride in
+// chunky.dad/phone-a-friend/ (phone-a-friend/index.html, no backend): the cards ride in
 // the hash as #j1.<base64url JSON>, trimmed to what the friend needs
 // (title, when, where, link, a public picture, the question). That link
 // is an EXPORT, recorded with its card keys so the reply — the page's
@@ -1287,7 +1287,7 @@ function publishApprovedPictures(store, options) {
 // rows on the cards (friend, yes/no/not sure, note); the card returns to
 // the stack with the advice on it. The swipe stays the owner's.
 const FRIEND_ADVICE_FILE_NAME = 'friend-advice.json';
-const ADVICE_PAGE_DEFAULT_BASE = 'https://chunky.dad/advice/';
+const ADVICE_PAGE_DEFAULT_BASE = 'https://chunky.dad/phone-a-friend/';
 const ADVICE_LINK_CARD_CAP = 25;
 
 function getFriendAdvicePath(sharedRoot) {

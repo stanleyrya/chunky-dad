@@ -657,10 +657,10 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   reviewQueue.saveFriendAdvice(file, store);
 
   const htmlByKey = new Map([['event|furball|rockbar|2030-10-03', '<h2>FURBALL NYC</h2>' + '<div class="line">x</div>'.repeat(40)]]);
-  const link = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt', base: 'https://chunky.dad/advice/', now: Date.parse('2030-10-02T00:00:00Z'), htmlByKey });
+  const link = reviewQueue.buildFriendLink(reviewQueue.loadFriendAdvice(file), { friend: 'Matt', base: 'https://chunky.dad/phone-a-friend/', now: Date.parse('2030-10-02T00:00:00Z'), htmlByKey });
   assert.equal(link.count, 2);
   assert.equal(link.left, 0);
-  assert.match(link.url, /^https:\/\/chunky\.dad\/advice\/#j2\.[A-Za-z0-9_-]+$/);
+  assert.match(link.url, /^https:\/\/chunky\.dad\/phone-a-friend\/#j2\.[A-Za-z0-9_-]+$/);
   const payload = JSON.parse(require('zlib').inflateRawSync(Buffer.from(link.url.split('#j2.')[1], 'base64url')).toString('utf8'));
   assert.equal(payload.f, 'Matt');
   assert.equal(payload.e, link.exportId);
@@ -685,13 +685,13 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
 
   // The friend's page (the deck in friend mode) builds #r2.<base64url JSON { e, f, a: [[i, approve|reject, mode, tags, note]] }>.
   const replyPayload = { e: link.exportId, f: 'Matt', a: [[0, 'reject', 'not-bear', [], 'that is the leather night'], [1, 'approve', '', [], '']] };
-  const replyLink = 'https://chunky.dad/advice/#r2.' + Buffer.from(JSON.stringify(replyPayload)).toString('base64url');
+  const replyLink = 'https://chunky.dad/phone-a-friend/#r2.' + Buffer.from(JSON.stringify(replyPayload)).toString('base64url');
   const fixReply = reviewQueue.parseFriendReply('#r2.' + Buffer.from(JSON.stringify({ e: 'x', f: 'Matt', a: [[0, 'reject', 'fix', ['wrong venue'], 'moved to the Eagle'], [1, 'reject', 'never', [], ''], [2, 'reject', '', [], ''], [3, 'maybe', '', [], '']] })).toString('base64url'));
   assert.deepEqual(fixReply.answers.map((a) => a.answer), ['fix', 'not-event', 'off'], 'unknown verdicts are dropped');
   assert.deepEqual(fixReply.answers[0].tags, ['wrong venue']);
   const oldReply = reviewQueue.parseFriendReply('#r1.' + Buffer.from(JSON.stringify({ e: 'x', f: 'Matt', a: [[0, 'u', 'hmm', 'T']] })).toString('base64url'));
   assert.equal(oldReply.answers[0].answer, 'unsure', 'the first page\'s replies still read');
-  assert.equal(reviewQueue.parseFriendReply('https://chunky.dad/advice/#j1.abc'), null, 'an ask link is not a reply');
+  assert.equal(reviewQueue.parseFriendReply('https://chunky.dad/phone-a-friend/#j1.abc'), null, 'an ask link is not a reply');
   assert.equal(reviewQueue.parseFriendReply('hello'), null);
   const reply = reviewQueue.parseFriendReply('  ' + replyLink + ' ');
   assert.equal(reply.friend, 'Matt');
@@ -725,8 +725,8 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   const html = renderReviewPage(deck, { runs: [], scriptName: "display-saved-run", ctx: {} });
   assert.ok(html.includes('🙋 Matt: 🚫 not bear — “that is the leather night”'), 'the advice row is on the card');
   // advice/index.html is what the deck renders in friend mode — a deck change without a rebuild fails here.
-  assert.equal(fs.readFileSync(path.join(__dirname, '..', 'advice', 'index.html'), 'utf8'), require('../tools/serve-results').renderFriendPage(),
-    'advice/index.html is stale — run: node tools/build-advice-page.js');
+  assert.equal(fs.readFileSync(path.join(__dirname, '..', 'phone-a-friend', 'index.html'), 'utf8'), require('../tools/serve-results').renderFriendPage(),
+    'phone-a-friend/index.html is stale — run: node tools/build-phone-a-friend-page.js');
   const friendPage = require('../tools/serve-results').renderFriendPage();
   const friendScript = friendPage.slice(friendPage.indexOf('window.__reviewDeck = '));
   assert.doesNotThrow(() => new Function(friendScript.slice(0, friendScript.indexOf('</script>'))), 'the friend page script parses');
@@ -745,13 +745,13 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
     assert.equal(asked.status, 200);
     const linked = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
     assert.equal(linked.count, 1);
-    assert.ok(linked.url.startsWith('https://chunky.dad/advice/#j2.'));
+    assert.ok(linked.url.startsWith('https://chunky.dad/phone-a-friend/#j2.'));
     const sent = JSON.parse(require('zlib').inflateRawSync(Buffer.from(linked.url.split('#j2.')[1], 'base64url')).toString('utf8'));
     assert.ok(sent.c[0].h.includes('class="card-body"') || sent.c[0].h.includes('<h2>'), 'the card is rendered by the deck\'s own renderer');
     const bad = await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'not a link' }));
     assert.equal(bad.status, 400);
     const answer = { e: linked.exportId, f: 'Roger', a: [[0, 'reject', 'fix', ['wrong date or time'], 'ask Matt']] };
-    const got = JSON.parse((await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'https://chunky.dad/advice/#r2.' + Buffer.from(JSON.stringify(answer)).toString('base64url') }))).body);
+    const got = JSON.parse((await request(state, 'POST', '/review/advice', JSON.stringify({ text: 'https://chunky.dad/phone-a-friend/#r2.' + Buffer.from(JSON.stringify(answer)).toString('base64url') }))).body);
     assert.equal(got.recorded.length, 1);
     assert.equal(got.recorded[0].answer, 'fix');
     assert.deepEqual(got.recorded[0].tags, ['wrong date or time']);
@@ -1785,7 +1785,7 @@ test('the review page fits the stack to the screen, lets the reject sheet scroll
   assert.ok(/function render\(\) \{[^}]*fitStage\(\); \}/.test(html), 'measured after every render — the pills may have wrapped');
   assert.ok(html.includes('max-height:calc(var(--stage-h, 68vh) * 0.59)'), 'the flyer takes its share of the card, not of the screen');
   // The Results link shares the first row with the run picker.
-  assert.ok(html.indexOf('>Results</a>') < html.indexOf('id="filters"') && html.indexOf('>Results</a>') > html.indexOf('id="run-select"'));
+  assert.ok(html.indexOf('<span>Results</span></a>') < html.indexOf('id="filters"') && html.indexOf('<span>Results</span></a>') > html.indexOf('id="run-select"'));
 
   // The sheet: scrolls inside the visible part of the screen.
   assert.ok(/\.sheet \.panel \{[^}]*max-height:100%;[^}]*overflow-y:auto;/.test(html));

@@ -1071,12 +1071,12 @@ ${options.sharedRoot ? `<p style="opacity:0.7;">Shared dir: <code>${escapeHtmlTe
 // The deck page. Cards are server-rendered (renderReviewCard) and shipped
 // inline with the deck JSON; the page script owns the stack, the swipe
 // gesture, the reject sheet, undo, and the decide POSTs.
-// THE FRIEND'S PAGE (advice/index.html on the website — owner, 2026-10-03:
+// THE FRIEND'S PAGE (phone-a-friend/index.html on the website — owner, 2026-10-03:
 // "same ui that I have for the most part. It should get our future
 // improvements too"). It IS the review deck, rendered in friend mode with
 // no cards: the same CSS, card stack, gestures and reasons sheet. The
 // cards arrive in the link as the deck's own card HTML; decisions stay on
-// the page and leave as a reply link. tools/build-advice-page.js writes
+// the page and leave as a reply link. tools/build-phone-a-friend-page.js writes
 // it; a test fails when the committed file is not what this renders, so
 // every deck change reaches friends with the next build.
 function renderFriendPage() {
@@ -1172,18 +1172,22 @@ function renderReviewPage(deck, options = {}) {
         : '';
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${options.friendMode === true ? '\n<meta name="robots" content="noindex">' : ''}
-<title>${options.friendMode === true ? 'A few events to check' : 'Review'} · chunky.dad</title>
+<title>${options.friendMode === true ? 'chunky.dad/phone-a-friend' : 'chunky.dad/review'}</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="${options.friendMode === true ? '/favicons/apple-touch-icon.png' : '/favicons/review-icon-180.png'}">
 ${options.friendMode === true ? '' : '<link rel="manifest" href="/review/manifest.webmanifest">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Review">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'}
 <meta name="theme-color" content="#151412">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-:root { --bg:#f4f2ee; --card:#ffffff; --ink:#1d1b18; --muted:#6f6a62; --line:#e2ddd4; --accent:#ff6b35; --ok:#2f9e5f; --no:#d0453c; --skip:#8a8378; --shadow:0 12px 32px rgba(40,30,10,0.18); }
-@media (prefers-color-scheme: dark) { :root { --bg:#151412; --card:#23211d; --ink:#f2efe9; --muted:#a39d92; --line:#3a362f; --shadow:0 12px 32px rgba(0,0,0,0.55); } }
+/* The tool pages' look (testing/event-builder.html): one dark scheme,
+   the site's purple header, navy panels, an orange primary. */
+:root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --panel:#141826; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --ok:#2f9e5f; --no:#d0453c; --skip:#8e94b6; --shadow:0 14px 32px rgba(0,0,0,0.45); }
 * { box-sizing:border-box; }
-html, body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
+html { background:var(--bg); }
+body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; }
+html, body { margin:0; color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
 /* iOS Safari zoom traps: a double-tap on a button (two quick swipes or
    taps on Approve/Reject) is a double-tap-to-zoom unless the element opts
    out with touch-action:manipulation, and focusing any form control whose
@@ -1192,16 +1196,25 @@ html, body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 -ap
 html, body, button, a, .controls, .sheet, .top { touch-action:manipulation; }
 select, textarea, input { font-size:16px; }
 a { color:var(--accent); }
-.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:8px 14px; padding-top:calc(8px + env(safe-area-inset-top)); background:var(--bg); border-bottom:1px solid var(--line); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 12px 26px rgba(0,0,0,.35); }
+.top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; min-width:0; }
+.top .brand-name { font:700 21px/1.1 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
+.top .tool-page-label { font:600 11px/1 Poppins, -apple-system, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.88); white-space:nowrap; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.14); }
+.top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto; }
+.action-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; font:600 13px/1 Poppins, -apple-system, system-ui, sans-serif; padding:9px 13px; min-height:36px; border-radius:12px; text-decoration:none; cursor:pointer; white-space:nowrap; }
+.action-button i { font-size:15px; line-height:1; }
+.primary-button { border:none; color:#1b1308; background:linear-gradient(135deg, var(--accent-soft), var(--accent)); box-shadow:0 10px 24px rgba(0,0,0,.35); }
+.secondary-button { color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
+.subbar { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; max-width:560px; margin:10px auto 0; padding:0 14px; }
+@media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
 /* Every row of the header is a row the card does not get: on a phone the
    Results link shares the first row with the run picker instead of taking
    a row of its own under the pills, and the age line and pills follow. */
-@media (max-width: 700px) { .top .top-age { flex-basis:100%; } }
-@media (min-width: 701px) { .top > a { order:9; } }
-.top h1 { font:700 18px/1.2 Poppins, -apple-system, system-ui, sans-serif; margin:0; display:flex; align-items:center; gap:8px; letter-spacing:-.01em; }
-.top h1 .logo { width:28px; height:28px; border-radius:8px; }
+
+.top h1 { margin:0; min-width:0; }
+.top h1 .logo { width:34px; height:34px; }
 .card h2 { font-family:Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
-.top select { font:inherit; font-size:16px; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.top select.action-button { font-size:14px; appearance:none; -webkit-appearance:none; padding-right:28px; background:rgba(15,20,34,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c4c8e4'/%3E%3C/svg%3E") no-repeat right 10px center; }
 .pills { display:flex; gap:6px; flex-wrap:wrap; }
 .pill { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--muted); cursor:pointer; }
 .pill.on { border-color:var(--accent); color:var(--ink); font-weight:600; }
@@ -1414,28 +1427,22 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .toast.show { opacity:1; }
 @media (prefers-reduced-motion: reduce) { .card { transition:none; } }
 /* Friend mode (renderFriendPage): the same deck, nothing that needs the Mac. */
-.friend-mode #run-select, .friend-mode .top a, .friend-mode .top-age, .friend-mode #filters, .friend-mode .tools, .friend-mode .missing-cal,
+.friend-mode #run-select, .friend-mode #results-link, .friend-mode .subbar, .friend-mode .tools, .friend-mode .missing-cal,
 .friend-mode #btn-ask, .friend-mode #sheet-ask-mode, .friend-mode .sheet-friend, .friend-mode .execute, .friend-mode .snapshot, .friend-mode #waiting-wrap, .friend-mode #friends-wrap, .friend-mode #decided-wrap, .friend-mode .meta .keys { display:none !important; }
-.friend-intro { display:none; padding:4px 16px 0; color:var(--muted); font-size:14px; }
-.friend-mode .friend-intro { display:block; }
-.friend-send { display:none; padding:8px 16px 4px; gap:8px; align-items:center; }
-.friend-mode .friend-send { display:flex; }
-.friend-send .count { flex:1; color:var(--muted); font-size:13px; }
-.friend-send a, .friend-send button { font:inherit; font-weight:700; font-size:14px; border:none; border-radius:999px; padding:10px 14px; text-decoration:none; cursor:pointer; }
-.friend-send a { background:var(--accent); color:#fff; }
-.friend-send button { background:var(--line); color:var(--ink); }
+#friend-sms { display:none; }
+.friend-mode #friend-sms { display:inline-flex; }
 </style></head>
 <body${options.friendMode === true ? ' class="friend-mode"' : ''}>
-<div class="top">
-  <h1><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="28" height="28"><span id="top-title">Review</span></h1>
-  <select id="run-select" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-  <a href="/" style="margin-left:auto; font-size:13px;">Results</a>
-  <span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span>
-  <div class="pills" id="filters"></div>
-</div>
+<header class="top">
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
+  <div class="tool-buttons">
+    <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+    <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send to Stanley</span></a>
+  </div>
+</header>
+<div class="subbar"><span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span><div class="pills" id="filters"></div></div>
 ${missingCalendarNotice}
-<div class="friend-intro" id="friend-intro"></div>
-<div class="friend-send" id="friend-send"><span class="count" id="friend-count"></span><button type="button" id="friend-copy">Copy reply</button><a id="friend-sms" href="#">Send back</a></div>
 <div class="tools">
   <input id="word" type="search" placeholder="filter by words (-word excludes)" autocapitalize="none" autocorrect="off">
   <div class="views pills" id="views"></div>
@@ -1538,9 +1545,7 @@ window.__loadFriendDeck = function () {
       deck.exportId = data.e || '';
       deck.smsTo = data.to || '';
       deck.back = /^https?:[/][/]/.test(data.back || '') ? data.back : '';
-      document.getElementById('top-title').textContent = deck.from + ' asked you';
-      document.title = deck.from + ' asked you · chunky.dad';
-      document.getElementById('friend-intro').textContent = data.q || ('Is each one a bear event, and is the card right? Swipe right if it looks right, left if it’s not, then Send back.');
+      document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from;
       window.__startDeck();
     }).catch(function () { fail('This link could not be read — ask for a new one.'); });
   } catch (e) { fail('This link could not be read — ask for a new one.'); }
@@ -2160,7 +2165,7 @@ window.__startDeck = function () {
   function renderFriendSend() {
     if (!friendMode) return;
     var n = Object.keys(friendAnswers).length;
-    document.getElementById('friend-count').textContent = n + ' of ' + deck.cards.length + ' answered';
+    document.getElementById('friend-send-label').textContent = 'Send to ' + deck.from + ' · ' + n + '/' + deck.cards.length;
     document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent('My answers 🐻 ' + friendReplyLink());
   }
   function postTo(path, body) {
@@ -2695,10 +2700,13 @@ window.__startDeck = function () {
   if (friendMode) {
     document.querySelector('#btn-approve .lb').textContent = 'Looks right';
     document.querySelector('#btn-reject .lb').textContent = 'Not right';
-    document.getElementById('friend-copy').onclick = function () {
-      var link = friendReplyLink();
-      if (navigator.clipboard) navigator.clipboard.writeText(link).then(function () { toast('Reply copied — send it to ' + deck.from); }, function () { window.prompt('Copy this link', link); });
-      else window.prompt('Copy this link', link);
+    // ONE send button: the phone's share sheet (Messages, WhatsApp,
+    // Copy…) where there is one, else straight to Messages.
+    document.getElementById('friend-sms').onclick = function (e) {
+      if (!Object.keys(friendAnswers).length) { e.preventDefault(); toast('Swipe a card first'); return; }
+      if (!navigator.share) return;
+      e.preventDefault();
+      navigator.share({ text: 'My answers 🐻', url: friendReplyLink() }).catch(function () {});
     };
     renderFriendSend();
   }
@@ -2950,11 +2958,11 @@ function resolveReplyBase(req) {
 // recorded, then the deck.
 function renderAdviceLandingPage(message, ok = false) {
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Friend's answers · chunky.dad</title>${ok ? '<meta http-equiv="refresh" content="2;url=/review">' : ''}
+<title>chunky.dad/review</title>${ok ? '<meta http-equiv="refresh" content="2;url=/review">' : ''}
 <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#151412;color:#f2efe9;font:16px/1.45 -apple-system,system-ui,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
-img{width:72px;height:72px}h1{font:700 22px/1.2 Poppins,-apple-system,sans-serif;margin:14px 0 8px}a{color:#ff6b35}</style></head>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top,#1b2033 0%,#0b0d13 45%,#07090f 100%);color:#f6f7ff;font:16px/1.45 -apple-system,system-ui,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
+img{width:72px;height:72px}h1{font:700 22px/1.2 Poppins,-apple-system,sans-serif;margin:14px 0 8px}a{display:inline-block;margin-top:8px;padding:10px 16px;border-radius:12px;font:600 14px Poppins,-apple-system,sans-serif;text-decoration:none;color:#1b1308;background:linear-gradient(135deg,#ffa24a,#ff7b2f)}</style></head>
 <body><div><img src="/favicons/favicon-96x96.png" alt=""><h1>${ok ? '🙋 Got it' : 'Hmm'}</h1><p>${escapeHtmlText(message)}</p><p><a href="/review">Open the deck</a></p></div></body></html>`;
 }
 
@@ -3352,7 +3360,7 @@ async function handleRequest(state, req, res) {
 
     // The friend's page itself, for links built against this server
     // (CHUNKY_ADVICE_BASE) — the same file the website serves at /advice/.
-    if ((pathname === '/advice/' || pathname === '/advice' || pathname === '/advice/index.html') && req.method === 'GET') {
+    if ((pathname === '/phone-a-friend/' || pathname === '/phone-a-friend' || pathname === '/phone-a-friend/index.html' || pathname === '/advice/' || pathname === '/advice' || pathname === '/advice/index.html') && req.method === 'GET') {
         return sendHtml(res, 200, renderFriendPage());
     }
 
