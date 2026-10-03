@@ -1172,7 +1172,7 @@ function renderReviewPage(deck, options = {}) {
         : '';
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${options.friendMode === true ? '\n<meta name="robots" content="noindex">' : ''}
-<title>${options.friendMode === true ? 'chunky.dad/phone-a-friend' : 'chunky.dad/review'}</title>
+<title>${options.friendMode === true ? 'chunky.dad/phone-a-friend' : 'Review · chunky.dad (on your Mac)'}</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="${options.friendMode === true ? '/favicons/apple-touch-icon.png' : '/favicons/review-icon-180.png'}">
 ${options.friendMode === true ? '' : '<link rel="manifest" href="/review/manifest.webmanifest">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Review">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'}
@@ -2956,7 +2956,7 @@ function resolveReplyBase(req) {
 // recorded, then the deck.
 function renderAdviceLandingPage(message, ok = false) {
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>chunky.dad/review</title>${ok ? '<meta http-equiv="refresh" content="2;url=/review">' : ''}
+<title>Review · chunky.dad (on your Mac)</title>${ok ? '<meta http-equiv="refresh" content="2;url=/review">' : ''}
 <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top,#1b2033 0%,#0b0d13 45%,#07090f 100%);color:#f6f7ff;font:16px/1.45 -apple-system,system-ui,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
