@@ -5,6 +5,66 @@
   },
   "events": [
     {
+      "name": "Sunday Tea: Disco with DJ Apthout",
+      "day": "Sunday",
+      "time": "5PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-04T17:00:00",
+      "endDate": "2026-10-05T02:00:00",
+      "unprocessedDescription": "description: Get into the groove at Sunday Tea\\: Disco, our f\rirst Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: sunday-tea-disco-with-dj-apthout|2026-10-04|dallas eagle\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1\ncover: No cover\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1\nimageSource: page\nbarSource: venue-site\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: SUNDAY TEA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
+      "uid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1",
+      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1",
+      "tea": "Get into the groove at Sunday Tea: Disco, our first Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "SUNDAY TEA",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46"
+    },
+    {
       "name": "Bear and Twink Night with DJ Level",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -60,6 +120,181 @@
         }
       ],
       "slug": "bear-and-twink-night-with-dj-level-36f7f7ac"
+    },
+    {
+      "name": "Gear Night with DJ Woolfie",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-03T21:00:00",
+      "endDate": "2026-10-04T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BLVD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover: No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSource: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
+      "uid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover!",
+      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1",
+      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1",
+      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pu",
+      "cadence": null,
+      "address": "125 S. KENDRICK BLVD",
+      "website": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "GEAR NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "gear-night-with-dj-woolfie-1810eb9e"
+    },
+    {
+      "name": "Three Years",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-02T21:00:00",
+      "endDate": "2026-10-03T02:00:00",
+      "unprocessedDescription": "description: It’s our third anniversary, and we’d love to cele\rbrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedallaseagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: THREE YEARS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "CE0B1128-2F30-4935-804E-7AAECF416053",
+      "uid": "CE0B1128-2F30-4935-804E-7AAECF416053",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp",
+      "tea": "It’s our third anniversary, and we’d love to celebrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "THREE YEARS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "three-years-31d21eb3"
+    },
+    {
+      "name": "FURBALL",
+      "day": "Sunday",
+      "time": "5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.810535,
+        "lng": -96.8110709
+      },
+      "startDate": "2026-07-05T17:00:00",
+      "unprocessedDescription": "bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75\r219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "uid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "STATION 4",
+      "image": "https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg",
+      "cadence": null,
+      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-442f8415"
     },
     {
       "name": "FURBALL Dallas Underwear + Gear Party featuring DJ GSP",
@@ -177,62 +412,6 @@
         }
       ],
       "slug": "brewery-bears-happy-hour-247d1b27"
-    },
-    {
-      "name": "FURBALL",
-      "day": "Sunday",
-      "time": "5PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.810535,
-        "lng": -96.8110709
-      },
-      "startDate": "2026-07-05T17:00:00",
-      "unprocessedDescription": "bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75\r219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
-      "uid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "STATION 4",
-      "image": "https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg",
-      "cadence": null,
-      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
-      "shortName": "FUR-BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-442f8415"
     }
   ]
 }

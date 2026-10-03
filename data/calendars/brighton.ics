@@ -6,65 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-brighton
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART:20260801T210000Z
-DTEND:20260802T040000Z
-DTSTAMP:20261001T140823Z
-UID:22724512-536F-464D-9592-A7104E2BC7E3
-CREATED:20260731T131551Z
-DESCRIPTION:description: Now it’s happening — BEEFMINCE Brighton Pride on S
- aturday 1 August at Horizon 🏳️‍🌈🔥 For the first time ever\, BEEFMINCE ha
- s a Saturday night party for Pride and it’s going to be major. Two rooms\, 
- huge sea-front terrace and attitude-free\, proud vibes until the very early
-  hours. Plus\, making their BEEFMINCE debut\, expect a no-holds-barred Prid
- e blowout with FREEMASONS (Russell Small) at the helm!\nbar: Horizon\naddre
- ss: 214 King's Road\, Brighton\, BN1 1NB\, United Kingdom\nticketUrl: https
- ://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-t
- ickets\nimage: https://dice-media.imgix.net/attachments/2026-02-07/92683f1d
- -efd9-49af-9b55-e93c17060038.jpg?rect=1%2C0%2C768%2C768\ntimezone: Europe/L
- ondon\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-02-07
- /92683f1d-efd9-49af-9b55-e93c17060038.jpg?rect=0%2C154%2C769%2C461&w=1300&h
- =630&auto=compress\nwebsite: https://beefmince.com\ninstagram: horizon.brig
- hton\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince
- -brighton-pride|2026-08-01|horizon\nbearSource: keyword\ncover: £25\npinSou
- rce: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\
- ngmaps: https://www.google.com/maps/search/?api=1&query=50.819936%2C-0.1403
- 82
-LAST-MODIFIED:20260811T175719Z
-LOCATION:50.819936\, -0.140382
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE Brighton Pride
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;VALUE=DATE:20270101
-DTEND;VALUE=DATE:20270102
-DTSTAMP:20261001T140823Z
-UID:54E9352F-F963-42CD-9EA4-F864674DB93C
-CREATED:20261001T131454Z
-DESCRIPTION:bar: Horizon Brighton and Hove\ntimezone: Europe/London\nticket
- Url: https://dice.fm/event/6aba34f81e905800015b17d7\ncover: £15\nwebsite: h
- ttps://beefmince.com\ngmaps: https://www.google.com/maps/search/?api=1&quer
- y=50.819936%2C-0.140382\naddress: 211-214 Kings Road Arches\, Brighton BN1 
- 1NB\naddressSource: curated\npinSource: curated\ninstagram: horizon.brighto
- n\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-ne
- w-year-s-day|2027-01-01|horizon brighton and hove\ntimeUnknown: true\nbearS
- ource: keyword
-LAST-MODIFIED:20261001T131454Z
-LOCATION:50.819936\, -0.140382
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE New Year's Day
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20270101T220000Z
 DTEND:20270102T040000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:58ACC0E9-80E4-43E2-9F93-25BD32D80E0D
 CREATED:20261001T131453Z
 DESCRIPTION:description: BEEFMINCE New Year's Day Brighton - more info soon
@@ -74,14 +18,14 @@ DESCRIPTION:description: BEEFMINCE New Year's Day Brighton - more info soon
  ce-media.imgix.net/attachments/2026-09-28/68ca5707-00f4-4d21-91da-5696c7c4f
  9c6.jpg\ncover: 15 GBP\ntimezone: Europe/London\nimageHorizontal: https://d
  ice-media.imgix.net/attachments/2026-09-28/68ca5707-00f4-4d21-91da-5696c7c4
- f9c6.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\naddressSourc
- e: page\nwebsite: https://link.dice.fm/eedfde452b1f\ngmaps: https://www.goo
- gle.com/maps/search/?api=1&query=Horizon%2C%20214%20King's%20Road%2C%20Brig
- hton%2C%20BN1%201NB%2C%20United%20Kingdom%2C%20Brighton%20and%20Hove\npinSo
- urce: curated\ninstagram: horizon.brighton\nshortName: BEEF­MINCE\nfavicon:
-  https://beefmince.com\nkey: beefmince-new-year-s-day-brighton|2027-01-01|h
- orizon\nimageSource: json-api\nbarSource: curated
-LAST-MODIFIED:20261001T131453Z
+ f9c6.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: htt
+ ps://beefmince.com\ninstagram: horizon.brighton\nshortName: BEEF­MINCE\nfav
+ icon: https://beefmince.com\nkey: beefmince-new-year-s-day-brighton|2027-01
+ -01|horizon\nbearSource: keyword\npinSource: curated\naddressSource: page\n
+ imageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Horizon%2C%20214%20King's%20Road%2C%20Brighton%2C%20
+ BN1%201NB%2C%20United%20Kingdom%2C%20Brighton%20and%20Hove
+LAST-MODIFIED:20261003T131629Z
 LOCATION:50.819936\, -0.140382
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -93,7 +37,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261205T230000Z
 DTEND:20261206T040000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:AC82B5F3-1E3E-4098-99F8-51208AFC7C58
 CREATED:20260731T131552Z
 DESCRIPTION:bar: Concorde 2\naddress: 286A Madeira Drive\, Brighton BN2 1EN
@@ -122,6 +66,62 @@ LOCATION:50.8172912\, -0.1225875
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFMINCE x Brighton
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20270101
+DTEND;VALUE=DATE:20270102
+DTSTAMP:20261003T134131Z
+UID:54E9352F-F963-42CD-9EA4-F864674DB93C
+CREATED:20261001T131454Z
+DESCRIPTION:bar: Horizon Brighton and Hove\ntimezone: Europe/London\nticket
+ Url: https://dice.fm/event/6aba34f81e905800015b17d7\ncover: £15\nwebsite: h
+ ttps://beefmince.com\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=50.819936%2C-0.140382\naddress: 211-214 Kings Road Arches\, Brighton BN1 
+ 1NB\naddressSource: curated\npinSource: curated\ninstagram: horizon.brighto
+ n\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-ne
+ w-year-s-day|2027-01-01|horizon brighton and hove\ntimeUnknown: true\nbearS
+ ource: keyword
+LAST-MODIFIED:20261001T131454Z
+LOCATION:50.819936\, -0.140382
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE New Year's Day
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260801T210000Z
+DTEND:20260802T040000Z
+DTSTAMP:20261003T134131Z
+UID:22724512-536F-464D-9592-A7104E2BC7E3
+CREATED:20260731T131551Z
+DESCRIPTION:description: Now it’s happening — BEEFMINCE Brighton Pride on S
+ aturday 1 August at Horizon 🏳️‍🌈🔥 For the first time ever\, BEEFMINCE ha
+ s a Saturday night party for Pride and it’s going to be major. Two rooms\, 
+ huge sea-front terrace and attitude-free\, proud vibes until the very early
+  hours. Plus\, making their BEEFMINCE debut\, expect a no-holds-barred Prid
+ e blowout with FREEMASONS (Russell Small) at the helm!\nbar: Horizon\naddre
+ ss: 214 King's Road\, Brighton\, BN1 1NB\, United Kingdom\nticketUrl: https
+ ://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-t
+ ickets\nimage: https://dice-media.imgix.net/attachments/2026-02-07/92683f1d
+ -efd9-49af-9b55-e93c17060038.jpg?rect=1%2C0%2C768%2C768\ntimezone: Europe/L
+ ondon\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-02-07
+ /92683f1d-efd9-49af-9b55-e93c17060038.jpg?rect=0%2C154%2C769%2C461&w=1300&h
+ =630&auto=compress\nwebsite: https://beefmince.com\ninstagram: horizon.brig
+ hton\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince
+ -brighton-pride|2026-08-01|horizon\nbearSource: keyword\ncover: £25\npinSou
+ rce: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=50.819936%2C-0.1403
+ 82
+LAST-MODIFIED:20260811T175719Z
+LOCATION:50.819936\, -0.140382
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE Brighton Pride
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

@@ -24,9 +24,328 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART:20260516T050000Z
+DTEND:20260516T090000Z
+DTSTAMP:20261003T134131Z
+UID:BBE7F872-30A1-40EC-AB3C-BCDAF9342658
+CREATED:20260510T025246Z
+DESCRIPTION:description: The Occult Leather Party Returns to The Stud Frida
+ y May 15. Are you ready to live deliciously?\nbar: The Stud\naddress: 1123 
+ Folsom Street\, San Francisco\, CA 94103\nticketUrl: https://www.eventbrite
+ .com/e/beefwitch-tickets-1988340517011\ninstagram: https://www.instagram.co
+ m/thebeefwitch\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F
+ images%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=foc
+ alpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0
+ .5&s=d4ebc964c2b00b6625c9a810da2199de\ncover: $10.38-$17.85\nshortName: BEE
+ FWITCH\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2
+ C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: beefw
+ itch|2026-05-16|the stud
+LAST-MODIFIED:20260514T004503Z
+LOCATION:37.7761825\,-122.4083567
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFWITCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261115T230000Z
+DTEND:20261116T030000Z
+DTSTAMP:20261003T134131Z
+UID:51029655-7257-43A2-BEF7-D2AFE2CA190E
+CREATED:20261003T131618Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025309/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-11-15|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131618Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260726T050000Z
+DTEND:20260726T110000Z
+DTSTAMP:20261003T134131Z
+UID:CEC90038-7CD1-4FA5-9BA7-1353A769AEB8
+CREATED:20260520T221145Z
+DESCRIPTION:description: THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF
+  Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOG
+ O FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 F
+ OLSOM ST // 10pm - 4am\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St\, 
+ San Francisco\, CA 94103\, USA\nimage: https://static.wixstatic.com/media/4
+ 2b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c
+ \,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\ntimezone: America/L
+ os_Angeles\ncover: $60\nimageVertical: https://static.wixstatic.com/media/4
+ 2b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c
+ \,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\nwebsite: https://ww
+ w.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th\nshortN
+ ame: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https
+ ://www.chunk-party.com\nkey: chunk-dore-alley|2026-07-26|f8 nightclub & bar
+ \nbearSource: keyword\npinSource: page\naddressSource: page\nimageSource: j
+ sonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1
+ &query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Franci
+ sco%2C%20CA%2094103%2C%20USA
+LAST-MODIFIED:20260817T005558Z
+LOCATION:37.77526599999999\, -122.4100374
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK DORE ALLEY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260627T040000Z
+DTEND:20260627T100000Z
+DTSTAMP:20261003T134131Z
+UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
+CREATED:20260123T030753Z
+DESCRIPTION:description: Bearracuda SF Pride! Friday\, June 26th\, 2026 wit
+ h TONY MORANBEEFCAKE\nbar: Public Works\naddress: 161 Erie Street\nticketUr
+ l: https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/ticket
+ s\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.clou
+ dinary.com/eventservice/image/upload/q_auto\,f_auto/v1776730474/saas/logos/
+ image_1776730463946_w2htw6xrh.webp\ncover: General Admission $40.00-$50.00\
+ nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/sf-pride/\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%2
+ 0161%20Erie%20Street\nkey: bearracuda-2026-06-27-sf\ntimezone: America/Los_
+ Angeles\npinSource: geocoded-exact
+LAST-MODIFIED:20260717T211302Z
+LOCATION:37.7688931\, -122.4192651
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF: BEEFCAKE Pride
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261025T220000Z
+DTEND:20261026T020000Z
+DTSTAMP:20261003T134131Z
+UID:C2166379-6596-4B15-8812-7B3BA1170830
+CREATED:20261003T131615Z
+DESCRIPTION:description: Join us for world famous SF Eagle Beer Bust every 
+ Sunday benefitting local LGBTQ+ Non Profits and Charities!\nbar: SF Eagle\n
+ address: 398 12th Street\, San Francisco\, CA 94103\nimage: https://wp.sf-e
+ agle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\ntimezone: 
+ America/Los_Angeles\nimageHorizontal: https://wp.sf-eagle.com/wp-content/up
+ loads/2024/01/Beer-Bust-Banner-copy-1.png\naddressSource: page\nwebsite: ht
+ tps://www.sf-eagle.com/events/beer-bust-3-34-2-10025306/\ngmaps: https://ww
+ w.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource:
+  curated\ninstagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WE
+ EKLY\;BYDAY=SU\nkey: beer-bust|2026-10-25|sf eagle\nimageSource: jsonld\nba
+ rSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshort
+ Name: BEER BUST
+LAST-MODIFIED:20261003T131615Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T000000Z
+DTEND:20260920T040000Z
+DTSTAMP:20261003T134131Z
+UID:B544C085-0B59-4B5C-AAF7-52F1FFDEC0D5
+CREATED:20260918T134814Z
+DESCRIPTION:bar: Powerhouse Bar\naddress: 1347 Folsom St\, San Francisco\, 
+ CA\, 94103\nwebsite: https://powerhousebar.com/event/chub-rub/2026-09-19/\n
+ image: https://powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\nim
+ ageSource: json-api\ntimezone: America/Los_Angeles\nimageVertical: https://
+ powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\naddressSource: pa
+ ge\ngmaps: https://www.google.com/maps/search/?api=1&query=37.773088%2C-122
+ .412193\npinSource: curated\ninstagram: https://www.instagram.com/sfpowerho
+ use\nkey: chub-rub|2026-09-20|powerhouse bar\nbearSource: keyword\nshortNam
+ e: CHUB RUB
+LAST-MODIFIED:20260918T134814Z
+LOCATION:37.773088\, -122.412193
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Chub Rub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260927T050000Z
+DTEND:20260927T110000Z
+DTSTAMP:20261003T134131Z
+UID:38DC1F04-89D4-436A-88E8-0439D845E570
+CREATED:20260808T014841Z
+DESCRIPTION:description: CHUNK presents SAN FRANCISCO FOLSOM '26 - Bear Pla
+ yground! CHICAGO DJ SHAUN J WRIGHT & MARCEAUX MARCEAUX & THCKRTANKER & E.FE
+ LD & BEN FONIK HOT GOGO BEARS DRE & WILL & DENNIS & MORE f8 - 1192 FOLSOM S
+ T 10-4\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St\, San Francisco\, 
+ CA 94103\, USA\nimage: https://static.wixstatic.com/media/42b6cb_9c265c543d
+ 68475cb1a2d4fc431f08d5~mv2.jpg/v1/fill/w_3122\,h_3902\,al_c\,q_90/42b6cb_9c
+ 265c543d68475cb1a2d4fc431f08d5~mv2.jpg\ncover: $50-$60\ntimezone: America/L
+ os_Angeles\nimageVertical: https://static.wixstatic.com/media/42b6cb_9c265c
+ 543d68475cb1a2d4fc431f08d5~mv2.jpg/v1/fill/w_3122\,h_3902\,al_c\,q_90/42b6c
+ b_9c265c543d68475cb1a2d4fc431f08d5~mv2.jpg\nwebsite: https://www.chunk-part
+ y.com/event-details/chunk-folsom-bear-playground-9-26\nshortName: CHUNK\nin
+ stagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-p
+ arty.com\nkey: chunk-folsom-bear-playground|2026-09-27|f8 nightclub & bar\n
+ bearSource: keyword\npinSource: page\naddressSource: page\nimageSource: jso
+ nld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisc
+ o%2C%20CA%2094103%2C%20USA
+LAST-MODIFIED:20260817T005558Z
+LOCATION:37.7752814\, -122.4099546
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK FOLSOM - Bear Playground
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261205T020000Z
+DTEND:20261205T050000Z
+DTSTAMP:20261003T134131Z
+UID:B5374371-2C9C-4292-99E7-6F43FED1E279
+CREATED:20260927T214735Z
+DESCRIPTION:description: QUEERS · CRUISING · LEATHER · BOOTBLACKS\nbar: SF 
+ Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/04/Untitled-2
+ 6.avif\nwebsite: https://www.sf-eagle.com/events/queer-leather-happy-hour-1
+ 0001132/\nimageSource: page\nbarSource: venue-site\ntimezone: America/Los_A
+ ngeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4
+ ARj3aV_MeMyf8\naddress: 398 12th Street\, San Francisco\, CA 94103\naddress
+ Source: curated\npinSource: curated\ninstagram: https://www.instagram.com/s
+ feaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leather-happy-hour|
+ 2026-12-05|sf eagle\nbearSource: keyword\nshortName: QUEER LEATHER
+LAST-MODIFIED:20260927T214736Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Queer Leather Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261101T230000Z
+DTEND:20261102T030000Z
+DTSTAMP:20261003T134131Z
+UID:6415C904-0493-4530-8A9D-2A496A7EA8E5
+CREATED:20261003T131616Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025307/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-11-01|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131617Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260614T040000Z
+DTEND:20260614T090000Z
+DTSTAMP:20261003T134131Z
+UID:C0CE53B6-54E8-4E7E-AD3D-95DF514E0382
+CREATED:20260507T001632Z
+DESCRIPTION:description: Saturday\, June 13th\, 2025 Doors at 9pm\, Party t
+ il 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo\;s\, Heavy Crui
+ singHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https\\://www.jphardyof
+ ficial.comSPRING has sprung and we are ready to strip down! Grab a wristban
+ d when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband
+  BOTTOM White Wristband SIDE You can choose one when you purchase tix and a
+ re free to change your mind (or go without a wristband) when you arrive.\nb
+ ar: The Stud\naddress: 1123 Folsom Street\nticketUrl: https://www.sickening
+ .events/e/treasuresf/tickets\ninstagram: https://www.instagram.com/bearracu
+ da\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto\,f_a
+ uto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp\ncover: 15.00
+ \nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/treasure-
+ trail-sf/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stu
+ d%2C%201123%20Folsom%20Street\nkey: bearracuda-2026-06-14-sf\ntimezone: Ame
+ rica/Los_Angeles
+LAST-MODIFIED:20260514T012023Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail: San Francisco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261018T000000Z
+DTEND:20261018T040000Z
+DTSTAMP:20261003T134131Z
+UID:6A56B564-31E5-43A0-A75C-CADA52663A37
+CREATED:20260918T134815Z
+DESCRIPTION:bar: Powerhouse Bar\naddress: 1347 Folsom St\, San Francisco\, 
+ CA\, 94103\nwebsite: https://powerhousebar.com/event/chub-rub/2026-10-17/\n
+ image: https://powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\nim
+ ageSource: json-api\ntimezone: America/Los_Angeles\nimageVertical: https://
+ powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\naddressSource: pa
+ ge\ngmaps: https://www.google.com/maps/search/?api=1&query=37.773088%2C-122
+ .412193\npinSource: curated\ninstagram: https://www.instagram.com/sfpowerho
+ use\nkey: chub-rub|2026-10-18|powerhouse bar\nbearSource: keyword\nshortNam
+ e: CHUB RUB
+LAST-MODIFIED:20260918T134815Z
+LOCATION:37.773088\, -122.412193
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Chub Rub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261107T020000Z
+DTEND:20261107T050000Z
+DTSTAMP:20261003T134131Z
+UID:FAA9AE05-B1EB-44B7-B4C2-0D56CC9A5EB4
+CREATED:20260927T214735Z
+DESCRIPTION:description: QUEERS · CRUISING · LEATHER · BOOTBLACKS\nbar: SF 
+ Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/04/Untitled-2
+ 6.avif\nwebsite: https://www.sf-eagle.com/events/queer-leather-happy-hour-1
+ 0001131/\nimageSource: page\nbarSource: venue-site\ntimezone: America/Los_A
+ ngeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4
+ ARj3aV_MeMyf8\naddress: 398 12th Street\, San Francisco\, CA 94103\naddress
+ Source: curated\npinSource: curated\ninstagram: https://www.instagram.com/s
+ feaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leather-happy-hour|
+ 2026-11-07|sf eagle\nbearSource: keyword\nshortName: QUEER LEATHER
+LAST-MODIFIED:20260927T214735Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Queer Leather Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251019T040000Z
 DTEND:20251019T090000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
 CREATED:20250930T014036Z
 DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
@@ -51,114 +370,84 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261018T000000Z
-DTEND:20261018T040000Z
-DTSTAMP:20261001T140823Z
-UID:6A56B564-31E5-43A0-A75C-CADA52663A37
-CREATED:20260918T134815Z
-DESCRIPTION:bar: Powerhouse Bar\naddress: 1347 Folsom St\, San Francisco\, 
- CA\, 94103\nwebsite: https://powerhousebar.com/event/chub-rub/2026-10-17/\n
- image: https://powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\nim
- ageSource: json-api\ntimezone: America/Los_Angeles\nimageVertical: https://
- powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\naddressSource: pa
- ge\ngmaps: https://www.google.com/maps/search/?api=1&query=37.773088%2C-122
- .412193\npinSource: curated\ninstagram: https://www.instagram.com/sfpowerho
- use\nkey: chub-rub|2026-10-18|powerhouse bar\nbearSource: keyword\nshortNam
- e: CHUB RUB
-LAST-MODIFIED:20260918T134815Z
-LOCATION:37.773088\, -122.412193
+DTSTART:20250928T050000Z
+DTEND:20250928T110000Z
+DTSTAMP:20261003T134131Z
+UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
+CREATED:20250901T054018Z
+DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
+ / 2 ROOMS // CAVALCADE OF GOGO BEARS DJS - DICAP (NYC) // MR PICKLES (CHUNK
+  RESIDENT) // DR TIME (Palm Springs) // FREDDY KOP (Seattle)  f8 NIGHTCLUB 
+ // 1192 FOLSOM ST // 10PM - CLOSE // 21+ // ID RQ'D\nbar: f8 NIGHTCLUB\nadd
+ ress: 1192 Folsom St\, San Francisco\ntimezone: America/Los_Angeles\nurl: h
+ ttps://www.chunk-party.com/event-details/chunk-presents-folsom-25\nticketUr
+ l: https://www.chunk-party.com/event-details/chunk-presents-folsom-25\ncove
+ r: $25.63 - $66.63\nimage: https://static.wixstatic.com/media/42b6cb_4273bb
+ d8298849f09e8b04906a809d02~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c\,q_90/42b6c
+ b_4273bbd8298849f09e8b04906a809d02~mv2.jpg\nshortName: CHUNK\ninstagram: ht
+ tps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.77
+ 526599999999\,-122.4100374\nkey: chunk-presents-folsom-'25|2025-09-28|f8 ni
+ ghtclub|chunk
+LAST-MODIFIED:20250913T105551Z
+LOCATION:37.77526599999999\, -122.4100374
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Chub Rub
+SUMMARY:CHUNK presents FOLSOM '25
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261003T010000Z
-DTEND:20261003T040000Z
-DTSTAMP:20261001T140823Z
-UID:1366D640-424A-445D-AD70-31481622C574
-CREATED:20260927T214734Z
-DESCRIPTION:description: SF Queer Leather Happy Hour is a monthly social ev
- ent for Queer leather folks and those that love them. Come cruise\, meet up
-  with friends\, make new ones\, or just bask in unapologet\nbar: SF Eagle\n
- address: 398 12th Street\, San Francisco\, CA 94103\nimage: https://wp.sf-e
- agle.com/wp-content/uploads/2024/04/Untitled-26.avif\ntimezone: America/Los
- _Angeles\naddressSource: page\nwebsite: https://www.sf-eagle.com/events/que
- er-leather-happy-hour/\ngmaps: https://www.google.com/maps/place/?q=place_i
- d:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource: curated\ninstagram: https://www.i
- nstagram.com/sfeaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leath
- er-happy-hour|2026-10-03|sf eagle\nimageSource: jsonld\nbarSource: curated\
- nbearSource: keyword\nshortName: QUEER LEATHER
-LAST-MODIFIED:20260927T214734Z
-LOCATION:37.7699927\, -122.4134077
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Queer Leather Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261004T040000Z
-DTEND:20261004T090000Z
-DTSTAMP:20261001T140823Z
-UID:BC29B670-5572-45FE-A5A9-F6FED2888C1B
-CREATED:20260927T214737Z
+DTSTART:20261003T040000Z
+DTEND:20261003T090000Z
+DTSTAMP:20261003T134131Z
+UID:E2007366-A2D1-4B6A-9AA5-2F9AA8CAE5F4
+CREATED:20260927T214736Z
 DESCRIPTION:address: San Francisco CA 94103\nimage: https://images.squaresp
- ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1790370665127-YT2975FLLQH27
- SCG6S6S/Screenshot+2026-09-25+at+2.07.48%E2%80%AFPM.png\ntimezone: America/
- Los_Angeles\nimageVertical: https://images.squarespace-cdn.com/content/v1/5
- 8164acaf5e2319b546c693a/1790370665127-YT2975FLLQH27SCG6S6S/Screenshot+2026-
- 09-25+at+2.07.48%E2%80%AFPM.png\naddressSource: page\nwebsite: https://www.
- lonestarsf.com/new-events-1/2026/10/3/disco-bear\ngmaps: https://www.google
- .com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8\nkey: disco-bear|20
- 26-10-04|lone star saloon\ndescription: 🪩 🪩 🪩 🪩 Get Down (and get back 
- up again) SQw are throwing a Disco-Stravaganza for your dancing pleasure. 
- 🪩 🪩 🪩 🪩 🕺 🕺 🕺 🕺Boomers\; it's far out. Gen X it's Awesome\, Milleni
- als it's Epic\, Gen Z it's Fire.So open up that shirt\, grab your tight whi
- te pants and dance.🕺 🕺 🕺 🕺 DJ\\: AyumiPlease is gonna keep the party Ah
-  ah ah ah Stayin Aliiiiiiive 9p - 2a\npinSource: geocoded-exact\nbar: Lone 
- Star Saloon\nimageSource: json-api\nbarSource: venue-site-identity\nbearSou
- rce: keyword\nshortName: DISCO BEAR
-LAST-MODIFIED:20260927T214738Z
+ ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1790371676123-49SZVPIZOR281
+ 47REY6F/Screenshot+2026-09-25+at+2.19.24%E2%80%AFPM.png\ntimezone: America/
+ Los_Angeles\nimageHorizontal: https://images.squarespace-cdn.com/content/v1
+ /58164acaf5e2319b546c693a/1790371676123-49SZVPIZOR28147REY6F/Screenshot+202
+ 6-09-25+at+2.19.24%E2%80%AFPM.png\naddressSource: page\nwebsite: https://ww
+ w.lonestarsf.com/new-events-1/2026/10/2/bear-trap\ngmaps: https://www.googl
+ e.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8\nkey: bear-trap|20
+ 26-10-03|lone star saloon\ndescription: If you wanna Trap a Bear\, you have
+  to go to where the bears are and that place is Bear Trap.... first Friday 
+ of every month. Bring your appetite. DJ Rexxx 9p - 2a\npinSource: geocoded-
+ exact\nbar: Lone Star Saloon\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nimageSource
+ : json-api\nbarSource: venue-site-identity\nbearSource: keyword\nshortName:
+  BEAR TRAP
+LAST-MODIFIED:20260927T214737Z
 LOCATION:37.7721663\, -122.4108890
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Disco Bear
+SUMMARY:Bear Trap
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261115T050000Z
-DTEND:20261115T100000Z
-DTSTAMP:20261001T140823Z
-UID:24AE5035-FB8A-4156-BC27-525B3344D284
-CREATED:20261001T131422Z
-DESCRIPTION:description: Twisted Bear can't wait to return to SF Eagle on S
- at\, Nov 14th!!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street\, S
- an Francisco\, CA 94103\nticketUrl: https://www.eventbrite.com/e/twisted-be
- ar-san-francisco-tickets-2002390930175\nimage: https://img.evbuc.com/https%
- 3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194465573%2F1088207912863%2F1%2Foriginal.
- 20260927-182953?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&
- sharp=10&fp-x=0.5&fp-y=0.5&s=28723ace341c2cb44fa4712b0813b44b\nimageSource:
-  jsonld\ncover: $12.51-$23.18\ntimezone: America/Los_Angeles\nimageHorizont
- al: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194465573
- %2F1088207912863%2F1%2Foriginal.20260927-182953?crop=focalpoint&fit=crop&w=
- 940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=28723ace341c2c
- b44fa4712b0813b44b\naddressSource: page\nwebsite: https://twisted-bear.com\
- ngmaps: https://www.google.com/maps/search/?api=1&query=37.7699927%2C-122.4
- 134077\npinSource: curated\ninstagram: https://www.instagram.com/twistedbea
- rparty\nshortName: TWIST­ED BEAR\nfacebook: https://www.facebook.com/twiste
- dglobal/\nfavicon: https://twisted-bear.com\nkey: twisted-bear-san-francisc
- o|2026-11-15|san francisco eagle bar\nbearSource: keyword
-LAST-MODIFIED:20261001T131422Z
+DTSTART:20261227T230000Z
+DTEND:20261228T030000Z
+DTSTAMP:20261003T134131Z
+UID:2C98F58F-1E3C-4766-8637-7AF09C3CB1C6
+CREATED:20261003T131623Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025315/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-12-27|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131623Z
 LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:TWISTED BEAR San Francisco
+SUMMARY:Beer Bust
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -166,7 +455,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260118T060000Z
 DTEND:20260118T120000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:7F66ECD5-BDAB-4CA8-BBC0-AAC031F6E4DB
 CREATED:20260117T205137Z
 DESCRIPTION:description: CHUNK SF celebrates MLK JR Weekend - Atlanta LEGEN
@@ -196,82 +485,91 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261025T040000Z
-DTEND:20261025T090000Z
-DTSTAMP:20261001T140823Z
-UID:608FD5A3-69F1-4600-A6A0-A219DF3EFC2C
-CREATED:20261001T131423Z
-DESCRIPTION:description: Gather your crew\, your coven\, your pack\, your m
- urder\, and show up in your best or worst TROLL\, ORC\, GOBLIN or HAG (at a
-  leather bar)\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\,
-  California\, 94103\ninstagram: https://www.instagram.com/jugodepapaya\nima
- ge: https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/
- a772d61b-6321-4262-bfea-a75369683c2e/DigiFront-01.jpg?format=300w\nimageSou
- rce: page\nbarSource: page-adjacent\naddressSource: curated\nwebsite: https
- ://gruntparty.monster/grunt-halloween\npinSource: curated\ntimezone: Americ
- a/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1&query=The%2
- 0Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20California%2C%2
- 094103\nshortName: GRUNT\nfavicon: https://gruntparty.monster\nkey: grunt-h
- alloween|2026-10-25|the stud\nbearSource: ai
-LAST-MODIFIED:20261001T131423Z
-LOCATION:37.7761653\, -122.4083643
+DTSTART:20260829T040000Z
+DTEND:20260829T090000Z
+DTSTAMP:20261003T134131Z
+UID:2A05155C-0DAD-46E4-807A-7DB36C1A3FB1
+CREATED:20260815T021936Z
+DESCRIPTION:description: When the lights go down\, the Locker Room heats up
+ . Coach After Dark\\: The Sports Gear Disco returns to the SF Eagle Friday\
+ , August 28th!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street\, Sa
+ n Francisco\, CA 94103\nticketUrl: https://www.eventbrite.com/e/coach-after
+ -dark-sf-tickets-1997961694211\nimage: https://img.evbuc.com/https%3A%2F%2F
+ cdn.evbuc.com%2Fimages%2F1191049298%2F2198683436473%2F1%2Foriginal.20260814
+ -093754?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10
+ &fp-x=1.0&fp-y=0.6&s=f5bcf4875cd378b87f3235ce08d3a589\ncover: $10.38-$17.85
+ \ntimezone: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/htt
+ ps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191049298%2F2198683436473%2F1%2Forigin
+ al.20260814-093754?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=
+ 75&sharp=10&fp-x=1.0&fp-y=0.6&s=f5bcf4875cd378b87f3235ce08d3a589\ninstagram
+ : https://www.instagram.com/coachafterdark\nshortName: COACH\nfavicon: http
+ s://linktr.ee/bearhappyhour\nkey: coach-after-dark-sf|2026-08-29|san franci
+ sco eagle bar\nbearSource: ai\npinSource: curated\naddressSource: page\nima
+ geSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=37
+ .7699927%2C-122.4134077
+LAST-MODIFIED:20260829T014915Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:GRUNT: Halloween
+SUMMARY:Coach After Dark: SF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260823T040000Z
-DTEND:20260823T090000Z
-DTSTAMP:20261001T140823Z
-UID:2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3
-CREATED:20260715T120617Z
-DESCRIPTION:description: Come join us to celebrate TWISTED BEAR's 11th Year
-  Anniversary Summer Tour at SF Eagle!!\nbar: San Francisco Eagle Bar\naddre
- ss: 398 12th Street\, San Francisco\, CA 94103\nticketUrl: https://www.even
- tbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927\nimage:
-  https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F
- 1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q
- =75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7\ncover: $12.51-$23.18\ntime
- zone: America/Los_Angeles\ninstagram: https://www.instagram.com/twistedbear
- party\nshortName: TWIST­ED BEAR\nfacebook: https://www.facebook.com/twisted
- global/\nkey: twisted-bear-san-francisco-debut|2026-08-23|san francisco eag
- le bar\nbearSource: keyword\npinSource: curated\naddressSource: page\nimage
- Source: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/sear
- ch/?api=1&query=San%20Francisco%20Eagle%20Bar%2C%20398%2012th%20Street%2C%2
- 0San%20Francisco%2C%20CA%2094103
-LAST-MODIFIED:20260821T203003Z
-LOCATION:37.7699933\, -122.4133375
+DTSTART:20261003T010000Z
+DTEND:20261003T040000Z
+DTSTAMP:20261003T134131Z
+UID:1366D640-424A-445D-AD70-31481622C574
+CREATED:20260927T214734Z
+DESCRIPTION:description: SF Queer Leather Happy Hour is a monthly social ev
+ ent for Queer leather folks and those that love them. Come cruise\, meet up
+  with friends\, make new ones\, or just bask in unapologet\nbar: SF Eagle\n
+ address: 398 12th Street\, San Francisco\, CA 94103\nimage: https://wp.sf-e
+ agle.com/wp-content/uploads/2024/04/Untitled-26.avif\ntimezone: America/Los
+ _Angeles\naddressSource: page\nwebsite: https://www.sf-eagle.com/events/que
+ er-leather-happy-hour/\ngmaps: https://www.google.com/maps/place/?q=place_i
+ d:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource: curated\ninstagram: https://www.i
+ nstagram.com/sfeaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leath
+ er-happy-hour|2026-10-03|sf eagle\nimageSource: jsonld\nbarSource: curated\
+ nbearSource: keyword\nshortName: QUEER LEATHER
+LAST-MODIFIED:20260927T214734Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:TWISTED BEAR San Francisco Debut
+SUMMARY:Queer Leather Happy Hour
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260627T040000Z
-DTEND:20260627T100000Z
-DTSTAMP:20261001T140823Z
-UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
-CREATED:20260123T030753Z
-DESCRIPTION:description: Bearracuda SF Pride! Friday\, June 26th\, 2026 wit
- h TONY MORANBEEFCAKE\nbar: Public Works\naddress: 161 Erie Street\nticketUr
- l: https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/ticket
- s\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.clou
- dinary.com/eventservice/image/upload/q_auto\,f_auto/v1776730474/saas/logos/
- image_1776730463946_w2htw6xrh.webp\ncover: General Admission $40.00-$50.00\
- nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/sf-pride/\
- ngmaps: https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%2
- 0161%20Erie%20Street\nkey: bearracuda-2026-06-27-sf\ntimezone: America/Los_
- Angeles\npinSource: geocoded-exact
-LAST-MODIFIED:20260717T211302Z
-LOCATION:37.7688931\, -122.4192651
+DTSTART:20261115T050000Z
+DTEND:20261115T100000Z
+DTSTAMP:20261003T134131Z
+UID:24AE5035-FB8A-4156-BC27-525B3344D284
+CREATED:20261001T131422Z
+DESCRIPTION:description: Twisted Bear can't wait to return to SF Eagle on S
+ at\, Nov 14th!!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street\, S
+ an Francisco\, CA 94103\nticketUrl: https://www.eventbrite.com/e/twisted-be
+ ar-san-francisco-tickets-2002390930175\nimage: https://img.evbuc.com/https%
+ 3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194465573%2F1088207912863%2F1%2Foriginal.
+ 20260927-182953?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&
+ sharp=10&fp-x=0.5&fp-y=0.5&s=28723ace341c2cb44fa4712b0813b44b\nimageSource:
+  jsonld\ncover: $12.51-$23.18\ntimezone: America/Los_Angeles\nimageHorizont
+ al: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1194465573
+ %2F1088207912863%2F1%2Foriginal.20260927-182953?crop=focalpoint&fit=crop&w=
+ 940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=28723ace341c2c
+ b44fa4712b0813b44b\naddressSource: page\nwebsite: https://twisted-bear.com\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=37.7699927%2C-122.4
+ 134077\npinSource: curated\ninstagram: https://www.instagram.com/twistedbea
+ rparty\nshortName: TWIST­ED BEAR\nfacebook: https://www.facebook.com/twiste
+ dglobal/\nfavicon: https://twisted-bear.com\nkey: twisted-bear-san-francisc
+ o|2026-11-15|san francisco eagle bar\nbearSource: keyword
+LAST-MODIFIED:20261001T131422Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bearracuda SF: BEEFCAKE Pride
+SUMMARY:TWISTED BEAR San Francisco
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -279,7 +577,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260503T050000Z
 DTEND:20260503T103000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6
 CREATED:20260204T221331Z
 DESCRIPTION:description: New Orleans DADDY Father Figure joins us for CHUNK
@@ -308,55 +606,421 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250928T050000Z
-DTEND:20250928T110000Z
-DTSTAMP:20261001T140823Z
-UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
-CREATED:20250901T054018Z
-DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
- / 2 ROOMS // CAVALCADE OF GOGO BEARS DJS - DICAP (NYC) // MR PICKLES (CHUNK
-  RESIDENT) // DR TIME (Palm Springs) // FREDDY KOP (Seattle)  f8 NIGHTCLUB 
- // 1192 FOLSOM ST // 10PM - CLOSE // 21+ // ID RQ'D\nbar: f8 NIGHTCLUB\nadd
- ress: 1192 Folsom St\, San Francisco\ntimezone: America/Los_Angeles\nurl: h
- ttps://www.chunk-party.com/event-details/chunk-presents-folsom-25\nticketUr
- l: https://www.chunk-party.com/event-details/chunk-presents-folsom-25\ncove
- r: $25.63 - $66.63\nimage: https://static.wixstatic.com/media/42b6cb_4273bb
- d8298849f09e8b04906a809d02~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c\,q_90/42b6c
- b_4273bbd8298849f09e8b04906a809d02~mv2.jpg\nshortName: CHUNK\ninstagram: ht
- tps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.77
- 526599999999\,-122.4100374\nkey: chunk-presents-folsom-'25|2025-09-28|f8 ni
- ghtclub|chunk
-LAST-MODIFIED:20250913T105551Z
-LOCATION:37.77526599999999\, -122.4100374
+DTSTART:20260926T220000Z
+DTEND:20260927T030000Z
+DTSTAMP:20261003T134131Z
+UID:9716B335-056E-48A3-909E-27213DB7A0F4
+CREATED:20260920T233600Z
+DESCRIPTION:description: DAD SF presents\\: Daddy Day Care Folsom Saturday 
+ DJs\\: SINORI KELLY NAUGHTON BOOTY JUICE ENNUI PETE From 3pm to 8pm. Cover\
+ \: $15 before 4pm\, $20 after.\nbar: SF Eagle\naddress: 398 12th Street\, S
+ an Francisco\, CA 94103\nimage: https://wp.sf-eagle.com/wp-content/uploads/
+ 2026/08/daddy-daycare.webp\ntimezone: America/Los_Angeles\ncover: $15 befor
+ e 4pm\, $20 after\nimageVertical: https://wp.sf-eagle.com/wp-content/upload
+ s/2026/08/daddy-daycare.webp\naddressSource: page\nwebsite: https://www.sf-
+ eagle.com/events/daddy-day-care-folsom-saturday/\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource: curated
+ \ninstagram: https://www.instagram.com/sfeaglebar\nkey: daddy-day-care-fols
+ om-saturday|2026-09-26|sf eagle\nimageSource: jsonld\nbarSource: curated\nb
+ earSource: keyword\nshortName: DADDY DAY CARE
+LAST-MODIFIED:20260920T233600Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK presents FOLSOM '25
+SUMMARY:Daddy Day Care Folsom Saturday
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260516T050000Z
-DTEND:20260516T090000Z
-DTSTAMP:20261001T140823Z
-UID:BBE7F872-30A1-40EC-AB3C-BCDAF9342658
-CREATED:20260510T025246Z
-DESCRIPTION:description: The Occult Leather Party Returns to The Stud Frida
- y May 15. Are you ready to live deliciously?\nbar: The Stud\naddress: 1123 
- Folsom Street\, San Francisco\, CA 94103\nticketUrl: https://www.eventbrite
- .com/e/beefwitch-tickets-1988340517011\ninstagram: https://www.instagram.co
- m/thebeefwitch\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F
- images%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=foc
- alpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0
- .5&s=d4ebc964c2b00b6625c9a810da2199de\ncover: $10.38-$17.85\nshortName: BEE
- FWITCH\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2
- C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: beefw
- itch|2026-05-16|the stud
-LAST-MODIFIED:20260514T004503Z
-LOCATION:37.7761825\,-122.4083567
+DTSTART:20261213T230000Z
+DTEND:20261214T030000Z
+DTSTAMP:20261003T134131Z
+UID:9F8244D0-4355-4A74-BE30-4D5D0CE6908C
+CREATED:20261003T131621Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025313/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-12-13|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131621Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:BEEFWITCH
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260927T040000Z
+DTEND:20260927T090000Z
+DTSTAMP:20261003T134131Z
+UID:09EA3FF7-A0DA-4DBA-BE8E-A536CAE5409D
+CREATED:20260920T233559Z
+DESCRIPTION:description: Big beats\, big guys\, big sleaze. Cruising party 
+ with a dark room and a dance floor. Suggested dress runs the full range\\: 
+ leather\, rubber\, boots\, punk\, biker\, heavy fetish\, jocks\, trackies. 
+ Free coat check.\nbar: The Stud\naddress: 1123 FOLSOM STREET\, SF\, CA\ntic
+ ketUrl: https://ra.co/events/2447663\ntimezone: America/Los_Angeles\naddres
+ sSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%2
+ 0Stud%2C%201123%20FOLSOM%20STREET%2C%20SF%2C%20CA\npinSource: curated\nshor
+ tName: GRUNT\nfavicon: https://gruntparty.monster\nkey: grunt-party-sf|2026
+ -09-26|the stud\nwebsite: https://gruntparty.monster/\nbearSource: ai\ninst
+ agram: https://www.instagram.com/jugodepapaya\nimage: https://images.square
+ space-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/ededd577-39f3-40da-90be-8
+ eeb8efd3829/Folsom+Digi+Front+final-01.jpg\nimageSource: page\nbarSource: c
+ urated
+LAST-MODIFIED:20260920T233600Z
+LOCATION:37.7761653\, -122.4083643
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:GRUNT PARTY SF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261018T220000Z
+DTEND:20261019T020000Z
+DTSTAMP:20261003T134131Z
+UID:E945B294-B82C-4C1C-AA1C-E1AD18AE0172
+CREATED:20261003T131614Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025305/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-10-18|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131614Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260704T043000Z
+DTEND:20260704T090000Z
+DTSTAMP:20261003T134131Z
+UID:1FB109E7-0355-4D65-AB9C-85F56D1E2502
+CREATED:20260512T171306Z
+DESCRIPTION:description: MEGAWOOF AMERICA RETURNS to SAN FRANCISCO\nbar: Th
+ e Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 94103\nticketUrl: 
+ https://www.eventbrite.com/e/megawoof-america-san-francisco-tickets-1988522
+ 943654\ninstagram: https://www.instagram.com/megawoof_america\nimage: https
+ ://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1184030413%2F185013
+ 722403%2F1%2Foriginal.20260507-154720?crop=focalpoint&fit=crop&w=940&auto=f
+ ormat%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=69d71feb01b7e2d1a442a2d0
+ 27def793\ncover: $11.58-$22.1\nshortName: MEGA-WOOF\n_aiPrompts\\: [object 
+ Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object Object]
+ \nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.co
+ m/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%
+ 20Francisco%2C%20CA%2094103\nkey: megawoof-america-san-francisco|2026-07-04
+ |the stud
+LAST-MODIFIED:20260514T005406Z
+LOCATION:37.7761825\,-122.4083567
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA SAN FRANCISCO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260926T000000Z
+DTEND:20260926T030000Z
+DTSTAMP:20261003T134131Z
+UID:993B883E-EBF0-41B9-9CA0-42AA9AACFECA
+CREATED:20260920T233601Z
+DESCRIPTION:address: San Francisco CA 94103\nimage: https://images.squaresp
+ ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788662272779-0OWI1ZSVNUV59
+ UOIEOFS/1f51d7d1-fe35-485f-9650-d0daae5e36a8.jpg\ntimezone: America/Los_Ang
+ eles\ncover: $5 Wells and $5 Draft Beer\nimageHorizontal: https://images.sq
+ uarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788662272779-0OWI1ZS
+ VNUV59UOIEOFS/1f51d7d1-fe35-485f-9650-d0daae5e36a8.jpg\naddressSource: page
+ \nwebsite: https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-ge
+ ar-happy-hour\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ4yv
+ d8Ch-j4ARGZFAn1jfTl8\nkey: leather-and-gear-happy-hour|2026-09-26|lone star
+  saloon\ndescription: Mr Lone Star Leather\, Brett Poe is hosting a Leather
+  & Gear Happy Hour to kick off Folsom Weekend. So get your gear on\, come a
+ nd meet some tourists and show them just how friendly we can be. $5 Wells a
+ nd $5 Draft Beer 5pm - 8pm\npinSource: geocoded-exact\nbar: Lone Star Saloo
+ n\nimageSource: json-api\nbarSource: venue-site-identity\nbearSource: keywo
+ rd\nshortName: LEATHER
+LAST-MODIFIED:20260920T233601Z
+LOCATION:37.7721663\, -122.4108890
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Leather and Gear Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T230000Z
+DTEND:20261130T030000Z
+DTSTAMP:20261003T134131Z
+UID:73DE21C4-55BE-457F-941A-4FAE362BAB34
+CREATED:20261003T131620Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025311/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-11-29|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131620Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261017T190000Z
+DTEND:20261018T010000Z
+DTSTAMP:20261003T134131Z
+UID:25CE8515-E86E-4BE9-BB2F-86CA123C829D
+CREATED:20260919T161241Z
+DESCRIPTION:bar: Harrison & 11th Streets\naddress: San Francisco\, CA\nwebs
+ ite: https://www.bosf.org/events/bearrison-street-fair-2026\nimage: https:/
+ /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ec6
+ dfb6a818834b9.jpg\nimageSource: json-api\ntimezone: America/Los_Angeles\nim
+ ageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/pub
+ lic/event-images/ec6dfb6a818834b9.jpg\naddressSource: page\ngmaps: https://
+ www.google.com/maps/search/?api=1&query=Harrison%20%26%2011th%20Streets%2C%
+ 20San%20Francisco%2C%20CA\nkey: bearrison-street-fair-2026|2026-10-17|harri
+ son & 11th streets\nbearSource: keyword\nshortName: BEARRISON
+LAST-MODIFIED:20260919T161241Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearrison Street Fair 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260823T040000Z
+DTEND:20260823T090000Z
+DTSTAMP:20261003T134131Z
+UID:2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3
+CREATED:20260715T120617Z
+DESCRIPTION:description: Come join us to celebrate TWISTED BEAR's 11th Year
+  Anniversary Summer Tour at SF Eagle!!\nbar: San Francisco Eagle Bar\naddre
+ ss: 398 12th Street\, San Francisco\, CA 94103\nticketUrl: https://www.even
+ tbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927\nimage:
+  https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F
+ 1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q
+ =75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7\ncover: $12.51-$23.18\ntime
+ zone: America/Los_Angeles\ninstagram: https://www.instagram.com/twistedbear
+ party\nshortName: TWIST­ED BEAR\nfacebook: https://www.facebook.com/twisted
+ global/\nkey: twisted-bear-san-francisco-debut|2026-08-23|san francisco eag
+ le bar\nbearSource: keyword\npinSource: curated\naddressSource: page\nimage
+ Source: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=San%20Francisco%20Eagle%20Bar%2C%20398%2012th%20Street%2C%2
+ 0San%20Francisco%2C%20CA%2094103
+LAST-MODIFIED:20260821T203003Z
+LOCATION:37.7699933\, -122.4133375
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR San Francisco Debut
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261108T230000Z
+DTEND:20261109T030000Z
+DTSTAMP:20261003T134131Z
+UID:D52A1F66-615E-4843-958B-8EA18083B79E
+CREATED:20261003T131617Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025308/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-11-08|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131617Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T040000Z
+DTEND:20261004T090000Z
+DTSTAMP:20261003T134131Z
+UID:BC29B670-5572-45FE-A5A9-F6FED2888C1B
+CREATED:20260927T214737Z
+DESCRIPTION:address: San Francisco CA 94103\nimage: https://images.squaresp
+ ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1790370665127-YT2975FLLQH27
+ SCG6S6S/Screenshot+2026-09-25+at+2.07.48%E2%80%AFPM.png\ntimezone: America/
+ Los_Angeles\nimageVertical: https://images.squarespace-cdn.com/content/v1/5
+ 8164acaf5e2319b546c693a/1790370665127-YT2975FLLQH27SCG6S6S/Screenshot+2026-
+ 09-25+at+2.07.48%E2%80%AFPM.png\naddressSource: page\nwebsite: https://www.
+ lonestarsf.com/new-events-1/2026/10/3/disco-bear\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8\nkey: disco-bear|20
+ 26-10-04|lone star saloon\ndescription: 🪩 🪩 🪩 🪩 Get Down (and get back 
+ up again) SQw are throwing a Disco-Stravaganza for your dancing pleasure. 
+ 🪩 🪩 🪩 🪩 🕺 🕺 🕺 🕺Boomers\; it's far out. Gen X it's Awesome\, Milleni
+ als it's Epic\, Gen Z it's Fire.So open up that shirt\, grab your tight whi
+ te pants and dance.🕺 🕺 🕺 🕺 DJ\\: AyumiPlease is gonna keep the party Ah
+  ah ah ah Stayin Aliiiiiiive 9p - 2a\npinSource: geocoded-exact\nbar: Lone 
+ Star Saloon\nimageSource: json-api\nbarSource: venue-site-identity\nbearSou
+ rce: keyword\nshortName: DISCO BEAR
+LAST-MODIFIED:20260927T214738Z
+LOCATION:37.7721663\, -122.4108890
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Disco Bear
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261011T220000Z
+DTEND:20261012T020000Z
+DTSTAMP:20261003T134131Z
+UID:C610772C-64B7-452C-B4B7-8693C8D37C03
+CREATED:20261003T131613Z
+DESCRIPTION:description: Join us for world famous SF Eagle Beer Bust every 
+ Sunday benefitting local LGBTQ+ Non Profits and Charities!\nbar: SF Eagle\n
+ address: 398 12th Street\, San Francisco\, CA 94103\nticketUrl: https://sf-
+ eagle.com/events/beer-bust-3-34-2-10025304/\nimage: https://wp.sf-eagle.com
+ /wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\ntimezone: America/
+ Los_Angeles\naddressSource: page\nwebsite: https://www.sf-eagle.com/events/
+ beer-bust-3-34-2-10025304/\ngmaps: https://www.google.com/maps/place/?q=pla
+ ce_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource: curated\ninstagram: https://w
+ ww.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDAY=SU\nkey: beer-bust
+ |2026-10-11|sf eagle\nimageHorizontal: https://wp.sf-eagle.com/wp-content/u
+ ploads/2024/01/Beer-Bust-Banner-copy-1.png\nimageSource: jsonld\nbarSource:
+  curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: BE
+ ER BUST
+LAST-MODIFIED:20261003T131613Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20251002T170000
+DTEND;TZID=America/Los_Angeles:20251002T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20261003T134131Z
+UID:dkep613fqcsi8tlh6bfsp12h50@google.com
+CREATED:20250930T210125Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nInstagram: https://www.instagra
+ m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161140Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250927T040000Z
+DTEND:20250927T100000Z
+DTSTAMP:20261003T134131Z
+UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
+CREATED:20250817T231656Z
+DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
+ isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
+ m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
+ 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
+ sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
+ com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
+ com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
+ cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
+ am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
+ s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
+ y: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250920T210918Z
+LOCATION:37.7689137\, -122.4192514
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260329T040000Z
+DTEND:20260329T090000Z
+DTSTAMP:20261003T134131Z
+UID:9D681FB7-DEDE-43CA-82D9-23985C241DAD
+CREATED:20260123T030752Z
+DESCRIPTION:description: Photos & Decor by Dusti Cunningham\nbar: THE STUD\
+ naddress: 1123 Folsom Street\, San Francisco\, CA 94103\ntimezone: America/
+ Los_Angeles\nurl: https://bearracuda.com/events/sf20/\nimage: https://bearr
+ acuda.com/wp-content/uploads/2025/11/insta-3.jpg\nfacebook: https://www.fac
+ ebook.com/events/753717904452981\nticketUrl: https://www.eventbrite.com/e/b
+ earracuda-sf-20-year-anniversary-tickets-1976399528192\nshortName: Bear-rac
+ -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=THE%20STUD%2C%201123%20Folsom%20Street%2
+ C%20San%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-03-29-sf
+LAST-MODIFIED:20260126T235325Z
+LOCATION:37.7761062\, -122.4083888
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF:  20 YEAR ANNIVERSARY!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T220000Z
+DTEND:20261005T020000Z
+DTSTAMP:20261003T134131Z
+UID:7EF8DA4B-B510-4D9D-BBFE-D776425B181E
+CREATED:20261003T131612Z
+DESCRIPTION:description: Join us for world famous SF Eagle Beer Bust every 
+ Sunday benefitting local LGBTQ+ Non Profits and Charities!\nbar: SF Eagle\n
+ address: 398 12th Street\, San Francisco\, CA 94103\nticketUrl: https://sf-
+ eagle.com/events/beer-bust-3-34-2/\nimage: https://wp.sf-eagle.com/wp-conte
+ nt/uploads/2024/01/Beer-Bust-Banner-copy-1.png\ntimezone: America/Los_Angel
+ es\naddressSource: page\nwebsite: https://www.sf-eagle.com/events/beer-bust
+ -3-34-2/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-
+ j4ARj3aV_MeMyf8\npinSource: curated\ninstagram: https://www.instagram.com/s
+ feaglebar\ncadence: FREQ=WEEKLY\;BYDAY=SU\nkey: beer-bust|2026-10-04|sf eag
+ le\nimageHorizontal: https://wp.sf-eagle.com/wp-content/uploads/2024/01/Bee
+ r-Bust-Banner-copy-1.png\nimageSource: jsonld\nbarSource: curated\nbearSour
+ ce: manual-bear (verdict store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131612Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -364,7 +1028,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260926T040000Z
 DTEND:20260926T100000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:13648C55-8022-4AF4-AFD2-105A2F347CB8
 CREATED:20260713T165339Z
 DESCRIPTION:description: Bearracuda SF PresentsFLSM FRIDAYwith HORSE MEAT D
@@ -396,240 +1060,8 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260920T000000Z
-DTEND:20260920T040000Z
-DTSTAMP:20261001T140823Z
-UID:B544C085-0B59-4B5C-AAF7-52F1FFDEC0D5
-CREATED:20260918T134814Z
-DESCRIPTION:bar: Powerhouse Bar\naddress: 1347 Folsom St\, San Francisco\, 
- CA\, 94103\nwebsite: https://powerhousebar.com/event/chub-rub/2026-09-19/\n
- image: https://powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\nim
- ageSource: json-api\ntimezone: America/Los_Angeles\nimageVertical: https://
- powerhousebar.com/wp-content/uploads/2026/05/chubmay.jpg\naddressSource: pa
- ge\ngmaps: https://www.google.com/maps/search/?api=1&query=37.773088%2C-122
- .412193\npinSource: curated\ninstagram: https://www.instagram.com/sfpowerho
- use\nkey: chub-rub|2026-09-20|powerhouse bar\nbearSource: keyword\nshortNam
- e: CHUB RUB
-LAST-MODIFIED:20260918T134814Z
-LOCATION:37.773088\, -122.412193
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Chub Rub
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260329T040000Z
-DTEND:20260329T090000Z
-DTSTAMP:20261001T140823Z
-UID:9D681FB7-DEDE-43CA-82D9-23985C241DAD
-CREATED:20260123T030752Z
-DESCRIPTION:description: Photos & Decor by Dusti Cunningham\nbar: THE STUD\
- naddress: 1123 Folsom Street\, San Francisco\, CA 94103\ntimezone: America/
- Los_Angeles\nurl: https://bearracuda.com/events/sf20/\nimage: https://bearr
- acuda.com/wp-content/uploads/2025/11/insta-3.jpg\nfacebook: https://www.fac
- ebook.com/events/753717904452981\nticketUrl: https://www.eventbrite.com/e/b
- earracuda-sf-20-year-anniversary-tickets-1976399528192\nshortName: Bear-rac
- -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=THE%20STUD%2C%201123%20Folsom%20Street%2
- C%20San%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-03-29-sf
-LAST-MODIFIED:20260126T235325Z
-LOCATION:37.7761062\, -122.4083888
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF:  20 YEAR ANNIVERSARY!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250927T040000Z
-DTEND:20250927T100000Z
-DTSTAMP:20261001T140823Z
-UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
-CREATED:20250817T231656Z
-DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
- isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
- m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
- 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
- sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
- com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
- com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
- cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
- am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
- s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
- y: bearracuda-2025-09-27-sf
-LAST-MODIFIED:20250920T210918Z
-LOCATION:37.7689137\, -122.4192514
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260829T040000Z
-DTEND:20260829T090000Z
-DTSTAMP:20261001T140823Z
-UID:2A05155C-0DAD-46E4-807A-7DB36C1A3FB1
-CREATED:20260815T021936Z
-DESCRIPTION:description: When the lights go down\, the Locker Room heats up
- . Coach After Dark\\: The Sports Gear Disco returns to the SF Eagle Friday\
- , August 28th!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street\, Sa
- n Francisco\, CA 94103\nticketUrl: https://www.eventbrite.com/e/coach-after
- -dark-sf-tickets-1997961694211\nimage: https://img.evbuc.com/https%3A%2F%2F
- cdn.evbuc.com%2Fimages%2F1191049298%2F2198683436473%2F1%2Foriginal.20260814
- -093754?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10
- &fp-x=1.0&fp-y=0.6&s=f5bcf4875cd378b87f3235ce08d3a589\ncover: $10.38-$17.85
- \ntimezone: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/htt
- ps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191049298%2F2198683436473%2F1%2Forigin
- al.20260814-093754?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=
- 75&sharp=10&fp-x=1.0&fp-y=0.6&s=f5bcf4875cd378b87f3235ce08d3a589\ninstagram
- : https://www.instagram.com/coachafterdark\nshortName: COACH\nfavicon: http
- s://linktr.ee/bearhappyhour\nkey: coach-after-dark-sf|2026-08-29|san franci
- sco eagle bar\nbearSource: ai\npinSource: curated\naddressSource: page\nima
- geSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=37
- .7699927%2C-122.4134077
-LAST-MODIFIED:20260829T014915Z
-LOCATION:37.7699927\, -122.4134077
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Coach After Dark: SF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261205T020000Z
-DTEND:20261205T050000Z
-DTSTAMP:20261001T140823Z
-UID:B5374371-2C9C-4292-99E7-6F43FED1E279
-CREATED:20260927T214735Z
-DESCRIPTION:description: QUEERS · CRUISING · LEATHER · BOOTBLACKS\nbar: SF 
- Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/04/Untitled-2
- 6.avif\nwebsite: https://www.sf-eagle.com/events/queer-leather-happy-hour-1
- 0001132/\nimageSource: page\nbarSource: venue-site\ntimezone: America/Los_A
- ngeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4
- ARj3aV_MeMyf8\naddress: 398 12th Street\, San Francisco\, CA 94103\naddress
- Source: curated\npinSource: curated\ninstagram: https://www.instagram.com/s
- feaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leather-happy-hour|
- 2026-12-05|sf eagle\nbearSource: keyword\nshortName: QUEER LEATHER
-LAST-MODIFIED:20260927T214736Z
-LOCATION:37.7699927\, -122.4134077
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Queer Leather Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261017T190000Z
-DTEND:20261018T010000Z
-DTSTAMP:20261001T140823Z
-UID:25CE8515-E86E-4BE9-BB2F-86CA123C829D
-CREATED:20260919T161241Z
-DESCRIPTION:bar: Harrison & 11th Streets\naddress: San Francisco\, CA\nwebs
- ite: https://www.bosf.org/events/bearrison-street-fair-2026\nimage: https:/
- /acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ec6
- dfb6a818834b9.jpg\nimageSource: json-api\ntimezone: America/Los_Angeles\nim
- ageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/pub
- lic/event-images/ec6dfb6a818834b9.jpg\naddressSource: page\ngmaps: https://
- www.google.com/maps/search/?api=1&query=Harrison%20%26%2011th%20Streets%2C%
- 20San%20Francisco%2C%20CA\nkey: bearrison-street-fair-2026|2026-10-17|harri
- son & 11th streets\nbearSource: keyword\nshortName: BEARRISON
-LAST-MODIFIED:20260919T161241Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearrison Street Fair 2026
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260614T040000Z
-DTEND:20260614T090000Z
-DTSTAMP:20261001T140823Z
-UID:C0CE53B6-54E8-4E7E-AD3D-95DF514E0382
-CREATED:20260507T001632Z
-DESCRIPTION:description: Saturday\, June 13th\, 2025 Doors at 9pm\, Party t
- il 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo\;s\, Heavy Crui
- singHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https\\://www.jphardyof
- ficial.comSPRING has sprung and we are ready to strip down! Grab a wristban
- d when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband
-  BOTTOM White Wristband SIDE You can choose one when you purchase tix and a
- re free to change your mind (or go without a wristband) when you arrive.\nb
- ar: The Stud\naddress: 1123 Folsom Street\nticketUrl: https://www.sickening
- .events/e/treasuresf/tickets\ninstagram: https://www.instagram.com/bearracu
- da\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto\,f_a
- uto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp\ncover: 15.00
- \nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/treasure-
- trail-sf/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stu
- d%2C%201123%20Folsom%20Street\nkey: bearracuda-2026-06-14-sf\ntimezone: Ame
- rica/Los_Angeles
-LAST-MODIFIED:20260514T012023Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail: San Francisco
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260928T020000Z
-DTEND:20260928T090000Z
-DTSTAMP:20261001T140823Z
-UID:2F86A79A-7771-4A02-9FD4-FB1FC4A8C845
-CREATED:20260920T233600Z
-DESCRIPTION:description: Disco Daddy Folsom at the SF Eagle on Sunday\, Sep
- tember 27\, 7 PM - 2 AM.\nbar: SF Eagle\naddress: 398 12th Street\, San Fra
- ncisco\, CA 94103\nimage: https://wp.sf-eagle.com/wp-content/uploads/2026/0
- 4/DDFOLSOM2026b.avif\ntimezone: America/Los_Angeles\naddressSource: page\nw
- ebsite: https://www.sf-eagle.com/events/disco-daddy-folsom/\ngmaps: https:/
- /www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSour
- ce: curated\ninstagram: https://www.instagram.com/sfeaglebar\nkey: disco-da
- ddy-folsom|2026-09-28|sf eagle\nimageSource: jsonld\nbarSource: curated\nbe
- arSource: keyword\nshortName: DISCO DADDY
-LAST-MODIFIED:20260920T233600Z
-LOCATION:37.7699927\, -122.4134077
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Disco Daddy Folsom
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260926T220000Z
-DTEND:20260927T030000Z
-DTSTAMP:20261001T140823Z
-UID:9716B335-056E-48A3-909E-27213DB7A0F4
-CREATED:20260920T233600Z
-DESCRIPTION:description: DAD SF presents\\: Daddy Day Care Folsom Saturday 
- DJs\\: SINORI KELLY NAUGHTON BOOTY JUICE ENNUI PETE From 3pm to 8pm. Cover\
- \: $15 before 4pm\, $20 after.\nbar: SF Eagle\naddress: 398 12th Street\, S
- an Francisco\, CA 94103\nimage: https://wp.sf-eagle.com/wp-content/uploads/
- 2026/08/daddy-daycare.webp\ntimezone: America/Los_Angeles\ncover: $15 befor
- e 4pm\, $20 after\nimageVertical: https://wp.sf-eagle.com/wp-content/upload
- s/2026/08/daddy-daycare.webp\naddressSource: page\nwebsite: https://www.sf-
- eagle.com/events/daddy-day-care-folsom-saturday/\ngmaps: https://www.google
- .com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSource: curated
- \ninstagram: https://www.instagram.com/sfeaglebar\nkey: daddy-day-care-fols
- om-saturday|2026-09-26|sf eagle\nimageSource: jsonld\nbarSource: curated\nb
- earSource: keyword\nshortName: DADDY DAY CARE
-LAST-MODIFIED:20260920T233600Z
-LOCATION:37.7699927\, -122.4134077
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Daddy Day Care Folsom Saturday
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260502T070000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:10D2C8FA-A1A6-4E5E-94A4-583E7745DD5D
 CREATED:20260730T190428Z
 DESCRIPTION:description: F8 Nightclub & Bar\nbar: F8 Nightclub & Bar\naddre
@@ -652,204 +1084,103 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260926T000000Z
-DTEND:20260926T030000Z
-DTSTAMP:20261001T140823Z
-UID:993B883E-EBF0-41B9-9CA0-42AA9AACFECA
-CREATED:20260920T233601Z
-DESCRIPTION:address: San Francisco CA 94103\nimage: https://images.squaresp
- ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788662272779-0OWI1ZSVNUV59
- UOIEOFS/1f51d7d1-fe35-485f-9650-d0daae5e36a8.jpg\ntimezone: America/Los_Ang
- eles\ncover: $5 Wells and $5 Draft Beer\nimageHorizontal: https://images.sq
- uarespace-cdn.com/content/v1/58164acaf5e2319b546c693a/1788662272779-0OWI1ZS
- VNUV59UOIEOFS/1f51d7d1-fe35-485f-9650-d0daae5e36a8.jpg\naddressSource: page
- \nwebsite: https://www.lonestarsf.com/new-events-1/2026/9/25/leather-and-ge
- ar-happy-hour\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ4yv
- d8Ch-j4ARGZFAn1jfTl8\nkey: leather-and-gear-happy-hour|2026-09-26|lone star
-  saloon\ndescription: Mr Lone Star Leather\, Brett Poe is hosting a Leather
-  & Gear Happy Hour to kick off Folsom Weekend. So get your gear on\, come a
- nd meet some tourists and show them just how friendly we can be. $5 Wells a
- nd $5 Draft Beer 5pm - 8pm\npinSource: geocoded-exact\nbar: Lone Star Saloo
- n\nimageSource: json-api\nbarSource: venue-site-identity\nbearSource: keywo
- rd\nshortName: LEATHER
-LAST-MODIFIED:20260920T233601Z
-LOCATION:37.7721663\, -122.4108890
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Leather and Gear Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260927T050000Z
-DTEND:20260927T110000Z
-DTSTAMP:20261001T140823Z
-UID:38DC1F04-89D4-436A-88E8-0439D845E570
-CREATED:20260808T014841Z
-DESCRIPTION:description: CHUNK presents SAN FRANCISCO FOLSOM '26 - Bear Pla
- yground! CHICAGO DJ SHAUN J WRIGHT & MARCEAUX MARCEAUX & THCKRTANKER & E.FE
- LD & BEN FONIK HOT GOGO BEARS DRE & WILL & DENNIS & MORE f8 - 1192 FOLSOM S
- T 10-4\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St\, San Francisco\, 
- CA 94103\, USA\nimage: https://static.wixstatic.com/media/42b6cb_9c265c543d
- 68475cb1a2d4fc431f08d5~mv2.jpg/v1/fill/w_3122\,h_3902\,al_c\,q_90/42b6cb_9c
- 265c543d68475cb1a2d4fc431f08d5~mv2.jpg\ncover: $50-$60\ntimezone: America/L
- os_Angeles\nimageVertical: https://static.wixstatic.com/media/42b6cb_9c265c
- 543d68475cb1a2d4fc431f08d5~mv2.jpg/v1/fill/w_3122\,h_3902\,al_c\,q_90/42b6c
- b_9c265c543d68475cb1a2d4fc431f08d5~mv2.jpg\nwebsite: https://www.chunk-part
- y.com/event-details/chunk-folsom-bear-playground-9-26\nshortName: CHUNK\nin
- stagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-p
- arty.com\nkey: chunk-folsom-bear-playground|2026-09-27|f8 nightclub & bar\n
- bearSource: keyword\npinSource: page\naddressSource: page\nimageSource: jso
- nld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&q
- uery=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisc
- o%2C%20CA%2094103%2C%20USA
-LAST-MODIFIED:20260817T005558Z
-LOCATION:37.7752814\, -122.4099546
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CHUNK FOLSOM - Bear Playground
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260726T050000Z
-DTEND:20260726T110000Z
-DTSTAMP:20261001T140823Z
-UID:CEC90038-7CD1-4FA5-9BA7-1353A769AEB8
-CREATED:20260520T221145Z
-DESCRIPTION:description: THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF
-  Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOG
- O FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 F
- OLSOM ST // 10pm - 4am\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St\, 
- San Francisco\, CA 94103\, USA\nimage: https://static.wixstatic.com/media/4
- 2b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c
- \,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\ntimezone: America/L
- os_Angeles\ncover: $60\nimageVertical: https://static.wixstatic.com/media/4
- 2b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c
- \,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\nwebsite: https://ww
- w.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th\nshortN
- ame: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https
- ://www.chunk-party.com\nkey: chunk-dore-alley|2026-07-26|f8 nightclub & bar
- \nbearSource: keyword\npinSource: page\naddressSource: page\nimageSource: j
- sonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1
- &query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Franci
- sco%2C%20CA%2094103%2C%20USA
-LAST-MODIFIED:20260817T005558Z
-LOCATION:37.77526599999999\, -122.4100374
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CHUNK DORE ALLEY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261107T020000Z
-DTEND:20261107T050000Z
-DTSTAMP:20261001T140823Z
-UID:FAA9AE05-B1EB-44B7-B4C2-0D56CC9A5EB4
-CREATED:20260927T214735Z
-DESCRIPTION:description: QUEERS · CRUISING · LEATHER · BOOTBLACKS\nbar: SF 
- Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/04/Untitled-2
- 6.avif\nwebsite: https://www.sf-eagle.com/events/queer-leather-happy-hour-1
- 0001131/\nimageSource: page\nbarSource: venue-site\ntimezone: America/Los_A
- ngeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4
- ARj3aV_MeMyf8\naddress: 398 12th Street\, San Francisco\, CA 94103\naddress
- Source: curated\npinSource: curated\ninstagram: https://www.instagram.com/s
- feaglebar\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nkey: queer-leather-happy-hour|
- 2026-11-07|sf eagle\nbearSource: keyword\nshortName: QUEER LEATHER
-LAST-MODIFIED:20260927T214735Z
+DTSTART:20261220T230000Z
+DTEND:20261221T030000Z
+DTSTAMP:20261003T134131Z
+UID:4D120C46-130D-4792-A9F4-B6FB7F59E535
+CREATED:20261003T131622Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025314/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-12-20|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131622Z
 LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Queer Leather Happy Hour
+SUMMARY:Beer Bust
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260704T043000Z
-DTEND:20260704T090000Z
-DTSTAMP:20261001T140823Z
-UID:1FB109E7-0355-4D65-AB9C-85F56D1E2502
-CREATED:20260512T171306Z
-DESCRIPTION:description: MEGAWOOF AMERICA RETURNS to SAN FRANCISCO\nbar: Th
- e Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 94103\nticketUrl: 
- https://www.eventbrite.com/e/megawoof-america-san-francisco-tickets-1988522
- 943654\ninstagram: https://www.instagram.com/megawoof_america\nimage: https
- ://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1184030413%2F185013
- 722403%2F1%2Foriginal.20260507-154720?crop=focalpoint&fit=crop&w=940&auto=f
- ormat%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=69d71feb01b7e2d1a442a2d0
- 27def793\ncover: $11.58-$22.1\nshortName: MEGA-WOOF\n_aiPrompts\\: [object 
- Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object Object]
- \nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.co
- m/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%
- 20Francisco%2C%20CA%2094103\nkey: megawoof-america-san-francisco|2026-07-04
- |the stud
-LAST-MODIFIED:20260514T005406Z
-LOCATION:37.7761825\,-122.4083567
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA SAN FRANCISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261003T040000Z
-DTEND:20261003T090000Z
-DTSTAMP:20261001T140823Z
-UID:E2007366-A2D1-4B6A-9AA5-2F9AA8CAE5F4
-CREATED:20260927T214736Z
-DESCRIPTION:address: San Francisco CA 94103\nimage: https://images.squaresp
- ace-cdn.com/content/v1/58164acaf5e2319b546c693a/1790371676123-49SZVPIZOR281
- 47REY6F/Screenshot+2026-09-25+at+2.19.24%E2%80%AFPM.png\ntimezone: America/
- Los_Angeles\nimageHorizontal: https://images.squarespace-cdn.com/content/v1
- /58164acaf5e2319b546c693a/1790371676123-49SZVPIZOR28147REY6F/Screenshot+202
- 6-09-25+at+2.19.24%E2%80%AFPM.png\naddressSource: page\nwebsite: https://ww
- w.lonestarsf.com/new-events-1/2026/10/2/bear-trap\ngmaps: https://www.googl
- e.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8\nkey: bear-trap|20
- 26-10-03|lone star saloon\ndescription: If you wanna Trap a Bear\, you have
-  to go to where the bears are and that place is Bear Trap.... first Friday 
- of every month. Bring your appetite. DJ Rexxx 9p - 2a\npinSource: geocoded-
- exact\nbar: Lone Star Saloon\ncadence: FREQ=MONTHLY\;BYDAY=1FR\nimageSource
- : json-api\nbarSource: venue-site-identity\nbearSource: keyword\nshortName:
-  BEAR TRAP
-LAST-MODIFIED:20260927T214737Z
-LOCATION:37.7721663\, -122.4108890
+DTSTART:20261206T230000Z
+DTEND:20261207T030000Z
+DTSTAMP:20261003T134131Z
+UID:D715EED9-D131-4A7A-8EA0-B135BEA43CC4
+CREATED:20261003T131621Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025312/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2026-12-06|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131621Z
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Trap
+SUMMARY:Beer Bust
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260927T040000Z
-DTEND:20260927T090000Z
-DTSTAMP:20261001T140823Z
-UID:09EA3FF7-A0DA-4DBA-BE8E-A536CAE5409D
-CREATED:20260920T233559Z
-DESCRIPTION:description: Big beats\, big guys\, big sleaze. Cruising party 
- with a dark room and a dance floor. Suggested dress runs the full range\\: 
- leather\, rubber\, boots\, punk\, biker\, heavy fetish\, jocks\, trackies. 
- Free coat check.\nbar: The Stud\naddress: 1123 FOLSOM STREET\, SF\, CA\ntic
- ketUrl: https://ra.co/events/2447663\ntimezone: America/Los_Angeles\naddres
- sSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%2
- 0Stud%2C%201123%20FOLSOM%20STREET%2C%20SF%2C%20CA\npinSource: curated\nshor
- tName: GRUNT\nfavicon: https://gruntparty.monster\nkey: grunt-party-sf|2026
- -09-26|the stud\nwebsite: https://gruntparty.monster/\nbearSource: ai\ninst
- agram: https://www.instagram.com/jugodepapaya\nimage: https://images.square
- space-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/ededd577-39f3-40da-90be-8
- eeb8efd3829/Folsom+Digi+Front+final-01.jpg\nimageSource: page\nbarSource: c
- urated
+DTSTART:20260928T020000Z
+DTEND:20260928T090000Z
+DTSTAMP:20261003T134131Z
+UID:2F86A79A-7771-4A02-9FD4-FB1FC4A8C845
+CREATED:20260920T233600Z
+DESCRIPTION:description: Disco Daddy Folsom at the SF Eagle on Sunday\, Sep
+ tember 27\, 7 PM - 2 AM.\nbar: SF Eagle\naddress: 398 12th Street\, San Fra
+ ncisco\, CA 94103\nimage: https://wp.sf-eagle.com/wp-content/uploads/2026/0
+ 4/DDFOLSOM2026b.avif\ntimezone: America/Los_Angeles\naddressSource: page\nw
+ ebsite: https://www.sf-eagle.com/events/disco-daddy-folsom/\ngmaps: https:/
+ /www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\npinSour
+ ce: curated\ninstagram: https://www.instagram.com/sfeaglebar\nkey: disco-da
+ ddy-folsom|2026-09-28|sf eagle\nimageSource: jsonld\nbarSource: curated\nbe
+ arSource: keyword\nshortName: DISCO DADDY
 LAST-MODIFIED:20260920T233600Z
-LOCATION:37.7761653\, -122.4083643
+LOCATION:37.7699927\, -122.4134077
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:GRUNT PARTY SF
+SUMMARY:Disco Daddy Folsom
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20201122T230000Z
+DTEND:20261123T030000Z
+DTSTAMP:20261003T134131Z
+UID:1259F638-CA09-4667-9C1C-DBEA7B7FA082
+CREATED:20261003T131619Z
+DESCRIPTION:description: Benefitting Bay Area LGBTQ+ Charities and Non Prof
+ its\nbar: SF Eagle\nimage: https://wp.sf-eagle.com/wp-content/uploads/2024/
+ 01/Beer-Bust-Banner-copy-1.png\nwebsite: https://www.sf-eagle.com/events/be
+ er-bust-3-34-2-10025310/\nimageSource: page\nimageHorizontal: https://wp.sf
+ -eagle.com/wp-content/uploads/2024/01/Beer-Bust-Banner-copy-1.png\nbarSourc
+ e: venue-site\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com
+ /maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8\naddress: 398 12th Stre
+ et\, San Francisco\, CA 94103\naddressSource: curated\npinSource: curated\n
+ instagram: https://www.instagram.com/sfeaglebar\ncadence: FREQ=WEEKLY\;BYDA
+ Y=SU\nkey: beer-bust|2020-11-22|sf eagle\nbearSource: manual-bear (verdict 
+ store 2026-10-01)\nshortName: BEER BUST
+LAST-MODIFIED:20261003T131619Z
+LOCATION:37.7699927\, -122.4134077
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Bust
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -857,7 +1188,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261018T040000Z
 DTEND:20261018T090000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261003T134131Z
 UID:425529C1-E892-437A-A223-B6590D9BF3AC
 CREATED:20260910T193027Z
 DESCRIPTION:bar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA
@@ -888,19 +1219,30 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20251002T170000
-DTEND;TZID=America/Los_Angeles:20251002T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20261001T140823Z
-UID:dkep613fqcsi8tlh6bfsp12h50@google.com
-CREATED:20250930T210125Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nInstagram: https://www.instagra
- m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161140Z
+DTSTART:20261025T040000Z
+DTEND:20261025T090000Z
+DTSTAMP:20261003T134131Z
+UID:608FD5A3-69F1-4600-A6A0-A219DF3EFC2C
+CREATED:20261001T131423Z
+DESCRIPTION:description: Gather your crew\, your coven\, your pack\, your m
+ urder\, and show up in your best or worst TROLL\, ORC\, GOBLIN or HAG (at a
+  leather bar)\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\,
+  California\, 94103\ninstagram: https://www.instagram.com/jugodepapaya\nima
+ ge: https://images.squarespace-cdn.com/content/v1/667e8f79a9a2367c5aa7996c/
+ a772d61b-6321-4262-bfea-a75369683c2e/DigiFront-01.jpg?format=300w\nimageSou
+ rce: page\nbarSource: page-adjacent\naddressSource: curated\nwebsite: https
+ ://gruntparty.monster/grunt-halloween\npinSource: curated\ntimezone: Americ
+ a/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1&query=The%2
+ 0Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20California%2C%2
+ 094103\nshortName: GRUNT\nfavicon: https://gruntparty.monster\nkey: grunt-h
+ alloween|2026-10-25|the stud\nbearSource: ai
+LAST-MODIFIED:20261001T131423Z
+LOCATION:37.7761653\, -122.4083643
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:GRUNT: Halloween
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR

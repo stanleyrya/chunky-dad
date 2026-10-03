@@ -6,9 +6,44 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20261004T220000Z
+DTEND:20261005T070000Z
+DTSTAMP:20261003T134131Z
+UID:B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1
+CREATED:20261003T131625Z
+DESCRIPTION:description: Get into the groove at Sunday Tea\\: Disco\, our f
+ irst Sunday celebration of timeless dance music and fresh chemistry. Let th
+ e music turn a casual Sunday outin ...\nbar: Dallas Eagle\ntimezone: Americ
+ a/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: 
+ https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle
+ .com/events/sunday-tea-disco-2026-10-04/\nmastodon: https://mastodon.social
+ /@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU84
+ 3NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd\, Dallas\, TX 75207\na
+ ddressSource: curated\npinSource: curated\nkey: sunday-tea-disco-with-dj-ap
+ thout|2026-10-04|dallas eagle\nimage: https://b3335593.assetcdn.net/2.0/333
+ 5593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4
+ b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079
+ c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196
+ 784.webp?lossy=2&strip=1&webp=1\ncover: No cover\nimageVertical: https://b3
+ 335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e0
+ 04639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce727399
+ 5f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9
+ eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1\nimageSource: pa
+ ge\nbarSource: venue-site\nbearSource: manual-bear (verdict store 2026-10-0
+ 1)\nshortName: SUNDAY TEA
+LAST-MODIFIED:20261003T131626Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Sunday Tea: Disco with DJ Apthout
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260815T020000Z
 DTEND:20260815T070000Z
-DTSTAMP:20260911T121059Z
+DTSTAMP:20261003T134131Z
 UID:13889125-C3DE-4D92-9227-86C5EE9B1005
 CREATED:20260804T184803Z
 DESCRIPTION:description: It’s time for another delicious combo\, it’s BEAR 
@@ -34,9 +69,96 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261004T020000Z
+DTEND:20261004T070000Z
+DTSTAMP:20261003T134131Z
+UID:BDADC283-8E09-4D48-9378-CD0154CBF5DE
+CREATED:20261003T131624Z
+DESCRIPTION:description: Grab your gear\, it's time for GEAR NIGHT! Put on 
+ your favorite gear and get ready to dance the night away to pounding beats 
+ that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BL
+ VD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedall
+ aseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: h
+ ttps://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382
+ cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0
+ ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a9
+ 80db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover:
+  No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-
+ 10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: http
+ s://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8
+ e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d07
+ 0d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec
+ 2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSo
+ urce: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|
+ dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bea
+ r (verdict store 2026-10-01)\nshortName: GEAR NIGHT
+LAST-MODIFIED:20261003T131624Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Gear Night with DJ Woolfie
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261003T020000Z
+DTEND:20261003T070000Z
+DTSTAMP:20261003T134131Z
+UID:CE0B1128-2F30-4935-804E-7AAECF416053
+CREATED:20261003T131626Z
+DESCRIPTION:description: It’s our third anniversary\, and we’d love to cele
+ brate with yall! Thank you for showing up\, bringing your friends\, and mak
+ ing the Dallas Eagle part of your lives. We’ve got a lot more we want to do
+ \, and we’re excited to keep building this place with you. Come spend the n
+ ight with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/C
+ hicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: htt
+ ps://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/
+ wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db
+ 004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedalla
+ seagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress:
+  525 S Riverfront Blvd\, Dallas\, TX 75207\naddressSource: curated\npinSour
+ ce: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nb
+ arSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshor
+ tName: THREE YEARS
+LAST-MODIFIED:20261003T131626Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Three Years
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260705T220000Z
+DTSTAMP:20261003T134131Z
+UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
+CREATED:20260701T132043Z
+DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
+ 219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/ti
+ ckets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instag
+ ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335ea
+ cf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296\,h_525\,al_c\,q_80\,usm_0
+ .66_1.00_0.01\,enc_avif\,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994f
+ c5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: h
+ ttps://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar
+ %20Springs%20Rd
+LAST-MODIFIED:20260701T132044Z
+LOCATION:32.810535\, -96.8110709
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260919T020000Z
 DTEND:20260919T070000Z
-DTSTAMP:20260911T121059Z
+DTSTAMP:20261003T134131Z
 UID:6829158E-CA7F-463D-9EFA-1F03CC7E6C42
 CREATED:20260910T195508Z
 DESCRIPTION:bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb
@@ -65,7 +187,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260814T220000Z
 DTEND:20260815T020000Z
-DTSTAMP:20260911T121059Z
+DTSTAMP:20261003T134131Z
 UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
 CREATED:20260807T210713Z
 DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
@@ -86,29 +208,6 @@ LOCATION:32.7693483\, -96.8112576
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Brewery Bears Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260705T220000Z
-DTSTAMP:20260911T121059Z
-UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
-CREATED:20260701T132043Z
-DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
- 219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/ti
- ckets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instag
- ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335ea
- cf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296\,h_525\,al_c\,q_80\,usm_0
- .66_1.00_0.01\,enc_avif\,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994f
- c5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: h
- ttps://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar
- %20Springs%20Rd
-LAST-MODIFIED:20260701T132044Z
-LOCATION:32.810535\, -96.8110709
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
