@@ -110,6 +110,16 @@
     "accent": "#e35326"
   },
   {
+    "slug": "naughty-santa-social-1d0788a7",
+    "url": "https://thelumberyardbar.com/",
+    "faviconBg": "#5d3d25",
+    "faviconFg": "#e9e8e6",
+    "faviconPlate": "#010100",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
+    "accent": "#9b1926"
+  },
+  {
     "slug": "seattle-glow-3b330fb1",
     "paletteSource": "flyer",
     "palette": "#443484:16:13 #cdecfd:15:4 #151b3c:15:6 #7644bd:13:18 #d14ae5:10:24",

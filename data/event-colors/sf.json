@@ -237,6 +237,36 @@
     "accent": "#2a2342"
   },
   {
+    "slug": "blufsfhard-2e037ab5",
+    "url": "https://www.sf-eagle.com/events/blufsfhard-10002687/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0403:42:2 #3f2119:19:5 #8b2d1c:11:13 #b14d2b:6:14",
+    "accent": "#8b2d1c"
+  },
+  {
+    "slug": "blufsfhard-37d7d945",
+    "url": "https://www.sf-eagle.com/events/blufsfhard/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0403:42:2 #3f2119:19:5 #8b2d1c:11:13 #b14d2b:6:14",
+    "accent": "#8b2d1c"
+  },
+  {
+    "slug": "blufsfhard-684ea228",
+    "url": "https://www.sf-eagle.com/events/blufsfhard-10002688/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0403:42:2 #3f2119:19:5 #8b2d1c:11:13 #b14d2b:6:14",
+    "accent": "#8b2d1c"
+  },
+  {
     "slug": "chub-rub-552df5bd",
     "url": "https://powerhousebar.com/event/chub-rub/2026-10-17/",
     "faviconBg": "#131719",

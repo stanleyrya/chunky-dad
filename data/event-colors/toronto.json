@@ -60,6 +60,51 @@
     "accent": "#c25f41"
   },
   {
+    "slug": "bluf-toronto-0567c85a",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
+  },
+  {
+    "slug": "bluf-toronto-306d59de",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
+  },
+  {
+    "slug": "bluf-toronto-62e2d7d6",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
+  },
+  {
+    "slug": "bluf-toronto-757b2694",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
+  },
+  {
+    "slug": "bluf-toronto-770d45d6",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
+  },
+  {
     "slug": "chubs-at-the-tubs-4216de53",
     "paletteSource": "flyer",
     "palette": "#d5d4db:23:1 #ad929d:16:3 #fbf7f8:14:0 #3d1634:10:8 #332a85:3:15",
