@@ -5,52 +5,6 @@
   },
   "events": [
     {
-      "name": "Bears in Excess",
-      "day": "Sunday",
-      "time": "1PM-6PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6620695,
-        "lng": -79.3773558
-      },
-      "startDate": "2026-09-20T13:00:00",
-      "endDate": "2026-09-20T18:00:00",
-      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-09-20|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
-      "uid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Spa Excess",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
-      "address": "105 Carlton Street, Toronto, Ontario",
-      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-      "shortName": "BEARS IN EXCESS",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bears-in-excess-64a0ef36"
-    },
-    {
       "name": "NORTHERN BEAR BASH",
       "day": "Saturday",
       "time": "9PM-11:45PM",
@@ -97,187 +51,6 @@
       "slug": "northern-bear-bash-30ce7df4"
     },
     {
-      "name": "STACHE",
-      "day": "Friday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6641525,
-        "lng": -79.3801656
-      },
-      "startDate": "2026-10-23T00:00:00",
-      "endDate": "2026-10-24T00:00:00",
-      "unprocessedDescription": "timezone: America/Toronto\nwebsite: https://www.blackeagletoron\rto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9e701781-8003-44b6-931b-c04c2e7f686f/STACHE-generic-sq.jpg\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: stache|2026-10-23|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\ntimeUnknown: true\nbearSource: manual-bear (verdict store 2026-10-01)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "4F1A85D5-6CC8-4A6C-9EBD-26A64EE1B1F5",
-      "uid": "4F1A85D5-6CC8-4A6C-9EBD-26A64EE1B1F5",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Black Eagle Toronto",
-      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9e701781-8003-44b6-931b-c04c2e7f686f/STACHE-generic-sq.jpg",
-      "cadence": null,
-      "address": "457 Church St, Toronto, ON M4Y 2C5",
-      "website": "https://www.blackeagletoronto.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.blackeagletoronto.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "stache-710f9ab2"
-    },
-    {
-      "name": "NORTHERN BEAR BASH",
-      "day": "Saturday",
-      "time": "9PM-11:45PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6641525,
-        "lng": -79.3801656
-      },
-      "startDate": "2026-10-31T21:00:00",
-      "endDate": "2026-10-31T23:45:00",
-      "unprocessedDescription": "description: an evening for bears and their admirers With DJ's \rto be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY;BYDAY=-1SA\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: northern-bear-bash|2026-11-01|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortName: NORTHERN BEAR",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "503112A0-17B1-4F9C-9162-4E3E59CD59A0",
-      "uid": "503112A0-17B1-4F9C-9162-4E3E59CD59A0",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Black Eagle Toronto",
-      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg",
-      "tea": "an evening for bears and their admirers With DJ's to be announced. 9PM / $10",
-      "cadence": "FREQ=MONTHLY;BYDAY=-1SA",
-      "address": "457 Church St, Toronto, ON M4Y 2C5",
-      "website": "https://www.blackeagletoronto.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-      "shortName": "NORTHERN BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.blackeagletoronto.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "northern-bear-bash-56388629"
-    },
-    {
-      "name": "DADDY NEXT DOOR",
-      "day": "Saturday",
-      "time": "7PM-9:45PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6641525,
-        "lng": -79.3801656
-      },
-      "startDate": "2026-12-12T19:00:00",
-      "endDate": "2026-12-12T21:45:00",
-      "unprocessedDescription": "description: A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OP\rENING SET\\: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.\ntimezone: America/Miquelon\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: daddy-next-door|2026-12-13|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "4504AB55-76AE-4656-B5DB-4EF73F1710BE",
-      "uid": "4504AB55-76AE-4656-B5DB-4EF73F1710BE",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Black Eagle Toronto",
-      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png",
-      "tea": "A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OPENING SET: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.",
-      "cadence": null,
-      "address": "457 Church St, Toronto, ON M4Y 2C5",
-      "website": "https://www.blackeagletoronto.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.blackeagletoronto.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-next-door-64826572"
-    },
-    {
-      "name": "NORTHERN BEAR BASH",
-      "day": "Saturday",
-      "time": "9PM-11:45PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6641525,
-        "lng": -79.3801656
-      },
-      "startDate": "2026-11-28T21:00:00",
-      "endDate": "2026-11-28T23:45:00",
-      "unprocessedDescription": "description: an evening for bears and their admirers With DJ's \rto be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY;BYDAY=-1SA\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: northern-bear-bash|2026-11-29|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortName: NORTHERN BEAR",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "C82C3152-36B6-43AA-99A2-B541A80AEB7A",
-      "uid": "C82C3152-36B6-43AA-99A2-B541A80AEB7A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Black Eagle Toronto",
-      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg",
-      "tea": "an evening for bears and their admirers With DJ's to be announced. 9PM / $10",
-      "cadence": "FREQ=MONTHLY;BYDAY=-1SA",
-      "address": "457 Church St, Toronto, ON M4Y 2C5",
-      "website": "https://www.blackeagletoronto.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-      "shortName": "NORTHERN BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.blackeagletoronto.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "northern-bear-bash-1bafd517"
-    },
-    {
       "name": "Bears in Excess",
       "day": "Sunday",
       "time": "1PM-6PM",
@@ -287,15 +60,15 @@
         "lat": 43.6620695,
         "lng": -79.3773558
       },
-      "startDate": "2026-10-18T13:00:00",
-      "endDate": "2026-10-18T18:00:00",
-      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-10-18|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "startDate": "2026-09-20T13:00:00",
+      "endDate": "2026-09-20T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-09-20|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
-      "uid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
+      "sourceUid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
+      "uid": "65B3C505-B6ED-45D9-8AD5-13E45BE68C7C",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -321,53 +94,133 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bears-in-excess-7592f66c"
+      "slug": "bears-in-excess-64a0ef36"
     },
     {
-      "name": "Bears in Excess",
-      "day": "Sunday",
-      "time": "1PM-6PM",
+      "name": "BLUF TORONTO",
+      "day": "Saturday",
+      "time": "6PM-9PM",
       "eventType": "routine",
       "recurring": false,
-      "coordinates": {
-        "lat": 43.6620695,
-        "lng": -79.3773558
-      },
-      "startDate": "2026-12-20T13:00:00",
-      "endDate": "2026-12-20T18:00:00",
-      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nbarSource: curated\naddressSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario\npinSource: curated\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-12-20|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS",
+      "startDate": "2027-05-29T18:00:00",
+      "endDate": "2027-05-29T21:00:00",
+      "unprocessedDescription": "description: LEATHER SOCIAL FROM 6PM TO 8\\:30PM\ntimezone: Ame\rrica/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=toronto\nkey: bluf-toronto|2027-05-29|\nimageSource: page\nbearSource: manual-bear (verdict store 2026-10-01)\nendUnknown: true",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "C7FD1DB1-4283-40CC-B71E-B2C7979DE578",
-      "uid": "C7FD1DB1-4283-40CC-B71E-B2C7979DE578",
+      "sourceUid": "34A66DC9-2D04-4DD4-A876-9816D0029C1E",
+      "uid": "34A66DC9-2D04-4DD4-A876-9816D0029C1E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Spa Excess",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
-      "address": "105 Carlton Street, Toronto, Ontario",
-      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-      "shortName": "BEARS IN EXCESS",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "tea": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=toronto",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "url": "https://www.blackeagletoronto.com",
           "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+          "url": "https://www.google.com/maps/search/?api=1&query=toronto",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bears-in-excess-72446e94"
+      "slug": "bluf-toronto-306d59de"
+    },
+    {
+      "name": "ART♡THROB",
+      "day": "Sunday",
+      "time": "4PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6641525,
+        "lng": -79.3801656
+      },
+      "startDate": "2026-12-06T16:00:00",
+      "endDate": "2026-12-06T20:00:00",
+      "unprocessedDescription": "description: Featuring\\: Jordan Pedde Jordan Madruga Grace Bro\roks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: art♡throb|2026-12-06|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: ART",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "ADB83128-8FC8-4871-94FA-0608BE48A1FC",
+      "uid": "ADB83128-8FC8-4871-94FA-0608BE48A1FC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Black Eagle Toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg",
+      "tea": "Featuring: Jordan Pedde Jordan Madruga Grace Brooks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison",
+      "cadence": null,
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+      "shortName": "ART",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "artthrob-6fc0bb24"
+    },
+    {
+      "name": "BLUF TORONTO",
+      "day": "Saturday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-09-26T18:00:00",
+      "endDate": "2026-09-26T21:00:00",
+      "unprocessedDescription": "description: LEATHER SOCIAL FROM 6PM TO 8\\:30PM\ntimezone: Ame\rrica/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=toronto\nkey: bluf-toronto|2026-09-26|\nimageSource: page\nbearSource: manual-bear (verdict store 2026-10-01)\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "49A8237F-B060-45BF-863B-56D782D637A7",
+      "uid": "49A8237F-B060-45BF-863B-56D782D637A7",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "tea": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=toronto",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bluf-toronto-62e2d7d6"
     },
     {
       "name": "Playground Toronto",
@@ -419,6 +272,359 @@
       "slug": "playground-toronto-2a1597db"
     },
     {
+      "name": "NORTHERN BEAR BASH",
+      "day": "Saturday",
+      "time": "9PM-11:45PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6641525,
+        "lng": -79.3801656
+      },
+      "startDate": "2026-10-31T21:00:00",
+      "endDate": "2026-10-31T23:45:00",
+      "unprocessedDescription": "description: an evening for bears and their admirers With DJ's \rto be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY;BYDAY=-1SA\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: northern-bear-bash|2026-11-01|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortName: NORTHERN BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "503112A0-17B1-4F9C-9162-4E3E59CD59A0",
+      "uid": "503112A0-17B1-4F9C-9162-4E3E59CD59A0",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Black Eagle Toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg",
+      "tea": "an evening for bears and their admirers With DJ's to be announced. 9PM / $10",
+      "cadence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+      "shortName": "NORTHERN BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "northern-bear-bash-56388629"
+    },
+    {
+      "name": "BLUF TORONTO",
+      "day": "Saturday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-01-30T18:00:00",
+      "endDate": "2027-01-30T21:00:00",
+      "unprocessedDescription": "description: LEATHER SOCIAL FROM 6PM TO 8\\:30PM\ntimezone: Ame\rrica/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=toronto\nkey: bluf-toronto|2027-01-30|\nimageSource: page\nbearSource: manual-bear (verdict store 2026-10-01)\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "52D5A577-CB9C-4AF7-ADEB-21C94D6A987E",
+      "uid": "52D5A577-CB9C-4AF7-ADEB-21C94D6A987E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "tea": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=toronto",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bluf-toronto-757b2694"
+    },
+    {
+      "name": "BLUF TORONTO",
+      "day": "Saturday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-10-30T18:00:00",
+      "endDate": "2027-10-30T21:00:00",
+      "unprocessedDescription": "description: LEATHER SOCIAL FROM 6PM TO 8\\:30PM\ntimezone: Ame\rrica/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=toronto\nkey: bluf-toronto|2027-10-30|\nimageSource: page\nbearSource: manual-bear (verdict store 2026-10-01)\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "625E9E1F-9272-4D00-983E-510597E1E8DD",
+      "uid": "625E9E1F-9272-4D00-983E-510597E1E8DD",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "tea": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=toronto",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bluf-toronto-770d45d6"
+    },
+    {
+      "name": "DADDY NEXT DOOR",
+      "day": "Saturday",
+      "time": "7PM-9:45PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6641525,
+        "lng": -79.3801656
+      },
+      "startDate": "2026-10-10T19:00:00",
+      "endDate": "2026-10-10T21:45:00",
+      "unprocessedDescription": "description: A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OP\rENING SET\\: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.\ntimezone: America/Miquelon\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: daddy-next-door|2026-10-10|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "67A8C2DE-B820-412D-847F-10AACE0EAF56",
+      "uid": "67A8C2DE-B820-412D-847F-10AACE0EAF56",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Black Eagle Toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png",
+      "tea": "A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OPENING SET: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.",
+      "cadence": null,
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-next-door-3671dd4c"
+    },
+    {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-11-15T13:00:00",
+      "endDate": "2026-11-15T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-11-15|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
+      "uid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto, Ontario",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-68750c47"
+    },
+    {
+      "name": "STACHE",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6641525,
+        "lng": -79.3801656
+      },
+      "startDate": "2026-10-23T00:00:00",
+      "endDate": "2026-10-24T00:00:00",
+      "unprocessedDescription": "timezone: America/Toronto\nwebsite: https://www.blackeagletoron\rto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9e701781-8003-44b6-931b-c04c2e7f686f/STACHE-generic-sq.jpg\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: stache|2026-10-23|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\ntimeUnknown: true\nbearSource: manual-bear (verdict store 2026-10-01)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "4F1A85D5-6CC8-4A6C-9EBD-26A64EE1B1F5",
+      "uid": "4F1A85D5-6CC8-4A6C-9EBD-26A64EE1B1F5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Black Eagle Toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9e701781-8003-44b6-931b-c04c2e7f686f/STACHE-generic-sq.jpg",
+      "cadence": null,
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "stache-710f9ab2"
+    },
+    {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-12-20T13:00:00",
+      "endDate": "2026-12-20T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nimageSource: json-api\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\nbarSource: curated\naddressSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario\npinSource: curated\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-12-20|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C7FD1DB1-4283-40CC-B71E-B2C7979DE578",
+      "uid": "C7FD1DB1-4283-40CC-B71E-B2C7979DE578",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto, Ontario",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-72446e94"
+    },
+    {
+      "name": "Bears in Excess",
+      "day": "Sunday",
+      "time": "1PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6620695,
+        "lng": -79.3773558
+      },
+      "startDate": "2026-10-18T13:00:00",
+      "endDate": "2026-10-18T18:00:00",
+      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-10-18|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
+      "uid": "F403BCF7-EEB0-4C3B-8838-A2A3C6A7C940",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Spa Excess",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
+      "address": "105 Carlton Street, Toronto, Ontario",
+      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+      "shortName": "BEARS IN EXCESS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-excess-7592f66c"
+    },
+    {
       "name": "Chubs at the Tubs",
       "day": "Sunday",
       "time": "1PM-6PM",
@@ -458,6 +664,52 @@
         }
       ],
       "slug": "chubs-at-the-tubs-4216de53"
+    },
+    {
+      "name": "NORTHERN BEAR BASH",
+      "day": "Saturday",
+      "time": "9PM-11:45PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6641525,
+        "lng": -79.3801656
+      },
+      "startDate": "2026-11-28T21:00:00",
+      "endDate": "2026-11-28T23:45:00",
+      "unprocessedDescription": "description: an evening for bears and their admirers With DJ's \rto be announced. 9PM / $10\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg\ncadence: FREQ=MONTHLY;BYDAY=-1SA\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: northern-bear-bash|2026-11-29|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword\nshortName: NORTHERN BEAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C82C3152-36B6-43AA-99A2-B541A80AEB7A",
+      "uid": "C82C3152-36B6-43AA-99A2-B541A80AEB7A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Black Eagle Toronto",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/5ce1c3dd-6047-4a5b-8018-703307aed362/NortherBearBash-2026-Generic-sq-800.jpg",
+      "tea": "an evening for bears and their admirers With DJ's to be announced. 9PM / $10",
+      "cadence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "address": "457 Church St, Toronto, ON M4Y 2C5",
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+      "shortName": "NORTHERN BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "northern-bear-bash-1bafd517"
     },
     {
       "name": "ART♡THROB",
@@ -506,6 +758,46 @@
       "slug": "artthrob-3254a6d3"
     },
     {
+      "name": "BLUF TORONTO",
+      "day": "Saturday",
+      "time": "6PM-8:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-10-25T18:00:00",
+      "endDate": "2025-10-25T20:30:00",
+      "unprocessedDescription": "description: LEATHER SOCIAL FROM 6PM TO 8\\:30PM\ntimezone: Ame\rrica/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=toronto\nkey: bluf-toronto|2025-10-25|\nimageSource: page\nbearSource: manual-bear (verdict store 2026-10-01)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "3DFA281E-F9B0-49FA-852C-715D402DC351",
+      "uid": "3DFA281E-F9B0-49FA-852C-715D402DC351",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cfe9a66-fb12-48ca-b097-d9c3c011917b/BLUF-Toronto-Social-generic-1200x1200.jpg",
+      "tea": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.blackeagletoronto.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=toronto",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.blackeagletoronto.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=toronto",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bluf-toronto-0567c85a"
+    },
+    {
       "name": "DADDY NEXT DOOR",
       "day": "Saturday",
       "time": "7PM-9:45PM",
@@ -515,15 +807,15 @@
         "lat": 43.6641525,
         "lng": -79.3801656
       },
-      "startDate": "2026-10-10T19:00:00",
-      "endDate": "2026-10-10T21:45:00",
-      "unprocessedDescription": "description: A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OP\rENING SET\\: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.\ntimezone: America/Miquelon\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: daddy-next-door|2026-10-10|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword",
+      "startDate": "2026-12-12T19:00:00",
+      "endDate": "2026-12-12T21:45:00",
+      "unprocessedDescription": "description: A NIGHT FOR DADDIES, DADDY CHASERS AND FRIENDS OP\rENING SET\\: DJ ITSMIKEYBOY Daddy Next Door is an event for men of a certain age to feel welcome and appreciated. A place to let loose & dance the night away with other like minded men and their younger admirers.\ntimezone: America/Miquelon\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/1e014bdb-2d76-44b9-8097-dcc8ef19ee8c/DND-2024-generic-square.png\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: daddy-next-door|2026-12-13|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "67A8C2DE-B820-412D-847F-10AACE0EAF56",
-      "uid": "67A8C2DE-B820-412D-847F-10AACE0EAF56",
+      "sourceUid": "4504AB55-76AE-4656-B5DB-4EF73F1710BE",
+      "uid": "4504AB55-76AE-4656-B5DB-4EF73F1710BE",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -548,99 +840,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-next-door-3671dd4c"
-    },
-    {
-      "name": "ART♡THROB",
-      "day": "Sunday",
-      "time": "4PM-8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6641525,
-        "lng": -79.3801656
-      },
-      "startDate": "2026-12-06T16:00:00",
-      "endDate": "2026-12-06T20:00:00",
-      "unprocessedDescription": "description: Featuring\\: Jordan Pedde Jordan Madruga Grace Bro\roks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison\ntimezone: America/Toronto\nwebsite: https://www.blackeagletoronto.com\nimage: https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg\nbar: Black Eagle Toronto\naddress: 457 Church St, Toronto, ON M4Y 2C5\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5\nkey: art♡throb|2026-12-06|black eagle toronto\nimageSource: page\nbarSource: venue-site-identity\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: ART",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "ADB83128-8FC8-4871-94FA-0608BE48A1FC",
-      "uid": "ADB83128-8FC8-4871-94FA-0608BE48A1FC",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Black Eagle Toronto",
-      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/427c1e7b-d099-4f39-8c36-d5fb23dc6a1f/Art-Throb-Poster-generic-square.jpg",
-      "tea": "Featuring: Jordan Pedde Jordan Madruga Grace Brooks Kyle Cahill Punk's Undead Tyler Mann Pete Ellison Poster by Pete Ellison",
-      "cadence": null,
-      "address": "457 Church St, Toronto, ON M4Y 2C5",
-      "website": "https://www.blackeagletoronto.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-      "shortName": "ART",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.blackeagletoronto.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Black%20Eagle%20Toronto%2C%20457%20Church%20St%2C%20Toronto%2C%20ON%20M4Y%202C5",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "artthrob-6fc0bb24"
-    },
-    {
-      "name": "Bears in Excess",
-      "day": "Sunday",
-      "time": "1PM-6PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 43.6620695,
-        "lng": -79.3773558
-      },
-      "startDate": "2026-11-15T13:00:00",
-      "endDate": "2026-11-15T18:00:00",
-      "unprocessedDescription": "bar: Spa Excess\naddress: 105 Carlton Street, Toronto, Ontari\ro\nwebsite: https://spaexcess.com/event-organizer/bears-in-excess/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ntimezone: America/Toronto\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg\ncadence: FREQ=MONTHLY;BYDAY=3SU\nkey: bears-in-excess|2026-11-15|spa excess\nbearSource: keyword\nshortName: BEARS IN EXCESS\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
-      "uid": "E9B485C8-C499-41BE-8039-3CEB6008761A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Spa Excess",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "cadence": "FREQ=MONTHLY;BYDAY=3SU",
-      "address": "105 Carlton Street, Toronto, Ontario",
-      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-      "shortName": "BEARS IN EXCESS",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Spa%20Excess%2C%20105%20Carlton%20Street%2C%20Toronto%2C%20Ontario",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bears-in-excess-68750c47"
+      "slug": "daddy-next-door-64826572"
     }
   ]
 }

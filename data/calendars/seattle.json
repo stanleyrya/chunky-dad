@@ -22,6 +22,261 @@
   },
   "events": [
     {
+      "name": "South Seattle Bear Social",
+      "day": "Sunday",
+      "time": "2PM-7PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "coordinates": {
+        "lat": 47.51652271569908,
+        "lng": -122.35487284211817
+      },
+      "startDate": "2025-07-06T14:00:00",
+      "endDate": "2025-07-06T19:00:00",
+      "unprocessedDescription": "shortName: South Seattle Social\nbar: Lumberyard\ntimezone: Ame\rrica/Los_Angeles\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\nwebsite: https://thelumberyardbar.com/\ninstagram: https://www.instagram.com/southseattlebearsocial/\ngmaps: https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
+      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Lumberyard",
+      "cadence": null,
+      "address": null,
+      "website": "https://thelumberyardbar.com/",
+      "instagram": "https://www.instagram.com/southseattlebearsocial/",
+      "gmaps": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
+      "shortName": "South Seattle Social",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thelumberyardbar.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/southseattlebearsocial/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "south-seattle-bear-social-1a3d1cb6"
+    },
+    {
+      "name": "Treasure Trail Seattle",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150824,
+        "lng": -122.3237201
+      },
+      "startDate": "2026-08-15T21:00:00",
+      "endDate": "2026-08-16T03:00:00",
+      "unprocessedDescription": "description: MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL \rSEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTIONS, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.\nbar: Massive\naddress: 619 East Pine Street, Seattle, WA, 98122\ntimezone: America/Los_Angeles\nticketUrl: https://tixr.com/e/198706\nimage: https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg\nwebsite: https://bearracuda.com/events/treasure-trail-seattle/\nshortName: TREAS-URE TRAIL\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: treasure-trail-seattle|2026-08-16|massive\nbearSource: manual-bear (overrode ai\\: The event description uses general queer party language (e.g., 'HARD BEATS', ...)\ncover: $15-$30\nimageVertical: https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-image\nbarSource: venue-site-identity\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5",
+      "uid": "ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Massive",
+      "cover": "$15-$30",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg",
+      "imageVertical": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp",
+      "favicon": "https://bearracuda.com/",
+      "tea": "MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL SEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTIONS, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.",
+      "cadence": null,
+      "address": "619 East Pine Street, Seattle, WA, 98122",
+      "website": "https://bearracuda.com/events/treasure-trail-seattle/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+      "ticketUrl": "https://tixr.com/e/198706",
+      "shortName": "TREAS-URE TRAIL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasure-trail-seattle/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://tixr.com/e/198706",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-seattle-2a543921"
+    },
+    {
+      "name": "Game Night",
+      "day": "Sunday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6191274,
+        "lng": -122.3210517
+      },
+      "startDate": "2026-10-11T16:00:00",
+      "endDate": "2026-10-11T21:00:00",
+      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-10-11|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "22F7191A-A6C0-40C2-8D62-A33F89712B54",
+      "uid": "22F7191A-A6C0-40C2-8D62-A33F89712B54",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Phoenix Comics & Games",
+      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
+      "cadence": null,
+      "address": "113 Broadway E, Seattle, WA 98102",
+      "website": "https://xlbears.org",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+      "shortName": "GAME NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://xlbears.org",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "game-night-56c4b379"
+    },
+    {
+      "name": "Game Night",
+      "day": "Sunday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6191274,
+        "lng": -122.3210517
+      },
+      "startDate": "2026-08-23T16:00:00",
+      "endDate": "2026-08-23T21:00:00",
+      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! Game Night moved from 08/09 to 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram link on our website! http\\://xlbears.org/ http\\://xlbears.org/about/code-of-conduct/\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-08-23|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E5D22143-402C-4355-BEC4-C5ECF51A7CB9",
+      "uid": "E5D22143-402C-4355-BEC4-C5ECF51A7CB9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Phoenix Comics & Games",
+      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! Game Night moved from 08/09 to 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram link on our website! http://xlbears.org/ http://xlbears.org/about/code-of-conduct/",
+      "cadence": null,
+      "address": "113 Broadway E, Seattle, WA 98102",
+      "website": "https://xlbears.org",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+      "shortName": "GAME NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://xlbears.org",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "game-night-6f4582b4"
+    },
+    {
+      "name": "NAUGHTY SANTA SOCIAL",
+      "day": "Sunday",
+      "time": "2PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 47.5165235,
+        "lng": -122.3548059
+      },
+      "startDate": "2026-12-27T14:00:00",
+      "endDate": "2026-12-27T21:00:00",
+      "unprocessedDescription": "description: Celebrate the holidays with the Bears.\nbar: The L\rumber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW, Seattle, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events/southseattlebearsocial\nkey: naughty-santa-social|2026-12-27|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261227T220000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "5EFCFA14-ACC3-4A30-98FF-2611273735D8",
+      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
+      "recurrenceId": "2026-12-27T14:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "The Lumber Yard Bar",
+      "favicon": "https://events.ticketleap.com/events/southseattlebearsocial",
+      "tea": "Celebrate the holidays with the Bears.",
+      "cadence": null,
+      "address": "9630 16th Ave SW, Seattle, WA 98106",
+      "website": "https://thelumberyardbar.com/",
+      "instagram": "https://www.instagram.com/southseattlebearsocial",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+      "shortName": "BEAR SOCIAL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thelumberyardbar.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/southseattlebearsocial",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "naughty-santa-social-1d0788a7"
+    },
+    {
       "name": "Leather Night",
       "day": "Thursday",
       "time": "7PM-2AM",
@@ -78,67 +333,6 @@
       "slug": "leather-night-51e2ca8d"
     },
     {
-      "name": "BEARRACUDA: Seattle💦",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150824,
-        "lng": -122.3237201
-      },
-      "startDate": "2026-09-12T21:00:00",
-      "endDate": "2026-09-13T03:00:00",
-      "unprocessedDescription": "bar: Massive\naddress: 619 E. Pine, Seattle, WA, 98122\ntick\retUrl: https://www.sickening.events/e/bearracuda-seattle-7days/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\ncover: $20-$30\ntimezone: America/Los_Angeles\nwebsite: https://bearracuda.com/events/7days/\ninstagram: https://www.instagram.com/bearracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: bearracuda-seattle-7-day-load|2026-09-13|massive\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\nbearSource: keyword\ndescription: 7 DAY LOADSaturday, Sept. 12thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky VisualsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on the menu for this evening. DJ Matt Consola will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E8573138-9CDE-45E6-A456-18A7D0DB736E",
-      "uid": "E8573138-9CDE-45E6-A456-18A7D0DB736E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Massive",
-      "cover": "$20-$30",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "7 DAY LOADSaturday, Sept. 12thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky VisualsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on the menu for this evening. DJ Matt Consola will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW",
-      "cadence": null,
-      "address": "619 E. Pine, Seattle, WA, 98122",
-      "website": "https://bearracuda.com/events/7days/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-7days/tickets",
-      "shortName": "Bear­rac­uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/7days/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-seattle-7days/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-seattle-283ac3dd"
-    },
-    {
       "name": "Game Night",
       "day": "Sunday",
       "time": "4PM-9PM",
@@ -148,21 +342,21 @@
         "lat": 47.6191274,
         "lng": -122.3210517
       },
-      "startDate": "2026-08-23T16:00:00",
-      "endDate": "2026-08-23T21:00:00",
-      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! Game Night moved from 08/09 to 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram link on our website! http\\://xlbears.org/ http\\://xlbears.org/about/code-of-conduct/\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-08-23|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
+      "startDate": "2026-11-08T16:00:00",
+      "endDate": "2026-11-08T21:00:00",
+      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-11-09|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "E5D22143-402C-4355-BEC4-C5ECF51A7CB9",
-      "uid": "E5D22143-402C-4355-BEC4-C5ECF51A7CB9",
+      "sourceUid": "E6E0BABE-5D69-4BAF-962A-D92A1991C07C",
+      "uid": "E6E0BABE-5D69-4BAF-962A-D92A1991C07C",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Phoenix Comics & Games",
-      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! Game Night moved from 08/09 to 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram link on our website! http://xlbears.org/ http://xlbears.org/about/code-of-conduct/",
+      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
       "cadence": null,
       "address": "113 Broadway E, Seattle, WA 98102",
       "website": "https://xlbears.org",
@@ -181,7 +375,484 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "game-night-6f4582b4"
+      "slug": "game-night-4d232090"
+    },
+    {
+      "name": "Bearracuda Seattle GLOW PARTY",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150824,
+        "lng": -122.3237201
+      },
+      "startDate": "2026-06-13T21:00:00",
+      "endDate": "2026-06-14T03:00:00",
+      "unprocessedDescription": "description: Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. \rPine SATURDAY, June 13th Doors at 9pm, Party til 3am! Hot Go-Go&rsquo;s, Chunky Visuals Decor by James Sharinghousen, Photos by Matt Hoffman, Hosted by Matt Bearracuda DJs Matt Stands DISCOUNTED tix for those in UV/Neon Attire Our GLOW PARTY is coming to Seattle! We are offering DEEPLY discounted tickets for those wearing UV Reactive or Neon Attire. Bearracuda resident DJ, Matt Stands spins all night with Hot GoGos, Decor by James Sharinghousen…\nbar: MASSIVE\naddress: 619 E. Pine\nticketUrl: https://www.sickening.events/e/bearracuda-seattle-glow/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776554715/saas/logos/image_1776554705644_n8exy3gc9.webp\ncover: DISCOUNTED tix for those in UV/Neon Attire\nshortName: South Seattle Social\nwebsite: https://bearracuda.com/events/seattle-glow/\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine\nkey: bearracuda-2026-06-14-seattle\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "762BAD4A-F1D8-4519-BAC3-D755EF9BA263",
+      "uid": "762BAD4A-F1D8-4519-BAC3-D755EF9BA263",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "cover": "DISCOUNTED tix for those in UV/Neon Attire",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776554715/saas/logos/image_1776554705644_n8exy3gc9.webp",
+      "tea": "Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. Pine SATURDAY, June 13th Doors at 9pm, Party til 3am! Hot Go-Go&rsquo;s, Chunky Visuals Decor by James Sharinghousen, Photos by Matt Hoffman, Hosted by Matt Bearracuda DJs Matt Stands DISCOUNTED tix for those in UV/Neon Attire Our GLOW PARTY is coming to Seattle! We are offering DEEPLY discounted tickets for those wearing UV Reactive or Neon Attire. Bearracuda resident DJ, Matt Stands spins all night with Hot GoGos, Decor by James Sharinghousen…",
+      "cadence": null,
+      "address": "619 E. Pine",
+      "website": "https://bearracuda.com/events/seattle-glow/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-glow/tickets",
+      "shortName": "South Seattle Social",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/seattle-glow/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-seattle-glow/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-seattle-glow-party-43d1597b"
+    },
+    {
+      "name": "Bearracuda Seattle: Red Light District!",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150824,
+        "lng": -122.3237201
+      },
+      "startDate": "2026-11-07T21:00:00",
+      "endDate": "2026-11-08T03:00:00",
+      "unprocessedDescription": "description: RED LIGHT DISTRICTSaturday, Nov. 7thParty til 3am\rUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky Visuals, Heavy CruisingDJs Matt StandsFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our FINAL PARTY OF THE YEAR! DJ Matt Stands will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW\nbar: Massive\naddress: 619 E Pine St, Seattle, WA 98122\ntimezone: America/Los_Angeles\nticketUrl: https://www.sickening.events/e/bearracuda-seattle-red/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg\ncover: $20-$30\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg\naddressSource: page\nwebsite: https://bearracuda.com/events/seattlered/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ\npinSource: curated\ninstagram: https://www.instagram.com/bearracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: bearracuda-seattle-red-light-district|2026-11-08|massive\nbearSource: keyword\nfacebook: https://www.facebook.com/bearracuda/\nimageSource: og-image\nbarSource: venue-site-identity",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "99F4C955-B5C0-4EF1-8A56-6BAF11907080",
+      "uid": "99F4C955-B5C0-4EF1-8A56-6BAF11907080",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Massive",
+      "cover": "$20-$30",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "RED LIGHT DISTRICTSaturday, Nov. 7thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky Visuals, Heavy CruisingDJs Matt StandsFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our FINAL PARTY OF THE YEAR! DJ Matt Stands will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW",
+      "cadence": null,
+      "address": "619 E Pine St, Seattle, WA 98122",
+      "website": "https://bearracuda.com/events/seattlered/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/bearracuda/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-red/tickets",
+      "shortName": "Bear­rac­uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/seattlered/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/bearracuda/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-seattle-red/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-seattle-red-light-district-792ef9cf"
+    },
+    {
+      "name": "Bearracuda Seattle Winter Beef Ball 2026!",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150572,
+        "lng": -122.3236574
+      },
+      "startDate": "2026-01-31T21:00:00",
+      "endDate": "2026-02-01T03:00:00",
+      "unprocessedDescription": "description: WINTER BEEF BALL!\n\nMusic & Entertainment\n• Beat\rs by MATT STANDS &amp; FREDDY KOP\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/seattlebeef/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg\nfacebook: https://www.facebook.com/events/698055449765272\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey: bearracuda-2026-02-01-seattle",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
+      "uid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg",
+      "tea": "WINTER BEEF BALL!",
+      "cadence": null,
+      "address": "619 E Pine, Seattle, WA 98122",
+      "website": "https://bearracuda.com/events/seattlebeef/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/698055449765272",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/seattlebeef/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/698055449765272",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-seattle-winter-beef-ball-2026-5d3a67cd"
+    },
+    {
+      "name": "Bearracuda Seattle: SERIOUS WOOD",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150572,
+        "lng": -122.3236574
+      },
+      "startDate": "2025-10-10T21:00:00",
+      "endDate": "2025-10-11T03:00:00",
+      "unprocessedDescription": "description: SERIOUS WOOD Show off your boots, plaid, jeans,\r nut huggers, flannel, suspenders, beanies & overalls! Hot Go-Go’s, Chunky Visuals!\n\nMusic & Entertainment\n• Matt Consola\n• Freddy KOP\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/seattlewood/\ncover: $24.89 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/serioiusweb.jpg\nfacebook: https://www.facebook.com/events/1210500617554659\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearracuda-2025-10-11-seattle",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "9DF93D82-1411-44C0-BE63-00037416BB38",
+      "uid": "9DF93D82-1411-44C0-BE63-00037416BB38",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "cover": "$24.89 - $30.54 (as of 10/1)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/08/serioiusweb.jpg",
+      "tea": "SERIOUS WOOD Show off your boots, plaid, jeans, nut huggers, flannel, suspenders, beanies & overalls! Hot Go-Go’s, Chunky Visuals!",
+      "cadence": null,
+      "address": "619 E Pine, Seattle, WA 98122",
+      "website": "https://bearracuda.com/events/seattlewood/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1210500617554659",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/seattlewood/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1210500617554659",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-seattle-serious-wood-4a1720dd"
+    },
+    {
+      "name": "IT'S GIVING THANKS",
+      "day": "Sunday",
+      "time": "2PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 47.5165235,
+        "lng": -122.3548059
+      },
+      "startDate": "2026-11-29T14:00:00",
+      "endDate": "2026-11-29T19:00:00",
+      "unprocessedDescription": "description: Gobble these bears up with a fun Thanksgiving them\red event.\nbar: The Lumber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW, Seattle, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events/southseattlebearsocial\nkey: it-s-giving-thanks|2026-11-29|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261129T220000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F31536C5-60DD-4097-B56B-CF0A136A3BA3",
+      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
+      "recurrenceId": "2026-11-29T14:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "The Lumber Yard Bar",
+      "favicon": "https://events.ticketleap.com/events/southseattlebearsocial",
+      "tea": "Gobble these bears up with a fun Thanksgiving themed event.",
+      "cadence": null,
+      "address": "9630 16th Ave SW, Seattle, WA 98106",
+      "website": "https://thelumberyardbar.com/",
+      "instagram": "https://www.instagram.com/southseattlebearsocial",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+      "shortName": "BEAR SOCIAL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://thelumberyardbar.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/southseattlebearsocial",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "its-giving-thanks-42370f17"
+    },
+    {
+      "name": "Treasure Trail Seattle",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150824,
+        "lng": -122.3237201
+      },
+      "startDate": "2026-05-08T21:00:00",
+      "endDate": "2026-05-09T03:00:00",
+      "unprocessedDescription": "description: Clothes check available\n\nMusic & Entertainment\n\r• Beats by MATT STANDS &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E. Pine St, Seattle, WA\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg\nfacebook: https://www.facebook.com/events/1574328850293138/\nticketUrl: https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA\nkey: bearracuda-2026-05-09-seattle\npinSource: geocoded-exact",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
+      "uid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg",
+      "tea": "Clothes check available",
+      "cadence": null,
+      "address": "619 E. Pine St, Seattle, WA",
+      "website": null,
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1574328850293138/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
+      "ticketUrl": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1574328850293138/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-seattle-7e9ae5d5"
+    },
+    {
+      "name": "Game Night",
+      "day": "Sunday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6191274,
+        "lng": -122.3210517
+      },
+      "startDate": "2026-12-13T16:00:00",
+      "endDate": "2026-12-13T21:00:00",
+      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-12-14|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "29FDDE35-4474-45DA-8A27-5C792071963F",
+      "uid": "29FDDE35-4474-45DA-8A27-5C792071963F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Phoenix Comics & Games",
+      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
+      "cadence": null,
+      "address": "113 Broadway E, Seattle, WA 98102",
+      "website": "https://xlbears.org",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+      "shortName": "GAME NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://xlbears.org",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "game-night-04c4d493"
+    },
+    {
+      "name": "Treasure Trail Seattle: Wish BONED!",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 47.6150572,
+        "lng": -122.3236574
+      },
+      "startDate": "2025-11-21T21:00:00",
+      "endDate": "2025-11-22T03:00:00",
+      "unprocessedDescription": "description: Treasure Trail returns to Seattle and we invite yo\ru to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by MATT STANDS &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/treasureseattle/\ncover: $15.65 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/treasurenov.jpg\nfacebook: https://www.facebook.com/events/784739777742843\nticketUrl: https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearracuda-2025-11-22-seattle",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "3D70DFD0-9501-434E-A015-10F01A25DA09",
+      "uid": "3D70DFD0-9501-434E-A015-10F01A25DA09",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "cover": "$15.65 - $30.54 (as of 10/1)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/treasurenov.jpg",
+      "tea": "Treasure Trail returns to Seattle and we invite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in:",
+      "cadence": null,
+      "address": "619 E Pine, Seattle, WA 98122",
+      "website": "https://bearracuda.com/events/treasureseattle/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/784739777742843",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+      "ticketUrl": "https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasureseattle/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/784739777742843",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-seattle-wish-boned-422a1406"
     },
     {
       "name": "Treasure Trail Seattle:TRAIL HEAD",
@@ -313,66 +984,7 @@
       "slug": "treasure-trail-seattle-4a6fa455"
     },
     {
-      "name": "Treasure Trail Seattle",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150824,
-        "lng": -122.3237201
-      },
-      "startDate": "2026-05-08T21:00:00",
-      "endDate": "2026-05-09T03:00:00",
-      "unprocessedDescription": "description: Clothes check available\n\nMusic & Entertainment\n\r• Beats by MATT STANDS &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E. Pine St, Seattle, WA\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg\nfacebook: https://www.facebook.com/events/1574328850293138/\nticketUrl: https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA\nkey: bearracuda-2026-05-09-seattle\npinSource: geocoded-exact",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
-      "uid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg",
-      "tea": "Clothes check available",
-      "cadence": null,
-      "address": "619 E. Pine St, Seattle, WA",
-      "website": null,
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1574328850293138/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
-      "ticketUrl": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1574328850293138/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-seattle-7e9ae5d5"
-    },
-    {
-      "name": "Bearracuda Seattle GLOW PARTY",
+      "name": "BEARRACUDA: Seattle💦",
       "day": "Saturday",
       "time": "9PM-3AM",
       "eventType": "routine",
@@ -381,377 +993,43 @@
         "lat": 47.6150824,
         "lng": -122.3237201
       },
-      "startDate": "2026-06-13T21:00:00",
-      "endDate": "2026-06-14T03:00:00",
-      "unprocessedDescription": "description: Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. \rPine SATURDAY, June 13th Doors at 9pm, Party til 3am! Hot Go-Go&rsquo;s, Chunky Visuals Decor by James Sharinghousen, Photos by Matt Hoffman, Hosted by Matt Bearracuda DJs Matt Stands DISCOUNTED tix for those in UV/Neon Attire Our GLOW PARTY is coming to Seattle! We are offering DEEPLY discounted tickets for those wearing UV Reactive or Neon Attire. Bearracuda resident DJ, Matt Stands spins all night with Hot GoGos, Decor by James Sharinghousen…\nbar: MASSIVE\naddress: 619 E. Pine\nticketUrl: https://www.sickening.events/e/bearracuda-seattle-glow/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776554715/saas/logos/image_1776554705644_n8exy3gc9.webp\ncover: DISCOUNTED tix for those in UV/Neon Attire\nshortName: South Seattle Social\nwebsite: https://bearracuda.com/events/seattle-glow/\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine\nkey: bearracuda-2026-06-14-seattle\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
+      "startDate": "2026-09-12T21:00:00",
+      "endDate": "2026-09-13T03:00:00",
+      "unprocessedDescription": "bar: Massive\naddress: 619 E. Pine, Seattle, WA, 98122\ntick\retUrl: https://www.sickening.events/e/bearracuda-seattle-7days/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\ncover: $20-$30\ntimezone: America/Los_Angeles\nwebsite: https://bearracuda.com/events/7days/\ninstagram: https://www.instagram.com/bearracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: bearracuda-seattle-7-day-load|2026-09-13|massive\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\nbearSource: keyword\ndescription: 7 DAY LOADSaturday, Sept. 12thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky VisualsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on the menu for this evening. DJ Matt Consola will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "762BAD4A-F1D8-4519-BAC3-D755EF9BA263",
-      "uid": "762BAD4A-F1D8-4519-BAC3-D755EF9BA263",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "cover": "DISCOUNTED tix for those in UV/Neon Attire",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776554715/saas/logos/image_1776554705644_n8exy3gc9.webp",
-      "tea": "Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. Pine SATURDAY, June 13th Doors at 9pm, Party til 3am! Hot Go-Go&rsquo;s, Chunky Visuals Decor by James Sharinghousen, Photos by Matt Hoffman, Hosted by Matt Bearracuda DJs Matt Stands DISCOUNTED tix for those in UV/Neon Attire Our GLOW PARTY is coming to Seattle! We are offering DEEPLY discounted tickets for those wearing UV Reactive or Neon Attire. Bearracuda resident DJ, Matt Stands spins all night with Hot GoGos, Decor by James Sharinghousen…",
-      "cadence": null,
-      "address": "619 E. Pine",
-      "website": "https://bearracuda.com/events/seattle-glow/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-glow/tickets",
-      "shortName": "South Seattle Social",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/seattle-glow/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-seattle-glow/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-seattle-glow-party-43d1597b"
-    },
-    {
-      "name": "Treasure Trail Seattle",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150824,
-        "lng": -122.3237201
-      },
-      "startDate": "2026-08-15T21:00:00",
-      "endDate": "2026-08-16T03:00:00",
-      "unprocessedDescription": "description: MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL \rSEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTIONS, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.\nbar: Massive\naddress: 619 East Pine Street, Seattle, WA, 98122\ntimezone: America/Los_Angeles\nticketUrl: https://tixr.com/e/198706\nimage: https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg\nwebsite: https://bearracuda.com/events/treasure-trail-seattle/\nshortName: TREAS-URE TRAIL\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: treasure-trail-seattle|2026-08-16|massive\nbearSource: manual-bear (overrode ai\\: The event description uses general queer party language (e.g., 'HARD BEATS', ...)\ncover: $15-$30\nimageVertical: https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-image\nbarSource: venue-site-identity\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5",
-      "uid": "ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Massive",
-      "cover": "$15-$30",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg",
-      "imageVertical": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp",
-      "favicon": "https://bearracuda.com/",
-      "tea": "MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL SEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTIONS, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.",
-      "cadence": null,
-      "address": "619 East Pine Street, Seattle, WA, 98122",
-      "website": "https://bearracuda.com/events/treasure-trail-seattle/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-      "ticketUrl": "https://tixr.com/e/198706",
-      "shortName": "TREAS-URE TRAIL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/treasure-trail-seattle/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://tixr.com/e/198706",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-seattle-2a543921"
-    },
-    {
-      "name": "IT'S GIVING THANKS",
-      "day": "Sunday",
-      "time": "2PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "recurrence": null,
-      "coordinates": {
-        "lat": 47.5165235,
-        "lng": -122.3548059
-      },
-      "startDate": "2026-11-29T14:00:00",
-      "endDate": "2026-11-29T19:00:00",
-      "unprocessedDescription": "description: Gobble these bears up with a fun Thanksgiving them\red event.\nbar: The Lumber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW, Seattle, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events/southseattlebearsocial\nkey: it-s-giving-thanks|2026-11-29|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261129T220000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "F31536C5-60DD-4097-B56B-CF0A136A3BA3",
-      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
-      "recurrenceId": "2026-11-29T14:00:00",
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "The Lumber Yard Bar",
-      "favicon": "https://events.ticketleap.com/events/southseattlebearsocial",
-      "tea": "Gobble these bears up with a fun Thanksgiving themed event.",
-      "cadence": null,
-      "address": "9630 16th Ave SW, Seattle, WA 98106",
-      "website": "https://thelumberyardbar.com/",
-      "instagram": "https://www.instagram.com/southseattlebearsocial",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-      "shortName": "BEAR SOCIAL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://thelumberyardbar.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/southseattlebearsocial",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "its-giving-thanks-42370f17"
-    },
-    {
-      "name": "Game Night",
-      "day": "Sunday",
-      "time": "4PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6191274,
-        "lng": -122.3210517
-      },
-      "startDate": "2026-10-11T16:00:00",
-      "endDate": "2026-10-11T21:00:00",
-      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-10-11|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "22F7191A-A6C0-40C2-8D62-A33F89712B54",
-      "uid": "22F7191A-A6C0-40C2-8D62-A33F89712B54",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Phoenix Comics & Games",
-      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
-      "cadence": null,
-      "address": "113 Broadway E, Seattle, WA 98102",
-      "website": "https://xlbears.org",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-      "shortName": "GAME NIGHT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://xlbears.org",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "game-night-56c4b379"
-    },
-    {
-      "name": "Game Night",
-      "day": "Sunday",
-      "time": "4PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6191274,
-        "lng": -122.3210517
-      },
-      "startDate": "2026-12-13T16:00:00",
-      "endDate": "2026-12-13T21:00:00",
-      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-12-14|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "29FDDE35-4474-45DA-8A27-5C792071963F",
-      "uid": "29FDDE35-4474-45DA-8A27-5C792071963F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Phoenix Comics & Games",
-      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
-      "cadence": null,
-      "address": "113 Broadway E, Seattle, WA 98102",
-      "website": "https://xlbears.org",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-      "shortName": "GAME NIGHT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://xlbears.org",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "game-night-04c4d493"
-    },
-    {
-      "name": "Bearracuda Seattle: SERIOUS WOOD",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150572,
-        "lng": -122.3236574
-      },
-      "startDate": "2025-10-10T21:00:00",
-      "endDate": "2025-10-11T03:00:00",
-      "unprocessedDescription": "description: SERIOUS WOOD Show off your boots, plaid, jeans,\r nut huggers, flannel, suspenders, beanies & overalls! Hot Go-Go’s, Chunky Visuals!\n\nMusic & Entertainment\n• Matt Consola\n• Freddy KOP\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/seattlewood/\ncover: $24.89 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/serioiusweb.jpg\nfacebook: https://www.facebook.com/events/1210500617554659\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearracuda-2025-10-11-seattle",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "9DF93D82-1411-44C0-BE63-00037416BB38",
-      "uid": "9DF93D82-1411-44C0-BE63-00037416BB38",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "cover": "$24.89 - $30.54 (as of 10/1)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/08/serioiusweb.jpg",
-      "tea": "SERIOUS WOOD Show off your boots, plaid, jeans, nut huggers, flannel, suspenders, beanies & overalls! Hot Go-Go’s, Chunky Visuals!",
-      "cadence": null,
-      "address": "619 E Pine, Seattle, WA 98122",
-      "website": "https://bearracuda.com/events/seattlewood/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1210500617554659",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/seattlewood/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1210500617554659",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1565073299369?aff=oddtdtcreator",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-seattle-serious-wood-4a1720dd"
-    },
-    {
-      "name": "Bearracuda Seattle: Red Light District!",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150824,
-        "lng": -122.3237201
-      },
-      "startDate": "2026-11-07T21:00:00",
-      "endDate": "2026-11-08T03:00:00",
-      "unprocessedDescription": "description: RED LIGHT DISTRICTSaturday, Nov. 7thParty til 3am\rUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky Visuals, Heavy CruisingDJs Matt StandsFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our FINAL PARTY OF THE YEAR! DJ Matt Stands will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW\nbar: Massive\naddress: 619 E Pine St, Seattle, WA 98122\ntimezone: America/Los_Angeles\nticketUrl: https://www.sickening.events/e/bearracuda-seattle-red/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg\ncover: $20-$30\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg\naddressSource: page\nwebsite: https://bearracuda.com/events/seattlered/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ\npinSource: curated\ninstagram: https://www.instagram.com/bearracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: bearracuda-seattle-red-light-district|2026-11-08|massive\nbearSource: keyword\nfacebook: https://www.facebook.com/bearracuda/\nimageSource: og-image\nbarSource: venue-site-identity",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "99F4C955-B5C0-4EF1-8A56-6BAF11907080",
-      "uid": "99F4C955-B5C0-4EF1-8A56-6BAF11907080",
+      "sourceUid": "E8573138-9CDE-45E6-A456-18A7D0DB736E",
+      "uid": "E8573138-9CDE-45E6-A456-18A7D0DB736E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Massive",
       "cover": "$20-$30",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/bearracuda_seattlenovember2026-ig-819x1024.jpg",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
       "favicon": "https://bearracuda.com/",
-      "tea": "RED LIGHT DISTRICTSaturday, Nov. 7thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky Visuals, Heavy CruisingDJs Matt StandsFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our FINAL PARTY OF THE YEAR! DJ Matt Stands will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW",
+      "tea": "7 DAY LOADSaturday, Sept. 12thParty til 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s, Chunky VisualsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on the menu for this evening. DJ Matt Consola will playing till late w/Freddy KOP opening. 3 FLOORS, heavy cruising, furry socializing and YOU! Early adv. tix available NOW",
       "cadence": null,
-      "address": "619 E Pine St, Seattle, WA 98122",
-      "website": "https://bearracuda.com/events/seattlered/",
+      "address": "619 E. Pine, Seattle, WA, 98122",
+      "website": "https://bearracuda.com/events/7days/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/bearracuda/",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-red/tickets",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-seattle-7days/tickets",
       "shortName": "Bear­rac­uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/seattlered/",
+          "url": "https://bearracuda.com/events/7days/",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
           "url": "https://www.instagram.com/bearracuda",
           "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/bearracuda/",
-          "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
@@ -760,289 +1038,11 @@
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-seattle-red/tickets",
+          "url": "https://www.sickening.events/e/bearracuda-seattle-7days/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-seattle-red-light-district-792ef9cf"
-    },
-    {
-      "name": "South Seattle Bear Social",
-      "day": "Sunday",
-      "time": "2PM-7PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
-      "coordinates": {
-        "lat": 47.51652271569908,
-        "lng": -122.35487284211817
-      },
-      "startDate": "2025-07-06T14:00:00",
-      "endDate": "2025-07-06T19:00:00",
-      "unprocessedDescription": "shortName: South Seattle Social\nbar: Lumberyard\ntimezone: Ame\rrica/Los_Angeles\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\nwebsite: https://thelumberyardbar.com/\ninstagram: https://www.instagram.com/southseattlebearsocial/\ngmaps: https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
-      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Lumberyard",
-      "cadence": null,
-      "address": null,
-      "website": "https://thelumberyardbar.com/",
-      "instagram": "https://www.instagram.com/southseattlebearsocial/",
-      "gmaps": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
-      "shortName": "South Seattle Social",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://thelumberyardbar.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/southseattlebearsocial/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "south-seattle-bear-social-1a3d1cb6"
-    },
-    {
-      "name": "South Seattle Bear Social",
-      "day": "Sunday",
-      "time": "2PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "recurrence": null,
-      "coordinates": {
-        "lat": 47.5165235,
-        "lng": -122.3548059
-      },
-      "startDate": "2026-12-27T14:00:00",
-      "endDate": "2026-12-27T21:00:00",
-      "unprocessedDescription": "description: Celebrate the holidays with the Bears.\nbar: The L\rumber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW, Seattle, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events/southseattlebearsocial\nkey: naughty-santa-social|2026-12-27|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261227T220000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "5EFCFA14-ACC3-4A30-98FF-2611273735D8",
-      "uid": "south-seattle-bear-social-20260823T012058Z@chunky.dad",
-      "recurrenceId": "2026-12-27T14:00:00",
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "The Lumber Yard Bar",
-      "favicon": "https://events.ticketleap.com/events/southseattlebearsocial",
-      "tea": "Celebrate the holidays with the Bears.",
-      "cadence": null,
-      "address": "9630 16th Ave SW, Seattle, WA 98106",
-      "website": "https://thelumberyardbar.com/",
-      "instagram": "https://www.instagram.com/southseattlebearsocial",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-      "shortName": "BEAR SOCIAL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://thelumberyardbar.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/southseattlebearsocial",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.3548059",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "south-seattle-bear-social-1d0788a7"
-    },
-    {
-      "name": "Bearracuda Seattle Winter Beef Ball 2026!",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150572,
-        "lng": -122.3236574
-      },
-      "startDate": "2026-01-31T21:00:00",
-      "endDate": "2026-02-01T03:00:00",
-      "unprocessedDescription": "description: WINTER BEEF BALL!\n\nMusic & Entertainment\n• Beat\rs by MATT STANDS &amp; FREDDY KOP\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/seattlebeef/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg\nfacebook: https://www.facebook.com/events/698055449765272\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey: bearracuda-2026-02-01-seattle",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
-      "uid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg",
-      "tea": "WINTER BEEF BALL!",
-      "cadence": null,
-      "address": "619 E Pine, Seattle, WA 98122",
-      "website": "https://bearracuda.com/events/seattlebeef/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/698055449765272",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/seattlebeef/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/698055449765272",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-seattle-winter-beef-ball-2026-5d3a67cd"
-    },
-    {
-      "name": "Game Night",
-      "day": "Sunday",
-      "time": "4PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6191274,
-        "lng": -122.3210517
-      },
-      "startDate": "2026-11-08T16:00:00",
-      "endDate": "2026-11-08T21:00:00",
-      "unprocessedDescription": "description: Come join us bears & friends at Phoenix Comics & G\rames for board games, card games, and more! You can also find our Telegram link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway E, Seattle, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026-11-09|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E6E0BABE-5D69-4BAF-962A-D92A1991C07C",
-      "uid": "E6E0BABE-5D69-4BAF-962A-D92A1991C07C",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Phoenix Comics & Games",
-      "tea": "Come join us bears & friends at Phoenix Comics & Games for board games, card games, and more! You can also find our Telegram link on our website!",
-      "cadence": null,
-      "address": "113 Broadway E, Seattle, WA 98102",
-      "website": "https://xlbears.org",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-      "shortName": "GAME NIGHT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://xlbears.org",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2098102",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "game-night-4d232090"
-    },
-    {
-      "name": "Treasure Trail Seattle: Wish BONED!",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 47.6150572,
-        "lng": -122.3236574
-      },
-      "startDate": "2025-11-21T21:00:00",
-      "endDate": "2025-11-22T03:00:00",
-      "unprocessedDescription": "description: Treasure Trail returns to Seattle and we invite yo\ru to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by MATT STANDS &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/treasureseattle/\ncover: $15.65 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/treasurenov.jpg\nfacebook: https://www.facebook.com/events/784739777742843\nticketUrl: https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearracuda-2025-11-22-seattle",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "3D70DFD0-9501-434E-A015-10F01A25DA09",
-      "uid": "3D70DFD0-9501-434E-A015-10F01A25DA09",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "cover": "$15.65 - $30.54 (as of 10/1)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/treasurenov.jpg",
-      "tea": "Treasure Trail returns to Seattle and we invite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in:",
-      "cadence": null,
-      "address": "619 E Pine, Seattle, WA 98122",
-      "website": "https://bearracuda.com/events/treasureseattle/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/784739777742843",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
-      "ticketUrl": "https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/treasureseattle/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/784739777742843",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/treasure-trail-seattle-wish-boned-tickets-1754983576119",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-seattle-wish-boned-422a1406"
+      "slug": "bearracuda-seattle-283ac3dd"
     }
   ]
 }

@@ -357,7 +357,7 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 26322,
+      "dataLength": 26317,
       "eventCount": 20
     },
     "seoul": {
@@ -369,8 +369,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 59816,
-      "eventCount": 45
+      "dataLength": 63515,
+      "eventCount": 48
     },
     "singapore": {
       "name": "Singapore",
@@ -405,8 +405,8 @@
     "toronto": {
       "name": "Toronto",
       "status": "success",
-      "dataLength": 17174,
-      "eventCount": 14
+      "dataLength": 21396,
+      "eventCount": 19
     },
     "torremolinos": {
       "name": "Torremolinos",
