@@ -1294,6 +1294,9 @@ function getFriendAdvicePath(sharedRoot) {
     return path.join(sharedRoot, FRIEND_ADVICE_FILE_NAME);
 }
 
+// No phone numbers, anywhere (owner, 2026-10-04: "too risky"): the deck
+// copies the link and opens Messages with it typed; the owner picks whom
+// it goes to.
 function emptyFriendAdviceStore() {
     return { version: 1, asks: [], exports: [], advice: [] };
 }

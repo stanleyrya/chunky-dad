@@ -770,6 +770,12 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
     assert.ok(tapped.body.includes('Roger answered 1 card') && tapped.body.includes('url=/review'), tapped.body.slice(0, 300));
     assert.equal((await request(state, 'GET', '/review/advice?r=nope')).status, 400);
     assert.equal(reviewQueue.parseFriendReply('http://x:8734/review/advice?r=r2.' + Buffer.from(JSON.stringify({ e: 'q', f: 'A', a: [[0, 'approve', '', [], '']] })).toString('base64url')).exportId, 'q', 'the ?r= form parses');
+    // No numbers anywhere: the link comes with an sms: link that names nobody.
+    await request(state, 'POST', '/review/ask', JSON.stringify({ key: 'event|z|z|2030-10-13', kind: 'new', friend: 'Roger', snapshot: { title: 'Z' } }));
+    const withSms = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
+    assert.ok(withSms.smsLink.startsWith('sms:&body='), withSms.smsLink.slice(0, 40));
+    assert.ok(decodeURIComponent(withSms.smsLink.split('&body=')[1]).includes(withSms.url), 'the link is in the message');
+    assert.equal((await request(state, 'POST', '/review/friend-contact', JSON.stringify({ friend: 'Roger', sms: '555' }))).status, 404, 'there is no place to put a number');
     // Icons and the home-screen manifest.
     const icon = await request(state, 'GET', '/favicons/review-icon-180.png');
     assert.equal(icon.status, 200);

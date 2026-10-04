@@ -1276,13 +1276,14 @@ window.__startDeck = function () {
         postTo('/review/friend-link', { friend: name }).then(function (j) {
           share.disabled = false;
           if (!j.count) { toast('Nothing to send — everything is answered'); return; }
-          var text = 'A few events to check (' + j.count + ')';
           linkLine.innerHTML = 'Link for ' + escapeHtml(name) + ' (' + j.count + ' card' + (j.count === 1 ? '' : 's') + '): <a href="' + escapeHtml(j.url) + '" target="_blank" rel="noopener">open it</a> · long-press to copy';
-          if (navigator.share) {
-            navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
-          } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(j.url).then(function () { toast('Link copied — ' + j.count + ' cards, send it to ' + name); }, function () { linkLine.textContent = j.url; });
-          } else { linkLine.textContent = j.url; }
+          // The link goes on the clipboard, then Messages opens with it
+          // typed — the owner picks the person there.
+          var copied = navigator.clipboard ? navigator.clipboard.writeText(j.url).then(function () { return true; }, function () { return false; }) : Promise.resolve(false);
+          copied.then(function (ok) {
+            toast((ok ? 'Copied — ' : '') + 'opening Messages for ' + name);
+            if (j.smsLink) location.href = j.smsLink;
+          });
         }).catch(function (e) { share.disabled = false; toast('Could not build the link: ' + e.message); });
       };
       who.appendChild(share);

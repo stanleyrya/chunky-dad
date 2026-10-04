@@ -11846,13 +11846,22 @@ test('executeReviewedSavedRun confirms BEFORE the snapshot step, so a crash ther
   const order = [];
   adapter.runPostRunHousekeeping = async () => { order.push('housekeeping'); };
   adapter.postSavedRunExecutionNotification = async (title, message) => { order.push('notification'); captured.notification = { title, message }; return true; };
-  adapter.writeCalendarSnapshots = async () => { order.push('snapshots'); return []; };
+  let snapshotCities = null;
+  adapter.cities = { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York' }, la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles' }, chicago: { calendar: 'chunky-dad-chicago', timezone: 'America/Chicago' } };
+  adapter.writeCalendarSnapshots = async (cities) => { order.push('snapshots'); snapshotCities = cities; return []; };
   adapter.appendLogSummary = async (results, options) => { order.push(options && options.preUi ? 'log:start' : 'log:after-snapshots'); };
   adapter.presentSavedRunExecutionNotice = async (title, message) => { order.push('alert'); captured.notices.push({ title, message }); };
   const decisions = [{ key: core.getOwnerReviewKey(freshPlan[0]), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }];
-  const results = buildReviewedRunResults(freshPlan.map((event) => ({ ...event, _action: 'new' })));
+  // The run holds rows in other cities too, none approved: their calendars
+  // are not re-read (94 calendars, 16 s on 2026-10-03 — only the written
+  // cities changed).
+  const results = buildReviewedRunResults(freshPlan.map((event) => ({ ...event, _action: 'new' })).concat([
+    { ...reviewedNew('Elsewhere One'), city: 'la', _action: 'new' },
+    { ...reviewedNew('Elsewhere Two'), city: 'chicago', _action: 'new' }
+  ]));
   await adapter.executeReviewedSavedRun(results, decisions);
   assert.deepEqual(order.filter((step) => step !== 'log:start'), ['housekeeping', 'notification', 'snapshots', 'log:after-snapshots', 'alert']);
+  assert.deepEqual(snapshotCities, [freshPlan[0].city], 'only the city written is snapshotted');
   assert.equal(captured.notification.title, 'Calendar Updated');
   assert.match(captured.notification.message, /Created 1/);
   assert.equal(captured.notices[0].message, captured.notification.message, 'the alert repeats what the notification already said');
