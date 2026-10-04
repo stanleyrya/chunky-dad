@@ -646,7 +646,7 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-friend-'));
   const file = reviewQueue.getFriendAdvicePath(root);
   let store = reviewQueue.loadFriendAdvice(file);
-  assert.deepEqual(store, { version: 1, asks: [], exports: [], advice: [], friends: {} });
+  assert.deepEqual(store, { version: 1, asks: [], exports: [], advice: [] });
   const snapshot = { title: 'FURBALL NYC', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: 'Rockbar', address: '185 Christopher St', city: 'nyc', url: 'https://furball.nyc/', image: 'https://inbox.chunky.dad/file/x.png', source: 'Furball' };
   assert.throws(() => reviewQueue.recordFriendAsk(store, { key: 'event|furball|rockbar|2030-10-03', friend: '  ' }), /needs a friend/);
   store = reviewQueue.recordFriendAsk(store, { key: 'event|furball|rockbar|2030-10-03', kind: 'new', friend: ' Matt ', question: 'still at Rockbar?', snapshot }, Date.parse('2030-10-01T00:00:00Z'));
@@ -770,22 +770,12 @@ test('phone a friend: an ask leaves the stack for the Friends section; one link 
     assert.ok(tapped.body.includes('Roger answered 1 card') && tapped.body.includes('url=/review'), tapped.body.slice(0, 300));
     assert.equal((await request(state, 'GET', '/review/advice?r=nope')).status, 400);
     assert.equal(reviewQueue.parseFriendReply('http://x:8734/review/advice?r=r2.' + Buffer.from(JSON.stringify({ e: 'q', f: 'A', a: [[0, 'approve', '', [], '']] })).toString('base64url')).exportId, 'q', 'the ?r= form parses');
-    // How to reach a friend lives in the iCloud store only; with a number, the link comes with an sms: link to them.
-    assert.equal(reviewQueue.cleanSmsNumber(' (555) 010-2020 '), '5550102020');
-    assert.equal(reviewQueue.cleanSmsNumber('+1 555 010 2020'), '+15550102020');
-    assert.equal(reviewQueue.cleanSmsNumber('matt'), '', 'not a number');
-    const saved = JSON.parse((await request(state, 'POST', '/review/friend-contact', JSON.stringify({ friend: 'Roger', sms: '+1 555 010 2020' }))).body);
-    assert.equal(saved.hasContact, true);
-    assert.deepEqual(saved.contacts, ['Roger']);
-    assert.equal(JSON.parse(fs.readFileSync(reviewQueue.getFriendAdvicePath(root), 'utf8')).friends.Roger.sms, '+15550102020', 'in friend-advice.json (iCloud), nowhere else');
+    // No numbers anywhere: the link comes with an sms: link that names nobody.
     await request(state, 'POST', '/review/ask', JSON.stringify({ key: 'event|z|z|2030-10-13', kind: 'new', friend: 'Roger', snapshot: { title: 'Z' } }));
     const withSms = JSON.parse((await request(state, 'POST', '/review/friend-link', JSON.stringify({ friend: 'Roger' }))).body);
-    assert.ok(withSms.smsLink.startsWith('sms:+15550102020&body='), withSms.smsLink.slice(0, 40));
+    assert.ok(withSms.smsLink.startsWith('sms:&body='), withSms.smsLink.slice(0, 40));
     assert.ok(decodeURIComponent(withSms.smsLink.split('&body=')[1]).includes(withSms.url), 'the link is in the message');
-    const forgot = JSON.parse((await request(state, 'POST', '/review/friend-contact', JSON.stringify({ friend: 'Roger', sms: '' }))).body);
-    assert.equal(forgot.hasContact, false);
-    const page2 = await request(state, 'GET', '/review');
-    assert.ok(!page2.body.includes('15550102020'), 'a number is never on the page');
+    assert.equal((await request(state, 'POST', '/review/friend-contact', JSON.stringify({ friend: 'Roger', sms: '555' }))).status, 404, 'there is no place to put a number');
     // Icons and the home-screen manifest.
     const icon = await request(state, 'GET', '/favicons/review-icon-180.png');
     assert.equal(icon.status, 200);
