@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-03",
+ "generatedAt": "2026-10-04",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-03",
     "2026-10-04",
     "2026-10-06",
     "2026-10-07",
@@ -153,7 +152,10 @@ window.CITY_ACTIVITY = {
     "2026-12-06",
     "2026-12-12",
     "2026-12-20",
-    "2027-01-31"
+    "2027-01-30",
+    "2027-01-31",
+    "2027-05-29",
+    "2027-10-30"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -220,24 +222,19 @@ window.CITY_ACTIVITY = {
    "festivalUntil": "2027-02-22"
   },
   "denver": {
-   "dates": [
-    "2026-10-03"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
   "dallas": {
    "dates": [
-    "2026-10-03",
     "2026-10-04"
    ],
    "recurring": 0,
    "festivalUntil": "2027-03-28"
   },
   "dc": {
-   "dates": [
-    "2026-10-03"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -267,8 +264,8 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-10-03",
     "2026-10-04",
+    "2026-10-09",
     "2026-10-11",
     "2026-10-17",
     "2026-10-18",
@@ -277,11 +274,13 @@ window.CITY_ACTIVITY = {
     "2026-11-01",
     "2026-11-06",
     "2026-11-08",
+    "2026-11-13",
     "2026-11-14",
     "2026-11-15",
     "2026-11-29",
     "2026-12-04",
     "2026-12-06",
+    "2026-12-11",
     "2026-12-13",
     "2026-12-20",
     "2026-12-27"
@@ -420,7 +419,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-10-03",
     "2026-10-09",
     "2026-10-10",
     "2026-10-16",
@@ -457,7 +455,6 @@ window.CITY_ACTIVITY = {
   },
   "montreal": {
    "dates": [
-    "2026-10-03",
     "2026-10-15"
    ],
    "recurring": 0,
@@ -485,7 +482,6 @@ window.CITY_ACTIVITY = {
   },
   "manchester": {
    "dates": [
-    "2026-10-03",
     "2026-10-04",
     "2026-10-10",
     "2026-11-14",
@@ -643,9 +639,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "singapore": {
-   "dates": [
-    "2026-10-03"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
