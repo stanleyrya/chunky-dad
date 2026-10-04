@@ -1135,6 +1135,7 @@ function renderReviewPage(deck, options = {}) {
         tags: reviewQueue.REVIEW_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
+        friendContacts: Array.isArray(deck.friendContacts) ? deck.friendContacts : [],
         adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE,
         // The friend's copy of this page (renderFriendPage): no server
         // behind it — the cards arrive in the link, the answers leave in one.
@@ -1314,6 +1315,7 @@ body { overscroll-behavior-y:none; }
 .line.friend { color:var(--ink); font-weight:600; }
 .friends .who { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0 4px; font-weight:600; }
 .friends .who button, .friends .reply button { font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; background:var(--accent); color:#fff; padding:5px 10px; cursor:pointer; }
+.friends .who button.quiet { background:var(--card); color:var(--muted); }
 .friends .reply { display:flex; gap:8px; margin:8px 0 4px; }
 .friends .reply input { flex:1; font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
 .friends .link { font-size:12px; color:var(--muted); word-break:break-all; margin:4px 0; }
@@ -2435,16 +2437,32 @@ window.__startDeck = function () {
         postTo('/review/friend-link', { friend: name }).then(function (j) {
           share.disabled = false;
           if (!j.count) { toast('Nothing to send — everything is answered'); return; }
-          var text = 'A few events to check (' + j.count + ')';
           linkLine.innerHTML = 'Link for ' + escapeHtml(name) + ' (' + j.count + ' card' + (j.count === 1 ? '' : 's') + '): <a href="' + escapeHtml(j.url) + '" target="_blank" rel="noopener">open it</a> · long-press to copy';
-          if (navigator.share) {
-            navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
-          } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(j.url).then(function () { toast('Link copied — ' + j.count + ' cards, send it to ' + name); }, function () { linkLine.textContent = j.url; });
-          } else { linkLine.textContent = j.url; }
+          // The link is on the clipboard either way; with a number on file,
+          // Messages opens to the friend with it typed.
+          var copied = navigator.clipboard ? navigator.clipboard.writeText(j.url).then(function () { return true; }, function () { return false; }) : Promise.resolve(false);
+          copied.then(function (ok) {
+            if (j.smsLink) { toast((ok ? 'Copied — ' : '') + 'opening Messages to ' + name); location.href = j.smsLink; return; }
+            toast(ok ? 'Link copied — ' + j.count + ' card' + (j.count === 1 ? '' : 's') + ' for ' + name + '. Add a number below to open Messages next time.' : 'Long-press the link below to copy it');
+          });
         }).catch(function (e) { share.disabled = false; toast('Could not build the link: ' + e.message); });
       };
       who.appendChild(share);
+      // How to reach them — a number opens Messages straight from Share;
+      // stored on the Mac's iCloud store, never on the website or in git.
+      var hasNumber = (deck.friendContacts || []).indexOf(name) !== -1;
+      var contact = document.createElement('button');
+      contact.type = 'button'; contact.className = 'quiet'; contact.textContent = hasNumber ? '📱 number saved · change' : '📱 add number';
+      contact.onclick = function () {
+        var typed = window.prompt(hasNumber ? 'New number for ' + name + ' (leave empty to forget it)' : 'Phone number for ' + name + ' — stays on your Mac, never on the website', '');
+        if (typed === null) return;
+        postTo('/review/friend-contact', { friend: name, sms: typed }).then(function (j) {
+          deck.friendContacts = j.contacts || [];
+          toast(j.hasContact ? 'Saved — Share opens Messages to ' + name : 'Number forgotten');
+          render();
+        }).catch(function (e) { toast(e.message); });
+      };
+      who.appendChild(contact);
       group.appendChild(who);
       var ul = document.createElement('ul');
       byFriend[name].forEach(function (c) {
@@ -2895,6 +2913,7 @@ function buildReviewDeckForRun(sharedRoot, run) {
         console.log(`Review: inbox picture retry failed: ${error.message}`);
     }
     deck.friends = reviewQueue.knownFriends(friendAdvice);
+    deck.friendContacts = reviewQueue.friendsWithContact(friendAdvice);
     deck.adviceBase = resolveAdvicePageBase();
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
@@ -3276,6 +3295,24 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // How to reach a friend — kept in friend-advice.json (iCloud), never in
+    // the repo. An empty number forgets it.
+    if (pathname === '/review/friend-contact' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch (error) { return sendJson(res, 400, { ok: false, error: 'body must be JSON' }); }
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const file = reviewQueue.getFriendAdvicePath(sharedRoot);
+        try {
+            const store = reviewQueue.saveFriendAdvice(file, reviewQueue.setFriendContact(reviewQueue.loadFriendAdvice(file), body && body.friend, body && body.sms));
+            const has = Boolean(reviewQueue.getFriendContact(store, body && body.friend));
+            console.log(`Review: ${has ? 'saved' : 'forgot'} how to reach ${body.friend}`);
+            return sendJson(res, 200, { ok: true, hasContact: has, contacts: reviewQueue.friendsWithContact(store), friends: reviewQueue.knownFriends(store) });
+        } catch (error) {
+            return sendJson(res, /needs a/.test(error.message) ? 400 : 500, { ok: false, error: error.message });
+        }
+    }
+
     // One link for everything a friend was asked and has not answered.
     if (pathname === '/review/friend-link' && req.method === 'POST') {
         const raw = await readRequestBody(req);
@@ -3289,7 +3326,11 @@ async function handleRequest(state, req, res) {
             const built = reviewQueue.buildFriendLink(store, { friend: body && body.friend, question: body && body.question, base: resolveAdvicePageBase(), htmlByKey, back: resolveReplyBase(req) });
             if (built.count > 0) reviewQueue.saveFriendAdvice(file, built.store);
             console.log(`Review: link for ${body.friend} — ${built.count} card(s), ${built.url.length} chars${built.left ? `, ${built.left} wait for the next link` : ''}`);
-            return sendJson(res, 200, { ok: true, url: built.url, count: built.count, left: built.left, exportId: built.exportId });
+            // With a number on file, the deck opens Messages to the friend
+            // with the link already typed (owner: "pop-up with their info").
+            const contact = reviewQueue.getFriendContact(store, body && body.friend);
+            const smsLink = contact ? `sms:${contact.sms}&body=${encodeURIComponent(`A few events to check 🐻 ${built.url}`)}` : '';
+            return sendJson(res, 200, { ok: true, url: built.url, count: built.count, left: built.left, exportId: built.exportId, smsLink });
         } catch (error) {
             return sendJson(res, /needs a/.test(error.message) ? 400 : 500, { ok: false, error: error.message });
         }

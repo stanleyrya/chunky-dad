@@ -26584,9 +26584,13 @@ class SharedCore {
                 throw new Error('No HTTP adapter available for AI request');
             }
 
+            const aiStartedAt = Date.now();
             const response = await httpAdapter.postJson(aiConfig.endpoint, payload, {
                 timeoutSeconds: aiConfig.timeoutSeconds
             });
+            // Which pass spent the time (the phone's execute timing line
+            // names them: "merge-arbitration 8 (11.2 s)").
+            if (typeof httpAdapter.recordAiPass === 'function') httpAdapter.recordAiPass(passLabel || 'ai', Date.now() - aiStartedAt);
 
             if (!response.ok) {
                 // An HTTP status is still an answer: the server is up, it just

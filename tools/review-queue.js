@@ -1294,15 +1294,46 @@ function getFriendAdvicePath(sharedRoot) {
     return path.join(sharedRoot, FRIEND_ADVICE_FILE_NAME);
 }
 
+// `friends` holds how to reach each friend ({ sms }) — in this iCloud file
+// only, never in the repo (owner, 2026-10-04: "I don't want to share their
+// phone numbers on our base code").
 function emptyFriendAdviceStore() {
-    return { version: 1, asks: [], exports: [], advice: [] };
+    return { version: 1, asks: [], exports: [], advice: [], friends: {} };
 }
 
 function normalizeFriendAdviceStore(store) {
     const base = emptyFriendAdviceStore();
     if (!store || typeof store !== 'object') return base;
     for (const key of ['asks', 'exports', 'advice']) base[key] = Array.isArray(store[key]) ? store[key].filter((entry) => entry && typeof entry === 'object') : [];
+    base.friends = store.friends && typeof store.friends === 'object' && !Array.isArray(store.friends) ? { ...store.friends } : {};
     return base;
+}
+
+// A phone number as Messages wants it in an sms: link: digits and a
+// leading +, nothing else. '' when nothing usable was typed.
+function cleanSmsNumber(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const digits = raw.replace(/[^0-9+]/g, '');
+    const normalized = digits.startsWith('+') ? '+' + digits.slice(1).replace(/\+/g, '') : digits.replace(/\+/g, '');
+    return normalized.replace(/\+/g, '').length >= 7 ? normalized : '';
+}
+
+// Remember (or forget, with an empty number) how to reach a friend.
+function setFriendContact(store, friend, sms) {
+    const clean = normalizeFriendAdviceStore(store);
+    const name = cleanFriendName(friend);
+    if (!name) throw new Error('a contact needs a friend');
+    const number = cleanSmsNumber(sms);
+    if (number) clean.friends[name] = { ...(clean.friends[name] || {}), sms: number };
+    else delete clean.friends[name];
+    return clean;
+}
+
+function getFriendContact(store, friend) {
+    const clean = normalizeFriendAdviceStore(store);
+    const entry = clean.friends[cleanFriendName(friend)];
+    return entry && typeof entry.sms === 'string' && entry.sms ? { sms: entry.sms } : null;
 }
 
 function loadFriendAdvice(file, fsLike = fs) {
@@ -1512,7 +1543,15 @@ function knownFriends(store) {
         const at = Date.parse(entry.askedAt || entry.receivedAt) || 0;
         if (!seen.has(entry.friend) || seen.get(entry.friend) < at) seen.set(entry.friend, at);
     }
+    for (const name of Object.keys(clean.friends)) if (!seen.has(name)) seen.set(name, 0);
     return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+}
+
+// Which friends the deck can text directly — names only; the numbers never
+// leave the server except inside the sms: link the deck opens.
+function friendsWithContact(store) {
+    const clean = normalizeFriendAdviceStore(store);
+    return Object.keys(clean.friends).filter((name) => clean.friends[name] && clean.friends[name].sms);
 }
 
 function buildDeck(runPayload, store, options = {}) {
@@ -1957,6 +1996,10 @@ module.exports = {
     recordFriendReply,
     friendAdviceByKey,
     knownFriends,
+    friendsWithContact,
+    cleanSmsNumber,
+    setFriendContact,
+    getFriendContact,
     reviewImageUrl,
     isSharedInboxAddress,
     readSharedInboxFile,

@@ -143,6 +143,7 @@ body { overscroll-behavior-y:none; }
 .line.friend { color:var(--ink); font-weight:600; }
 .friends .who { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0 4px; font-weight:600; }
 .friends .who button, .friends .reply button { font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; background:var(--accent); color:#fff; padding:5px 10px; cursor:pointer; }
+.friends .who button.quiet { background:var(--card); color:var(--muted); }
 .friends .reply { display:flex; gap:8px; margin:8px 0 4px; }
 .friends .reply input { flex:1; font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
 .friends .link { font-size:12px; color:var(--muted); word-break:break-all; margin:4px 0; }
@@ -346,7 +347,7 @@ function closeFlyer() {
 function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
 </script>
 <script>
-window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
+window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"executeLink":"","friends":[],"friendContacts":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
 // FRIEND MODE: the cards ride in the link as #j2.<base64url(deflate-raw
 // JSON)> — the deck's own card HTML, so a friend sees exactly the card
 // the owner sees (tools/review-queue buildFriendLink). Decoded here, then
@@ -1276,16 +1277,32 @@ window.__startDeck = function () {
         postTo('/review/friend-link', { friend: name }).then(function (j) {
           share.disabled = false;
           if (!j.count) { toast('Nothing to send — everything is answered'); return; }
-          var text = 'A few events to check (' + j.count + ')';
           linkLine.innerHTML = 'Link for ' + escapeHtml(name) + ' (' + j.count + ' card' + (j.count === 1 ? '' : 's') + '): <a href="' + escapeHtml(j.url) + '" target="_blank" rel="noopener">open it</a> · long-press to copy';
-          if (navigator.share) {
-            navigator.share({ title: text, text: text, url: j.url }).catch(function () { linkLine.textContent = j.url; });
-          } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(j.url).then(function () { toast('Link copied — ' + j.count + ' cards, send it to ' + name); }, function () { linkLine.textContent = j.url; });
-          } else { linkLine.textContent = j.url; }
+          // The link is on the clipboard either way; with a number on file,
+          // Messages opens to the friend with it typed.
+          var copied = navigator.clipboard ? navigator.clipboard.writeText(j.url).then(function () { return true; }, function () { return false; }) : Promise.resolve(false);
+          copied.then(function (ok) {
+            if (j.smsLink) { toast((ok ? 'Copied — ' : '') + 'opening Messages to ' + name); location.href = j.smsLink; return; }
+            toast(ok ? 'Link copied — ' + j.count + ' card' + (j.count === 1 ? '' : 's') + ' for ' + name + '. Add a number below to open Messages next time.' : 'Long-press the link below to copy it');
+          });
         }).catch(function (e) { share.disabled = false; toast('Could not build the link: ' + e.message); });
       };
       who.appendChild(share);
+      // How to reach them — a number opens Messages straight from Share;
+      // stored on the Mac's iCloud store, never on the website or in git.
+      var hasNumber = (deck.friendContacts || []).indexOf(name) !== -1;
+      var contact = document.createElement('button');
+      contact.type = 'button'; contact.className = 'quiet'; contact.textContent = hasNumber ? '📱 number saved · change' : '📱 add number';
+      contact.onclick = function () {
+        var typed = window.prompt(hasNumber ? 'New number for ' + name + ' (leave empty to forget it)' : 'Phone number for ' + name + ' — stays on your Mac, never on the website', '');
+        if (typed === null) return;
+        postTo('/review/friend-contact', { friend: name, sms: typed }).then(function (j) {
+          deck.friendContacts = j.contacts || [];
+          toast(j.hasContact ? 'Saved — Share opens Messages to ' + name : 'Number forgotten');
+          render();
+        }).catch(function (e) { toast(e.message); });
+      };
+      who.appendChild(contact);
       group.appendChild(who);
       var ul = document.createElement('ul');
       byFriend[name].forEach(function (c) {

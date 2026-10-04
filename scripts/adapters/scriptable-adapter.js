@@ -2104,6 +2104,15 @@ class ScriptableAdapter {
     }
   }
 
+  // Per-pass tally of AI round trips (SharedCore.callAiGenerate reports
+  // each), so the execute timing line says which pass the seconds went to.
+  recordAiPass(label, ms) {
+    const passes = this._aiPassStats || (this._aiPassStats = {});
+    const entry = passes[label] || (passes[label] = { calls: 0, ms: 0 });
+    entry.calls += 1;
+    entry.ms += Number(ms) || 0;
+  }
+
   async postJson(url, payload, options = {}) {
     // Per-run tally (calls, wall time) so an execute's timing line can say
     // how much of it was AI round trips.
@@ -16515,6 +16524,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         while (restorePhaseTimers.length > 0) restorePhaseTimers.pop()();
       };
       const aiCallsBefore = this._postJsonStats ? { ...this._postJsonStats } : { calls: 0, ms: 0 };
+      const aiPassesBefore = JSON.parse(JSON.stringify(this._aiPassStats || {}));
 
       const runIdForLog = results.savedRunId || results.sourceRunId || "";
       const stamp = new Date()
@@ -16818,8 +16828,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         const phaseText = Object.keys(phases)
           .map((name) => `${name} ${phases[name].calls} (${seconds(phases[name].ms)} s)`)
           .join(", ");
+        const passesNow = this._aiPassStats || {};
+        const aiPassText = Object.keys(passesNow)
+          .map((name) => ({ name, calls: passesNow[name].calls - ((aiPassesBefore[name] || {}).calls || 0), ms: passesNow[name].ms - ((aiPassesBefore[name] || {}).ms || 0) }))
+          .filter((entry) => entry.calls > 0)
+          .map((entry) => `${entry.name} ${entry.calls} (${seconds(entry.ms)} s)`)
+          .join(", ");
         console.log(
-          `📱 Scriptable: 🃏 Reviewed execute timing — ${seconds(writesDoneAt - executeStartedAt)} s live analysis + writes for ${toAnalyze.length} row(s): AI requests ${aiCalls} (${seconds(aiMs)} s)${phaseText ? `, ${phaseText}` : ""}; the remainder is in-memory analysis.`,
+          `📱 Scriptable: 🃏 Reviewed execute timing — ${seconds(writesDoneAt - executeStartedAt)} s live analysis + writes for ${toAnalyze.length} row(s): AI requests ${aiCalls} (${seconds(aiMs)} s)${aiPassText ? ` [${aiPassText}]` : ""}${phaseText ? `, ${phaseText}` : ""}; the remainder is in-memory analysis.`,
         );
       }
       await this.persistExecutedSavedRunSnapshot(results);
@@ -16848,8 +16864,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // wait for a tap, so the owner knows the outcome whatever happens next.
       await this.postSavedRunExecutionNotification("Calendar Updated", noticeLines);
       // The phone's calendars are the truth the Mac run should compare
-      // against next — snapshot the cities this plan touched.
-      await this.writeCalendarSnapshots(this.collectSnapshotCities(results));
+      // against next — snapshot the cities this execution WROTE. The whole
+      // plan's cities (every city of an 882-row run → 94 calendars, 16 s,
+      // and the step that killed the app on 2026-09-27) are not what
+      // changed; the Mac's next run reads the rest from the last snapshot.
+      await this.writeCalendarSnapshots(this.collectSnapshotCities({ analyzedEvents: freshExecutable }));
       void persistedAt;
       // The log on disk was written by the housekeeping above, so it ended
       // before the snapshot lines; write it again so a later reader sees
