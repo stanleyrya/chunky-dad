@@ -16970,6 +16970,117 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // never the same URL twice within a day. Fulfilled requests leave the
   // file; failed ones stay for next time, with the reason. Returns
   // { asked, fetched, failed, skipped, details }.
+  // DATA FOLDER PROBE (owner, 2026-10-04: Scriptable "takes forever to
+  // load"). Scriptable's iCloud folder holds 2 GB in 34,000 files, nearly
+  // all chunky-dad-scraper/ — the scripts are a rounding error. The way
+  // out is to keep the SCRIPTS here (the updater writes them here) and move
+  // the DATA to a folder of its own in iCloud Drive that scripts reach
+  // through a Scriptable FILE BOOKMARK named DATA_FOLDER_BOOKMARK. Before
+  // anything moves, this answers whether that works on this phone:
+  //   1. how many files the Scriptable folder holds and how long listing
+  //      takes (the symptom, measured);
+  //   2. whether the bookmark exists — if not, how to add it, and stop;
+  //   3. with the bookmark: which FileManager can use it (local, iCloud,
+  //      both) — write a file, read it back, list, make a subfolder,
+  //      delete — and how long each takes.
+  // Nothing is moved, nothing else is written; the findings go to
+  // probes/data-folder-probe.json for the Mac. Returns { title, message,
+  // findings }.
+  async probeDataFolder() {
+    const BOOKMARK = ScriptableAdapter.DATA_FOLDER_BOOKMARK;
+    const findings = { ranAt: new Date().toISOString(), bookmark: BOOKMARK, steps: [] };
+    const note = (line) => { findings.steps.push(line); console.log(`📱 Scriptable: 🧪 ${line}`); };
+    const icloud = this.fm;
+    const local = typeof FileManager !== "undefined" && typeof FileManager.local === "function" ? FileManager.local() : null;
+    const countFiles = (fm, dir, depth) => {
+      let n = 0;
+      for (const name of fm.listContents(dir)) {
+        const p = fm.joinPath(dir, name);
+        if (fm.isDirectory(p)) n += depth > 0 ? countFiles(fm, p, depth - 1) : 0;
+        else n += 1;
+      }
+      return n;
+    };
+    let t = Date.now();
+    const docs = icloud.documentsDirectory();
+    const top = icloud.listContents(docs);
+    findings.topLevelEntries = top.length;
+    findings.topLevelListMs = Date.now() - t;
+    note(`Scriptable folder: ${top.length} entries at the top, listed in ${findings.topLevelListMs} ms`);
+    if (icloud.fileExists(this.baseDir)) {
+      t = Date.now();
+      const counts = {};
+      let total = 0;
+      for (const sub of icloud.listContents(this.baseDir)) {
+        const p = icloud.joinPath(this.baseDir, sub);
+        if (!icloud.isDirectory(p)) { total += 1; continue; }
+        const n = countFiles(icloud, p, 3);
+        counts[sub] = n;
+        total += n;
+      }
+      findings.dataFiles = total;
+      findings.dataCounts = counts;
+      findings.dataCountMs = Date.now() - t;
+      note(`chunky-dad-scraper/: ${total} files (${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(", ")}), counted in ${findings.dataCountMs} ms`);
+    }
+    const bookmarks = local && typeof local.allFileBookmarks === "function" ? local.allFileBookmarks().map((b) => (b && b.name) || String(b)) : [];
+    findings.bookmarks = bookmarks;
+    findings.bookmarkExists = Boolean(local && typeof local.bookmarkExists === "function" && local.bookmarkExists(BOOKMARK));
+    let title;
+    if (!findings.bookmarkExists) {
+      note(`no file bookmark named "${BOOKMARK}" (bookmarks: ${bookmarks.join(", ") || "none"})`);
+      note(`To add it: Files → iCloud Drive → new EMPTY folder "${BOOKMARK}". Then Scriptable → Settings → File Bookmarks → + → Pick Folder → that folder → name it ${BOOKMARK}. Then tap this link again.`);
+      title = `Add the ${BOOKMARK} bookmark, then run again`;
+    } else {
+      findings.managers = {};
+      for (const [label, fm] of [["local", local], ["iCloud", icloud]]) {
+        const result = { ok: false };
+        try {
+          const t0 = Date.now();
+          const base = fm.bookmarkedPath(BOOKMARK);
+          result.path = base;
+          result.isDirectory = fm.isDirectory(base);
+          const file = fm.joinPath(base, "probe.json");
+          const sub = fm.joinPath(base, "probe-sub");
+          fm.writeString(file, JSON.stringify({ hello: `from ${label}`, at: new Date().toISOString() }));
+          result.writeMs = Date.now() - t0;
+          const back = JSON.parse(fm.readString(file));
+          result.readBack = back.hello;
+          result.listed = fm.listContents(base);
+          if (!fm.fileExists(sub)) fm.createDirectory(sub, true);
+          result.subfolder = fm.isDirectory(sub);
+          if (typeof fm.isFileDownloaded === "function") {
+            try { result.isFileDownloaded = fm.isFileDownloaded(file); } catch (e) { result.isFileDownloaded = `error: ${e.message}`; }
+          }
+          fm.remove(file);
+          try { fm.remove(sub); } catch (_) { /* leave it */ }
+          result.totalMs = Date.now() - t0;
+          result.ok = back.hello === `from ${label}`;
+          note(`${label} manager: write/read/list/mkdir OK in ${result.totalMs} ms at ${base}`);
+        } catch (error) {
+          result.error = error.message;
+          note(`${label} manager: ${error.message}`);
+        }
+        findings.managers[label] = result;
+      }
+      const working = Object.entries(findings.managers).filter(([, r]) => r.ok).map(([k]) => k);
+      findings.verdict = working.length
+        ? `the bookmarked folder works through ${working.join(" and ")} — the data can move out of Scriptable's folder`
+        : "neither manager could use the bookmarked folder — the data must stay where it is";
+      note(`verdict: ${findings.verdict}`);
+      title = findings.verdict;
+    }
+    try {
+      const dir = this.fm.joinPath(this.baseDir, "probes");
+      this.ensureDirectoryExists(dir);
+      this.fm.writeString(this.fm.joinPath(dir, "data-folder-probe.json"), JSON.stringify(findings, null, 2));
+      findings.steps.push("findings written to chunky-dad-scraper/probes/data-folder-probe.json");
+    } catch (error) {
+      findings.steps.push(`could not write findings: ${error.message}`);
+    }
+    return { title, message: findings.steps.join("\n"), findings };
+  }
+
   async fulfillInboxRequests(options = {}) {
     const result = { asked: 0, fetched: 0, failed: 0, skipped: 0, details: [] };
     const file = this.fm.joinPath(this.baseDir, "inbox/requests.json");
@@ -18718,6 +18829,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 // under any tap rate a human produces — while costing nothing that matters,
 // and every line the owner actually needs is forced past it anyway (below).
 ScriptableAdapter.INBOX_FETCH_CAP = 20;
+ScriptableAdapter.DATA_FOLDER_BOOKMARK = 'chunky-dad-data';
 ScriptableAdapter.INBOX_FETCH_GAP_MS = 3000;
 ScriptableAdapter.INBOX_SETTLE_MS = 4000;
 ScriptableAdapter.LOG_CHECKPOINT_MIN_INTERVAL_MS = 250;

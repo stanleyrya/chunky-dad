@@ -485,6 +485,10 @@ function buildScriptableSnapshotLink(scriptName = resolveReviewScriptName()) {
     return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&snapshot=1`;
 }
 
+function buildScriptableProbeLink(scriptName = resolveReviewScriptName()) {
+    return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&dataFolderProbe=1`;
+}
+
 // ---- dates -----------------------------------------------------------------
 
 function reviewZoneFormatter(timezone, options) {
@@ -1166,7 +1170,8 @@ function renderReviewPage(deck, options = {}) {
     // missing-calendar notice (owner, 2026-09-30: "I don't see an option to
     // refresh the local file on scriptable" — the notice was the only place
     // it lived, and it shows only while a calendar is missing).
-    const snapshotBlock = `<div class="snapshot"><a href="${escapeHtmlText(snapshotLink)}">🔄 Refresh the phone's calendar snapshot</a><small>Opens Scriptable: reads the phone's calendars and rewrites the snapshot the Mac analyses against — no scrape, no calendar write.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''}</small></div>`;
+    const snapshotBlock = `<div class="snapshot"><a href="${escapeHtmlText(snapshotLink)}">🔄 Refresh the phone's calendar snapshot</a><small>Opens Scriptable: reads the phone's calendars and rewrites the snapshot the Mac analyses against — no scrape, no calendar write.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''}</small></div>
+<div class="snapshot"><a href="${escapeHtmlText(buildScriptableProbeLink(options.scriptName))}">🧪 Measure the Scriptable folder</a><small>Opens Scriptable: counts the files that make it slow to open and tests whether a file bookmark named <b>chunky-dad-data</b> (an empty folder in iCloud Drive) could hold the data instead. Moves nothing; writes its findings for the Mac.</small></div>`;
     const missingCalendarNotice = missingCalendars.length > 0
         ? `<div class="missing-cal">❌ No calendar on the phone for ${missingCalendars.map((entry) => `<b>${escapeHtmlText(entry.city)}</b> (${escapeHtmlText(entry.calendarName)} · ${entry.events} event${entry.events === 1 ? '' : 's'})`).join(', ')} — the phone cannot write those until a calendar with that exact name exists.${phoneListAge ? ` The phone's calendar list is from ${escapeHtmlText(phoneListAge)}.` : ''} <a href="${escapeHtmlText(snapshotLink)}">Refresh it on the phone</a> after adding calendars.</div>`
         : '';
@@ -3506,6 +3511,7 @@ module.exports = {
     resolveReviewScriptName,
     buildScriptableExecuteLink,
     buildScriptableSnapshotLink,
+    buildScriptableProbeLink,
     formatReviewDateLine,
     formatReviewUtcLine,
     describeReviewTimeDelta,

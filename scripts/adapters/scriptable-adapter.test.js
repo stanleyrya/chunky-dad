@@ -11411,6 +11411,44 @@ test('merge table: a short name differing only by a soft hyphen is a no-op row, 
 // The inbox, phone side: pages the Mac asked for, fetched through a headless
 // WebView into the shared page cache.
 // ---------------------------------------------------------------------------
+test('probeDataFolder: counts the folder, stops with instructions when the bookmark is missing, and with it tests both file managers and writes the findings', async () => {
+  const adapter = buildAdapter();
+  const written = {};
+  const tree = { '/docs': ['a.js', 'b.js', 'chunky-dad-scraper'], '/docs/chunky-dad-scraper': ['runs', 'logs', 'bear-verdicts.json'], '/docs/chunky-dad-scraper/runs': ['1.json', '2.json'], '/docs/chunky-dad-scraper/logs': ['1.log'] };
+  const dirs = new Set(Object.keys(tree));
+  adapter.baseDir = '/docs/chunky-dad-scraper';
+  adapter.fm = { ...fileManagerStub, documentsDirectory: () => '/docs', listContents: (p) => tree[p] || [], isDirectory: (p) => dirs.has(p), fileExists: (p) => dirs.has(p) || p === '/docs/chunky-dad-scraper/probes', createDirectory: () => {}, writeString: (p, text) => { written[p] = text; } };
+  adapter.ensureDirectoryExists = () => {};
+  const originalFM = global.FileManager;
+  global.FileManager = { ...originalFM, local: () => ({ allFileBookmarks: () => [{ name: 'other' }], bookmarkExists: () => false }) };
+  try {
+    const missing = await adapter.probeDataFolder();
+    assert.match(missing.title, /Add the chunky-dad-data bookmark/);
+    assert.match(missing.message, /3 entries at the top/);
+    assert.match(missing.message, /chunky-dad-scraper\/: 4 files \(runs 2, logs 1\)/);
+    assert.match(missing.message, /Settings → File Bookmarks/);
+    const saved = JSON.parse(written['/docs/chunky-dad-scraper/probes/data-folder-probe.json']);
+    assert.equal(saved.bookmarkExists, false);
+    assert.deepEqual(saved.bookmarks, ['other']);
+
+    // With the bookmark: a local manager that works, an iCloud one that refuses.
+    const store = {};
+    const localFm = { bookmarkExists: () => true, allFileBookmarks: () => [{ name: 'chunky-dad-data' }], bookmarkedPath: () => '/bookmarked', isDirectory: (p) => p === '/bookmarked' || p === '/bookmarked/probe-sub', joinPath: (a, b) => `${a}/${b}`, writeString: (p, t) => { store[p] = t; }, readString: (p) => store[p], listContents: () => Object.keys(store).map((k) => k.split('/').pop()), fileExists: (p) => p in store, createDirectory: () => {}, remove: (p) => { delete store[p]; }, isFileDownloaded: () => true };
+    adapter.fm = { ...adapter.fm, bookmarkedPath: () => { throw new Error('not allowed'); } };
+    global.FileManager = { ...originalFM, local: () => localFm };
+    const withBookmark = await adapter.probeDataFolder();
+    assert.match(withBookmark.title, /works through local — the data can move/);
+    const findings = JSON.parse(written['/docs/chunky-dad-scraper/probes/data-folder-probe.json']);
+    assert.equal(findings.managers.local.ok, true);
+    assert.equal(findings.managers.local.readBack, 'from local');
+    assert.equal(findings.managers.iCloud.ok, false);
+    assert.equal(findings.managers.iCloud.error, 'not allowed');
+    assert.deepEqual(Object.keys(store), [], 'the probe cleans up after itself');
+  } finally {
+    global.FileManager = originalFM;
+  }
+});
+
 test('fulfillInboxRequests: each asked page is loaded headlessly and written into the shared page cache; failures stay for next time; the cap and the day gap hold', async () => {
   const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
   const files = {};

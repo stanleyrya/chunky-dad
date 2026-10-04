@@ -17,7 +17,7 @@ test('parseLaunchOptions: reviewExecute needs a runId; the display defaults are 
 
   assert.equal(parseLaunchOptions({ reviewExecute: '1' }).reviewExecute, false, 'no runId → a plain display launch');
   const plain = parseLaunchOptions({});
-  assert.deepEqual(plain, { snapshot: false, last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false });
+  assert.deepEqual(plain, { snapshot: false, dataFolderProbe: false, last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false });
   assert.equal(parseLaunchOptions({}, 'last').last, true);
   assert.equal(parseLaunchOptions({}, 'runid:20260101-000000').runId, '20260101-000000');
   assert.equal(parseLaunchOptions({ runid: '20260101-000000', readOnly: 'false' }).readOnly, false);
@@ -139,4 +139,20 @@ test('refreshCalendarSnapshots: nothing missing reads as a plain success; an old
   display.showError = async (title) => { errors.push(title); };
   assert.equal(await display.refreshCalendarSnapshots(), null);
   assert.deepEqual(errors, ['Adapter too old']);
+});
+
+test('dataFolderProbe=1 runs the data-folder probe and nothing else', async () => {
+  assert.equal(parseLaunchOptions({ dataFolderProbe: '1' }, null).dataFolderProbe, true);
+  assert.equal(parseLaunchOptions({}, null).dataFolderProbe, false);
+  const display = new SavedRunDisplay();
+  const calls = [];
+  display.createAdapter = () => ({ probeDataFolder: async () => { calls.push('probe'); return { title: 'ok', message: 'm', findings: {} }; } });
+  const result = await display.probeDataFolder();
+  assert.deepEqual(calls, ['probe']);
+  assert.equal(result.title, 'ok');
+  display.createAdapter = () => ({});
+  let shown = null;
+  display.showError = async (title) => { shown = title; };
+  assert.equal(await display.probeDataFolder(), null);
+  assert.equal(shown, 'Adapter too old');
 });

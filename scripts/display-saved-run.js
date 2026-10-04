@@ -291,6 +291,25 @@ class SavedRunDisplay {
         return { cityKeys, written, missing: summary.missing };
     }
 
+    // The data-folder probe (ScriptableAdapter.probeDataFolder), shown and
+    // written for the Mac. No scrape, no run, no calendar write.
+    async probeDataFolder() {
+        const adapter = this.createAdapter();
+        if (typeof adapter.probeDataFolder !== 'function') {
+            await this.showError('Adapter too old', 'This adapter has no probeDataFolder — update scripts/adapters/scriptable-adapter.js.');
+            return null;
+        }
+        const result = await adapter.probeDataFolder();
+        try {
+            const alert = new Alert();
+            alert.title = result.title;
+            alert.message = result.message;
+            alert.addAction('OK');
+            await alert.present();
+        } catch (_) { /* no UI: the log has it */ }
+        return result;
+    }
+
     // What a snapshot refresh did, in the owner's terms: how many calendars
     // were read, how many occurrences, and which configured cities have no
     // calendar on this phone (by the exact calendar name to create).
@@ -452,8 +471,13 @@ function parseLaunchOptions(query = {}, widgetParam = null) {
     // the Mac analyses against — no scrape, no run, no calendar write.
     const snapshot = toBool(params.snapshot, false)
         || (widgetParam !== null && widgetParam !== undefined && String(widgetParam).trim().toLowerCase() === 'snapshot');
+    // scriptable:///run?scriptName=<this>&dataFolderProbe=1: measure the
+    // Scriptable folder and test the data-folder bookmark (see
+    // ScriptableAdapter.probeDataFolder). Moves nothing.
+    const dataFolderProbe = toBool(params.dataFolderProbe, false);
     return {
         snapshot,                               // refresh the calendar snapshot only
+        dataFolderProbe,                        // the data-folder probe only
         last,                                   // auto-load most recent
         runId,                                  // a specific runId like "20250101-120000"
         presentHistory: toBool(params.presentHistory, presentHistoryDefault),
@@ -476,6 +500,8 @@ if (!isNodeEnvironment) {
             const OPTIONS = parseLaunchOptions(query, widgetParam);
             if (OPTIONS.snapshot) {
                 await display.refreshCalendarSnapshots();
+            } else if (OPTIONS.dataFolderProbe) {
+                await display.probeDataFolder();
             } else if (OPTIONS.reviewExecute) {
                 await display.executeReviewedRun(OPTIONS);
             } else {
