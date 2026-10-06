@@ -428,9 +428,9 @@ class ScriptableAdapter {
     // FileManager available for fallbacks
     this.fm = FileManager.iCloud();
 
-    // Initialize directory paths
-    const documentsDir = this.fm.documentsDirectory();
-    this.baseDir = this.fm.joinPath(documentsDir, "chunky-dad-scraper");
+    // Initialize directory paths — the data folder lives outside
+    // Scriptable's own folder once the owner has moved it (resolveDataRoot).
+    this.baseDir = ScriptableAdapter.resolveDataRoot(this.fm);
     this.runsDir = this.fm.joinPath(this.baseDir, "runs");
     this.logsDir = this.fm.joinPath(this.baseDir, "logs");
     this.metricsDir = this.fm.joinPath(this.baseDir, "metrics");
@@ -16970,6 +16970,32 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // never the same URL twice within a day. Fulfilled requests leave the
   // file; failed ones stay for next time, with the reason. Returns
   // { asked, fetched, failed, skipped, details }.
+  // WHERE THE DATA LIVES (owner, 2026-10-05, after the probe said both file
+  // managers can use a Scriptable file bookmark). Scriptable's own iCloud
+  // folder held 2 GB in 34,000 files of chunky-dad-scraper/ data and took
+  // forever to open; the SCRIPTS stay there (the updater writes them
+  // there) and the DATA moves to iCloud Drive/chunky-dad-data, reached
+  // through the file bookmark DATA_FOLDER_BOOKMARK. The bookmarked folder
+  // is the root only once it HOLDS the data (a storage/ or
+  // calendar-snapshot/ folder inside it) — until the Mac has moved the
+  // files, the old Documents/chunky-dad-scraper stays the root, so a run
+  // never writes into an empty new folder while the phone still reads
+  // the old one. The Mac side: CHUNKY_SHARED_STORAGE_DIR / review-queue
+  // defaultSharedRoot make the same choice.
+  static resolveDataRoot(fm) {
+    const legacy = fm.joinPath(fm.documentsDirectory(), "chunky-dad-scraper");
+    try {
+      const local = typeof FileManager !== "undefined" && typeof FileManager.local === "function" ? FileManager.local() : null;
+      if (!local || typeof local.bookmarkExists !== "function" || !local.bookmarkExists(ScriptableAdapter.DATA_FOLDER_BOOKMARK)) return legacy;
+      const root = fm.bookmarkedPath(ScriptableAdapter.DATA_FOLDER_BOOKMARK);
+      if (!root || !fm.isDirectory(root)) return legacy;
+      const populated = ["storage", "calendar-snapshot"].some((name) => fm.isDirectory(fm.joinPath(root, name)));
+      return populated ? root : legacy;
+    } catch (_) {
+      return legacy;
+    }
+  }
+
   async fulfillInboxRequests(options = {}) {
     const result = { asked: 0, fetched: 0, failed: 0, skipped: 0, details: [] };
     const file = this.fm.joinPath(this.baseDir, "inbox/requests.json");
@@ -17341,9 +17367,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     relDirPath,
     { maxAgeDays = 30, keep = () => false, recurse = false, afterCleanup = null } = {},
   ) {
-    // Use documents directory as base, not script directory
+    // "chunky-dad-scraper/<x>" names a folder of the data root, wherever
+    // the root is (resolveDataRoot); anything else is under Documents.
     const documentsDir = this.fm.documentsDirectory();
-    const dirPath = this.fm.joinPath(documentsDir, relDirPath);
+    const inData = String(relDirPath).match(/^chunky-dad-scraper\/(.*)$/);
+    const dirPath = inData ? this.fm.joinPath(this.baseDir, inData[1]) : this.fm.joinPath(documentsDir, relDirPath);
     const fm = this.fm || FileManager.iCloud();
     if (!fm.fileExists(dirPath)) return 0;
     const now = Date.now();
@@ -18718,6 +18746,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 // under any tap rate a human produces — while costing nothing that matters,
 // and every line the owner actually needs is forced past it anyway (below).
 ScriptableAdapter.INBOX_FETCH_CAP = 20;
+ScriptableAdapter.DATA_FOLDER_BOOKMARK = "chunky-dad-data";
 ScriptableAdapter.INBOX_FETCH_GAP_MS = 3000;
 ScriptableAdapter.INBOX_SETTLE_MS = 4000;
 ScriptableAdapter.LOG_CHECKPOINT_MIN_INTERVAL_MS = 250;

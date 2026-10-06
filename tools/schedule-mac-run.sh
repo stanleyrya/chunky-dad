@@ -57,7 +57,13 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TEMPLATE="${SCRIPT_DIR}/launchd/${LABEL}.plist.template"
 PLIST_PATH="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 LAUNCHD_LOG_DIR="${HOME}/Library/Logs/chunky-dad-scraper"
+# The data folder: iCloud Drive/chunky-dad-data once it holds the data (the
+# phone reaches it through a Scriptable file bookmark of that name), else
+# Scriptable's own folder — the same choice tools/review-queue.js makes.
 DEFAULT_SHARED_DIR="${HOME}/Library/Mobile Documents/iCloud~dk~simonbs~Scriptable/Documents/chunky-dad-scraper"
+if [[ -d "${HOME}/Library/Mobile Documents/com~apple~CloudDocs/chunky-dad-data/storage" ]]; then
+    DEFAULT_SHARED_DIR="${HOME}/Library/Mobile Documents/com~apple~CloudDocs/chunky-dad-data"
+fi
 
 usage() {
     sed -n '2,49p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'

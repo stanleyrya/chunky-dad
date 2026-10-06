@@ -273,6 +273,16 @@ test('run files: newest first, iCloud placeholders listed as unavailable, ids va
 test('resolveSharedRoot honours CHUNKY_SHARED_STORAGE_DIR and defaults to the iCloud tree', () => {
   assert.equal(rq.resolveSharedRoot({ CHUNKY_SHARED_STORAGE_DIR: '/tmp/x/../y' }), '/tmp/y');
   assert.equal(rq.resolveSharedRoot({}), rq.DEFAULT_SHARED_ROOT);
+  // The default is iCloud Drive/chunky-dad-data once it holds the data (a storage/ subtree), else Scriptable's folder.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-home-'));
+  const legacy = path.join(home, 'Library', 'Mobile Documents', 'iCloud~dk~simonbs~Scriptable', 'Documents', 'chunky-dad-scraper');
+  const moved = path.join(home, 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'chunky-dad-data');
+  assert.equal(rq.defaultSharedRoot(home), legacy, 'nothing moved yet');
+  fs.mkdirSync(moved, { recursive: true });
+  assert.equal(rq.defaultSharedRoot(home), legacy, 'an empty new folder is not the root');
+  fs.mkdirSync(path.join(moved, 'storage'));
+  assert.equal(rq.defaultSharedRoot(home), moved, 'with the data in it, it is');
+  fs.rmSync(home, { recursive: true, force: true });
   assert.ok(rq.DEFAULT_SHARED_ROOT.endsWith(path.join('Documents', 'chunky-dad-scraper')));
 });
 
