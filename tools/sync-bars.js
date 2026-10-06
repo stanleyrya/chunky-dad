@@ -149,7 +149,7 @@ function parseGoogleSheetsData(json) {
 
         // Only normalize city name if it's not empty and looks like a real city name
         if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
-            bar.city = normalizeCityName(bar.city);
+            bar.city = normalizeCityName(bar.city, bar.name);
         } else {
             throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
         }
@@ -207,14 +207,15 @@ async function loadLocalBars() {
 }
 
 // Normalize city name using CITY_CONFIG patterns (no fallbacks)
-function normalizeCityName(cityName) {
+function normalizeCityName(cityName, barName = '') {
+    const who = barName ? ` (bar "${barName}")` : '';
     if (!cityName) {
-        throw new Error('City name missing from bar data.');
+        throw new Error(`City name missing from bar data${who}.`);
     }
 
     const candidate = String(cityName).trim();
     if (!candidate) {
-        throw new Error('City name missing from bar data.');
+        throw new Error(`City name missing from bar data${who}.`);
     }
 
     const keyMatch = findCityKeyByName(candidate);
@@ -227,7 +228,7 @@ function normalizeCityName(cityName) {
         return patternMatch;
     }
 
-    throw new Error(`Unknown city "${cityName}". Add a matching pattern to CITY_CONFIG.`);
+    throw new Error(`Unknown city "${cityName}"${who}. Add a matching pattern to CITY_CONFIG, or place the bar.`);
 }
 
 function matchesCaseInsensitive(left, right) {
@@ -280,7 +281,7 @@ function mergeBars(sheetsBars, localBars) {
         // Only normalize city if it's a real city name, not a URL
         let normalizedCity = bar.city;
         if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
-            normalizedCity = normalizeCityName(bar.city);
+            normalizedCity = normalizeCityName(bar.city, bar.name);
         } else {
             throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
         }
@@ -296,7 +297,7 @@ function mergeBars(sheetsBars, localBars) {
         // Only normalize city if it's a real city name, not a URL
         let normalizedCity = bar.city;
         if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
-            normalizedCity = normalizeCityName(bar.city);
+            normalizedCity = normalizeCityName(bar.city, bar.name);
         } else {
             throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
         }
@@ -603,7 +604,7 @@ async function saveBarsLocally(allBars) {
     // Group by normalized city name
     const barsByCity = {};
     allBars.forEach(bar => {
-        const normalizedCity = normalizeCityName(bar.city);
+        const normalizedCity = normalizeCityName(bar.city, bar.name);
         if (!barsByCity[normalizedCity]) {
             barsByCity[normalizedCity] = [];
         }

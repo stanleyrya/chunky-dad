@@ -121,6 +121,13 @@ function planBarPromotions(store, curatedBars) {
             continue;
         }
         const bar = buildCuratedBar(snapshot);
+        // A bar nobody placed is not curated data: "unknown" became
+        // data/bars/unknown.json (New Guernica, PR #1836) and broke every
+        // bars sync after it ("Unknown city"). Place it first, then approve.
+        if (!bar.city || bar.city === 'unknown') {
+            skipped.push({ city: bar.city, name: bar.name, why: 'no city — the card must be placed before the bar can be curated' });
+            continue;
+        }
         if (!bar.coordinates || !bar.address) {
             skipped.push({ city: bar.city, name: bar.name, why: 'candidate has no address or coordinates' });
             continue;

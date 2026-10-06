@@ -1,124 +1,137 @@
-// WEBVIEW SESSION PROBE — tap it in Scriptable; tap it again tomorrow.
+// DATA FOLDER PROBE — tap it once in Scriptable. No questions asked.
+// (This file keeps the name of the earlier WebView probe on purpose: the
+// owner reuses the script he already has on the phone instead of adding
+// another — "I don't really mind if their names don't match anymore.")
 //
-// Decides whether a logged-in site (dilf.uk) can be read by the nightly
-// phone script without an account on the Mac: does a Scriptable WebView
-// keep its cookies between runs, and can a WebView that is never
-// presented load a page, run its JavaScript and hand the HTML back?
-//
-// No questions asked. Every run:
-//   1. a never-presented WebView loads PAGE_URL and reads it: did the
-//      page render, is it logged in (no password field, a sign-out or
-//      account link);
-//   2. only when that read says NOT logged in: a web view opens on
-//      LOGIN_URL — log in, close it — and step 1 runs again;
-//   3. the verdict is shown and written to
-//      iCloud/Scriptable/chunky-dad-scraper/probes/webview-session-probe.json.
-// The first run answers "can it read headlessly"; a run a day later that
-// comes up logged in without opening the login view answers "do cookies
-// persist". Nothing is scraped, nothing else is written.
-//
-// Instagram and Facebook are deliberately not what this reads: automated
-// logged-in reads there are how accounts get banned; they stay
-// share-sheet sources.
+// Why Scriptable opens slowly (owner, 2026-10-04): its iCloud folder holds
+// 2.0 GB in 34,000 files, nearly all of it chunky-dad-scraper/ (runs, logs,
+// caches) — the scripts are a rounding error. The way out is to keep the
+// SCRIPTS where they are (the updater writes them there) and move the DATA
+// to a folder of its own in iCloud Drive that scripts reach through a
+// Scriptable FILE BOOKMARK. This probe answers whether that works on this
+// phone before anything is moved:
+//   1. how long listing the Scriptable folder takes, and how many files
+//      it holds (the symptom, measured);
+//   2. whether a bookmark named "chunky-dad-data" exists — if not, it says
+//      how to add one (Scriptable › Settings › File Bookmarks › + › pick
+//      a NEW, EMPTY folder in iCloud Drive called chunky-dad-data) and
+//      stops;
+//   3. with the bookmark: which FileManager can use it (local, iCloud, or
+//      both) — write a file, read it back, list the folder, make a
+//      subfolder, delete the file — and how long each takes;
+//   4. the verdict, shown and written to
+//      chunky-dad-scraper/probes/data-folder-probe.json for the Mac.
+// Nothing is moved, nothing else is written. Not part of the scraper.
 
-const PAGE_URL = 'https://dilf.uk/events';
-const LOGIN_URL = 'https://dilf.uk/login';
+const BOOKMARK = 'chunky-dad-data';
 
 async function main() {
-  const findings = { ranAt: new Date().toISOString(), pageUrl: PAGE_URL, steps: [] };
+  const findings = { ranAt: new Date().toISOString(), bookmark: BOOKMARK, steps: [] };
   const note = (line) => { findings.steps.push(line); console.log(line); };
-  const fm = FileManager.iCloud();
-  const dir = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper/probes');
-  const file = fm.joinPath(dir, 'webview-session-probe.json');
-  let previous = null;
-  try { if (fm.fileExists(file)) { await fm.downloadFileFromiCloud(file); previous = JSON.parse(fm.readString(file)); } } catch (_) { previous = null; }
-  findings.previousRunAt = previous ? previous.ranAt : null;
-  findings.previousLoggedIn = previous ? previous.loggedIn === true : null;
+  const icloud = FileManager.iCloud();
+  const local = FileManager.local();
 
-  findings.firstRead = await headlessRead(note, 'first headless read');
-  let loggedIn = isLoggedIn(findings.firstRead);
-  findings.openedLogin = false;
-  if (!loggedIn) {
-    note('not logged in — opening the login page; log in, then close the web view');
-    const shown = new WebView();
-    await shown.loadURL(LOGIN_URL);
-    await shown.present(false);
-    findings.openedLogin = true;
-    findings.secondRead = await headlessRead(note, 'headless read after login');
-    loggedIn = isLoggedIn(findings.secondRead);
+  // 1. the symptom
+  const docs = icloud.documentsDirectory();
+  let t = Date.now();
+  const top = icloud.listContents(docs);
+  findings.topLevelEntries = top.length;
+  findings.topLevelListMs = Date.now() - t;
+  note(`Scriptable folder: ${top.length} entries at the top, listed in ${findings.topLevelListMs} ms`);
+  const dataDir = icloud.joinPath(docs, 'chunky-dad-scraper');
+  if (icloud.fileExists(dataDir)) {
+    t = Date.now();
+    const counts = {};
+    let total = 0;
+    for (const sub of icloud.listContents(dataDir)) {
+      const p = icloud.joinPath(dataDir, sub);
+      if (!icloud.isDirectory(p)) { total += 1; continue; }
+      const n = countFiles(icloud, p, 3);
+      counts[sub] = n;
+      total += n;
+    }
+    findings.dataFiles = total;
+    findings.dataCounts = counts;
+    findings.dataCountMs = Date.now() - t;
+    note(`chunky-dad-scraper/: ${total} files (${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ')}), counted in ${findings.dataCountMs} ms`);
   }
-  const last = findings.secondRead || findings.firstRead;
-  findings.loggedIn = loggedIn;
-  findings.pageRendered = Boolean(last && last.textChars > 500);
-  findings.cookiesPersisted = previous && previous.loggedIn === true ? !findings.openedLogin && loggedIn : null;
-  findings.verdict = [
-    findings.pageRendered ? 'headless read renders the page' : `headless read did NOT render the page (${last ? last.textChars : 0} text chars)`,
-    loggedIn ? 'logged in' : 'NOT logged in',
-    findings.cookiesPersisted === null ? (findings.openedLogin ? 'run again tomorrow for the cookie answer' : 'first run') : (findings.cookiesPersisted ? 'cookies PERSIST between runs' : 'cookies did NOT persist')
-  ].join('; ');
+
+  // 2. the bookmark
+  const bookmarks = typeof local.allFileBookmarks === 'function' ? local.allFileBookmarks().map((b) => (b && b.name) || String(b)) : [];
+  findings.bookmarks = bookmarks;
+  const exists = typeof local.bookmarkExists === 'function' && local.bookmarkExists(BOOKMARK);
+  findings.bookmarkExists = exists;
+  if (!exists) {
+    note(`no file bookmark named "${BOOKMARK}" (bookmarks: ${bookmarks.join(', ') || 'none'})`);
+    note('To add it: Files app → iCloud Drive → new EMPTY folder "chunky-dad-data". Then Scriptable → Settings → File Bookmarks → + → Pick Folder → that folder → name it chunky-dad-data. Run this probe again.');
+    await finish(findings, 'Add the chunky-dad-data bookmark, then run again');
+    return;
+  }
+
+  // 3. which manager can use it
+  findings.managers = {};
+  for (const [label, fm] of [['local', local], ['iCloud', icloud]]) {
+    const result = { ok: false };
+    try {
+      const t0 = Date.now();
+      const base = fm.bookmarkedPath(BOOKMARK);
+      result.path = base;
+      result.isDirectory = fm.isDirectory(base);
+      const file = fm.joinPath(base, 'probe.json');
+      const sub = fm.joinPath(base, 'probe-sub');
+      fm.writeString(file, JSON.stringify({ hello: 'from ' + label, at: new Date().toISOString() }));
+      result.writeMs = Date.now() - t0;
+      const back = JSON.parse(fm.readString(file));
+      result.readBack = back.hello;
+      result.listed = fm.listContents(base);
+      if (!fm.fileExists(sub)) fm.createDirectory(sub, true);
+      result.subfolder = fm.isDirectory(sub);
+      if (typeof fm.isFileDownloaded === 'function') { try { result.isFileDownloaded = fm.isFileDownloaded(file); } catch (e) { result.isFileDownloaded = `error: ${e.message}`; } }
+      fm.remove(file);
+      try { fm.remove(sub); } catch (_) {}
+      result.totalMs = Date.now() - t0;
+      result.ok = back.hello === 'from ' + label;
+      note(`${label} manager: write/read/list/mkdir OK in ${result.totalMs} ms at ${base}`);
+    } catch (error) {
+      result.error = error.message;
+      note(`${label} manager: ${error.message}`);
+    }
+    findings.managers[label] = result;
+  }
+  const working = Object.entries(findings.managers).filter(([, r]) => r.ok).map(([k]) => k);
+  findings.verdict = working.length
+    ? `the bookmarked folder works through ${working.join(' and ')} — the data can move out of Scriptable's folder`
+    : 'neither manager could use the bookmarked folder — the data must stay where it is';
   note(`verdict: ${findings.verdict}`);
+  await finish(findings, findings.verdict);
+}
+
+function countFiles(fm, dir, depth) {
+  let n = 0;
+  for (const name of fm.listContents(dir)) {
+    const p = fm.joinPath(dir, name);
+    if (fm.isDirectory(p)) n += depth > 0 ? countFiles(fm, p, depth - 1) : 0;
+    else n += 1;
+  }
+  return n;
+}
+
+async function finish(findings, headline) {
   try {
+    const fm = FileManager.iCloud();
+    const dir = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper/probes');
     if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
-    fm.writeString(file, JSON.stringify(findings, null, 2));
-    note('findings written to chunky-dad-scraper/probes/webview-session-probe.json');
+    fm.writeString(fm.joinPath(dir, 'data-folder-probe.json'), JSON.stringify(findings, null, 2));
+    findings.steps.push('findings written to chunky-dad-scraper/probes/data-folder-probe.json');
   } catch (error) {
-    note(`could not write findings: ${error.message}`);
+    findings.steps.push(`could not write findings: ${error.message}`);
   }
   const alert = new Alert();
-  alert.title = findings.verdict;
+  alert.title = headline;
   alert.message = findings.steps.join('\n');
   alert.addAction('OK');
   await alert.present();
 }
-
-const PROBE_JS = `
-  (function () {
-    var text = document.body ? document.body.innerText : '';
-    var html = document.documentElement ? document.documentElement.outerHTML : '';
-    var links = Array.prototype.map.call(document.querySelectorAll('a[href]'), function (a) { return (a.textContent || '').trim().toLowerCase() + ' → ' + a.getAttribute('href'); });
-    var signOut = links.filter(function (l) { return /log ?out|sign ?out|my account|profile/.test(l); }).slice(0, 5);
-    var loginForm = Boolean(document.querySelector('input[type="password"]'));
-    return JSON.stringify({ title: document.title, textChars: text.length, htmlChars: html.length, links: links.length, signOut: signOut, loginForm: loginForm, cookieChars: (document.cookie || '').length, sample: text.slice(0, 300) });
-  })()`;
-
-// Load, then read three times (right away, 4 s, 10 s): a page that needs
-// its JavaScript shows up in the later reads. Returns the fullest read —
-// and then SHOWS the very same web view (owner, 2026-10-01: "present the
-// page to me so I can make sure it isn't just signed into my account"):
-// what you see is exactly what the headless read saw, cookies and all.
-// Close it to continue.
-async function headlessRead(note, label) {
-  const view = new WebView();
-  const startedAt = Date.now();
-  try {
-    await view.loadURL(PAGE_URL);
-  } catch (error) {
-    note(`${label}: loadURL failed — ${error.message}`);
-    return null;
-  }
-  note(`${label}: loadURL resolved in ${Date.now() - startedAt} ms`);
-  let best = null;
-  for (const delay of [0, 4000, 6000]) {
-    if (delay) await wait(delay);
-    try {
-      const result = JSON.parse(await view.evaluateJavaScript(PROBE_JS, false));
-      note(`${label} +${Math.round((Date.now() - startedAt) / 1000)}s: "${result.title}", ${result.textChars} text chars, ${result.links} links, password field ${result.loginForm ? 'PRESENT' : 'absent'}, account links ${result.signOut.length ? result.signOut.join(' ; ') : 'none'}, document.cookie ${result.cookieChars} chars`);
-      if (!best || result.textChars >= best.textChars) best = result;
-    } catch (error) {
-      note(`${label}: evaluateJavaScript failed — ${error.message}`);
-    }
-  }
-  note(`${label}: showing you the page as the headless view holds it — close it to continue`);
-  try {
-    await view.present(false);
-  } catch (error) {
-    note(`${label}: could not present the view — ${error.message}`);
-  }
-  return best;
-}
-
-function isLoggedIn(read) { return Boolean(read && !read.loginForm && read.signOut.length > 0); }
-function wait(ms) { return new Promise((resolve) => Timer.schedule(ms, false, resolve)); }
 
 await main();
 Script.complete();

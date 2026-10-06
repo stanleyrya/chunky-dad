@@ -877,6 +877,13 @@ test('planBarPromotions: an approval at a curated bar\'s address or pin is a ren
   ] }, { boston: [legacy] });
   assert.deepEqual(pinOnly.additions, []);
   assert.equal(pinOnly.skipped[0].why, 'same address/pin as curated "Legacy"');
+  // A bar nobody placed is not curated data: "unknown" became
+  // data/bars/unknown.json and broke every bars sync after it (2026-10-03).
+  const unplaced = planBarPromotions({ decisions: [
+    approval({ name: 'New Guernica', city: 'unknown', address: '64-68 Smith Street, Melbourne', coordinates: '-37.8062453, 144.9833075' })
+  ] }, {});
+  assert.deepEqual(unplaced.additions, []);
+  assert.match(unplaced.skipped[0].why, /^no city — /);
 });
 
 // ---------------------------------------------------------------------------

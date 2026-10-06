@@ -26,6 +26,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Every workflow that commits to main shares this group: GitHub queues
+# them one at a time, so two cannot race to push (the owner was being
+# notified of failed pushes when two landed at once).
+concurrency:
+  group: main-commits
+  cancel-in-progress: false
+
 jobs:
   update-calendar-data:
     runs-on: ubuntu-latest
@@ -333,7 +340,14 @@ jobs:
             CHANGED_CALENDAR_FILES=$(git diff --staged --name-only | grep '\.ics$' | wc -l)
             
             git commit -m "🗓️ Update calendar data - $(date -u '+%Y-%m-%d %H:%M UTC') (${CHANGED_CALENDAR_FILES} calendars changed)"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
             echo "✓ Calendar data updated and committed (${CHANGED_FILES} files changed)"
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
@@ -347,7 +361,14 @@ jobs:
             echo "No city activity changes to commit"
           else
             git commit -m "📍 Refresh city activity summary"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
           fi
 
       - name: Generate event pages
@@ -365,7 +386,14 @@ jobs:
             echo "EVENT_PAGES_CHANGED=false" >> $GITHUB_ENV
           else
             git commit -m "🧩 Regenerate event pages from calendars"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
             echo "EVENT_PAGES_CHANGED=true" >> $GITHUB_ENV
           fi
 
@@ -385,7 +413,14 @@ jobs:
             echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
           else
             git commit -m "🖼️ Download/update event images and high-quality favicons (32px, 64px, 256px)"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
             echo "✓ Event images and high-quality favicons updated and committed"
             echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
           fi
@@ -400,7 +435,14 @@ jobs:
             echo "No favicon color changes to commit"
           else
             git commit -m "🎨 Extract favicon colors for bars and events"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
           fi
 
       - name: Generate OG images for events
@@ -415,7 +457,14 @@ jobs:
             echo "No OG image changes to commit"
           else
             git commit -m "🖼️ Generate/update OG images for events"
-            git push
+            # Other workflows commit to main too; rebase onto whatever landed
+            # meanwhile and retry (a plain push was rejected when another
+            # workflow's commit landed seconds earlier).
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $attempt failed — retrying"
+              sleep 10
+            done
           fi
       
       - name: Update test manifest only if calendar data changed
@@ -430,7 +479,14 @@ jobs:
             if ! git diff --quiet testing/manifest.json; then
               git add testing/manifest.json
               git commit -m "📋 Update test manifest after calendar data update"
-              git push
+              # Other workflows commit to main too; rebase onto whatever landed
+              # meanwhile and retry (a plain push was rejected when another
+              # workflow's commit landed seconds earlier).
+              for attempt in 1 2 3; do
+                git pull --rebase origin main && git push && break
+                echo "push attempt $attempt failed — retrying"
+                sleep 10
+              done
               echo "✓ Test manifest updated and committed"
             else
               echo "No manifest changes after regeneration"
