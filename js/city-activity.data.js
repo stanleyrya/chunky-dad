@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-04",
+ "generatedAt": "2026-10-06",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-04",
     "2026-10-06",
     "2026-10-07",
     "2026-10-08",
@@ -92,7 +91,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-04",
     "2026-10-08",
     "2026-10-10",
     "2026-10-11",
@@ -173,7 +171,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-10-04",
     "2026-10-07",
     "2026-10-08",
     "2026-10-09",
@@ -227,9 +224,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "dallas": {
-   "dates": [
-    "2026-10-04"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": "2027-03-28"
   },
@@ -264,7 +259,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-10-04",
     "2026-10-09",
     "2026-10-11",
     "2026-10-17",
@@ -310,7 +304,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-10-04",
     "2026-10-07",
     "2026-10-09",
     "2026-10-10",
@@ -482,7 +475,6 @@ window.CITY_ACTIVITY = {
   },
   "manchester": {
    "dates": [
-    "2026-10-04",
     "2026-10-10",
     "2026-11-14",
     "2026-12-12"
