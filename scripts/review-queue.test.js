@@ -283,7 +283,8 @@ test('resolveSharedRoot honours CHUNKY_SHARED_STORAGE_DIR and defaults to the iC
   fs.mkdirSync(path.join(moved, 'storage'));
   assert.equal(rq.defaultSharedRoot(home), moved, 'with the data in it, it is');
   fs.rmSync(home, { recursive: true, force: true });
-  assert.ok(rq.DEFAULT_SHARED_ROOT.endsWith(path.join('Documents', 'chunky-dad-scraper')));
+  // The module-level default is whichever of the two folders this Mac holds the data in (the data moved on 2026-10-06).
+  assert.ok(rq.DEFAULT_SHARED_ROOT.endsWith(path.join('Documents', 'chunky-dad-scraper')) || rq.DEFAULT_SHARED_ROOT.endsWith(path.join('com~apple~CloudDocs', 'chunky-dad-data')), rq.DEFAULT_SHARED_ROOT);
 });
 
 test('formatRejectionsText lists every rejection with its tags, text and the values it refused', () => {
