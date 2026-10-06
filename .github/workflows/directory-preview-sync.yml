@@ -9,6 +9,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Every workflow that commits to main shares this group: GitHub queues
+# them one at a time, so two cannot race to push (the owner was being
+# notified of failed pushes when two landed at once).
+concurrency:
+  group: main-commits
+  cancel-in-progress: false
+
 jobs:
   sync-previews:
     runs-on: ubuntu-latest
@@ -41,6 +48,13 @@ jobs:
           echo "No cache changes to commit"
         else
           git commit -m "🖼️ Sync Microlink directory previews"
-          git push
+          # Other workflows commit to main too; rebase onto whatever landed
+          # meanwhile and retry (a plain push was rejected when another
+          # workflow's commit landed seconds earlier).
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "push attempt $attempt failed — retrying"
+            sleep 10
+          done
           echo "✓ Directory preview cache committed."
         fi

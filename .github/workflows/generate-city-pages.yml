@@ -18,6 +18,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Every workflow that commits to main shares this group: GitHub queues
+# them one at a time, so two cannot race to push (the owner was being
+# notified of failed pushes when two landed at once).
+concurrency:
+  group: main-commits
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
