@@ -6253,6 +6253,7 @@ class ScriptableAdapter {
         await this.cleanupOldFiles("chunky-dad-scraper/runs", {
           maxAgeDays: retentionDays,
           keep: (name) => !name.endsWith(".json"),
+          archiveTo: "archive/runs",
         });
       } else {
         const reason = results?._isDisplayingSavedRun
@@ -16316,6 +16317,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
       await this.cleanupOldFiles("chunky-dad-scraper/logs", {
         maxAgeDays: retentionDays,
+        archiveTo: "archive/logs",
         keep: (name) => {
           const lower = name.toLowerCase();
           return lower.includes("performance") || lower.endsWith(".csv");
@@ -16330,6 +16332,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         await this.cleanupOldFiles("chunky-dad-scraper/runs", {
           maxAgeDays: retentionDays,
           keep: (name) => !name.endsWith(".json"),
+          archiveTo: "archive/runs",
         });
       } catch (runsErr) {
         console.log(`📱 Scriptable: Run cleanup failed: ${runsErr.message}`);
@@ -16407,11 +16410,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       }
       const prunedAiResponses = await this.cleanupOldFiles(
         "chunky-dad-scraper/storage/ai-responses",
-        { maxAgeDays: unusedCutoffDays, recurse: true },
+        { maxAgeDays: unusedCutoffDays, recurse: true, archiveTo: "archive/ai-responses" },
       );
       if (prunedAiResponses > 0) {
         console.log(
-          `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
+          `📱 Scriptable: Archived ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d (training data — kept under archive/)`,
         );
       }
     } catch (pruneErr) {
@@ -17363,9 +17366,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
+  // ARCHIVE, DON'T DELETE (owner, 2026-10-06: "I prefer no prune so we can
+  // use the old data for training"). With `archiveTo` (a folder under the
+  // data root, e.g. "archive/runs"), an old file is MOVED there instead of
+  // removed — runs, logs and AI responses are training data. Without it
+  // (the refetchable caches: pages, answers, OCR, classification) the old
+  // file is removed as before.
   async cleanupOldFiles(
     relDirPath,
-    { maxAgeDays = 30, keep = () => false, recurse = false, afterCleanup = null } = {},
+    { maxAgeDays = 30, keep = () => false, recurse = false, afterCleanup = null, archiveTo = "" } = {},
   ) {
     // "chunky-dad-scraper/<x>" names a folder of the data root, wherever
     // the root is (resolveDataRoot); anything else is under Documents.
@@ -17401,7 +17410,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         const ms = mtime ? mtime.getTime() : null;
         if (ms && ms < cutoff) {
           try {
-            fm.remove(path);
+            if (archiveTo) {
+              const archiveDir = this.fm.joinPath(this.baseDir, archiveTo);
+              if (!fm.fileExists(archiveDir)) fm.createDirectory(archiveDir, true);
+              fm.move(path, this.fm.joinPath(archiveDir, name));
+            } else {
+              fm.remove(path);
+            }
             removed += 1;
           } catch (_) {}
         }

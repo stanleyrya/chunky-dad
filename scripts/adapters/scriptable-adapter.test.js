@@ -387,6 +387,34 @@ test('resolveDataRoot: the chunky-dad-data bookmark is the data root only once i
   }
 });
 
+test('cleanupOldFiles with archiveTo MOVES old files under the data root instead of removing them (runs, logs, AI responses are training data)', async () => {
+  const adapter = buildAdapter();
+  adapter.baseDir = '/data';
+  const old = new Date(Date.now() - 40 * 86400000);
+  const fresh = new Date();
+  const moved = []; const removed = []; const made = [];
+  adapter.fm = {
+    ...fileManagerStub,
+    documentsDirectory: () => '/docs',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => p === '/data/runs' || p === '/data/archive/runs',
+    listContents: (p) => (p === '/data/runs' ? ['old.json', 'new.json', 'notes.txt'] : []),
+    modificationDate: (p) => (p.endsWith('old.json') ? old : fresh),
+    isDirectory: () => false,
+    createDirectory: (p) => { made.push(p); },
+    move: (from, to) => { moved.push([from, to]); },
+    remove: (p) => { removed.push(p); }
+  };
+  const count = await adapter.cleanupOldFiles('chunky-dad-scraper/runs', { maxAgeDays: 30, keep: (name) => !name.endsWith('.json'), archiveTo: 'archive/runs' });
+  assert.equal(count, 1);
+  assert.deepEqual(moved, [['/data/runs/old.json', '/data/archive/runs/old.json']]);
+  assert.deepEqual(removed, [], 'nothing deleted');
+  // Without archiveTo (the refetchable caches) the old file is removed as before.
+  const plain = await adapter.cleanupOldFiles('chunky-dad-scraper/runs', { maxAgeDays: 30, keep: (name) => !name.endsWith('.json') });
+  assert.equal(plain, 1);
+  assert.deepEqual(removed, ['/data/runs/old.json']);
+});
+
 test('cleanupOldFiles recurses into nested cache host dirs and reports the pruned count', async () => {
   const adapter = buildAdapter();
   const DAY = 24 * 60 * 60 * 1000;
