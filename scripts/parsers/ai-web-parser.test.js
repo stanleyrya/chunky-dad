@@ -21930,3 +21930,12 @@ test('MEC and Elfsight rows with no clock are stamped date-only; rows with one a
   assert.equal(cell('9:00 pm - 2:00 am')._noTimeStated, undefined);
   assert.equal(cell('21:00')._noTimeStated, undefined);
 });
+
+test('JSON-LD: an offers.url that is another event page under the same listing root is not this event\'s ticket link; a real ticket host still is', () => {
+  const parser = createParser();
+  assert.equal(parser.isSiblingEventPage('https://eaglela.com/events/calf-bb-event/', 'https://eaglela.com/events/bluf/?occurrence=2026-11-20'), true);
+  assert.equal(parser.isSiblingEventPage('https://eaglela.com/events/bluf/', 'https://eaglela.com/events/bluf/?occurrence=2026-11-20'), false, 'its own page');
+  assert.equal(parser.isSiblingEventPage('https://www.eventbrite.com/e/bluf-la-tickets-123', 'https://eaglela.com/events/bluf/'), false, 'a ticket host');
+  assert.equal(parser.isSiblingEventPage('https://eaglela.com/tickets/bluf/', 'https://eaglela.com/events/bluf/'), false, 'a different root on the same site');
+  assert.equal(parser.isSiblingEventPage('https://eaglela.com/', 'https://eaglela.com/events/bluf/'), false);
+});

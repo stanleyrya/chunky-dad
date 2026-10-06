@@ -12577,8 +12577,21 @@ class AiWebParser {
         }
 
         const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
-        const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
-        const ticketUrl = offerUrl || this.normalizeHttpUrlValue(node.url) || '';
+        let offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
+        const ownUrl = this.normalizeHttpUrlValue(node.url) || '';
+        // A NEIGHBOUR'S PAGE IS NOT THIS EVENT'S TICKET LINK. Eagle LA's MEC
+        // month grid (2026-11, read 2026-10-06) published BLUF LA's JSON-LD
+        // with offers.url = /events/calf-bb-event/ — the OTHER party that
+        // night. Written to the calendar as BLUF's ticketUrl, it later
+        // matched the real CALF B&B record to BLUF LA ("same ticket page")
+        // and proposed renaming it. An offer link that is an event page on
+        // this site under the same listing root as the event's own page,
+        // with a different slug, belongs to someone else: dropped.
+        if (offerUrl && ownUrl && this.isSiblingEventPage(offerUrl, ownUrl)) {
+            console.log(`🤖 AI Web: JSON-LD offers.url ${offerUrl} is another event's page on this site (this one is ${ownUrl}) — not this event's ticket link`);
+            offerUrl = '';
+        }
+        const ticketUrl = offerUrl || ownUrl || '';
         const cover = this.formatJsonLdOffersCover(node.offers);
         const jsonLdImageCandidates = this.pickJsonLdImageCandidates(node.image, nodesById);
 
@@ -28043,6 +28056,31 @@ TEXT:
         const key = this.canonicalizeImageUrlForComparison(imageUrl);
         if (!key) return null;
         return this.measuredImageDimensionsByUrl.get(key) || null;
+    }
+
+    // Two event pages on one site under the same listing root
+    // (/events/<a>/ vs /events/<b>/): the same host, the same path up to the
+    // last segment, different last segments. Query strings and trailing
+    // slashes are ignored; a page under a different root is not a sibling.
+    isSiblingEventPage(candidateUrl, ownUrl) {
+        // One implementation: SharedCore.isSiblingEventPage (the merge
+        // resolver's sibling-page rung reads the same geometry). The wired
+        // core is preferred; the module import is the fallback for isolated
+        // construction (tests). Missing both → not a sibling (fail open).
+        const wired = this.core && this.core.constructor && typeof this.core.constructor.isSiblingEventPage === 'function'
+            ? this.core.constructor : null;
+        let core = wired;
+        if (!core) {
+            try {
+                if (typeof importModule === 'function') core = importModule('shared-core').SharedCore;
+            } catch (_) {}
+        }
+        if (!core) {
+            try {
+                if (typeof require === 'function') core = require('../shared-core').SharedCore;
+            } catch (_) {}
+        }
+        return Boolean(core && typeof core.isSiblingEventPage === 'function' && core.isSiblingEventPage(candidateUrl, ownUrl));
     }
 
     // ------------------------------------------------------------------
