@@ -32,8 +32,7 @@ class SavedRunDisplay {
         // Read directory contents directly - no index needed
         try {
             const fm = FileManager.iCloud();
-            const documentsDir = fm.documentsDirectory();
-            const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const rootDir = this.resolveDataRoot(fm);
             const runsDir = fm.joinPath(rootDir, 'runs');
             
             console.log(`📱 Display: Checking for saved runs in ${runsDir}`);
@@ -84,7 +83,7 @@ class SavedRunDisplay {
             
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const rootDir = this.resolveDataRoot(fm);
             const runsDir = fm.joinPath(rootDir, 'runs');
             const fileName = `${runId}.json`;
             const runFilePath = fm.joinPath(runsDir, fileName);
@@ -236,6 +235,17 @@ class SavedRunDisplay {
             _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
         };
         return resultsLike;
+    }
+
+    // The data folder, wherever it is (ScriptableAdapter.resolveDataRoot:
+    // the chunky-dad-data bookmark once the data moved there, else
+    // Documents/chunky-dad-scraper).
+    resolveDataRoot(fm) {
+        try {
+            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
+            if (typeof ScriptableAdapter.resolveDataRoot === 'function') return ScriptableAdapter.resolveDataRoot(fm);
+        } catch (_) { /* old adapter: the old place */ }
+        return fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper');
     }
 
     createAdapter() {

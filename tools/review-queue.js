@@ -33,11 +33,19 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 
-// Same default the launchd installer uses (tools/schedule-mac-run.sh).
-const DEFAULT_SHARED_ROOT = path.join(
-    os.homedir(),
-    'Library', 'Mobile Documents', 'iCloud~dk~simonbs~Scriptable', 'Documents', 'chunky-dad-scraper'
-);
+// Same default the launchd installer uses (tools/schedule-mac-run.sh): the
+// data folder in iCloud Drive (chunky-dad-data — where the phone's
+// ScriptableAdapter.resolveDataRoot looks through its file bookmark) once
+// it holds the data (a storage/ subtree), else Scriptable's own folder.
+function defaultSharedRoot(home = os.homedir(), fsLike = fs) {
+    const moved = path.join(home, 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'chunky-dad-data');
+    const legacy = path.join(home, 'Library', 'Mobile Documents', 'iCloud~dk~simonbs~Scriptable', 'Documents', 'chunky-dad-scraper');
+    try {
+        if (fsLike.statSync(path.join(moved, 'storage')).isDirectory()) return moved;
+    } catch (_) { /* not moved yet */ }
+    return legacy;
+}
+const DEFAULT_SHARED_ROOT = defaultSharedRoot();
 const DECISIONS_FILE_NAME = 'owner-decisions.json';
 const RUN_ID_PATTERN = /^\d{8}-\d{6}$/;
 const RUN_CACHE_LIMIT = 4;
@@ -1973,6 +1981,7 @@ module.exports = {
     prunePublishedPictures,
     PICTURES_BRANCH,
     DEFAULT_SHARED_ROOT,
+    defaultSharedRoot,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,
     RUN_ID_PATTERN,

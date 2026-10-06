@@ -359,6 +359,34 @@ test('generateRichHTML defines the exportProvenanceIssue page handler once', asy
 // End-of-run cache pruning: cleanupOldFiles recursion + retention config
 // ---------------------------------------------------------------------------
 
+test('resolveDataRoot: the chunky-dad-data bookmark is the data root only once it holds the data; otherwise Documents/chunky-dad-scraper — and cleanupOldFiles follows the root', async () => {
+  const originalFM = global.FileManager;
+  const fm = (opts) => ({ ...fileManagerStub, documentsDirectory: () => '/docs', bookmarkedPath: () => '/drive/chunky-dad-data', isDirectory: (p) => (opts.dirs || []).includes(p), joinPath: (a, b) => `${a}/${b}` });
+  try {
+    // No bookmark at all.
+    global.FileManager = { iCloud: () => fileManagerStub, local: () => ({ bookmarkExists: () => false }) };
+    assert.equal(ScriptableAdapter.resolveDataRoot(fm({ dirs: ['/drive/chunky-dad-data', '/drive/chunky-dad-data/storage'] })), '/docs/chunky-dad-scraper');
+    // Bookmark, but the folder is still empty: the data has not moved.
+    global.FileManager = { iCloud: () => fileManagerStub, local: () => ({ bookmarkExists: (name) => name === 'chunky-dad-data' }) };
+    assert.equal(ScriptableAdapter.resolveDataRoot(fm({ dirs: ['/drive/chunky-dad-data'] })), '/docs/chunky-dad-scraper');
+    // Bookmark and the data inside it.
+    assert.equal(ScriptableAdapter.resolveDataRoot(fm({ dirs: ['/drive/chunky-dad-data', '/drive/chunky-dad-data/storage'] })), '/drive/chunky-dad-data');
+    assert.equal(ScriptableAdapter.resolveDataRoot(fm({ dirs: ['/drive/chunky-dad-data', '/drive/chunky-dad-data/calendar-snapshot'] })), '/drive/chunky-dad-data');
+    // A bookmark lookup that throws never breaks a run.
+    assert.equal(ScriptableAdapter.resolveDataRoot({ ...fm({}), bookmarkedPath: () => { throw new Error('gone'); } }), '/docs/chunky-dad-scraper');
+    // cleanupOldFiles: "chunky-dad-scraper/<x>" means <root>/<x>.
+    const adapter = buildAdapter();
+    adapter.baseDir = '/drive/chunky-dad-data';
+    const seen = [];
+    adapter.fm = { ...fileManagerStub, documentsDirectory: () => '/docs', joinPath: (a, b) => `${a}/${b}`, fileExists: (p) => { seen.push(p); return false; } };
+    await adapter.cleanupOldFiles('chunky-dad-scraper/runs', { maxAgeDays: 1 });
+    await adapter.cleanupOldFiles('something-else', { maxAgeDays: 1 });
+    assert.deepEqual(seen, ['/drive/chunky-dad-data/runs', '/docs/something-else']);
+  } finally {
+    global.FileManager = originalFM;
+  }
+});
+
 test('cleanupOldFiles recurses into nested cache host dirs and reports the pruned count', async () => {
   const adapter = buildAdapter();
   const DAY = 24 * 60 * 60 * 1000;
