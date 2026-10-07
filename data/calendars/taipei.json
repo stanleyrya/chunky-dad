@@ -3,5 +3,85 @@
     "calendarTimezone": "Asia/Taipei",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "UTOPIA×Tackle! -TAIPEI PRIDE NIGHT- 2026",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-30T00:00:00",
+      "endDate": "2026-10-31T00:00:00",
+      "unprocessedDescription": "bar: 烏托邦 Utopia Taipei\nticketUrl: https://forms.gle/7bMZpoZaCa\rK1RZjB9\nimage: https://cdn.whereto.party/media/events/6a02077e-63af-4b48-8511-993cc2012796.jpeg\ntimezone: Asia/Taipei\nimageVertical: https://cdn.whereto.party/media/events/6a02077e-63af-4b48-8511-993cc2012796.jpeg\ngmaps: https://www.google.com/maps/search/?api=1&query=%E7%83%8F%E6%89%98%E9%82%A6%20Utopia%20Taipei\nkey: utopia×tackle-taipei-pride-night-2026|2026-10-29|烏托邦 utopia taipei\nimageSource: json-api\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: UTOPIA×TACKLE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Asia/Taipei",
+      "wasUTC": true,
+      "sourceUid": "11D5DEFE-8962-4838-BE01-BD8C12D7AE68",
+      "uid": "11D5DEFE-8962-4838-BE01-BD8C12D7AE68",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "烏托邦 Utopia Taipei",
+      "image": "https://cdn.whereto.party/media/events/6a02077e-63af-4b48-8511-993cc2012796.jpeg",
+      "imageVertical": "https://cdn.whereto.party/media/events/6a02077e-63af-4b48-8511-993cc2012796.jpeg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=%E7%83%8F%E6%89%98%E9%82%A6%20Utopia%20Taipei",
+      "ticketUrl": "https://forms.gle/7bMZpoZaCaK1RZjB9",
+      "shortName": "UTOPIA×TACKLE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=%E7%83%8F%E6%89%98%E9%82%A6%20Utopia%20Taipei",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://forms.gle/7bMZpoZaCaK1RZjB9",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "utopiatackle-taipei-pride-night-2026-64a415a0"
+    },
+    {
+      "name": "DRUNK PRIDE",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-31T21:00:00",
+      "endDate": "2026-11-01T05:00:00",
+      "unprocessedDescription": "bar: DRUNK Taipei\nimage: https://cdn.whereto.party/media/event\rs/158b3a48-1c1c-46c8-9dee-7866329eaa75.jpeg\ntimezone: Asia/Taipei\nimageVertical: https://cdn.whereto.party/media/events/158b3a48-1c1c-46c8-9dee-7866329eaa75.jpeg\ngmaps: https://www.google.com/maps/search/?api=1&query=DRUNK%20Taipei\nkey: drunk-pride|2026-10-31|drunk taipei\nimageSource: json-api\nbearSource: manual-bear (verdict store 2026-10-06)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Asia/Taipei",
+      "wasUTC": true,
+      "sourceUid": "0CD5DB8A-4F01-4990-AB57-7693DA73CF49",
+      "uid": "0CD5DB8A-4F01-4990-AB57-7693DA73CF49",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "DRUNK Taipei",
+      "image": "https://cdn.whereto.party/media/events/158b3a48-1c1c-46c8-9dee-7866329eaa75.jpeg",
+      "imageVertical": "https://cdn.whereto.party/media/events/158b3a48-1c1c-46c8-9dee-7866329eaa75.jpeg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=DRUNK%20Taipei",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=DRUNK%20Taipei",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "drunk-pride-59964935"
+    }
+  ]
 }

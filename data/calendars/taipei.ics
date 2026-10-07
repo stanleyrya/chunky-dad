@@ -5,4 +5,46 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-taipei
 X-WR-TIMEZONE:Asia/Taipei
+BEGIN:VEVENT
+DTSTART:20261029T160000Z
+DTEND:20261030T160000Z
+DTSTAMP:20261007T140715Z
+UID:11D5DEFE-8962-4838-BE01-BD8C12D7AE68
+CREATED:20261007T125036Z
+DESCRIPTION:bar: 烏托邦 Utopia Taipei\nticketUrl: https://forms.gle/7bMZpoZaCa
+ K1RZjB9\nimage: https://cdn.whereto.party/media/events/6a02077e-63af-4b48-8
+ 511-993cc2012796.jpeg\ntimezone: Asia/Taipei\nimageVertical: https://cdn.wh
+ ereto.party/media/events/6a02077e-63af-4b48-8511-993cc2012796.jpeg\ngmaps: 
+ https://www.google.com/maps/search/?api=1&query=%E7%83%8F%E6%89%98%E9%82%A6
+ %20Utopia%20Taipei\nkey: utopia×tackle-taipei-pride-night-2026|2026-10-29|烏
+ 托邦 utopia taipei\nimageSource: json-api\nbearSource: manual-bear (verdict s
+ tore 2026-10-06)\nshortName: UTOPIA×TACKLE
+LAST-MODIFIED:20261007T125036Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:UTOPIA×Tackle! -TAIPEI PRIDE NIGHT- 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T130000Z
+DTEND:20261031T210000Z
+DTSTAMP:20261007T140715Z
+UID:0CD5DB8A-4F01-4990-AB57-7693DA73CF49
+CREATED:20261007T125037Z
+DESCRIPTION:bar: DRUNK Taipei\nimage: https://cdn.whereto.party/media/event
+ s/158b3a48-1c1c-46c8-9dee-7866329eaa75.jpeg\ntimezone: Asia/Taipei\nimageVe
+ rtical: https://cdn.whereto.party/media/events/158b3a48-1c1c-46c8-9dee-7866
+ 329eaa75.jpeg\ngmaps: https://www.google.com/maps/search/?api=1&query=DRUNK
+ %20Taipei\nkey: drunk-pride|2026-10-31|drunk taipei\nimageSource: json-api\
+ nbearSource: manual-bear (verdict store 2026-10-06)
+LAST-MODIFIED:20261007T125037Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DRUNK PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR
