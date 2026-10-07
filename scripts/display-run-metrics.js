@@ -1850,7 +1850,8 @@ class MetricsDisplay {
     const filteredRuns = this.applyRunFilters(runItems, runFilters);
     const sortedRuns = this.sortRunItems(filteredRuns, runSortResolved);
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
-    const chartSize = this.getAppChartSize();
+    const isDarkMode = Device.isUsingDarkAppearance();
+    const chartMode = isDarkMode ? 'dark' : 'light';
     const safeView = view?.mode ? view : { mode: 'sources' };
     const viewMode = safeView.mode === 'host' ? 'host' : (this.normalizeViewToken(safeView.mode) || 'sources');
     const initialViewKey = viewMode === 'host' ? String(safeView.host || '') : '';
@@ -1929,41 +1930,28 @@ class MetricsDisplay {
       null
     );
 
-    const buildChartLegend = seriesList => {
-      if (!Array.isArray(seriesList) || seriesList.length === 0) return '';
-      const items = seriesList.map(item => {
-        const label = item?.label || item?.name || '';
-        const color = item?.color || CHART_STYLE.line;
-        if (!label) return '';
-        return `
-          <span class="chart-legend-item">
-            <span class="chart-swatch" style="background:${escapeHtml(color)}"></span>
-            ${escapeHtml(label)}
-          </span>`;
-      }).filter(Boolean).join('');
-      if (!items) return '';
-      return `<div class="chart-legend">${items}</div>`;
-    };
-
-    const buildChartCard = (title, imageData, subtitle, options = {}) => {
-      if (!imageData) return '';
-      const xLabel = options.xLabel || '';
-      const yLabel = options.yLabel || '';
-      const legendHtml = options.legendHtml || '';
+    // One chart card: title, figures, subtitle. A figure is inline SVG with
+    // its spec embedded (metrics-sections buildChartFigureHtml); the page
+    // script re-renders it for the range toggle, shows a run's numbers on
+    // tap, and upgrades it to a Chart.js canvas when the CDN script loads.
+    // Figures in views hidden on load stay pending (spec only) and render
+    // when their view opens.
+    const buildChartFigureCard = (title, figures, subtitle) => {
+      const body = (Array.isArray(figures) ? figures : [figures]).filter(Boolean).join('');
+      if (!body) return '';
       return `
-      <div class="card">
+      <div class="card chart-card">
         <div class="section-title">${escapeHtml(title)}</div>
-        <div class="chart-wrapper">
-          <div class="chart-axis-y">${escapeHtml(yLabel)}</div>
-          <div class="chart-axis-main">
-            <img class="chart" src="${escapeHtml(imageData)}" alt="${escapeHtml(title)}">
-            <div class="chart-axis-x">${escapeHtml(xLabel)}</div>
-          </div>
-        </div>
-        ${legendHtml}
-        ${subtitle ? `<div class="chart-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+        ${subtitle ? `<div class="section-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+        ${body}
       </div>`;
     };
+    const buildFigure = (spec, options = {}) => (spec && MetricsSections && typeof MetricsSections.buildChartFigureHtml === 'function'
+      ? MetricsSections.buildChartFigureHtml(spec, { mode: chartMode, ...options })
+      : '');
+    const chartSpec = (name, ...args) => (MetricsSections && typeof MetricsSections[name] === 'function'
+      ? MetricsSections[name](...args)
+      : null);
 
     const buildRunTable = (items, sortState) => {
       if (!items.length) {
@@ -2120,10 +2108,6 @@ class MetricsDisplay {
       return buildRunFilterChip(name, { parserFilter: name }, isActive, 'parser', name);
     }).join('');
 
-    const runAxisLabel = CHART_AXIS_LABELS.runs;
-    const finalEventsAxisLabel = CHART_AXIS_LABELS.finalEvents;
-    const durationAxisLabel = CHART_AXIS_LABELS.durationMinutes;
-
     const emptyLedgerMessage = MetricsSections?.SOURCE_LEDGER_EMPTY_MESSAGE
       || 'No source ledger yet — every run writes it; seed history with npm run backfill-source-ledger on the Mac.';
 
@@ -2147,6 +2131,16 @@ class MetricsDisplay {
           hostUrl: row => this.buildHostUrl(row.host),
           faviconUrl: row => this.getHostFaviconUrl(row)
         })}`;
+      // Overview: extracted per run stacked by site (troubled sites in their
+      // verdict colour), with the sites-answering strip following its range.
+      const overviewSpec = chartSpec('buildSourcesOverviewChartSpec', health, { verdictColors: SOURCE_VERDICT_COLORS });
+      const answeringSpec = chartSpec('buildSitesAnsweringChartSpec', health);
+      const sourcesVisible = viewMode === 'sources';
+      const overviewCard = buildChartFigureCard('Extracted Per Run', [
+        buildFigure(overviewSpec, { render: sourcesVisible }),
+        buildFigure(answeringSpec, { render: sourcesVisible, follows: overviewSpec ? overviewSpec.id : null })
+      ], 'Rows each site yielded per run, troubled sites in their verdict colour; below, how many sites answered ok');
+      if (overviewCard) cards.push(overviewCard);
       cards.push(buildSection('Sources', body, escapeHtml(`${digest.headline} • ${newestLabel}`)));
       return cards;
     };
@@ -2171,27 +2165,27 @@ class MetricsDisplay {
         faviconUrl: item => this.getHostFaviconUrl(item)
       })));
 
+      // Charts: extracted/bear/upcoming with the baseline and the troubled
+      // stretch, a pages/page-errors strip that follows its range, then
+      // proposals (new up, merge down) with vanished counts as dots. Only
+      // the host open on load is rendered now; the rest render when tapped.
       const series = Array.isArray(row.series) ? row.series : [];
-      if (series.length >= 2) {
-        const hostSeriesList = [
-          { label: 'Extracted', values: series.map(line => Number(line.extracted) || 0), color: CHART_SERIES_COLORS[1] },
-          { label: 'Bear', values: series.map(line => Number(line.bear) || 0), color: CHART_SERIES_COLORS[0] },
-          { label: 'Upcoming', values: series.map(line => Number(line.upcoming) || 0), color: CHART_SERIES_COLORS[3] }
-        ];
-        const hostChart = this.buildMultiLineChartImage(hostSeriesList, chartSize, {
-          lineWidth: CHART_STYLE.lineWidth
-        });
-        const hostChartData = hostChart ? this.imageToDataUri(hostChart) : null;
-        if (hostChartData) {
-          const baselineSubtitle = row.baseline !== null && row.baseline !== undefined
-            ? `Baseline ${this.formatNumber(row.baseline)} extracted (median of recent ok runs)`
-            : 'No baseline yet';
-          cards.push(buildChartCard(`Per Run (Last ${series.length} Runs)`, hostChartData, baselineSubtitle, {
-            xLabel: runAxisLabel,
-            yLabel: 'Events',
-            legendHtml: buildChartLegend(hostSeriesList)
-          }));
-        }
+      const hostVisible = viewMode === 'host' && String(row.host).toLowerCase() === String(initialViewKey).toLowerCase();
+      const hostChartOptions = { verdictColors: SOURCE_VERDICT_COLORS, records: sourceRecords };
+      const hostSeriesSpec = chartSpec('buildHostSeriesChartSpec', row, hostChartOptions);
+      if (hostSeriesSpec) {
+        const baselineSubtitle = row.baseline !== null && row.baseline !== undefined
+          ? `Baseline ${this.formatNumber(row.baseline)} extracted (median of recent ok runs)${row.since ? ', troubled stretch shaded' : ''}`
+          : 'No baseline yet';
+        cards.push(buildChartFigureCard(`Per Run (${series.length} Runs)`, [
+          buildFigure(hostSeriesSpec, { render: hostVisible }),
+          buildFigure(chartSpec('buildHostPagesChartSpec', row, hostChartOptions), { render: hostVisible, follows: hostSeriesSpec.id })
+        ], baselineSubtitle));
+        cards.push(buildChartFigureCard(
+          'Proposals & Vanished',
+          buildFigure(chartSpec('buildHostProposalsChartSpec', row, hostChartOptions), { render: hostVisible }),
+          'New proposals up, merges down; dots are upcoming events that vanished in that run'
+        ));
       }
 
       cards.push(buildSection('Runs', MetricsSections.buildHostSeriesTableHtml(row, {
@@ -2281,39 +2275,14 @@ class MetricsDisplay {
 
       // Quality trends over the retained window — only runs that carry a
       // signals block are plotted (older records are skipped, not zeroed).
-      if (MetricsSections) {
-        const trend = MetricsSections.buildQualityTrendData(recentRecords);
-        if (trend.count >= 2) {
-          const qualitySeriesList = [
-            { label: '% with venue', values: trend.venuePct, color: CHART_SERIES_COLORS[0] },
-            { label: '% with coordinates', values: trend.coordsPct, color: CHART_SERIES_COLORS[1] },
-            { label: '% with duration', values: trend.durationPct, color: CHART_SERIES_COLORS[3] }
-          ];
-          const qualityChart = this.buildMultiLineChartImage(qualitySeriesList, chartSize, {
-            lineWidth: CHART_STYLE.lineWidth,
-            maxValue: 100
-          });
-          const qualityData = qualityChart ? this.imageToDataUri(qualityChart) : null;
-          if (qualityData) {
-            cards.push(buildChartCard(`Event Quality (Last ${trend.count} Runs)`, qualityData, 'Share of events with a venue, coordinates, and a real duration', {
-              xLabel: runAxisLabel,
-              yLabel: 'Percent of events',
-              legendHtml: buildChartLegend(qualitySeriesList)
-            }));
-          }
-
-          const aiSecondsSeries = trend.aiTotalMs.map(ms => Math.round(ms / 100) / 10);
-          const aiChart = this.buildMultiLineChartImage([
-            { label: 'AI time (s)', values: aiSecondsSeries, color: CHART_STYLE.line }
-          ], chartSize, { lineWidth: CHART_STYLE.lineWidth });
-          const aiData = aiChart ? this.imageToDataUri(aiChart) : null;
-          if (aiData) {
-            cards.push(buildChartCard(`AI Time Per Run (Last ${trend.count} Runs)`, aiData, 'Total AI request time per run', {
-              xLabel: runAxisLabel,
-              yLabel: 'AI time (seconds)'
-            }));
-          }
-        }
+      const qualitySpec = chartSpec('buildQualityChartSpec', recentRecords);
+      const aiSpec = chartSpec('buildAiTimeChartSpec', recentRecords);
+      const runsVisible = viewMode === 'runs';
+      if (qualitySpec) {
+        cards.push(buildChartFigureCard(`Event Quality (Last ${qualitySpec.labels.length} Runs)`, buildFigure(qualitySpec, { render: runsVisible }), 'Share of events with a venue, coordinates, and a real duration'));
+      }
+      if (aiSpec) {
+        cards.push(buildChartFigureCard(`AI Time Per Run (Last ${aiSpec.labels.length} Runs)`, buildFigure(aiSpec, { render: runsVisible }), 'Total AI request time per run, in seconds'));
       }
       return cards;
     };
@@ -2394,7 +2363,12 @@ class MetricsDisplay {
       return `    .verdict-${verdict} { color: ${color}; background: ${this.hexToRgba(color, verdict === 'ok' ? 0.16 : 0.18)}; }`;
     }).join('\n');
 
-    const isDarkMode = Device.isUsingDarkAppearance();
+    // The chart renderer is pure and closes over nothing, so its source text
+    // runs inside the page too: the same code that drew the SVGs here
+    // re-renders them for the range toggle and the views opened later.
+    const rendererSource = MetricsSections && typeof MetricsSections.createChartRenderer === 'function'
+      ? MetricsSections.createChartRenderer.toString()
+      : 'function () { return null; }';
     const html = `
 <!DOCTYPE html>
 <html>
@@ -2403,6 +2377,7 @@ class MetricsDisplay {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chunky Dad Metrics</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" onload="if (window.chunkyChartsUpgrade) window.chunkyChartsUpgrade()"></script>
   <style>
     :root {
       --primary-color: ${BRAND.primary};
@@ -2878,42 +2853,67 @@ class MetricsDisplay {
       background: rgba(167, 176, 204, 0.22);
       color: var(--color-neutral);
     }
-    .chart-wrapper {
-      margin-top: 12px;
+    .chart-card {
+      overflow: hidden;
+    }
+    .chart-figure {
+      margin: 8px 0 0;
+      min-width: 0;
+    }
+    .chart-figure + .chart-figure {
+      margin-top: 4px;
+    }
+    .chart-range {
       display: flex;
-      gap: 8px;
-      align-items: stretch;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-bottom: 6px;
     }
-    .chart-axis-y {
+    .chart-range-button {
+      font: inherit;
       font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: transparent;
       color: var(--text-secondary);
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      text-align: center;
-      letter-spacing: 0.3px;
+      cursor: pointer;
     }
-    .chart-axis-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    .chart-range-button.active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: #ffffff;
     }
-    .chart-axis-x {
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin-top: 6px;
-      text-align: center;
-    }
-    .chart {
+    .chart-stage {
+      position: relative;
       width: 100%;
-      border-radius: 12px;
       background: var(--background-light);
-      padding: 8px;
+      border-radius: 12px;
+      padding: 6px 4px 2px;
+    }
+    .chart-stage.is-canvas {
+      padding: 8px 6px;
+      min-height: 190px;
+    }
+    .chart-kind-bars .chart-stage.is-canvas {
+      min-height: 110px;
+    }
+    .chart-stage > svg,
+    .chart-stage > canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .chart-svg text {
+      font-family: inherit;
     }
     .chart-legend {
-      margin-top: 6px;
+      margin-top: 8px;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       font-size: 11px;
       color: var(--text-secondary);
     }
@@ -2921,12 +2921,34 @@ class MetricsDisplay {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--background-light);
+    }
+    .chart-legend-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
     }
     .chart-swatch {
       width: 10px;
-      height: 10px;
+      height: 3px;
       border-radius: 999px;
+      flex: none;
       background: var(--text-secondary);
+    }
+    .chart-swatch.square {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .chart-caption {
+      margin: 6px 0 0;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+      min-height: 14px;
+      word-break: break-word;
     }
     .chart-subtitle {
       font-size: 12px;
@@ -3114,6 +3136,191 @@ ${verdictCss}
       const normalizeDirection = value => (value === 'asc' ? 'asc' : 'desc');
       const normalizeText = value => String(value || '').toLowerCase();
 
+      // ---- Charts -------------------------------------------------------
+      // Every figure carries its spec (data-chart). The SVG was drawn by the
+      // same renderer that runs here; range changes and views opened later
+      // re-render it, a tap shows that run's numbers, and once Chart.js has
+      // loaded from the CDN the figure becomes a canvas with tooltips, legend
+      // toggles and animation. No CDN, no change: the SVG stays.
+      let activateCharts = () => {};
+      const chartRenderer = (() => {
+        try { return (${rendererSource})(); } catch (_) { return null; }
+      })();
+      if (chartRenderer) {
+        const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const chartFigures = Array.from(document.querySelectorAll('figure[data-chart]'));
+        const chartState = new Map();
+        const rangeDays = { 7: 7, 30: 30, all: null };
+        const stateFor = figure => {
+          if (!chartState.has(figure)) {
+            let spec = null;
+            try { spec = JSON.parse(figure.getAttribute('data-chart') || 'null'); } catch (_) { spec = null; }
+            if (!spec) return null;
+            chartState.set(figure, {
+              spec,
+              range: figure.getAttribute('data-chart-range') || '30',
+              mode: figure.getAttribute('data-chart-mode') || 'light',
+              chart: null
+            });
+          }
+          return chartState.get(figure);
+        };
+        const shownSpec = state => {
+          const days = rangeDays[state.range];
+          return days ? chartRenderer.sliceChartSpec(state.spec, days) : state.spec;
+        };
+        const setCaption = (figure, text) => {
+          const caption = figure.querySelector('[data-chart-caption]');
+          if (caption) caption.textContent = text;
+        };
+        const dropChart = state => {
+          if (state.chart) {
+            try { state.chart.destroy(); } catch (_) { /* already gone */ }
+            state.chart = null;
+          }
+        };
+        const bindTap = (figure, stage, shown) => {
+          stage.onclick = event => {
+            const svg = stage.querySelector('svg');
+            if (!svg) return;
+            const rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
+            const x = ((event.clientX - rect.left) / rect.width) * chartRenderer.WIDTH;
+            const index = chartRenderer.indexAtX(shown, x);
+            if (index < 0) return;
+            const cursor = svg.querySelector('[data-chart-cursor]');
+            if (cursor) {
+              const cursorX = chartRenderer.xForIndex(shown, index);
+              cursor.setAttribute('x1', cursorX);
+              cursor.setAttribute('x2', cursorX);
+              cursor.setAttribute('stroke-opacity', '0.6');
+            }
+            setCaption(figure, chartRenderer.describeIndex(shown, index));
+          };
+        };
+        const renderSvg = (figure, state) => {
+          const stage = figure.querySelector('[data-chart-stage]');
+          if (!stage) return;
+          const shown = shownSpec(state);
+          dropChart(state);
+          stage.classList.remove('is-canvas');
+          stage.innerHTML = chartRenderer.buildChartSvg(shown, { mode: state.mode });
+          const legendHtml = chartRenderer.buildLegendHtml(shown, { mode: state.mode });
+          const legend = figure.querySelector('.chart-legend');
+          if (legend) legend.outerHTML = legendHtml;
+          else if (legendHtml) stage.insertAdjacentHTML('afterend', legendHtml);
+          setCaption(figure, chartRenderer.describeIndex(shown, shown.labels.length - 1));
+          figure.removeAttribute('data-chart-pending');
+          bindTap(figure, stage, shown);
+        };
+        const shadePlugin = {
+          id: 'chunkyShade',
+          beforeDatasetsDraw(chart) {
+            const shade = chart.options.plugins && chart.options.plugins.chunkyShade;
+            const scale = chart.scales.x;
+            const area = chart.chartArea;
+            if (!shade || !scale || !area) return;
+            const count = chart.data.labels.length;
+            let from = scale.getPixelForValue(shade.fromIndex);
+            if (chart.config.type === 'bar') from -= (scale.width / Math.max(1, count)) / 2;
+            else if (shade.fromIndex > 0) from = (scale.getPixelForValue(shade.fromIndex - 1) + from) / 2;
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.fillStyle = chartRenderer.withAlpha(shade.color, 0.12);
+            ctx.fillRect(from, area.top, area.right - from, area.bottom - area.top);
+            ctx.restore();
+          }
+        };
+        const renderCanvas = (figure, state) => {
+          const stage = figure.querySelector('[data-chart-stage]');
+          if (!stage || !window.Chart) return false;
+          const shown = shownSpec(state);
+          const config = chartRenderer.buildChartJsConfig(shown, { mode: state.mode, reducedMotion });
+          const meta = config.chunky;
+          dropChart(state);
+          stage.onclick = null;
+          stage.innerHTML = '';
+          stage.classList.add('is-canvas');
+          const canvas = document.createElement('canvas');
+          stage.appendChild(canvas);
+          config.data.datasets.forEach(dataset => {
+            if (!dataset.chunkyGradient) return;
+            const color = dataset.borderColor;
+            const topAlpha = meta.kind === 'stack' ? 0.55 : 0.35;
+            const bottomAlpha = meta.kind === 'stack' ? 0.25 : 0.03;
+            dataset.backgroundColor = context => {
+              const area = context.chart.chartArea;
+              if (!area) return chartRenderer.withAlpha(color, 0.2);
+              const gradient = context.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+              gradient.addColorStop(0, chartRenderer.withAlpha(color, topAlpha));
+              gradient.addColorStop(1, chartRenderer.withAlpha(color, bottomAlpha));
+              return gradient;
+            };
+          });
+          config.options.plugins.tooltip.callbacks = {
+            title: items => (items.length ? (meta.titles[items[0].dataIndex] || '') : ''),
+            label: item => {
+              if (item.dataset.chunkyBaseline) return null;
+              const raw = item.parsed.y;
+              if (raw == null) return null;
+              return ' ' + chartRenderer.formatValue(Math.abs(raw), meta.unit) + '  ' + item.dataset.label;
+            }
+          };
+          config.options.scales.y.ticks.callback = value => chartRenderer.formatValue(Math.abs(value), meta.unit);
+          config.plugins = [shadePlugin];
+          try {
+            state.chart = new window.Chart(canvas, config);
+          } catch (_) {
+            return false;
+          }
+          // Chart.js draws its own (toggleable) legend inside the canvas;
+          // strips keep the HTML chips instead so their plot stays tall.
+          const legend = figure.querySelector('.chart-legend');
+          if (legend && config.options.plugins.legend.display) legend.remove();
+          setCaption(figure, chartRenderer.describeIndex(shown, shown.labels.length - 1));
+          figure.removeAttribute('data-chart-pending');
+          return true;
+        };
+        const renderFigure = (figure, state) => {
+          if (!(window.Chart && renderCanvas(figure, state))) renderSvg(figure, state);
+        };
+        activateCharts = section => {
+          if (!section) return;
+          Array.from(section.querySelectorAll('figure[data-chart]')).forEach(figure => {
+            const state = stateFor(figure);
+            if (!state) return;
+            if (figure.hasAttribute('data-chart-pending') || (window.Chart && !state.chart)) {
+              renderFigure(figure, state);
+            } else if (!state.chart) {
+              const stage = figure.querySelector('[data-chart-stage]');
+              if (stage && !stage.onclick) bindTap(figure, stage, shownSpec(state));
+            }
+          });
+        };
+        window.chunkyChartsUpgrade = () => activateCharts(document.querySelector('section.view.active'));
+        chartFigures.forEach(figure => {
+          Array.from(figure.querySelectorAll('button[data-chart-range]')).forEach(button => {
+            button.addEventListener('click', () => {
+              const state = stateFor(figure);
+              if (!state) return;
+              state.range = button.getAttribute('data-chart-range') || 'all';
+              figure.setAttribute('data-chart-range', state.range);
+              Array.from(figure.querySelectorAll('button[data-chart-range]')).forEach(item => item.classList.toggle('active', item === button));
+              renderFigure(figure, state);
+              const id = figure.getAttribute('data-chart-id');
+              if (!id) return;
+              chartFigures.filter(other => other.getAttribute('data-chart-follows') === id).forEach(other => {
+                const otherState = stateFor(other);
+                if (!otherState) return;
+                otherState.range = state.range;
+                other.setAttribute('data-chart-range', state.range);
+                renderFigure(other, otherState);
+              });
+            });
+          });
+        });
+      }
+
       const sourceSortState = {
         key: body.getAttribute('data-source-sort-key') || 'verdict',
         direction: normalizeDirection(body.getAttribute('data-source-sort-dir'))
@@ -3170,6 +3377,7 @@ ${verdictCss}
         body.setAttribute('data-view-mode', activeMode || '');
         body.setAttribute('data-view-key', activeKey || '');
         window.scrollTo(0, 0);
+        activateCharts(section);
       };
 
       const updateSortButtons = (buttons, state) => {

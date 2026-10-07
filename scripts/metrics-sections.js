@@ -762,6 +762,701 @@ function buildSourceWidgetSummary(health, options = {}) {
     };
 }
 
+// ============================================================================
+// CHARTS — SVG renderer, Chart.js config builder and chart specs
+// ============================================================================
+// Every dashboard chart is a plain "spec" (labels, dates, series, baseline,
+// shade) built from assessSourceHealth rows or metrics records. One renderer
+// turns a spec into inline SVG (works offline, no scripts) or a Chart.js config
+// (the page upgrades to canvas when the CDN script loads).
+//
+// createChartRenderer() is deliberately self-contained — it closes over
+// nothing in this module — so the display script can embed its source text in
+// the page (`(${createChartRenderer.toString()})()`) and re-render a chart
+// client-side for the 7 / 30 / all range toggle with the very same code the
+// tests cover here. Keep it that way: no references to module-level helpers.
+//
+// Spec shape:
+//   { id, kind: 'area'|'lines'|'stack'|'bars'|'diverging', unit, yMax,
+//     height, labels: [run_id…], dates: [ISO…], series: [{ key, label,
+//     color: {slot} | {hex}, values: [n…], role: 'area'|'line'|'bar'|'dots',
+//     down }], baseline: {value, label} | null, shade: {fromLabel, hex, label} | null }
+//
+// Colours: {slot: n} picks the n-th categorical slot of the palette for the
+// page's colour scheme (both palettes validated for CVD separation, lightness
+// band and contrast — see the dataviz validator); {hex} is a literal (verdict
+// colours, neutral "other"). Series keep their colour across range changes.
+
+function createChartRenderer() {
+    const PALETTE = {
+        light: ['#5b6ee1', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#8b5cf6', '#e34948'],
+        dark: ['#667eea', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']
+    };
+    const THEME = {
+        light: { surface: '#ffffff', grid: 'rgba(31, 37, 68, 0.1)', axis: '#5a637a', ink: '#1f2544', neutral: '#a7b0cc' },
+        dark: { surface: '#1b1c2b', grid: 'rgba(241, 242, 255, 0.12)', axis: '#c1c6e2', ink: '#f1f2ff', neutral: '#6f7799' }
+    };
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const WIDTH = 360;
+    const PAD = { left: 36, right: 12, top: 12, bottom: 20 };
+    const DAY_MS = 86400000;
+
+    const esc = (value) => String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+    const round = (value) => Math.round(value * 10) / 10;
+    const themeFor = (mode) => (mode === 'dark' ? THEME.dark : THEME.light);
+    const resolveColor = (color, mode) => {
+        const palette = mode === 'dark' ? PALETTE.dark : PALETTE.light;
+        if (color && typeof color === 'object') {
+            if (color.hex) return String(color.hex);
+            if (Number.isFinite(color.slot)) return palette[((color.slot % palette.length) + palette.length) % palette.length];
+        }
+        if (typeof color === 'string' && color) return color;
+        return palette[0];
+    };
+    const withAlpha = (hex, alpha) => {
+        const clean = String(hex || '').replace('#', '');
+        if (!/^[0-9a-fA-F]{6}$/.test(clean)) return hex;
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    // Run ids are YYYYMMDD-HHMMSS in local time; ISO dates are the fallback.
+    const dateParts = (label, iso) => {
+        const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(String(label || ''));
+        if (match) return { month: Number(match[2]), day: Number(match[3]), time: `${match[4]}:${match[5]}` };
+        const isoMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso || ''));
+        if (isoMatch) return { month: Number(isoMatch[2]), day: Number(isoMatch[3]), time: `${isoMatch[4]}:${isoMatch[5]}Z` };
+        return null;
+    };
+    const shortDate = (label, iso) => {
+        const parts = dateParts(label, iso);
+        return parts ? `${MONTHS[parts.month - 1] || parts.month} ${parts.day}` : String(label || '');
+    };
+    const longDate = (label, iso) => {
+        const parts = dateParts(label, iso);
+        return parts ? `${MONTHS[parts.month - 1] || parts.month} ${parts.day} ${parts.time}` : String(label || '');
+    };
+    const formatValue = (value, unit) => {
+        const safe = num(value);
+        const text = Number.isInteger(safe) ? String(safe) : safe.toFixed(1);
+        return unit === '%' ? `${text}%` : (unit ? `${text}${unit}` : text);
+    };
+    const niceMax = (value) => {
+        if (!(value > 0)) return 4;
+        if (value < 4) return value <= 1 ? 1 : (value <= 2 ? 2 : 4);
+        const exponent = Math.floor(Math.log10(value));
+        const base = Math.pow(10, exponent);
+        const fraction = value / base;
+        const step = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10;
+        return step * base;
+    };
+
+    const seriesOf = (spec) => (Array.isArray(spec && spec.series) ? spec.series : []);
+    const countOf = (spec) => (Array.isArray(spec && spec.labels) ? spec.labels.length : 0);
+
+    // Keep only the runs within the last `days` of the newest run (the data,
+    // not the clock, anchors the window). 'all' or a non-number keeps everything.
+    function sliceChartSpec(spec, range) {
+        const days = Number(range);
+        const labels = Array.isArray(spec && spec.labels) ? spec.labels : [];
+        if (!spec || !(days > 0) || labels.length < 2) return spec;
+        const dates = Array.isArray(spec.dates) ? spec.dates : [];
+        const times = labels.map((label, index) => {
+            const stamp = Date.parse(dates[index] || '');
+            if (Number.isFinite(stamp)) return stamp;
+            const parts = /^(\d{4})(\d{2})(\d{2})/.exec(String(label || ''));
+            return parts ? Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : null;
+        });
+        const newest = times.reduce((best, time) => (Number.isFinite(time) && time > best ? time : best), -Infinity);
+        if (!Number.isFinite(newest)) return spec;
+        const cutoff = newest - days * DAY_MS;
+        let keep = labels.map((_, index) => index).filter((index) => Number.isFinite(times[index]) && times[index] >= cutoff);
+        if (keep.length < 2) keep = labels.map((_, index) => index).slice(-2);
+        const pick = (list) => (Array.isArray(list) ? keep.map((index) => list[index]) : list);
+        return Object.assign({}, spec, {
+            labels: pick(labels),
+            dates: pick(dates),
+            series: seriesOf(spec).map((item) => Object.assign({}, item, { values: pick(item.values) }))
+        });
+    }
+
+    function shadeIndex(spec) {
+        if (!spec || !spec.shade || !spec.shade.fromLabel) return -1;
+        const index = (spec.labels || []).indexOf(spec.shade.fromLabel);
+        if (index >= 0) return index;
+        // The trouble began before the visible window: shade everything.
+        const first = String((spec.labels || [])[0] || '');
+        return first && String(spec.shade.fromLabel) < first ? 0 : -1;
+    }
+
+    // Layout shared by the SVG renderer and the hit targets.
+    function layout(spec) {
+        const height = Number.isFinite(spec && spec.height) ? spec.height : 170;
+        const count = countOf(spec);
+        const plotWidth = WIDTH - PAD.left - PAD.right;
+        const plotHeight = height - PAD.top - PAD.bottom;
+        const kind = spec && spec.kind ? spec.kind : 'area';
+        const series = seriesOf(spec);
+        let top = 0;
+        if (kind === 'stack' || kind === 'bars') {
+            for (let index = 0; index < count; index += 1) {
+                top = Math.max(top, series.reduce((sum, item) => sum + Math.max(0, num((item.values || [])[index])), 0));
+            }
+        } else {
+            series.forEach((item) => (item.values || []).forEach((value) => { top = Math.max(top, Math.abs(num(value))); }));
+        }
+        if (spec && spec.baseline && Number.isFinite(Number(spec.baseline.value))) top = Math.max(top, Number(spec.baseline.value));
+        const max = Number.isFinite(spec && spec.yMax) ? spec.yMax : niceMax(top);
+        const diverging = kind === 'diverging';
+        const zeroY = diverging ? PAD.top + plotHeight / 2 : PAD.top + plotHeight;
+        const unitHeight = diverging ? (plotHeight / 2) / max : plotHeight / max;
+        const band = count > 0 ? plotWidth / count : plotWidth;
+        const bars = kind === 'bars' || kind === 'diverging';
+        const xAt = (index) => {
+            if (bars) return PAD.left + band * (index + 0.5);
+            if (count <= 1) return PAD.left + plotWidth / 2;
+            return PAD.left + (plotWidth * index) / (count - 1);
+        };
+        const yAt = (value) => zeroY - num(value) * unitHeight;
+        return { width: WIDTH, height, plotWidth, plotHeight, count, max, zeroY, band, bars, diverging, xAt, yAt };
+    }
+
+    function tickIndices(count) {
+        if (count <= 4) return Array.from({ length: count }, (_, index) => index);
+        return [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+    }
+
+    function smoothPath(points) {
+        if (points.length < 2) return '';
+        let path = `M${points[0][0]},${points[0][1]}`;
+        for (let index = 1; index < points.length; index += 1) {
+            const [x0, y0] = points[index - 1];
+            const [x1, y1] = points[index];
+            const cx = round((x0 + x1) / 2);
+            path += ` C${cx},${y0} ${cx},${y1} ${x1},${y1}`;
+        }
+        return path;
+    }
+
+    // Inline SVG for a spec. `options.mode` picks the palette/theme.
+    function buildChartSvg(spec, options = {}) {
+        const mode = options.mode === 'dark' ? 'dark' : 'light';
+        const theme = themeFor(mode);
+        const series = seriesOf(spec);
+        const count = countOf(spec);
+        if (!spec || count === 0 || series.length === 0) return '';
+        const geo = layout(spec);
+        const id = String(spec.id || 'chart').replace(/[^a-zA-Z0-9_-]/g, '-');
+        const unit = spec.unit || '';
+        const parts = [];
+        const defs = [];
+
+        // Troubled stretch first so everything draws over it.
+        const shadeFrom = shadeIndex(spec);
+        if (shadeFrom >= 0 && spec.shade) {
+            const left = geo.bars ? PAD.left + geo.band * shadeFrom : (shadeFrom > 0 ? (geo.xAt(shadeFrom - 1) + geo.xAt(shadeFrom)) / 2 : geo.xAt(shadeFrom));
+            const right = PAD.left + geo.plotWidth;
+            parts.push(`<rect class="chart-shade" x="${round(left)}" y="${PAD.top}" width="${round(Math.max(2, right - left))}" height="${round(geo.plotHeight)}" fill="${esc(spec.shade.hex || theme.neutral)}" fill-opacity="0.12"/>`);
+        }
+
+        // Gridlines: four or five solid hairlines (whichever makes the ticks
+        // whole numbers) plus the zero/base rule.
+        const gridSteps = Number.isInteger(geo.max / 4) ? 4 : (Number.isInteger(geo.max / 5) ? 5 : (geo.max < 4 && Number.isInteger(geo.max) ? geo.max : 4));
+        for (let step = 1; step <= gridSteps; step += 1) {
+            const value = (geo.max * step) / gridSteps;
+            const y = round(geo.yAt(value));
+            parts.push(`<line class="chart-grid" x1="${PAD.left}" x2="${PAD.left + geo.plotWidth}" y1="${y}" y2="${y}" stroke="${theme.grid}" stroke-width="1"/>`);
+            parts.push(`<text class="chart-tick" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="9" fill="${theme.axis}">${esc(formatValue(value, unit))}</text>`);
+            if (geo.diverging) {
+                const yDown = round(geo.yAt(-value));
+                parts.push(`<line class="chart-grid" x1="${PAD.left}" x2="${PAD.left + geo.plotWidth}" y1="${yDown}" y2="${yDown}" stroke="${theme.grid}" stroke-width="1"/>`);
+                parts.push(`<text class="chart-tick" x="${PAD.left - 6}" y="${yDown + 3}" text-anchor="end" font-size="9" fill="${theme.axis}">${esc(formatValue(value, unit))}</text>`);
+            }
+        }
+        parts.push(`<line class="chart-zero" x1="${PAD.left}" x2="${PAD.left + geo.plotWidth}" y1="${round(geo.zeroY)}" y2="${round(geo.zeroY)}" stroke="${theme.axis}" stroke-opacity="0.5" stroke-width="1"/>`);
+
+        if (geo.bars) {
+            const barWidth = Math.max(2, Math.min(18, geo.band * 0.62));
+            const stackTop = new Array(count).fill(0);
+            series.forEach((item, seriesIndex) => {
+                if (item.role === 'dots') return;
+                const color = resolveColor(item.color, mode);
+                for (let index = 0; index < count; index += 1) {
+                    const value = num((item.values || [])[index]);
+                    if (value === 0) continue;
+                    const x = round(geo.xAt(index) - barWidth / 2);
+                    let yTop;
+                    let height;
+                    if (geo.diverging) {
+                        const signed = item.down ? -Math.abs(value) : Math.abs(value);
+                        yTop = Math.min(geo.yAt(signed), geo.zeroY);
+                        height = Math.abs(geo.yAt(signed) - geo.zeroY);
+                    } else {
+                        const base = stackTop[index];
+                        yTop = geo.yAt(base + value);
+                        height = geo.yAt(base) - yTop;
+                        stackTop[index] = base + value;
+                        if (seriesIndex > 0 && height > 4) { height -= 2; }
+                    }
+                    const radius = Math.min(3, height / 2);
+                    parts.push(`<rect class="chart-bar" data-series="${seriesIndex}" data-index="${index}" x="${x}" y="${round(yTop)}" width="${round(barWidth)}" height="${round(Math.max(1, height))}" rx="${round(radius)}" fill="${esc(color)}"${index === count - 1 ? '' : ' fill-opacity="0.85"'}/>`);
+                }
+            });
+        }
+
+        const stackBase = new Array(count).fill(0);
+        const lastPoints = [];
+        series.forEach((item, seriesIndex) => {
+            if (item.role === 'bar') return;
+            const color = resolveColor(item.color, mode);
+            const values = item.values || [];
+            if (item.role === 'dots') {
+                for (let index = 0; index < count; index += 1) {
+                    const value = num(values[index]);
+                    if (value <= 0) continue;
+                    const x = round(geo.xAt(index));
+                    const y = round(geo.yAt(geo.diverging ? value : value));
+                    parts.push(`<circle class="chart-dot" data-series="${seriesIndex}" data-index="${index}" cx="${x}" cy="${y}" r="4" fill="${esc(color)}" stroke="${theme.surface}" stroke-width="2"/>`);
+                    parts.push(`<text class="chart-dot-label" x="${x}" y="${y - 7}" text-anchor="middle" font-size="9" font-weight="600" fill="${theme.ink}">${esc(formatValue(value, ''))}</text>`);
+                }
+                return;
+            }
+            const stacked = spec.kind === 'stack';
+            const points = [];
+            const bottoms = [];
+            for (let index = 0; index < count; index += 1) {
+                const value = Math.max(0, num(values[index]));
+                const base = stacked ? stackBase[index] : 0;
+                points.push([round(geo.xAt(index)), round(geo.yAt(base + value))]);
+                bottoms.push([round(geo.xAt(index)), round(geo.yAt(base))]);
+                if (stacked) stackBase[index] = base + value;
+            }
+            const line = count > 1 ? smoothPath(points) : '';
+            if (item.role !== 'line' && count > 1) {
+                const gradientId = `g-${id}-${seriesIndex}`;
+                defs.push(`<linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${esc(color)}" stop-opacity="${stacked ? 0.55 : 0.32}"/><stop offset="1" stop-color="${esc(color)}" stop-opacity="${stacked ? 0.25 : 0.03}"/></linearGradient>`);
+                const back = stacked ? smoothPath(bottoms.slice().reverse()).replace(/^M/, 'L') : `L${points[count - 1][0]},${round(geo.zeroY)} L${points[0][0]},${round(geo.zeroY)}`;
+                parts.push(`<path class="chart-area" data-series="${seriesIndex}" d="${line} ${back} Z" fill="url(#${gradientId})"/>`);
+            }
+            if (line) parts.push(`<path class="chart-line" data-series="${seriesIndex}" d="${line}" fill="none" stroke="${esc(color)}" stroke-width="${stacked ? 1.25 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`);
+            if (!stacked) lastPoints.push({ x: points[count - 1][0], y: points[count - 1][1], color });
+        });
+
+        // Baseline as a dashed reference rule (a threshold, not a gridline).
+        if (spec.baseline && Number.isFinite(Number(spec.baseline.value))) {
+            const y = round(geo.yAt(Number(spec.baseline.value)));
+            parts.push(`<line class="chart-baseline" x1="${PAD.left}" x2="${PAD.left + geo.plotWidth}" y1="${y}" y2="${y}" stroke="${theme.axis}" stroke-width="1" stroke-dasharray="4 3"/>`);
+            parts.push(`<text class="chart-baseline-label" x="${PAD.left + geo.plotWidth}" y="${y - 3}" text-anchor="end" font-size="9" fill="${theme.axis}">${esc(spec.baseline.label || 'baseline')} ${esc(formatValue(spec.baseline.value, unit))}</text>`);
+        }
+
+        // Emphasised newest point: a ring in the surface colour, then the dot.
+        lastPoints.forEach((point) => {
+            parts.push(`<circle class="chart-last" cx="${point.x}" cy="${point.y}" r="3.5" fill="${esc(point.color)}" stroke="${theme.surface}" stroke-width="2"/>`);
+        });
+
+        // Date axis.
+        tickIndices(count).forEach((index, position, list) => {
+            const anchor = position === 0 ? 'start' : (position === list.length - 1 ? 'end' : 'middle');
+            const x = round(geo.xAt(index));
+            parts.push(`<text class="chart-tick" x="${x}" y="${geo.height - 6}" text-anchor="${anchor}" font-size="9" fill="${theme.axis}">${esc(shortDate(spec.labels[index], (spec.dates || [])[index]))}</text>`);
+        });
+
+        // Cursor + one hit target over the plot for the tap-to-caption
+        // behaviour; the page maps a tap to the nearest run with indexAtX().
+        parts.push(`<line class="chart-cursor" data-chart-cursor x1="0" x2="0" y1="${PAD.top}" y2="${PAD.top + geo.plotHeight}" stroke="${theme.axis}" stroke-width="1" stroke-opacity="0"/>`);
+        parts.push(`<rect class="chart-hit" data-chart-hit x="${PAD.left}" y="${PAD.top}" width="${round(geo.plotWidth)}" height="${round(geo.plotHeight)}" fill="transparent"/>`);
+
+        const title = spec.title ? `<title>${esc(spec.title)}</title>` : '';
+        return `<svg class="chart-svg" viewBox="0 0 ${geo.width} ${geo.height}" width="100%" role="img" aria-label="${esc(spec.title || 'chart')}" data-count="${count}" style="font-family: inherit; font-variant-numeric: tabular-nums;">${title}${defs.length ? `<defs>${defs.join('')}</defs>` : ''}${parts.join('')}</svg>`;
+    }
+
+    // Tap geometry for the page: which run sits under viewBox x, and where a
+    // run's cursor line goes.
+    function indexAtX(spec, x) {
+        const geo = layout(spec);
+        if (geo.count === 0) return -1;
+        let index;
+        if (geo.bars) index = Math.floor((x - PAD.left) / geo.band);
+        else if (geo.count === 1) index = 0;
+        else index = Math.round(((x - PAD.left) / geo.plotWidth) * (geo.count - 1));
+        return Math.max(0, Math.min(geo.count - 1, index));
+    }
+    function xForIndex(spec, index) {
+        const geo = layout(spec);
+        return round(geo.xAt(Math.max(0, Math.min(Math.max(0, geo.count - 1), index))));
+    }
+
+    // One line of numbers for the run at `index` (the tap caption).
+    function describeIndex(spec, index) {
+        const count = countOf(spec);
+        if (!spec || count === 0) return '';
+        const safeIndex = Number.isFinite(index) && index >= 0 && index < count ? index : count - 1;
+        const unit = spec.unit || '';
+        const values = seriesOf(spec).map((item) => `${item.label} ${formatValue((item.values || [])[safeIndex], unit)}`);
+        return `${longDate(spec.labels[safeIndex], (spec.dates || [])[safeIndex])} · ${values.join(' · ')}`;
+    }
+
+    // Legend chips: colour swatch + label + the newest value (tabular).
+    function buildLegendHtml(spec, options = {}) {
+        const mode = options.mode === 'dark' ? 'dark' : 'light';
+        const series = seriesOf(spec);
+        const count = countOf(spec);
+        if (series.length < 2) return '';
+        const unit = spec.unit || '';
+        return `<div class="chart-legend">${series.map((item, seriesIndex) => {
+            const color = resolveColor(item.color, mode);
+            const latest = count ? formatValue((item.values || [])[count - 1], unit) : '';
+            const shape = item.role === 'bar' || item.role === 'dots' ? 'chart-swatch square' : 'chart-swatch';
+            return `<span class="chart-legend-item" data-series="${seriesIndex}"><span class="${shape}" style="background:${esc(color)}"></span><span class="chart-legend-label">${esc(item.label)}</span><span class="chart-legend-value">${esc(latest)}</span></span>`;
+        }).join('')}</div>`;
+    }
+
+    // Chart.js (v4) config for the same spec. Callbacks cannot ride in JSON, so
+    // `config.chunky` carries what the page's upgrader wires up (tooltips,
+    // gradient fills, the shaded stretch).
+    function buildChartJsConfig(spec, options = {}) {
+        const mode = options.mode === 'dark' ? 'dark' : 'light';
+        const theme = themeFor(mode);
+        const series = seriesOf(spec);
+        const count = countOf(spec);
+        const kind = spec && spec.kind ? spec.kind : 'area';
+        const bars = kind === 'bars' || kind === 'diverging';
+        const stacked = kind === 'stack' || kind === 'bars';
+        const labels = (spec.labels || []).map((label, index) => shortDate(label, (spec.dates || [])[index]));
+        const datasets = series.map((item, seriesIndex) => {
+            const color = resolveColor(item.color, mode);
+            const values = (item.values || []).map((value) => num(value));
+            if (item.role === 'dots') {
+                return {
+                    type: 'line', label: item.label, data: values.map((value) => (value > 0 ? value : null)), showLine: false,
+                    borderColor: color, backgroundColor: color, pointRadius: 5, pointHoverRadius: 7, pointBorderColor: theme.surface, pointBorderWidth: 2, order: 0
+                };
+            }
+            if (item.role === 'bar' || bars) {
+                return {
+                    type: 'bar', label: item.label, data: item.down ? values.map((value) => -Math.abs(value)) : values,
+                    backgroundColor: withAlpha(color, 0.85), borderColor: color, borderWidth: 0, borderRadius: 4, borderSkipped: false,
+                    barPercentage: 0.62, categoryPercentage: 1, stack: kind === 'diverging' ? 'diverging' : 'stack', order: 2
+                };
+            }
+            const fill = item.role === 'line' ? false : (stacked && seriesIndex > 0 ? '-1' : 'origin');
+            return {
+                type: 'line', label: item.label, data: values, borderColor: color, backgroundColor: withAlpha(color, stacked ? 0.45 : 0.18),
+                fill, tension: 0.35, borderWidth: stacked ? 1.25 : 2, pointRadius: values.map((_, index) => (index === count - 1 ? 3.5 : 0)),
+                pointHoverRadius: 5, pointBackgroundColor: color, pointBorderColor: theme.surface, pointBorderWidth: 2, order: 1, chunkyGradient: fill !== false
+            };
+        });
+        if (spec.baseline && Number.isFinite(Number(spec.baseline.value))) {
+            datasets.push({
+                type: 'line', label: `${spec.baseline.label || 'Baseline'} ${formatValue(spec.baseline.value, spec.unit || '')}`,
+                data: new Array(count).fill(Number(spec.baseline.value)), borderColor: theme.axis, borderDash: [4, 3], borderWidth: 1,
+                pointRadius: 0, pointHoverRadius: 0, fill: false, order: 3, chunkyBaseline: true
+            });
+        }
+        const reduceMotion = options.reducedMotion === true;
+        const shadeFrom = shadeIndex(spec);
+        return {
+            type: bars ? 'bar' : 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: reduceMotion ? false : { duration: 650, easing: 'easeOutQuart' },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { stacked, grid: { display: false }, border: { display: false }, ticks: { color: theme.axis, maxTicksLimit: 5, maxRotation: 0, font: { size: 10 } } },
+                    y: Object.assign({
+                        stacked, grid: { color: theme.grid, lineWidth: 1 }, border: { display: false, dash: [0] },
+                        ticks: { color: theme.axis, maxTicksLimit: 5, font: { size: 10 }, precision: 0 }, beginAtZero: kind !== 'diverging'
+                    }, Number.isFinite(spec.yMax) ? { max: spec.yMax } : {}, kind === 'diverging' ? { suggestedMin: -1, suggestedMax: 1 } : {})
+                },
+                plugins: {
+                    legend: { display: series.length > 1 && kind !== 'bars', position: 'bottom', labels: { color: theme.axis, usePointStyle: true, pointStyle: 'circle', boxWidth: 6, boxHeight: 6, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', intersect: false, titleFont: { size: 11 }, bodyFont: { size: 11 }, padding: 8, displayColors: true, usePointStyle: true },
+                    chunkyShade: shadeFrom >= 0 && spec.shade ? { fromIndex: shadeFrom, color: spec.shade.hex || theme.neutral, label: spec.shade.label || '' } : null
+                }
+            },
+            chunky: {
+                kind,
+                unit: spec.unit || '',
+                mode,
+                surface: theme.surface,
+                titles: (spec.labels || []).map((label, index) => longDate(label, (spec.dates || [])[index])),
+                diverging: kind === 'diverging',
+                shadeFrom
+            }
+        };
+    }
+
+    return { WIDTH, PALETTE, THEME, resolveColor, withAlpha, shortDate, longDate, formatValue, sliceChartSpec, shadeIndex, buildChartSvg, buildChartJsConfig, describeIndex, buildLegendHtml, indexAtX, xForIndex };
+}
+
+const chartRenderer = createChartRenderer();
+
+// ---- spec builders ---------------------------------------------------------
+
+// All run ids seen across rows, oldest → newest, with their finished_at.
+function collectSourceRuns(rows) {
+    const byRun = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        (Array.isArray(row && row.series) ? row.series : []).forEach((line) => {
+            if (!line || !line.run_id) return;
+            if (!byRun.has(line.run_id)) byRun.set(line.run_id, line.finished_at || '');
+        });
+    });
+    return Array.from(byRun.entries())
+        .sort((a, b) => String(a[1]).localeCompare(String(b[1])) || String(a[0]).localeCompare(String(b[0])))
+        .map(([runId, finishedAt]) => ({ run_id: runId, finished_at: finishedAt }));
+}
+
+const NEUTRAL_SERIES_HEX = '#a7b0cc';
+
+// Sources overview: extracted per run stacked by host. Troubled hosts are
+// named first (worst first, in their verdict colour), then the biggest ok
+// hosts fill the palette's eight slots; everything else folds into "other".
+function buildSourcesOverviewChartSpec(health, options = {}) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const runs = collectSourceRuns(rows);
+    if (!runs.length || !rows.length) return null;
+    const verdictColors = options.verdictColors || {};
+    const maxNamed = Number.isFinite(options.maxNamed) ? options.maxNamed : 8;
+    const totalOf = (row) => row.series.reduce((sum, line) => sum + (Number(line.extracted) || 0), 0);
+    const troubled = rows.filter((row) => row.verdict !== 'ok').sort((a, b) => sourceVerdictRank(a.verdict) - sourceVerdictRank(b.verdict) || totalOf(b) - totalOf(a)).slice(0, maxNamed);
+    const okRows = rows.filter((row) => row.verdict === 'ok').sort((a, b) => totalOf(b) - totalOf(a)).slice(0, Math.max(0, maxNamed - troubled.length));
+    const namedHosts = new Set([...troubled, ...okRows].map((row) => row.host));
+    const valuesFor = (row) => {
+        const byRun = new Map(row.series.map((line) => [line.run_id, Number(line.extracted) || 0]));
+        return runs.map((run) => byRun.get(run.run_id) || 0);
+    };
+    const series = [];
+    okRows.forEach((row, index) => {
+        series.push({ key: row.host, label: row.host, color: { slot: index }, values: valuesFor(row), role: 'area' });
+    });
+    troubled.forEach((row) => {
+        series.push({ key: row.host, label: row.host, color: { hex: verdictColors[row.verdict] || NEUTRAL_SERIES_HEX }, values: valuesFor(row), role: 'area', verdict: row.verdict });
+    });
+    const rest = rows.filter((row) => !namedHosts.has(row.host));
+    if (rest.length) {
+        const other = runs.map(() => 0);
+        rest.forEach((row) => valuesFor(row).forEach((value, index) => { other[index] += value; }));
+        series.push({ key: 'other', label: `${rest.length} other site${rest.length === 1 ? '' : 's'}`, color: { hex: NEUTRAL_SERIES_HEX }, values: other, role: 'area' });
+    }
+    return {
+        id: 'sources-overview',
+        kind: 'stack',
+        title: 'Extracted per run, by site',
+        unit: '',
+        height: 210,
+        labels: runs.map((run) => run.run_id),
+        dates: runs.map((run) => run.finished_at),
+        series,
+        baseline: null,
+        shade: null
+    };
+}
+
+// Sites answering: per run, how many hosts came back ok vs not (status).
+function buildSitesAnsweringChartSpec(health) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const runs = collectSourceRuns(rows);
+    if (!runs.length) return null;
+    const ok = runs.map(() => 0);
+    const troubled = runs.map(() => 0);
+    const index = new Map(runs.map((run, position) => [run.run_id, position]));
+    rows.forEach((row) => row.series.forEach((line) => {
+        const position = index.get(line.run_id);
+        if (position === undefined) return;
+        if (line.status === 'ok') ok[position] += 1; else troubled[position] += 1;
+    }));
+    return {
+        id: 'sites-answering',
+        kind: 'bars',
+        title: 'Sites answering per run',
+        unit: '',
+        height: 90,
+        labels: runs.map((run) => run.run_id),
+        dates: runs.map((run) => run.finished_at),
+        series: [
+            { key: 'ok', label: 'ok', color: { slot: 0 }, values: ok, role: 'bar' },
+            { key: 'troubled', label: 'not ok', color: { hex: '#d03b3b' }, values: troubled, role: 'bar' }
+        ],
+        baseline: null,
+        shade: null
+    };
+}
+
+function hostShade(row, options = {}) {
+    if (!row || !row.since) return null;
+    const verdictColors = options.verdictColors || {};
+    return { fromLabel: row.since, hex: verdictColors[row.verdict] || NEUTRAL_SERIES_HEX, label: `${sourceVerdictLabel(row.verdict)} since ${formatSourceRun(row.since)}` };
+}
+
+// Host detail: extracted / bear / upcoming areas, the baseline, the troubled stretch.
+function buildHostSeriesChartSpec(row, options = {}) {
+    const series = row && Array.isArray(row.series) ? row.series : [];
+    if (!row || series.length < 2) return null;
+    const safeHost = String(row.host || 'host').replace(/[^a-zA-Z0-9]/g, '-');
+    return {
+        id: `host-${safeHost}-series`,
+        kind: 'area',
+        title: `${row.host} per run`,
+        unit: '',
+        height: 190,
+        labels: series.map((line) => line.run_id),
+        dates: series.map((line) => line.finished_at),
+        series: [
+            { key: 'extracted', label: 'Extracted', color: { slot: 0 }, values: series.map((line) => Number(line.extracted) || 0), role: 'area' },
+            { key: 'bear', label: 'Bear', color: { slot: 1 }, values: series.map((line) => Number(line.bear) || 0), role: 'area' },
+            { key: 'upcoming', label: 'Upcoming', color: { slot: 2 }, values: series.map((line) => Number(line.upcoming) || 0), role: 'line' }
+        ],
+        baseline: Number.isFinite(Number(row.baseline)) && row.baseline !== null ? { value: Number(row.baseline), label: 'baseline' } : null,
+        shade: hostShade(row, options)
+    };
+}
+
+// Thin bar row under the host chart: pages fetched and page errors per run.
+// Pages are not on the assessment series; options.records (the raw ledger) supplies them.
+function buildHostPagesChartSpec(row, options = {}) {
+    const series = row && Array.isArray(row.series) ? row.series : [];
+    if (!row || series.length < 2) return null;
+    const pagesByRun = new Map();
+    (Array.isArray(options.records) ? options.records : []).forEach((record) => {
+        if (record && record.host === row.host && record.run_id) pagesByRun.set(record.run_id, Number(record.pages) || 0);
+    });
+    const safeHost = String(row.host || 'host').replace(/[^a-zA-Z0-9]/g, '-');
+    return {
+        id: `host-${safeHost}-pages`,
+        kind: 'bars',
+        title: `${row.host} pages per run`,
+        unit: '',
+        height: 80,
+        labels: series.map((line) => line.run_id),
+        dates: series.map((line) => line.finished_at),
+        series: [
+            { key: 'pages', label: 'Pages', color: { slot: 0 }, values: series.map((line) => pagesByRun.get(line.run_id) || 0), role: 'bar' },
+            { key: 'page_errors', label: 'Page errors', color: { hex: '#d03b3b' }, values: series.map((line) => Number(line.page_errors) || 0), role: 'bar' }
+        ],
+        baseline: null,
+        shade: hostShade(row, options)
+    };
+}
+
+// Proposals as a diverging bar (new up, merge down) with vanished counts as dots.
+function buildHostProposalsChartSpec(row, options = {}) {
+    const series = row && Array.isArray(row.series) ? row.series : [];
+    if (!row || series.length < 2) return null;
+    const verdictColors = options.verdictColors || {};
+    const safeHost = String(row.host || 'host').replace(/[^a-zA-Z0-9]/g, '-');
+    return {
+        id: `host-${safeHost}-proposals`,
+        kind: 'diverging',
+        title: `${row.host} proposals per run`,
+        unit: '',
+        height: 150,
+        labels: series.map((line) => line.run_id),
+        dates: series.map((line) => line.finished_at),
+        series: [
+            { key: 'new', label: 'New', color: { slot: 0 }, values: series.map((line) => Number(line.proposals && line.proposals.new) || 0), role: 'bar' },
+            { key: 'merge', label: 'Merge', color: { slot: 1 }, values: series.map((line) => Number(line.proposals && line.proposals.merge) || 0), role: 'bar', down: true },
+            { key: 'vanished', label: 'Vanished', color: { hex: verdictColors.vanished || '#e056a0' }, values: series.map((line) => Number(line.vanished) || 0), role: 'dots' }
+        ],
+        baseline: null,
+        shade: null
+    };
+}
+
+// Runs tab: event quality (percent of events with a venue / coordinates /
+// duration) and AI time per run, from metrics.ndjson records with signals.
+function buildQualityChartSpec(records) {
+    const rows = (Array.isArray(records) ? records : []).filter((record) => record && record.signals && typeof record.signals === 'object');
+    if (rows.length < 2) return null;
+    const trend = buildQualityTrendData(rows);
+    return {
+        id: 'event-quality',
+        kind: 'lines',
+        title: 'Event quality per run',
+        unit: '%',
+        yMax: 100,
+        height: 170,
+        labels: rows.map((record) => record.run_id || ''),
+        dates: rows.map((record) => record.finished_at || ''),
+        series: [
+            { key: 'venue', label: 'With venue', color: { slot: 0 }, values: trend.venuePct, role: 'line' },
+            { key: 'coords', label: 'With coordinates', color: { slot: 1 }, values: trend.coordsPct, role: 'line' },
+            { key: 'duration', label: 'With duration', color: { slot: 2 }, values: trend.durationPct, role: 'line' }
+        ],
+        baseline: null,
+        shade: null
+    };
+}
+
+function buildAiTimeChartSpec(records) {
+    const rows = (Array.isArray(records) ? records : []).filter((record) => record && record.signals && typeof record.signals === 'object');
+    if (rows.length < 2) return null;
+    const trend = buildQualityTrendData(rows);
+    return {
+        id: 'ai-time',
+        kind: 'area',
+        title: 'AI time per run',
+        unit: 's',
+        height: 150,
+        labels: rows.map((record) => record.run_id || ''),
+        dates: rows.map((record) => record.finished_at || ''),
+        series: [
+            { key: 'ai', label: 'AI time', color: { slot: 6 }, values: trend.aiTotalMs.map((ms) => Math.round(ms / 100) / 10), role: 'area' }
+        ],
+        baseline: null,
+        shade: null
+    };
+}
+
+const CHART_RANGES = [
+    { key: '7', label: '7d', days: 7 },
+    { key: '30', label: '30d', days: 30 },
+    { key: 'all', label: 'All', days: null }
+];
+
+// JSON inside a single-quoted attribute: only &, <, > and the quote itself
+// need escaping, which keeps the embedded spec a third the size of &quot;-ing
+// every string delimiter.
+function escapeJsonAttr(json) {
+    return String(json || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/'/g, '&#39;');
+}
+
+// A chart figure: range toggle, the SVG for the default range, legend chips
+// and the caption line, with the full spec embedded for the page script
+// (re-render on range change, tap-to-caption, Chart.js upgrade).
+// options.render === false leaves the stage empty (data-chart-pending) so a
+// view that is not visible on load costs only its spec; the page renders it
+// with the same code when the view is opened. options.follows names another
+// figure whose range toggle this one obeys (no toggle of its own).
+function buildChartFigureHtml(spec, options = {}) {
+    if (!spec || !Array.isArray(spec.labels) || !spec.labels.length) return '';
+    const mode = options.mode === 'dark' ? 'dark' : 'light';
+    const range = CHART_RANGES.some((item) => item.key === String(options.range)) ? String(options.range) : '30';
+    const rangeDays = (CHART_RANGES.find((item) => item.key === range) || {}).days;
+    const shown = rangeDays ? chartRenderer.sliceChartSpec(spec, rangeDays) : spec;
+    const follows = options.follows ? ` data-chart-follows="${escapeHtml(options.follows)}"` : '';
+    const toggle = options.follows || options.rangeToggle === false ? '' : `<div class="chart-range" role="group" aria-label="Range">${CHART_RANGES.map((item) => `<button type="button" class="chart-range-button${item.key === range ? ' active' : ''}" data-chart-range="${item.key}">${escapeHtml(item.label)}</button>`).join('')}</div>`;
+    const caption = chartRenderer.describeIndex(shown, shown.labels.length - 1);
+    const pending = options.render === false;
+    const stage = pending ? '' : chartRenderer.buildChartSvg(shown, { mode });
+    return `
+        <figure class="chart-figure chart-kind-${escapeHtml(spec.kind || 'area')}" data-chart='${escapeJsonAttr(JSON.stringify(spec))}' data-chart-id="${escapeHtml(spec.id || '')}" data-chart-range="${range}" data-chart-mode="${mode}"${follows}${pending ? ' data-chart-pending="1"' : ''}>
+          ${toggle}
+          <div class="chart-stage" data-chart-stage style="aspect-ratio: ${chartRenderer.WIDTH} / ${Number.isFinite(spec.height) ? spec.height : 170};">${stage}</div>
+          ${chartRenderer.buildLegendHtml(shown, { mode })}
+          <figcaption class="chart-caption" data-chart-caption>${escapeHtml(caption)}</figcaption>
+        </figure>`;
+}
+
 const MetricsSections = {
     SOURCE_VERDICT_ORDER,
     parseSourceLedger,
@@ -791,7 +1486,18 @@ const MetricsSections = {
     buildHostSeriesTableHtml,
     buildHostErrorsHtml,
     buildVanishedListHtml,
-    buildSourceWidgetSummary
+    buildSourceWidgetSummary,
+    createChartRenderer,
+    chartRenderer,
+    CHART_RANGES,
+    buildSourcesOverviewChartSpec,
+    buildSitesAnsweringChartSpec,
+    buildHostSeriesChartSpec,
+    buildHostPagesChartSpec,
+    buildHostProposalsChartSpec,
+    buildQualityChartSpec,
+    buildAiTimeChartSpec,
+    buildChartFigureHtml
 };
 
 // Export for both environments
@@ -826,7 +1532,18 @@ if (typeof module !== 'undefined' && module.exports) {
         buildHostSeriesTableHtml,
         buildHostErrorsHtml,
         buildVanishedListHtml,
-        buildSourceWidgetSummary
+        buildSourceWidgetSummary,
+        createChartRenderer,
+        chartRenderer,
+        CHART_RANGES,
+        buildSourcesOverviewChartSpec,
+        buildSitesAnsweringChartSpec,
+        buildHostSeriesChartSpec,
+        buildHostPagesChartSpec,
+        buildHostProposalsChartSpec,
+        buildQualityChartSpec,
+        buildAiTimeChartSpec,
+        buildChartFigureHtml
     };
 } else if (typeof window !== 'undefined') {
     window.MetricsSections = MetricsSections;
