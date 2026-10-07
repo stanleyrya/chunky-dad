@@ -1200,6 +1200,44 @@ class WebAdapter {
     // dirs. `results` may be null for a FAILED run — the log (the evidence of
     // what went wrong) is still written; the run JSON is not. Returns the
     // runId, or null when the shared root is off or the save failed.
+    // Source ledger (metrics/sources.ndjson + metrics/source-upcoming.json):
+    // one line per run per website, written by every run — the Mac's daily
+    // scrape included, which the per-parser metrics.ndjson never recorded.
+    // Idempotent per run id: a phone execute re-saving this run adds nothing.
+    getSourceLedgerPaths() {
+        const metricsDir = this.path.join(this.sharedStorageRoot, 'metrics');
+        return {
+            metricsDir,
+            ledger: this.path.join(metricsDir, 'sources.ndjson'),
+            upcoming: this.path.join(metricsDir, 'source-upcoming.json')
+        };
+    }
+
+    async appendSourceLedger(payload, runId) {
+        if (!this.isNode || !this.sharedStorageRoot || !this.fs || !this.path) return null;
+        const SharedCoreRef = this.getSharedCoreRef();
+        if (!SharedCoreRef || typeof SharedCoreRef.buildSourceLedger !== 'function') return null;
+        const paths = this.getSourceLedgerPaths();
+        await this.fs.promises.mkdir(paths.metricsDir, { recursive: true });
+        let existing = '';
+        try { existing = await this.fs.promises.readFile(paths.ledger, 'utf8'); } catch (_) { existing = ''; }
+        if (runId && existing.includes(`"run_id":"${runId}"`)) {
+            console.log(`🟢 Node.js: Source ledger already has run ${runId} — nothing to add`);
+            return null;
+        }
+        let previousUpcoming = null;
+        try { previousUpcoming = JSON.parse(await this.fs.promises.readFile(paths.upcoming, 'utf8')); } catch (_) { previousUpcoming = null; }
+        const built = SharedCoreRef.buildSourceLedger(payload, { runId, previousUpcoming, now: new Date() });
+        if (!built.records.length) return built;
+        const lines = built.records.map((record) => JSON.stringify(record)).join('\n') + '\n';
+        const content = existing && !existing.endsWith('\n') ? `${existing}\n${lines}` : `${existing}${lines}`;
+        await this.writeFileAtomicallyNode(paths.ledger, content);
+        await this.writeFileAtomicallyNode(paths.upcoming, JSON.stringify(built.upcoming));
+        const trouble = built.records.filter((record) => record.status !== 'ok' || record.vanished.length > 0).length;
+        console.log(`🟢 Node.js: 📒 Source ledger +${built.records.length} host line(s) for run ${runId}${trouble ? ` — ${trouble} host(s) with trouble` : ''}`);
+        return built;
+    }
+
     async saveRunToSharedStorage(results, options = {}) {
         if (!this.isNode || !this.sharedStorageRoot || !this.fs || !this.path) return null;
         try {
@@ -1260,6 +1298,11 @@ class WebAdapter {
                 results.savedRunId = runId;
                 results.savedRunPath = runFilePath;
                 console.log(`🟢 Node.js: 💾 Saved run ${runId} to ${runFilePath} (shared storage — the phone's saved-run browser lists it like a phone run)`);
+                try {
+                    await this.appendSourceLedger(payload, runId);
+                } catch (ledgerError) {
+                    console.log(`🟢 Node.js: Source ledger write failed: ${ledgerError && ledgerError.message ? ledgerError.message : ledgerError}`);
+                }
             }
 
             // Same first-line shape as the phone's appendLogSummary, so log
