@@ -9991,6 +9991,34 @@ class SharedCore {
         return SharedCore.isTransportFailureMessage(message);
     }
 
+    // A REFUSAL IS ABOUT THE CLIENT, NOT THE PAGE. 403 and 429 are what a
+    // bot wall or a rate limit says to the shape of the request it saw that
+    // minute: eaglebarwm.com answered 403 to every plain request from
+    // 2026-10-05 (Cloudflare bot management — curl, Node and headless Chrome
+    // alike) while the same calendar served a browser 200. The 403 written
+    // into the page cache that night was then honoured for two days without
+    // the site being asked once. So a refusal is never written as a note
+    // (saveNonRetryableFailureNote) and one already written reads as a miss
+    // (both adapters' readCachedPage) — 404/410 stay what the page said.
+    static isClientRefusalStatus(statusCode) {
+        const code = Number(statusCode);
+        return code === 403 || code === 429;
+    }
+
+    static isClientRefusalNote(cached) {
+        if (!cached || typeof cached !== 'object') return false;
+        const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+        if (fetchState && fetchState !== 'failed') return false;
+        const failure = cached.failure && typeof cached.failure === 'object' ? cached.failure : null;
+        if (!failure) return false;
+        if (SharedCore.isClientRefusalStatus(cached.statusCode)) return true;
+        const message = typeof failure.error === 'string'
+            ? failure.error
+            : (failure.error && typeof failure.error.message === 'string' ? failure.error.message : '');
+        const stated = message.match(/\bHTTP\s+(\d{3})\b/i);
+        return Boolean(stated && SharedCore.isClientRefusalStatus(stated[1]));
+    }
+
     isRetryableFailure(error) {
         if (error && typeof error.retryable === 'boolean') {
             return error.retryable;
@@ -10051,6 +10079,11 @@ class SharedCore {
 
     async saveNonRetryableFailureNote(httpAdapter, url, error, context) {
         if (this.isRetryableFailure(error)) {
+            return false;
+        }
+        // A refusal (403/429) is not a fact about the page — see
+        // isClientRefusalNote. Tomorrow's run asks again.
+        if (SharedCore.isClientRefusalStatus(this.extractHttpStatusCodeFromError(error))) {
             return false;
         }
         if (!httpAdapter || typeof httpAdapter.saveFailureNote !== 'function') {

@@ -1351,6 +1351,18 @@ class ScriptableAdapter {
           );
           return null;
         }
+        // A refusal (403/429) was about the client that minute, not the
+        // page (SharedCore.isClientRefusalNote): a miss.
+        if (
+          typeof SharedCore !== "undefined" &&
+          typeof SharedCore.isClientRefusalNote === "function" &&
+          SharedCore.isClientRefusalNote(cached)
+        ) {
+          console.log(
+            `📱 Scriptable: Ignoring a cached refusal for ${normalizedUrl} (noted ${cached.fetchedAt || "earlier"}) — that was about the client, asking again`,
+          );
+          return null;
+        }
         const failureMessage =
           typeof cached.failure.error === "string"
             ? cached.failure.error
