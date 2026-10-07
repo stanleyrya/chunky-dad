@@ -616,13 +616,228 @@ class StaleParsersChecker {
     return VERDICT_COLORS[verdict] || BRAND.neutral;
   }
 
+  // ── Widget art (DrawContext) ─────────────────────────────────────────────
+  // Same visual language as display-run-metrics.js: a verdict ring over a
+  // faint track with the count in the middle, verdict dots on the rows, and
+  // the brand purple deepened in dark mode (Device.isUsingDarkAppearance).
+
+  getWidgetPalette() {
+    if (this._widgetPalette) return this._widgetPalette;
+    let dark = false;
+    try {
+      dark = typeof Device !== 'undefined' && typeof Device.isUsingDarkAppearance === 'function'
+        ? !!Device.isUsingDarkAppearance()
+        : false;
+    } catch (_) {
+      dark = false;
+    }
+    this._widgetPalette = dark
+      ? { dark: true, background: '#2a2f5e', backgroundDeep: '#1b1f42', text: BRAND.textSoft, textMuted: '#c7cdf0', card: 0.09, track: 0.12 }
+      : { dark: false, background: BRAND.primary, backgroundDeep: '#5260d8', text: BRAND.text, textMuted: BRAND.textMuted, card: WIDGET_STYLE.rowBackgroundAlpha, track: 0.18 };
+    return this._widgetPalette;
+  }
+
+  createWidget() {
+    const palette = this.getWidgetPalette();
+    const widget = new ListWidget();
+    widget.backgroundColor = new Color(palette.background);
+    try {
+      if (typeof LinearGradient === 'function') {
+        const gradient = new LinearGradient();
+        gradient.colors = [new Color(palette.background), new Color(palette.backgroundDeep)];
+        gradient.locations = [0, 1];
+        gradient.startPoint = new Point(0, 0);
+        gradient.endPoint = new Point(1, 1);
+        widget.backgroundGradient = gradient;
+      }
+    } catch (error) {
+      console.log(`StaleParsers: widget gradient unavailable: ${error.message}`);
+    }
+    widget.setPadding(12, 12, 12, 12);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
+    return widget;
+  }
+
+  widgetFont(size, weight = 'regular') {
+    const rounded = {
+      regular: 'regularRoundedSystemFont',
+      medium: 'mediumRoundedSystemFont',
+      bold: 'boldRoundedSystemFont',
+      heavy: 'heavyRoundedSystemFont'
+    }[weight] || 'regularRoundedSystemFont';
+    if (typeof Font[rounded] === 'function') return Font[rounded](size);
+    return weight === 'regular' ? Font.systemFont(size) : Font.boldSystemFont(size);
+  }
+
+  // Scriptable's Path has no arc primitive: cubic curves of at most a quarter
+  // turn each (radians, screen orientation, increasing angles run clockwise).
+  appendArc(path, cx, cy, radius, startAngle, endAngle, moveFirst) {
+    const sweep = endAngle - startAngle;
+    const segments = Math.max(1, Math.ceil(Math.abs(sweep) / (Math.PI / 2)));
+    const step = sweep / segments;
+    const k = (4 / 3) * Math.tan(step / 4);
+    const at = angle => new Point(cx + (radius * Math.cos(angle)), cy + (radius * Math.sin(angle)));
+    let angle = startAngle;
+    let from = at(angle);
+    if (moveFirst) path.move(from);
+    else path.addLine(from);
+    for (let index = 0; index < segments; index += 1) {
+      const next = angle + step;
+      const to = at(next);
+      const control1 = new Point(from.x - (k * radius * Math.sin(angle)), from.y + (k * radius * Math.cos(angle)));
+      const control2 = new Point(to.x + (k * radius * Math.sin(next)), to.y - (k * radius * Math.cos(next)));
+      path.addCurve(to, control1, control2);
+      angle = next;
+      from = to;
+    }
+  }
+
+  // Gauge ring: faint track, one arc per segment clockwise from the top, a
+  // big number (and a small caption) in the middle.
+  buildRingImage(options = {}) {
+    const palette = this.getWidgetPalette();
+    const size = Number.isFinite(options.size) ? options.size : 64;
+    const thickness = Number.isFinite(options.thickness) ? options.thickness : Math.max(5, Math.round(size * 0.13));
+    const ctx = new DrawContext();
+    ctx.size = new Size(size, size);
+    ctx.respectScreenScale = true;
+    ctx.opaque = false;
+    const center = size / 2;
+    const radius = (size / 2) - (thickness / 2) - 1;
+    const total = Math.max(0, Number(options.total) || 0);
+    const segments = (Array.isArray(options.segments) ? options.segments : [])
+      .filter(segment => segment && Number(segment.value) > 0);
+
+    ctx.setStrokeColor(new Color('#ffffff', palette.track));
+    ctx.setLineWidth(thickness);
+    ctx.strokeEllipse(new Rect(center - radius, center - radius, radius * 2, radius * 2));
+
+    if (total > 0 && segments.length) {
+      const gap = segments.length > 1 ? 0.035 : 0;
+      let angle = -Math.PI / 2;
+      segments.forEach(segment => {
+        const sweep = (Math.PI * 2) * Math.min(1, Number(segment.value) / total);
+        const start = angle + (gap / 2);
+        const end = angle + sweep - (gap / 2);
+        if (end > start) {
+          const arc = new Path();
+          this.appendArc(arc, center, center, radius, start, end, true);
+          ctx.setStrokeColor(new Color(String(segment.color || BRAND.neutral)));
+          ctx.setLineWidth(thickness);
+          ctx.addPath(arc);
+          ctx.strokePath();
+        }
+        angle += sweep;
+      });
+    }
+
+    const centerText = options.centerText === undefined || options.centerText === null ? '' : String(options.centerText);
+    const subText = options.centerSubText ? String(options.centerSubText) : '';
+    if (centerText) {
+      const numberSize = Math.max(12, Math.round(size * (centerText.length > 2 ? 0.26 : 0.34)));
+      const subSize = Math.max(7, Math.round(size * 0.13));
+      const inner = radius - (thickness / 2);
+      ctx.setTextAlignedCenter();
+      ctx.setFont(this.widgetFont(numberSize, 'heavy'));
+      ctx.setTextColor(new Color(String(options.centerColor || palette.text)));
+      const numberHeight = numberSize * 1.25;
+      const subHeight = subText ? subSize * 1.3 : 0;
+      const blockTop = center - ((numberHeight + subHeight) / 2);
+      ctx.drawTextInRect(centerText, new Rect(center - inner, blockTop, inner * 2, numberHeight));
+      if (subText) {
+        ctx.setFont(this.widgetFont(subSize, 'medium'));
+        ctx.setTextColor(new Color(palette.textMuted));
+        ctx.drawTextInRect(subText, new Rect(center - inner, blockTop + numberHeight - 1, inner * 2, subHeight + 2));
+      }
+    }
+    return ctx.getImage();
+  }
+
+  buildDotImage(colorHex, size = 6) {
+    const ctx = new DrawContext();
+    ctx.size = new Size(size, size);
+    ctx.respectScreenScale = true;
+    ctx.opaque = false;
+    ctx.setFillColor(new Color(colorHex));
+    ctx.fillEllipse(new Rect(0, 0, size, size));
+    return ctx.getImage();
+  }
+
+  // Troubled verdicts worst first, then vanished (informational), over the
+  // ok track; the centre shows how many sites need a look.
+  countVerdicts(status) {
+    const counts = {};
+    status.troubled.forEach(entry => { counts[entry.verdict] = (counts[entry.verdict] || 0) + 1; });
+    if (status.vanished.length) counts.vanished = status.vanished.length;
+    return counts;
+  }
+
+  buildStatusRingImage(status, size) {
+    const palette = this.getWidgetPalette();
+    if (status.ledgerMissing) {
+      return this.buildRingImage({ size, segments: [], total: 0, centerText: '–', centerColor: palette.textMuted });
+    }
+    const counts = this.countVerdicts(status);
+    const order = [...TROUBLED_VERDICTS, 'vanished'];
+    const segments = order.map(verdict => ({ value: counts[verdict] || 0, color: this.verdictColor(verdict) }));
+    const troubled = status.troubled.length;
+    const worst = order.find(verdict => TROUBLED_VERDICTS.includes(verdict) && counts[verdict] > 0) || null;
+    return this.buildRingImage({
+      size,
+      segments,
+      total: status.total,
+      centerText: troubled > 0 ? String(troubled) : '✓',
+      centerSubText: status.total > 0 ? `of ${status.total}` : '',
+      centerColor: worst ? this.verdictColor(worst) : BRAND.success
+    });
+  }
+
+  // "1 dead · 1 shrunk · 2 empty · 44 ok" as coloured dots with counts.
+  addVerdictLegend(container, status) {
+    const palette = this.getWidgetPalette();
+    const counts = this.countVerdicts(status);
+    const legend = container.addStack();
+    legend.layoutHorizontally();
+    legend.centerAlignContent();
+    legend.spacing = 4;
+    const entries = [...TROUBLED_VERDICTS, 'vanished']
+      .filter(verdict => counts[verdict] > 0)
+      .map(verdict => ({ verdict, count: counts[verdict] }));
+    entries.push({ verdict: 'ok', count: status.ok });
+    entries.forEach((entry, index) => {
+      if (index > 0) legend.addSpacer(4);
+      const dot = legend.addImage(this.buildDotImage(this.verdictColor(entry.verdict), 6));
+      dot.imageSize = new Size(6, 6);
+      const text = legend.addText(`${entry.count} ${entry.verdict}`);
+      text.font = Font.systemFont(10);
+      text.textColor = new Color(entry.verdict === 'ok' ? BRAND.success : palette.textMuted);
+      text.lineLimit = 1;
+    });
+    return legend;
+  }
+
+  // The tap affordance: which parser the next tap runs.
+  addTapHint(container, queueStateInfo, maxLength) {
+    const palette = this.getWidgetPalette();
+    const current = queueStateInfo?.current || null;
+    const label = current
+      ? `Tap runs ${this.truncateText(current.parserName, maxLength)}${current.parsers.length > 1 ? ` (${current.parserIndex + 1}/${current.parsers.length})` : ''}`
+      : 'Tap: nothing to run right now';
+    const hint = container.addText(label);
+    hint.font = Font.systemFont(10);
+    hint.textColor = new Color(palette.textMuted);
+    hint.lineLimit = 1;
+    return hint;
+  }
+
   // ── Widget cell helpers ─────────────────────────────────────────────────────
 
   addWidgetCell(container, family) {
+    const palette = this.getWidgetPalette();
     const cell = container.addStack();
     cell.layoutVertically();
     cell.spacing = 2;
-    const alpha = family === 'small' ? WIDGET_STYLE.rowBackgroundAlphaCompact : WIDGET_STYLE.rowBackgroundAlpha;
+    const alpha = family === 'small' ? WIDGET_STYLE.rowBackgroundAlphaCompact : palette.card;
     cell.backgroundColor = new Color(WIDGET_STYLE.rowBackground, alpha);
     cell.cornerRadius = WIDGET_STYLE.rowRadius;
     const padding = family === 'small' ? WIDGET_STYLE.rowPaddingCompact : WIDGET_STYLE.rowPadding;
@@ -637,84 +852,104 @@ class StaleParsersChecker {
     const p = WIDGET_STYLE.badgePadding;
     badge.setPadding(p.top, p.left, p.bottom, p.right);
     const text = badge.addText(String(label));
-    text.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+    text.font = Font.boldSystemFont(10);
     text.textColor = new Color(colorHex);
     text.lineLimit = 1;
     return badge;
   }
 
   addWidgetHeader(widget, logoImage, headerText) {
+    const palette = this.getWidgetPalette();
     const family = this.runtime.widgetFamily || 'medium';
     const header = widget.addStack();
     header.centerAlignContent();
     header.spacing = family === 'small' ? 4 : 6;
     if (logoImage) {
       const img = header.addImage(logoImage);
-      const size = family === 'small' ? 20 : 24;
+      const size = family === 'small' ? 18 : 24;
       img.imageSize = new Size(size, size);
     }
     const title = header.addText(headerText || WIDGET_TITLE);
     title.font = Font.boldSystemFont(family === 'small' ? FONT_SIZES.widget.small : FONT_SIZES.widget.label);
-    title.textColor = new Color(BRAND.text);
+    title.textColor = new Color(palette.text);
     title.lineLimit = 1;
     widget.addSpacer(family === 'small' ? 4 : 6);
   }
 
-  // One troubled host row: favicon, host, verdict badge, "since <run>" line.
-  async addHostRow(widget, entry, family, hostMaxLength) {
-    const cell = this.addWidgetCell(widget, family);
-    cell.url = this.buildSelfUrl({ action: 'runCurrent' });
-
-    const headerRow = cell.addStack();
-    headerRow.layoutHorizontally();
-    headerRow.centerAlignContent();
-    headerRow.spacing = 4;
+  // One troubled host row: favicon, verdict dot, host, the verdict badge and
+  // (when there is room) "since <run>" on the right. The current queue pick
+  // is marked with a brighter card.
+  async addHostRow(widget, entry, family, hostMaxLength, options = {}) {
+    const palette = this.getWidgetPalette();
+    const row = widget.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    row.spacing = 5;
+    row.backgroundColor = new Color(WIDGET_STYLE.rowBackground, options.current ? palette.card + 0.08 : palette.card);
+    row.cornerRadius = WIDGET_STYLE.rowRadius;
+    const padding = family === 'large' ? WIDGET_STYLE.rowPadding : WIDGET_STYLE.rowPaddingCompact;
+    row.setPadding(padding.top, padding.left, padding.bottom, padding.right);
+    row.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     const iconImage = await this.getHostIcon(entry.iconUrl);
     if (iconImage) {
-      const icon = headerRow.addImage(iconImage);
-      icon.imageSize = new Size(11, 11);
+      const icon = row.addImage(iconImage);
+      icon.imageSize = new Size(12, 12);
+      icon.cornerRadius = 3;
     }
+    const dot = row.addImage(this.buildDotImage(this.verdictColor(entry.verdict), 6));
+    dot.imageSize = new Size(6, 6);
 
-    const nameText = headerRow.addText(this.truncateText(entry.host, hostMaxLength));
+    const nameText = row.addText(this.truncateText(entry.host, hostMaxLength));
     nameText.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-    nameText.textColor = new Color(BRAND.text);
+    nameText.textColor = new Color(palette.text);
     nameText.lineLimit = 1;
 
-    headerRow.addSpacer();
-    this.addWidgetBadge(headerRow, entry.verdict, this.verdictColor(entry.verdict));
-
-    if (entry.since) {
-      const sinceText = cell.addText(`since ${formatRunId(entry.since)}`);
-      sinceText.font = Font.systemFont(FONT_SIZES.widget.small);
-      sinceText.textColor = new Color(BRAND.textMuted);
+    row.addSpacer();
+    if (entry.since && options.since !== false) {
+      const sinceText = row.addText(`since ${formatRunId(entry.since)}`);
+      sinceText.font = Font.systemFont(10);
+      sinceText.textColor = new Color(palette.textMuted);
       sinceText.lineLimit = 1;
     }
-    return cell;
+    this.addWidgetBadge(row, entry.verdict, this.verdictColor(entry.verdict));
+    return row;
   }
 
-  // Centered "all answered" / "no ledger" body shared by medium and large.
-  addQuietBody(widget, logoImage, status, family) {
+  // Centered "all answered" / "no ledger" body shared by medium and large:
+  // the ring (a green check inside when all is well) beside the summary.
+  addQuietBody(widget, status, family) {
+    const palette = this.getWidgetPalette();
     widget.addSpacer();
     const row = widget.addStack();
     row.centerAlignContent();
-    if (logoImage) {
-      const size = family === 'large' ? 36 : 28;
-      const img = row.addImage(logoImage);
-      img.imageSize = new Size(size, size);
-      row.addSpacer(family === 'large' ? 10 : 8);
-    }
+    const size = family === 'large' ? 72 : 56;
+    const ring = row.addImage(this.buildStatusRingImage(status, size));
+    ring.imageSize = new Size(size, size);
+    row.addSpacer(family === 'large' ? 12 : 10);
     const column = row.addStack();
     column.layoutVertically();
+    column.spacing = 2;
     const label = column.addText(status.ledgerMissing ? NO_LEDGER_TEXT : `${formatSummaryLine(status)} 🐻`);
     label.font = Font.boldSystemFont(family === 'large' ? FONT_SIZES.widget.title : FONT_SIZES.widget.label);
-    label.textColor = new Color(status.ledgerMissing ? BRAND.textMuted : BRAND.success);
-    label.lineLimit = 1;
+    label.textColor = new Color(status.ledgerMissing ? palette.textMuted : BRAND.success);
+    label.lineLimit = 2;
+    if (status.ledgerMissing) {
+      const note = column.addText('Every run writes it.');
+      note.font = Font.systemFont(FONT_SIZES.widget.small);
+      note.textColor = new Color(palette.textMuted);
+      note.lineLimit = 2;
+    } else if (status.vanished.length > 0) {
+      const vanishedText = column.addText(`${status.vanished.length} vanished — see the dashboard`);
+      vanishedText.font = Font.systemFont(FONT_SIZES.widget.small);
+      vanishedText.textColor = new Color(this.verdictColor('vanished'));
+      vanishedText.lineLimit = 1;
+    }
     const newest = this.formatNewestRun(status);
     if (newest) {
       const newestText = column.addText(newest);
       newestText.font = Font.systemFont(FONT_SIZES.widget.small);
-      newestText.textColor = new Color(BRAND.textMuted);
+      newestText.textColor = new Color(palette.textMuted);
       newestText.lineLimit = 1;
     }
     widget.addSpacer();
@@ -722,141 +957,176 @@ class StaleParsersChecker {
 
   // ── Widget renderers ────────────────────────────────────────────────────────
 
-  async renderSmallWidget(status) {
-    const widget = new ListWidget();
-    widget.backgroundColor = new Color(BRAND.primary);
-    widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
-
+  // Small: header, the ring, one line under it, the tap hint.
+  async renderSmallWidget(status, queueStateInfo) {
+    const palette = this.getWidgetPalette();
+    const widget = this.createWidget();
     const logoImage = await this.loadLogoImage();
+    this.addWidgetHeader(widget, logoImage, WIDGET_TITLE);
 
-    if (logoImage) {
-      const logo = widget.addImage(logoImage);
-      logo.imageSize = new Size(24, 24);
-      widget.addSpacer(6);
-    }
+    widget.addSpacer();
+    const ringRow = widget.addStack();
+    ringRow.layoutHorizontally();
+    ringRow.addSpacer();
+    const size = 58;
+    const ring = ringRow.addImage(this.buildStatusRingImage(status, size));
+    ring.imageSize = new Size(size, size);
+    ringRow.addSpacer();
+    widget.addSpacer(4);
 
+    let labelText;
+    let labelColor;
     if (status.ledgerMissing) {
-      const label = widget.addText(NO_LEDGER_TEXT);
-      label.font = Font.systemFont(FONT_SIZES.widget.small);
-      label.textColor = new Color(BRAND.textMuted);
-      label.centerAlignText();
+      labelText = NO_LEDGER_TEXT;
+      labelColor = palette.textMuted;
     } else if (status.troubled.length === 0) {
-      const check = widget.addText('✓');
-      check.font = Font.boldSystemFont(28);
-      check.textColor = new Color(BRAND.success);
-      check.centerAlignText();
-      widget.addSpacer(2);
-      const label = widget.addText(formatSummaryLine(status));
-      label.font = Font.systemFont(FONT_SIZES.widget.small);
-      label.textColor = new Color(BRAND.textMuted);
-      label.centerAlignText();
+      labelText = 'all answered';
+      labelColor = BRAND.success;
     } else {
-      const count = widget.addText(String(status.troubled.length));
-      count.font = Font.boldSystemFont(32);
-      count.textColor = new Color(BRAND.danger);
-      count.centerAlignText();
-      widget.addSpacer(2);
-      const label = widget.addText(`of ${status.total} sites need a look`);
-      label.font = Font.systemFont(FONT_SIZES.widget.small);
-      label.textColor = new Color(BRAND.textMuted);
-      label.centerAlignText();
+      labelText = status.troubled.length === 1 ? 'site needs a look' : 'sites need a look';
+      labelColor = palette.text;
     }
+    const label = widget.addText(labelText);
+    label.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+    label.textColor = new Color(labelColor);
+    label.centerAlignText();
+    label.lineLimit = 1;
 
+    if (!status.ledgerMissing && status.troubled.length > 0) {
+      const current = queueStateInfo?.current || null;
+      const hint = widget.addText(current ? `tap runs ${this.truncateText(current.parserName, 16)}` : 'tap: nothing to run');
+      hint.font = Font.systemFont(9);
+      hint.textColor = new Color(palette.textMuted);
+      hint.centerAlignText();
+      hint.lineLimit = 1;
+    }
+    widget.addSpacer();
     return widget;
   }
 
-  async renderMediumWidget(status) {
-    const widget = new ListWidget();
-    widget.backgroundColor = new Color(BRAND.primary);
-    widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
-
+  // Medium: ring on the left; summary, two troubled host rows and the tap
+  // hint on the right.
+  async renderMediumWidget(status, queueStateInfo) {
+    const palette = this.getWidgetPalette();
+    const widget = this.createWidget();
     const logoImage = await this.loadLogoImage();
     this.addWidgetHeader(widget, logoImage, WIDGET_TITLE);
 
     if (status.ledgerMissing || status.troubled.length === 0) {
-      this.addQuietBody(widget, logoImage, status, 'medium');
+      this.addQuietBody(widget, status, 'medium');
       return widget;
     }
 
-    const summary = widget.addText(formatSummaryLine(status));
-    summary.font = Font.systemFont(FONT_SIZES.widget.small);
-    summary.textColor = new Color(BRAND.textMuted);
+    const body = widget.addStack();
+    body.layoutHorizontally();
+    body.centerAlignContent();
+    body.spacing = 10;
+    const size = 66;
+    const ring = body.addImage(this.buildStatusRingImage(status, size));
+    ring.imageSize = new Size(size, size);
+
+    const column = body.addStack();
+    column.layoutVertically();
+    column.spacing = 3;
+    const summary = column.addText(formatSummaryLine(status));
+    summary.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+    summary.textColor = new Color(palette.text);
     summary.lineLimit = 1;
-    widget.addSpacer(4);
 
     const maxRows = 2;
     const items = status.troubled.slice(0, maxRows);
+    const currentHost = queueStateInfo?.current?.host || null;
     for (let i = 0; i < items.length; i += 1) {
-      if (i > 0) widget.addSpacer(4);
-      await this.addHostRow(widget, items[i], 'medium', 22);
+      await this.addHostRow(column, items[i], 'medium', 18, { since: false, current: items[i].host === currentHost });
     }
 
+    const footer = column.addStack();
+    footer.layoutHorizontally();
+    footer.centerAlignContent();
+    footer.spacing = 8;
+    this.addTapHint(footer, queueStateInfo, 16);
+    footer.addSpacer();
     if (status.troubled.length > maxRows) {
-      widget.addSpacer(4);
-      const more = widget.addText(`+${status.troubled.length - maxRows} more`);
-      more.font = Font.systemFont(FONT_SIZES.widget.small);
-      more.textColor = new Color(BRAND.textMuted);
+      const more = footer.addText(`+${status.troubled.length - maxRows} more`);
+      more.font = Font.systemFont(10);
+      more.textColor = new Color(palette.textMuted);
+      more.lineLimit = 1;
     }
-
     return widget;
   }
 
-  async renderLargeWidget(status) {
-    const widget = new ListWidget();
-    widget.backgroundColor = new Color(BRAND.primary);
-    widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
-
+  // Large: ring beside the summary and a verdict legend, five troubled host
+  // rows with since-run, then the ok/vanished/newest card and the tap hint.
+  async renderLargeWidget(status, queueStateInfo) {
+    const palette = this.getWidgetPalette();
+    const widget = this.createWidget();
     const logoImage = await this.loadLogoImage();
     this.addWidgetHeader(widget, logoImage, WIDGET_TITLE);
 
     if (status.ledgerMissing || status.troubled.length === 0) {
-      this.addQuietBody(widget, logoImage, status, 'large');
+      this.addQuietBody(widget, status, 'large');
       return widget;
     }
 
-    const summary = widget.addText(formatSummaryLine(status));
-    summary.font = Font.systemFont(FONT_SIZES.widget.small);
-    summary.textColor = new Color(BRAND.textMuted);
+    const top = widget.addStack();
+    top.layoutHorizontally();
+    top.centerAlignContent();
+    top.spacing = 12;
+    const size = 76;
+    const ring = top.addImage(this.buildStatusRingImage(status, size));
+    ring.imageSize = new Size(size, size);
+    const column = top.addStack();
+    column.layoutVertically();
+    column.spacing = 4;
+    const summary = column.addText(formatSummaryLine(status));
+    summary.font = Font.boldSystemFont(FONT_SIZES.widget.title);
+    summary.textColor = new Color(palette.text);
     summary.lineLimit = 1;
-    widget.addSpacer(4);
+    this.addVerdictLegend(column, status);
+    const newest = this.formatNewestRun(status);
+    if (newest) {
+      const newestText = column.addText(newest);
+      newestText.font = Font.systemFont(10);
+      newestText.textColor = new Color(palette.textMuted);
+      newestText.lineLimit = 1;
+    }
+    widget.addSpacer(8);
 
     const maxRows = 5;
     const items = status.troubled.slice(0, maxRows);
+    const currentHost = queueStateInfo?.current?.host || null;
     for (let i = 0; i < items.length; i += 1) {
       if (i > 0) widget.addSpacer(4);
-      await this.addHostRow(widget, items[i], 'large', 28);
+      await this.addHostRow(widget, items[i], 'large', 26, { current: items[i].host === currentHost });
     }
-
     if (status.troubled.length > maxRows) {
       widget.addSpacer(4);
       const more = widget.addText(`+${status.troubled.length - maxRows} more`);
-      more.font = Font.systemFont(FONT_SIZES.widget.small);
-      more.textColor = new Color(BRAND.textMuted);
+      more.font = Font.systemFont(10);
+      more.textColor = new Color(palette.textMuted);
     }
 
-    widget.addSpacer(6);
-    const summaryCell = this.addWidgetCell(widget, 'large');
-    const okText = summaryCell.addText(`✅ ${status.ok} ok`);
-    okText.font = Font.systemFont(FONT_SIZES.widget.small);
+    widget.addSpacer();
+    const footer = widget.addStack();
+    footer.layoutHorizontally();
+    footer.centerAlignContent();
+    footer.spacing = 6;
+    const okDot = footer.addImage(this.buildDotImage(BRAND.success, 6));
+    okDot.imageSize = new Size(6, 6);
+    const okText = footer.addText(`${status.ok} ok`);
+    okText.font = Font.systemFont(10);
     okText.textColor = new Color(BRAND.success);
     okText.lineLimit = 1;
     if (status.vanished.length > 0) {
-      const vanishedText = summaryCell.addText(`${status.vanished.length} vanished — see the dashboard`);
-      vanishedText.font = Font.systemFont(FONT_SIZES.widget.small);
-      vanishedText.textColor = new Color(BRAND.textMuted);
+      const vanishedDot = footer.addImage(this.buildDotImage(this.verdictColor('vanished'), 6));
+      vanishedDot.imageSize = new Size(6, 6);
+      const vanishedText = footer.addText(`${status.vanished.length} vanished`);
+      vanishedText.font = Font.systemFont(10);
+      vanishedText.textColor = new Color(palette.textMuted);
       vanishedText.lineLimit = 1;
     }
-    const newest = this.formatNewestRun(status);
-    if (newest) {
-      const newestText = summaryCell.addText(newest);
-      newestText.font = Font.systemFont(FONT_SIZES.widget.small);
-      newestText.textColor = new Color(BRAND.textMuted);
-      newestText.lineLimit = 1;
-    }
-
+    footer.addSpacer();
+    this.addTapHint(footer, queueStateInfo, 24);
     return widget;
   }
 
@@ -1045,13 +1315,13 @@ class StaleParsersChecker {
       return this.renderAccessoryInlineWidget(status);
     }
     if (family === 'small') {
-      return this.renderSmallWidget(status);
+      return this.renderSmallWidget(status, queueStateInfo);
     }
     if (family === 'large') {
-      return this.renderLargeWidget(status);
+      return this.renderLargeWidget(status, queueStateInfo);
     }
     // Default: medium (also covers null/undefined family when adding widget)
-    return this.renderMediumWidget(status);
+    return this.renderMediumWidget(status, queueStateInfo);
   }
 }
 
