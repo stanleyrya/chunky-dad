@@ -1815,6 +1815,246 @@ class SharedCore {
         return `event|${titleKey}|${this.getOwnerReviewPlaceKey(event)}|${day}`;
     }
 
+    // ------------------------------------------------------------------
+    // SOURCE LEDGER — one line per run per website (host)
+    // ------------------------------------------------------------------
+    // The old metrics record is per PARSER and only the phone wrote it, so
+    // the Mac's daily scrapes left no trace. The source ledger is written by
+    // EVERY run (Node and Scriptable) into metrics/sources.ndjson, keyed by
+    // the website's host — a parser crawling two sites gets two rows, and
+    // parsers that merge do not blur. Pure: takes a run payload (the saved
+    // runs/<id>.json shape, or the live results object — both carry
+    // parserResults[].events, analyzedEvents and errors) plus the previous
+    // upcoming snapshot, and returns the ledger lines and the new snapshot.
+    //
+    // Record (v1): { v, run_id, finished_at, environment, trigger, host,
+    //   parsers, pages, outbound_pages, page_errors, errors, extracted, events, bear,
+    //   upcoming, proposals:{new,merge}, duration_ms, status, vanished }
+    // status: 'ok' (the site yielded rows, bear or not), 'dead' (nothing and
+    // the site answered with errors), 'empty' (nothing, no errors — the
+    // parser or the page shape may have broken).
+    // vanished: events that were upcoming last time this host ran, are still
+    // in the future, and are missing now. A dead site keeps its previous
+    // snapshot (unreachable is not "the events went away").
+    static hostOfUrl(value) {
+        const match = String(value || '').match(/^https?:\/\/([^/?#]+)/i);
+        if (!match) return '';
+        return match[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '');
+    }
+
+    // Where the scrape actually happened: a phone execute re-saves a Mac
+    // run with its own runContext wrapped around the original.
+    static scrapeRunContext(runContext) {
+        let context = runContext && typeof runContext === 'object' ? runContext : null;
+        let depth = 0;
+        while (context && context.original && typeof context.original === 'object' && depth < 20) {
+            context = context.original;
+            depth += 1;
+        }
+        return context || {};
+    }
+
+    static sourceLedgerLocalDay(startDate, timezone) {
+        const date = startDate instanceof Date ? startDate : new Date(startDate);
+        if (!Number.isFinite(date.getTime())) return '';
+        if (timezone) {
+            try {
+                const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+                if (/^\d{4}-\d{2}-\d{2}$/.test(parts)) return parts;
+            } catch (_) { /* unknown zone — fall through to UTC */ }
+        }
+        return date.toISOString().slice(0, 10);
+    }
+
+    // 'title tokens|place|local day' — stable across runs, independent of
+    // the merge (no calendar identity needed).
+    static sourceLedgerEventKey(event) {
+        if (!event || typeof event !== 'object') return '';
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+        const title = fold(event.title || event.name);
+        if (!title) return '';
+        const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+        if (!day) return '';
+        const place = fold(event.bar || event.venue) || fold(event.city);
+        return `${title}|${place}|${day}`;
+    }
+
+    static buildSourceLedger(payload, options = {}) {
+        const run = payload && typeof payload === 'object' ? payload : {};
+        const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+        const todayKey = now.toISOString().slice(0, 10);
+        const summary = run.summary && typeof run.summary === 'object' ? run.summary : {};
+        const runId = String(options.runId || summary.runId || run.runId || run.savedRunId || '').trim();
+        const finishedAt = options.finishedAt || summary.timestamp || run.finishedAt || run.savedAt || now.toISOString();
+        const scrapeContext = SharedCore.scrapeRunContext(run.runContext || summary.runContext);
+        const environment = String(scrapeContext.environment || '').trim() || 'unknown';
+        const trigger = String(scrapeContext.trigger || scrapeContext.type || '').trim() || 'unknown';
+        const previous = options.previousUpcoming && typeof options.previousUpcoming === 'object' && options.previousUpcoming.hosts
+            ? options.previousUpcoming.hosts : {};
+        const parserResults = Array.isArray(run.parserResults) ? run.parserResults : [];
+        const analyzedEvents = Array.isArray(run.analyzedEvents) ? run.analyzedEvents : [];
+        const errors = Array.isArray(run.errors) ? run.errors : [];
+        const trimError = (value) => {
+            const text = typeof value === 'string' ? value : (value && value.message) || JSON.stringify(value);
+            return String(text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+        };
+
+        const byHost = new Map();
+        const hostOf = (host) => {
+            if (!byHost.has(host)) {
+                byHost.set(host, {
+                    host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
+                    extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
+                    proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set()
+                });
+            }
+            return byHost.get(host);
+        };
+        const allHomeHosts = new Set();
+        const eventKeyToHost = new Map();
+
+        parserResults.forEach((parser) => {
+            if (!parser || typeof parser !== 'object') return;
+            const name = String(parser.name || '').trim() || 'unnamed';
+            const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
+            const configUrls = Array.isArray(config.urls) ? config.urls : (Array.isArray(parser.urls) ? parser.urls : []);
+            const homeHosts = [];
+            configUrls.forEach((url) => {
+                const host = SharedCore.hostOfUrl(url);
+                if (host && !homeHosts.includes(host)) homeHosts.push(host);
+            });
+            const events = Array.isArray(parser.events) ? parser.events : [];
+            if (homeHosts.length === 0) {
+                // No configured urls (shared pages, inbox, local imports): the
+                // majority host of its events, else the parser's name.
+                const counts = new Map();
+                events.forEach((event) => {
+                    const host = SharedCore.hostOfUrl(event && (event.website || event.url));
+                    if (host) counts.set(host, (counts.get(host) || 0) + 1);
+                });
+                const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+                homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+            }
+            const primary = homeHosts[0];
+            homeHosts.forEach((host) => {
+                allHomeHosts.add(host);
+                const row = hostOf(host);
+                if (!row.parsers.includes(name)) row.parsers.push(name);
+            });
+            const primaryRow = hostOf(primary);
+            primaryRow.duration_ms += Number.isFinite(parser.durationMs) ? parser.durationMs : 0;
+            // totalEvents = everything the parser extracted before the bear
+            // gate; events[] = what it kept. A site that yields plenty but
+            // nothing bear is working, not broken.
+            primaryRow.extracted += Number.isFinite(parser.totalEvents) ? parser.totalEvents : events.length;
+
+            const classifications = parser.urlClassifications && typeof parser.urlClassifications === 'object' ? parser.urlClassifications : {};
+            Object.keys(classifications).forEach((url) => {
+                const host = SharedCore.hostOfUrl(url);
+                if (homeHosts.includes(host)) hostOf(host).pages += 1;
+                else primaryRow.outbound_pages += 1;
+            });
+
+            events.forEach((event) => {
+                if (!event || typeof event !== 'object') return;
+                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+                const host = homeHosts.includes(eventHost) ? eventHost : primary;
+                const row = hostOf(host);
+                row.events += 1;
+                if (event.isBearEvent === true) row.bear += 1;
+                const key = SharedCore.sourceLedgerEventKey(event);
+                if (!key) return;
+                row.eventKeyIndex.add(key);
+                if (!eventKeyToHost.has(key)) eventKeyToHost.set(key, host);
+                const day = key.slice(key.lastIndexOf('|') + 1);
+                if (day >= todayKey) {
+                    if (!row.upcomingKeys[key]) {
+                        row.upcoming += 1;
+                        row.upcomingKeys[key] = { title: String(event.title || '').slice(0, 120), day, bear: event.isBearEvent === true };
+                    }
+                }
+            });
+        });
+
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const action = String(event._action || '').toLowerCase();
+            if (action !== 'new' && action !== 'merge') return;
+            const key = SharedCore.sourceLedgerEventKey(event);
+            let host = key ? eventKeyToHost.get(key) : '';
+            if (!host) {
+                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+                host = allHomeHosts.has(eventHost) ? eventHost : '';
+            }
+            if (!host) return;
+            hostOf(host).proposals[action] += 1;
+        });
+
+        errors.forEach((error) => {
+            const text = trimError(error);
+            if (!text) return;
+            const urls = text.match(/https?:\/\/[^\s"'<>)]+/gi) || [];
+            const hosts = new Set(urls.map((url) => SharedCore.hostOfUrl(url)).filter((host) => allHomeHosts.has(host)));
+            hosts.forEach((host) => {
+                const row = hostOf(host);
+                row.page_errors += 1;
+                if (row.errors.length < 3) row.errors.push(text);
+            });
+        });
+
+        const records = [];
+        const hosts = {};
+        [...byHost.values()].sort((a, b) => a.host.localeCompare(b.host)).forEach((row) => {
+            const status = row.extracted > 0 || row.events > 0 ? 'ok' : (row.page_errors > 0 ? 'dead' : 'empty');
+            const prev = previous[row.host] && typeof previous[row.host] === 'object' ? previous[row.host] : null;
+            const prevUpcoming = prev && prev.upcoming && typeof prev.upcoming === 'object' ? prev.upcoming : {};
+            const vanished = [];
+            if (status !== 'dead') {
+                Object.keys(prevUpcoming).forEach((key) => {
+                    const entry = prevUpcoming[key] || {};
+                    if (!entry.day || entry.day < todayKey) return;
+                    if (row.eventKeyIndex.has(key)) return;
+                    vanished.push({ key, title: entry.title || '', day: entry.day, bear: entry.bear === true, last_seen: prev.run_id || '' });
+                });
+            }
+            vanished.sort((a, b) => a.day.localeCompare(b.day) || a.key.localeCompare(b.key));
+            records.push({
+                v: 1,
+                run_id: runId,
+                finished_at: finishedAt,
+                environment,
+                trigger,
+                host: row.host,
+                parsers: row.parsers,
+                pages: row.pages,
+                outbound_pages: row.outbound_pages,
+                page_errors: row.page_errors,
+                errors: row.errors,
+                extracted: row.extracted,
+                events: row.events,
+                bear: row.bear,
+                upcoming: row.upcoming,
+                proposals: row.proposals,
+                duration_ms: row.duration_ms,
+                status,
+                vanished
+            });
+            hosts[row.host] = status === 'dead' && prev
+                ? prev
+                : { run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys };
+        });
+
+        // Hosts that did not run this time keep their last snapshot.
+        Object.keys(previous).forEach((host) => {
+            if (!hosts[host]) hosts[host] = previous[host];
+        });
+
+        return {
+            records,
+            upcoming: { version: 1, run_id: runId, finished_at: finishedAt, hosts }
+        };
+    }
+
     static getOwnerReviewBarKey(candidate) {
         const key = candidate && typeof candidate.key === 'string' ? candidate.key.trim() : '';
         return key ? `bar|${key}` : '';

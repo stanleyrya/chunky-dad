@@ -3,7 +3,8 @@
 // icon-color: deep-brown; icon-glyph: chart-bar;
 
 // Display Run Metrics
-// Shows aggregated + per-parser metrics for Scriptable runs.
+// Sources (per-website health from the source ledger, trouble first), host
+// detail with the vanished list, the run history and Health & Guards.
 
 const BRAND = {
   primary: '#667eea',
@@ -43,7 +44,20 @@ const CHART_SERIES_COLORS = [
   '#ff6b6b'
 ];
 
-const MAX_PARSER_DURATION_SERIES = 4;
+// Verdict colours for the Sources view and widget (SOURCE_VERDICT_ORDER in
+// metrics-sections.js, worst first). "ok" stays quiet grey on purpose.
+const SOURCE_VERDICT_COLORS = {
+  dead: BRAND.danger,
+  stopped: '#ff9f43',
+  shrunk: BRAND.warning,
+  empty: '#9b8cff',
+  vanished: '#e056a0',
+  quiet: '#54a0ff',
+  ok: BRAND.neutral
+};
+
+// Host detail: how many ledger lines the run-by-run table shows.
+const HOST_SERIES_ROW_LIMIT = 40;
 
 const WIDGET_STYLE = {
   rowBackground: '#ffffff',
@@ -72,20 +86,6 @@ const FONT_SIZES = {
     metric: 24
   }
 };
-
-const STATUS_ICONS = {
-  healthy: 'checkmark.circle.fill',
-  warning: 'exclamationmark.triangle.fill',
-  failed: 'xmark.octagon.fill',
-  'no-events': 'minus.circle.fill',
-  'not-run': 'circle.dashed'
-};
-
-const PARSER_ICON_RULES = [
-  { match: ['eventbrite'], symbol: 'ticket.fill' },
-  { match: ['bearracuda'], symbol: 'music.note.list' },
-  { match: ['linktree', 'linktr.ee'], symbol: 'link' }
-];
 
 const FAVICON_CACHE_TTL_DAYS = 14;
 
@@ -352,27 +352,76 @@ class MetricsDisplay {
     }
   }
 
-  getParserFaviconUrl(item) {
-    const parserType = String(item?.parserType || '').toLowerCase();
-    const parserName = String(item?.name || '').toLowerCase();
-    const haystack = `${parserType} ${parserName}`.trim();
-    if (!haystack) return null;
-    const overrides = this.parserIconOverrides || {};
-    const overrideUrl = overrides[parserName] || null;
-    return overrideUrl || null;
+  // Favicon URL for a website, named the way the site's favicon sync names its
+  // files (favicon-<domain>-64px.ico; linktr.ee pages keyed by their path).
+  getFaviconUrlForSiteUrl(url) {
+    const match = String(url || '').match(/^https?:\/\/([^\/]+)(\/.*)?$/);
+    if (!match) return null;
+    return this.getFaviconUrlForHost(match[1], match[2] || '/');
   }
 
-  async getParserIconImage(item, size = 12, color = null) {
-    const faviconUrl = this.getParserFaviconUrl(item);
+  getFaviconUrlForHost(host, pathname = '/') {
+    const hostname = String(host || '').trim().toLowerCase();
+    if (!hostname) return null;
+    let filename;
+    if (hostname === 'linktr.ee' || hostname === 'www.linktr.ee') {
+      const cleanPath = String(pathname || '/').substring(1)
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
+    } else {
+      const cleanDomain = hostname
+        .replace(/^www\./, '')
+        .replace(/[^a-zA-Z0-9.-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      filename = `favicon-${cleanDomain}-64px.ico`;
+    }
+    return `https://chunky.dad/img/favicons/${filename}`;
+  }
+
+  // Parser name → icon URL from scraper-input: an explicit iconUrl/faviconUrl,
+  // else the favicon derived from the parser's first URL. Ledger hosts carry
+  // parsers[], so a host row inherits its parser's icon before falling back to
+  // the host itself (getHostFaviconUrl).
+  getParserIconOverrides() {
+    try {
+      const scraperConfig = importModule('scraper-input');
+      const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
+      const overrides = {};
+      parsers.forEach(parser => {
+        const name = parser?.name ? String(parser.name).toLowerCase() : '';
+        if (!name) return;
+        const explicit = parser?.iconUrl || parser?.faviconUrl || null;
+        const firstUrl = Array.isArray(parser?.urls) && parser.urls.length > 0 ? parser.urls[0] : null;
+        const iconUrl = explicit || (firstUrl ? this.getFaviconUrlForSiteUrl(firstUrl) : null);
+        if (iconUrl) overrides[name] = String(iconUrl);
+      });
+      return overrides;
+    } catch (error) {
+      console.log(`Metrics: Could not load parser icon overrides: ${error.message}`);
+      return {};
+    }
+  }
+
+  getHostFaviconUrl(row) {
+    const overrides = this.parserIconOverrides || {};
+    const parsers = Array.isArray(row?.parsers) ? row.parsers : [];
+    for (const name of parsers) {
+      const override = overrides[String(name || '').toLowerCase()];
+      if (override) return override;
+    }
+    return this.getFaviconUrlForHost(row?.host);
+  }
+
+  async getHostIconImage(row) {
+    const faviconUrl = this.getHostFaviconUrl(row);
     if (!faviconUrl) return null;
     const cacheKey = `favicon:${faviconUrl}`;
-    let image = null;
-    if (this.iconCache.has(cacheKey)) {
-      image = this.iconCache.get(cacheKey);
-    } else {
-      image = await this.loadFaviconImage(faviconUrl);
-      this.iconCache.set(cacheKey, image);
-    }
+    if (this.iconCache.has(cacheKey)) return this.iconCache.get(cacheKey);
+    const image = await this.loadFaviconImage(faviconUrl);
+    this.iconCache.set(cacheKey, image);
     return image || null;
   }
 
@@ -464,96 +513,42 @@ class MetricsDisplay {
     }
   }
 
-  async loadRunDetails(record) {
-    // Prefer reconstructing the path from run_id: run_file_path is stored as a
-    // device-absolute path and goes stale across devices/container changes
-    const candidatePaths = [];
-    if (record?.run_id) {
-      const runsDir = this.fm.joinPath(this.baseDir, 'runs');
-      candidatePaths.push(this.fm.joinPath(runsDir, `${record.run_id}.json`));
-    }
-    if (record?.run_file_path) {
-      candidatePaths.push(record.run_file_path);
-    }
-    for (const runPath of candidatePaths) {
-      if (!this.fm.fileExists(runPath)) {
-        continue;
-      }
-      try {
-        await this.fm.downloadFileFromiCloud(runPath);
-        const content = this.fm.readString(runPath);
-        return JSON.parse(content);
-      } catch (error) {
-        console.log(`Metrics: Failed to load run details: ${error.message}`);
-      }
-    }
-    return null;
+  getSourceLedgerPath() {
+    return this.fm.joinPath(this.metricsDir, 'sources.ndjson');
   }
 
-  getConfiguredParsers() {
-    try {
-      const scraperConfig = importModule('scraper-input');
-      const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
-      return parsers
-        .filter(parser => parser && parser.name)
-        .map(parser => parser.name);
-    } catch (error) {
-      console.log(`Metrics: Could not load scraper-input: ${error.message}`);
-      return [];
+  // The source ledger (metrics/sources.ndjson): one line per run per website
+  // host, written by every run on every machine — unlike metrics.ndjson, which
+  // only the phone writes. Returns { available, reason, health, records }; a
+  // missing file is not an error, the views show the friendly empty card.
+  async loadSourceHealth() {
+    if (!MetricsSections
+      || typeof MetricsSections.parseSourceLedger !== 'function'
+      || typeof MetricsSections.assessSourceHealth !== 'function') {
+      return { available: false, reason: 'metrics-sections module unavailable', health: null, records: [] };
     }
-  }
-
-  getParserIconOverrides() {
-    try {
-      const scraperConfig = importModule('scraper-input');
-      const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
-      const overrides = {};
-      parsers.forEach(parser => {
-        const name = parser?.name ? String(parser.name).toLowerCase() : '';
-        if (!name) return;
-
-        let iconUrl = parser?.iconUrl || parser?.faviconUrl || null;
-
-        if (!iconUrl && parser.urls && parser.urls.length > 0) {
-          const url = parser.urls[0];
-          try {
-            // Very simple parser for URLs since Scriptable has limited URL class features
-            // but we'll use regex for hostname and pathname
-            const match = url.match(/^https?:\/\/([^\/]+)(\/.*)?$/);
-            if (match) {
-              const hostname = match[1];
-              const pathname = match[2] || '/';
-
-              let filename;
-              if (hostname === 'linktr.ee' || hostname === 'www.linktr.ee') {
-                const cleanPath = pathname.substring(1)
-                  .replace(/[^a-zA-Z0-9._-]/g, '-')
-                  .replace(/-+/g, '-')
-                  .replace(/^-|-$/g, '');
-                filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
-              } else {
-                const cleanDomain = hostname
-                  .replace(/^www\./, '')
-                  .replace(/[^a-zA-Z0-9.-]/g, '-')
-                  .replace(/-+/g, '-')
-                  .replace(/^-|-$/g, '');
-                filename = `favicon-${cleanDomain}-64px.ico`;
-              }
-              iconUrl = `https://chunky.dad/img/favicons/${filename}`;
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        if (!iconUrl) return;
-        overrides[name] = String(iconUrl);
-      });
-      return overrides;
-    } catch (error) {
-      console.log(`Metrics: Could not load parser icon overrides: ${error.message}`);
-      return {};
+    const path = this.getSourceLedgerPath();
+    if (!this.fm.fileExists(path)) {
+      return { available: false, reason: null, health: null, records: [] };
     }
+    try {
+      await this.fm.downloadFileFromiCloud(path);
+    } catch (error) {
+      console.log(`Metrics: Source ledger iCloud download failed: ${error.message}`);
+    }
+    let records = [];
+    try {
+      records = MetricsSections.parseSourceLedger(this.fm.readString(path) || '');
+    } catch (error) {
+      console.log(`Metrics: Source ledger read failed: ${error.message}`);
+      return { available: false, reason: error.message, health: null, records: [] };
+    }
+    if (!records.length) {
+      return { available: false, reason: null, health: null, records: [] };
+    }
+    const health = MetricsSections.assessSourceHealth(records, { now: new Date() });
+    console.log(`Metrics: Source ledger — ${records.length} lines, ${health.hosts} hosts, ${health.troubled} troubled`);
+    return { available: true, reason: null, health, records };
   }
 
   createActionCounts() {
@@ -576,37 +571,12 @@ class MetricsDisplay {
     };
   }
 
-  createParserTotals() {
-    return {
-      total_events: 0,
-      raw_bear_events: 0,
-      final_bear_events: 0,
-      duplicates_removed: 0
-    };
-  }
-
-  createStatusCounts() {
-    return {
-      success: 0,
-      warning: 0,
-      failed: 0
-    };
-  }
-
   normalizeStatusCounts(counts) {
     return {
       success: counts?.success || 0,
       warning: counts?.warning ?? counts?.partial ?? 0,
       failed: counts?.failed || 0
     };
-  }
-
-  getRunStatusBucketKey(status) {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'success') return 'success';
-    if (normalized === 'partial' || normalized === 'warning') return 'warning';
-    if (normalized === 'failed') return 'failed';
-    return null;
   }
 
   getWarningActionCount(actions) {
@@ -668,188 +638,6 @@ class MetricsDisplay {
     }
   }
 
-  getParserLastRuns(records) {
-    const lastRuns = {};
-    if (!Array.isArray(records)) return lastRuns;
-    records.forEach(record => {
-      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
-      parserRecords.forEach(parserRecord => {
-        if (parserRecord?.parser_name) {
-          lastRuns[parserRecord.parser_name] = {
-            record,
-            parser: parserRecord
-          };
-        }
-      });
-    });
-    return lastRuns;
-  }
-
-  buildParserHistoryMap(records) {
-    const history = {};
-    if (!Array.isArray(records)) return history;
-    records.forEach(record => {
-      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
-      parserRecords.forEach(parserRecord => {
-        const name = parserRecord?.parser_name;
-        if (!name) return;
-        if (!history[name]) {
-          history[name] = {
-            runs: 0,
-            totals: this.createParserTotals(),
-            actions: this.createActionCounts(),
-            calendarActions: this.createCalendarActionCounts(),
-            durationMsTotal: 0,
-            statusCounts: this.createStatusCounts()
-          };
-        }
-        const bucket = history[name];
-        bucket.runs += 1;
-        bucket.durationMsTotal += parserRecord?.duration_ms || 0;
-        bucket.totals.total_events += parserRecord?.total_events || 0;
-        bucket.totals.raw_bear_events += parserRecord?.raw_bear_events || 0;
-        bucket.totals.final_bear_events += parserRecord?.final_bear_events || 0;
-        bucket.totals.duplicates_removed += parserRecord?.duplicates_removed || 0;
-        const actions = parserRecord?.actions || {};
-        Object.keys(bucket.actions).forEach(key => {
-          bucket.actions[key] += actions[key] || 0;
-        });
-        const calendarActions = parserRecord?.calendar_actions || {};
-        Object.keys(bucket.calendarActions).forEach(key => {
-          bucket.calendarActions[key] += calendarActions[key] || 0;
-        });
-        const statusKey = this.getRunStatusBucketKey(record?.status);
-        if (statusKey && bucket.statusCounts) {
-          bucket.statusCounts[statusKey] = (bucket.statusCounts[statusKey] || 0) + 1;
-        }
-      });
-    });
-    return history;
-  }
-
-  buildParserErrorCounts(runData, parserNames) {
-    const counts = {};
-    const errors = Array.isArray(runData?.errors) ? runData.errors : [];
-    if (!errors.length) return counts;
-    const names = Array.isArray(parserNames) ? parserNames.filter(Boolean) : [];
-    if (!names.length) return counts;
-    const normalizedErrors = errors.map(error => String(error).toLowerCase());
-    names.forEach(name => {
-      const needle = String(name).toLowerCase();
-      if (!needle) return;
-      let matched = 0;
-      normalizedErrors.forEach(error => {
-        if (error.includes(needle)) matched += 1;
-      });
-      if (matched > 0) {
-        counts[name] = matched;
-      }
-    });
-    return counts;
-  }
-
-  buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts = {}, summary = null) {
-    const lastRuns = this.getParserLastRuns(records);
-    const historyByParser = this.buildParserHistoryMap(records);
-    const latestParserRecords = Array.isArray(latestRecord?.parsers) ? latestRecord.parsers : [];
-    const latestParserMap = {};
-    latestParserRecords.forEach(record => {
-      if (record?.parser_name) {
-        latestParserMap[record.parser_name] = record;
-      }
-    });
-
-    const hasConfig = configuredParsers.length > 0;
-    const summaryParsers = summary?.by_parser_name || {};
-    const summaryNames = Object.keys(summaryParsers);
-    const parserNames = hasConfig
-      ? configuredParsers
-      : Array.from(new Set([...Object.keys(lastRuns), ...summaryNames]));
-
-    const hasLatestRecord = !!latestRecord;
-    const items = parserNames.map(name => {
-      const lastRun = lastRuns[name] || null;
-      const record = lastRun?.parser || null;
-      const actions = record?.actions ? record.actions : this.createActionCounts();
-      const calendarActions = record?.calendar_actions ? record.calendar_actions : this.createCalendarActionCounts();
-      const totalEvents = record?.total_events || 0;
-      const summaryTotals = summaryParsers?.[name]?.totals || null;
-      const allTimeRuns = summaryTotals?.runs || 0;
-      const allTimeTotals = summaryTotals?.totals || this.createParserTotals();
-      const allTimeActions = summaryTotals?.actions || this.createActionCounts();
-      const allTimeCalendarActions = summaryTotals?.calendar_actions || this.createCalendarActionCounts();
-      const allTimeDurationMs = summaryTotals?.duration_ms_total || 0;
-      const historyTotals = historyByParser?.[name]?.totals || this.createParserTotals();
-      const historyActions = historyByParser?.[name]?.actions || this.createActionCounts();
-      const historyCalendarActions = historyByParser?.[name]?.calendarActions || this.createCalendarActionCounts();
-      const historyRuns = historyByParser?.[name]?.runs || 0;
-      const historyDurationMs = historyByParser?.[name]?.durationMsTotal || 0;
-      const ran = !!record || allTimeRuns > 0 || historyRuns > 0;
-      const warningCount = this.getWarningActionCount(actions);
-
-      return {
-        name,
-        parserType: record?.parser_type || null,
-        urlCount: record?.url_count || 0,
-        ran,
-        ranInLatest: !!latestParserMap[name],
-        hasLatestRecord,
-        totalEvents,
-        finalBearEvents: record?.final_bear_events || 0,
-        durationMs: record?.duration_ms || null,
-        actions,
-        calendarActions,
-        warningCount,
-        lastRunAt: lastRun?.record?.finished_at || null,
-        lastRunId: lastRun?.record?.run_id || null,
-        latestErrorCount: latestErrorCounts?.[name] || 0,
-        allTimeRuns,
-        allTimeTotals,
-        allTimeActions,
-        allTimeCalendarActions,
-        allTimeDurationMs,
-        historyRuns,
-        historyTotals,
-        historyActions,
-        historyCalendarActions,
-        historyDurationMs
-      };
-    });
-
-    return {
-      hasConfig,
-      configuredCount: configuredParsers.length,
-      ranCount: latestParserRecords.length,
-      items
-    };
-  }
-
-  buildAllTimeParserRows(records, summary) {
-    const historyByParser = this.buildParserHistoryMap(records);
-    const summaryParsers = summary?.by_parser_name || {};
-    const names = Array.from(new Set([
-      ...Object.keys(summaryParsers),
-      ...Object.keys(historyByParser)
-    ]));
-    return names.map(name => {
-      const summaryTotals = summaryParsers?.[name]?.totals || null;
-      const historyTotals = historyByParser?.[name] || null;
-      const actions = summaryTotals?.actions || historyTotals?.actions || this.createActionCounts();
-      const calendarActions = summaryTotals?.calendar_actions || historyTotals?.calendarActions || this.createCalendarActionCounts();
-      const runs = Number.isFinite(summaryTotals?.runs) ? summaryTotals.runs : (historyTotals?.runs || 0);
-      const statusCounts = this.normalizeStatusCounts(
-        summaryTotals?.statuses || historyTotals?.statusCounts || this.createStatusCounts()
-      );
-      return {
-        name,
-        actions,
-        calendarActions,
-        runs,
-        statusCounts
-      };
-    });
-  }
-
   formatNumber(value) {
     if (!Number.isFinite(value)) return '0';
     return Math.round(value).toLocaleString();
@@ -886,80 +674,9 @@ class MetricsDisplay {
     return `${days}d ago`;
   }
 
-  formatActions(actions) {
-    if (!actions) return 'n/a';
-    const parts = [];
-    if (actions.new) parts.push(`adds ${actions.new}`);
-    if (actions.merge) parts.push(`merges ${actions.merge}`);
-    if (actions.conflict) parts.push(`conflicts ${actions.conflict}`);
-    if (parts.length === 0) return 'none';
-    return parts.join(', ');
-  }
-
-  formatCalendarActions(actions) {
-    if (!actions) return 'n/a';
-    const parts = [];
-    if (actions.create) parts.push(`create ${actions.create}`);
-    if (actions.update) parts.push(`update ${actions.update}`);
-    if (actions.skip) parts.push(`skip ${actions.skip}`);
-    if (parts.length === 0) return 'none';
-    return parts.join(', ');
-  }
-
-  formatActionsCompact(actions) {
-    if (!actions) return 'Adds 0 • Merges 0 • Conflicts 0';
-    const addCount = actions.new || 0;
-    const mergeCount = actions.merge || 0;
-    const conflictCount = actions.conflict || 0;
-    return `Adds ${addCount} • Merges ${mergeCount} • Conflicts ${conflictCount}`;
-  }
-
   formatLastRunLabel(isoString) {
     if (!isoString) return 'Never';
     return this.formatRelativeTime(isoString);
-  }
-
-  formatAllTimeSummary(item, options = {}) {
-    const runs = item?.allTimeRuns || 0;
-    if (runs <= 0) return 'No historical data';
-    const totals = item?.allTimeTotals || {};
-    const finalEvents = this.formatNumber(totals.final_bear_events || 0);
-    const totalEvents = this.formatNumber(totals.total_events || 0);
-    const runLabel = this.formatNumber(runs);
-    if (options.compact) {
-      return `All-time ${finalEvents} final • ${runLabel} runs`;
-    }
-    if (options.includeTotal === false) {
-      return `All-time final ${finalEvents} • Runs ${runLabel}`;
-    }
-    return `All-time final ${finalEvents} • Total ${totalEvents} • Runs ${runLabel}`;
-  }
-
-  formatHistorySummary(item, options = {}) {
-    const runs = item?.historyRuns || 0;
-    if (runs <= 0) return 'No recent history';
-    const totals = item?.historyTotals || {};
-    const finalEvents = this.formatNumber(totals.final_bear_events || 0);
-    const totalEvents = this.formatNumber(totals.total_events || 0);
-    const runLabel = this.formatNumber(runs);
-    if (options.compact) {
-      return `Recent ${finalEvents} final • ${runLabel} runs`;
-    }
-    if (options.includeTotal === false) {
-      return `Recent final ${finalEvents} • Runs ${runLabel}`;
-    }
-    return `Recent final ${finalEvents} • Total ${totalEvents} • Runs ${runLabel}`;
-  }
-
-  formatLastRunSummary(item, options = {}) {
-    if (!item?.lastRunAt) return 'Last run unknown';
-    const finalEvents = this.formatNumber(item?.finalBearEvents || 0);
-    const totalEvents = this.formatNumber(item?.totalEvents || 0);
-    const when = this.formatLastRunLabel(item.lastRunAt);
-    if (options.compact) {
-      return `Last ${when} • ${finalEvents} final`;
-    }
-    return `Last run ${when} • Final ${finalEvents} • Total ${totalEvents}`;
   }
 
   formatRunId(runId) {
@@ -1106,108 +823,6 @@ class MetricsDisplay {
     return '➖';
   }
 
-  getParserStatusKey(item) {
-    if (!item) return 'unknown';
-    if ((item.latestErrorCount || 0) > 0) return 'failed';
-    if (!item.ran) return 'not-run';
-    const warningCount = Number.isFinite(item.warningCount)
-      ? item.warningCount
-      : this.getWarningActionCount(item.actions);
-    if (warningCount > 0) return 'warning';
-    return 'healthy';
-  }
-
-  getParserStatusMeta(item) {
-    const key = this.getParserStatusKey(item);
-    if (key === 'healthy') {
-      return { key, label: 'Healthy', color: new Color(BRAND.success), icon: STATUS_ICONS.healthy, rank: 2 };
-    }
-    if (key === 'warning') {
-      return { key, label: 'Warning', color: new Color(BRAND.warning), icon: STATUS_ICONS.warning, rank: 3 };
-    }
-    if (key === 'failed') {
-      return { key, label: 'Failed', color: new Color(BRAND.danger), icon: STATUS_ICONS.failed, rank: 4 };
-    }
-    if (key === 'no-events') {
-      return { key, label: 'No events', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['no-events'], rank: 2 };
-    }
-    if (key === 'not-run') {
-      return { key, label: 'Not run', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
-    }
-    return { key, label: 'Unknown', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
-  }
-
-  getParserStatusEmoji(item) {
-    const key = this.getParserStatusKey(item);
-    if (key === 'healthy') return '✅';
-    if (key === 'warning') return '⚠️';
-    if (key === 'failed') return '❌';
-    if (key === 'no-events') return '➖';
-    if (key === 'not-run') return '⏸️';
-    return '➖';
-  }
-
-  getParserStatusRank(item) {
-    return this.getParserStatusMeta(item).rank || 0;
-  }
-
-  getParserStatusCounts(items) {
-    const counts = {
-      total: 0,
-      healthy: 0,
-      warning: 0,
-      failed: 0,
-      notRun: 0,
-      running: 0
-    };
-    if (!Array.isArray(items)) return counts;
-    counts.total = items.length;
-    items.forEach(item => {
-      const key = this.getParserStatusKey(item);
-      if (key === 'healthy') {
-        counts.healthy += 1;
-      } else if (key === 'warning') {
-        counts.warning += 1;
-      } else if (key === 'failed') {
-        counts.failed += 1;
-      } else if (key === 'not-run') {
-        counts.notRun += 1;
-      } else {
-        counts.notRun += 1;
-      }
-    });
-    counts.running = Math.max(0, counts.total - counts.notRun);
-    return counts;
-  }
-
-  getRunHealthSummary(records) {
-    const summary = {
-      failureStreak: 0,
-      lastSuccessAt: null,
-      latestStatus: null
-    };
-    if (!Array.isArray(records) || records.length === 0) return summary;
-    let counting = true;
-    for (let i = records.length - 1; i >= 0; i -= 1) {
-      const record = records[i];
-      const errorsCount = Number.isFinite(record?.errors_count) ? record.errors_count : 0;
-      const warningsCount = this.getRunWarningCount(record);
-      const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record?.status);
-      if (summary.latestStatus === null) summary.latestStatus = status;
-      if (!summary.lastSuccessAt && status === 'success' && record?.finished_at) {
-        summary.lastSuccessAt = record.finished_at;
-      }
-      if (counting) {
-        if (status === 'success') {
-          counting = false;
-        } else {
-          summary.failureStreak += 1;
-        }
-      }
-    }
-    return summary;
-  }
-
   getWidgetChartSize() {
     const family = this.runtime.widgetFamily || 'medium';
     if (family === 'small') return { width: 120, height: 56 };
@@ -1228,13 +843,6 @@ class MetricsDisplay {
 
   getAppHistoryLimit() {
     return 0;
-  }
-
-  getWidgetMetricFontSize() {
-    const family = this.runtime.widgetFamily || 'medium';
-    if (family === 'small') return 18;
-    if (family === 'large') return 22;
-    return FONT_SIZES.widget.metric;
   }
 
   getWidgetRowPadding(family) {
@@ -1278,12 +886,15 @@ class MetricsDisplay {
     return cell;
   }
 
+  // Badge variants: the run statuses plus every source verdict (dead, stopped,
+  // shrunk, empty, vanished, quiet, ok) so widget rows share the page palette.
   getWidgetBadgeColors(variant) {
     const palette = {
       success: BRAND.success,
       warning: BRAND.warning,
       danger: BRAND.danger,
-      neutral: BRAND.neutral || BRAND.textMuted
+      neutral: BRAND.neutral || BRAND.textMuted,
+      ...SOURCE_VERDICT_COLORS
     };
     const base = palette[variant] || palette.neutral;
     return {
@@ -1316,154 +927,10 @@ class MetricsDisplay {
     return ordered.slice(-limit);
   }
 
-  getSeries(records, selector) {
-    if (!Array.isArray(records)) return [];
-    return records.map(record => {
-      const value = selector(record);
-      return Number.isFinite(value) ? value : 0;
-    });
-  }
-
-  getSeriesAverage(values) {
-    if (!Array.isArray(values) || values.length === 0) return null;
-    const total = values.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
-    return total / values.length;
-  }
-
-  getParserSeries(records, parserName) {
-    if (!Array.isArray(records) || !parserName) return [];
-    const series = [];
-    records.forEach(record => {
-      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
-      const match = parserRecords.find(item => item?.parser_name === parserName);
-      if (!match) return;
-      const value = match?.final_bear_events;
-      series.push(Number.isFinite(value) ? value : 0);
-    });
-    return series;
-  }
-
-  getParserDurationSeries(records, parserName, options = {}) {
-    if (!Array.isArray(records) || !parserName) return [];
-    const fillMissing = !!options.fillMissing;
-    const series = [];
-    records.forEach(record => {
-      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
-      const match = parserRecords.find(item => item?.parser_name === parserName);
-      if (!match) {
-        if (fillMissing) series.push(0);
-        return;
-      }
-      series.push(this.getDurationMinutes(match?.duration_ms));
-    });
-    return series;
-  }
-
-  getParserNamesByMaxDuration(records, limit) {
-    if (!Array.isArray(records)) return [];
-    const maxValues = {};
-    records.forEach(record => {
-      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
-      parserRecords.forEach(parserRecord => {
-        const name = parserRecord?.parser_name;
-        if (!name) return;
-        const durationMinutes = this.getDurationMinutes(parserRecord?.duration_ms);
-        const currentMax = maxValues[name];
-        if (!Number.isFinite(currentMax) || durationMinutes > currentMax) {
-          maxValues[name] = durationMinutes;
-        }
-      });
-    });
-    const sorted = Object.keys(maxValues).sort((a, b) => {
-      const diff = (maxValues[b] || 0) - (maxValues[a] || 0);
-      if (diff !== 0) return diff;
-      return String(a).localeCompare(String(b));
-    });
-    if (!Number.isFinite(limit) || limit <= 0) return sorted;
-    return sorted.slice(0, limit);
-  }
-
-  getDurationMinutes(ms) {
-    if (!Number.isFinite(ms) || ms <= 0) return 0;
-    return ms / 60000;
-  }
-
   getTimeValue(isoString) {
     if (!isoString) return 0;
     const time = new Date(isoString).getTime();
     return Number.isFinite(time) ? time : 0;
-  }
-
-  sortParserItems(items, sortState) {
-    if (!Array.isArray(items)) return [];
-    const sortKey = sortState?.key || 'status';
-    const direction = sortState?.direction === 'asc' ? 1 : -1;
-    const sorted = [...items];
-    sorted.sort((a, b) => {
-      let diff = 0;
-      if (sortKey === 'name') {
-        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
-      } else if (sortKey === 'events') {
-        diff = (a?.finalBearEvents || 0) - (b?.finalBearEvents || 0);
-      } else if (sortKey === 'actions') {
-        diff = this.sumDisplayActions(a?.actions) - this.sumDisplayActions(b?.actions);
-      } else if (sortKey === 'new') {
-        diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
-      } else if (sortKey === 'merge') {
-        diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
-      } else if (sortKey === 'conflict') {
-        diff = (a?.actions?.conflict || 0) - (b?.actions?.conflict || 0);
-      } else if (sortKey === 'last-run') {
-        diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
-      } else if (sortKey === 'duration') {
-        diff = (a?.durationMs || 0) - (b?.durationMs || 0);
-      } else if (sortKey === 'status') {
-        diff = this.getParserStatusRank(a) - this.getParserStatusRank(b);
-        if (diff === 0) {
-          diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
-        }
-        if (diff === 0) {
-          diff = this.sumDisplayActions(a?.actions) - this.sumDisplayActions(b?.actions);
-        }
-      }
-      if (diff === 0) {
-        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
-      }
-      return diff * direction;
-    });
-    return sorted;
-  }
-
-  sortAggregateParserRows(items, sortState) {
-    if (!Array.isArray(items)) return [];
-    const sortKey = sortState?.key || 'runs';
-    const direction = sortState?.direction === 'asc' ? 1 : -1;
-    const sorted = [...items];
-    sorted.sort((a, b) => {
-      let diff = 0;
-      if (sortKey === 'name') {
-        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
-      } else if (sortKey === 'new') {
-        diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
-      } else if (sortKey === 'merge') {
-        diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
-      } else if (sortKey === 'conflict') {
-        diff = (a?.actions?.conflict || 0) - (b?.actions?.conflict || 0);
-      } else if (sortKey === 'runs') {
-        diff = (a?.runs || 0) - (b?.runs || 0);
-      } else if (sortKey === 'success') {
-        diff = (a?.statusCounts?.success || 0) - (b?.statusCounts?.success || 0);
-      } else if (sortKey === 'warning') {
-        diff = (a?.statusCounts?.warning || 0) - (b?.statusCounts?.warning || 0);
-      } else if (sortKey === 'failed') {
-        diff = (a?.statusCounts?.failed || 0) - (b?.statusCounts?.failed || 0);
-      }
-      if (diff === 0) {
-        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
-      }
-      return diff * direction;
-    });
-    return sorted;
   }
 
   getRunStatusRank(status) {
@@ -1634,18 +1101,6 @@ class MetricsDisplay {
     return image || this.buildStatusDot(color, size);
   }
 
-  getParserIconSymbol(item) {
-    const parserType = String(item?.parserType || '').toLowerCase();
-    const parserName = String(item?.name || '').toLowerCase();
-    const haystack = `${parserType} ${parserName}`;
-    for (const rule of PARSER_ICON_RULES) {
-      if (rule.match.some(match => haystack.includes(match))) {
-        return rule.symbol;
-      }
-    }
-    return 'calendar';
-  }
-
   buildScriptableUrl(scriptName, params = {}) {
     const base = `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}`;
     const query = Object.keys(params)
@@ -1655,28 +1110,32 @@ class MetricsDisplay {
     return query ? `${base}&${query}` : base;
   }
 
+  buildSourcesUrl(sortState) {
+    const defaultSort = this.getDefaultSortForView({ mode: 'sources' });
+    const isDefault = !sortState
+      || (sortState.key === defaultSort.key && sortState.direction === defaultSort.direction);
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+      view: 'sources',
+      sort: isDefault ? null : sortState.key,
+      dir: isDefault ? null : sortState.direction
+    });
+  }
+
+  buildHostUrl(host) {
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { host });
+  }
+
   buildWidgetDashboardUrl(view, sortState, runSortState, runFilters) {
-    const safeView = view?.mode ? view : { mode: 'parsers' };
+    const safeView = view?.mode ? view : { mode: 'sources' };
+    if (safeView.mode === 'host' && safeView.host) {
+      return this.buildHostUrl(safeView.host);
+    }
     const normalizedMode = this.normalizeViewToken(safeView.mode) || safeView.mode;
     if (normalizedMode === 'runs') {
       const sort = runSortState || this.getDefaultRunSort();
       return this.buildRunListUrl(sort, runFilters || null);
     }
-    if (normalizedMode === 'parsers') {
-      const sort = sortState || this.getDefaultSortForView(safeView);
-      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-        view: 'parsers',
-        sort: sort?.key || null,
-        dir: sort?.direction || null
-      });
-    }
-    if (normalizedMode === 'parser') {
-      if (safeView.parserName) {
-        return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: safeView.parserName });
-      }
-      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
-    }
-    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+    return this.buildSourcesUrl(sortState || null);
   }
 
   getQueryParams() {
@@ -1700,7 +1159,8 @@ class MetricsDisplay {
     if (!value) return null;
     const raw = String(value).trim().toLowerCase();
     if (!raw) return null;
-    if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'parsers';
+    // Old widget parameters ("parsers", "health") land on Sources, which replaced them.
+    if (['sources', 'source', 'hosts', 'host', 'sites', 'site', 'websites', 'parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'sources';
     if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'runs';
     return null;
   }
@@ -1708,6 +1168,7 @@ class MetricsDisplay {
   parseWidgetParams(param) {
     const payload = {
       view: null,
+      host: null,
       parserName: null,
       sortKey: null,
       sortDirection: null,
@@ -1722,11 +1183,19 @@ class MetricsDisplay {
     if (tokens.length === 0) {
       tokens.push(raw);
     }
+    const valueAfter = (token, separator) => token.slice(token.indexOf(separator) + 1).trim();
     tokens.forEach(token => {
       const lower = token.toLowerCase();
-      if (lower.startsWith('parser:')) {
-        const parserName = token.slice(token.indexOf(':') + 1).trim();
-        payload.view = 'parser';
+      if (lower.startsWith('host:') || lower.startsWith('host=') || lower.startsWith('site:') || lower.startsWith('site=')) {
+        const host = valueAfter(token, lower.charAt(4));
+        payload.view = 'host';
+        payload.host = host ? host.toLowerCase() : null;
+        return;
+      }
+      if (lower.startsWith('parser:') || lower.startsWith('parser=')) {
+        // Old parser deep links resolve to the host that parser feeds (resolveHostView).
+        const parserName = valueAfter(token, lower.charAt(6));
+        payload.view = 'host';
         payload.parserName = parserName || null;
         return;
       }
@@ -1741,7 +1210,7 @@ class MetricsDisplay {
         return;
       }
       if (lower.startsWith('status:')) {
-        payload.status = token.slice(token.indexOf(':') + 1).trim();
+        payload.status = valueAfter(token, ':');
         return;
       }
       if (lower.startsWith('parserfilter=')
@@ -1754,19 +1223,11 @@ class MetricsDisplay {
         return;
       }
       if (lower.startsWith('parserfilter:') || lower.startsWith('parser-filter:')) {
-        payload.parserFilter = token.slice(token.indexOf(':') + 1).trim();
+        payload.parserFilter = valueAfter(token, ':');
         return;
       }
-      if (lower.startsWith('days=')) {
-        const rawDays = token.split('=').slice(1).join('=').trim();
-        const parsedDays = Number.parseInt(rawDays, 10);
-        if (Number.isFinite(parsedDays) && parsedDays > 0) {
-          payload.days = parsedDays;
-        }
-        return;
-      }
-      if (lower.startsWith('days:')) {
-        const rawDays = token.slice(token.indexOf(':') + 1).trim();
+      if (lower.startsWith('days=') || lower.startsWith('days:')) {
+        const rawDays = valueAfter(token, lower.charAt(4));
         const parsedDays = Number.parseInt(rawDays, 10);
         if (Number.isFinite(parsedDays) && parsedDays > 0) {
           payload.days = parsedDays;
@@ -1799,35 +1260,57 @@ class MetricsDisplay {
   parseViewParam(param) {
     const parsed = this.parseWidgetParams(param);
     if (!parsed.view) return null;
-    if (parsed.view === 'parser') {
-      return parsed.parserName ? { mode: 'parser', parserName: parsed.parserName } : { mode: 'parsers' };
+    if (parsed.view === 'host') {
+      if (parsed.host) return { mode: 'host', host: parsed.host };
+      if (parsed.parserName) return { mode: 'host', parserName: parsed.parserName };
+      return { mode: 'sources' };
     }
     return { mode: parsed.view };
   }
 
   parseViewFromQuery(query) {
     if (!query) return null;
+    const host = query.host || query.site || null;
+    if (host) {
+      return { mode: 'host', host: String(host).trim().toLowerCase() };
+    }
     const parserName = query.parser || query.parserName || null;
     if (parserName) {
-      return { mode: 'parser', parserName: String(parserName) };
+      return { mode: 'host', parserName: String(parserName) };
     }
     const viewValue = query.view || query.mode || null;
     const viewToken = this.normalizeViewToken(viewValue);
     return viewToken ? { mode: viewToken } : null;
   }
 
+  // A host view that only names a parser (old parser deep links) resolves to
+  // the host that parser feeds; a host that is not in the ledger keeps its
+  // name so the detail view can say so.
+  resolveHostView(view, sourceHealth) {
+    if (!view || view.mode !== 'host') return view;
+    const rows = sourceHealth?.health?.rows || [];
+    if (view.host) {
+      const needle = String(view.host).toLowerCase();
+      const match = rows.find(row => String(row.host).toLowerCase() === needle);
+      return { mode: 'host', host: match ? match.host : view.host };
+    }
+    if (view.parserName) {
+      const needle = String(view.parserName).toLowerCase();
+      const match = rows.find(row => (row.parsers || []).some(name => String(name).toLowerCase() === needle));
+      if (match) return { mode: 'host', host: match.host };
+    }
+    return { mode: 'sources' };
+  }
+
   normalizeSortKey(value) {
     if (!value) return null;
     const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
-    if (['name', 'parser'].includes(normalized)) return 'name';
-    if (['events', 'finalevents', 'final', 'bear'].includes(normalized)) return 'events';
-    if (['actions', 'action', 'activity'].includes(normalized)) return 'actions';
-    if (['status', 'health', 'state'].includes(normalized)) return 'status';
-    if (['lastrun', 'last', 'run'].includes(normalized)) return 'last-run';
-    if (['duration', 'time', 'runtime'].includes(normalized)) return 'duration';
-    if (['new', 'add', 'adds', 'added'].includes(normalized)) return 'new';
-    if (['merge', 'merged', 'mrg'].includes(normalized)) return 'merge';
-    if (['conflict', 'conflicts', 'conf', 'cnf'].includes(normalized)) return 'conflict';
+    if (['verdict', 'status', 'health', 'trouble', 'state'].includes(normalized)) return 'verdict';
+    if (['host', 'site', 'name', 'website'].includes(normalized)) return 'host';
+    if (['extracted', 'extr', 'rows', 'events', 'total'].includes(normalized)) return 'extracted';
+    if (['bear', 'bears', 'final'].includes(normalized)) return 'bear';
+    if (['upcoming', 'up', 'future'].includes(normalized)) return 'upcoming';
+    if (['age', 'seen', 'lastrun', 'last', 'lastseen', 'run'].includes(normalized)) return 'age';
     return null;
   }
 
@@ -1840,12 +1323,12 @@ class MetricsDisplay {
   }
 
   getDefaultSortDirection(sortKey) {
-    return sortKey === 'name' ? 'asc' : 'desc';
+    return sortKey === 'verdict' || sortKey === 'host' ? 'asc' : 'desc';
   }
 
   getDefaultSortForView(view) {
-    if (view?.mode === 'parsers') {
-      return { key: 'status', direction: 'desc' };
+    if (view?.mode === 'sources') {
+      return { key: 'verdict', direction: 'asc' };
     }
     return null;
   }
@@ -1867,55 +1350,12 @@ class MetricsDisplay {
   }
 
   resolveSort(view) {
-    if (!view || view.mode !== 'parsers') return null;
+    if (!view || view.mode !== 'sources') return null;
     const fromQuery = this.getSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
     if (fromParam) return fromParam;
     return this.getDefaultSortForView(view);
-  }
-
-  normalizeAggregateSortKey(value) {
-    if (!value) return null;
-    const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
-    if (['name', 'parser'].includes(normalized)) return 'name';
-    if (['new', 'add', 'adds', 'added'].includes(normalized)) return 'new';
-    if (['merge', 'merged', 'mrg'].includes(normalized)) return 'merge';
-    if (['conflict', 'conflicts', 'conf', 'cnf'].includes(normalized)) return 'conflict';
-    if (['runs', 'run'].includes(normalized)) return 'runs';
-    if (['success', 'suc'].includes(normalized)) return 'success';
-    if (['warning', 'warnings', 'warn', 'partial'].includes(normalized)) return 'warning';
-    if (['failed', 'fail'].includes(normalized)) return 'failed';
-    return null;
-  }
-
-  getDefaultAggregateSort() {
-    return { key: 'runs', direction: 'desc' };
-  }
-
-  getAggregateSortFromQuery(query) {
-    if (!query) return null;
-    const key = this.normalizeAggregateSortKey(query.sort || query.order || query.sortBy || null);
-    if (!key) return null;
-    const direction = this.normalizeSortDirection(query.dir || query.direction || null);
-    return { key, direction: direction || this.getDefaultSortDirection(key) };
-  }
-
-  getAggregateSortFromParam(param) {
-    const parsed = this.parseWidgetParams(param);
-    const key = this.normalizeAggregateSortKey(parsed.sortKey);
-    if (!key) return null;
-    const direction = this.normalizeSortDirection(parsed.sortDirection);
-    return { key, direction: direction || this.getDefaultSortDirection(key) };
-  }
-
-  resolveAggregateSort(view) {
-    if (!view || view.mode !== 'runs') return null;
-    const fromQuery = this.getAggregateSortFromQuery(this.getQueryParams());
-    if (fromQuery) return fromQuery;
-    const fromParam = this.getAggregateSortFromParam(this.runtime.widgetParameter);
-    if (fromParam) return fromParam;
-    return this.getDefaultAggregateSort();
   }
 
   normalizeRunSortKey(value) {
@@ -2014,8 +1454,7 @@ class MetricsDisplay {
     if (queryView) return queryView;
     const paramView = this.parseViewParam(this.runtime.widgetParameter);
     if (paramView) return paramView;
-    if (this.runtime.runsInWidget) return { mode: 'parsers' };
-    return { mode: 'parsers' };
+    return { mode: 'sources' };
   }
 
   getWidgetMaxRows() {
@@ -2025,13 +1464,10 @@ class MetricsDisplay {
     return 3;
   }
 
-  getWidgetHeaderText(context, view, sortState) {
-    if (view?.mode === 'parsers') return 'Parser Health';
+  getWidgetHeaderText(view) {
     if (view?.mode === 'runs') return 'All Runs';
-    if (view?.mode === 'parser') {
-      return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
-    }
-    return 'Parser Health';
+    if (view?.mode === 'host') return view.host ? String(view.host) : 'Host';
+    return 'Sources';
   }
 
   addWidgetHeader(widget, logoImage, headerText) {
@@ -2051,195 +1487,157 @@ class MetricsDisplay {
     widget.addSpacer(family === 'small' ? 4 : 6);
   }
 
-  async renderWidgetParserHealth(widget, context) {
-    const parserHealth = context.parserHealth;
-    const sortState = context.sortState;
+  async renderWidgetSources(widget, context) {
     const family = this.runtime.widgetFamily || 'medium';
-    const latestRunId = context.latest?.run_id || null;
-
-    const columns = this.getWidgetColumnCount(family);
-    const maxRows = this.getWidgetMaxRows();
-    const sortedItems = this.sortParserItems(parserHealth.items, sortState);
-    const items = sortedItems.slice(0, maxRows * columns);
-    const nameLimit = family === 'small' ? 14 : (family === 'large' ? 20 : 16);
-    const showDetails = family === 'large';
-
-    for (let index = 0; index < items.length; index += columns) {
-      if (index > 0) widget.addSpacer(4);
-      const row = widget.addStack();
-      row.layoutHorizontally();
-      row.spacing = WIDGET_STYLE.rowSpacing;
-      const isIncompleteRow = columns > 1 && (index + columns > items.length);
-
-      for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
-        const item = items[index + columnIndex];
-        if (!item) {
-          row.addSpacer();
-          continue;
-        }
-        const statusMeta = this.getParserStatusMeta(item);
-        const cell = this.addWidgetCell(row, family, columns);
-        const runId = item?.lastRunId || latestRunId;
-        if (runId) {
-          cell.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
-            runId,
-            readOnly: true
-          });
-        }
-
-        const header = cell.addStack();
-        header.layoutHorizontally();
-        header.centerAlignContent();
-        header.spacing = 4;
-
-        const iconImage = await this.getParserIconImage(item, 11, new Color(BRAND.textSoft));
-        if (iconImage) {
-          const icon = header.addImage(iconImage);
-          icon.imageSize = new Size(11, 11);
-        }
-
-        const name = header.addText(this.truncateText(item.name, nameLimit));
-        name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-        name.textColor = new Color(BRAND.text);
-        name.lineLimit = 1;
-
-        if (isIncompleteRow) {
-          header.addSpacer(4);
-        } else {
-          header.addSpacer();
-        }
-
-        const statusIcon = this.buildStatusIcon(statusMeta, 11);
-        if (statusIcon) {
-          const statusImage = header.addImage(statusIcon);
-          statusImage.imageSize = new Size(11, 11);
-        }
-
-        const actions = item.actions || this.createActionCounts();
-        const issuesCount = item.latestErrorCount || 0;
-        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
-        const summaryLabel = `➕${this.formatNumber(actions.new || 0)} 🔀${this.formatNumber(actions.merge || 0)} ⚠️${this.formatNumber(actions.conflict || 0)}`;
-        const summaryRow = cell.addStack();
-        summaryRow.layoutHorizontally();
-        summaryRow.centerAlignContent();
-        const summary = summaryRow.addText(summaryLabel);
-        summary.font = Font.systemFont(FONT_SIZES.widget.small);
-        summary.textColor = new Color(BRAND.textMuted);
-        summary.lineLimit = 1;
-        if (isIncompleteRow) {
-          summaryRow.addSpacer(4);
-        } else {
-          summaryRow.addSpacer();
-        }
-        const lastRun = summaryRow.addText(lastRunLabel);
-        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
-        lastRun.textColor = new Color(BRAND.textMuted);
-        lastRun.lineLimit = 1;
-
-        if (showDetails && issuesCount > 0) {
-          cell.addSpacer(2);
-          const issues = cell.addText(`Issues ${issuesCount}`);
-          issues.font = Font.systemFont(FONT_SIZES.widget.small);
-          issues.textColor = new Color(BRAND.textMuted);
-          issues.lineLimit = 1;
-        }
-      }
+    const sourceHealth = context.sourceHealth;
+    if (!sourceHealth?.available || !MetricsSections?.buildSourceWidgetSummary) {
+      const title = widget.addText('No source ledger yet');
+      title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+      title.textColor = new Color(BRAND.text);
+      const note = widget.addText(family === 'small' ? 'Every run writes it.' : 'Every run writes it; backfill history on the Mac.');
+      note.font = Font.systemFont(FONT_SIZES.widget.small);
+      note.textColor = new Color(BRAND.textMuted);
+      return;
     }
 
-    if (parserHealth.items.length > items.length) {
-      const more = widget.addText(`+${parserHealth.items.length - items.length} more`);
+    const limit = family === 'small' ? 2 : this.getWidgetMaxRows();
+    const summary = MetricsSections.buildSourceWidgetSummary(sourceHealth.health, { limit });
+    const headline = widget.addText(summary.headline);
+    headline.font = Font.boldSystemFont(family === 'small' ? FONT_SIZES.widget.small : FONT_SIZES.widget.label);
+    headline.textColor = new Color(BRAND.text);
+    headline.lineLimit = 1;
+    widget.addSpacer(4);
+
+    if (summary.items.length === 0) {
+      const newestLabel = summary.newestFinishedAt
+        ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`
+        : 'No runs recorded yet';
+      const newest = widget.addText(newestLabel);
+      newest.font = Font.systemFont(FONT_SIZES.widget.small);
+      newest.textColor = new Color(BRAND.textMuted);
+      return;
+    }
+
+    const nameLimit = family === 'small' ? 16 : (family === 'large' ? 30 : 22);
+    for (let index = 0; index < summary.items.length; index += 1) {
+      const item = summary.items[index];
+      if (index > 0) widget.addSpacer(4);
+      const row = this.addWidgetRow(widget, family);
+      row.url = this.buildHostUrl(item.host);
+
+      const iconImage = await this.getHostIconImage(item);
+      if (iconImage) {
+        const icon = row.addImage(iconImage);
+        icon.imageSize = new Size(11, 11);
+      }
+
+      const name = row.addText(this.truncateText(item.host, nameLimit));
+      name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+      name.textColor = new Color(BRAND.text);
+      name.lineLimit = 1;
+      row.addSpacer();
+
+      if (family === 'large') {
+        let detailLabel = `${this.formatNumber(item.extracted)} · ${this.formatNumber(item.bear)} · ${this.formatNumber(item.upcoming)}`;
+        if (item.sinceLabel) detailLabel = `since ${item.sinceLabel}`;
+        else if (item.vanished > 0) detailLabel = `${item.vanished} gone`;
+        const detail = row.addText(detailLabel);
+        detail.font = Font.systemFont(FONT_SIZES.widget.small);
+        detail.textColor = new Color(BRAND.textMuted);
+        detail.lineLimit = 1;
+      }
+
+      this.addWidgetBadge(row, item.label, item.verdict, { fontSize: 10 });
+    }
+
+    if (summary.more > 0) {
+      widget.addSpacer(4);
+      const more = widget.addText(`+${summary.more} more`);
       more.font = Font.systemFont(FONT_SIZES.widget.small);
       more.textColor = new Color(BRAND.textMuted);
     }
+    if (family !== 'small' && summary.newestFinishedAt) {
+      widget.addSpacer(4);
+      const newest = widget.addText(`Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`);
+      newest.font = Font.systemFont(FONT_SIZES.widget.small);
+      newest.textColor = new Color(BRAND.textMuted);
+    }
   }
 
-  renderWidgetParserDetail(widget, context, view) {
-    const parserHealth = context.parserHealth;
-    const recentRecords = context.recentRecords;
-    const chartSize = context.chartSize;
-    const record = parserHealth.items.find(item => item.name === view.parserName);
+  async renderWidgetHost(widget, context, view) {
     const family = this.runtime.widgetFamily || 'medium';
-
-    const title = widget.addText(`Parser: ${view.parserName}`);
-    title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
-    title.textColor = new Color(BRAND.text);
-    widget.addSpacer(4);
-
-    if (recentRecords.length > 0) {
-      const series = this.getParserSeries(recentRecords, view.parserName);
-      if (series.length > 0) {
-        const chartImage = this.buildLineChartImage(series, chartSize, {
-          lineColor: new Color(CHART_STYLE.lineSecondary),
-          fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-        });
-        const chart = widget.addImage(chartImage);
-        chart.imageSize = new Size(chartSize.width, chartSize.height);
-        widget.addSpacer(4);
-      }
-    }
-
-    const hasAllTime = (record?.allTimeRuns || 0) > 0;
-    const hasHistory = (record?.historyRuns || 0) > 0;
-    const hasLastRun = !!record?.lastRunAt;
-
-    if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
-      const none = widget.addText('No parser metrics yet.');
+    const sourceHealth = context.sourceHealth;
+    const rows = sourceHealth?.available ? (sourceHealth.health?.rows || []) : [];
+    const needle = String(view?.host || '').toLowerCase();
+    const row = rows.find(item => String(item.host).toLowerCase() === needle) || null;
+    if (!row) {
+      const none = widget.addText(sourceHealth?.available ? 'No ledger lines for this host.' : 'No source ledger yet');
       none.font = Font.systemFont(FONT_SIZES.widget.small);
       none.textColor = new Color(BRAND.text);
       return;
     }
 
-    if (hasAllTime) {
-      const allTime = widget.addText(this.formatAllTimeSummary(record, {
-        compact: family === 'small',
-        includeTotal: family !== 'small'
-      }));
-      allTime.font = Font.systemFont(FONT_SIZES.widget.label);
-      allTime.textColor = new Color(BRAND.text);
-    } else if (hasHistory) {
-      const recent = widget.addText(this.formatHistorySummary(record, {
-        compact: family === 'small',
-        includeTotal: family !== 'small'
-      }));
-      recent.font = Font.systemFont(FONT_SIZES.widget.label);
-      recent.textColor = new Color(BRAND.text);
-    } else {
-      const summaryMissing = widget.addText('History summary unavailable.');
-      summaryMissing.font = Font.systemFont(FONT_SIZES.widget.small);
-      summaryMissing.textColor = new Color(BRAND.textMuted);
+    const verdictLabel = MetricsSections?.sourceVerdictLabel
+      ? MetricsSections.sourceVerdictLabel(row.verdict)
+      : String(row.verdict || '');
+    const statusRow = widget.addStack();
+    statusRow.layoutHorizontally();
+    statusRow.centerAlignContent();
+    statusRow.spacing = 6;
+    const iconImage = await this.getHostIconImage(row);
+    if (iconImage) {
+      const icon = statusRow.addImage(iconImage);
+      icon.imageSize = new Size(12, 12);
+    }
+    this.addWidgetBadge(statusRow, verdictLabel, row.verdict, { fontSize: 10 });
+    statusRow.addSpacer();
+    let whenLabel = '';
+    if (row.since && MetricsSections?.formatSourceRun) {
+      whenLabel = `since ${MetricsSections.formatSourceRun(row.since)}`;
+    } else if (row.latest?.finished_at) {
+      whenLabel = this.formatRelativeTime(row.latest.finished_at);
+    }
+    if (whenLabel) {
+      const when = statusRow.addText(whenLabel);
+      when.font = Font.systemFont(FONT_SIZES.widget.small);
+      when.textColor = new Color(BRAND.textMuted);
+      when.lineLimit = 1;
+    }
+    widget.addSpacer(4);
+
+    const series = (Array.isArray(row.series) ? row.series : [])
+      .slice(-this.getWidgetHistoryLimit())
+      .map(line => Number(line.extracted) || 0);
+    if (series.length > 1) {
+      const chartSize = context.chartSize;
+      const chartImage = this.buildLineChartImage(series, chartSize, {
+        lineColor: new Color(CHART_STYLE.lineSecondary),
+        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
+      });
+      const chart = widget.addImage(chartImage);
+      chart.imageSize = new Size(chartSize.width, chartSize.height);
+      widget.addSpacer(4);
     }
 
-    const lastRunLabel = hasLastRun
-      ? this.formatLastRunSummary(record, { compact: family === 'small' })
-      : 'No recent run data.';
-    const lastRun = widget.addText(lastRunLabel);
-    lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
-    lastRun.textColor = new Color(BRAND.textMuted);
+    const latest = row.latest || {};
+    const numbers = widget.addText(`Extracted ${this.formatNumber(latest.extracted || 0)} • Bear ${this.formatNumber(latest.bear || 0)} • Upcoming ${this.formatNumber(latest.upcoming || 0)}`);
+    numbers.font = Font.systemFont(FONT_SIZES.widget.small);
+    numbers.textColor = new Color(BRAND.text);
+    numbers.lineLimit = 1;
 
     if (family !== 'small') {
-      const durationMs = hasLastRun
-        ? record.durationMs
-        : (hasAllTime && record.allTimeRuns > 0 ? Math.round(record.allTimeDurationMs / record.allTimeRuns) : null)
-          || (hasHistory && record.historyRuns > 0 ? Math.round(record.historyDurationMs / record.historyRuns) : null);
-      if (durationMs) {
-        const durationLabel = hasLastRun ? 'Duration' : 'Avg duration';
-        const duration = widget.addText(`${durationLabel}: ${this.formatDuration(durationMs)}`);
-        duration.font = Font.systemFont(FONT_SIZES.widget.small);
-        duration.textColor = new Color(BRAND.textMuted);
-      }
-
-      const actionSource = hasLastRun
-        ? record.actions
-        : (hasAllTime ? record.allTimeActions : record.historyActions);
-      const calendarActionSource = hasLastRun
-        ? record.calendarActions
-        : (hasAllTime ? record.allTimeCalendarActions : record.historyCalendarActions);
-      const actions = widget.addText(`Intent: ${this.formatActions(actionSource)}`);
-      actions.font = Font.systemFont(FONT_SIZES.widget.small);
-      actions.textColor = new Color(BRAND.textMuted);
-      const writeActions = widget.addText(`Writes: ${this.formatCalendarActions(calendarActionSource)}`);
-      writeActions.font = Font.systemFont(FONT_SIZES.widget.small);
-      writeActions.textColor = new Color(BRAND.textMuted);
+      const parts = [];
+      parts.push(row.baseline !== null && row.baseline !== undefined
+        ? `Baseline ${this.formatNumber(row.baseline)}`
+        : 'No baseline yet');
+      parts.push(`${(Array.isArray(row.series) ? row.series : []).length} runs`);
+      if (Array.isArray(row.vanished) && row.vanished.length) parts.push(`${row.vanished.length} vanished`);
+      const parsers = (Array.isArray(row.parsers) ? row.parsers : []).filter(Boolean);
+      if (parsers.length) parts.push(parsers.join(', '));
+      const meta = widget.addText(parts.join(' • '));
+      meta.font = Font.systemFont(FONT_SIZES.widget.small);
+      meta.textColor = new Color(BRAND.textMuted);
+      meta.lineLimit = 2;
     }
   }
 
@@ -2364,32 +1762,23 @@ class MetricsDisplay {
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
 
-    const normalizedMode = this.normalizeViewToken(view?.mode) || view?.mode || 'parsers';
-    const normalizedView = view?.mode ? { ...view, mode: normalizedMode } : { mode: normalizedMode };
+    const normalizedMode = view?.mode === 'host'
+      ? 'host'
+      : (this.normalizeViewToken(view?.mode) || 'sources');
+    const normalizedView = { ...(view || {}), mode: normalizedMode };
 
     const logoImage = await this.loadLogoImage();
 
     const latest = data.latestRecord;
-    const summary = data.summary;
-    const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
-    const sortState = data.sortState || this.resolveSort(view);
-    const runSortState = data.runSortState || this.resolveRunSort(view);
-    const runFilters = data.runFilters || this.resolveRunFilters(view);
+    const sortState = data.sortState || this.resolveSort(normalizedView);
+    const runSortState = data.runSortState || this.resolveRunSort(normalizedView);
+    const runFilters = data.runFilters || this.resolveRunFilters(normalizedView);
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
-    const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
     const widgetUrl = this.buildWidgetDashboardUrl(normalizedView, sortState, runSortState, runFilters);
-    const headerText = this.getWidgetHeaderText({ latest, parserHealth }, normalizedView, sortState);
-    this.addWidgetHeader(widget, logoImage, headerText);
+    this.addWidgetHeader(widget, logoImage, this.getWidgetHeaderText(normalizedView));
 
-    if (!latest && normalizedView.mode !== 'runs') {
-      const message = widget.addText('No metrics found yet.');
-      message.font = Font.systemFont(FONT_SIZES.widget.label);
-      message.textColor = new Color(BRAND.text);
-      if (widgetUrl) widget.url = widgetUrl;
-      return widget;
-    }
     if (normalizedView.mode === 'runs' && runItems.length === 0) {
       const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
@@ -2400,25 +1789,20 @@ class MetricsDisplay {
 
     const context = {
       latest,
-      summary,
-      parserHealth,
       records,
-      recentRecords,
+      sourceHealth: data.sourceHealth || null,
       chartSize,
-      sortState,
       runSortState,
       runFilters,
       runItems
     };
 
-    if (normalizedView.mode === 'parsers') {
-      await this.renderWidgetParserHealth(widget, context);
-    } else if (normalizedView.mode === 'runs') {
+    if (normalizedView.mode === 'runs') {
       this.renderWidgetRuns(widget, context);
-    } else if (normalizedView.mode === 'parser') {
-      this.renderWidgetParserDetail(widget, context, normalizedView);
+    } else if (normalizedView.mode === 'host') {
+      await this.renderWidgetHost(widget, context, normalizedView);
     } else {
-      await this.renderWidgetParserHealth(widget, context);
+      await this.renderWidgetSources(widget, context);
     }
 
     if (widgetUrl) widget.url = widgetUrl;
@@ -2445,21 +1829,6 @@ class MetricsDisplay {
     }
   }
 
-  getRunStatusBadgeClass(status) {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'success') return 'success';
-    if (normalized === 'partial') return 'warning';
-    if (normalized === 'failed') return 'danger';
-    return 'neutral';
-  }
-
-  getParserStatusBadgeClass(statusKey) {
-    if (statusKey === 'healthy') return 'success';
-    if (statusKey === 'warning') return 'warning';
-    if (statusKey === 'failed') return 'danger';
-    return 'neutral';
-  }
-
   async renderAppHtml(data, view, sortState) {
     const html = await this.buildAppHtml(data, view, sortState);
     await WebView.loadHTML(html, null, null, true);
@@ -2468,25 +1837,23 @@ class MetricsDisplay {
   async buildAppHtml(data, view, sortState) {
     const latest = data.latestRecord;
     const summary = data.summary;
-    const parserHealth = data.parserHealth || {};
-    const parserItems = Array.isArray(parserHealth.items) ? parserHealth.items : [];
     const records = Array.isArray(data.records) ? data.records : [];
-    const allTimeParserRows = summary ? this.buildAllTimeParserRows(records, summary) : [];
-    const parserSort = sortState || data.sortState || this.resolveSort(view);
-    const parserSortResolved = parserSort || this.getDefaultSortForView({ mode: 'parsers' });
+    const sourceHealth = data.sourceHealth || { available: false, reason: null, health: null, records: [] };
+    const sourceRows = sourceHealth.available && Array.isArray(sourceHealth.health?.rows) ? sourceHealth.health.rows : [];
+    const sourceRecords = Array.isArray(sourceHealth.records) ? sourceHealth.records : [];
+    const sourceSort = sortState || data.sortState || this.resolveSort(view);
+    const sourceSortResolved = sourceSort || this.getDefaultSortForView({ mode: 'sources' });
     const runSortState = data.runSortState || this.resolveRunSort(view);
     const runSortResolved = runSortState || this.getDefaultRunSort();
-    const aggregateSortState = data.aggregateSortState || this.resolveAggregateSort(view);
-    const aggregateSortResolved = aggregateSortState || this.getDefaultAggregateSort();
     const runFilters = data.runFilters || this.resolveRunFilters(view);
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const filteredRuns = this.applyRunFilters(runItems, runFilters);
     const sortedRuns = this.sortRunItems(filteredRuns, runSortResolved);
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
     const chartSize = this.getAppChartSize();
-    const safeView = view?.mode ? view : { mode: 'parsers' };
-    const viewMode = this.normalizeViewToken(safeView.mode) || safeView.mode;
-    const initialParserName = viewMode === 'parser' ? (safeView.parserName || '') : '';
+    const safeView = view?.mode ? view : { mode: 'sources' };
+    const viewMode = safeView.mode === 'host' ? 'host' : (this.normalizeViewToken(safeView.mode) || 'sources');
+    const initialViewKey = viewMode === 'host' ? String(safeView.host || '') : '';
 
     const escapeHtml = value => this.escapeHtml(value);
 
@@ -2501,22 +1868,16 @@ class MetricsDisplay {
       return buildLink(label, url, className, dataAttrs);
     };
 
-    const buildNavAttributes = (viewTarget, parserTarget, isTab = false) => {
+    const buildNavAttributes = (viewTarget, keyTarget, isTab = false) => {
       if (!viewTarget) return '';
       const attrs = [`data-nav-view="${escapeHtml(viewTarget)}"`];
-      if (parserTarget) {
-        attrs.push(`data-nav-parser="${escapeHtml(parserTarget)}"`);
+      if (keyTarget) {
+        attrs.push(`data-nav-key="${escapeHtml(keyTarget)}"`);
       }
       if (isTab) {
         attrs.push('data-nav-tab="true"');
       }
       return attrs.join(' ');
-    };
-
-    const buildBadge = (label, variant) => `<span class="badge ${variant}">${escapeHtml(label)}</span>`;
-    const buildMetricChip = (label, value, variant = '') => {
-      const variantClass = variant ? ` ${variant}` : '';
-      return `<span class="metric-chip${variantClass}"><span class="metric-chip-label">${escapeHtml(label)}</span><span class="metric-chip-value">${escapeHtml(value)}</span></span>`;
     };
 
     const buildMetric = (label, value, subvalue = null) => `
@@ -2602,192 +1963,6 @@ class MetricsDisplay {
         ${legendHtml}
         ${subtitle ? `<div class="chart-subtitle">${escapeHtml(subtitle)}</div>` : ''}
       </div>`;
-    };
-
-    const buildParserTable = (items, sortState) => {
-      if (!items.length) {
-        return `<div class="muted">No parser metrics available.</div>`;
-      }
-      const rows = items.map(item => {
-        const statusMeta = this.getParserStatusMeta(item);
-        const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
-        const parserNavAttrs = buildNavAttributes('parser', item.name);
-        const statusRank = this.getParserStatusRank(item);
-        const actions = item.actions || this.createActionCounts();
-        const actionTotal = this.sumDisplayActions(actions);
-        const lastRunValue = this.getTimeValue(item.lastRunAt);
-        const durationMs = Number.isFinite(item?.durationMs) ? item.durationMs : 0;
-        const statusEmoji = this.getParserStatusEmoji(item);
-        const statusLabel = statusMeta?.label || 'Unknown';
-        const rowAttrs = [
-          `data-parser-name="${escapeHtml(item.name || '')}"`,
-          `data-parser-status="${escapeHtml(statusMeta.key)}"`,
-          `data-parser-status-rank="${statusRank}"`,
-          `data-parser-final-events="${item.finalBearEvents || 0}"`,
-          `data-parser-actions="${actionTotal}"`,
-          `data-parser-new="${actions.new || 0}"`,
-          `data-parser-merge="${actions.merge || 0}"`,
-          `data-parser-conflict="${actions.conflict || 0}"`,
-          `data-parser-last-run="${lastRunValue}"`,
-          `data-parser-duration="${durationMs}"`
-        ].join(' ');
-        const lastRun = this.formatLastRunLabel(item.lastRunAt);
-        const durationLabel = durationMs > 0 ? this.formatDuration(durationMs) : '-';
-        return `
-          <tr data-row="parser" ${rowAttrs}>
-            <td>
-              <div class="cell-title">
-                ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.new || 0))}</div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.merge || 0))}</div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.conflict || 0))}</div>
-            </td>
-            <td>
-              <div class="cell-title">${escapeHtml(lastRun)}</div>
-            </td>
-            <td class="num">
-              <div class="cell-title">${escapeHtml(durationLabel)}</div>
-            </td>
-            <td class="status-cell">
-              <span class="status-emoji" title="${escapeHtml(statusLabel)}">${escapeHtml(statusEmoji)}</span>
-            </td>
-          </tr>`;
-      }).join('');
-      return `
-        <div class="table-wrapper">
-          <table class="metrics-table list-table">
-            <thead>
-              <tr>
-                ${buildSortHeader('Parser', 'name', sortState, 'parsers', 'asc')}
-                ${buildSortHeader('Add', 'new', sortState, 'parsers', 'desc', 'num tight')}
-                ${buildSortHeader('Mrg', 'merge', sortState, 'parsers', 'desc', 'num tight')}
-                ${buildSortHeader('Cnf', 'conflict', sortState, 'parsers', 'desc', 'num tight')}
-                ${buildSortHeader('Last', 'last-run', sortState, 'parsers', 'desc')}
-                ${buildSortHeader('Dur', 'duration', sortState, 'parsers', 'desc', 'num')}
-                ${buildSortHeader('Stat', 'status', sortState, 'parsers', 'desc', 'status-cell')}
-              </tr>
-            </thead>
-            <tbody data-list="parsers">
-              ${rows}
-            </tbody>
-          </table>
-        </div>`;
-    };
-
-    const buildAggregateParserTable = (items, sortState) => {
-      if (!items.length) {
-        return `<div class="muted">No parser totals available.</div>`;
-      }
-      const rows = items.map(item => {
-        const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
-        const parserNavAttrs = buildNavAttributes('parser', item.name);
-        const actions = item.actions || this.createActionCounts();
-        const statusCounts = this.normalizeStatusCounts(item.statusCounts || this.createStatusCounts());
-        const runs = item.runs || 0;
-        const actionTotal = this.sumDisplayActions(actions);
-        const addPercentValue = actionTotal > 0 ? ((actions.new || 0) / actionTotal) * 100 : 0;
-        const mergePercentValue = actionTotal > 0 ? ((actions.merge || 0) / actionTotal) * 100 : 0;
-        const conflictPercentValue = actionTotal > 0 ? ((actions.conflict || 0) / actionTotal) * 100 : 0;
-        const successPercentValue = runs > 0 ? ((statusCounts.success || 0) / runs) * 100 : 0;
-        const warningPercentValue = runs > 0 ? ((statusCounts.warning || 0) / runs) * 100 : 0;
-        const failedPercentValue = runs > 0 ? ((statusCounts.failed || 0) / runs) * 100 : 0;
-        const addPercent = this.formatPercent(actions.new || 0, actionTotal);
-        const mergePercent = this.formatPercent(actions.merge || 0, actionTotal);
-        const conflictPercent = this.formatPercent(actions.conflict || 0, actionTotal);
-        const successPercent = this.formatPercent(statusCounts.success || 0, runs);
-        const warningPercent = this.formatPercent(statusCounts.warning || 0, runs);
-        const failedPercent = this.formatPercent(statusCounts.failed || 0, runs);
-        const rowAttrs = [
-          `data-aggregate-name="${escapeHtml(item.name || '')}"`,
-          `data-aggregate-new="${actions.new || 0}"`,
-          `data-aggregate-new-percent="${addPercentValue}"`,
-          `data-aggregate-merge="${actions.merge || 0}"`,
-          `data-aggregate-merge-percent="${mergePercentValue}"`,
-          `data-aggregate-conflict="${actions.conflict || 0}"`,
-          `data-aggregate-conflict-percent="${conflictPercentValue}"`,
-          `data-aggregate-runs="${runs}"`,
-          `data-aggregate-success="${statusCounts.success || 0}"`,
-          `data-aggregate-success-percent="${successPercentValue}"`,
-          `data-aggregate-warning="${statusCounts.warning || 0}"`,
-          `data-aggregate-warning-percent="${warningPercentValue}"`,
-          `data-aggregate-failed="${statusCounts.failed || 0}"`,
-          `data-aggregate-failed-percent="${failedPercentValue}"`
-        ].join(' ');
-        return `
-          <tr data-row="aggregate-parser" ${rowAttrs}>
-            <td>
-              <div class="cell-title">
-                ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(actions.new || 0))}</span>
-                <span class="value-percent">${escapeHtml(addPercent)}</span>
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(actions.merge || 0))}</span>
-                <span class="value-percent">${escapeHtml(mergePercent)}</span>
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(actions.conflict || 0))}</span>
-                <span class="value-percent">${escapeHtml(conflictPercent)}</span>
-              </div>
-            </td>
-            <td class="num">
-              <div class="cell-title">${escapeHtml(this.formatNumber(runs))}</div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(statusCounts.success || 0))}</span>
-                <span class="value-percent">${escapeHtml(successPercent)}</span>
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(statusCounts.warning || 0))}</span>
-                <span class="value-percent">${escapeHtml(warningPercent)}</span>
-              </div>
-            </td>
-            <td class="num tight">
-              <div class="cell-title">
-                <span class="value-count">${escapeHtml(this.formatNumber(statusCounts.failed || 0))}</span>
-                <span class="value-percent">${escapeHtml(failedPercent)}</span>
-              </div>
-            </td>
-          </tr>`;
-      }).join('');
-      return `
-        <div class="table-wrapper">
-          <table class="metrics-table list-table">
-            <thead>
-              <tr>
-                ${buildSortHeader('Parser', 'name', sortState, 'aggregate', 'asc')}
-                ${buildSortHeader('Add', 'new', sortState, 'aggregate', 'desc', 'num tight')}
-                ${buildSortHeader('Mrg', 'merge', sortState, 'aggregate', 'desc', 'num tight')}
-                ${buildSortHeader('Cnf', 'conflict', sortState, 'aggregate', 'desc', 'num tight')}
-                ${buildSortHeader('Runs', 'runs', sortState, 'aggregate', 'desc', 'num')}
-                ${buildSortHeader('Suc', 'success', sortState, 'aggregate', 'desc', 'num tight')}
-                ${buildSortHeader('Wrn', 'warning', sortState, 'aggregate', 'desc', 'num tight')}
-                ${buildSortHeader('Fail', 'failed', sortState, 'aggregate', 'desc', 'num tight')}
-              </tr>
-            </thead>
-            <tbody data-list="aggregate-parsers">
-              ${rows}
-            </tbody>
-          </table>
-        </div>`;
     };
 
     const buildRunTable = (items, sortState) => {
@@ -2876,31 +2051,6 @@ class MetricsDisplay {
         </div>`;
     };
 
-    const buildSortChips = (options, currentSort, viewKey, directionResolver) => {
-      return options.map(option => {
-        const defaultDirection = option.defaultDirection || directionResolver(option.key);
-        const isActive = currentSort?.key === option.key;
-        const activeDirection = currentSort?.direction || defaultDirection;
-        const nextDirection = isActive
-          ? (activeDirection === 'asc' ? 'desc' : 'asc')
-          : defaultDirection;
-        const label = `${option.label}${isActive ? ` (${activeDirection})` : ''}`;
-        const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-          view: viewKey,
-          sort: option.key,
-          dir: nextDirection
-        });
-        const dataAttrs = [
-          `data-sort-view="${escapeHtml(viewKey)}"`,
-          `data-sort-key="${escapeHtml(option.key)}"`,
-          `data-sort-dir="${escapeHtml(nextDirection)}"`,
-          `data-sort-default-dir="${escapeHtml(defaultDirection)}"`,
-          `data-sort-label="${escapeHtml(option.label)}"`
-        ].join(' ');
-        return buildChip(label, url, isActive, dataAttrs);
-      }).join('');
-    };
-
     const runFilterState = {
       status: runFilters?.status || null,
       parserFilter: runFilters?.parserFilter || null,
@@ -2949,7 +2099,18 @@ class MetricsDisplay {
       option.value
     )).join('');
 
-    const parserNames = Array.from(new Set(parserItems.map(item => item?.name).filter(Boolean))).slice(0, 8);
+    // Parser filter chips come from the runs themselves (metrics.ndjson still
+    // records parser names per run), most frequent first.
+    const parserNameCounts = {};
+    runItems.forEach(item => {
+      (Array.isArray(item.parserNames) ? item.parserNames : []).forEach(name => {
+        if (!name) return;
+        parserNameCounts[name] = (parserNameCounts[name] || 0) + 1;
+      });
+    });
+    const parserNames = Object.keys(parserNameCounts)
+      .sort((a, b) => (parserNameCounts[b] - parserNameCounts[a]) || String(a).localeCompare(String(b)))
+      .slice(0, 8);
     const activeParserFilter = runFilters?.parserFilter ? String(runFilters.parserFilter).toLowerCase() : null;
     const parserChips = ['All parsers', ...parserNames].map((name, index) => {
       if (index === 0) {
@@ -2963,218 +2124,111 @@ class MetricsDisplay {
     const finalEventsAxisLabel = CHART_AXIS_LABELS.finalEvents;
     const durationAxisLabel = CHART_AXIS_LABELS.durationMinutes;
 
-    const buildCardsForView = viewState => {
-      const safeView = viewState?.mode ? viewState : { mode: 'parsers' };
-      const viewMode = this.normalizeViewToken(safeView.mode) || safeView.mode;
+    const emptyLedgerMessage = MetricsSections?.SOURCE_LEDGER_EMPTY_MESSAGE
+      || 'No source ledger yet — every run writes it; seed history with npm run backfill-source-ledger on the Mac.';
+
+    // Sources — one row per website host from the source ledger, trouble first.
+    const buildSourcesCards = () => {
       const cards = [];
-      if (!latest && viewMode !== 'runs') {
-        cards.push(buildEmptyCard('No metrics found yet.', 'Run the scraper to generate metrics.'));
-      } else if (viewMode === 'runs' && runItems.length === 0) {
-        cards.push(buildEmptyCard('No run metrics found.', 'Run the scraper to generate metrics.'));
-      } else if (viewMode === 'parsers') {
-        // Health & Guards (latest run) — the per-run health badge leads the
-        // dashboard; guard/arbitration/AI details come from record.signals.
-        // Records without signals (pre-metrics-2.0) render a graceful note.
-        if (MetricsSections && RunLogSummary && latest) {
-          const latestHealth = this.getRecordHealth(latest);
-          const healthBody = MetricsSections.buildHealthGuardsSectionHtml(
-            latest,
-            latestHealth ? latestHealth.health : null,
-            latestHealth ? latestHealth.badgeText : ''
-          );
-          const healthSubtitle = latest?.run_id
-            ? escapeHtml(`Latest run ${this.formatRunId(latest.run_id)}`)
-            : null;
-          cards.push(buildSection('Health & Guards (Latest Run)', healthBody, healthSubtitle));
+      if (!sourceHealth.available || !MetricsSections) {
+        const reason = sourceHealth.reason ? ` (${sourceHealth.reason})` : '';
+        cards.push(buildEmptyCard('No source ledger yet', `${emptyLedgerMessage}${reason}`));
+        return cards;
+      }
+      const health = sourceHealth.health;
+      const digest = MetricsSections.buildSourceWidgetSummary(health, { limit: 1 });
+      const newestLabel = digest.newestFinishedAt
+        ? `newest run ${this.formatRelativeTime(digest.newestFinishedAt)}`
+        : 'no runs yet';
+      const body = `
+        ${MetricsSections.buildSourceCountersHtml(health)}
+        ${MetricsSections.buildSourcesTableHtml(health, {
+          sortState: sourceSortResolved,
+          hostUrl: row => this.buildHostUrl(row.host),
+          faviconUrl: row => this.getHostFaviconUrl(row)
+        })}`;
+      cards.push(buildSection('Sources', body, escapeHtml(`${digest.headline} • ${newestLabel}`)));
+      return cards;
+    };
+
+    // Host detail — the series, latest errors and the vanished list for one host.
+    const buildHostCards = host => {
+      const cards = [];
+      if (!MetricsSections) {
+        cards.push(buildEmptyCard('Host detail unavailable', 'The metrics-sections module is missing on this device.'));
+        return cards;
+      }
+      const needle = String(host || '').toLowerCase();
+      const row = sourceRows.find(item => String(item.host).toLowerCase() === needle) || null;
+      if (!row) {
+        cards.push(buildEmptyCard(
+          host ? `No ledger lines for ${host}` : 'No host selected',
+          sourceHealth.available ? 'Pick a site from the Sources list.' : emptyLedgerMessage
+        ));
+        return cards;
+      }
+      cards.push(buildSection('Latest Run', MetricsSections.buildHostSummaryHtml(row, {
+        faviconUrl: item => this.getHostFaviconUrl(item)
+      })));
+
+      const series = Array.isArray(row.series) ? row.series : [];
+      if (series.length >= 2) {
+        const hostSeriesList = [
+          { label: 'Extracted', values: series.map(line => Number(line.extracted) || 0), color: CHART_SERIES_COLORS[1] },
+          { label: 'Bear', values: series.map(line => Number(line.bear) || 0), color: CHART_SERIES_COLORS[0] },
+          { label: 'Upcoming', values: series.map(line => Number(line.upcoming) || 0), color: CHART_SERIES_COLORS[3] }
+        ];
+        const hostChart = this.buildMultiLineChartImage(hostSeriesList, chartSize, {
+          lineWidth: CHART_STYLE.lineWidth
+        });
+        const hostChartData = hostChart ? this.imageToDataUri(hostChart) : null;
+        if (hostChartData) {
+          const baselineSubtitle = row.baseline !== null && row.baseline !== undefined
+            ? `Baseline ${this.formatNumber(row.baseline)} extracted (median of recent ok runs)`
+            : 'No baseline yet';
+          cards.push(buildChartCard(`Per Run (Last ${series.length} Runs)`, hostChartData, baselineSubtitle, {
+            xLabel: runAxisLabel,
+            yLabel: 'Events',
+            legendHtml: buildChartLegend(hostSeriesList)
+          }));
         }
-        const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
-        const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
-        const latestWarnings = this.getRunWarningCount(latest);
-        const historyCount = Math.max(recentRecords.length, 1);
-        const parserCounts = this.getParserStatusCounts(parserItems);
-        const runningCount = parserCounts.running;
-        const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
-        const healthSummary = runningCount > 0
-          ? `${this.formatNumber(runningCount)} running • ${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed • ${this.formatNumber(parserCounts.total)} total`
-          : `${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed • ${this.formatNumber(parserCounts.total)} total`;
-        const runHealth = this.getRunHealthSummary(records);
-        const failureStreak = runHealth.failureStreak || 0;
-        const lastSuccessAt = runHealth.lastSuccessAt;
-        const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
-        const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
+      }
 
-        const lastSuccessSummary = lastSuccessAt
-          ? `Last success: ${lastSuccessLabel}`
-          : 'Last success: Never';
-        const latestRunSummary = `Status: ${latestStatusLabel} • Errors ${this.formatNumber(latestErrors)} • Warnings ${this.formatNumber(latestWarnings)}`;
-        const dashboardBody = `
-          <div class="metrics-grid">
-            ${buildMetric('Health', overallHealthValue, healthSummary)}
-            ${buildMetric('Issue streak', this.formatNumber(failureStreak), lastSuccessSummary)}
-            ${buildMetric('Last run', lastRun, latestRunSummary)}
-          </div>`;
-        cards.push(buildSection('Parser Health Snapshot', dashboardBody));
+      cards.push(buildSection('Runs', MetricsSections.buildHostSeriesTableHtml(row, {
+        records: sourceRecords,
+        limit: HOST_SERIES_ROW_LIMIT
+      })));
+      cards.push(buildSection('Latest Errors', MetricsSections.buildHostErrorsHtml(row)));
+      cards.push(buildSection(
+        'Vanished Events',
+        MetricsSections.buildVanishedListHtml(row),
+        escapeHtml('Upcoming events seen in the previous run that are gone from the latest one')
+      ));
+      return cards;
+    };
 
-        const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
-        let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
-        if (parserItems.length > sortedItems.length) {
-          parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers not shown</div>`;
-        }
-        cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
+    // Runs — metrics.ndjson: Health & Guards for the latest run, the run list,
+    // all-time totals and the quality trends.
+    const buildRunsCards = () => {
+      const cards = [];
+      // Health & Guards (latest run) — guard/arbitration/AI details come from
+      // record.signals; records without signals (pre-metrics-2.0) render a note.
+      if (MetricsSections && RunLogSummary && latest) {
+        const latestHealth = this.getRecordHealth(latest);
+        const healthBody = MetricsSections.buildHealthGuardsSectionHtml(
+          latest,
+          latestHealth ? latestHealth.health : null,
+          latestHealth ? latestHealth.badgeText : ''
+        );
+        const healthSubtitle = latest?.run_id
+          ? escapeHtml(`Latest run ${this.formatRunId(latest.run_id)}`)
+          : null;
+        cards.push(buildSection('Health & Guards (Latest Run)', healthBody, healthSubtitle));
+      }
 
-        const durationParserNames = this.getParserNamesByMaxDuration(recentRecords, MAX_PARSER_DURATION_SERIES);
-        const allDurationParserNames = this.getParserNamesByMaxDuration(recentRecords, 0);
-        if (durationParserNames.length > 0) {
-          const buildDurationSeries = names => names.map((name, index) => ({
-            label: name,
-            values: this.getParserDurationSeries(recentRecords, name, { fillMissing: true }),
-            color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
-          })).filter(series => Array.isArray(series.values) && series.values.length > 0);
-          const parserDurationSeries = buildDurationSeries(durationParserNames);
-          const parserDurationChart = this.buildMultiLineChartImage(parserDurationSeries, chartSize, {
-            lineWidth: CHART_STYLE.lineWidth
-          });
-          const parserDurationData = parserDurationChart ? this.imageToDataUri(parserDurationChart) : null;
-          const parserLegend = buildChartLegend(parserDurationSeries);
-          const parserSubtitle = durationParserNames.length > 1
-            ? `Top ${durationParserNames.length} parsers by max duration`
-            : `Parser duration over last ${historyCount} runs`;
-
-          if (allDurationParserNames.length > durationParserNames.length) {
-            const allDurationSeries = buildDurationSeries(allDurationParserNames);
-            const allDurationChart = this.buildMultiLineChartImage(allDurationSeries, chartSize, {
-              lineWidth: CHART_STYLE.lineWidth
-            });
-            const allDurationData = allDurationChart ? this.imageToDataUri(allDurationChart) : null;
-            const allLegend = buildChartLegend(allDurationSeries);
-            const allSubtitle = `All ${allDurationParserNames.length} parsers by max duration`;
-            if (parserDurationData && allDurationData) {
-              const topLegendBlock = parserLegend ? `<div data-parser-duration-legend="top">${parserLegend}</div>` : '';
-              const allLegendBlock = allLegend ? `<div class="is-hidden" data-parser-duration-legend="all">${allLegend}</div>` : '';
-              const topSubtitleBlock = parserSubtitle
-                ? `<div class="chart-subtitle" data-parser-duration-subtitle="top">${escapeHtml(parserSubtitle)}</div>`
-                : '';
-              const allSubtitleBlock = allSubtitle
-                ? `<div class="chart-subtitle is-hidden" data-parser-duration-subtitle="all">${escapeHtml(allSubtitle)}</div>`
-                : '';
-              const chartCard = `
-                <div class="card" data-parser-duration-card>
-                  <div class="section-title">Parser Durations (Minutes, Last ${historyCount} Runs)</div>
-                  <div class="chart-wrapper">
-                    <div class="chart-axis-y">${escapeHtml(durationAxisLabel)}</div>
-                    <div class="chart-axis-main">
-                      <img class="chart" data-parser-duration-chart="top" src="${escapeHtml(parserDurationData)}" alt="Parser durations (top parsers)">
-                      <img class="chart is-hidden" data-parser-duration-chart="all" src="${escapeHtml(allDurationData)}" alt="Parser durations (all parsers)">
-                      <div class="chart-axis-x">${escapeHtml(runAxisLabel)}</div>
-                    </div>
-                  </div>
-                  ${topLegendBlock}
-                  ${allLegendBlock}
-                  ${topSubtitleBlock}
-                  ${allSubtitleBlock}
-                  <div class="card-actions">
-                    <button class="toggle-button" type="button" data-parser-duration-toggle>Show all parsers</button>
-                  </div>
-                </div>`;
-              cards.push(chartCard);
-            } else if (parserDurationData) {
-              cards.push(buildChartCard(`Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationData, parserSubtitle, {
-                xLabel: runAxisLabel,
-                yLabel: durationAxisLabel,
-                legendHtml: parserLegend
-              }));
-            }
-          } else if (parserDurationData) {
-            cards.push(buildChartCard(`Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationData, parserSubtitle, {
-              xLabel: runAxisLabel,
-              yLabel: durationAxisLabel,
-              legendHtml: parserLegend
-            }));
-          }
-        }
-
-        // Quality trends over the retained window — only runs that carry a
-        // signals block are plotted (older records are skipped, not zeroed).
-        if (MetricsSections) {
-          const trend = MetricsSections.buildQualityTrendData(recentRecords);
-          if (trend.count >= 2) {
-            const qualitySeriesList = [
-              { label: '% with venue', values: trend.venuePct, color: CHART_SERIES_COLORS[0] },
-              { label: '% with coordinates', values: trend.coordsPct, color: CHART_SERIES_COLORS[1] },
-              { label: '% with duration', values: trend.durationPct, color: CHART_SERIES_COLORS[3] }
-            ];
-            const qualityChart = this.buildMultiLineChartImage(qualitySeriesList, chartSize, {
-              lineWidth: CHART_STYLE.lineWidth,
-              maxValue: 100
-            });
-            const qualityData = qualityChart ? this.imageToDataUri(qualityChart) : null;
-            if (qualityData) {
-              cards.push(buildChartCard(`Event Quality (Last ${trend.count} Runs)`, qualityData, 'Share of events with a venue, coordinates, and a real duration', {
-                xLabel: runAxisLabel,
-                yLabel: 'Percent of events',
-                legendHtml: buildChartLegend(qualitySeriesList)
-              }));
-            }
-
-            const aiSecondsSeries = trend.aiTotalMs.map(ms => Math.round(ms / 100) / 10);
-            const aiChart = this.buildMultiLineChartImage([
-              { label: 'AI time (s)', values: aiSecondsSeries, color: CHART_STYLE.line }
-            ], chartSize, { lineWidth: CHART_STYLE.lineWidth });
-            const aiData = aiChart ? this.imageToDataUri(aiChart) : null;
-            if (aiData) {
-              cards.push(buildChartCard(`AI Time Per Run (Last ${trend.count} Runs)`, aiData, 'Total AI request time per run', {
-                xLabel: runAxisLabel,
-                yLabel: 'AI time (seconds)'
-              }));
-            }
-          }
-        }
-
-      } else if (viewMode === 'runs') {
-        if (!summary?.totals) {
-          cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
-        } else {
-          const totals = summary.totals;
-          const statusCounts = this.normalizeStatusCounts(totals.statuses);
-          const actions = totals.actions || this.createActionCounts();
-          const calendarActions = totals.calendar_actions || this.createCalendarActionCounts();
-          const runs = totals.runs || 0;
-          const actionTotal = this.sumDisplayActions(actions);
-          const parserCount = allTimeParserRows.length || parserItems.length;
-          const totalsGrid = `
-            <div class="metrics-grid">
-              ${buildMetric('Runs', this.formatNumber(runs))}
-              ${buildMetric('Parsers', this.formatNumber(parserCount))}
-            </div>
-            <div class="metrics-grid">
-              ${buildMetric('Success', this.formatNumber(statusCounts.success || 0), this.formatPercent(statusCounts.success || 0, runs))}
-              ${buildMetric('Warnings', this.formatNumber(statusCounts.warning || 0), this.formatPercent(statusCounts.warning || 0, runs))}
-              ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0), this.formatPercent(statusCounts.failed || 0, runs))}
-            </div>
-            <div class="metrics-grid">
-              ${buildMetric('Adds', this.formatNumber(actions.new || 0), this.formatPercent(actions.new || 0, actionTotal))}
-              ${buildMetric('Merges', this.formatNumber(actions.merge || 0), this.formatPercent(actions.merge || 0, actionTotal))}
-              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0), this.formatPercent(actions.conflict || 0, actionTotal))}
-            </div>
-            <div class="metrics-grid">
-              ${buildMetric('Create writes', this.formatNumber(calendarActions.create || 0))}
-              ${buildMetric('Update writes', this.formatNumber(calendarActions.update || 0))}
-              ${buildMetric('Skip writes', this.formatNumber(calendarActions.skip || 0))}
-            </div>`;
-          cards.push(buildSection('All Time Totals', totalsGrid));
-          const parserTotals = allTimeParserRows;
-          const sortedParserTotals = this.sortAggregateParserRows(parserTotals, aggregateSortResolved);
-          if (sortedParserTotals.length > 0) {
-            const totalsTable = buildAggregateParserTable(sortedParserTotals, aggregateSortResolved);
-            const totalsBody = `
-              <div class="table-controls">
-                <div class="table-control-label">Status Columns</div>
-                <button class="toggle-button" type="button" data-aggregate-toggle>Show %</button>
-              </div>
-              ${totalsTable}`;
-            cards.push(buildSection('Per-Parser Totals', totalsBody));
-          }
-        }
+      if (runItems.length === 0) {
+        cards.push(buildEmptyCard('No run metrics found.', 'Run the scraper on the phone to generate metrics.'));
+      } else {
         const filtersHtml = `
           <div class="filter-block">
             <div class="filter-label">Status</div>
@@ -3192,153 +2246,95 @@ class MetricsDisplay {
           ${filtersHtml}
           ${buildRunTable(sortedRuns, runSortResolved)}`;
         cards.push(buildSection('All Runs', runsBody));
-      } else if (viewMode === 'parser') {
-        const parserName = safeView.parserName || 'Parser';
-        const record = parserItems.find(item => item.name === safeView.parserName);
-        const hasAllTime = (record?.allTimeRuns || 0) > 0;
-        const hasHistory = (record?.historyRuns || 0) > 0;
-        const hasLastRun = !!record?.lastRunAt;
+      }
 
-        if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
-          cards.push(buildEmptyCard('No parser metrics available.', 'Run the parser to collect metrics.'));
-        } else {
-          if (hasLastRun) {
-            const lastRunUrl = record?.lastRunId
-              ? this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, { runId: record.lastRunId, readOnly: true })
-              : null;
-            const lastRunAction = lastRunUrl
-              ? `<div class="card-actions">${buildLink('Open run details', lastRunUrl, 'button small')}</div>`
-              : '';
-            const lastRunBody = `
-              <div class="metrics-grid">
-                ${buildMetric('Final events', this.formatNumber(record.finalBearEvents || 0))}
-                ${buildMetric('Duration', this.formatDuration(record.durationMs))}
-                ${buildMetric('Intent actions', this.formatActions(record.actions))}
-              </div>
-              <div class="meta-row">
-                <div class="meta-item">
-                  <span class="meta-label">Calendar writes</span>
-                  <span class="meta-value">${escapeHtml(this.formatCalendarActions(record.calendarActions))}</span>
-                </div>
-              </div>
-              ${lastRunAction}`;
-            const lastRunSubtitle = `Last run ${this.formatRelativeTime(record.lastRunAt)}`;
-            cards.push(buildSection('Latest Run', lastRunBody, escapeHtml(lastRunSubtitle)));
-          } else {
-            cards.push(buildEmptyCard('No recent run data.', 'Only historical totals are available.'));
-          }
+      if (summary?.totals) {
+        const totals = summary.totals;
+        const statusCounts = this.normalizeStatusCounts(totals.statuses);
+        const actions = totals.actions || this.createActionCounts();
+        const calendarActions = totals.calendar_actions || this.createCalendarActionCounts();
+        const runs = totals.runs || 0;
+        const actionTotal = this.sumDisplayActions(actions);
+        const parserCount = Object.keys(summary.by_parser_name || {}).length;
+        const totalsGrid = `
+          <div class="metrics-grid">
+            ${buildMetric('Runs', this.formatNumber(runs))}
+            ${buildMetric('Parsers', this.formatNumber(parserCount))}
+          </div>
+          <div class="metrics-grid">
+            ${buildMetric('Success', this.formatNumber(statusCounts.success || 0), this.formatPercent(statusCounts.success || 0, runs))}
+            ${buildMetric('Warnings', this.formatNumber(statusCounts.warning || 0), this.formatPercent(statusCounts.warning || 0, runs))}
+            ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0), this.formatPercent(statusCounts.failed || 0, runs))}
+          </div>
+          <div class="metrics-grid">
+            ${buildMetric('Adds', this.formatNumber(actions.new || 0), this.formatPercent(actions.new || 0, actionTotal))}
+            ${buildMetric('Merges', this.formatNumber(actions.merge || 0), this.formatPercent(actions.merge || 0, actionTotal))}
+            ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0), this.formatPercent(actions.conflict || 0, actionTotal))}
+          </div>
+          <div class="metrics-grid">
+            ${buildMetric('Create writes', this.formatNumber(calendarActions.create || 0))}
+            ${buildMetric('Update writes', this.formatNumber(calendarActions.update || 0))}
+            ${buildMetric('Skip writes', this.formatNumber(calendarActions.skip || 0))}
+          </div>`;
+        cards.push(buildSection('All Time Totals', totalsGrid));
+      }
 
-          if (hasAllTime || hasHistory) {
-            const totals = hasAllTime ? (record.allTimeTotals || {}) : (record.historyTotals || {});
-            const runsCount = hasAllTime ? record.allTimeRuns : record.historyRuns;
-            const actions = hasAllTime ? record.allTimeActions : record.historyActions;
-            const calendarActions = hasAllTime ? record.allTimeCalendarActions : record.historyCalendarActions;
-            const avgDurationMs = runsCount > 0
-              ? Math.round((hasAllTime ? record.allTimeDurationMs : record.historyDurationMs) / runsCount)
-              : null;
-            const metricsGrid = `
-              <div class="metrics-grid">
-                ${buildMetric('Final events', this.formatNumber(totals.final_bear_events || 0))}
-                ${buildMetric('Total events', this.formatNumber(totals.total_events || 0))}
-                ${buildMetric('Runs', this.formatNumber(runsCount || 0))}
-                ${buildMetric('Avg duration', avgDurationMs ? this.formatDuration(avgDurationMs) : 'n/a')}
-              </div>
-              <div class="meta-row">
-                <div class="meta-item">
-                  <span class="meta-label">Intent actions</span>
-                  <span class="meta-value">${escapeHtml(this.formatActions(actions))}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Calendar writes</span>
-                  <span class="meta-value">${escapeHtml(this.formatCalendarActions(calendarActions))}</span>
-                </div>
-              </div>`;
-            cards.push(buildSection(hasAllTime ? 'All Time Totals' : 'Recent Totals', metricsGrid));
-          } else {
-            cards.push(buildEmptyCard('History summary unavailable.', 'Run the scraper to generate summary metrics.'));
-          }
-
-          const parserSeries = this.getParserSeries(recentRecords, safeView.parserName);
-          if (parserSeries.length > 0) {
-            const parserAverage = this.getSeriesAverage(parserSeries);
-            const parserSeriesList = [
-              { label: parserName, values: parserSeries, color: CHART_STYLE.lineSecondary }
-            ];
-            if (Number.isFinite(parserAverage)) {
-              parserSeriesList.push({
-                label: 'Average',
-                values: new Array(parserSeries.length).fill(parserAverage),
-                color: CHART_STYLE.line
-              });
-            }
-            const parserChart = this.buildMultiLineChartImage(parserSeriesList, chartSize, {
-              lineWidth: CHART_STYLE.lineWidth
-            });
-            const parserChartData = parserChart ? this.imageToDataUri(parserChart) : null;
-            const parserLegend = buildChartLegend(parserSeriesList);
-            const avgLabel = Number.isFinite(parserAverage)
-              ? `Avg: ${this.formatNumber(Math.round(parserAverage))}`
-              : null;
-            const parserSubtitle = avgLabel ? avgLabel : null;
-            const parserRunCount = parserSeries.length || 1;
-            cards.push(buildChartCard(`Events Per Run (Last ${parserRunCount} Parser Runs)`, parserChartData, parserSubtitle, {
+      // Quality trends over the retained window — only runs that carry a
+      // signals block are plotted (older records are skipped, not zeroed).
+      if (MetricsSections) {
+        const trend = MetricsSections.buildQualityTrendData(recentRecords);
+        if (trend.count >= 2) {
+          const qualitySeriesList = [
+            { label: '% with venue', values: trend.venuePct, color: CHART_SERIES_COLORS[0] },
+            { label: '% with coordinates', values: trend.coordsPct, color: CHART_SERIES_COLORS[1] },
+            { label: '% with duration', values: trend.durationPct, color: CHART_SERIES_COLORS[3] }
+          ];
+          const qualityChart = this.buildMultiLineChartImage(qualitySeriesList, chartSize, {
+            lineWidth: CHART_STYLE.lineWidth,
+            maxValue: 100
+          });
+          const qualityData = qualityChart ? this.imageToDataUri(qualityChart) : null;
+          if (qualityData) {
+            cards.push(buildChartCard(`Event Quality (Last ${trend.count} Runs)`, qualityData, 'Share of events with a venue, coordinates, and a real duration', {
               xLabel: runAxisLabel,
-              yLabel: finalEventsAxisLabel,
-              legendHtml: parserLegend
+              yLabel: 'Percent of events',
+              legendHtml: buildChartLegend(qualitySeriesList)
             }));
-          } else {
-            cards.push(buildEmptyCard('Events Per Run', 'No recent parser runs to chart.'));
           }
 
-          const parserDurationSeries = this.getParserDurationSeries(recentRecords, safeView.parserName);
-          if (parserDurationSeries.length > 0) {
-            const parserDurationAverage = this.getSeriesAverage(parserDurationSeries);
-            const durationSeriesList = [
-              { label: parserName, values: parserDurationSeries, color: CHART_STYLE.line }
-            ];
-            if (Number.isFinite(parserDurationAverage)) {
-              durationSeriesList.push({
-                label: 'Average',
-                values: new Array(parserDurationSeries.length).fill(parserDurationAverage),
-                color: CHART_STYLE.lineSecondary
-              });
-            }
-            const parserDurationChart = this.buildMultiLineChartImage(durationSeriesList, chartSize, {
-              lineWidth: CHART_STYLE.lineWidth
-            });
-            const parserDurationData = parserDurationChart ? this.imageToDataUri(parserDurationChart) : null;
-            const durationLegend = buildChartLegend(durationSeriesList);
-            const avgDurationMs = Number.isFinite(parserDurationAverage)
-              ? Math.round(parserDurationAverage * 60000)
-              : null;
-            const durationSubtitleParts = [];
-            if (avgDurationMs !== null) durationSubtitleParts.push(`Avg: ${this.formatDuration(avgDurationMs)}`);
-            if (hasLastRun && record?.durationMs) durationSubtitleParts.push(`Latest: ${this.formatDuration(record.durationMs)}`);
-            const durationSubtitle = durationSubtitleParts.length ? durationSubtitleParts.join(' • ') : null;
-            const parserDurationRuns = parserDurationSeries.length || 1;
-            cards.push(buildChartCard(`Duration (Minutes, Last ${parserDurationRuns} Parser Runs)`, parserDurationData, durationSubtitle, {
+          const aiSecondsSeries = trend.aiTotalMs.map(ms => Math.round(ms / 100) / 10);
+          const aiChart = this.buildMultiLineChartImage([
+            { label: 'AI time (s)', values: aiSecondsSeries, color: CHART_STYLE.line }
+          ], chartSize, { lineWidth: CHART_STYLE.lineWidth });
+          const aiData = aiChart ? this.imageToDataUri(aiChart) : null;
+          if (aiData) {
+            cards.push(buildChartCard(`AI Time Per Run (Last ${trend.count} Runs)`, aiData, 'Total AI request time per run', {
               xLabel: runAxisLabel,
-              yLabel: durationAxisLabel,
-              legendHtml: durationLegend
+              yLabel: 'AI time (seconds)'
             }));
-          } else {
-            cards.push(buildEmptyCard('Duration', 'No recent parser runs to chart.'));
           }
         }
-      } else {
-        cards.push(buildEmptyCard('Unknown view.', 'Open Parser Health to get started.'));
       }
       return cards;
     };
 
+    const buildCardsForView = viewState => {
+      const mode = viewState?.mode === 'host'
+        ? 'host'
+        : (this.normalizeViewToken(viewState?.mode) || 'sources');
+      if (mode === 'runs') return buildRunsCards();
+      if (mode === 'host') return buildHostCards(viewState.host);
+      return buildSourcesCards();
+    };
+
     const buildViewSection = (viewState, cards) => {
       const label = this.getViewLabel(viewState);
-      const mode = viewState?.mode || 'parsers';
-      const parserName = viewState?.parserName || '';
-      const isActive = mode === viewMode && (mode !== 'parser' || parserName === initialParserName);
-      const parserAttr = parserName ? ` data-parser="${escapeHtml(parserName)}"` : '';
+      const mode = viewState?.mode || 'sources';
+      const key = viewState?.host || '';
+      const isActive = mode === viewMode && (mode !== 'host' || key === initialViewKey);
+      const keyAttr = key ? ` data-key="${escapeHtml(key)}"` : '';
       return `
-        <section class="view${isActive ? ' active' : ''}" data-view="${escapeHtml(mode)}"${parserAttr} data-view-label="${escapeHtml(label)}">
+        <section class="view${isActive ? ' active' : ''}" data-view="${escapeHtml(mode)}"${keyAttr} data-view-label="${escapeHtml(label)}">
           ${cards.join('\n')}
         </section>`;
     };
@@ -3346,51 +2342,57 @@ class MetricsDisplay {
     const viewSections = [];
     this.getViewOptions().forEach(option => {
       const viewState = { mode: option.mode };
-      const cards = buildCardsForView(viewState);
-      viewSections.push(buildViewSection(viewState, cards));
+      viewSections.push(buildViewSection(viewState, buildCardsForView(viewState)));
     });
 
-    const parserDetailNames = Array.from(new Set(parserItems.map(item => item?.name).filter(Boolean)));
-    const parserDetailViews = parserDetailNames.map(name => ({ mode: 'parser', parserName: name }));
-    if (safeView.mode === 'parser') {
-      const targetName = safeView.parserName || '';
-      if (!targetName || !parserDetailNames.includes(targetName)) {
-        parserDetailViews.push({ mode: 'parser', parserName: targetName });
-      }
+    // Every host gets its own pre-rendered section so taps switch instantly;
+    // a host missing from the ledger still gets a section that says so.
+    const hostViews = sourceRows.map(row => ({ mode: 'host', host: row.host }));
+    if (viewMode === 'host' && !sourceRows.some(row => row.host === initialViewKey)) {
+      hostViews.push({ mode: 'host', host: initialViewKey });
     }
-    parserDetailViews.forEach(viewState => {
-      const cards = buildCardsForView(viewState);
-      viewSections.push(buildViewSection(viewState, cards));
+    hostViews.forEach(viewState => {
+      viewSections.push(buildViewSection(viewState, buildCardsForView(viewState)));
     });
 
     const logoImage = await this.loadLogoImage();
     const logoData = this.imageToDataUri(logoImage);
-    const latestRunLabel = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'No runs yet';
-    const headerMeta = latest ? `Latest run ${latestRunLabel}` : 'No run data yet';
+    const newestSourceRun = sourceRows.reduce((newest, row) => {
+      const stamp = row.latest?.finished_at ? String(row.latest.finished_at) : '';
+      return stamp > newest ? stamp : newest;
+    }, '');
+    let headerMeta = 'No run data yet';
+    if (latest?.finished_at) {
+      headerMeta = `Latest run ${this.formatRelativeTime(latest.finished_at)}`;
+    } else if (newestSourceRun) {
+      headerMeta = `Newest source run ${this.formatRelativeTime(newestSourceRun)}`;
+    }
     const lastRunUrl = latest?.run_id
       ? this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, { runId: latest.run_id, readOnly: true })
       : null;
     const lastRunButton = lastRunUrl ? buildLink('Open last run', lastRunUrl, 'button') : '';
     const navLinks = this.getViewOptions().map(option => {
-      const isActive = viewMode === option.mode || (viewMode === 'parser' && option.mode === 'parsers');
+      const isActive = viewMode === option.mode || (viewMode === 'host' && option.mode === 'sources');
       const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: option.mode });
       return buildChip(option.label, url, isActive, buildNavAttributes(option.mode, null, true));
     }).join('');
-    const parserChipClass = viewMode === 'parser' ? 'chip parser-chip active' : 'chip parser-chip hidden';
-    const parserChipLabel = `Parser: ${safeView.parserName || 'detail'}`;
-    const parserChip = `<span class="${parserChipClass}" data-parser-chip>${escapeHtml(parserChipLabel)}</span>`;
-    const navHtml = `${navLinks}${parserChip}`;
+    const hostChipClass = viewMode === 'host' ? 'chip host-chip active' : 'chip host-chip hidden';
+    const hostChip = `<span class="${hostChipClass}" data-host-chip>${escapeHtml(`Host: ${initialViewKey || 'detail'}`)}</span>`;
+    const navHtml = `${navLinks}${hostChip}`;
 
-    const parserSortKey = parserSortResolved?.key || 'status';
-    const parserSortDir = parserSortResolved?.direction || this.getDefaultSortDirection(parserSortKey);
+    const sourceSortKey = sourceSortResolved?.key || 'verdict';
+    const sourceSortDir = sourceSortResolved?.direction || this.getDefaultSortDirection(sourceSortKey);
     const runSortKey = runSortResolved?.key || 'finished';
     const runSortDir = runSortResolved?.direction || this.getDefaultRunSortDirection(runSortKey);
-    const aggregateSortKey = aggregateSortResolved?.key || 'runs';
-    const aggregateSortDir = aggregateSortResolved?.direction || this.getDefaultSortDirection(aggregateSortKey);
     const runFilterStatus = runFilters?.status ? String(runFilters.status) : '';
     const runFilterDays = Number.isFinite(runFilters?.days) ? String(runFilters.days) : '';
     const runFilterParser = runFilters?.parserFilter ? String(runFilters.parserFilter) : '';
-    const aggregateDisplay = 'count';
+
+    // One CSS rule per verdict, from the same palette the widget badges use.
+    const verdictCss = Object.keys(SOURCE_VERDICT_COLORS).map(verdict => {
+      const color = SOURCE_VERDICT_COLORS[verdict];
+      return `    .verdict-${verdict} { color: ${color}; background: ${this.hexToRgba(color, verdict === 'ok' ? 0.16 : 0.18)}; }`;
+    }).join('\n');
 
     const isDarkMode = Device.isUsingDarkAppearance();
     const html = `
@@ -3528,9 +2530,6 @@ class MetricsDisplay {
     .chip.hidden {
       display: none;
     }
-    .is-hidden {
-      display: none;
-    }
     .content {
       display: block;
     }
@@ -3548,6 +2547,7 @@ class MetricsDisplay {
       padding: 12px;
       border: 1px solid var(--border-color);
       box-shadow: none;
+      min-width: 0;
     }
     .card-actions {
       margin-top: 10px;
@@ -3593,50 +2593,6 @@ class MetricsDisplay {
       font-size: 11px;
       color: var(--text-secondary);
       margin-top: 2px;
-    }
-    .table-controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .table-control-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-    .toggle-button {
-      border: 1px solid var(--border-color);
-      background: var(--background-light);
-      color: var(--text-primary);
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .toggle-button.active {
-      background: var(--primary-color);
-      color: var(--text-inverse);
-      border-color: transparent;
-    }
-    .value-count {
-      display: block;
-    }
-    .value-percent {
-      display: none;
-      font-size: 10px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-    body[data-aggregate-display="percent"] .value-count {
-      display: none;
-    }
-    body[data-aggregate-display="percent"] .value-percent {
-      display: block;
     }
     .meta-row {
       display: flex;
@@ -3982,6 +2938,134 @@ class MetricsDisplay {
       color: var(--text-secondary);
       margin-top: 8px;
     }
+    .source-counters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .metric-chip[class*="verdict-"] .metric-chip-label {
+      color: inherit;
+    }
+    .verdict-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .verdict-chip::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+${verdictCss}
+    .verdict-ok {
+      color: var(--color-neutral);
+    }
+    .source-site {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .source-favicon {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex: none;
+      object-fit: contain;
+      background: var(--background-light);
+    }
+    .source-favicon.placeholder {
+      display: inline-block;
+      border: 1px dashed var(--border-color);
+      background: transparent;
+    }
+    .sources-table td {
+      vertical-align: middle;
+    }
+    .verdict-cell {
+      white-space: nowrap;
+    }
+    .trio-cell {
+      white-space: nowrap;
+    }
+    .trend-cell {
+      width: 80px;
+    }
+    .sparkline {
+      display: block;
+      color: var(--primary-color);
+      overflow: visible;
+    }
+    tr[data-source-verdict="dead"] .sparkline,
+    tr[data-source-verdict="stopped"] .sparkline {
+      color: var(--color-danger);
+    }
+    tr[data-source-verdict="shrunk"] .sparkline {
+      color: var(--color-warning);
+    }
+    .age-cell {
+      white-space: nowrap;
+    }
+    .host-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .host-head .source-favicon {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+    }
+    .host-head-text {
+      flex: 1;
+      min-width: 140px;
+    }
+    .host-name {
+      font-size: 15px;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .host-meta {
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .source-errors {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+      word-break: break-word;
+    }
+    .source-errors li {
+      margin: 4px 0;
+    }
+    .status-text {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+    }
+    .status-text.source-status-dead {
+      color: var(--color-danger);
+    }
+    .status-text.source-status-empty {
+      color: var(--color-warning);
+    }
+    .status-text.source-status-ok {
+      color: var(--color-success);
+    }
     @media (max-width: 640px) {
       body {
         padding: 12px;
@@ -3995,7 +3079,7 @@ class MetricsDisplay {
     }
   </style>
 </head>
-<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-aggregate-sort-key="${escapeHtml(aggregateSortKey)}" data-aggregate-sort-dir="${escapeHtml(aggregateSortDir)}" data-aggregate-display="${escapeHtml(aggregateDisplay)}" data-parser-duration-view="top" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
+<body data-view-mode="${escapeHtml(viewMode)}" data-view-key="${escapeHtml(initialViewKey)}" data-source-sort-key="${escapeHtml(sourceSortKey)}" data-source-sort-dir="${escapeHtml(sourceSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
   <div class="header">
     <div class="header-main">
       ${logoData ? `<img class="logo" src="${escapeHtml(logoData)}" alt="Chunky Dad">` : ''}
@@ -4016,53 +3100,23 @@ class MetricsDisplay {
       const viewSections = Array.from(document.querySelectorAll('.view'));
       const navLinks = Array.from(document.querySelectorAll('[data-nav-view]'));
       const navTabs = navLinks.filter(link => link.hasAttribute('data-nav-tab'));
-      const headerSubtitle = document.querySelector('.header-subtitle');
-      const parserChip = document.querySelector('[data-parser-chip]');
-      const parserSortButtons = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
+      const hostChip = document.querySelector('[data-host-chip]');
+      const sourceSortButtons = Array.from(document.querySelectorAll('[data-sort-view="sources"]'));
       const runSortButtons = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
-      const aggregateSortButtons = Array.from(document.querySelectorAll('[data-sort-view="aggregate"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
-      const parserList = document.querySelector('[data-list="parsers"]');
+      const sourceList = document.querySelector('[data-list="sources"]');
       const runList = document.querySelector('[data-list="runs"]');
-      const aggregateList = document.querySelector('section[data-view="runs"] [data-list="aggregate-parsers"]');
-      const aggregateToggle = document.querySelector('[data-aggregate-toggle]');
-      const parserDurationToggle = document.querySelector('[data-parser-duration-toggle]');
-      const parserDurationCharts = {
-        top: document.querySelector('[data-parser-duration-chart="top"]'),
-        all: document.querySelector('[data-parser-duration-chart="all"]')
-      };
-      const parserDurationLegends = {
-        top: document.querySelector('[data-parser-duration-legend="top"]'),
-        all: document.querySelector('[data-parser-duration-legend="all"]')
-      };
-      const parserDurationSubtitles = {
-        top: document.querySelector('[data-parser-duration-subtitle="top"]'),
-        all: document.querySelector('[data-parser-duration-subtitle="all"]')
-      };
-      const hasParserDurationToggle = !!parserDurationToggle && !!parserDurationCharts.top && !!parserDurationCharts.all;
 
       const parseNumber = value => {
         const num = Number(value);
         return Number.isFinite(num) ? num : 0;
       };
-      const formatNumber = value => {
-        if (!Number.isFinite(value)) return '0';
-        return Math.round(value).toLocaleString();
-      };
       const normalizeDirection = value => (value === 'asc' ? 'asc' : 'desc');
       const normalizeText = value => String(value || '').toLowerCase();
-      const toggleHidden = (element, shouldHide) => {
-        if (!element) return;
-        element.classList.toggle('is-hidden', shouldHide);
-      };
 
-      const parserSortState = {
-        key: body.getAttribute('data-parser-sort-key') || 'status',
-        direction: normalizeDirection(body.getAttribute('data-parser-sort-dir'))
-      };
-      const aggregateSortState = {
-        key: body.getAttribute('data-aggregate-sort-key') || 'runs',
-        direction: normalizeDirection(body.getAttribute('data-aggregate-sort-dir'))
+      const sourceSortState = {
+        key: body.getAttribute('data-source-sort-key') || 'verdict',
+        direction: normalizeDirection(body.getAttribute('data-source-sort-dir'))
       };
       const runSortState = {
         key: body.getAttribute('data-run-sort-key') || 'finished',
@@ -4074,58 +3128,47 @@ class MetricsDisplay {
         days: rawDays > 0 ? rawDays : null,
         parser: normalizeText(body.getAttribute('data-run-filter-parser')) || null
       };
-      const aggregateDisplayState = {
-        mode: normalizeText(body.getAttribute('data-aggregate-display')) === 'percent' ? 'percent' : 'count'
-      };
 
-      const buildKey = (mode, parser) => (mode === 'parser' ? 'parser:' + (parser || '') : mode);
+      const buildKey = (mode, key) => (mode === 'host' ? 'host:' + normalizeText(key) : mode);
       const viewIndex = new Map();
       viewSections.forEach(section => {
         const mode = section.getAttribute('data-view') || '';
-        const parser = section.getAttribute('data-parser') || '';
-        viewIndex.set(buildKey(mode, parser), section);
+        const key = section.getAttribute('data-key') || '';
+        viewIndex.set(buildKey(mode, key), section);
       });
 
-      const getSectionFor = (mode, parser) => {
+      const getSectionFor = (mode, key) => {
         if (!mode) return null;
-        const key = buildKey(mode, parser || '');
-        if (viewIndex.has(key)) return viewIndex.get(key);
-        if (mode === 'parser') {
-          const fallbackKey = buildKey('parser', '');
-          if (viewIndex.has(fallbackKey)) return viewIndex.get(fallbackKey);
-        }
-        const parserKey = buildKey('parsers', '');
-        if (viewIndex.has(parserKey)) return viewIndex.get(parserKey);
+        const lookup = buildKey(mode, key || '');
+        if (viewIndex.has(lookup)) return viewIndex.get(lookup);
+        const sourcesKey = buildKey('sources', '');
+        if (viewIndex.has(sourcesKey)) return viewIndex.get(sourcesKey);
         return viewSections[0] || null;
       };
 
-      const setActiveView = (mode, parser) => {
-        const section = getSectionFor(mode, parser);
+      const setActiveView = (mode, key) => {
+        const section = getSectionFor(mode, key);
         if (!section) return;
         viewSections.forEach(item => item.classList.toggle('active', item === section));
-        const label = section.getAttribute('data-view-label') || '';
-        if (headerSubtitle && label) {
-          headerSubtitle.textContent = label;
-        }
         const activeMode = section.getAttribute('data-view') || mode;
-        const activeParser = section.getAttribute('data-parser') || '';
-        const navMode = activeMode === 'parser' ? 'parsers' : activeMode;
+        const activeKey = section.getAttribute('data-key') || '';
+        const navMode = activeMode === 'host' ? 'sources' : activeMode;
         navTabs.forEach(tab => {
           const tabMode = tab.getAttribute('data-nav-view') || '';
           tab.classList.toggle('active', tabMode === navMode);
         });
-        if (parserChip) {
-          if (activeMode === 'parser') {
-            parserChip.textContent = 'Parser: ' + (activeParser || 'detail');
-            parserChip.classList.remove('hidden');
-            parserChip.classList.add('active');
+        if (hostChip) {
+          if (activeMode === 'host') {
+            hostChip.textContent = 'Host: ' + (activeKey || 'detail');
+            hostChip.classList.remove('hidden');
+            hostChip.classList.add('active');
           } else {
-            parserChip.classList.add('hidden');
-            parserChip.classList.remove('active');
+            hostChip.classList.add('hidden');
+            hostChip.classList.remove('active');
           }
         }
         body.setAttribute('data-view-mode', activeMode || '');
-        body.setAttribute('data-parser-name', activeParser || '');
+        body.setAttribute('data-view-key', activeKey || '');
         window.scrollTo(0, 0);
       };
 
@@ -4167,117 +3210,39 @@ class MetricsDisplay {
         });
       };
 
-      const setAggregateDisplay = mode => {
-        const nextMode = mode === 'percent' ? 'percent' : 'count';
-        aggregateDisplayState.mode = nextMode;
-        body.setAttribute('data-aggregate-display', nextMode);
-        if (aggregateToggle) {
-          aggregateToggle.textContent = nextMode === 'percent' ? 'Show Counts' : 'Show %';
-          aggregateToggle.classList.toggle('active', nextMode === 'percent');
-          aggregateToggle.setAttribute('aria-pressed', nextMode === 'percent' ? 'true' : 'false');
-        }
-      };
+      // Sources: trouble first, then the biggest sites, then the host name —
+      // the same order the assessment produces (sortSourceRows in metrics-sections).
+      const sourceBaseOrder = (aData, bData) => (
+        (parseNumber(aData.sourceVerdictRank) - parseNumber(bData.sourceVerdictRank))
+        || (parseNumber(bData.sourceExtracted) - parseNumber(aData.sourceExtracted))
+        || String(aData.sourceHost || '').localeCompare(String(bData.sourceHost || ''))
+      );
 
-      const setParserDurationView = mode => {
-        if (!hasParserDurationToggle) return;
-        const nextMode = mode === 'all' ? 'all' : 'top';
-        const showAll = nextMode === 'all';
-        toggleHidden(parserDurationCharts.top, showAll);
-        toggleHidden(parserDurationCharts.all, !showAll);
-        toggleHidden(parserDurationLegends.top, showAll);
-        toggleHidden(parserDurationLegends.all, !showAll);
-        toggleHidden(parserDurationSubtitles.top, showAll);
-        toggleHidden(parserDurationSubtitles.all, !showAll);
-        if (parserDurationToggle) {
-          parserDurationToggle.textContent = showAll ? 'Show top parsers' : 'Show all parsers';
-          parserDurationToggle.classList.toggle('active', showAll);
-          parserDurationToggle.setAttribute('aria-pressed', showAll ? 'true' : 'false');
-        }
-        body.setAttribute('data-parser-duration-view', nextMode);
-      };
-
-      const sortParserRows = () => {
-        if (!parserList) return;
-        const rows = Array.from(parserList.querySelectorAll('[data-row="parser"]'));
-        const direction = parserSortState.direction === 'asc' ? 1 : -1;
+      const sortSourceRows = () => {
+        if (!sourceList) return;
+        const rows = Array.from(sourceList.querySelectorAll('[data-row="source"]'));
+        const direction = sourceSortState.direction === 'asc' ? 1 : -1;
         rows.sort((a, b) => {
           const aData = a.dataset;
           const bData = b.dataset;
           let diff = 0;
-          if (parserSortState.key === 'name') {
-            diff = String(aData.parserName || '').localeCompare(String(bData.parserName || ''));
-          } else if (parserSortState.key === 'events') {
-            diff = parseNumber(aData.parserFinalEvents) - parseNumber(bData.parserFinalEvents);
-          } else if (parserSortState.key === 'actions') {
-            diff = parseNumber(aData.parserActions) - parseNumber(bData.parserActions);
-          } else if (parserSortState.key === 'new') {
-            diff = parseNumber(aData.parserNew) - parseNumber(bData.parserNew);
-          } else if (parserSortState.key === 'merge') {
-            diff = parseNumber(aData.parserMerge) - parseNumber(bData.parserMerge);
-          } else if (parserSortState.key === 'conflict') {
-            diff = parseNumber(aData.parserConflict) - parseNumber(bData.parserConflict);
-          } else if (parserSortState.key === 'last-run') {
-            diff = parseNumber(aData.parserLastRun) - parseNumber(bData.parserLastRun);
-          } else if (parserSortState.key === 'duration') {
-            diff = parseNumber(aData.parserDuration) - parseNumber(bData.parserDuration);
-          } else if (parserSortState.key === 'status') {
-            diff = parseNumber(aData.parserStatusRank) - parseNumber(bData.parserStatusRank);
-            if (diff === 0) {
-              diff = parseNumber(aData.parserActions) - parseNumber(bData.parserActions);
-            }
+          if (sourceSortState.key === 'host') {
+            diff = String(aData.sourceHost || '').localeCompare(String(bData.sourceHost || ''));
+          } else if (sourceSortState.key === 'verdict') {
+            diff = parseNumber(aData.sourceVerdictRank) - parseNumber(bData.sourceVerdictRank);
+          } else if (sourceSortState.key === 'extracted') {
+            diff = parseNumber(aData.sourceExtracted) - parseNumber(bData.sourceExtracted);
+          } else if (sourceSortState.key === 'bear') {
+            diff = parseNumber(aData.sourceBear) - parseNumber(bData.sourceBear);
+          } else if (sourceSortState.key === 'upcoming') {
+            diff = parseNumber(aData.sourceUpcoming) - parseNumber(bData.sourceUpcoming);
+          } else if (sourceSortState.key === 'age') {
+            diff = parseNumber(aData.sourceAge) - parseNumber(bData.sourceAge);
           }
-          if (diff === 0) {
-            diff = String(aData.parserName || '').localeCompare(String(bData.parserName || ''));
-          }
+          if (diff === 0) return sourceBaseOrder(aData, bData);
           return diff * direction;
         });
-        rows.forEach(row => parserList.appendChild(row));
-      };
-
-      const sortAggregateRows = () => {
-        if (!aggregateList) return;
-        const rows = Array.from(aggregateList.querySelectorAll('[data-row="aggregate-parser"]'));
-        const direction = aggregateSortState.direction === 'asc' ? 1 : -1;
-        const usePercent = aggregateDisplayState.mode === 'percent';
-        rows.sort((a, b) => {
-          const aData = a.dataset;
-          const bData = b.dataset;
-          let diff = 0;
-          if (aggregateSortState.key === 'name') {
-            diff = String(aData.aggregateName || '').localeCompare(String(bData.aggregateName || ''));
-          } else if (aggregateSortState.key === 'new') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateNewPercent) - parseNumber(bData.aggregateNewPercent)
-              : parseNumber(aData.aggregateNew) - parseNumber(bData.aggregateNew);
-          } else if (aggregateSortState.key === 'merge') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateMergePercent) - parseNumber(bData.aggregateMergePercent)
-              : parseNumber(aData.aggregateMerge) - parseNumber(bData.aggregateMerge);
-          } else if (aggregateSortState.key === 'conflict') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateConflictPercent) - parseNumber(bData.aggregateConflictPercent)
-              : parseNumber(aData.aggregateConflict) - parseNumber(bData.aggregateConflict);
-          } else if (aggregateSortState.key === 'runs') {
-            diff = parseNumber(aData.aggregateRuns) - parseNumber(bData.aggregateRuns);
-          } else if (aggregateSortState.key === 'success') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateSuccessPercent) - parseNumber(bData.aggregateSuccessPercent)
-              : parseNumber(aData.aggregateSuccess) - parseNumber(bData.aggregateSuccess);
-          } else if (aggregateSortState.key === 'warning') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateWarningPercent) - parseNumber(bData.aggregateWarningPercent)
-              : parseNumber(aData.aggregateWarning) - parseNumber(bData.aggregateWarning);
-          } else if (aggregateSortState.key === 'failed') {
-            diff = usePercent
-              ? parseNumber(aData.aggregateFailedPercent) - parseNumber(bData.aggregateFailedPercent)
-              : parseNumber(aData.aggregateFailed) - parseNumber(bData.aggregateFailed);
-          }
-          if (diff === 0) {
-            diff = String(aData.aggregateName || '').localeCompare(String(bData.aggregateName || ''));
-          }
-          return diff * direction;
-        });
-        rows.forEach(row => aggregateList.appendChild(row));
+        rows.forEach(row => sourceList.appendChild(row));
       };
 
       const matchesRunFilters = row => {
@@ -4367,34 +3332,21 @@ class MetricsDisplay {
           const mode = link.getAttribute('data-nav-view');
           if (!mode) return;
           event.preventDefault();
-          const parser = link.getAttribute('data-nav-parser') || '';
-          setActiveView(mode, parser);
+          const key = link.getAttribute('data-nav-key') || '';
+          setActiveView(mode, key);
         });
       });
 
-      parserSortButtons.forEach(button => {
+      sourceSortButtons.forEach(button => {
         button.addEventListener('click', event => {
           const key = button.getAttribute('data-sort-key');
           const dir = button.getAttribute('data-sort-dir');
           if (!key || !dir) return;
           event.preventDefault();
-          parserSortState.key = key;
-          parserSortState.direction = normalizeDirection(dir);
-          updateSortButtons(parserSortButtons, parserSortState);
-          sortParserRows();
-        });
-      });
-
-      aggregateSortButtons.forEach(button => {
-        button.addEventListener('click', event => {
-          const key = button.getAttribute('data-sort-key');
-          const dir = button.getAttribute('data-sort-dir');
-          if (!key || !dir) return;
-          event.preventDefault();
-          aggregateSortState.key = key;
-          aggregateSortState.direction = normalizeDirection(dir);
-          updateSortButtons(aggregateSortButtons, aggregateSortState);
-          sortAggregateRows();
+          sourceSortState.key = key;
+          sourceSortState.direction = normalizeDirection(dir);
+          updateSortButtons(sourceSortButtons, sourceSortState);
+          sortSourceRows();
         });
       });
 
@@ -4430,34 +3382,13 @@ class MetricsDisplay {
         });
       });
 
-      if (aggregateToggle) {
-        aggregateToggle.addEventListener('click', event => {
-          event.preventDefault();
-          const nextMode = aggregateDisplayState.mode === 'percent' ? 'count' : 'percent';
-          setAggregateDisplay(nextMode);
-          sortAggregateRows();
-        });
-      }
-
-      if (hasParserDurationToggle) {
-        parserDurationToggle.addEventListener('click', event => {
-          event.preventDefault();
-          const current = body.getAttribute('data-parser-duration-view') || 'top';
-          setParserDurationView(current === 'all' ? 'top' : 'all');
-        });
-      }
-
-      const initialMode = body.getAttribute('data-view-mode') || 'parsers';
-      const initialParser = body.getAttribute('data-parser-name') || '';
-      setActiveView(initialMode, initialParser);
-      setAggregateDisplay(aggregateDisplayState.mode);
-      setParserDurationView(body.getAttribute('data-parser-duration-view') || 'top');
-      updateSortButtons(parserSortButtons, parserSortState);
-      updateSortButtons(aggregateSortButtons, aggregateSortState);
+      const initialMode = body.getAttribute('data-view-mode') || 'sources';
+      const initialKey = body.getAttribute('data-view-key') || '';
+      setActiveView(initialMode, initialKey);
+      updateSortButtons(sourceSortButtons, sourceSortState);
       updateSortButtons(runSortButtons, runSortState);
       updateFilterChips();
-      sortParserRows();
-      sortAggregateRows();
+      sortSourceRows();
       applyRunFiltersAndSort();
     })();
   </script>
@@ -4469,18 +3400,29 @@ class MetricsDisplay {
 
   getViewOptions() {
     return [
-      { mode: 'parsers', label: 'Parser Health' },
+      { mode: 'sources', label: 'Sources' },
       { mode: 'runs', label: 'All Runs' }
     ];
   }
 
   getViewLabel(view) {
-    if (!view) return 'Parser Health';
-    if (view.mode === 'parser') {
-      return view.parserName ? `Parser Detail: ${view.parserName}` : 'Parser Detail';
+    if (!view) return 'Sources';
+    if (view.mode === 'host') {
+      return view.host ? `Host: ${view.host}` : 'Host Detail';
     }
     const option = this.getViewOptions().find(item => item.mode === view.mode);
-    return option ? option.label : 'Parser Health';
+    return option ? option.label : 'Sources';
+  }
+
+  // "#rrggbb" + alpha → "rgba(r, g, b, a)" for the verdict chip backgrounds.
+  hexToRgba(hex, alpha) {
+    const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!match) return `rgba(167, 176, 204, ${alpha})`;
+    const value = parseInt(match[1], 16);
+    const r = (value >> 16) & 255;
+    const g = (value >> 8) & 255;
+    const b = value & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   getRunSortOptions() {
@@ -4523,20 +3465,14 @@ async function runMetricsDisplay() {
   const records = await display.loadMetricsRecords();
   const latestRecord = records.length ? records[records.length - 1] : null;
   const summary = await display.loadSummary();
-  const configuredParsers = display.getConfiguredParsers();
-  const latestRunData = latestRecord ? await display.loadRunDetails(latestRecord) : null;
-  const fallbackParserNames = configuredParsers.length
-    ? configuredParsers
-    : Object.keys(display.getParserLastRuns(records));
-  const latestErrorCounts = display.buildParserErrorCounts(latestRunData, fallbackParserNames);
-  const parserHealth = display.buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts, summary);
+  const sourceHealth = await display.loadSourceHealth();
 
-  const view = await display.resolveView();
+  const view = display.resolveHostView(await display.resolveView(), sourceHealth);
   const sortState = display.resolveSort(view);
   const runSortState = display.resolveRunSort(view);
   const runFilters = display.resolveRunFilters(view);
   const runItems = display.buildRunItems(records);
-  const data = { latestRecord, summary, parserHealth, records, sortState, runSortState, runFilters, runItems };
+  const data = { latestRecord, summary, records, sourceHealth, sortState, runSortState, runFilters, runItems };
 
   if (display.runtime.runsInWidget) {
     const widget = await display.renderWidget(data, view);

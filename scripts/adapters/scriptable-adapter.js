@@ -16343,6 +16343,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       if (metricsRecord) {
         await this.appendMetricsRecord(metricsRecord, retentionDays);
         await this.updateMetricsSummary(metricsRecord);
+        await this.appendSourceLedger(results, metricsRecord.run_id);
       } else {
         console.log("📱 Scriptable: Skipping metrics write (missing runId)");
       }
@@ -18049,6 +18050,58 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       signals,
       parsers,
     };
+  }
+
+  // Source ledger (metrics/sources.ndjson + metrics/source-upcoming.json):
+  // one line per run per website, the same shape the Mac writes from
+  // web-adapter.appendSourceLedger. Idempotent per run id — an owner-review
+  // execute re-saving a Mac run adds nothing.
+  getSourceLedgerPath() {
+    return this.fm.joinPath(this.metricsDir, "sources.ndjson");
+  }
+
+  getSourceUpcomingPath() {
+    return this.fm.joinPath(this.metricsDir, "source-upcoming.json");
+  }
+
+  async appendSourceLedger(results, runId) {
+    try {
+      const core = typeof SharedCore !== "undefined" ? SharedCore : null;
+      if (!core || typeof core.buildSourceLedger !== "function") return null;
+      const fm = this.fm || FileManager.iCloud();
+      const ledgerPath = this.getSourceLedgerPath();
+      const upcomingPath = this.getSourceUpcomingPath();
+      let existing = "";
+      if (fm.fileExists(ledgerPath)) {
+        fm.downloadFileFromiCloud(ledgerPath);
+        existing = fm.readString(ledgerPath) || "";
+      }
+      if (runId && existing.includes(`"run_id":"${runId}"`)) {
+        console.log(`📱 Scriptable: Source ledger already has run ${runId} — nothing to add`);
+        return null;
+      }
+      let previousUpcoming = null;
+      if (fm.fileExists(upcomingPath)) {
+        fm.downloadFileFromiCloud(upcomingPath);
+        try {
+          previousUpcoming = JSON.parse(fm.readString(upcomingPath) || "null");
+        } catch (_) {
+          previousUpcoming = null;
+        }
+      }
+      const built = core.buildSourceLedger(results, { runId, previousUpcoming, now: new Date() });
+      if (!built.records.length) return built;
+      const lines = built.records.map((record) => JSON.stringify(record)).join("\n") + "\n";
+      const content = existing && !existing.endsWith("\n") ? `${existing}\n${lines}` : `${existing}${lines}`;
+      fm.writeString(ledgerPath, content);
+      fm.writeString(upcomingPath, JSON.stringify(built.upcoming));
+      const trouble = built.records.filter((record) => record.status !== "ok" || record.vanished.length > 0).length;
+      console.log(`📱 Scriptable: 📒 Source ledger +${built.records.length} host line(s) for run ${runId}${trouble ? ` — ${trouble} host(s) with trouble` : ""}`);
+      return built;
+    } catch (error) {
+      console.log(`📱 Scriptable: Source ledger write failed: ${error && error.message ? error.message : error}`);
+      return null;
+    }
   }
 
   async appendMetricsRecord(record, retentionDays) {

@@ -15,7 +15,10 @@ scripts/
 ├── bear-event-scraper-unified.js       # Lightweight orchestrator (environment detection only)
 ├── shared-core.js                      # Pure JavaScript business logic (NO environment code)
 ├── run-log-summary.js                  # Pure run-log parsing/summarizing (used by displays + tools CLI)
-├── metrics-sections.js                 # Pure HTML/data builders for the metrics dashboard (Health & Guards)
+├── metrics-sections.js                 # Pure HTML/data builders for the metrics dashboard (Health & Guards, source health)
+│                                       #   Source ledger: metrics/sources.ndjson = one line per run per website host, written by EVERY run
+│                                       #   (SharedCore.buildSourceLedger); metrics/source-upcoming.json = last upcoming set per host (vanished detection);
+│                                       #   seed history with `npm run backfill-source-ledger`
 ├── adapters/                           # Environment-specific implementations
 │   ├── scriptable-adapter.js           # iOS/Scriptable ONLY code
 │   └── web-adapter.js                  # Browser/Web ONLY code
