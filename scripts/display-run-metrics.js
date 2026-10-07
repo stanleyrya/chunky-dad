@@ -121,6 +121,12 @@ class LineChart {
     this.padding = Number.isFinite(options.padding) ? options.padding : CHART_STYLE.padding;
   }
 
+  // Style flags (all optional): fillColor (a translucent Color; the fill is a
+  // faux gradient of stacked bands unless gradient:false), lineColor, lineWidth,
+  // showDots/dotRadius/dotColor, gridlines (faint horizontal rules),
+  // emphasizeLast (halo + solid dot on the newest point), baselineValue
+  // (dashed horizontal rule at that value), tintFromIndex/tintColor (a
+  // translucent stretch from that point to the right edge).
   getImage(style = {}) {
     const points = this.getPoints();
     if (style.logPoints) {
@@ -137,11 +143,27 @@ class LineChart {
     const dotRadius = Number.isFinite(style.dotRadius) ? style.dotRadius : 2;
     const dotColor = style.dotColor || lineColor;
 
+    if (style.gridlines) {
+      this.drawGridlines(style.gridColor || null);
+    }
+
+    if (Number.isFinite(style.tintFromIndex) && style.tintFromIndex >= 0 && style.tintFromIndex < points.length) {
+      this.drawTint(points, style.tintFromIndex, style.tintColor || fillColor || lineColor);
+    }
+
     if (fillColor) {
-      const fillPath = this.getSmoothPath(points, true);
-      this.ctx.setFillColor(fillColor);
-      this.ctx.addPath(fillPath);
-      this.ctx.fillPath();
+      if (style.gradient === false) {
+        const fillPath = this.getSmoothPath(points, true);
+        this.ctx.setFillColor(fillColor);
+        this.ctx.addPath(fillPath);
+        this.ctx.fillPath();
+      } else {
+        this.drawGradientArea(points, fillColor, style.gradientSteps);
+      }
+    }
+
+    if (Number.isFinite(style.baselineValue)) {
+      this.drawBaseline(style.baselineValue, style.baselineColor || null, style.baselineLabel);
     }
 
     if (lineColor) {
@@ -160,7 +182,152 @@ class LineChart {
       });
     }
 
+    if (style.emphasizeLast) {
+      const accent = style.lastPointColor || dotColor || lineColor || fillColor;
+      if (accent) this.drawLastPoint(points[points.length - 1], accent, dotRadius + 1);
+    }
+
     return this.ctx.getImage();
+  }
+
+  // Colour with a new alpha; Scriptable's Color exposes .hex (no alpha).
+  static withAlpha(color, alpha) {
+    const raw = color && color.hex ? String(color.hex) : CHART_STYLE.line;
+    const hex = `#${raw.replace(/^#/, '').slice(0, 6)}`;
+    return new Color(hex, Math.max(0, Math.min(1, alpha)));
+  }
+
+  getPlotFrame() {
+    const width = this.ctx.size.width;
+    const height = this.ctx.size.height;
+    const padding = this.padding;
+    return {
+      left: padding,
+      right: width - padding,
+      top: padding,
+      bottom: height - padding,
+      width: Math.max(1, width - (padding * 2)),
+      height: Math.max(1, height - (padding * 2))
+    };
+  }
+
+  getScale() {
+    const numericValues = this.values.filter(value => Number.isFinite(value));
+    const maxFromValues = numericValues.length ? Math.max(...numericValues, this.minValue) : this.minValue;
+    const maxValue = Number.isFinite(this.maxValue)
+      ? this.maxValue
+      : (maxFromValues > this.minValue ? maxFromValues : this.minValue + 1);
+    return { minValue: this.minValue, maxValue, diff: maxValue - this.minValue || 1 };
+  }
+
+  valueToY(value) {
+    const frame = this.getPlotFrame();
+    const scale = this.getScale();
+    const normalized = Math.max(0, Math.min(1, (value - scale.minValue) / scale.diff));
+    return frame.top + (1 - normalized) * frame.height;
+  }
+
+  // Three faint rules at a quarter, a half and three quarters of the plot.
+  drawGridlines(color) {
+    const frame = this.getPlotFrame();
+    const ruleColor = color || new Color('#ffffff', 0.14);
+    this.ctx.setFillColor(ruleColor);
+    [0.25, 0.5, 0.75].forEach(fraction => {
+      const y = frame.top + frame.height * fraction;
+      this.ctx.fillRect(new Rect(frame.left, y, frame.width, 0.5));
+    });
+  }
+
+  // Translucent stretch from the given point to the right edge, with a thin
+  // marker line where it starts (the run trouble began on).
+  drawTint(points, index, color) {
+    if (!color) return;
+    const frame = this.getPlotFrame();
+    const step = points.length > 1 ? points[1].x - points[0].x : frame.width;
+    const startX = Math.max(frame.left, points[index].x - (step / 2));
+    this.ctx.setFillColor(LineChart.withAlpha(color, 0.16));
+    this.ctx.fillRect(new Rect(startX, frame.top, Math.max(1, frame.right - startX), frame.height));
+    this.ctx.setFillColor(LineChart.withAlpha(color, 0.55));
+    this.ctx.fillRect(new Rect(startX, frame.top, 1, frame.height));
+  }
+
+  // Dashed rule at a value (the baseline), labelled at the right edge when the
+  // plot is tall enough for a 7pt caption.
+  drawBaseline(value, color, label) {
+    const frame = this.getPlotFrame();
+    const y = this.valueToY(value);
+    const ruleColor = color || new Color('#ffffff', 0.7);
+    this.ctx.setFillColor(ruleColor);
+    const dash = 4;
+    const gap = 3;
+    for (let x = frame.left; x < frame.right; x += dash + gap) {
+      this.ctx.fillRect(new Rect(x, y - 0.5, Math.min(dash, frame.right - x), 1));
+    }
+    const caption = label === undefined ? 'baseline' : label;
+    if (caption && frame.height >= 48) {
+      this.ctx.setFont(Font.systemFont(7));
+      this.ctx.setTextColor(ruleColor);
+      this.ctx.setTextAlignedRight();
+      const labelY = y - 10 < frame.top ? y + 1 : y - 10;
+      this.ctx.drawTextInRect(String(caption), new Rect(frame.left, labelY, frame.width, 9));
+    }
+  }
+
+  // Faux vertical gradient: the area is drawn `steps` times, each copy with
+  // its floor raised a little, so the pixels nearest the curve are covered by
+  // every band (opaque) and the pixels near the baseline by one (faint).
+  drawGradientArea(points, color, steps) {
+    const frame = this.getPlotFrame();
+    const bands = Number.isFinite(steps) && steps > 0 ? Math.floor(steps) : 10;
+    const baseAlpha = Number.isFinite(color.alpha) ? color.alpha : CHART_STYLE.fillOpacity;
+    const topAlpha = Math.max(0.2, Math.min(0.85, baseAlpha * 2.2));
+    const bandAlpha = 1 - Math.pow(1 - topAlpha, 1 / bands);
+    const dense = this.sampleSmoothCurve(points, 8);
+    const bandColor = LineChart.withAlpha(color, bandAlpha);
+    for (let band = 0; band < bands; band += 1) {
+      const floor = frame.bottom - (band * (frame.height / bands));
+      const path = new Path();
+      path.move(new Point(dense[0].x, floor));
+      dense.forEach(sample => path.addLine(new Point(sample.x, Math.min(sample.y, floor))));
+      path.addLine(new Point(dense[dense.length - 1].x, floor));
+      path.closeSubpath();
+      this.ctx.setFillColor(bandColor);
+      this.ctx.addPath(path);
+      this.ctx.fillPath();
+    }
+  }
+
+  // Halo + solid dot on the newest point.
+  drawLastPoint(point, color, radius) {
+    const halo = radius * 2.6;
+    this.ctx.setFillColor(LineChart.withAlpha(color, 0.28));
+    this.ctx.fillEllipse(new Rect(point.x - halo, point.y - halo, halo * 2, halo * 2));
+    this.ctx.setFillColor(LineChart.withAlpha(color, 1));
+    this.ctx.fillEllipse(new Rect(point.x - radius, point.y - radius, radius * 2, radius * 2));
+    this.ctx.setFillColor(new Color('#ffffff', 0.9));
+    const core = Math.max(1, radius * 0.45);
+    this.ctx.fillEllipse(new Rect(point.x - core, point.y - core, core * 2, core * 2));
+  }
+
+  // The same two quadratic curves per segment that getSmoothPath draws,
+  // sampled into a polyline so clipped fills follow the stroked line exactly.
+  sampleSmoothCurve(points, perSegment) {
+    if (points.length < 2) return points.slice();
+    const samples = [points[0]];
+    const quad = (p0, c, p1, t) => new Point(
+      ((1 - t) * (1 - t) * p0.x) + (2 * (1 - t) * t * c.x) + (t * t * p1.x),
+      ((1 - t) * (1 - t) * p0.y) + (2 * (1 - t) * t * c.y) + (t * t * p1.y)
+    );
+    for (let i = 0; i < points.length - 1; i += 1) {
+      const current = points[i];
+      const next = points[i + 1];
+      const avg = new Point((current.x + next.x) / 2, (current.y + next.y) / 2);
+      const cp1 = new Point((avg.x + current.x) / 2, current.y);
+      const cp2 = new Point((avg.x + next.x) / 2, next.y);
+      for (let s = 1; s <= perSegment; s += 1) samples.push(quad(current, cp1, avg, s / perSegment));
+      for (let s = 1; s <= perSegment; s += 1) samples.push(quad(avg, cp2, next, s / perSegment));
+    }
+    return samples;
   }
 
   logPoints(points, style = {}) {
@@ -170,12 +337,9 @@ class LineChart {
     const width = this.ctx.size.width;
     const height = this.ctx.size.height;
     const padding = this.padding;
-    const numericValues = this.values.filter(value => Number.isFinite(value));
-    const maxFromValues = numericValues.length ? Math.max(...numericValues, this.minValue) : this.minValue;
-    const maxValue = Number.isFinite(this.maxValue)
-      ? this.maxValue
-      : (maxFromValues > this.minValue ? maxFromValues : this.minValue + 1);
-    const diff = maxValue - this.minValue || 1;
+    const scale = this.getScale();
+    const maxValue = scale.maxValue;
+    const diff = scale.diff;
     const previewCount = Math.min(limit, count);
     const valuesPreview = this.values.slice(0, previewCount).map(value => (
       Number.isFinite(value) ? Number(value.toFixed(3)) : value
@@ -196,23 +360,15 @@ class LineChart {
     const count = this.values.length;
     if (count === 0) return [];
 
-    const width = this.ctx.size.width;
-    const height = this.ctx.size.height;
-    const padding = this.padding;
-    const usableWidth = Math.max(1, width - (padding * 2));
-    const usableHeight = Math.max(1, height - (padding * 2));
-    const step = count === 1 ? 0 : usableWidth / (count - 1);
-
-    const maxFromValues = Math.max(...this.values, this.minValue);
-    const maxValue = Number.isFinite(this.maxValue)
-      ? this.maxValue
-      : (maxFromValues > this.minValue ? maxFromValues : this.minValue + 1);
-    const diff = maxValue - this.minValue || 1;
+    const frame = this.getPlotFrame();
+    const step = count === 1 ? 0 : frame.width / (count - 1);
+    const scale = this.getScale();
 
     return this.values.map((current, index) => {
-      const x = padding + (step * index);
-      const normalized = (current - this.minValue) / diff;
-      const y = padding + (1 - normalized) * usableHeight;
+      const x = frame.left + (step * index);
+      const safe = Number.isFinite(current) ? current : scale.minValue;
+      const normalized = (safe - scale.minValue) / scale.diff;
+      const y = frame.top + (1 - normalized) * frame.height;
       return new Point(x, y);
     });
   }
@@ -985,6 +1141,10 @@ class MetricsDisplay {
     return sorted;
   }
 
+  // Filled, smoothed area with faint gridlines and the newest point
+  // emphasized (all three can be turned off per call); the extra style keys
+  // baselineValue / tintFromIndex / tintColor feed the host widget. The
+  // signature is shared with the page builders, so it stays put.
   buildLineChartImage(values, size, style = {}) {
     const safeValues = Array.isArray(values) && values.length ? values : [0];
     const chart = new LineChart(size.width, size.height, safeValues, {
@@ -1006,12 +1166,25 @@ class MetricsDisplay {
       showDots: !!style.showDots,
       dotRadius: style.dotRadius,
       dotColor: style.dotColor || lineColor,
+      gradient: style.gradient !== false,
+      gradientSteps: style.gradientSteps,
+      gridlines: style.gridlines !== false,
+      gridColor: style.gridColor || null,
+      emphasizeLast: style.emphasizeLast !== false,
+      lastPointColor: style.lastPointColor || null,
+      baselineValue: Number.isFinite(style.baselineValue) ? style.baselineValue : null,
+      baselineColor: style.baselineColor || null,
+      baselineLabel: style.baselineLabel,
+      tintFromIndex: Number.isFinite(style.tintFromIndex) ? style.tintFromIndex : null,
+      tintColor: style.tintColor || null,
       logPoints,
       logLabel: style.logLabel,
       logLimit: style.logLimit
     });
   }
 
+  // Several series on one plot: shared scale, one set of gridlines, a faint
+  // gradient under each line and the newest point of each series emphasized.
   buildMultiLineChartImage(seriesList, size, style = {}) {
     const safeSeries = Array.isArray(seriesList)
       ? seriesList.filter(series => series && Array.isArray(series.values) && series.values.length)
@@ -1035,11 +1208,18 @@ class MetricsDisplay {
     const showDots = !!style.showDots;
     const dotRadius = Number.isFinite(style.dotRadius) ? style.dotRadius : 2;
     const logPoints = style.logPoints ?? this.shouldLogChartPoints();
+    const fillAlpha = Number.isFinite(style.fillOpacity) ? style.fillOpacity : 0.1;
 
     const ctx = new DrawContext();
     ctx.size = new Size(size.width, size.height);
     ctx.respectScreenScale = true;
     ctx.opaque = false;
+
+    if (style.gridlines !== false) {
+      const grid = new LineChart(size.width, size.height, [0], { minValue, maxValue, padding });
+      grid.drawGridlines(style.gridColor || null);
+      ctx.drawImageAtPoint(grid.ctx.getImage(), new Point(0, 0));
+    }
 
     safeSeries.forEach((series, index) => {
       const rawColor = series.color || CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length] || CHART_STYLE.line;
@@ -1055,11 +1235,14 @@ class MetricsDisplay {
       });
       const lineImage = chart.getImage({
         lineColor,
-        fillColor: null,
+        fillColor: style.fill === false || fillAlpha <= 0 ? null : LineChart.withAlpha(lineColor, fillAlpha),
+        gradient: true,
+        gradientSteps: 4,
         lineWidth,
         showDots,
         dotRadius,
         dotColor: lineColor,
+        emphasizeLast: style.emphasizeLast !== false,
         logPoints,
         logLabel,
         logLimit: style.logLimit
@@ -1487,85 +1670,622 @@ class MetricsDisplay {
     widget.addSpacer(family === 'small' ? 4 : 6);
   }
 
-  async renderWidgetSources(widget, context) {
-    const family = this.runtime.widgetFamily || 'medium';
-    const sourceHealth = context.sourceHealth;
-    if (!sourceHealth?.available || !MetricsSections?.buildSourceWidgetSummary) {
-      const title = widget.addText('No source ledger yet');
-      title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
-      title.textColor = new Color(BRAND.text);
-      const note = widget.addText(family === 'small' ? 'Every run writes it.' : 'Every run writes it; backfill history on the Mac.');
-      note.font = Font.systemFont(FONT_SIZES.widget.small);
-      note.textColor = new Color(BRAND.textMuted);
-      return;
+  // ─── Widget art (DrawContext) ─────────────────────────────────────────────
+  // The home-screen widgets draw their own graphics: a verdict ring, a run
+  // heat strip, gradient area charts, a bar strip and dot rows. Both palettes
+  // sit on the brand purple; dark mode deepens it (Device.isUsingDarkAppearance).
+
+  getWidgetPalette() {
+    if (this._widgetPalette) return this._widgetPalette;
+    let dark = false;
+    try {
+      dark = typeof Device !== 'undefined' && typeof Device.isUsingDarkAppearance === 'function'
+        ? !!Device.isUsingDarkAppearance()
+        : false;
+    } catch (_) {
+      dark = false;
     }
-
-    const limit = family === 'small' ? 2 : this.getWidgetMaxRows();
-    const summary = MetricsSections.buildSourceWidgetSummary(sourceHealth.health, { limit });
-    const headline = widget.addText(summary.headline);
-    headline.font = Font.boldSystemFont(family === 'small' ? FONT_SIZES.widget.small : FONT_SIZES.widget.label);
-    headline.textColor = new Color(BRAND.text);
-    headline.lineLimit = 1;
-    widget.addSpacer(4);
-
-    if (summary.items.length === 0) {
-      const newestLabel = summary.newestFinishedAt
-        ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`
-        : 'No runs recorded yet';
-      const newest = widget.addText(newestLabel);
-      newest.font = Font.systemFont(FONT_SIZES.widget.small);
-      newest.textColor = new Color(BRAND.textMuted);
-      return;
-    }
-
-    const nameLimit = family === 'small' ? 16 : (family === 'large' ? 30 : 22);
-    for (let index = 0; index < summary.items.length; index += 1) {
-      const item = summary.items[index];
-      if (index > 0) widget.addSpacer(4);
-      const row = this.addWidgetRow(widget, family);
-      row.url = this.buildHostUrl(item.host);
-
-      const iconImage = await this.getHostIconImage(item);
-      if (iconImage) {
-        const icon = row.addImage(iconImage);
-        icon.imageSize = new Size(11, 11);
+    this._widgetPalette = dark
+      ? {
+        dark: true,
+        background: '#2a2f5e',
+        backgroundDeep: '#1b1f42',
+        text: BRAND.textSoft,
+        textMuted: '#c7cdf0',
+        card: 0.09,
+        rule: 0.1,
+        track: 0.12,
+        ok: BRAND.success
       }
+      : {
+        dark: false,
+        background: BRAND.primary,
+        backgroundDeep: '#5260d8',
+        text: BRAND.text,
+        textMuted: BRAND.textMuted,
+        card: WIDGET_STYLE.rowBackgroundAlpha,
+        rule: 0.14,
+        track: 0.18,
+        ok: BRAND.success
+      };
+    return this._widgetPalette;
+  }
 
-      const name = row.addText(this.truncateText(item.host, nameLimit));
-      name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-      name.textColor = new Color(BRAND.text);
-      name.lineLimit = 1;
-      row.addSpacer();
-
-      if (family === 'large') {
-        let detailLabel = `${this.formatNumber(item.extracted)} · ${this.formatNumber(item.bear)} · ${this.formatNumber(item.upcoming)}`;
-        if (item.sinceLabel) detailLabel = `since ${item.sinceLabel}`;
-        else if (item.vanished > 0) detailLabel = `${item.vanished} gone`;
-        const detail = row.addText(detailLabel);
-        detail.font = Font.systemFont(FONT_SIZES.widget.small);
-        detail.textColor = new Color(BRAND.textMuted);
-        detail.lineLimit = 1;
+  // Brand purple fading to a deeper shade corner to corner; plain colour when
+  // LinearGradient is unavailable.
+  applyWidgetBackground(widget) {
+    const palette = this.getWidgetPalette();
+    widget.backgroundColor = new Color(palette.background);
+    try {
+      if (typeof LinearGradient === 'function') {
+        const gradient = new LinearGradient();
+        gradient.colors = [new Color(palette.background), new Color(palette.backgroundDeep)];
+        gradient.locations = [0, 1];
+        gradient.startPoint = new Point(0, 0);
+        gradient.endPoint = new Point(1, 1);
+        widget.backgroundGradient = gradient;
       }
-
-      this.addWidgetBadge(row, item.label, item.verdict, { fontSize: 10 });
-    }
-
-    if (summary.more > 0) {
-      widget.addSpacer(4);
-      const more = widget.addText(`+${summary.more} more`);
-      more.font = Font.systemFont(FONT_SIZES.widget.small);
-      more.textColor = new Color(BRAND.textMuted);
-    }
-    if (family !== 'small' && summary.newestFinishedAt) {
-      widget.addSpacer(4);
-      const newest = widget.addText(`Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`);
-      newest.font = Font.systemFont(FONT_SIZES.widget.small);
-      newest.textColor = new Color(BRAND.textMuted);
+    } catch (error) {
+      console.log(`Metrics: widget gradient unavailable: ${error.message}`);
     }
   }
 
+  createWidgetContext(width, height) {
+    const ctx = new DrawContext();
+    ctx.size = new Size(width, height);
+    ctx.respectScreenScale = true;
+    ctx.opaque = false;
+    return ctx;
+  }
+
+  widgetFont(size, weight = 'regular') {
+    const rounded = {
+      regular: 'regularRoundedSystemFont',
+      medium: 'mediumRoundedSystemFont',
+      bold: 'boldRoundedSystemFont',
+      heavy: 'heavyRoundedSystemFont'
+    }[weight] || 'regularRoundedSystemFont';
+    if (typeof Font[rounded] === 'function') return Font[rounded](size);
+    return weight === 'regular' ? Font.systemFont(size) : Font.boldSystemFont(size);
+  }
+
+  // Scriptable's Path has no arc primitive: the arc is appended as cubic
+  // curves of at most a quarter turn each (angles in radians, screen
+  // orientation, so increasing angles run clockwise).
+  appendArc(path, cx, cy, radius, startAngle, endAngle, moveFirst) {
+    const sweep = endAngle - startAngle;
+    const segments = Math.max(1, Math.ceil(Math.abs(sweep) / (Math.PI / 2)));
+    const step = sweep / segments;
+    const k = (4 / 3) * Math.tan(step / 4);
+    const at = angle => new Point(cx + (radius * Math.cos(angle)), cy + (radius * Math.sin(angle)));
+    let angle = startAngle;
+    let from = at(angle);
+    if (moveFirst) path.move(from);
+    else path.addLine(from);
+    for (let index = 0; index < segments; index += 1) {
+      const next = angle + step;
+      const to = at(next);
+      const control1 = new Point(from.x - (k * radius * Math.sin(angle)), from.y + (k * radius * Math.cos(angle)));
+      const control2 = new Point(to.x + (k * radius * Math.sin(next)), to.y - (k * radius * Math.cos(next)));
+      path.addCurve(to, control1, control2);
+      angle = next;
+      from = to;
+    }
+  }
+
+  // A gauge ring: a faint full track, one coloured arc per segment (clockwise
+  // from the top, in the order given) and a big number in the middle.
+  // options: { size, thickness, segments:[{ value, color }], total,
+  //            centerText, centerSubText, centerColor }
+  buildRingImage(options = {}) {
+    const palette = this.getWidgetPalette();
+    const size = Number.isFinite(options.size) ? options.size : 64;
+    const thickness = Number.isFinite(options.thickness) ? options.thickness : Math.max(5, Math.round(size * 0.13));
+    const ctx = this.createWidgetContext(size, size);
+    const center = size / 2;
+    const radius = (size / 2) - (thickness / 2) - 1;
+    const total = Math.max(0, Number(options.total) || 0);
+    const segments = (Array.isArray(options.segments) ? options.segments : [])
+      .filter(segment => segment && Number(segment.value) > 0);
+
+    ctx.setStrokeColor(new Color('#ffffff', palette.track));
+    ctx.setLineWidth(thickness);
+    ctx.strokeEllipse(new Rect(center - radius, center - radius, radius * 2, radius * 2));
+
+    if (total > 0 && segments.length) {
+      const fullTurn = Math.PI * 2;
+      const gap = segments.length > 1 ? 0.035 : 0;
+      let angle = -Math.PI / 2;
+      ctx.setLineWidth(thickness);
+      segments.forEach(segment => {
+        const sweep = fullTurn * Math.min(1, Number(segment.value) / total);
+        const start = angle + (gap / 2);
+        const end = angle + sweep - (gap / 2);
+        if (end > start) {
+          const arc = new Path();
+          this.appendArc(arc, center, center, radius, start, end, true);
+          const color = segment.color instanceof Color ? segment.color : new Color(String(segment.color || BRAND.neutral));
+          ctx.setStrokeColor(color);
+          ctx.addPath(arc);
+          ctx.strokePath();
+        }
+        angle += sweep;
+      });
+    }
+
+    const centerText = options.centerText === undefined || options.centerText === null ? '' : String(options.centerText);
+    const subText = options.centerSubText ? String(options.centerSubText) : '';
+    if (centerText) {
+      const numberSize = Number.isFinite(options.centerFontSize)
+        ? options.centerFontSize
+        : Math.max(12, Math.round(size * (centerText.length > 2 ? 0.26 : 0.34)));
+      const subSize = Math.max(7, Math.round(size * 0.13));
+      const inner = radius - (thickness / 2);
+      const textColor = options.centerColor instanceof Color
+        ? options.centerColor
+        : new Color(String(options.centerColor || palette.text));
+      ctx.setTextAlignedCenter();
+      ctx.setFont(this.widgetFont(numberSize, 'heavy'));
+      ctx.setTextColor(textColor);
+      const numberHeight = numberSize * 1.25;
+      const subHeight = subText ? subSize * 1.3 : 0;
+      const blockTop = center - ((numberHeight + subHeight) / 2);
+      ctx.drawTextInRect(centerText, new Rect(center - inner, blockTop, inner * 2, numberHeight));
+      if (subText) {
+        ctx.setFont(this.widgetFont(subSize, 'medium'));
+        ctx.setTextColor(new Color(palette.textMuted));
+        ctx.drawTextInRect(subText, new Rect(center - inner, blockTop + numberHeight - 1, inner * 2, subHeight + 2));
+      }
+    }
+
+    return ctx.getImage();
+  }
+
+  // One column per run (oldest left, newest right) from every host's series:
+  // how many hosts that run found dead / stopped / shrunk / empty. The current
+  // baseline stands in for the baseline of the day, which is close enough for
+  // a 14-run strip.
+  buildHeatStripColumns(health, runLimit) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const runs = new Map();
+    rows.forEach(row => {
+      const baseline = Number.isFinite(row?.baseline) ? row.baseline : null;
+      (Array.isArray(row?.series) ? row.series : []).forEach(line => {
+        if (!line || !line.run_id) return;
+        let entry = runs.get(line.run_id);
+        if (!entry) {
+          entry = {
+            runId: line.run_id,
+            finishedAt: line.finished_at || '',
+            counts: { dead: 0, stopped: 0, shrunk: 0, empty: 0, ok: 0 },
+            total: 0,
+            extracted: 0
+          };
+          runs.set(line.run_id, entry);
+        }
+        const extracted = Number(line.extracted) || 0;
+        let verdict = 'ok';
+        if (line.status === 'dead') verdict = 'dead';
+        else if (extracted === 0) verdict = baseline > 0 ? 'stopped' : 'empty';
+        else if (baseline > 0 && extracted < baseline / 2) verdict = 'shrunk';
+        entry.counts[verdict] += 1;
+        entry.total += 1;
+        entry.extracted += extracted;
+      });
+    });
+    const ordered = [...runs.values()].sort((a, b) => (
+      String(a.finishedAt).localeCompare(String(b.finishedAt)) || String(a.runId).localeCompare(String(b.runId))
+    ));
+    const limit = Number.isFinite(runLimit) && runLimit > 0 ? runLimit : 14;
+    return ordered.slice(-limit).map(entry => {
+      const troubled = entry.total - entry.counts.ok;
+      const worst = ['dead', 'stopped', 'shrunk', 'empty'].find(verdict => entry.counts[verdict] > 0) || null;
+      return { ...entry, troubled, worst };
+    });
+  }
+
+  // Heat strip: a rounded square per run; inside it the troubled hosts of
+  // that run stack up from the bottom as verdict-coloured bands (worst on
+  // top), the stack as tall as the run's share of the worst run on the
+  // strip. The newest square is outlined; a 7pt caption sits underneath.
+  buildHeatStripImage(columns, options = {}) {
+    const palette = this.getWidgetPalette();
+    const width = Number.isFinite(options.width) ? options.width : 200;
+    const height = Number.isFinite(options.height) ? options.height : 26;
+    const ctx = this.createWidgetContext(width, height);
+    const list = Array.isArray(columns) ? columns : [];
+    const captionHeight = options.caption === false ? 0 : 10;
+    const cellHeight = Math.max(4, height - captionHeight - 1);
+    const slots = Math.max(list.length, Number.isFinite(options.slots) ? options.slots : 1);
+    const gap = 3;
+    const cellWidth = Math.min(22, (width - (gap * (slots - 1))) / slots);
+    const corner = Math.min(3, cellWidth / 3);
+    const peak = list.reduce((max, column) => Math.max(max, column.troubled || 0), 0);
+    const totalHosts = list.reduce((max, column) => Math.max(max, column.total || 0), 0);
+
+    list.forEach((column, index) => {
+      const x = index * (cellWidth + gap);
+      const rect = new Rect(x, 0, cellWidth, cellHeight);
+      const base = new Path();
+      base.addRoundedRect(rect, corner, corner);
+      ctx.setFillColor(new Color('#ffffff', palette.track));
+      ctx.addPath(base);
+      ctx.fillPath();
+      if (column.troubled > 0 && column.worst) {
+        const stackHeight = Math.max(3, cellHeight * (peak > 0 ? column.troubled / peak : 0));
+        let y = cellHeight;
+        ['empty', 'shrunk', 'stopped', 'dead'].forEach(verdict => {
+          const count = column.counts[verdict] || 0;
+          if (!count) return;
+          const bandHeight = stackHeight * (count / column.troubled);
+          y -= bandHeight;
+          const band = new Path();
+          const isTop = y <= cellHeight - stackHeight + 0.01;
+          band.addRoundedRect(new Rect(x, y, cellWidth, bandHeight), isTop ? corner : 0, isTop ? corner : 0);
+          ctx.setFillColor(new Color(SOURCE_VERDICT_COLORS[verdict] || BRAND.danger, 0.95));
+          ctx.addPath(band);
+          ctx.fillPath();
+        });
+      } else if (column.total > 0) {
+        const calm = new Path();
+        calm.addRoundedRect(rect, corner, corner);
+        ctx.setFillColor(new Color(palette.ok, 0.28));
+        ctx.addPath(calm);
+        ctx.fillPath();
+      }
+      if (index === list.length - 1) {
+        const outline = new Path();
+        outline.addRoundedRect(new Rect(x + 0.5, 0.5, cellWidth - 1, cellHeight - 1), corner, corner);
+        ctx.setStrokeColor(new Color('#ffffff', 0.85));
+        ctx.setLineWidth(1);
+        ctx.addPath(outline);
+        ctx.strokePath();
+      }
+    });
+
+    if (captionHeight > 0) {
+      const captionY = cellHeight + 1;
+      ctx.setFont(Font.systemFont(7));
+      ctx.setTextColor(new Color(palette.textMuted));
+      ctx.setTextAlignedLeft();
+      const left = options.captionLeft || `${list.length} runs`;
+      ctx.drawTextInRect(left, new Rect(0, captionY, width / 2, captionHeight));
+      ctx.setTextAlignedRight();
+      const right = options.captionRight || (peak > 0
+        ? `peak ${peak} of ${totalHosts} troubled`
+        : (list.length ? 'all clear' : ''));
+      if (right) ctx.drawTextInRect(right, new Rect(width / 2, captionY, width / 2, captionHeight));
+    }
+
+    return ctx.getImage();
+  }
+
+  // Bar strip: one rounded bar per run, coloured by status, over three faint
+  // rules; the newest bar is outlined and carries its value.
+  // bars: [{ value, color }]
+  buildBarStripImage(bars, options = {}) {
+    const palette = this.getWidgetPalette();
+    const width = Number.isFinite(options.width) ? options.width : 200;
+    const height = Number.isFinite(options.height) ? options.height : 40;
+    const ctx = this.createWidgetContext(width, height);
+    const list = Array.isArray(bars) ? bars : [];
+    const captionHeight = options.caption === false ? 0 : 10;
+    const labelHeight = 9;
+    const plotTop = labelHeight;
+    const plotHeight = Math.max(4, height - captionHeight - labelHeight - 1);
+    const plotBottom = plotTop + plotHeight;
+    const slots = Math.max(list.length, Number.isFinite(options.slots) ? options.slots : 1);
+    const gap = 3;
+    const barWidth = Math.min(26, (width - (gap * (slots - 1))) / slots);
+    const corner = Math.min(2.5, barWidth / 3);
+    const peak = list.reduce((max, bar) => Math.max(max, Number(bar.value) || 0), 0) || 1;
+
+    ctx.setFillColor(new Color('#ffffff', palette.rule));
+    [0.25, 0.5, 0.75].forEach(fraction => {
+      ctx.fillRect(new Rect(0, plotTop + (plotHeight * fraction), width, 0.5));
+    });
+
+    list.forEach((bar, index) => {
+      const value = Math.max(0, Number(bar.value) || 0);
+      const barHeight = Math.max(2, (value / peak) * plotHeight);
+      const x = index * (barWidth + gap);
+      const rect = new Rect(x, plotBottom - barHeight, barWidth, barHeight);
+      const color = bar.color instanceof Color ? bar.color : new Color(String(bar.color || BRAND.neutral));
+      const isLast = index === list.length - 1;
+      const path = new Path();
+      path.addRoundedRect(rect, corner, corner);
+      ctx.setFillColor(LineChart.withAlpha(color, isLast ? 1 : 0.72));
+      ctx.addPath(path);
+      ctx.fillPath();
+      if (isLast) {
+        const outline = new Path();
+        outline.addRoundedRect(new Rect(x + 0.5, rect.y + 0.5, barWidth - 1, Math.max(1, barHeight - 1)), corner, corner);
+        ctx.setStrokeColor(new Color('#ffffff', 0.85));
+        ctx.setLineWidth(1);
+        ctx.addPath(outline);
+        ctx.strokePath();
+        ctx.setFont(this.widgetFont(7, 'bold'));
+        ctx.setTextColor(new Color(palette.text));
+        ctx.setTextAlignedRight();
+        const labelWidth = 48;
+        ctx.drawTextInRect(this.formatNumber(value), new Rect(Math.min(x + barWidth, width) - labelWidth, 0, labelWidth, labelHeight));
+      }
+    });
+
+    if (captionHeight > 0) {
+      ctx.setFont(Font.systemFont(7));
+      ctx.setTextColor(new Color(palette.textMuted));
+      ctx.setTextAlignedLeft();
+      ctx.drawTextInRect(options.captionLeft || `${list.length} runs`, new Rect(0, plotBottom + 1, width * 0.7, captionHeight));
+      if (options.captionRight) {
+        ctx.setTextAlignedRight();
+        ctx.drawTextInRect(options.captionRight, new Rect(width * 0.3, plotBottom + 1, width * 0.7, captionHeight));
+      }
+    }
+
+    return ctx.getImage();
+  }
+
+  // A row of dots (one per item, up to `max`), for the vanished count.
+  buildDotsImage(count, color, options = {}) {
+    const max = Number.isFinite(options.max) ? options.max : 12;
+    const dot = Number.isFinite(options.dot) ? options.dot : 6;
+    const gap = Number.isFinite(options.gap) ? options.gap : 3;
+    const shown = Math.max(0, Math.min(max, Math.floor(Number(count) || 0)));
+    const width = Math.max(dot, (shown * (dot + gap)) - gap);
+    const ctx = this.createWidgetContext(width, dot);
+    const fill = color instanceof Color ? color : new Color(String(color || BRAND.secondary));
+    for (let index = 0; index < shown; index += 1) {
+      ctx.setFillColor(LineChart.withAlpha(fill, index === shown - 1 && count > max ? 0.45 : 1));
+      ctx.fillEllipse(new Rect(index * (dot + gap), 0, dot, dot));
+    }
+    return { image: ctx.getImage(), width, height: dot };
+  }
+
+  getWidgetArtSizes(family) {
+    if (family === 'small') {
+      return { ring: 60, strip: { width: 124, height: 24 }, chart: { width: 124, height: 44 }, bars: { width: 124, height: 30 }, runs: 8, runRows: 2 };
+    }
+    if (family === 'large') {
+      return { ring: 78, strip: { width: 196, height: 30 }, chart: { width: 280, height: 96 }, bars: { width: 280, height: 64 }, spark: { width: 280, height: 46 }, runs: 14, runRows: 4 };
+    }
+    return { ring: 68, strip: { width: 212, height: 26 }, chart: { width: 280, height: 40 }, bars: { width: 280, height: 40 }, runs: 12, runRows: 1 };
+  }
+
+  countSourceVerdicts(health) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const counts = {};
+    rows.forEach(row => {
+      const verdict = String(row?.verdict || 'ok');
+      counts[verdict] = (counts[verdict] || 0) + 1;
+    });
+    return counts;
+  }
+
+  // The sources ring: one arc per troubled verdict (worst first) over the
+  // faint track, the troubled count in the middle.
+  buildSourcesRingImage(health, size) {
+    const palette = this.getWidgetPalette();
+    const counts = this.countSourceVerdicts(health);
+    const hosts = health && Array.isArray(health.rows) ? health.rows.length : 0;
+    const order = MetricsSections?.SOURCE_VERDICT_ORDER || Object.keys(SOURCE_VERDICT_COLORS);
+    const segments = order
+      .filter(verdict => verdict !== 'ok')
+      .map(verdict => ({ value: counts[verdict] || 0, color: SOURCE_VERDICT_COLORS[verdict] || BRAND.danger }));
+    const troubled = segments.reduce((sum, segment) => sum + segment.value, 0);
+    const worst = order.find(verdict => verdict !== 'ok' && counts[verdict] > 0) || null;
+    return this.buildRingImage({
+      size,
+      segments,
+      total: hosts,
+      centerText: hosts === 0 ? '–' : String(troubled),
+      centerSubText: hosts === 0 ? '' : `of ${hosts}`,
+      centerColor: worst ? SOURCE_VERDICT_COLORS[worst] : palette.ok
+    });
+  }
+
+  // One troubled host as a tappable row: favicon, verdict dot, host, then
+  // (when asked) the since/vanished detail and the verdict badge.
+  async addSourceHostRow(widget, item, family, options = {}) {
+    const palette = this.getWidgetPalette();
+    const row = this.addWidgetRow(widget, family);
+    row.url = this.buildHostUrl(item.host);
+    const iconImage = await this.getHostIconImage(item);
+    if (iconImage) {
+      const icon = row.addImage(iconImage);
+      icon.imageSize = new Size(12, 12);
+      icon.cornerRadius = 3;
+    }
+    const dot = row.addImage(this.buildStatusDot(new Color(SOURCE_VERDICT_COLORS[item.verdict] || BRAND.neutral), 6));
+    dot.imageSize = new Size(6, 6);
+    const name = row.addText(this.truncateText(item.host, options.nameLimit || 22));
+    name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+    name.textColor = new Color(palette.text);
+    name.lineLimit = 1;
+    row.addSpacer();
+    if (options.detail) {
+      let detailLabel = `${this.formatNumber(item.extracted)} · ${this.formatNumber(item.bear)} · ${this.formatNumber(item.upcoming)}`;
+      if (item.sinceLabel) detailLabel = `since ${item.sinceLabel}`;
+      else if (item.vanished > 0) detailLabel = `${item.vanished} gone`;
+      const detail = row.addText(detailLabel);
+      detail.font = Font.systemFont(10);
+      detail.textColor = new Color(palette.textMuted);
+      detail.lineLimit = 1;
+    }
+    if (options.badge !== false) {
+      this.addWidgetBadge(row, item.label, item.verdict, { fontSize: 10 });
+    }
+    return row;
+  }
+
+  // Sources widget. Small: ring + headline. Medium: ring beside the headline,
+  // the heat strip and two troubled hosts. Large: adds more hosts and a
+  // gradient sparkline of total extracted per run.
+  async renderWidgetSources(widget, context) {
+    const family = this.runtime.widgetFamily || 'medium';
+    const palette = this.getWidgetPalette();
+    const sizes = this.getWidgetArtSizes(family);
+    const sourceHealth = context.sourceHealth;
+    if (!sourceHealth?.available || !MetricsSections?.buildSourceWidgetSummary) {
+      const empty = widget.addStack();
+      empty.layoutHorizontally();
+      empty.centerAlignContent();
+      empty.spacing = 10;
+      const ring = empty.addImage(this.buildRingImage({ size: family === 'small' ? 48 : 56, segments: [], total: 0, centerText: '–' }));
+      ring.imageSize = new Size(family === 'small' ? 48 : 56, family === 'small' ? 48 : 56);
+      const column = empty.addStack();
+      column.layoutVertically();
+      const title = column.addText('No source ledger yet');
+      title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+      title.textColor = new Color(palette.text);
+      title.lineLimit = 2;
+      const note = column.addText(family === 'small' ? 'Every run writes it.' : 'Every run writes it; backfill history on the Mac.');
+      note.font = Font.systemFont(FONT_SIZES.widget.small);
+      note.textColor = new Color(palette.textMuted);
+      note.lineLimit = 2;
+      return;
+    }
+
+    const health = sourceHealth.health;
+    const limit = family === 'small' ? 0 : (family === 'large' ? 5 : 2);
+    const summary = MetricsSections.buildSourceWidgetSummary(health, { limit: Math.max(1, limit) });
+    const ringImage = this.buildSourcesRingImage(health, sizes.ring);
+    const columns = this.buildHeatStripColumns(health, 14);
+    const headlineText = summary.troubled > 0
+      ? (family === 'small' ? (summary.troubled === 1 ? 'needs a look' : 'need a look') : summary.headline)
+      : (family === 'small' ? 'all ok' : summary.headline);
+
+    if (family === 'small') {
+      widget.addSpacer();
+      const ringRow = widget.addStack();
+      ringRow.layoutHorizontally();
+      ringRow.addSpacer();
+      const ring = ringRow.addImage(ringImage);
+      ring.imageSize = new Size(sizes.ring, sizes.ring);
+      ringRow.addSpacer();
+      widget.addSpacer(4);
+      const headline = widget.addText(headlineText);
+      headline.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+      headline.textColor = new Color(summary.troubled > 0 ? palette.text : palette.ok);
+      headline.centerAlignText();
+      headline.lineLimit = 1;
+      const strip = widget.addImage(this.buildHeatStripImage(columns, { ...sizes.strip, caption: false, slots: 14 }));
+      strip.imageSize = new Size(sizes.strip.width, sizes.strip.height);
+      strip.centerAlignImage();
+      widget.addSpacer();
+      return;
+    }
+
+    const top = widget.addStack();
+    top.layoutHorizontally();
+    top.centerAlignContent();
+    top.spacing = 10;
+    const ring = top.addImage(ringImage);
+    ring.imageSize = new Size(sizes.ring, sizes.ring);
+    const column = top.addStack();
+    column.layoutVertically();
+    column.spacing = 3;
+    const headline = column.addText(headlineText);
+    headline.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+    headline.textColor = new Color(palette.text);
+    headline.lineLimit = 1;
+    if (family === 'large') {
+      const newestLabel = summary.newestFinishedAt
+        ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)} · ${columns.length} runs on the strip`
+        : 'No runs recorded yet';
+      const newest = column.addText(newestLabel);
+      newest.font = Font.systemFont(10);
+      newest.textColor = new Color(palette.textMuted);
+      newest.lineLimit = 1;
+    }
+    const stripImage = this.buildHeatStripImage(columns, { ...sizes.strip, slots: 14 });
+    const strip = column.addImage(stripImage);
+    strip.imageSize = new Size(sizes.strip.width, sizes.strip.height);
+
+    if (family === 'medium') {
+      const items = summary.items.slice(0, 2);
+      for (const item of items) {
+        await this.addSourceHostRow(column, item, 'small', { nameLimit: 20, badge: true });
+      }
+      if (items.length === 0) {
+        const newestLabel = summary.newestFinishedAt
+          ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`
+          : 'No runs recorded yet';
+        const newest = column.addText(newestLabel);
+        newest.font = Font.systemFont(FONT_SIZES.widget.small);
+        newest.textColor = new Color(palette.textMuted);
+        newest.lineLimit = 1;
+      }
+      return;
+    }
+
+    widget.addSpacer(6);
+    for (let index = 0; index < summary.items.length; index += 1) {
+      if (index > 0) widget.addSpacer(3);
+      await this.addSourceHostRow(widget, summary.items[index], 'large', { nameLimit: 28, detail: true });
+    }
+    if (summary.items.length === 0) {
+      const calm = widget.addText(`All ${summary.hosts} sites answered — nothing to chase.`);
+      calm.font = Font.systemFont(FONT_SIZES.widget.small);
+      calm.textColor = new Color(palette.ok);
+      calm.lineLimit = 1;
+    }
+
+    widget.addSpacer();
+    const caption = widget.addStack();
+    caption.layoutHorizontally();
+    caption.centerAlignContent();
+    const captionText = caption.addText(`Extracted per run · last ${columns.length}`);
+    captionText.font = Font.systemFont(10);
+    captionText.textColor = new Color(palette.textMuted);
+    captionText.lineLimit = 1;
+    caption.addSpacer();
+    if (summary.more > 0) {
+      const more = caption.addText(`+${summary.more} more hosts`);
+      more.font = Font.systemFont(10);
+      more.textColor = new Color(palette.textMuted);
+      more.lineLimit = 1;
+    }
+    widget.addSpacer(2);
+    const sparkValues = columns.map(column => column.extracted);
+    const sparkImage = this.buildLineChartImage(sparkValues.length ? sparkValues : [0], sizes.spark, {
+      lineColor: new Color(CHART_STYLE.line),
+      fillColor: new Color(CHART_STYLE.line, 0.3),
+      lineWidth: 1.5,
+      padding: 4,
+      logPoints: false
+    });
+    const spark = widget.addImage(sparkImage);
+    spark.imageSize = new Size(sizes.spark.width, sizes.spark.height);
+  }
+
+  addWidgetMetricTile(container, label, value, options = {}) {
+    const palette = this.getWidgetPalette();
+    const tile = container.addStack();
+    tile.layoutVertically();
+    tile.spacing = 0;
+    tile.backgroundColor = new Color(WIDGET_STYLE.rowBackground, palette.card);
+    tile.cornerRadius = WIDGET_STYLE.rowRadius;
+    tile.setPadding(4, 7, 4, 7);
+    const number = tile.addText(String(value));
+    number.font = this.widgetFont(options.fontSize || 15, 'heavy');
+    number.textColor = options.color instanceof Color ? options.color : new Color(String(options.color || palette.text));
+    number.lineLimit = 1;
+    number.minimumScaleFactor = 0.6;
+    const caption = tile.addText(String(label));
+    caption.font = Font.systemFont(9);
+    caption.textColor = new Color(palette.textMuted);
+    caption.lineLimit = 1;
+    return tile;
+  }
+
+  // Host widget: verdict badge and since-run, a gradient area of extracted
+  // per run with the baseline dashed and the troubled stretch tinted, the
+  // latest numbers as tiles, vanished events as dots.
   async renderWidgetHost(widget, context, view) {
     const family = this.runtime.widgetFamily || 'medium';
+    const palette = this.getWidgetPalette();
+    const sizes = this.getWidgetArtSizes(family);
     const sourceHealth = context.sourceHealth;
     const rows = sourceHealth?.available ? (sourceHealth.health?.rows || []) : [];
     const needle = String(view?.host || '').toLowerCase();
@@ -1573,10 +2293,11 @@ class MetricsDisplay {
     if (!row) {
       const none = widget.addText(sourceHealth?.available ? 'No ledger lines for this host.' : 'No source ledger yet');
       none.font = Font.systemFont(FONT_SIZES.widget.small);
-      none.textColor = new Color(BRAND.text);
+      none.textColor = new Color(palette.text);
       return;
     }
 
+    const verdictColor = SOURCE_VERDICT_COLORS[row.verdict] || BRAND.neutral;
     const verdictLabel = MetricsSections?.sourceVerdictLabel
       ? MetricsSections.sourceVerdictLabel(row.verdict)
       : String(row.verdict || '');
@@ -1584,12 +2305,14 @@ class MetricsDisplay {
     statusRow.layoutHorizontally();
     statusRow.centerAlignContent();
     statusRow.spacing = 6;
-    const iconImage = await this.getHostIconImage(row);
-    if (iconImage) {
-      const icon = statusRow.addImage(iconImage);
-      icon.imageSize = new Size(12, 12);
-    }
     this.addWidgetBadge(statusRow, verdictLabel, row.verdict, { fontSize: 10 });
+    const parsers = (Array.isArray(row.parsers) ? row.parsers : []).filter(Boolean);
+    if (family !== 'small' && parsers.length) {
+      const parserText = statusRow.addText(this.truncateText(parsers.join(', '), family === 'large' ? 40 : 24));
+      parserText.font = Font.systemFont(FONT_SIZES.widget.small);
+      parserText.textColor = new Color(palette.textMuted);
+      parserText.lineLimit = 1;
+    }
     statusRow.addSpacer();
     let whenLabel = '';
     if (row.since && MetricsSections?.formatSourceRun) {
@@ -1597,84 +2320,159 @@ class MetricsDisplay {
     } else if (row.latest?.finished_at) {
       whenLabel = this.formatRelativeTime(row.latest.finished_at);
     }
-    if (whenLabel) {
+    if (whenLabel && family !== 'small') {
       const when = statusRow.addText(whenLabel);
       when.font = Font.systemFont(FONT_SIZES.widget.small);
-      when.textColor = new Color(BRAND.textMuted);
+      when.textColor = new Color(palette.textMuted);
       when.lineLimit = 1;
     }
-    widget.addSpacer(4);
+    widget.addSpacer(3);
 
-    const series = (Array.isArray(row.series) ? row.series : [])
-      .slice(-this.getWidgetHistoryLimit())
-      .map(line => Number(line.extracted) || 0);
-    if (series.length > 1) {
-      const chartSize = context.chartSize;
-      const chartImage = this.buildLineChartImage(series, chartSize, {
-        lineColor: new Color(CHART_STYLE.lineSecondary),
-        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
+    const fullSeries = Array.isArray(row.series) ? row.series : [];
+    const runLimit = family === 'small' ? 8 : (family === 'large' ? 16 : 12);
+    const windowed = fullSeries.slice(-runLimit);
+    const values = windowed.map(line => Number(line.extracted) || 0);
+    if (values.length > 1) {
+      let tintFromIndex = null;
+      if (row.since) {
+        const index = windowed.findIndex(line => line.run_id === row.since);
+        const older = fullSeries.some(line => line.run_id === row.since);
+        tintFromIndex = index >= 0 ? index : (older ? 0 : null);
+      }
+      const chartImage = this.buildLineChartImage(values, sizes.chart, {
+        lineColor: new Color(CHART_STYLE.line),
+        fillColor: new Color(CHART_STYLE.line, 0.3),
+        lineWidth: family === 'small' ? 1.5 : 2,
+        padding: family === 'small' ? 4 : 6,
+        baselineValue: Number.isFinite(row.baseline) ? row.baseline : null,
+        baselineColor: new Color(palette.text, 0.7),
+        baselineLabel: family === 'small' ? null : 'baseline',
+        tintFromIndex,
+        tintColor: new Color(verdictColor),
+        lastPointColor: new Color(row.verdict === 'ok' ? CHART_STYLE.line : verdictColor),
+        gridColor: new Color('#ffffff', palette.rule),
+        logPoints: false
       });
       const chart = widget.addImage(chartImage);
-      chart.imageSize = new Size(chartSize.width, chartSize.height);
-      widget.addSpacer(4);
+      chart.imageSize = new Size(sizes.chart.width, sizes.chart.height);
+      widget.addSpacer(3);
     }
 
     const latest = row.latest || {};
-    const numbers = widget.addText(`Extracted ${this.formatNumber(latest.extracted || 0)} • Bear ${this.formatNumber(latest.bear || 0)} • Upcoming ${this.formatNumber(latest.upcoming || 0)}`);
-    numbers.font = Font.systemFont(FONT_SIZES.widget.small);
-    numbers.textColor = new Color(BRAND.text);
-    numbers.lineLimit = 1;
-
+    const tiles = widget.addStack();
+    tiles.layoutHorizontally();
+    tiles.spacing = 5;
+    const tileSize = family === 'small' ? 13 : 15;
+    this.addWidgetMetricTile(tiles, 'extracted', this.formatNumber(latest.extracted || 0), { fontSize: tileSize });
     if (family !== 'small') {
-      const parts = [];
-      parts.push(row.baseline !== null && row.baseline !== undefined
-        ? `Baseline ${this.formatNumber(row.baseline)}`
-        : 'No baseline yet');
-      parts.push(`${(Array.isArray(row.series) ? row.series : []).length} runs`);
-      if (Array.isArray(row.vanished) && row.vanished.length) parts.push(`${row.vanished.length} vanished`);
-      const parsers = (Array.isArray(row.parsers) ? row.parsers : []).filter(Boolean);
-      if (parsers.length) parts.push(parsers.join(', '));
-      const meta = widget.addText(parts.join(' • '));
-      meta.font = Font.systemFont(FONT_SIZES.widget.small);
-      meta.textColor = new Color(BRAND.textMuted);
-      meta.lineLimit = 2;
+      this.addWidgetMetricTile(tiles, 'bear', this.formatNumber(latest.bear || 0), { fontSize: tileSize });
+    }
+    this.addWidgetMetricTile(tiles, 'upcoming', this.formatNumber(latest.upcoming || 0), { fontSize: tileSize });
+    if (family !== 'small') {
+      this.addWidgetMetricTile(tiles, 'baseline', Number.isFinite(row.baseline) ? this.formatNumber(row.baseline) : '—', {
+        fontSize: tileSize,
+        color: palette.textMuted
+      });
+    }
+    tiles.addSpacer();
+    if (family === 'small') return;
+
+    // Medium has no room for the meta row unless something vanished.
+    const vanished = Array.isArray(row.vanished) ? row.vanished : [];
+    if (family === 'medium' && !vanished.length) return;
+    widget.addSpacer(4);
+    const meta = widget.addStack();
+    meta.layoutHorizontally();
+    meta.centerAlignContent();
+    meta.spacing = 6;
+    if (vanished.length) {
+      const dots = this.buildDotsImage(vanished.length, new Color(SOURCE_VERDICT_COLORS.vanished), { max: family === 'large' ? 16 : 10 });
+      const dotsImage = meta.addImage(dots.image);
+      dotsImage.imageSize = new Size(dots.width, dots.height);
+      const vanishedText = meta.addText(`${vanished.length} vanished`);
+      vanishedText.font = Font.boldSystemFont(10);
+      vanishedText.textColor = new Color(SOURCE_VERDICT_COLORS.vanished);
+      vanishedText.lineLimit = 1;
+    } else {
+      const calm = meta.addText('nothing vanished');
+      calm.font = Font.systemFont(10);
+      calm.textColor = new Color(palette.textMuted);
+      calm.lineLimit = 1;
+    }
+    meta.addSpacer();
+    const runsText = meta.addText(`${fullSeries.length} runs`);
+    runsText.font = Font.systemFont(10);
+    runsText.textColor = new Color(palette.textMuted);
+    runsText.lineLimit = 1;
+
+    if (family === 'large' && vanished.length) {
+      widget.addSpacer(3);
+      vanished.slice(0, 3).forEach(item => {
+        const line = widget.addText(`• ${this.truncateText(item.title || item.key || 'untitled', 34)}${item.day ? ` · ${item.day}` : ''}`);
+        line.font = Font.systemFont(10);
+        line.textColor = new Color(palette.textMuted);
+        line.lineLimit = 1;
+      });
     }
   }
 
+  // Runs widget: a bar strip of final events per run (status-coloured, newest
+  // outlined) above the run cells the widget always had.
   renderWidgetRuns(widget, context) {
     const runItems = Array.isArray(context.runItems) ? context.runItems : [];
     const runSortState = context.runSortState || this.getDefaultRunSort();
     const runFilters = context.runFilters || null;
     const family = this.runtime.widgetFamily || 'medium';
+    const palette = this.getWidgetPalette();
+    const sizes = this.getWidgetArtSizes(family);
 
-    const title = widget.addText('All Runs');
-    title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
-    title.textColor = new Color(BRAND.text);
-    widget.addSpacer(4);
+    // The header row (logo + "All Runs") is already on the widget.
+    if (runSortState && family !== 'small') {
+      const sortLabel = widget.addText(`Sort ${this.getRunSortLabel(runSortState)}`);
+      sortLabel.font = Font.systemFont(10);
+      sortLabel.textColor = new Color(palette.textMuted);
+      sortLabel.lineLimit = 1;
+    }
 
     if (runFilters && (runFilters.status || runFilters.parserFilter || runFilters.days)) {
       const filterLine = widget.addText(this.formatRunFilterLabel(runFilters));
-      filterLine.font = Font.systemFont(FONT_SIZES.widget.small);
-      filterLine.textColor = new Color(BRAND.textMuted);
+      filterLine.font = Font.systemFont(10);
+      filterLine.textColor = new Color(palette.textMuted);
+      filterLine.lineLimit = 1;
     }
-
-    if (runSortState && family !== 'small') {
-      const sortLabel = widget.addText(`Sort ${this.getRunSortLabel(runSortState)}`);
-      sortLabel.font = Font.systemFont(FONT_SIZES.widget.small);
-      sortLabel.textColor = new Color(BRAND.textMuted);
-      widget.addSpacer(2);
-    }
+    widget.addSpacer(4);
 
     const filtered = this.applyRunFilters(runItems, runFilters);
+    const chronological = [...filtered]
+      .sort((a, b) => this.getTimeValue(a?.finishedAt) - this.getTimeValue(b?.finishedAt))
+      .slice(-sizes.runs);
+    if (chronological.length) {
+      const bars = chronological.map(run => ({
+        value: run.finalEvents || 0,
+        color: this.getStatusMeta(run.status).color
+      }));
+      const newest = chronological[chronological.length - 1];
+      const barsImage = this.buildBarStripImage(bars, {
+        ...sizes.bars,
+        slots: sizes.runs,
+        caption: family !== 'small',
+        captionLeft: `Final events · last ${chronological.length} runs`,
+        captionRight: family === 'small' ? null : `newest ${this.formatLastRunLabel(newest.finishedAt)}`
+      });
+      const strip = widget.addImage(barsImage);
+      strip.imageSize = new Size(sizes.bars.width, sizes.bars.height);
+      widget.addSpacer(5);
+    }
+
     const sorted = this.sortRunItems(filtered, runSortState);
     const columns = this.getWidgetColumnCount(family);
-    const maxRows = this.getWidgetMaxRows();
+    const maxRows = sizes.runRows;
     const items = sorted.slice(0, maxRows * columns);
 
     if (items.length === 0) {
       const none = widget.addText('No runs match filters.');
       none.font = Font.systemFont(FONT_SIZES.widget.small);
-      none.textColor = new Color(BRAND.text);
+      none.textColor = new Color(palette.text);
       return;
     }
 
@@ -1705,9 +2503,15 @@ class MetricsDisplay {
         header.centerAlignContent();
         header.spacing = 4;
 
+        const statusIcon = this.buildStatusIcon(statusMeta, 10);
+        if (statusIcon) {
+          const statusImage = header.addImage(statusIcon);
+          statusImage.imageSize = new Size(10, 10);
+        }
+
         const titleLine = header.addText(this.formatRunId(run.runId));
         titleLine.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-        titleLine.textColor = new Color(BRAND.text);
+        titleLine.textColor = new Color(palette.text);
         titleLine.lineLimit = 1;
 
         if (isIncompleteRow) {
@@ -1716,50 +2520,44 @@ class MetricsDisplay {
           header.addSpacer();
         }
 
-        const statusIcon = this.buildStatusIcon(statusMeta, 11);
-        if (statusIcon) {
-          const statusImage = header.addImage(statusIcon);
-          statusImage.imageSize = new Size(11, 11);
-        }
-
         const finalLabel = this.formatNumber(run.finalEvents || 0);
+        const finalText = header.addText(finalLabel);
+        finalText.font = this.widgetFont(FONT_SIZES.widget.small, 'heavy');
+        finalText.textColor = statusMeta.color;
+        finalText.lineLimit = 1;
+
         const errors = run.errorsCount || 0;
         const warnings = run.warningsCount || 0;
         const issuesTotal = errors + warnings;
-        const summaryParts = [`Final ${finalLabel}`];
+        const summaryParts = [];
         if (issuesTotal > 0) {
           summaryParts.push(`Issues ${issuesTotal}`);
-        } else if (run.finishedAt) {
+        }
+        if (run.finishedAt) {
           summaryParts.push(this.formatLastRunLabel(run.finishedAt));
         }
-        const summary = cell.addText(summaryParts.join(' • '));
-        summary.font = Font.systemFont(FONT_SIZES.widget.small);
-        summary.textColor = new Color(BRAND.textMuted);
-        summary.lineLimit = 1;
-
         if (family === 'large') {
-          const metaParts = [];
-          if (run.parsersCount) metaParts.push(`Parsers ${run.parsersCount}`);
-          if (run.durationMs) metaParts.push(this.formatDuration(run.durationMs));
-          metaParts.push(`Finished ${this.formatLastRunLabel(run.finishedAt)}`);
-          const metaLine = cell.addText(metaParts.join(' • '));
-          metaLine.font = Font.systemFont(FONT_SIZES.widget.small);
-          metaLine.textColor = new Color(BRAND.textMuted);
-          metaLine.lineLimit = 1;
+          if (run.parsersCount) summaryParts.push(`${run.parsersCount} parsers`);
+          if (run.durationMs) summaryParts.push(this.formatDuration(run.durationMs));
         }
+        const summary = cell.addText(summaryParts.join(' • ') || 'Final events');
+        summary.font = Font.systemFont(10);
+        summary.textColor = new Color(palette.textMuted);
+        summary.lineLimit = 1;
       }
     }
 
     if (filtered.length > items.length) {
+      widget.addSpacer(3);
       const more = widget.addText(`+${filtered.length - items.length} more`);
-      more.font = Font.systemFont(FONT_SIZES.widget.small);
-      more.textColor = new Color(BRAND.textMuted);
+      more.font = Font.systemFont(10);
+      more.textColor = new Color(palette.textMuted);
     }
   }
 
   async renderWidget(data, view) {
     const widget = new ListWidget();
-    widget.backgroundColor = new Color(BRAND.primary);
+    this.applyWidgetBackground(widget);
     widget.setPadding(12, 12, 12, 12);
 
     const normalizedMode = view?.mode === 'host'
@@ -1777,12 +2575,22 @@ class MetricsDisplay {
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const chartSize = this.getWidgetChartSize();
     const widgetUrl = this.buildWidgetDashboardUrl(normalizedView, sortState, runSortState, runFilters);
-    this.addWidgetHeader(widget, logoImage, this.getWidgetHeaderText(normalizedView));
+
+    // Host views wear the host's favicon in the header instead of the logo.
+    let headerImage = logoImage;
+    if (normalizedView.mode === 'host' && normalizedView.host) {
+      const rows = data.sourceHealth?.available ? (data.sourceHealth.health?.rows || []) : [];
+      const needle = String(normalizedView.host).toLowerCase();
+      const row = rows.find(item => String(item.host).toLowerCase() === needle) || null;
+      const favicon = row ? await this.getHostIconImage(row) : null;
+      if (favicon) headerImage = favicon;
+    }
+    this.addWidgetHeader(widget, headerImage, this.getWidgetHeaderText(normalizedView));
 
     if (normalizedView.mode === 'runs' && runItems.length === 0) {
       const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
-      message.textColor = new Color(BRAND.text);
+      message.textColor = new Color(this.getWidgetPalette().text);
       if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
