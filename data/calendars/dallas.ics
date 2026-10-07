@@ -6,9 +6,181 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20261003T020000Z
+DTEND:20261003T070000Z
+DTSTAMP:20261007T002202Z
+UID:CE0B1128-2F30-4935-804E-7AAECF416053
+CREATED:20261003T131626Z
+DESCRIPTION:description: It’s our third anniversary\, and we’d love to cele
+ brate with yall! Thank you for showing up\, bringing your friends\, and mak
+ ing the Dallas Eagle part of your lives. We’ve got a lot more we want to do
+ \, and we’re excited to keep building this place with you. Come spend the n
+ ight with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/C
+ hicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: htt
+ ps://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/
+ wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db
+ 004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedalla
+ seagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress:
+  525 S Riverfront Blvd\, Dallas\, TX 75207\naddressSource: curated\npinSour
+ ce: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nb
+ arSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshor
+ tName: THREE YEARS
+LAST-MODIFIED:20261003T131626Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Three Years
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T020000Z
+DTEND:20260919T070000Z
+DTSTAMP:20261007T002202Z
+UID:6829158E-CA7F-463D-9EFA-1F03CC7E6C42
+CREATED:20260910T195508Z
+DESCRIPTION:bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb
+ all-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232\nima
+ ge: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982
+ %2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=
+ 940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba4
+ 73f5b6874e429393814ff7\ncover: $19.32-$25.09\ntimezone: America/Chicago\nwe
+ bsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc
+ /\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball
+ -dallas-underwear-gear-party-featuring-dj-gsp|2026-09-19|dallas eagle\nbear
+ Source: keyword\ndescription: Joe Fiore Presents FURBALL at the Dallas Eagl
+ e\, featuring DJ GSP and DJ Sanders!\naddress: 525 South Riverfront Bouleva
+ rd\, Dallas\, TX 75207\npinSource: curated\naddressSource: page\nimageSourc
+ e: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=
+ place_id:ChIJU843NR6cToYROpJZCM8p4-I
+LAST-MODIFIED:20260911T102727Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:FURBALL Dallas Underwear + Gear Party featuring DJ GSP
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260814T220000Z
+DTEND:20260815T020000Z
+DTSTAMP:20261007T002202Z
+UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
+CREATED:20260807T210713Z
+DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
+ s Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the bi
+ ggest beer drinking crowd in town! Enjoy discount ice cold craft and draft 
+ beers\, and our rotating Brewery Bears Reserve selections. Bears gotta eat\
+ , so we’re serving up fresh and delicious sc \, ...\nbar: Dallas Eagle\nins
+ tagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.fa
+ cebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/br
+ ewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\n
+ timezone: America/Chicago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 752
+ 07\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyw
+ ord\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\n
+ barSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id
+ :ChIJU843NR6cToYROpJZCM8p4-I
+LAST-MODIFIED:20260811T175057Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Brewery Bears Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260815T020000Z
+DTEND:20260815T070000Z
+DTSTAMP:20261007T002202Z
+UID:13889125-C3DE-4D92-9227-86C5EE9B1005
+CREATED:20260804T184803Z
+DESCRIPTION:description: It’s time for another delicious combo\, it’s BEAR 
+ & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event\
+ , so come on out and enjoy the variety! Big or small\, hirsute or svelte\, 
+ here you’ll find all types to satisfy your desires. Mix it up on the dance 
+ floor with heart-pounding hous \, ...\nbar: Dallas Eagle\ninstagram: https:
+ //www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lon
+ estareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-n
+ ight/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Ch
+ icago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 75207\nkey: bear-and-tw
+ ink-night-with-dj-level|2026-08-15|dallas eagle\nbearSource: keyword\nshort
+ Name: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource
+ : venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843
+ NR6cToYROpJZCM8p4-I
+LAST-MODIFIED:20260811T175058Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear and Twink Night with DJ Level
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T020000Z
+DTEND:20261004T070000Z
+DTSTAMP:20261007T002202Z
+UID:BDADC283-8E09-4D48-9378-CD0154CBF5DE
+CREATED:20261003T131624Z
+DESCRIPTION:description: Grab your gear\, it's time for GEAR NIGHT! Put on 
+ your favorite gear and get ready to dance the night away to pounding beats 
+ that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BL
+ VD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedall
+ aseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: h
+ ttps://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382
+ cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0
+ ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a9
+ 80db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover:
+  No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-
+ 10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: http
+ s://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8
+ e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d07
+ 0d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec
+ 2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSo
+ urce: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|
+ dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bea
+ r (verdict store 2026-10-01)\nshortName: GEAR NIGHT
+LAST-MODIFIED:20261003T131624Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Gear Night with DJ Woolfie
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260705T220000Z
+DTSTAMP:20261007T002202Z
+UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
+CREATED:20260701T132043Z
+DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
+ 219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/ti
+ ckets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instag
+ ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335ea
+ cf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296\,h_525\,al_c\,q_80\,usm_0
+ .66_1.00_0.01\,enc_avif\,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994f
+ c5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: h
+ ttps://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar
+ %20Springs%20Rd
+LAST-MODIFIED:20260701T132044Z
+LOCATION:32.810535\, -96.8110709
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261004T220000Z
 DTEND:20261005T070000Z
-DTSTAMP:20261003T134131Z
+DTSTAMP:20261007T002202Z
 UID:B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1
 CREATED:20261003T131625Z
 DESCRIPTION:description: Get into the groove at Sunday Tea\\: Disco\, our f
@@ -41,173 +213,36 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260815T020000Z
-DTEND:20260815T070000Z
-DTSTAMP:20261003T134131Z
-UID:13889125-C3DE-4D92-9227-86C5EE9B1005
-CREATED:20260804T184803Z
-DESCRIPTION:description: It’s time for another delicious combo\, it’s BEAR 
- & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event\
- , so come on out and enjoy the variety! Big or small\, hirsute or svelte\, 
- here you’ll find all types to satisfy your desires. Mix it up on the dance 
- floor with heart-pounding hous \, ...\nbar: Dallas Eagle\ninstagram: https:
- //www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lon
- estareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-n
- ight/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Ch
- icago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 75207\nkey: bear-and-tw
- ink-night-with-dj-level|2026-08-15|dallas eagle\nbearSource: keyword\nshort
- Name: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource
- : venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843
- NR6cToYROpJZCM8p4-I
-LAST-MODIFIED:20260811T175058Z
-LOCATION:32.7693483\, -96.8112576
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear and Twink Night with DJ Level
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261004T020000Z
-DTEND:20261004T070000Z
-DTSTAMP:20261003T134131Z
-UID:BDADC283-8E09-4D48-9378-CD0154CBF5DE
-CREATED:20261003T131624Z
+DTSTART:20261011T020000Z
+DTEND:20261011T070000Z
+DTSTAMP:20261007T002202Z
+UID:18200B99-F2B2-4AC0-98C7-8B4111B902FB
+CREATED:20261006T224452Z
 DESCRIPTION:description: Grab your gear\, it's time for GEAR NIGHT! Put on 
  your favorite gear and get ready to dance the night away to pounding beats 
- that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BL
- VD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedall
- aseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://
- www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: h
- ttps://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382
- cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0
- ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a9
- 80db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover:
-  No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-
- 10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: http
- s://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8
- e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d07
- 0d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec
- 2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSo
- urce: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|
- dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bea
- r (verdict store 2026-10-01)\nshortName: GEAR NIGHT
-LAST-MODIFIED:20261003T131624Z
+ that will get your blood pumping. Leather\, Harnesses\, Rubber\, Sports\, a
+ ny kind of gear is always welcome at the Dallas Eagle! It's time to indulge
+  yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leathe
+ r and gear highly encouraged\, but not required. Lockers available for $5 
+ 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now 
+ Open! ⭐…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd\, Dallas\, TX 7
+ 5207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39
+ 382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1
+ e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006
+ fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp\ntimezone: America/Chicago\
+ ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagr
+ am: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.s
+ ocial/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagl
+ e.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/\ngmaps: https://ww
+ w.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource:
+  curated\nkey: gear-night-with-dj-tristan-jaxx|2026-10-11|dallas eagle\nima
+ geSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict stor
+ e 2026-10-01)\nshortName: GEAR NIGHT
+LAST-MODIFIED:20261006T224452Z
 LOCATION:32.7693483\, -96.8112576
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Gear Night with DJ Woolfie
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261003T020000Z
-DTEND:20261003T070000Z
-DTSTAMP:20261003T134131Z
-UID:CE0B1128-2F30-4935-804E-7AAECF416053
-CREATED:20261003T131626Z
-DESCRIPTION:description: It’s our third anniversary\, and we’d love to cele
- brate with yall! Thank you for showing up\, bringing your friends\, and mak
- ing the Dallas Eagle part of your lives. We’ve got a lot more we want to do
- \, and we’re excited to keep building this place with you. Come spend the n
- ight with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/C
- hicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: htt
- ps://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/
- wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db
- 004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedalla
- seagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://
- www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress:
-  525 S Riverfront Blvd\, Dallas\, TX 75207\naddressSource: curated\npinSour
- ce: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nb
- arSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshor
- tName: THREE YEARS
-LAST-MODIFIED:20261003T131626Z
-LOCATION:32.7693483\, -96.8112576
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Three Years
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260705T220000Z
-DTSTAMP:20261003T134131Z
-UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
-CREATED:20260701T132043Z
-DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
- 219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/ti
- ckets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instag
- ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335ea
- cf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296\,h_525\,al_c\,q_80\,usm_0
- .66_1.00_0.01\,enc_avif\,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994f
- c5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: h
- ttps://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar
- %20Springs%20Rd
-LAST-MODIFIED:20260701T132044Z
-LOCATION:32.810535\, -96.8110709
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T020000Z
-DTEND:20260919T070000Z
-DTSTAMP:20261003T134131Z
-UID:6829158E-CA7F-463D-9EFA-1F03CC7E6C42
-CREATED:20260910T195508Z
-DESCRIPTION:bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb
- all-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232\nima
- ge: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982
- %2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=
- 940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba4
- 73f5b6874e429393814ff7\ncover: $19.32-$25.09\ntimezone: America/Chicago\nwe
- bsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc
- /\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball
- -dallas-underwear-gear-party-featuring-dj-gsp|2026-09-19|dallas eagle\nbear
- Source: keyword\ndescription: Joe Fiore Presents FURBALL at the Dallas Eagl
- e\, featuring DJ GSP and DJ Sanders!\naddress: 525 South Riverfront Bouleva
- rd\, Dallas\, TX 75207\npinSource: curated\naddressSource: page\nimageSourc
- e: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=
- place_id:ChIJU843NR6cToYROpJZCM8p4-I
-LAST-MODIFIED:20260911T102727Z
-LOCATION:32.7693483\, -96.8112576
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:FURBALL Dallas Underwear + Gear Party featuring DJ GSP
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260814T220000Z
-DTEND:20260815T020000Z
-DTSTAMP:20261003T134131Z
-UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
-CREATED:20260807T210713Z
-DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
- s Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the bi
- ggest beer drinking crowd in town! Enjoy discount ice cold craft and draft 
- beers\, and our rotating Brewery Bears Reserve selections. Bears gotta eat\
- , so we’re serving up fresh and delicious sc \, ...\nbar: Dallas Eagle\nins
- tagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.fa
- cebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/br
- ewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\n
- timezone: America/Chicago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 752
- 07\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyw
- ord\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\n
- barSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id
- :ChIJU843NR6cToYROpJZCM8p4-I
-LAST-MODIFIED:20260811T175057Z
-LOCATION:32.7693483\, -96.8112576
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Brewery Bears Happy Hour
+SUMMARY:Gear Night with DJ Tristan Jaxx
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

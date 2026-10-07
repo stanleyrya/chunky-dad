@@ -87,8 +87,8 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 81318,
-      "eventCount": 60
+      "dataLength": 84688,
+      "eventCount": 62
     },
     "cologne": {
       "name": "Cologne",
@@ -99,8 +99,8 @@
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 10727,
-      "eventCount": 7
+      "dataLength": 12659,
+      "eventCount": 8
     },
     "dc": {
       "name": "DC",
@@ -183,8 +183,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 114488,
-      "eventCount": 100
+      "dataLength": 136156,
+      "eventCount": 120
     },
     "leipzig": {
       "name": "Leipzig",
@@ -195,8 +195,8 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 32903,
-      "eventCount": 19
+      "dataLength": 39031,
+      "eventCount": 23
     },
     "madrid": {
       "name": "Madrid",
@@ -237,8 +237,8 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 17782,
-      "eventCount": 14
+      "dataLength": 19605,
+      "eventCount": 15
     },
     "nola": {
       "name": "New Orleans",
@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 192224,
-      "eventCount": 172
+      "dataLength": 201300,
+      "eventCount": 179
     },
     "orlando": {
       "name": "Orlando",
@@ -309,8 +309,8 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 38489,
-      "eventCount": 27
+      "dataLength": 39807,
+      "eventCount": 28
     },
     "prague": {
       "name": "Prague",
@@ -357,8 +357,8 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 26317,
-      "eventCount": 20
+      "dataLength": 29281,
+      "eventCount": 22
     },
     "seoul": {
       "name": "Seoul",
@@ -369,8 +369,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 63515,
-      "eventCount": 48
+      "dataLength": 65018,
+      "eventCount": 49
     },
     "singapore": {
       "name": "Singapore",
@@ -387,8 +387,8 @@
     "sydney": {
       "name": "Sydney",
       "status": "success",
-      "dataLength": 1380,
-      "eventCount": 1
+      "dataLength": 3584,
+      "eventCount": 3
     },
     "taipei": {
       "name": "Taipei",

@@ -5,6 +5,102 @@
   },
   "events": [
     {
+      "name": "Furry Friday",
+      "day": "Friday",
+      "time": "7PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -33.8749589,
+        "lng": 151.2219447
+      },
+      "startDate": "2026-10-09T19:00:00",
+      "endDate": "2026-10-09T22:00:00",
+      "unprocessedDescription": "description: a community group for hairy, gay men, their frie\rnds and their admirers.\nbar: Kings Cross Hotel\naddress: 244-248 William Street, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: furry-friday|2026-10-09|kings cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Sydney",
+      "wasUTC": true,
+      "sourceUid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
+      "uid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kings Cross Hotel",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "tea": "a community group for hairy, gay men, their friends and their admirers.",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "244-248 William Street, Kings Cross",
+      "website": "https://hcbears.com.au/event-6700980/Registration",
+      "facebook": "https://www.facebook.com/aconhealth",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+      "shortName": "FURRY FRIDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://hcbears.com.au/event-6700980/Registration",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/aconhealth",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furry-friday-6baf4435"
+    },
+    {
+      "name": "BEEFCAKE Leather 🥩 Sydney",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-13T21:00:00",
+      "endDate": "2026-11-14T04:00:00",
+      "unprocessedDescription": "bar: Trough X\nticketUrl: https://events.humanitix.com/beef13no\rv\nimage: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d4c49b0a.jpg\nimageSource: json-api\ntimezone: Australia/Sydney\nimageVertical: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d4c49b0a.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Trough%20X%2C%20sydney\nkey: beefcake-leather-🥩-sydney-trough-x|2026-11-13|trough x\nbearSource: keyword\nshortName: BEEFCAKE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Sydney",
+      "wasUTC": true,
+      "sourceUid": "C2321295-4A14-4C86-AA13-BDDBCE791377",
+      "uid": "C2321295-4A14-4C86-AA13-BDDBCE791377",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Trough X",
+      "image": "https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d4c49b0a.jpg",
+      "imageVertical": "https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d4c49b0a.jpg",
+      "cadence": null,
+      "address": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Trough%20X%2C%20sydney",
+      "ticketUrl": "https://events.humanitix.com/beef13nov",
+      "shortName": "BEEFCAKE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Trough%20X%2C%20sydney",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.humanitix.com/beef13nov",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefcake-leather-sydney-53f88db4"
+    },
+    {
       "name": "THICK 'N' JUICY Sydney - October Long Weekend",
       "day": "Friday",
       "time": "9PM-4AM",

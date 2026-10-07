@@ -6,9 +6,57 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sydney
 X-WR-TIMEZONE:Australia/Sydney
 BEGIN:VEVENT
+DTSTART:20261009T080000Z
+DTEND:20261009T110000Z
+DTSTAMP:20261007T002203Z
+UID:13A4CAA0-9472-4A76-BBDC-00789032A0F2
+CREATED:20261006T224430Z
+DESCRIPTION:description: a community group for hairy\, gay men\, their frie
+ nds and their admirers.\nbar: Kings Cross Hotel\naddress: 244-248 William S
+ treet\, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://www.face
+ book.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/storag
+ e/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: page\n
+ website: https://hcbears.com.au/event-6700980/Registration\ngmaps: https://
+ www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%
+ 20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: FREQ=WE
+ EKLY\;BYDAY=FR\nkey: furry-friday|2026-10-09|kings cross hotel\nimageHorizo
+ ntal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/eve
+ nt-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: curated\n
+ bearSource: keyword\nshortName: FURRY FRIDAY\nendUnknown: true
+LAST-MODIFIED:20261006T224430Z
+LOCATION:-33.8749589\, 151.2219447
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Furry Friday
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261113T100000Z
+DTEND:20261113T170000Z
+DTSTAMP:20261007T002203Z
+UID:C2321295-4A14-4C86-AA13-BDDBCE791377
+CREATED:20261006T224431Z
+DESCRIPTION:bar: Trough X\nticketUrl: https://events.humanitix.com/beef13no
+ v\nimage: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-87
+ 67d4c49b0a.jpg\nimageSource: json-api\ntimezone: Australia/Sydney\nimageVer
+ tical: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d
+ 4c49b0a.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Trough%
+ 20X%2C%20sydney\nkey: beefcake-leather-🥩-sydney-trough-x|2026-11-13|trough
+  x\nbearSource: keyword\nshortName: BEEFCAKE
+LAST-MODIFIED:20261006T224431Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFCAKE Leather 🥩 Sydney
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261002T110000Z
 DTEND:20261002T180000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261007T002203Z
 UID:EC84B336-7030-4AA5-AE00-9B1E1AB4E56A
 CREATED:20261001T131413Z
 DESCRIPTION:bar: ARQ Sydney\nticketUrl: https://events.humanitix.com/syd2oc

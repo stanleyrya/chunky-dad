@@ -5,45 +5,44 @@
   },
   "events": [
     {
-      "name": "Sunday Tea: Disco with DJ Apthout",
-      "day": "Sunday",
-      "time": "5PM-2AM",
+      "name": "Three Years",
+      "day": "Friday",
+      "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-10-04T17:00:00",
-      "endDate": "2026-10-05T02:00:00",
-      "unprocessedDescription": "description: Get into the groove at Sunday Tea\\: Disco, our f\rirst Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: sunday-tea-disco-with-dj-apthout|2026-10-04|dallas eagle\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1\ncover: No cover\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1\nimageSource: page\nbarSource: venue-site\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: SUNDAY TEA",
+      "startDate": "2026-10-02T21:00:00",
+      "endDate": "2026-10-03T02:00:00",
+      "unprocessedDescription": "description: It’s our third anniversary, and we’d love to cele\rbrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedallaseagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: THREE YEARS",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
-      "uid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
+      "sourceUid": "CE0B1128-2F30-4935-804E-7AAECF416053",
+      "uid": "CE0B1128-2F30-4935-804E-7AAECF416053",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
       "cover": "No cover",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1",
-      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1",
-      "tea": "Get into the groove at Sunday Tea: Disco, our first Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp",
+      "tea": "It’s our third anniversary, and we’d love to celebrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!",
       "cadence": null,
       "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
+      "website": "https://www.thedallaseagle.com",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "SUNDAY TEA",
+      "shortName": "THREE YEARS",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
+          "url": "https://www.thedallaseagle.com",
           "label": "🌐 Website"
         },
         {
@@ -62,7 +61,124 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46"
+      "slug": "three-years-31d21eb3"
+    },
+    {
+      "name": "FURBALL Dallas Underwear + Gear Party featuring DJ GSP",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-09-18T21:00:00",
+      "endDate": "2026-09-19T02:00:00",
+      "unprocessedDescription": "bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb\rall-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982%2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba473f5b6874e429393814ff7\ncover: $19.32-$25.09\ntimezone: America/Chicago\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-dallas-underwear-gear-party-featuring-dj-gsp|2026-09-19|dallas eagle\nbearSource: keyword\ndescription: Joe Fiore Presents FURBALL at the Dallas Eagle, featuring DJ GSP and DJ Sanders!\naddress: 525 South Riverfront Boulevard, Dallas, TX 75207\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "6829158E-CA7F-463D-9EFA-1F03CC7E6C42",
+      "uid": "6829158E-CA7F-463D-9EFA-1F03CC7E6C42",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "$19.32-$25.09",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982%2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba473f5b6874e429393814ff7",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Joe Fiore Presents FURBALL at the Dallas Eagle, featuring DJ GSP and DJ Sanders!",
+      "cadence": null,
+      "address": "525 South Riverfront Boulevard, Dallas, TX 75207",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "ticketUrl": "https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-dallas-underwear-gear-party-featuring-dj-gsp-56af9376"
+    },
+    {
+      "name": "Brewery Bears Happy Hour",
+      "day": "Friday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-08-14T17:00:00",
+      "endDate": "2026-08-14T21:00:00",
+      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
+      "uid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "The Brewery Bears have a new home bar at the Dallas Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "BREWERY BEARS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "brewery-bears-happy-hour-247d1b27"
     },
     {
       "name": "Bear and Twink Night with DJ Level",
@@ -182,65 +298,6 @@
       "slug": "gear-night-with-dj-woolfie-1810eb9e"
     },
     {
-      "name": "Three Years",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.7693483,
-        "lng": -96.8112576
-      },
-      "startDate": "2026-10-02T21:00:00",
-      "endDate": "2026-10-03T02:00:00",
-      "unprocessedDescription": "description: It’s our third anniversary, and we’d love to cele\rbrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nimage: https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp\ncover: No cover\nwebsite: https://www.thedallaseagle.com\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: three-years|2026-10-03|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: THREE YEARS",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "CE0B1128-2F30-4935-804E-7AAECF416053",
-      "uid": "CE0B1128-2F30-4935-804E-7AAECF416053",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dallas Eagle",
-      "cover": "No cover",
-      "image": "https://www.thedallaseagle.com/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp",
-      "tea": "It’s our third anniversary, and we’d love to celebrate with yall! Thank you for showing up, bringing your friends, and making the Dallas Eagle part of your lives. We’ve got a lot more we want to do, and we’re excited to keep building this place with you. Come spend the night with us and help us celebrate!",
-      "cadence": null,
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com",
-      "instagram": "https://www.instagram.com/thedallaseagle/",
-      "facebook": "https://www.facebook.com/lonestareagle",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "THREE YEARS",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.thedallaseagle.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/thedallaseagle/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/lonestareagle",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "three-years-31d21eb3"
-    },
-    {
       "name": "FURBALL",
       "day": "Sunday",
       "time": "5PM",
@@ -297,102 +354,45 @@
       "slug": "furball-442f8415"
     },
     {
-      "name": "FURBALL Dallas Underwear + Gear Party featuring DJ GSP",
-      "day": "Friday",
-      "time": "9PM-2AM",
+      "name": "Sunday Tea: Disco with DJ Apthout",
+      "day": "Sunday",
+      "time": "5PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-09-18T21:00:00",
-      "endDate": "2026-09-19T02:00:00",
-      "unprocessedDescription": "bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb\rall-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982%2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba473f5b6874e429393814ff7\ncover: $19.32-$25.09\ntimezone: America/Chicago\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-dallas-underwear-gear-party-featuring-dj-gsp|2026-09-19|dallas eagle\nbearSource: keyword\ndescription: Joe Fiore Presents FURBALL at the Dallas Eagle, featuring DJ GSP and DJ Sanders!\naddress: 525 South Riverfront Boulevard, Dallas, TX 75207\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startDate": "2026-10-04T17:00:00",
+      "endDate": "2026-10-05T02:00:00",
+      "unprocessedDescription": "description: Get into the groove at Sunday Tea\\: Disco, our f\rirst Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...\nbar: Dallas Eagle\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/\nmastodon: https://mastodon.social/@dallaseagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: sunday-tea-disco-with-dj-apthout|2026-10-04|dallas eagle\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1\ncover: No cover\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1\nimageSource: page\nbarSource: venue-site\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: SUNDAY TEA",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "6829158E-CA7F-463D-9EFA-1F03CC7E6C42",
-      "uid": "6829158E-CA7F-463D-9EFA-1F03CC7E6C42",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Dallas Eagle",
-      "cover": "$19.32-$25.09",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982%2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba473f5b6874e429393814ff7",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Joe Fiore Presents FURBALL at the Dallas Eagle, featuring DJ GSP and DJ Sanders!",
-      "cadence": null,
-      "address": "525 South Riverfront Boulevard, Dallas, TX 75207",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "ticketUrl": "https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232",
-      "shortName": "FUR­BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-dallas-underwear-gear-party-featuring-dj-gsp-56af9376"
-    },
-    {
-      "name": "Brewery Bears Happy Hour",
-      "day": "Friday",
-      "time": "5PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.7693483,
-        "lng": -96.8112576
-      },
-      "startDate": "2026-08-14T17:00:00",
-      "endDate": "2026-08-14T21:00:00",
-      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
-      "uid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
+      "sourceUid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
+      "uid": "B6ACECBA-4410-4953-BD4A-5CE5BB1DC6C1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
-      "tea": "The Brewery Bears have a new home bar at the Dallas Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...",
+      "cover": "No cover",
+      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/956149c77c51a28d5e6d445d97e4f3002cd0ccc28a8bfbb3079c0f8ed15c3a1d/492af846391ca4b5ebca413e1305e3ca5a01a55d95a27c0a2c968b9a5d196784.webp?lossy=2&strip=1&webp=1",
+      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5fa7c31940af0c1fce7273995f51bfd91a6cf228fd5661cf47696dad11c06ad2/0536aa6c3a772f43629e1941ac4b9166a9eebeb38c84c98900638836a5d4e2b3.webp?lossy=2&strip=1&webp=1",
+      "tea": "Get into the groove at Sunday Tea: Disco, our first Sunday celebration of timeless dance music and fresh chemistry. Let the music turn a casual Sunday outin ...",
       "cadence": null,
       "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+      "website": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "BREWERY BEARS",
+      "shortName": "SUNDAY TEA",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+          "url": "https://www.thedallaseagle.com/events/sunday-tea-disco-2026-10-04/",
           "label": "🌐 Website"
         },
         {
@@ -411,7 +411,66 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "brewery-bears-happy-hour-247d1b27"
+      "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46"
+    },
+    {
+      "name": "Gear Night with DJ Tristan Jaxx",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-10T21:00:00",
+      "endDate": "2026-10-11T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: gear-night-with-dj-tristan-jaxx|2026-10-11|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
+      "uid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp",
+      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "GEAR NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "gear-night-with-dj-tristan-jaxx-53ef889e"
     }
   ]
 }

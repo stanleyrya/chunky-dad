@@ -24,157 +24,9 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250706T140000
-DTEND;TZID=America/Los_Angeles:20250706T190000
-RRULE:FREQ=WEEKLY;BYDAY=SU
-DTSTAMP:20261004T153204Z
-UID:south-seattle-bear-social-20260823T012058Z@chunky.dad
-URL:https://thelumberyardbar.com/
-CREATED:20260823T012121Z
-DESCRIPTION:shortName: South Seattle Social\nbar: Lumberyard\ntimezone: Ame
- rica/Los_Angeles\nuid: south-seattle-bear-social-20260823T012058Z@chunky.da
- d\nwebsite: https://thelumberyardbar.com/\ninstagram: https://www.instagram
- .com/southseattlebearsocial/\ngmaps: https://maps.app.goo.gl/SDUbV4qsRpivNi
- X39
-LAST-MODIFIED:20260823T195053Z
-LOCATION:47.51652271569908\, -122.35487284211817
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:South Seattle Bear Social
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260816T040000Z
-DTEND:20260816T100000Z
-DTSTAMP:20261004T153204Z
-UID:ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5
-CREATED:20260713T165324Z
-DESCRIPTION:description: MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL 
- SEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 
- CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTI
- ONS\, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.\
- nbar: Massive\naddress: 619 East Pine Street\, Seattle\, WA\, 98122\ntimezo
- ne: America/Los_Angeles\nticketUrl: https://tixr.com/e/198706\nimage: https
- ://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg\nwebsite: https
- ://bearracuda.com/events/treasure-trail-seattle/\nshortName: TREAS-URE TRAI
- L\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearra
- cuda.com/\nkey: treasure-trail-seattle|2026-08-16|massive\nbearSource: manu
- al-bear (overrode ai\\: The event description uses general queer party lang
- uage (e.g.\, 'HARD BEATS'\, ...)\ncover: $15-$30\nimageVertical: https://cd
- n.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_
- 2813daf0-3d53-49b8-8dae-d1decc23c604.webp\npinSource: geocoded-exact\naddre
- ssSource: page\nimageSource: og-image\nbarSource: venue-site-identity\ngmap
- s: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiB
- Q
-LAST-MODIFIED:20260815T022624Z
-LOCATION:47.6150824\, -122.3237201
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail Seattle
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261011T230000Z
-DTEND:20261012T040000Z
-DTSTAMP:20261004T153204Z
-UID:22F7191A-A6C0-40C2-8D62-A33F89712B54
-CREATED:20260920T233632Z
-DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
- ames for board games\, card games\, and more! You can also find our Telegra
- m link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway 
- E\, Seattle\, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los
- _Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seat
- tle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: ga
- me-night|2026-10-11|phoenix comics & games\nbearSource: ai\nshortName: GAME
-  NIGHT
-LAST-MODIFIED:20260920T233632Z
-LOCATION:47.6191274\, -122.3210517
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Game Night
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260823T230000Z
-DTEND:20260824T040000Z
-DTSTAMP:20261004T153204Z
-UID:E5D22143-402C-4355-BEC4-C5ECF51A7CB9
-CREATED:20260920T233631Z
-DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
- ames for board games\, card games\, and more! Game Night moved from 08/09 t
- o 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram li
- nk on our website! http\\://xlbears.org/ http\\://xlbears.org/about/code-of
- -conduct/\nbar: Phoenix Comics & Games\naddress: 113 Broadway E\, Seattle\,
-  WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\nadd
- ressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Ph
- oenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2
- 098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026
- -08-23|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT
-LAST-MODIFIED:20260920T233632Z
-LOCATION:47.6191274\, -122.3210517
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Game Night
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261227T220000Z
-DTEND:20261228T050000Z
-DTSTAMP:20261004T153204Z
-UID:5EFCFA14-ACC3-4A30-98FF-2611273735D8
-CREATED:20261001T131428Z
-DESCRIPTION:description: Celebrate the holidays with the Bears.\nbar: The L
- umber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW\, 
- Seattle\, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagra
- m.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events
- /southseattlebearsocial\nkey: naughty-santa-social|2026-12-27|the lumber ya
- rd bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-
- seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle
- -bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261227T22
- 0000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ng
- maps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.354
- 8059
-LAST-MODIFIED:20261004T142510Z
-LOCATION:47.5165235\, -122.3548059
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:NAUGHTY SANTA SOCIAL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250717T190000
-DTEND;TZID=America/Los_Angeles:20250718T020000
-RRULE:FREQ=MONTHLY;BYDAY=3TH
-DTSTAMP:20261004T153204Z
-UID:1dl55f6fm4qqv42go7r3nj5st9@google.com
-CREATED:20250712T180301Z
-DESCRIPTION:Bar: Diesel<br>Google Maps: <a href="https://maps.app.goo.gl/yD
- DhdkV7M7p2mYEP7">https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7</a><br>Website: 
- <a href="https://dieselseattle.com/DIESEL.html">https://dieselseattle.com/D
- IESEL.html</a><br>Facebook: <a href="https://www.facebook.com/DieselSeattle
- ">https://www.facebook.com/DieselSeattle</a><br>Instagram: <a href="https:/
- /www.instagram.com/dieselseattle">https://www.instagram.com/dieselseattle</
- a>
-LAST-MODIFIED:20250719T040329Z
-LOCATION:47.61337340244105\, -122.31441768029491
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Leather Night
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261109T000000Z
 DTEND:20261109T050000Z
-DTSTAMP:20261004T153204Z
+DTSTAMP:20261007T002202Z
 UID:E6E0BABE-5D69-4BAF-962A-D92A1991C07C
 CREATED:20260920T233633Z
 DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
@@ -196,9 +48,117 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261011T210000Z
+DTEND:20261012T020000Z
+DTSTAMP:20261007T002202Z
+UID:DA39673F-B215-4162-8EB3-9643B8F6343B
+CREATED:20261006T224429Z
+DESCRIPTION:description: This event is in collaboration with Seattle Men in
+  Leather\nSlip into your leathers and join us for an afternoon of laughs\, 
+ camaraderie\, and celebration! Whether you’re a seasoned leather enthusiast
+  or just leather-curious\, there’s a place for you in the pack.\nThis event
+  will also feature a pop up shop by Beard Crack Beard Care Products .\nbar:
+  Seattle Men in Leather\ntimezone: America/Los_Angeles\ngmaps: https://www.
+ google.com/maps/search/?api=1&query=Seattle%20Men%20in%20Leather\nshortName
+ : BEAR SOCIAL\ninstagram: https://www.instagram.com/southseattlebearsocial\
+ nfavicon: https://events.ticketleap.com/events/southseattlebearsocial\nkey:
+  leather-social|2026-10-11|seattle men in leather\nbearSource: keyword\ntic
+ ketUrl: https://events.ticketleap.com/events/southseattlebearsocial
+LAST-MODIFIED:20261006T224430Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LEATHER SOCIAL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261011T210000Z
+DTEND:20261012T020000Z
+DTSTAMP:20261007T002202Z
+UID:B7DF7DF0-D1FC-4AD5-9504-9FDB36A3A6A3
+CREATED:20261006T225956Z
+DESCRIPTION:description: Every Sunday 2pm-6pm Drink Specials DJ Redline\nba
+ r: The Lumber Yard Bar\ntimezone: America/Los_Angeles\nimage: https://stati
+ c.wixstatic.com/media/f45f1a_0f19f49bcfb84e9fb2c1f0164fa65796~mv2.jpeg/v1/f
+ ill/w_600\,h_337\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/IM
+ G_3906.jpeg\nimageHorizontal: https://static.wixstatic.com/media/f45f1a_0f1
+ 9f49bcfb84e9fb2c1f0164fa65796~mv2.jpeg/v1/fill/w_600\,h_337\,al_c\,q_80\,us
+ m_0.66_1.00_0.01\,enc_avif\,quality_auto/IMG_3906.jpeg\naddress: 9630 16th 
+ Ave SW\, Seattle\, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www
+ .instagram.com/southseattlebearsocial\nfavicon: https://events.ticketleap.c
+ om/events/southseattlebearsocial\nkey: south-seattle-bear-social|2026-10-11
+ |the lumber yard bar\nbearSource: keyword\nuid: south-seattle-bear-social-2
+ 0260823T012058Z@chunky.dad\nticketUrl: https://events.ticketleap.com/events
+ /southseattlebearsocial\noverrideUid: south-seattle-bear-social-20260823T01
+ 2058Z@chunky.dad\noverrideRecurrenceId: 20261011T210000Z\nwebsite: https://
+ thelumberyardbar.com/\npinSource: curated\naddressSource: curated\nimageSou
+ rce: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=The%20Lumber%20Yard%20Bar%2C%209630%2016th%20Ave%20SW%2C%20Seatt
+ le%2C%20WA%2098106
+LAST-MODIFIED:20261006T225957Z
+LOCATION:47.5165235\, -122.3548059
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:South Seattle Bear Social
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261214T000000Z
+DTEND:20261214T050000Z
+DTSTAMP:20261007T002202Z
+UID:29FDDE35-4474-45DA-8A27-5C792071963F
+CREATED:20260920T233633Z
+DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
+ ames for board games\, card games\, and more! You can also find our Telegra
+ m link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway 
+ E\, Seattle\, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los
+ _Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seat
+ tle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: ga
+ me-night|2026-12-14|phoenix comics & games\nbearSource: ai\nshortName: GAME
+  NIGHT
+LAST-MODIFIED:20260920T233634Z
+LOCATION:47.6191274\, -122.3210517
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Game Night
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251011T040000Z
+DTEND:20251011T100000Z
+DTSTAMP:20261007T002202Z
+UID:9DF93D82-1411-44C0-BE63-00037416BB38
+CREATED:20250817T231654Z
+DESCRIPTION:description: SERIOUS WOOD Show off your boots\, plaid\, jeans\,
+  nut huggers\, flannel\, suspenders\, beanies & overalls! Hot Go-Go’s\, Chu
+ nky Visuals!\n\nMusic & Entertainment\n• Matt Consola\n• Freddy KOP\nbar: M
+ ASSIVE\naddress: 619 E Pine\, Seattle\, WA 98122\ntimezone: America/Los_Ang
+ eles\nurl: https://bearracuda.com/events/seattlewood/\ncover: $24.89 - $30.
+ 54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/s
+ erioiusweb.jpg\nfacebook: https://www.facebook.com/events/1210500617554659\
+ nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-ti
+ ckets-1565073299369?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: 
+ https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/se
+ arch/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: 
+ bearracuda-2025-10-11-seattle
+LAST-MODIFIED:20251001T141832Z
+LOCATION:47.6150572\, -122.3236574
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Seattle: SERIOUS WOOD
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260614T040000Z
 DTEND:20260614T100000Z
-DTSTAMP:20261004T153204Z
+DTSTAMP:20261007T002202Z
 UID:762BAD4A-F1D8-4519-BAC3-D755EF9BA263
 CREATED:20260514T005858Z
 DESCRIPTION:description: Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. 
@@ -227,9 +187,137 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261011T230000Z
+DTEND:20261012T040000Z
+DTSTAMP:20261007T002202Z
+UID:22F7191A-A6C0-40C2-8D62-A33F89712B54
+CREATED:20260920T233632Z
+DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
+ ames for board games\, card games\, and more! You can also find our Telegra
+ m link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway 
+ E\, Seattle\, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los
+ _Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seat
+ tle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: ga
+ me-night|2026-10-11|phoenix comics & games\nbearSource: ai\nshortName: GAME
+  NIGHT
+LAST-MODIFIED:20260920T233632Z
+LOCATION:47.6191274\, -122.3210517
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Game Night
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250927T040000Z
+DTEND:20250927T100000Z
+DTSTAMP:20261007T002202Z
+UID:19A871C3-E891-4C93-BF2E-A0234C04BF1E
+CREATED:20250825T034004Z
+DESCRIPTION:description: Treasure Trail returns to Seattle and we invite yo
+ u to choose your own ADVENTURE! Now our guys can grab a wristband when you 
+ walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by BIG SIR &amp\; TIGERBE
+ ATZ\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, WA 98122\ntimezone: Amer
+ ica/Los_Angeles\nurl: https://bearracuda.com/events/treasureseattle/\ncover
+ : $15.65 - $30.54 (as of 9/20)\nimage: https://bearracuda.com/wp-content/up
+ loads/2025/04/treasuretrailweb.jpg\nfacebook: https://www.facebook.com/even
+ ts/1113055394051303\nticketUrl: https://www.eventbrite.com/e/treasure-trail
+ -seattle-tickets-1497840042889\nshortName: Bear-rac-uda\ninstagram: https:/
+ /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearrac
+ uda-2025-09-27-seattle\npinSource: geocoded-exact
+LAST-MODIFIED:20260717T211317Z
+LOCATION:47.6150824\, -122.3237201
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail: SEATTLE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260913T040000Z
+DTEND:20260913T100000Z
+DTSTAMP:20261007T002202Z
+UID:E8573138-9CDE-45E6-A456-18A7D0DB736E
+CREATED:20260717T221925Z
+DESCRIPTION:bar: Massive\naddress: 619 E. Pine\, Seattle\, WA\, 98122\ntick
+ etUrl: https://www.sickening.events/e/bearracuda-seattle-7days/tickets\nima
+ ge: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_septembe
+ r_2026-web.jpg\ncover: $20-$30\ntimezone: America/Los_Angeles\nwebsite: htt
+ ps://bearracuda.com/events/7days/\ninstagram: https://www.instagram.com/bea
+ rracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: be
+ arracuda-seattle-7-day-load|2026-09-13|massive\nimageVertical: https://bear
+ racuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\n
+ bearSource: keyword\ndescription: 7 DAY LOADSaturday\, Sept. 12thParty til 
+ 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s\, Chunky Visua
+ lsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda
+  returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on
+  the menu for this evening. DJ Matt Consola will playing till late w/Freddy
+  KOP opening. 3 FLOORS\, heavy cruising\, furry socializing and YOU! Early 
+ adv. tix available NOW\npinSource: curated\naddressSource: page\nimageSourc
+ e: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?
+ q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ
+LAST-MODIFIED:20260911T102729Z
+LOCATION:47.6150824\, -122.3237201
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: Seattle💦
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250717T190000
+DTEND;TZID=America/Los_Angeles:20250718T020000
+RRULE:FREQ=MONTHLY;BYDAY=3TH
+DTSTAMP:20261007T002202Z
+UID:1dl55f6fm4qqv42go7r3nj5st9@google.com
+CREATED:20250712T180301Z
+DESCRIPTION:Bar: Diesel<br>Google Maps: <a href="https://maps.app.goo.gl/yD
+ DhdkV7M7p2mYEP7">https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7</a><br>Website: 
+ <a href="https://dieselseattle.com/DIESEL.html">https://dieselseattle.com/D
+ IESEL.html</a><br>Facebook: <a href="https://www.facebook.com/DieselSeattle
+ ">https://www.facebook.com/DieselSeattle</a><br>Instagram: <a href="https:/
+ /www.instagram.com/dieselseattle">https://www.instagram.com/dieselseattle</
+ a>
+LAST-MODIFIED:20250719T040329Z
+LOCATION:47.61337340244105\, -122.31441768029491
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Leather Night
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260308T050000Z
+DTEND:20260308T100000Z
+DTSTAMP:20261007T002202Z
+UID:3DCE764F-EC21-459C-8791-745DE1731298
+CREATED:20260123T030754Z
+DESCRIPTION:description: TRAIL HEAD\n\nMusic & Entertainment\n• Beats by MA
+ TT STANDS &amp\; DOBERMANN\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, W
+ A 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/
+ seattlett/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/11x17-
+ 4.jpg\nfacebook: https://www.facebook.com/events/857466110421715\nticketUrl
+ : https://www.eventbrite.com/e/treasure-trail-seattletrail-head-tickets-198
+ 0435540012\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
+ earracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2
+ C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey: bearracuda-2026-03-08
+ -seattle
+LAST-MODIFIED:20260126T235324Z
+LOCATION:47.6150572\, -122.3236574
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail Seattle:TRAIL HEAD
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261108T050000Z
 DTEND:20261108T110000Z
-DTSTAMP:20261004T153204Z
+DTSTAMP:20261007T002202Z
 UID:99F4C955-B5C0-4EF1-8A56-6BAF11907080
 CREATED:20260917T215100Z
 DESCRIPTION:description: RED LIGHT DISTRICTSaturday\, Nov. 7thParty til 3am
@@ -260,26 +348,60 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260201T050000Z
-DTEND:20260201T110000Z
-DTSTAMP:20261004T153204Z
-UID:33B9EEB8-F6D3-4068-9A20-64B8DE33B103
-CREATED:20260123T030739Z
-DESCRIPTION:description: WINTER BEEF BALL!\n\nMusic & Entertainment\n• Beat
- s by MATT STANDS &amp\; FREDDY KOP\nbar: MASSIVE\naddress: 619 E Pine\, Sea
- ttle\, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com
- /events/seattlebeef/\nimage: https://bearracuda.com/wp-content/uploads/2025
- /12/seattlejan26.jpg\nfacebook: https://www.facebook.com/events/69805544976
- 5272\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-winter-bee
- f-ball-2026-tickets-1977102214947\nshortName: Bear-rac-uda\ninstagram: http
- s://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search
- /?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey
- : bearracuda-2026-02-01-seattle
-LAST-MODIFIED:20260126T235314Z
+DTSTART:20251122T050000Z
+DTEND:20251122T110000Z
+DTSTAMP:20261007T002202Z
+UID:3D70DFD0-9501-434E-A015-10F01A25DA09
+CREATED:20250930T014035Z
+DESCRIPTION:description: Treasure Trail returns to Seattle and we invite yo
+ u to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wris
+ tband when you walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by MATT ST
+ ANDS &amp\; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, WA 98
+ 122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/trea
+ sureseattle/\ncover: $15.65 - $30.54 (as of 10/1)\nimage: https://bearracud
+ a.com/wp-content/uploads/2025/04/treasurenov.jpg\nfacebook: https://www.fac
+ ebook.com/events/784739777742843\nticketUrl: https://www.eventbrite.com/e/t
+ reasure-trail-seattle-wish-boned-tickets-1754983576119\nshortName: Bear-rac
+ -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id
+ =101730401\nkey: bearracuda-2025-11-22-seattle
+LAST-MODIFIED:20251001T225002Z
 LOCATION:47.6150572\, -122.3236574
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bearracuda Seattle Winter Beef Ball 2026!
+SUMMARY:Treasure Trail Seattle: Wish BONED!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T040000Z
+DTEND:20260816T100000Z
+DTSTAMP:20261007T002202Z
+UID:ACCAF25D-4CEF-4D6E-8CE5-1C273DB716E5
+CREATED:20260713T165324Z
+DESCRIPTION:description: MATT BEARRACUDA & JP HARDY PRESENT TREASURE TRAIL 
+ SEATTLE SHORE THING HARD BEATS BY BIG SIR + TIGERBEATZ HOT HORNY GOGOS + 2 
+ CLOTHES CHECKS AVAILABLE CRUISE AND MEET ON 3 FLOORS. NO CLOTHING RESTRICTI
+ ONS\, 21+. NO PHONES OR PHOTOS PAST THE FIRST FLOOR. CONSENT IS MANDATORY.\
+ nbar: Massive\naddress: 619 East Pine Street\, Seattle\, WA\, 98122\ntimezo
+ ne: America/Los_Angeles\nticketUrl: https://tixr.com/e/198706\nimage: https
+ ://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg\nwebsite: https
+ ://bearracuda.com/events/treasure-trail-seattle/\nshortName: TREAS-URE TRAI
+ L\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearra
+ cuda.com/\nkey: treasure-trail-seattle|2026-08-16|massive\nbearSource: manu
+ al-bear (overrode ai\\: The event description uses general queer party lang
+ uage (e.g.\, 'HARD BEATS'\, ...)\ncover: $15-$30\nimageVertical: https://cd
+ n.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_
+ 2813daf0-3d53-49b8-8dae-d1decc23c604.webp\npinSource: geocoded-exact\naddre
+ ssSource: page\nimageSource: og-image\nbarSource: venue-site-identity\ngmap
+ s: https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiB
+ Q
+LAST-MODIFIED:20260815T022624Z
+LOCATION:47.6150824\, -122.3237201
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail Seattle
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -287,7 +409,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261011T040000Z
 DTEND:20261011T100000Z
-DTSTAMP:20261004T153204Z
+DTSTAMP:20261007T002202Z
 UID:FBFA81BD-23DE-47C1-A6EF-5B07AF08CA14
 CREATED:20260917T215059Z
 DESCRIPTION:description: Saturday\, October 10\, 2026Doors at 9pm\, Party t
@@ -321,98 +443,22 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251011T040000Z
-DTEND:20251011T100000Z
-DTSTAMP:20261004T153204Z
-UID:9DF93D82-1411-44C0-BE63-00037416BB38
-CREATED:20250817T231654Z
-DESCRIPTION:description: SERIOUS WOOD Show off your boots\, plaid\, jeans\,
-  nut huggers\, flannel\, suspenders\, beanies & overalls! Hot Go-Go’s\, Chu
- nky Visuals!\n\nMusic & Entertainment\n• Matt Consola\n• Freddy KOP\nbar: M
- ASSIVE\naddress: 619 E Pine\, Seattle\, WA 98122\ntimezone: America/Los_Ang
- eles\nurl: https://bearracuda.com/events/seattlewood/\ncover: $24.89 - $30.
- 54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/s
- erioiusweb.jpg\nfacebook: https://www.facebook.com/events/1210500617554659\
- nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-ti
- ckets-1565073299369?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: 
- https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/se
- arch/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: 
- bearracuda-2025-10-11-seattle
-LAST-MODIFIED:20251001T141832Z
-LOCATION:47.6150572\, -122.3236574
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Seattle: SERIOUS WOOD
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261129T220000Z
-DTEND:20261130T030000Z
-DTSTAMP:20261004T153204Z
-UID:F31536C5-60DD-4097-B56B-CF0A136A3BA3
-CREATED:20261001T131427Z
-DESCRIPTION:description: Gobble these bears up with a fun Thanksgiving them
- ed event.\nbar: The Lumber Yard Bar\ntimezone: America/Los_Angeles\naddress
- : 9630 16th Ave SW\, Seattle\, WA 98106\nshortName: BEAR SOCIAL\ninstagram:
-  https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.
- ticketleap.com/events/southseattlebearsocial\nkey: it-s-giving-thanks|2026-
- 11-29|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSour
- ce: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrid
- eUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurr
- enceId: 20261129T220000Z\npinSource: curated\naddressSource: curated\nbarSo
- urce: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47
- .5165235%2C-122.3548059
-LAST-MODIFIED:20261001T131428Z
-LOCATION:47.5165235\, -122.3548059
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:IT'S GIVING THANKS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260509T040000Z
-DTEND:20260509T100000Z
-DTSTAMP:20261004T153204Z
-UID:C2EDB500-501A-4F94-9060-3A0EEE8AC165
-CREATED:20260507T001637Z
-DESCRIPTION:description: Clothes check available\n\nMusic & Entertainment\n
- • Beats by MATT STANDS &amp\; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E. Pin
- e St\, Seattle\, WA\ntimezone: America/Los_Angeles\nimage: https://bearracu
- da.com/wp-content/uploads/2026/01/45-2.jpg\nfacebook: https://www.facebook.
- com/events/1574328850293138/\nticketUrl: https://sickening.events/e/bearrac
- uda-treasure-trail-seattle-4/tickets\nshortName: Bear-rac-uda\ninstagram: h
- ttps://www.instagram.com/bearracuda\n_staticFields: [object Object]\ngmaps:
-  https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pi
- ne%20St%2C%20Seattle%2C%20WA\nkey: bearracuda-2026-05-09-seattle\npinSource
- : geocoded-exact
-LAST-MODIFIED:20260717T211317Z
-LOCATION:47.6150824\, -122.3237201
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail Seattle
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261214T000000Z
-DTEND:20261214T050000Z
-DTSTAMP:20261004T153204Z
-UID:29FDDE35-4474-45DA-8A27-5C792071963F
-CREATED:20260920T233633Z
+DTSTART:20260823T230000Z
+DTEND:20260824T040000Z
+DTSTAMP:20261007T002202Z
+UID:E5D22143-402C-4355-BEC4-C5ECF51A7CB9
+CREATED:20260920T233631Z
 DESCRIPTION:description: Come join us bears & friends at Phoenix Comics & G
- ames for board games\, card games\, and more! You can also find our Telegra
- m link on our website!\nbar: Phoenix Comics & Games\naddress: 113 Broadway 
- E\, Seattle\, WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los
- _Angeles\naddressSource: page\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=Phoenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seat
- tle%2C%20WA%2098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: ga
- me-night|2026-12-14|phoenix comics & games\nbearSource: ai\nshortName: GAME
-  NIGHT
-LAST-MODIFIED:20260920T233634Z
+ ames for board games\, card games\, and more! Game Night moved from 08/09 t
+ o 08/23 due to MTG Prerelease at Phoenix. You can also find our Telegram li
+ nk on our website! http\\://xlbears.org/ http\\://xlbears.org/about/code-of
+ -conduct/\nbar: Phoenix Comics & Games\naddress: 113 Broadway E\, Seattle\,
+  WA 98102\nwebsite: https://xlbears.org\ntimezone: America/Los_Angeles\nadd
+ ressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Ph
+ oenix%20Comics%20%26%20Games%2C%20113%20Broadway%20E%2C%20Seattle%2C%20WA%2
+ 098102\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: game-night|2026
+ -08-23|phoenix comics & games\nbearSource: ai\nshortName: GAME NIGHT
+LAST-MODIFIED:20260920T233632Z
 LOCATION:47.6191274\, -122.3210517
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -422,53 +468,26 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251122T050000Z
-DTEND:20251122T110000Z
-DTSTAMP:20261004T153204Z
-UID:3D70DFD0-9501-434E-A015-10F01A25DA09
-CREATED:20250930T014035Z
-DESCRIPTION:description: Treasure Trail returns to Seattle and we invite yo
- u to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wris
- tband when you walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by MATT ST
- ANDS &amp\; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, WA 98
- 122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/trea
- sureseattle/\ncover: $15.65 - $30.54 (as of 10/1)\nimage: https://bearracud
- a.com/wp-content/uploads/2025/04/treasurenov.jpg\nfacebook: https://www.fac
- ebook.com/events/784739777742843\nticketUrl: https://www.eventbrite.com/e/t
- reasure-trail-seattle-wish-boned-tickets-1754983576119\nshortName: Bear-rac
- -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id
- =101730401\nkey: bearracuda-2025-11-22-seattle
-LAST-MODIFIED:20251001T225002Z
+DTSTART:20260201T050000Z
+DTEND:20260201T110000Z
+DTSTAMP:20261007T002202Z
+UID:33B9EEB8-F6D3-4068-9A20-64B8DE33B103
+CREATED:20260123T030739Z
+DESCRIPTION:description: WINTER BEEF BALL!\n\nMusic & Entertainment\n• Beat
+ s by MATT STANDS &amp\; FREDDY KOP\nbar: MASSIVE\naddress: 619 E Pine\, Sea
+ ttle\, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com
+ /events/seattlebeef/\nimage: https://bearracuda.com/wp-content/uploads/2025
+ /12/seattlejan26.jpg\nfacebook: https://www.facebook.com/events/69805544976
+ 5272\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-winter-bee
+ f-ball-2026-tickets-1977102214947\nshortName: Bear-rac-uda\ninstagram: http
+ s://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search
+ /?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey
+ : bearracuda-2026-02-01-seattle
+LAST-MODIFIED:20260126T235314Z
 LOCATION:47.6150572\, -122.3236574
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Treasure Trail Seattle: Wish BONED!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260308T050000Z
-DTEND:20260308T100000Z
-DTSTAMP:20261004T153204Z
-UID:3DCE764F-EC21-459C-8791-745DE1731298
-CREATED:20260123T030754Z
-DESCRIPTION:description: TRAIL HEAD\n\nMusic & Entertainment\n• Beats by MA
- TT STANDS &amp\; DOBERMANN\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, W
- A 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/
- seattlett/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/11x17-
- 4.jpg\nfacebook: https://www.facebook.com/events/857466110421715\nticketUrl
- : https://www.eventbrite.com/e/treasure-trail-seattletrail-head-tickets-198
- 0435540012\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
- earracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2
- C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey: bearracuda-2026-03-08
- -seattle
-LAST-MODIFIED:20260126T235324Z
-LOCATION:47.6150572\, -122.3236574
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail Seattle:TRAIL HEAD
+SUMMARY:Bearracuda Seattle Winter Beef Ball 2026!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -476,7 +495,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20270103T060000Z
 DTEND:20270103T110000Z
-DTSTAMP:20261004T153204Z
+DTSTAMP:20261007T002202Z
 UID:99D97EBE-1042-4771-9175-C03A63863672
 CREATED:20260917T215101Z
 DESCRIPTION:description: PRESENTS HORSE MEAT DISCO\nbar: Massive\naddress: 
@@ -503,61 +522,100 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250927T040000Z
-DTEND:20250927T100000Z
-DTSTAMP:20261004T153204Z
-UID:19A871C3-E891-4C93-BF2E-A0234C04BF1E
-CREATED:20250825T034004Z
-DESCRIPTION:description: Treasure Trail returns to Seattle and we invite yo
- u to choose your own ADVENTURE! Now our guys can grab a wristband when you 
- walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by BIG SIR &amp\; TIGERBE
- ATZ\nbar: MASSIVE\naddress: 619 E Pine\, Seattle\, WA 98122\ntimezone: Amer
- ica/Los_Angeles\nurl: https://bearracuda.com/events/treasureseattle/\ncover
- : $15.65 - $30.54 (as of 9/20)\nimage: https://bearracuda.com/wp-content/up
- loads/2025/04/treasuretrailweb.jpg\nfacebook: https://www.facebook.com/even
- ts/1113055394051303\nticketUrl: https://www.eventbrite.com/e/treasure-trail
- -seattle-tickets-1497840042889\nshortName: Bear-rac-uda\ninstagram: https:/
- /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearrac
- uda-2025-09-27-seattle\npinSource: geocoded-exact
-LAST-MODIFIED:20260717T211317Z
-LOCATION:47.6150824\, -122.3237201
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail: SEATTLE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260913T040000Z
-DTEND:20260913T100000Z
-DTSTAMP:20261004T153204Z
-UID:E8573138-9CDE-45E6-A456-18A7D0DB736E
-CREATED:20260717T221925Z
-DESCRIPTION:bar: Massive\naddress: 619 E. Pine\, Seattle\, WA\, 98122\ntick
- etUrl: https://www.sickening.events/e/bearracuda-seattle-7days/tickets\nima
- ge: https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_septembe
- r_2026-web.jpg\ncover: $20-$30\ntimezone: America/Los_Angeles\nwebsite: htt
- ps://bearracuda.com/events/7days/\ninstagram: https://www.instagram.com/bea
- rracuda\nshortName: Bear­rac­uda\nfavicon: https://bearracuda.com/\nkey: be
- arracuda-seattle-7-day-load|2026-09-13|massive\nimageVertical: https://bear
- racuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg\n
- bearSource: keyword\ndescription: 7 DAY LOADSaturday\, Sept. 12thParty til 
- 3amUnderwear or Jockstraps Encouraged!619 E. PineHot Go-Go’s\, Chunky Visua
- lsDJs Matt ConsolaFreddy KOPHosted by Matt Bearracuda & JP Hardy Bearracuda
-  returns to MASSIVE with our 7 DAY LOAD. Undies & Jockstraps are hot and on
-  the menu for this evening. DJ Matt Consola will playing till late w/Freddy
-  KOP opening. 3 FLOORS\, heavy cruising\, furry socializing and YOU! Early 
- adv. tix available NOW\npinSource: curated\naddressSource: page\nimageSourc
- e: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?
- q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ
-LAST-MODIFIED:20260911T102729Z
-LOCATION:47.6150824\, -122.3237201
+DTSTART:20261129T220000Z
+DTEND:20261130T030000Z
+DTSTAMP:20261007T002202Z
+UID:F31536C5-60DD-4097-B56B-CF0A136A3BA3
+CREATED:20261001T131427Z
+DESCRIPTION:description: Gobble these bears up with a fun Thanksgiving them
+ ed event.\nbar: The Lumber Yard Bar\ntimezone: America/Los_Angeles\naddress
+ : 9630 16th Ave SW\, Seattle\, WA 98106\nshortName: BEAR SOCIAL\ninstagram:
+  https://www.instagram.com/southseattlebearsocial\nfavicon: https://events.
+ ticketleap.com/events/southseattlebearsocial\nkey: it-s-giving-thanks|2026-
+ 11-29|the lumber yard bar\nwebsite: https://thelumberyardbar.com/\nbearSour
+ ce: ai\nuid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrid
+ eUid: south-seattle-bear-social-20260823T012058Z@chunky.dad\noverrideRecurr
+ enceId: 20261129T220000Z\npinSource: curated\naddressSource: curated\nbarSo
+ urce: page-prose\ngmaps: https://www.google.com/maps/search/?api=1&query=47
+ .5165235%2C-122.3548059
+LAST-MODIFIED:20261001T131428Z
+LOCATION:47.5165235\, -122.3548059
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: Seattle💦
+SUMMARY:IT'S GIVING THANKS
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261227T220000Z
+DTEND:20261228T050000Z
+DTSTAMP:20261007T002202Z
+UID:5EFCFA14-ACC3-4A30-98FF-2611273735D8
+CREATED:20261001T131428Z
+DESCRIPTION:description: Celebrate the holidays with the Bears.\nbar: The L
+ umber Yard Bar\ntimezone: America/Los_Angeles\naddress: 9630 16th Ave SW\, 
+ Seattle\, WA 98106\nshortName: BEAR SOCIAL\ninstagram: https://www.instagra
+ m.com/southseattlebearsocial\nfavicon: https://events.ticketleap.com/events
+ /southseattlebearsocial\nkey: naughty-santa-social|2026-12-27|the lumber ya
+ rd bar\nwebsite: https://thelumberyardbar.com/\nbearSource: ai\nuid: south-
+ seattle-bear-social-20260823T012058Z@chunky.dad\noverrideUid: south-seattle
+ -bear-social-20260823T012058Z@chunky.dad\noverrideRecurrenceId: 20261227T22
+ 0000Z\npinSource: curated\naddressSource: curated\nbarSource: page-prose\ng
+ maps: https://www.google.com/maps/search/?api=1&query=47.5165235%2C-122.354
+ 8059
+LAST-MODIFIED:20261004T142510Z
+LOCATION:47.5165235\, -122.3548059
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:NAUGHTY SANTA SOCIAL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260509T040000Z
+DTEND:20260509T100000Z
+DTSTAMP:20261007T002202Z
+UID:C2EDB500-501A-4F94-9060-3A0EEE8AC165
+CREATED:20260507T001637Z
+DESCRIPTION:description: Clothes check available\n\nMusic & Entertainment\n
+ • Beats by MATT STANDS &amp\; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E. Pin
+ e St\, Seattle\, WA\ntimezone: America/Los_Angeles\nimage: https://bearracu
+ da.com/wp-content/uploads/2026/01/45-2.jpg\nfacebook: https://www.facebook.
+ com/events/1574328850293138/\nticketUrl: https://sickening.events/e/bearrac
+ uda-treasure-trail-seattle-4/tickets\nshortName: Bear-rac-uda\ninstagram: h
+ ttps://www.instagram.com/bearracuda\n_staticFields: [object Object]\ngmaps:
+  https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pi
+ ne%20St%2C%20Seattle%2C%20WA\nkey: bearracuda-2026-05-09-seattle\npinSource
+ : geocoded-exact
+LAST-MODIFIED:20260717T211317Z
+LOCATION:47.6150824\, -122.3237201
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail Seattle
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250706T140000
+DTEND;TZID=America/Los_Angeles:20250706T190000
+RRULE:FREQ=WEEKLY;BYDAY=SU
+DTSTAMP:20261007T002202Z
+UID:south-seattle-bear-social-20260823T012058Z@chunky.dad
+URL:https://thelumberyardbar.com/
+CREATED:20260823T012121Z
+DESCRIPTION:shortName: South Seattle Social\nbar: Lumberyard\ntimezone: Ame
+ rica/Los_Angeles\nuid: south-seattle-bear-social-20260823T012058Z@chunky.da
+ d\nwebsite: https://thelumberyardbar.com/\ninstagram: https://www.instagram
+ .com/southseattlebearsocial/\ngmaps: https://maps.app.goo.gl/SDUbV4qsRpivNi
+ X39
+LAST-MODIFIED:20260823T195053Z
+LOCATION:47.51652271569908\, -122.35487284211817
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:South Seattle Bear Social
+TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
