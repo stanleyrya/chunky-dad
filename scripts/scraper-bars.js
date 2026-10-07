@@ -608,6 +608,12 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJEc7NGK4byUwR1QVPh5qsYCY",
       "gayCities": "https://montreal.gaycities.com/bars/710-aigle-noir",
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:34.423Z"
+    },
+    {
+      "name": "Bain Mathieu",
+      "city": "montreal",
+      "address": "2915 Rue Ontario E, Montréal, QC H2K 1X7",
+      "coordinates": "45.5374686, -73.5499132"
     }
   ],
   "nola": [
@@ -1379,14 +1385,6 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/aquatorremolinos",
       "faviconBg": "#4f4d4c",
       "faviconFg": "#e5e4e4"
-    }
-  ],
-  "unknown": [
-    {
-      "name": "New Guernica",
-      "city": "unknown",
-      "address": "64-68 Smith Street, Melbourne",
-      "coordinates": "-37.8062453, 144.9833075"
     }
   ],
   "vegas": [
