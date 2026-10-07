@@ -27582,3 +27582,35 @@ test('all-day in dedup: a stated time is never mixed with an all-day twin', asyn
   const both = await core.mergeParsedEvents({ ...stub }, { ...allDay }, {});
   assert.equal(core.applyAllDayConvention(both), true);
 });
+
+test('bareBarNameKey strips a leading "Bar " said as its own word — "Bar Diamant Rouge" and "Diamant Rouge" are one bar — and never cuts into Barcelona', () => {
+  assert.equal(SharedCore.bareBarNameKey('Bar Diamant Rouge'), SharedCore.bareBarNameKey('Diamant Rouge'));
+  assert.equal(SharedCore.bareBarNameKey('Barcelona Eagle'), 'barcelonaeagle');
+  assert.equal(SharedCore.bareBarNameKey('Rawhide Bar'), SharedCore.bareBarNameKey('Rawhide'));
+  assert.equal(SharedCore.bareBarNameKey('Bar'), 'bar', 'a name that is only the word stays');
+});
+
+// Eagle LA (run 20261005-051500): the MEC month feed published BLUF LA's
+// JSON-LD with offers.url pointing at the NEIGHBOUR's page
+// (/events/calf-bb-event/). The calendar kept that link under the binding
+// ticketUrl stickiness, and the real CALF B&B record then matched BLUF by
+// "same ticket page" every run. A link that is another event's page on the
+// record's own site loses to the event's own page, on either side.
+test('merge resolver: a sibling event page on the record\'s own site yields to the event\'s own page', () => {
+  const core = createCore();
+  const own = 'https://eaglela.com/events/bluf/?occurrence=2026-11-20';
+  const context = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'BLUF LA' }, b: { title: 'BLUF LA', url: own } } };
+  const calendarHoldsSibling = core.resolveConflictDeterministically('ticketUrl', 'https://eaglela.com/events/calf-bb-event/', 'https://eaglela.com/events/bluf/', context);
+  assert.equal(calendarHoldsSibling && calendarHoldsSibling.winner, 'b', 'the calendar\'s neighbour-page link yields to the own page');
+  assert.match(calendarHoldsSibling.reason, /another event's page on this site/);
+  const scrapedHoldsSibling = core.resolveConflictDeterministically('ticketUrl', 'https://eaglela.com/events/bluf/', 'https://eaglela.com/events/calf-bb-event/', context);
+  assert.equal(scrapedHoldsSibling && scrapedHoldsSibling.winner, 'a', 'a scraped neighbour-page link never replaces the stored own page');
+  const twoSiblings = core.resolveConflictDeterministically('ticketUrl', 'https://eaglela.com/events/calf-bb-event/', 'https://eaglela.com/events/cruise-night-9/', context);
+  assert.ok(!twoSiblings || !/another event's page/.test(twoSiblings.reason), 'two neighbour pages are a genuine question — the rung stays silent');
+  const ticketHost = core.resolveConflictDeterministically('ticketUrl', 'https://eaglela.com/events/calf-bb-event/', 'https://www.eventbrite.com/e/bluf-la-tickets-1234', context);
+  assert.ok(!ticketHost || !/another event's page/.test(ticketHost.reason), 'a real ticket host is not the own page — the rung stays silent');
+  const websiteSlot = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'BLUF LA' }, b: { title: 'BLUF LA', website: 'https://eaglela.com/events/bluf/' } } };
+  assert.equal(core.resolveConflictDeterministically('ticketUrl', 'https://eaglela.com/events/calf-bb-event/', 'https://eaglela.com/events/bluf/', websiteSlot).winner, 'b', 'the own page may sit in the website slot (url and website are one field)');
+  assert.equal(SharedCore.isSameEventPage('https://www.eaglela.com/events/bluf/', own), true);
+  assert.equal(SharedCore.isSiblingEventPage('https://eaglela.com/events/', own), false, 'the listing itself is not a sibling page');
+});

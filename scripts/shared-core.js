@@ -2749,6 +2749,36 @@ class SharedCore {
     // Exact host or subdomain of a known ticketing platform (host must already
     // be lowercased/www-stripped, as getUrlRuleParts returns it). Subdomain
     // matching covers e.g. events.ticketleap.com.
+    // Event-page geometry on ONE site: host + path root + last segment.
+    // "Sibling" = same host and root, a different last segment (another
+    // event's page in the same section); "same" = all three equal (query
+    // and fragment ignored, so /events/bluf/?occurrence=… is /events/bluf/).
+    // Shared by the JSON-LD offers.url guard in the web parser and the
+    // merge resolver's sibling-page rung.
+    static eventPageParts(value) {
+        const match = String(value || '').match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return null;
+        const segments = match[2].split('/').filter(Boolean);
+        if (segments.length < 2) return null;
+        return {
+            host: match[1].toLowerCase().replace(/^www\./, ''),
+            root: segments.slice(0, -1).join('/').toLowerCase(),
+            slug: segments[segments.length - 1].toLowerCase()
+        };
+    }
+
+    static isSiblingEventPage(candidateUrl, ownUrl) {
+        const a = SharedCore.eventPageParts(candidateUrl);
+        const b = SharedCore.eventPageParts(ownUrl);
+        return Boolean(a && b && a.host === b.host && a.root === b.root && a.slug !== b.slug);
+    }
+
+    static isSameEventPage(candidateUrl, ownUrl) {
+        const a = SharedCore.eventPageParts(candidateUrl);
+        const b = SharedCore.eventPageParts(ownUrl);
+        return Boolean(a && b && a.host === b.host && a.root === b.root && a.slug === b.slug);
+    }
+
     isKnownTicketingPlatformHost(host) {
         const normalized = String(host || '').toLowerCase();
         if (!normalized) return false;
@@ -4411,7 +4441,12 @@ class SharedCore {
     // applies. Returns distinct { city, bar } hits; the caller decides what
     // more than one means.
     static bareBarNameKey(name, normalizedKey = null) {
-        const key = normalizedKey !== null ? normalizedKey : String(name || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, '');
+        let key = normalizedKey !== null ? normalizedKey : String(name || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, '');
+        // A leading "Bar " is the same furniture as a trailing one ("Bar
+        // Diamant Rouge" / "Diamant Rouge" were two deck cards, 2026-10-06).
+        // Only when the NAME says it as its own word — never cut into
+        // "Barcelona".
+        if (/^\s*(?:the\s+)?bar\s+\S/i.test(String(name || '')) && key.startsWith('bar') && key.length - 3 >= 5) key = key.slice(3);
         const stripped = key.replace(/(bar|pub|club|lounge|tavern|saloon|nightclub)$/, '');
         return stripped.length >= 5 ? stripped : key;
     }
@@ -5809,6 +5844,31 @@ class SharedCore {
 
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
+        // Sibling-page rung (2026-10-06, Eagle LA run 20261005-051500): a
+        // link that is ANOTHER event's page on the record's own site — same
+        // host, same path root, a different last segment from the page the
+        // scrape established as this event's (records.b.url/website) — loses to the
+        // event's own page, on either side. Eagle LA's MEC month feed had
+        // published BLUF LA's JSON-LD with offers.url = /events/calf-bb-event/;
+        // the calendar kept it (🧊 STICKY: no deterministic reason), and the
+        // real CALF B&B record then matched BLUF by "same ticket page" every
+        // run. Both candidates siblings, or neither, fall through unchanged.
+        if ((fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl')
+            && context && context.records && context.records.b && urlA && urlB) {
+            // url and website are one field; the scraped record's own page
+            // may sit in either slot.
+            const ownPage = context.records.b.url || context.records.b.website || '';
+            const siblingA = SharedCore.isSiblingEventPage(valueA, ownPage);
+            const siblingB = SharedCore.isSiblingEventPage(valueB, ownPage);
+            const ownA = SharedCore.isSameEventPage(valueA, ownPage);
+            const ownB = SharedCore.isSameEventPage(valueB, ownPage);
+            if (siblingA && ownB) {
+                return { winner: 'b', reason: 'the other link is another event\'s page on this site (same section, different slug) — this event\'s own page wins' };
+            }
+            if (siblingB && ownA) {
+                return { winner: 'a', reason: 'the other link is another event\'s page on this site (same section, different slug) — this event\'s own page wins' };
+            }
+        }
         // THE VENUE'S CONTACT NEVER REPLACES THE EVENT'S. Calendar merges
         // only: a scraped instagram / facebook / website / gmaps that
         // describes the VENUE (copied off the curated bar record, stamped by
@@ -8811,7 +8871,9 @@ class SharedCore {
             if (!this.isNewVenueCandidateEvent(event)) continue;
             const bar = event.bar.trim();
             const cityKey = event.city.trim().toLowerCase();
-            const key = `${cityKey}|${this.normalizeBarNameKey(bar)}`;
+            // Keyed by the bare name, so "Bar Diamant Rouge" and "Diamant
+            // Rouge" (or "Rawhide" and "Rawhide Bar") are one card.
+            const key = `${cityKey}|${SharedCore.bareBarNameKey(bar, this.normalizeBarNameKey(bar))}`;
             const barSource = event.barSource.trim();
             const address = typeof event.address === 'string' ? event.address.trim() : '';
             // Organizer-link pollution guard: an event's website/instagram
