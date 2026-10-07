@@ -423,13 +423,32 @@ class LineChart {
 class MetricsDisplay {
   constructor() {
     this.fm = FileManager.iCloud();
-    const documentsDir = this.fm.documentsDirectory();
-    this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
+    this.baseDir = this.resolveDataRoot(this.fm);
     this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
     this.runtime = this.getRuntimeContext();
     this.iconCache = new Map();
     this.parserIconOverrides = this.getParserIconOverrides();
+  }
+
+  // The data folder, wherever it is: the chunky-dad-data file bookmark once
+  // the data moved there (2026-10-06 — Scriptable's own folder held 2 GB and
+  // took forever to open), else Documents/chunky-dad-scraper. Same choice as
+  // ScriptableAdapter.resolveDataRoot (inlined: this display must not load the
+  // whole adapter just to find a path). The bookmarked folder counts only
+  // once it HOLDS the data (storage/ or calendar-snapshot/ inside it).
+  resolveDataRoot(fm) {
+    const legacy = fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper');
+    try {
+      const local = typeof FileManager !== 'undefined' && typeof FileManager.local === 'function' ? FileManager.local() : null;
+      if (!local || typeof local.bookmarkExists !== 'function' || !local.bookmarkExists('chunky-dad-data')) return legacy;
+      const root = fm.bookmarkedPath('chunky-dad-data');
+      if (!root || !fm.isDirectory(root)) return legacy;
+      const populated = ['storage', 'calendar-snapshot', 'metrics'].some((name) => fm.isDirectory(fm.joinPath(root, name)));
+      return populated ? root : legacy;
+    } catch (_) {
+      return legacy;
+    }
   }
 
   getRuntimeContext() {
