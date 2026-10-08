@@ -27670,3 +27670,192 @@ test('sanity: weekday-derived-date and card-weekday-conflict surface the parser\
   assert.deepEqual(sanityCodes(core, { ...base, _weekdayDerivedDate: { weekday: 'Thursday' } }), []);
   assert.deepEqual(sanityCodes(core, { ...base, _cardWeekdayConflict: { line: 'THURSDAY' } }), []);
 });
+
+// ---------------------------------------------------------------------------
+// Crawling from the bare domain root (audit 2026-10-07). A home page with no
+// structured data and fewer than three month names classifies 'unknown' and
+// followed nothing; the site's own menu — /events/, /whats-on/, /calendar2/
+// — was never opened and a parser configured at the root read 0.
+// ---------------------------------------------------------------------------
+test('adaptive crawl: a configured root whose home page reads as unknown still opens the listing links its own menu names', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://venue.example/': {
+      additionalLinks: [
+        'https://venue.example/menu/',               // not a listing word
+        'https://venue.example/about',
+        'https://venue.example/events/',             // the listing
+        'https://venue.example/whats-on/',
+        'https://venue.example/calendar2/',          // a numbered twin of a listing word
+        'https://venue.example/events/?view=list',   // a view of a page, not a page
+        'https://other.example/events/',             // another site's listing
+        'https://venue.example/api/events',          // an endpoint, not a page
+        'https://venue.example/new-events-1',
+        'https://venue.example/tickets/',
+        'https://venue.example/rsvp/',               // sixth and seventh: past the cap
+        'https://venue.example/schedule/'
+      ]
+    },
+    'https://venue.example/events/': {
+      events: [{ title: 'Bear Night', startDate: soon(5), bar: 'The Venue' }],
+      additionalLinks: ['https://venue.example/agenda/']   // a deeper unknown page does not do this
+    },
+    'https://venue.example/whats-on/': {},
+    'https://venue.example/calendar2/': {},
+    'https://venue.example/new-events-1': {},
+    'https://venue.example/tickets/': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const result = await core.processParser(
+    { name: 'Root Only', urls: ['https://venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  for (const url of ['https://venue.example/events/', 'https://venue.example/whats-on/', 'https://venue.example/calendar2/', 'https://venue.example/new-events-1', 'https://venue.example/tickets/']) {
+    assert.ok(fetched.includes(url), `${url} is opened from the root (fetched: ${fetched.join(', ')})`);
+  }
+  for (const url of ['https://venue.example/menu/', 'https://venue.example/about', 'https://venue.example/events/?view=list', 'https://other.example/events/', 'https://venue.example/api/events', 'https://venue.example/rsvp/', 'https://venue.example/schedule/', 'https://venue.example/agenda/']) {
+    assert.ok(!fetched.includes(url), `${url} is not (fetched: ${fetched.join(', ')})`);
+  }
+  const rootLines = display.logs.filter(line => line.includes('🧭 ROOT: following'));
+  assert.equal(rootLines.length, 1, `one 🧭 line, for the root only: ${rootLines.join(' | ')}`);
+  assert.ok(rootLines[0].includes('following 5 listing link(s) from an unknown home page') && rootLines[0].includes('https://venue.example/events/'), rootLines[0]);
+  assert.equal(result.totalEvents, 1, 'the listing\'s event is an event of its own, not the root\'s enrichment');
+});
+
+test('adaptive crawl: a root that reads as a listing follows its links as before — no 🧭 line; a root that reads as one event already opens its site', async () => {
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const display = createDisplayAdapterStub();
+  const listingCore = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /listing\.example\/$/i, classification: 'multi-event-page' }]
+  });
+  const listing = createCrawlHarness({
+    'https://listing.example/': { additionalLinks: ['https://listing.example/events/', 'https://listing.example/menu/'] },
+    'https://listing.example/events/': {},
+    'https://listing.example/menu/': {}
+  });
+  await listingCore.processParser({ name: 'Listing Root', urls: ['https://listing.example/'], alwaysBear: true, ai: CRAWL_AI }, {}, listing.httpAdapter, display, listing.parsers);
+  assert.ok(listing.fetched.includes('https://listing.example/events/') && listing.fetched.includes('https://listing.example/menu/'), 'a listing root follows every link');
+  assert.ok(!display.logs.some(line => line.includes('🧭 ROOT')), 'nothing to add');
+
+  const eventCore = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /party\.example\/$/i, classification: 'event-page' }]
+  });
+  const party = createCrawlHarness({
+    'https://party.example/': {
+      events: [{ title: 'THE PARTY', startDate: soon(-2), bar: 'The Venue' }],
+      additionalLinks: ['https://party.example/events/', 'https://party.example/menu/']
+    },
+    'https://party.example/events/': { events: [{ title: 'NEXT PARTY', startDate: soon(20), bar: 'The Venue' }] },
+    'https://party.example/menu/': {}
+  });
+  const result = await eventCore.processParser({ name: 'Party Root', urls: ['https://party.example/'], alwaysBear: true, ai: CRAWL_AI }, {}, party.httpAdapter, display, party.parsers);
+  assert.ok(party.fetched.includes('https://party.example/events/'), 'the single-event root rule already opens the site\'s pages');
+  assert.ok(!display.logs.some(line => line.includes('🧭 ROOT')), 'the listing link was already queued as a sibling: nothing to add, no line');
+  assert.equal(result.totalEvents, 2);
+});
+
+// The machine-door probe a configured root gets — advertised feeds, then
+// the well-known paths on a hint — now runs on the configured SITE's pages
+// one hop down too (the listing a root's nav names), once per host. The
+// root here has no feed hint of its own (a hint on the root would make the
+// root find the feed itself, which is the existing behaviour).
+test('machine door: the listing one hop from a configured root is read through its feed; the host is not probed twice; another site is not probed at all', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const bodies = {
+    'https://door.example/': '<html><body><a href="/events/">Events</a> <a href="/calendar/">Calendar</a> <a href="https://other.example/events/">Friends</a></body></html>',
+    'https://door.example/events/': DOOR_LISTING_HTML,
+    'https://door.example/calendar/': DOOR_LISTING_HTML,
+    'https://door.example/feed.ics': DOOR_ICS,
+    'https://other.example/events/': DOOR_LISTING_HTML,
+    'https://other.example/feed.ics': DOOR_ICS
+  };
+  const { httpAdapter } = doorStubAdapter(bodies);
+  const parsed = [];
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => {
+        parsed.push({ url: htmlData.url, door: htmlData.machineDoor ? htmlData.machineDoor.doorUrl : '' });
+        if (htmlData.machineDoor) return { events: [{ title: 'Bear Night', startDate: soon(10), bar: 'The Eagle' }], additionalLinks: [] };
+        const links = htmlData.url === 'https://door.example/'
+          ? ['https://door.example/events/', 'https://door.example/calendar/', 'https://other.example/events/']
+          : [];
+        return { events: [], additionalLinks: links };
+      }
+    }
+  };
+  const result = await core.processParser(
+    { name: 'Door Root', urls: ['https://door.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  const doorLines = display.logs.filter(line => line.includes('🚪 MACHINE DOOR') && line.includes('answered with'));
+  assert.equal(doorLines.length, 1, doorLines.join('\n'));
+  assert.ok(doorLines[0].includes('https://door.example/events/ → https://door.example/feed.ics answered'), doorLines[0]);
+  assert.ok(parsed.some(entry => entry.url === 'https://door.example/feed.ics' && entry.door === 'https://door.example/feed.ics'), 'the listing is parsed through the feed');
+  const calendarParse = parsed.find(entry => entry.url === 'https://door.example/calendar/');
+  assert.ok(calendarParse && calendarParse.door === '', 'the second listing of the host is read as a page: its host\'s door was already adopted');
+  assert.ok(!display.logs.some(line => line.includes('MACHINE DOOR') && line.includes('other.example')), 'another site reached from the root is never probed');
+  assert.equal(result.totalEvents, 1);
+});
+
+test('machine door: a candidate the root already tried is not tried again from the listing one hop down', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  // WordPress markers on both pages: the root tries the well-known routes
+  // (all 404 here); the listing adds one door of its own.
+  const rootHtml = '<html><head><link rel="stylesheet" href="/wp-content/themes/bar/style.css"></head><body><a href="/events/">Events</a></body></html>';
+  const listingHtml = '<html><head><link rel="stylesheet" href="/wp-content/themes/bar/style.css"><link rel="alternate" type="text/calendar" href="/calendar/export.ics"></head><body><a href="/calendar/export.ics">Subscribe</a></body></html>';
+  const { fetched, httpAdapter } = doorStubAdapter({
+    'https://door.example/': rootHtml,
+    'https://door.example/events/': listingHtml,
+    'https://door.example/calendar/export.ics': DOOR_ICS
+  });
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => (htmlData.machineDoor
+        ? { events: [{ title: 'Bear Night', startDate: soon(10), bar: 'The Eagle' }], additionalLinks: [] }
+        : { events: [], additionalLinks: htmlData.url === 'https://door.example/' ? ['https://door.example/events/'] : [] })
+    }
+  };
+  const result = await core.processParser(
+    { name: 'Door Root', urls: ['https://door.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  for (const tried of ['https://door.example/wp-json/tribe/events/v1/events?per_page=50', 'https://door.example/feed.json', 'https://door.example/feed.ics']) {
+    assert.equal(fetched.filter(url => url === tried).length, 1, `${tried}: the root tried it; the listing does not try it again`);
+  }
+  assert.equal(fetched.filter(url => url === 'https://door.example/calendar/export.ics').length, 1, 'the listing\'s own new candidate is tried once');
+  assert.ok(display.logs.some(line => line.includes('🚪 MACHINE DOOR: https://door.example/events/ → https://door.example/calendar/export.ics answered')), display.logs.filter(line => line.includes('MACHINE DOOR')).join('\n'));
+  assert.equal(result.totalEvents, 1);
+});
+
+test('machine door: one page per host gets the hop-down probe — the second same-site page one hop down is read as a page', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /wp\.example\/$/i, classification: 'multi-event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  // WordPress advertises a per-page REST link on every page.
+  const wpPage = (id) => `<html><head><link rel="alternate" type="application/json" href="/wp-json/wp/v2/pages/${id}"></head><body>page ${id}</body></html>`;
+  const { fetched, httpAdapter } = doorStubAdapter({
+    'https://wp.example/': '<html><body><a href="/events/">Events</a> <a href="/about-us/">About us</a></body></html>',
+    'https://wp.example/events/': wpPage(10),
+    'https://wp.example/about-us/': wpPage(11)
+    // every REST link answers 404
+  });
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => ({ events: [], additionalLinks: htmlData.url === 'https://wp.example/' ? ['https://wp.example/events/', 'https://wp.example/about-us/'] : [] })
+    }
+  };
+  await core.processParser({ name: 'WP Root', urls: ['https://wp.example/'], alwaysBear: true, ai: CRAWL_AI }, {}, httpAdapter, display, parsers);
+  assert.ok(fetched.includes('https://wp.example/about-us/'), 'the second page is crawled');
+  assert.ok(fetched.includes('https://wp.example/wp-json/wp/v2/pages/10'), 'the first page one hop down is probed');
+  assert.ok(!fetched.includes('https://wp.example/wp-json/wp/v2/pages/11'), 'the second is not: one hop-down probe per host');
+});
