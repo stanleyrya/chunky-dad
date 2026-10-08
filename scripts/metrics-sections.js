@@ -237,8 +237,13 @@ function buildQualityTrendData(records) {
 //   empty    — never extracted anything in the window (no baseline either)
 //   vanished — upcoming events seen last time are gone this time
 //   quiet    — no line within staleAfterDays (the parser has not run)
+//   companion — extracted 0, but another host of the same parser in the
+//              same run did the work (southseattlebears.com is the club's
+//              website; its events come from events.ticketleap.com). Not
+//              trouble: the site is read, the feed answers.
 //   ok
-const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'ok'];
+const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+const SOURCE_UNTROUBLED_VERDICTS = ['ok', 'companion'];
 
 function parseSourceLedger(text) {
     const records = [];
@@ -329,13 +334,38 @@ function assessSourceHealth(records, options = {}) {
             }))
         });
     });
+    // A host that yielded nothing while a sibling host of the same parser
+    // yielded in the SAME run is that parser's companion (the venue's own
+    // site next to its ticketing feed), not a failure.
+    const fed = new Map();
+    rows.forEach((row) => {
+        if ((Number(row.latest.extracted) || 0) <= 0) return;
+        row.parsers.forEach((parser) => {
+            const key = `${row.latest.run_id || ''}|${parser}`;
+            if (!fed.has(key)) fed.set(key, []);
+            fed.get(key).push(row.host);
+        });
+    });
+    rows.forEach((row) => {
+        if (row.verdict !== 'empty' && row.verdict !== 'stopped') return;
+        const siblings = [];
+        row.parsers.forEach((parser) => {
+            (fed.get(`${row.latest.run_id || ''}|${parser}`) || []).forEach((host) => {
+                if (host !== row.host && !siblings.includes(host)) siblings.push(host);
+            });
+        });
+        if (!siblings.length) return;
+        row.verdict = 'companion';
+        row.since = null;
+        row.companionOf = siblings;
+    });
     rows.sort((a, b) => SOURCE_VERDICT_ORDER.indexOf(a.verdict) - SOURCE_VERDICT_ORDER.indexOf(b.verdict)
         || (Number(b.latest.extracted) || 0) - (Number(a.latest.extracted) || 0)
         || a.host.localeCompare(b.host));
     const counts = {};
     SOURCE_VERDICT_ORDER.forEach((verdict) => { counts[verdict] = 0; });
     rows.forEach((row) => { counts[row.verdict] += 1; });
-    return { rows, counts, troubled: rows.filter((row) => row.verdict !== 'ok').length, hosts: rows.length };
+    return { rows, counts, troubled: rows.filter((row) => !SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict)).length, hosts: rows.length };
 }
 
 // ============================================================================
@@ -354,6 +384,7 @@ const SOURCE_VERDICT_LABELS = {
     empty: 'Empty',
     vanished: 'Vanished',
     quiet: 'Quiet',
+    companion: 'Companion',
     ok: 'OK'
 };
 
@@ -530,7 +561,10 @@ function buildSourcesTableHtml(health, options = {}) {
         const vanishedLabel = row.verdict === 'vanished' && Array.isArray(row.vanished) && row.vanished.length
             ? `${row.vanished.length} gone`
             : '';
-        const verdictNote = sinceLabel || vanishedLabel;
+        const companionLabel = row.verdict === 'companion' && Array.isArray(row.companionOf) && row.companionOf.length
+            ? `fed by ${row.companionOf.join(', ')}`
+            : '';
+        const verdictNote = sinceLabel || vanishedLabel || companionLabel;
         const series = Array.isArray(row.series) ? row.series.map((line) => line.extracted) : [];
         const rowAttrs = [
             `data-source-host="${escapeHtml(row.host)}"`,
@@ -592,6 +626,7 @@ function buildHostSummaryHtml(row, options = {}) {
         latest.trigger ? String(latest.trigger) : null,
         row.baseline !== null && row.baseline !== undefined ? `baseline ${row.baseline}` : 'no baseline yet',
         row.since ? `trouble since ${formatSourceRun(row.since)}` : null,
+        row.verdict === 'companion' && Array.isArray(row.companionOf) && row.companionOf.length ? `events come from ${row.companionOf.join(', ')}` : null,
         `${Array.isArray(row.series) ? row.series.length : 0} runs on record`
     ].filter(Boolean);
     const proposals = latest.proposals || {};
@@ -1459,6 +1494,7 @@ function buildChartFigureHtml(spec, options = {}) {
 
 const MetricsSections = {
     SOURCE_VERDICT_ORDER,
+    SOURCE_UNTROUBLED_VERDICTS,
     parseSourceLedger,
     assessSourceHealth,
     escapeHtml,
@@ -1505,6 +1541,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         MetricsSections,
         SOURCE_VERDICT_ORDER,
+        SOURCE_UNTROUBLED_VERDICTS,
         parseSourceLedger,
         assessSourceHealth,
         escapeHtml,

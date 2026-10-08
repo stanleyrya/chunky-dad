@@ -27647,3 +27647,26 @@ test('merge resolver: a sibling event page on the record\'s own site yields to t
   assert.equal(SharedCore.isSameEventPage('https://www.eaglela.com/events/bluf/', own), true);
   assert.equal(SharedCore.isSiblingEventPage('https://eaglela.com/events/', own), false, 'the listing itself is not a sibling page');
 });
+
+// === Sanity rule 10b: weekday-derived-date / card-weekday-conflict (report-only) ===
+
+test('sanity: weekday-derived-date and card-weekday-conflict surface the parser\'s weekday-only card stamps', () => {
+  const core = createSanityCore();
+  const base = {
+    title: 'Pride 2026: Country Pride',
+    startDate: new Date('2026-10-09T00:00:00.000Z'),
+    endDate: new Date('2026-10-09T07:00:00.000Z')
+  };
+  const derived = { ...base, _weekdayDerivedDate: { line: 'THURSDAY', weekday: 'Thursday', reference: '2026-10-06', date: '2026-10-08' } };
+  assert.deepEqual(sanityCodes(core, derived), ['weekday-derived-date']);
+  assert.equal(core.getEventSanityFlags(derived, { nowMs: SANITY_NOW_MS }).find(entry => entry.code === 'weekday-derived-date').detail,
+    'the page prints only "THURSDAY"; dated to the next Thursday on/after the page\'s own date 2026-10-06 → 2026-10-08');
+  const conflict = { ...base, startDate: new Date('2026-10-11T00:00:00.000Z'), endDate: new Date('2026-10-11T07:00:00.000Z'), _cardWeekdayConflict: { line: 'THURSDAY', weekday: 'Thursday', modelDate: '2026-10-10', weekdayDate: '2026-10-08' } };
+  assert.deepEqual(sanityCodes(core, conflict), ['card-weekday-conflict']);
+  assert.equal(core.getEventSanityFlags(conflict, { nowMs: SANITY_NOW_MS }).find(entry => entry.code === 'card-weekday-conflict').detail,
+    'the page prints "THURSDAY" but the record is dated 2026-10-10, not a Thursday (the next one is 2026-10-08)');
+  // No stamp or a malformed one: nothing.
+  assert.deepEqual(sanityCodes(core, base), []);
+  assert.deepEqual(sanityCodes(core, { ...base, _weekdayDerivedDate: { weekday: 'Thursday' } }), []);
+  assert.deepEqual(sanityCodes(core, { ...base, _cardWeekdayConflict: { line: 'THURSDAY' } }), []);
+});

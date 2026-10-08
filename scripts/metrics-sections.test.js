@@ -397,7 +397,8 @@ test('module exposes the Sources builders on both export surfaces', () => {
     assert.equal(typeof MetricsSections[name], 'function', name);
     assert.equal(typeof exported[name], 'function', name);
   });
-  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'ok']);
+  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'companion', 'ok']);
+  assert.deepEqual(exported.SOURCE_UNTROUBLED_VERDICTS, ['ok', 'companion']);
   assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.shrunk, 'Shrunk');
 });
 
