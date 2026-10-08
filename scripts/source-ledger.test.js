@@ -150,7 +150,14 @@ test('assessSourceHealth: verdicts, trouble-first order, since, baseline', () =>
     line('never.example', '20261004-050000', 0),
     line('never.example', '20261005-050000', 0),
     line('gone.example', '20261005-050000', 9, { vanished: [{ key: 'k', title: 'Gone Night', day: '2026-11-01', bear: true, last_seen: '20261004-050000' }] }),
-    line('old.example', '20260925-050000', 5, { finished_at: '2026-09-25T05:00:00Z' })
+    line('old.example', '20260925-050000', 5, { finished_at: '2026-09-25T05:00:00Z' }),
+    // The club's website next to its ticketing feed: the parser reads both,
+    // the feed answers (South Seattle Bear Social, 2026-10-07).
+    ...['20261004-050000', '20261005-050000'].map((id) => line('feed.example', id, 13, { parsers: ['Club'] })),
+    ...['20261004-050000', '20261005-050000'].map((id) => line('site.example', id, 0, { parsers: ['Club'] })),
+    // Same shape, but the feed's latest line is an OLDER run: no alibi.
+    line('lagfeed.example', '20261004-050000', 9, { parsers: ['Lag'] }),
+    ...['20261004-050000', '20261005-050000'].map((id) => line('lagsite.example', id, 0, { parsers: ['Lag'] }))
   ];
   const health = assessSourceHealth(records, { now: new Date('2026-10-05T12:00:00Z') });
   const verdictOf = (host) => health.rows.find((r) => r.host === host);
@@ -164,10 +171,16 @@ test('assessSourceHealth: verdicts, trouble-first order, since, baseline', () =>
   assert.equal(verdictOf('never.example').verdict, 'empty');
   assert.equal(verdictOf('gone.example').verdict, 'vanished');
   assert.equal(verdictOf('old.example').verdict, 'quiet');
-  assert.deepEqual(health.rows.map((r) => r.verdict), ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'ok']);
-  assert.deepEqual(health.rows.map((r) => r.verdict), SOURCE_VERDICT_ORDER);
-  assert.equal(health.troubled, 6);
-  assert.equal(health.hosts, 7);
+  assert.equal(verdictOf('site.example').verdict, 'companion');
+  assert.deepEqual(verdictOf('site.example').companionOf, ['feed.example']);
+  assert.equal(verdictOf('site.example').since, null);
+  assert.equal(verdictOf('feed.example').verdict, 'ok');
+  assert.equal(verdictOf('lagsite.example').verdict, 'empty', 'a sibling that answered in an older run is no alibi for this run');
+  assert.equal(verdictOf('lagfeed.example').verdict, 'ok');
+  assert.deepEqual(health.rows.map((r) => r.verdict), ['dead', 'stopped', 'shrunk', 'empty', 'empty', 'vanished', 'quiet', 'companion', 'ok', 'ok', 'ok']);
+  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER);
+  assert.equal(health.troubled, 7, 'companion is not trouble');
+  assert.equal(health.hosts, 11);
   assert.equal(verdictOf('steady.example').series.length, 5);
 });
 
