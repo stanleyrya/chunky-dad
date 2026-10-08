@@ -1879,6 +1879,139 @@ class SharedCore {
         return `${title}|${place}|${day}`;
     }
 
+    // Identity for the "expected future events" comparison: title + local
+    // day, place-insensitive — bar enrichment renames the place, not the
+    // event (beefdip: 'beefdip' → 'the tryst hotel' on 2026-09-25).
+    static sourceLedgerIdentity(key) {
+        const text = String(key || '');
+        const first = text.indexOf('|');
+        const last = text.lastIndexOf('|');
+        if (first < 0 || last <= first) return text;
+        return `${text.slice(0, first)}|${text.slice(last + 1)}`;
+    }
+
+    static sourceLedgerPlace(key) {
+        const text = String(key || '');
+        const first = text.indexOf('|');
+        const last = text.lastIndexOf('|');
+        if (first < 0 || last <= first) return '';
+        return text.slice(first + 1, last);
+    }
+
+    // Share of the shorter title's tokens (3+ chars) found in the other one.
+    static sourceLedgerTitleOverlap(a, b) {
+        const tokens = (value) => new Set(String(value || '').split(' ').filter((word) => word.length > 2));
+        const A = tokens(a);
+        const B = tokens(b);
+        if (!A.size || !B.size) return 0;
+        let shared = 0;
+        A.forEach((token) => { if (B.has(token)) shared += 1; });
+        return shared / Math.min(A.size, B.size);
+    }
+
+    // "Expected future events gone", advanced one run at a time per host.
+    //   expected  = identities upcoming in ≥2 of the host's last 4 ok runs, still in the future
+    //   suspected = an expected identity missing from this ok run (first miss — log only)
+    //   confirmed = missing from 2 consecutive ok runs → part of `lost`, grouped per series (title)
+    //   returned  = a lost day seen again drops out of `lost`
+    //   rename    = same day + same place + ≥60% title-token overlap is a match, not a loss
+    //   listing   = upcoming ≥3 → 0 while the host still extracted: an immediate alert
+    // A run that is not ok (dead, empty) neither confirms nor clears anything.
+    static advanceSourceLoss(previousState, current, options = {}) {
+        const minSeen = Number.isFinite(options.minSeen) ? options.minSeen : 2;
+        const window = Number.isFinite(options.window) ? options.window : 4;
+        const confirmAfter = Number.isFinite(options.confirmAfter) ? options.confirmAfter : 2;
+        const renameOverlap = Number.isFinite(options.renameOverlap) ? options.renameOverlap : 0.6;
+        const prev = previousState && typeof previousState === 'object' ? previousState : {};
+        const history = (Array.isArray(prev.history) ? prev.history : []).filter((entry) => entry && entry.upcoming && typeof entry.upcoming === 'object');
+        const misses = Object.assign({}, prev.misses && typeof prev.misses === 'object' ? prev.misses : {});
+        const lost = {};
+        Object.keys(prev.lost && typeof prev.lost === 'object' ? prev.lost : {}).forEach((series) => {
+            const entry = prev.lost[series] || {};
+            lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
+        });
+        const todayKey = String(current.todayKey || '');
+        const runId = String(current.runId || '');
+        const ok = current.status === 'ok';
+        const upcomingKeys = current.upcomingKeys && typeof current.upcomingKeys === 'object' ? current.upcomingKeys : {};
+
+        let suspected = 0;
+        let listingGone = false;
+        if (ok) {
+            const currentIds = new Map();
+            Object.keys(upcomingKeys).forEach((key) => {
+                const entry = upcomingKeys[key] || {};
+                const id = SharedCore.sourceLedgerIdentity(key);
+                if (!currentIds.has(id)) currentIds.set(id, { key, id, title: entry.title || '', day: entry.day || id.slice(id.lastIndexOf('|') + 1), bear: entry.bear === true, place: SharedCore.sourceLedgerPlace(key), fold: id.slice(0, id.lastIndexOf('|')) });
+            });
+            const counts = new Map();
+            const lastSeen = new Map();
+            history.slice(-window).forEach((entry) => {
+                const seenThisRun = new Set();
+                Object.keys(entry.upcoming).forEach((key) => {
+                    const id = SharedCore.sourceLedgerIdentity(key);
+                    if (seenThisRun.has(id)) return;
+                    seenThisRun.add(id);
+                    counts.set(id, (counts.get(id) || 0) + 1);
+                    const value = entry.upcoming[key] || {};
+                    lastSeen.set(id, { key, id, title: value.title || '', day: value.day || id.slice(id.lastIndexOf('|') + 1), bear: value.bear === true, place: SharedCore.sourceLedgerPlace(key), fold: id.slice(0, id.lastIndexOf('|')), run_id: entry.run_id || '' });
+                });
+            });
+            const expected = new Set();
+            counts.forEach((count, id) => {
+                const day = id.slice(id.lastIndexOf('|') + 1);
+                if (count >= minSeen && day >= todayKey) expected.add(id);
+            });
+            // Anything seen again is no longer missing, confirmed or not.
+            currentIds.forEach((entry, id) => {
+                delete misses[id];
+                const series = lost[entry.fold];
+                if (series && series.days[entry.day]) delete series.days[entry.day];
+            });
+            const currentList = [...currentIds.values()];
+            expected.forEach((id) => {
+                if (currentIds.has(id)) return;
+                const last = lastSeen.get(id);
+                if (!last) return;
+                const renamed = currentList.some((entry) => entry.day === last.day && entry.place === last.place && SharedCore.sourceLedgerTitleOverlap(entry.fold, last.fold) >= renameOverlap);
+                if (renamed) { delete misses[id]; return; }
+                misses[id] = (misses[id] || 0) + 1;
+                if (misses[id] === 1) suspected += 1;
+                if (misses[id] >= confirmAfter) {
+                    const series = lost[last.fold] || (lost[last.fold] = { title: last.title || last.fold, bear: false, seen: 0, days: {} });
+                    if (!series.days[last.day]) series.days[last.day] = runId;
+                    if (last.bear) series.bear = true;
+                    series.seen = Math.max(series.seen, counts.get(id) || 0);
+                    if (!series.title && last.title) series.title = last.title;
+                }
+            });
+            // A first miss that is no longer expected (fell out of the window) is forgotten.
+            Object.keys(misses).forEach((id) => { if (!expected.has(id)) delete misses[id]; });
+            const previousUpcoming = history.length ? Object.keys(history[history.length - 1].upcoming).length : 0;
+            listingGone = previousUpcoming >= 3 && currentIds.size === 0 && (Number(current.extracted) || 0) > 0;
+            history.push({ run_id: runId, upcoming: upcomingKeys });
+            while (history.length > window) history.shift();
+        }
+        // Days that have passed are no longer "future events gone".
+        Object.keys(lost).forEach((series) => {
+            Object.keys(lost[series].days).forEach((day) => { if (day < todayKey) delete lost[series].days[day]; });
+            if (!Object.keys(lost[series].days).length) delete lost[series];
+        });
+        const list = Object.keys(lost).map((series) => {
+            const entry = lost[series];
+            const days = Object.keys(entry.days).sort();
+            const since = days.map((day) => entry.days[day]).sort()[0] || '';
+            return { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
+        }).sort((a, b) => (b.bear ? 1 : 0) - (a.bear ? 1 : 0) || b.days.length - a.days.length || a.since.localeCompare(b.since) || a.title.localeCompare(b.title));
+        return {
+            state: { history, misses, lost },
+            lost: list,
+            suspected,
+            listing_gone: listingGone,
+            lost_new: list.reduce((sum, entry) => sum + entry.new, 0)
+        };
+    }
+
     static buildSourceLedger(payload, options = {}) {
         const run = payload && typeof payload === 'object' ? payload : {};
         const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
@@ -1905,7 +2038,8 @@ class SharedCore {
                 byHost.set(host, {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
-                    proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set()
+                    proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
+                    roles: [], url: ''
                 });
             }
             return byHost.get(host);
@@ -1936,10 +2070,18 @@ class SharedCore {
                 homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
             }
             const primary = homeHosts[0];
+            const siteRole = String(config.siteRole || '').trim().toLowerCase();
             homeHosts.forEach((host) => {
                 allHomeHosts.add(host);
                 const row = hostOf(host);
-                if (!row.parsers.includes(name)) row.parsers.push(name);
+                if (!row.parsers.includes(name)) {
+                    row.parsers.push(name);
+                    row.roles.push(siteRole);
+                }
+                if (!row.url) {
+                    const own = configUrls.find((url) => SharedCore.hostOfUrl(url) === host);
+                    if (own) row.url = String(own);
+                }
             });
             const primaryRow = hostOf(primary);
             primaryRow.duration_ms += Number.isFinite(parser.durationMs) ? parser.durationMs : 0;
@@ -2018,6 +2160,12 @@ class SharedCore {
                 });
             }
             vanished.sort((a, b) => a.day.localeCompare(b.day) || a.key.localeCompare(b.key));
+            // Aggregators (siteRole "aggregator" on every parser feeding the
+            // host) are discovery only: their losses are recorded, never alerted.
+            const aggregator = row.roles.length > 0 && row.roles.every((role) => role === 'aggregator');
+            const loss = SharedCore.advanceSourceLoss(prev, {
+                runId, status, todayKey, extracted: row.extracted, upcomingKeys: row.upcomingKeys
+            });
             records.push({
                 v: 1,
                 run_id: runId,
@@ -2037,11 +2185,16 @@ class SharedCore {
                 proposals: row.proposals,
                 duration_ms: row.duration_ms,
                 status,
-                vanished
+                vanished,
+                aggregator,
+                url: row.url,
+                lost: loss.lost,
+                suspected: loss.suspected,
+                listing_gone: loss.listing_gone
             });
             hosts[row.host] = status === 'dead' && prev
-                ? prev
-                : { run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys };
+                ? Object.assign({}, prev, loss.state)
+                : Object.assign({ run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys }, loss.state);
         });
 
         // Hosts that did not run this time keep their last snapshot.
@@ -2051,7 +2204,7 @@ class SharedCore {
 
         return {
             records,
-            upcoming: { version: 1, run_id: runId, finished_at: finishedAt, hosts }
+            upcoming: { version: 2, run_id: runId, finished_at: finishedAt, hosts }
         };
     }
 

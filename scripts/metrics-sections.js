@@ -242,7 +242,18 @@ function buildQualityTrendData(records) {
 //              website; its events come from events.ticketleap.com). Not
 //              trouble: the site is read, the feed answers.
 //   ok
-const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+// 'lost' = expected future events gone (content); 'shrunk' = volume. They are
+// independent: a row wears the worse one as its verdict and the other as a
+// flag chip. 'vanished' is the one-run blip (seen last run, gone now) and
+// ranks below empty: it is a detail, not trouble.
+const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+// Slow-decline clause for 'shrunk': the latest SLOW_DECLINE_RUNS ok runs all
+// below SLOW_DECLINE_RATIO × the peak of the last SLOW_DECLINE_WINDOW ok runs
+// (precinctdtla.com 160 → 98 for three runs never crossed the ½-median line).
+const SLOW_DECLINE_RATIO = 0.7;
+const SLOW_DECLINE_RUNS = 3;
+const SLOW_DECLINE_WINDOW = 14;
+const SLOW_DECLINE_MIN_PEAK = 10;
 const SOURCE_UNTROUBLED_VERDICTS = ['ok', 'companion'];
 
 function parseSourceLedger(text) {
@@ -285,14 +296,33 @@ function assessSourceHealth(records, options = {}) {
         const vanished = Array.isArray(latest.vanished) ? latest.vanished : [];
         const ageMs = now.getTime() - new Date(latest.finished_at || 0).getTime();
         const ageDays = Number.isFinite(ageMs) ? ageMs / 86400000 : Infinity;
+        // Lost = open "expected future events gone" series on the latest line
+        // (lines written before the field existed simply have none).
+        const lost = (Array.isArray(latest.lost) ? latest.lost : []).filter((entry) => entry && Array.isArray(entry.days) && entry.days.length);
+        const lostDays = lost.reduce((sum, entry) => sum + entry.days.length, 0);
+        const lostBear = lost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + entry.days.length, 0);
+        const aggregator = latest.aggregator === true;
+        const listingGone = latest.listing_gone === true;
+        const suspected = Number(latest.suspected) || 0;
+        const hasLoss = lost.length > 0 || listingGone;
+        // Slow decline: the last few ok runs all well under the window's peak.
+        const okLines = lines.filter((line) => line.status === 'ok');
+        const recentOk = okLines.slice(-SLOW_DECLINE_RUNS);
+        const peakWindow = okLines.slice(0, Math.max(0, okLines.length - SLOW_DECLINE_RUNS)).slice(-SLOW_DECLINE_WINDOW);
+        const peak = peakWindow.reduce((max, line) => Math.max(max, Number(line.extracted) || 0), 0);
+        const slowDecline = latest.status === 'ok' && recentOk.length === SLOW_DECLINE_RUNS && peak >= SLOW_DECLINE_MIN_PEAK
+            && recentOk.every((line) => (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
+        const underHalf = (line) => baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2;
         let verdict = 'ok';
         let since = null;
         if (latest.status === 'dead') {
             verdict = 'dead';
         } else if (latestExtracted === 0 && baseline > 0) {
             verdict = 'stopped';
-        } else if (baseline !== null && baseline >= 4 && latestExtracted < baseline / 2) {
+        } else if (underHalf(latest) || slowDecline) {
             verdict = 'shrunk';
+        } else if (hasLoss && !aggregator) {
+            verdict = 'lost';
         } else if (latestExtracted === 0 && latest.status === 'empty') {
             verdict = 'empty';
         } else if (vanished.length > 0) {
@@ -304,34 +334,56 @@ function assessSourceHealth(records, options = {}) {
             // Walk back to the first consecutive troubled line.
             for (let index = lines.length - 1; index >= 0; index -= 1) {
                 const line = lines[index];
-                const troubled = line.status !== 'ok' || (baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2);
+                const troubled = line.status !== 'ok' || underHalf(line) || (slowDecline && (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
                 if (!troubled) break;
                 since = line.run_id || line.finished_at || since;
             }
+        } else if (verdict === 'lost') {
+            since = lost.map((entry) => entry.since).filter(Boolean).sort()[0] || latest.run_id || null;
         }
+        // The other axis as a flag chip: a shrunk/dead host that also lost
+        // expected events, or an aggregator whose losses are recorded only.
+        const flags = [];
+        if (hasLoss && verdict !== 'lost') flags.push('lost');
         const parsers = Array.isArray(latest.parsers) ? latest.parsers : [];
         rows.push({
             host,
             parsers,
             verdict,
+            flags,
             since,
             baseline,
             latest,
             vanished,
+            lost,
+            lostDays,
+            lostBear,
+            suspected,
+            listingGone,
+            aggregator,
+            url: latest.url || '',
             ageDays: Number.isFinite(ageDays) ? Math.round(ageDays * 10) / 10 : null,
-            series: lines.map((line) => ({
-                run_id: line.run_id,
-                finished_at: line.finished_at,
-                extracted: Number(line.extracted) || 0,
-                events: Number(line.events) || 0,
-                bear: Number(line.bear) || 0,
-                upcoming: Number(line.upcoming) || 0,
-                proposals: line.proposals || { new: 0, merge: 0 },
-                status: line.status || 'ok',
-                vanished: Array.isArray(line.vanished) ? line.vanished.length : 0,
-                page_errors: Number(line.page_errors) || 0,
-                duration_ms: Number(line.duration_ms) || 0
-            }))
+            series: lines.map((line) => {
+                const lineLost = (Array.isArray(line.lost) ? line.lost : []).filter((entry) => entry && Array.isArray(entry.days));
+                return {
+                    run_id: line.run_id,
+                    finished_at: line.finished_at,
+                    extracted: Number(line.extracted) || 0,
+                    events: Number(line.events) || 0,
+                    bear: Number(line.bear) || 0,
+                    upcoming: Number(line.upcoming) || 0,
+                    proposals: line.proposals || { new: 0, merge: 0 },
+                    status: line.status || 'ok',
+                    vanished: Array.isArray(line.vanished) ? line.vanished.length : 0,
+                    lost: lineLost.reduce((sum, entry) => sum + entry.days.length, 0),
+                    lostNewBear: lineLost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + (Number(entry.new) || 0), 0),
+                    lostNewOther: lineLost.filter((entry) => entry.bear !== true).reduce((sum, entry) => sum + (Number(entry.new) || 0), 0),
+                    suspected: Number(line.suspected) || 0,
+                    listingGone: line.listing_gone === true,
+                    page_errors: Number(line.page_errors) || 0,
+                    duration_ms: Number(line.duration_ms) || 0
+                };
+            })
         });
     });
     // A host that yielded nothing while a sibling host of the same parser
@@ -365,7 +417,23 @@ function assessSourceHealth(records, options = {}) {
     const counts = {};
     SOURCE_VERDICT_ORDER.forEach((verdict) => { counts[verdict] = 0; });
     rows.forEach((row) => { counts[row.verdict] += 1; });
-    return { rows, counts, troubled: rows.filter((row) => !SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict)).length, hosts: rows.length };
+    // Open losses in total: venue/promoter sites (the alerting ones) and
+    // aggregators (recorded, never alerted) kept apart.
+    const tally = (list) => ({
+        hosts: list.filter((row) => row.lostDays > 0 || row.listingGone).length,
+        series: list.reduce((sum, row) => sum + row.lost.length, 0),
+        days: list.reduce((sum, row) => sum + row.lostDays, 0),
+        bear: list.reduce((sum, row) => sum + row.lostBear, 0),
+        listingGone: list.filter((row) => row.listingGone).length
+    });
+    return {
+        rows,
+        counts,
+        troubled: rows.filter((row) => !SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict)).length,
+        hosts: rows.length,
+        lost: tally(rows.filter((row) => !row.aggregator)),
+        lostAggregator: tally(rows.filter((row) => row.aggregator))
+    };
 }
 
 // ============================================================================
@@ -381,6 +449,7 @@ const SOURCE_VERDICT_LABELS = {
     dead: 'Dead',
     stopped: 'Stopped',
     shrunk: 'Shrunk',
+    lost: 'Lost',
     empty: 'Empty',
     vanished: 'Vanished',
     quiet: 'Quiet',
@@ -390,7 +459,7 @@ const SOURCE_VERDICT_LABELS = {
 
 const SOURCE_LEDGER_EMPTY_MESSAGE = 'No source ledger yet — every run writes it; seed history with npm run backfill-source-ledger on the Mac.';
 
-const SOURCE_SORT_KEYS = ['verdict', 'host', 'extracted', 'bear', 'upcoming', 'age'];
+const SOURCE_SORT_KEYS = ['verdict', 'host', 'extracted', 'bear', 'upcoming', 'lost', 'age'];
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -479,6 +548,7 @@ function sortSourceRows(rows, sortState) {
         else if (key === 'extracted') diff = latestNumber(a, 'extracted') - latestNumber(b, 'extracted');
         else if (key === 'bear') diff = latestNumber(a, 'bear') - latestNumber(b, 'bear');
         else if (key === 'upcoming') diff = latestNumber(a, 'upcoming') - latestNumber(b, 'upcoming');
+        else if (key === 'lost') diff = (Number(a.lostDays) || 0) - (Number(b.lostDays) || 0);
         else if (key === 'age') diff = (Number(a.ageDays) || 0) - (Number(b.ageDays) || 0);
         return diff !== 0 ? diff * direction : baseOrder(a, b);
     });
@@ -516,10 +586,15 @@ function buildSourceCountersHtml(health) {
         .filter((verdict) => (counts[verdict] || 0) > 0)
         .map((verdict) => chip(sourceVerdictLabel(verdict), counts[verdict], `verdict-${verdict}`))
         .join('');
+    const lost = health && health.lost ? health.lost : { days: 0, bear: 0 };
+    const lostChip = lost.days > 0
+        ? chip('Expected events gone', `${lost.days}${lost.bear ? ` (${lost.bear} bear)` : ''}`, 'verdict-lost')
+        : '';
     return `
         <div class="source-counters">
           ${chip('Hosts', hosts)}
           ${chip('Troubled', troubled, troubled > 0 ? 'danger' : '')}
+          ${lostChip}
           ${verdictChips}
         </div>`;
 }
@@ -537,6 +612,19 @@ function buildSourceSortHeader(label, key, sortState, defaultDirection, extraCla
                     <span class="sort-arrow">${arrow}</span>
                   </button>
                 </th>`;
+}
+
+// "3 gone · Bearded Pig Disco ×3" / "listing gone" for a row with losses.
+function formatLostNote(row) {
+    if (!row) return '';
+    const parts = [];
+    if (row.listingGone) parts.push('listing gone');
+    if (row.lostDays > 0) {
+        const first = Array.isArray(row.lost) && row.lost[0] ? row.lost[0] : null;
+        const headline = `${row.lostDays} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}`;
+        parts.push(first ? `${headline} · ${String(first.title || '').slice(0, 40)}${first.days.length > 1 ? ` ×${first.days.length}` : ''}` : headline);
+    }
+    return parts.join(' · ');
 }
 
 // The Sources table: one row per host (trouble first unless sortState says
@@ -564,7 +652,13 @@ function buildSourcesTableHtml(health, options = {}) {
         const companionLabel = row.verdict === 'companion' && Array.isArray(row.companionOf) && row.companionOf.length
             ? `fed by ${row.companionOf.join(', ')}`
             : '';
-        const verdictNote = sinceLabel || vanishedLabel || companionLabel;
+        const lostLabel = formatLostNote(row);
+        const verdictNote = row.verdict === 'lost'
+            ? [lostLabel, sinceLabel].filter(Boolean).join(' · ')
+            : [sinceLabel || vanishedLabel || companionLabel, lostLabel].filter(Boolean).join(' · ');
+        const flagChips = (Array.isArray(row.flags) ? row.flags : [])
+            .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : sourceVerdictLabel(flag) }))
+            .join('');
         const series = Array.isArray(row.series) ? row.series.map((line) => line.extracted) : [];
         const rowAttrs = [
             `data-source-host="${escapeHtml(row.host)}"`,
@@ -573,6 +667,7 @@ function buildSourcesTableHtml(health, options = {}) {
             `data-source-extracted="${extracted}"`,
             `data-source-bear="${bear}"`,
             `data-source-upcoming="${upcoming}"`,
+            `data-source-lost="${Number(row.lostDays) || 0}"`,
             `data-source-age="${ageDays === null ? '' : ageDays}"`
         ].join(' ');
         return `
@@ -585,10 +680,11 @@ function buildSourcesTableHtml(health, options = {}) {
               ${parserLabel ? `<div class="cell-subtitle">${escapeHtml(parserLabel)}</div>` : ''}
             </td>
             <td class="verdict-cell">
-              ${buildVerdictChipHtml(row.verdict)}
+              ${buildVerdictChipHtml(row.verdict)}${flagChips}
               ${verdictNote ? `<div class="cell-subtitle">${escapeHtml(verdictNote)}</div>` : ''}
             </td>
             <td class="num trio-cell"><div class="cell-title">${extracted} · ${bear} · ${upcoming}</div></td>
+            <td class="num lost-cell">${row.lostDays > 0 ? `<div class="cell-title${row.aggregator ? ' muted' : ' lost-count'}">${Number(row.lostDays) || 0}${row.lostBear ? ' 🐻' : ''}</div>` : '<div class="cell-subtitle">—</div>'}</td>
             <td class="trend-cell">${buildSparklineSvg(series, { title: `${series.length} runs` })}</td>
             <td class="age-cell"><div class="cell-subtitle">${escapeHtml(formatSourceAge(ageDays))}</div></td>
           </tr>`;
@@ -601,6 +697,7 @@ function buildSourcesTableHtml(health, options = {}) {
                 ${buildSourceSortHeader('Site', 'host', options.sortState, 'asc')}
                 ${buildSourceSortHeader('Verdict', 'verdict', options.sortState, 'asc', 'verdict-cell')}
                 ${buildSourceSortHeader('Extr · Bear · Up', 'extracted', options.sortState, 'desc', 'num trio-cell')}
+                ${buildSourceSortHeader('Lost', 'lost', options.sortState, 'desc', 'num lost-cell')}
                 <th class="trend-cell">Trend</th>
                 ${buildSourceSortHeader('Seen', 'age', options.sortState, 'desc', 'age-cell')}
               </tr>
@@ -626,6 +723,7 @@ function buildHostSummaryHtml(row, options = {}) {
         latest.trigger ? String(latest.trigger) : null,
         row.baseline !== null && row.baseline !== undefined ? `baseline ${row.baseline}` : 'no baseline yet',
         row.since ? `trouble since ${formatSourceRun(row.since)}` : null,
+        row.aggregator ? 'aggregator (discovery only — losses recorded, never alerted)' : null,
         row.verdict === 'companion' && Array.isArray(row.companionOf) && row.companionOf.length ? `events come from ${row.companionOf.join(', ')}` : null,
         `${Array.isArray(row.series) ? row.series.length : 0} runs on record`
     ].filter(Boolean);
@@ -649,6 +747,7 @@ function buildHostSummaryHtml(row, options = {}) {
           ${metric('Extracted', Number(latest.extracted) || 0)}
           ${metric('Bear', Number(latest.bear) || 0, `${Number(latest.events) || 0} kept`)}
           ${metric('Upcoming', Number(latest.upcoming) || 0)}
+          ${metric('Lost', Number(row.lostDays) || 0, `${Array.isArray(row.lost) ? row.lost.length : 0} series${row.suspected ? ` • ${row.suspected} suspected` : ''}`)}
           ${metric('Proposals', `${Number(proposals.new) || 0} new / ${Number(proposals.merge) || 0} merge`)}
           ${metric('Pages', `${Number(latest.pages) || 0}`, `${Number(latest.page_errors) || 0} errors • ${Number(latest.outbound_pages) || 0} outbound`)}
           ${metric('Duration', formatSourceDuration(Number(latest.duration_ms) || 0))}
@@ -684,6 +783,7 @@ function buildHostSeriesTableHtml(row, options = {}) {
             + `<td class="num tight">${Number(proposals.merge) || 0}</td>`
             + `<td class="status-text source-status-${escapeHtml(status)}">${escapeHtml(status)}</td>`
             + `<td class="num tight">${Number(line.vanished) || 0}</td>`
+            + `<td class="num tight">${Number(line.lost) || 0}${line.listingGone ? '↓' : ''}</td>`
             + `<td class="num tight">${Number(line.page_errors) || 0}</td>`
             + `<td class="num">${escapeHtml(formatSourceDuration(Number(line.duration_ms) || 0))}</td></tr>`;
     }).join('\n');
@@ -704,6 +804,7 @@ function buildHostSeriesTableHtml(row, options = {}) {
                 <th class="num tight">Mrg</th>
                 <th>Status</th>
                 <th class="num tight">Van</th>
+                <th class="num tight">Lost</th>
                 <th class="num tight">Err</th>
                 <th class="num">Dur</th>
               </tr>
@@ -760,12 +861,59 @@ function buildVanishedListHtml(row) {
 
 // Widget-ready digest: headline, the top troubled hosts, and the newest run
 // stamp (the display formats it relative to now).
+// Open "expected future events gone" series on the latest line: title ×n,
+// the days, bear, since when, how many runs it had been listed. Suspected
+// (first-miss) and listing-gone notes go underneath — present, never guess.
+function buildLostListHtml(row) {
+    const lost = row && Array.isArray(row.lost) ? row.lost : [];
+    const notes = [];
+    if (row && row.listingGone) notes.push('The whole upcoming list went to zero in the latest run while the site still yielded rows — a page-shape miss or a cleared calendar; the next run tells which.');
+    if (row && row.suspected > 0) notes.push(`${row.suspected} expected event${row.suspected === 1 ? '' : 's'} missing for the first time — waiting for the next ok run before calling ${row.suspected === 1 ? 'it' : 'them'} lost.`);
+    if (row && row.aggregator && lost.length) notes.push('Aggregator: losses are recorded for the record and never raise the verdict.');
+    const noteHtml = notes.length ? `<div class="muted lost-notes">${notes.map((note) => escapeHtml(note)).join('<br>')}</div>` : '';
+    if (!lost.length) {
+        return `<div class="muted">No expected future events are missing.</div>${noteHtml}`;
+    }
+    const rows = lost.map((item) => {
+        const days = Array.isArray(item.days) ? item.days : [];
+        const shownDays = days.slice(0, 4).join(', ') + (days.length > 4 ? ` +${days.length - 4}` : '');
+        return `
+          <tr>
+            <td><div class="cell-title">${escapeHtml(item.title || 'Untitled')}${days.length > 1 ? ` <span class="cell-subtitle">×${days.length}</span>` : ''}</div></td>
+            <td><div class="cell-subtitle">${escapeHtml(shownDays || '—')}</div></td>
+            <td class="status-cell">${item.bear ? '🐻' : ''}</td>
+            <td><div class="cell-subtitle">${escapeHtml(item.since ? formatSourceRun(item.since) : '—')}</div></td>
+            <td class="num tight"><div class="cell-subtitle">${Number(item.seen) || 0}</div></td>
+          </tr>`;
+    }).join('');
+    return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table lost-table">
+            <thead>
+              <tr>
+                <th>Series</th>
+                <th>Days</th>
+                <th class="status-cell">Bear</th>
+                <th>Lost since</th>
+                <th class="num tight">Runs seen</th>
+              </tr>
+            </thead>
+            <tbody>${rows}
+            </tbody>
+          </table>
+        </div>${noteHtml}`;
+}
+
 function buildSourceWidgetSummary(health, options = {}) {
     const limit = Number.isFinite(options.limit) && options.limit > 0 ? options.limit : 3;
     const rows = health && Array.isArray(health.rows) ? health.rows : [];
     const hosts = rows.length;
-    const troubledRows = rows.filter((row) => row.verdict !== 'ok');
+    const troubledRows = rows.filter((row) => !SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict));
     const troubled = troubledRows.length;
+    const sparkRuns = Number.isFinite(options.sparkRuns) && options.sparkRuns > 0 ? options.sparkRuns : 8;
+    const lost = health && health.lost ? health.lost : { hosts: 0, series: 0, days: 0, bear: 0, listingGone: 0 };
+    const worstLost = rows.filter((row) => !row.aggregator && row.lostDays > 0)
+        .sort((a, b) => b.lostBear - a.lostBear || b.lostDays - a.lostDays || a.host.localeCompare(b.host))[0] || null;
     const newest = rows.reduce((latest, row) => {
         const stamp = row.latest && row.latest.finished_at ? String(row.latest.finished_at) : '';
         return stamp > latest ? stamp : latest;
@@ -775,25 +923,56 @@ function buildSourceWidgetSummary(health, options = {}) {
     if (hosts === 0) headline = 'No sources yet';
     else if (troubled > 0) headline = `${troubled} of ${hosts} ${siteWord} need${troubled === 1 ? 's' : ''} a look`;
     else headline = `All ${hosts} ${siteWord} ok`;
-    const items = troubledRows.slice(0, limit).map((row) => ({
-        host: row.host,
-        parsers: Array.isArray(row.parsers) ? row.parsers : [],
-        verdict: row.verdict,
-        label: sourceVerdictLabel(row.verdict),
-        since: row.since || null,
-        sinceLabel: row.since ? formatSourceRun(row.since) : null,
-        extracted: Number(row.latest && row.latest.extracted) || 0,
-        bear: Number(row.latest && row.latest.bear) || 0,
-        upcoming: Number(row.latest && row.latest.upcoming) || 0,
-        vanished: Array.isArray(row.vanished) ? row.vanished.length : 0
-    }));
+    const describe = (row) => {
+        const first = Array.isArray(row.lost) && row.lost[0] ? row.lost[0] : null;
+        const lostDays = Number(row.lostDays) || 0;
+        let detail;
+        if (row.verdict === 'lost' || (lostDays > 0 && !row.since)) detail = `${lostDays} gone${row.lostBear ? ' 🐻' : ''}`;
+        else if (row.listingGone && row.verdict === 'lost') detail = 'listing gone';
+        else if (row.since) detail = `${sourceVerdictLabel(row.verdict).toLowerCase()} · ${formatSourceRun(row.since)}`;
+        else if (row.verdict === 'companion') detail = 'companion';
+        else detail = sourceVerdictLabel(row.verdict).toLowerCase();
+        return {
+            host: row.host,
+            parsers: Array.isArray(row.parsers) ? row.parsers : [],
+            verdict: row.verdict,
+            flags: Array.isArray(row.flags) ? row.flags : [],
+            label: sourceVerdictLabel(row.verdict),
+            since: row.since || null,
+            sinceLabel: row.since ? formatSourceRun(row.since) : null,
+            extracted: Number(row.latest && row.latest.extracted) || 0,
+            bear: Number(row.latest && row.latest.bear) || 0,
+            upcoming: Number(row.latest && row.latest.upcoming) || 0,
+            vanished: Array.isArray(row.vanished) ? row.vanished.length : 0,
+            lost: lostDays,
+            lostBear: Number(row.lostBear) || 0,
+            lostSeries: Array.isArray(row.lost) ? row.lost.length : 0,
+            lostTitle: first ? `${String(first.title || '').slice(0, 60)}${first.days.length > 1 ? ` ×${first.days.length}` : ''}` : null,
+            lostDay: first && first.days.length ? first.days[0] : null,
+            lostSince: first && first.since ? first.since : null,
+            listingGone: row.listingGone === true,
+            aggregator: row.aggregator === true,
+            url: row.url || '',
+            detail,
+            spark: (Array.isArray(row.series) ? row.series : []).slice(-sparkRuns).map((line) => Number(line.extracted) || 0)
+        };
+    };
+    const items = troubledRows.slice(0, limit).map(describe);
+    // Every venue/promoter site with open losses, biggest bear loss first —
+    // the lost-series list on the large widget and the "worst" line.
+    const lostItems = rows.filter((row) => !row.aggregator && row.lostDays > 0)
+        .sort((a, b) => b.lostBear - a.lostBear || b.lostDays - a.lostDays || a.host.localeCompare(b.host))
+        .map(describe);
     return {
         hosts,
         troubled,
         headline,
         items,
         more: Math.max(0, troubled - items.length),
-        newestFinishedAt: newest || null
+        newestFinishedAt: newest || null,
+        lost: { hosts: lost.hosts, series: lost.series, days: lost.days, bear: lost.bear, listingGone: lost.listingGone },
+        lostItems,
+        worst: worstLost ? describe(worstLost) : null
     };
 }
 
@@ -1226,7 +1405,55 @@ function createChartRenderer() {
         };
     }
 
-    return { WIDTH, PALETTE, THEME, resolveColor, withAlpha, shortDate, longDate, formatValue, sliceChartSpec, shadeIndex, buildChartSvg, buildChartJsConfig, describeIndex, buildLegendHtml, indexAtX, xForIndex };
+    // Compact sparkline for a small-multiples card: area + line of the first
+    // series, dashed baseline, faint tint on runs the host did not answer
+    // (spec.tints = indices), red floor dots on runs that confirmed losses
+    // (spec.marks = [{ index, count }]), newest point emphasised. No axes.
+    function buildSparkSvg(spec, options = {}) {
+        const mode = options.mode === 'dark' ? 'dark' : 'light';
+        const theme = themeFor(mode);
+        const series = seriesOf(spec);
+        const count = countOf(spec);
+        if (!spec || count === 0 || series.length === 0) return '';
+        const width = Number.isFinite(options.width) ? options.width : 250;
+        const height = Number.isFinite(spec.height) ? spec.height : 48;
+        const pad = 5;
+        const floor = height - pad;
+        const values = (series[0].values || []).map((value) => Math.max(0, num(value)));
+        const baselineValue = spec.baseline && Number.isFinite(Number(spec.baseline.value)) ? Number(spec.baseline.value) : null;
+        const top = Math.max(1, ...values, baselineValue || 0);
+        const xAt = (index) => (count <= 1 ? width / 2 : pad + ((width - pad * 2) * index) / (count - 1));
+        const yAt = (value) => floor - (value / top) * (height - pad * 2 - 4);
+        const color = resolveColor(series[0].color, mode);
+        const markColor = options.markColor || '#d03b3b';
+        const id = String(spec.id || 'spark').replace(/[^a-zA-Z0-9_-]/g, '-');
+        const parts = [];
+        (Array.isArray(spec.tints) ? spec.tints : []).forEach((index) => {
+            if (!(index >= 0 && index < count)) return;
+            const band = count > 1 ? (width - pad * 2) / (count - 1) : width;
+            parts.push(`<rect x="${round(xAt(index) - band / 2)}" y="${pad}" width="${round(band)}" height="${round(height - pad * 2)}" fill="${esc(markColor)}" fill-opacity="0.12"/>`);
+        });
+        const points = values.map((value, index) => [round(xAt(index)), round(yAt(value))]);
+        const line = count > 1 ? smoothPath(points) : '';
+        if (line) {
+            parts.push(`<defs><linearGradient id="s-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${esc(color)}" stop-opacity="0.3"/><stop offset="1" stop-color="${esc(color)}" stop-opacity="0.03"/></linearGradient></defs>`);
+            parts.push(`<path class="spark-area" d="${line} L${points[count - 1][0]},${floor} L${points[0][0]},${floor} Z" fill="url(#s-${id})"/>`);
+            parts.push(`<path class="spark-line" d="${line}" fill="none" stroke="${esc(color)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
+        }
+        if (baselineValue !== null) {
+            const y = round(yAt(baselineValue));
+            parts.push(`<line class="spark-baseline" x1="${pad}" x2="${width - pad}" y1="${y}" y2="${y}" stroke="${theme.axis}" stroke-width="1" stroke-dasharray="3 3"/>`);
+        }
+        (Array.isArray(spec.marks) ? spec.marks : []).forEach((mark) => {
+            const index = Number(mark && mark.index);
+            if (!(index >= 0 && index < count)) return;
+            parts.push(`<circle class="spark-mark" cx="${round(xAt(index))}" cy="${floor}" r="3" fill="${esc(markColor)}"><title>${esc(mark.label || '')}</title></circle>`);
+        });
+        parts.push(`<circle class="spark-last" cx="${points[count - 1][0]}" cy="${points[count - 1][1]}" r="3.5" fill="${esc(color)}" stroke="${theme.surface}" stroke-width="1.5"/>`);
+        return `<svg class="spark-svg" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${esc(spec.title || 'trend')}" preserveAspectRatio="none">${parts.join('')}</svg>`;
+    }
+
+    return { WIDTH, PALETTE, THEME, resolveColor, withAlpha, shortDate, longDate, formatValue, sliceChartSpec, shadeIndex, buildChartSvg, buildSparkSvg, buildChartJsConfig, describeIndex, buildLegendHtml, indexAtX, xForIndex };
 }
 
 const chartRenderer = createChartRenderer();
@@ -1288,6 +1515,198 @@ function buildSourcesOverviewChartSpec(health, options = {}) {
         labels: runs.map((run) => run.run_id),
         dates: runs.map((run) => run.finished_at),
         series,
+        baseline: null,
+        shade: null
+    };
+}
+
+// Rank for the movers grid: dead/stopped → shrunk → lost → empty → the
+// rest; aggregators with recorded losses last. Within a band: bear losses,
+// then lost days, then |Δ vs baseline|.
+const MOVER_BAND = { dead: 0, stopped: 0, shrunk: 1, lost: 2, empty: 3, vanished: 4, quiet: 4 };
+
+function moverDelta(row) {
+    const baseline = Number(row && row.baseline);
+    const extracted = Number(row && row.latest && row.latest.extracted) || 0;
+    if (!Number.isFinite(baseline) || baseline <= 0) return null;
+    return Math.round(((extracted - baseline) / baseline) * 100);
+}
+
+function isMover(row) {
+    if (!row) return false;
+    if (!SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict)) return true;
+    return Array.isArray(row.flags) && row.flags.includes('lost');
+}
+
+// Sources overview as ranked small multiples: one card per site that is
+// not plainly ok, each with its own sparkline over the last `runLimit`
+// runs; every steady site named in a list with its count. Nothing folds.
+function buildSourcesMoversSpec(health, options = {}) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const allRuns = collectSourceRuns(rows);
+    if (!allRuns.length || !rows.length) return null;
+    const runLimit = Number.isFinite(options.runLimit) && options.runLimit > 0 ? options.runLimit : 14;
+    const maxCards = Number.isFinite(options.maxCards) && options.maxCards > 0 ? options.maxCards : 12;
+    const runs = allRuns.slice(-runLimit);
+    const band = (row) => {
+        const base = MOVER_BAND[row.verdict];
+        if (Number.isFinite(base)) return base;
+        return row.aggregator ? 6 : 5;
+    };
+    const rank = (a, b) => band(a) - band(b)
+        || (b.lostBear || 0) - (a.lostBear || 0)
+        || (b.lostDays || 0) - (a.lostDays || 0)
+        || Math.abs(moverDelta(b) || 0) - Math.abs(moverDelta(a) || 0)
+        || a.host.localeCompare(b.host);
+    const movers = rows.filter(isMover).sort(rank);
+    const cards = movers.slice(0, maxCards).map((row) => {
+        const byRun = new Map(row.series.map((line) => [line.run_id, line]));
+        const lines = runs.map((run) => byRun.get(run.run_id) || null);
+        const marks = [];
+        const tints = [];
+        lines.forEach((line, index) => {
+            if (!line) return;
+            if (line.status !== 'ok') tints.push(index);
+            const confirmed = (line.lostNewBear || 0) + (line.lostNewOther || 0);
+            if (confirmed > 0 || line.listingGone) marks.push({ index, count: confirmed, label: line.listingGone ? 'listing gone' : `${confirmed} expected event${confirmed === 1 ? '' : 's'} confirmed gone` });
+        });
+        const first = Array.isArray(row.lost) && row.lost[0] ? row.lost[0] : null;
+        const safeHost = String(row.host || 'host').replace(/[^a-zA-Z0-9]/g, '-');
+        let note = '';
+        if (row.verdict === 'lost' || (row.flags || []).includes('lost')) {
+            const lostText = row.lostDays > 0 ? `${row.lostDays} expected future event${row.lostDays === 1 ? '' : 's'} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}${row.since && row.verdict === 'lost' ? ` · since ${formatSourceRun(row.since)}` : ''}` : '';
+            const listingText = row.listingGone ? 'upcoming list went to zero in the latest run' : '';
+            const verdictText = row.verdict !== 'lost' && !SOURCE_UNTROUBLED_VERDICTS.includes(row.verdict) ? `${sourceVerdictLabel(row.verdict).toLowerCase()}${row.since ? ` since ${formatSourceRun(row.since)}` : ''}` : '';
+            note = [verdictText, lostText, listingText].filter(Boolean).join(' · ');
+        } else if (row.since) {
+            note = `${sourceVerdictLabel(row.verdict).toLowerCase()} since ${formatSourceRun(row.since)}`;
+        } else if (row.verdict === 'empty') {
+            note = 'nothing extracted';
+        } else if (row.verdict === 'vanished') {
+            note = `${row.vanished.length} upcoming event${row.vanished.length === 1 ? '' : 's'} gone since the previous run (one-run blip)`;
+        } else if (row.verdict === 'quiet') {
+            note = `no run for ${formatSourceAge(row.ageDays)}`;
+        }
+        return {
+            host: row.host,
+            verdict: row.verdict,
+            flags: Array.isArray(row.flags) ? row.flags : [],
+            aggregator: row.aggregator === true,
+            extracted: Number(row.latest && row.latest.extracted) || 0,
+            baseline: Number.isFinite(Number(row.baseline)) && row.baseline !== null ? Number(row.baseline) : null,
+            delta: moverDelta(row),
+            since: row.since || null,
+            note,
+            lostDays: row.lostDays || 0,
+            lostBear: row.lostBear || 0,
+            firstLost: first ? { title: first.title, day: first.days[0] || '', count: first.days.length, bear: first.bear === true } : null,
+            spec: {
+                id: `mover-${safeHost}`,
+                kind: 'spark',
+                title: `${row.host} extracted per run`,
+                height: 48,
+                labels: runs.map((run) => run.run_id),
+                dates: runs.map((run) => run.finished_at),
+                series: [{ key: 'extracted', label: 'Extracted', color: row.aggregator ? { hex: NEUTRAL_SERIES_HEX } : { slot: 0 }, values: lines.map((line) => (line ? line.extracted : 0)), role: 'area' }],
+                baseline: Number.isFinite(Number(row.baseline)) && row.baseline !== null ? { value: Number(row.baseline), label: 'baseline' } : null,
+                marks,
+                tints
+            }
+        };
+    });
+    const steady = rows.filter((row) => !isMover(row)).map((row) => ({
+        host: row.host,
+        verdict: row.verdict,
+        extracted: Number(row.latest && row.latest.extracted) || 0,
+        delta: moverDelta(row)
+    }));
+    return {
+        id: 'sources-movers',
+        kind: 'multiples',
+        title: 'Sites to look at',
+        labels: runs.map((run) => run.run_id),
+        dates: runs.map((run) => run.finished_at),
+        cards,
+        more: Math.max(0, movers.length - cards.length),
+        steady
+    };
+}
+
+// HTML for the movers spec: a card grid (host link, verdict + flag chips,
+// latest count with Δ vs baseline, the sparkline, one line of why, the
+// first lost series) and the steady sites as chips underneath.
+function buildSourcesMoversHtml(spec, options = {}) {
+    if (!spec || !Array.isArray(spec.cards)) return '';
+    const mode = options.mode === 'dark' ? 'dark' : 'light';
+    const hostUrl = typeof options.hostUrl === 'function' ? options.hostUrl : () => '#';
+    const faviconUrl = typeof options.faviconUrl === 'function' ? options.faviconUrl : () => null;
+    const deltaText = (delta) => (delta === null || delta === undefined ? '' : `${delta > 0 ? '+' : ''}${delta}%`);
+    const cards = spec.cards.map((card) => {
+        const chips = [buildVerdictChipHtml(card.verdict)]
+            .concat((card.flags || []).map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && card.aggregator ? 'Lost · aggregator' : sourceVerdictLabel(flag) })))
+            .join('');
+        const first = card.firstLost
+            ? `<div class="mover-lost">↳ ${escapeHtml(String(card.firstLost.title || '').slice(0, 44))} · ${escapeHtml(String(card.firstLost.day || '').slice(5))}${card.firstLost.count > 1 ? ` ×${card.firstLost.count}` : ''}${card.firstLost.bear ? ' 🐻' : ''}</div>`
+            : '';
+        return `
+          <a class="mover-card verdict-${escapeHtml(card.verdict)}" href="${escapeHtml(hostUrl({ host: card.host }))}" data-nav-view="host" data-nav-key="${escapeHtml(card.host)}">
+            <div class="mover-head">
+              ${buildFaviconHtml(faviconUrl({ host: card.host }))}
+              <span class="mover-host">${escapeHtml(card.host)}</span>
+              <span class="mover-num">${card.extracted}<small>${escapeHtml(deltaText(card.delta))}</small></span>
+            </div>
+            <div class="mover-chips">${chips}</div>
+            <div class="mover-spark">${chartRenderer.buildSparkSvg(card.spec, { mode })}</div>
+            ${card.note ? `<div class="mover-note">${escapeHtml(card.note)}</div>` : ''}
+            ${first}
+          </a>`;
+    }).join('');
+    const steady = (spec.steady || []).map((item) => `<a class="steady-chip verdict-${escapeHtml(item.verdict)}" href="${escapeHtml(hostUrl({ host: item.host }))}" data-nav-view="host" data-nav-key="${escapeHtml(item.host)}"><span class="steady-dot"></span>${escapeHtml(item.host)} <small>${item.extracted}${item.delta ? ` ${escapeHtml(deltaText(item.delta))}` : ''}</small></a>`).join('');
+    const more = spec.more > 0 ? `<div class="muted mover-more">+${spec.more} more site${spec.more === 1 ? '' : 's'} to look at — see the table below</div>` : '';
+    const steadyHead = spec.steady && spec.steady.length
+        ? `<div class="muted steady-head">${spec.steady.length} steady site${spec.steady.length === 1 ? '' : 's'} (tap any to open it)</div><div class="steady-list">${steady}</div>`
+        : '';
+    return `<div class="mover-grid">${cards || '<div class="muted">Every site is steady — nothing to look at.</div>'}</div>${more}${steadyHead}`;
+}
+
+// Expected future events confirmed gone, per run: bear and other losses on
+// venue/promoter sites as stacked bars, aggregator losses in neutral grey
+// (recorded, never alerted), hosts whose listing went to zero as dots.
+function buildLostPerRunChartSpec(health, options = {}) {
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    const runs = collectSourceRuns(rows);
+    if (!runs.length) return null;
+    const verdictColors = options.verdictColors || {};
+    const index = new Map(runs.map((run, position) => [run.run_id, position]));
+    const bear = runs.map(() => 0);
+    const other = runs.map(() => 0);
+    const aggregator = runs.map(() => 0);
+    const listing = runs.map(() => 0);
+    rows.forEach((row) => row.series.forEach((line) => {
+        const position = index.get(line.run_id);
+        if (position === undefined) return;
+        const confirmed = (Number(line.lostNewBear) || 0) + (Number(line.lostNewOther) || 0);
+        if (row.aggregator) aggregator[position] += confirmed;
+        else {
+            bear[position] += Number(line.lostNewBear) || 0;
+            other[position] += Number(line.lostNewOther) || 0;
+        }
+        if (line.listingGone && !row.aggregator) listing[position] += 1;
+    }));
+    return {
+        id: 'lost-per-run',
+        kind: 'bars',
+        title: 'Expected future events gone, per run',
+        unit: '',
+        height: 150,
+        labels: runs.map((run) => run.run_id),
+        dates: runs.map((run) => run.finished_at),
+        series: [
+            { key: 'bear', label: 'Bear (venue sites)', color: { hex: verdictColors.lost || '#d03b3b' }, values: bear, role: 'bar' },
+            { key: 'other', label: 'Other (venue sites)', color: { hex: '#ec835a' }, values: other, role: 'bar' },
+            { key: 'aggregator', label: 'Aggregators', color: { hex: NEUTRAL_SERIES_HEX }, values: aggregator, role: 'bar' },
+            { key: 'listing', label: 'Listing gone', color: { hex: verdictColors.stopped || '#ff9f43' }, values: listing, role: 'dots' }
+        ],
         baseline: null,
         shade: null
     };
@@ -1522,11 +1941,16 @@ const MetricsSections = {
     buildHostSeriesTableHtml,
     buildHostErrorsHtml,
     buildVanishedListHtml,
+    buildLostListHtml,
+    formatLostNote,
     buildSourceWidgetSummary,
     createChartRenderer,
     chartRenderer,
     CHART_RANGES,
     buildSourcesOverviewChartSpec,
+    buildSourcesMoversSpec,
+    buildSourcesMoversHtml,
+    buildLostPerRunChartSpec,
     buildSitesAnsweringChartSpec,
     buildHostSeriesChartSpec,
     buildHostPagesChartSpec,
@@ -1569,11 +1993,16 @@ if (typeof module !== 'undefined' && module.exports) {
         buildHostSeriesTableHtml,
         buildHostErrorsHtml,
         buildVanishedListHtml,
+        buildLostListHtml,
+        formatLostNote,
         buildSourceWidgetSummary,
         createChartRenderer,
         chartRenderer,
         CHART_RANGES,
         buildSourcesOverviewChartSpec,
+        buildSourcesMoversSpec,
+        buildSourcesMoversHtml,
+        buildLostPerRunChartSpec,
         buildSitesAnsweringChartSpec,
         buildHostSeriesChartSpec,
         buildHostPagesChartSpec,

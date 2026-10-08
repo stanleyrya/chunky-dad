@@ -50,6 +50,7 @@ const SOURCE_VERDICT_COLORS = {
   dead: BRAND.danger,
   stopped: '#ff9f43',
   shrunk: BRAND.warning,
+  lost: '#ff7eb6',
   empty: '#9b8cff',
   vanished: '#e056a0',
   quiet: '#54a0ff',
@@ -2070,9 +2071,9 @@ class MetricsDisplay {
       return { ring: 60, strip: { width: 124, height: 24 }, chart: { width: 124, height: 44 }, bars: { width: 124, height: 30 }, runs: 8, runRows: 2 };
     }
     if (family === 'large') {
-      return { ring: 78, strip: { width: 196, height: 30 }, chart: { width: 280, height: 96 }, bars: { width: 280, height: 64 }, spark: { width: 280, height: 46 }, runs: 14, runRows: 4 };
+      return { ring: 78, strip: { width: 196, height: 30 }, chart: { width: 280, height: 96 }, bars: { width: 280, height: 64 }, spark: { width: 280, height: 46 }, rowSpark: { width: 48, height: 16 }, dual: { width: 280, height: 36 }, runs: 14, runRows: 4 };
     }
-    return { ring: 68, strip: { width: 212, height: 26 }, chart: { width: 280, height: 40 }, bars: { width: 280, height: 40 }, runs: 12, runRows: 1 };
+    return { ring: 68, strip: { width: 212, height: 26 }, chart: { width: 280, height: 40 }, bars: { width: 280, height: 40 }, rowSpark: { width: 36, height: 14 }, runs: 12, runRows: 1 };
   }
 
   countSourceVerdicts(health) {
@@ -2113,7 +2114,7 @@ class MetricsDisplay {
     const palette = this.getWidgetPalette();
     const row = this.addWidgetRow(widget, family);
     row.url = this.buildHostUrl(item.host);
-    const iconImage = await this.getHostIconImage(item);
+    const iconImage = options.icon === false ? null : await this.getHostIconImage(item);
     if (iconImage) {
       const icon = row.addImage(iconImage);
       icon.imageSize = new Size(12, 12);
@@ -2125,18 +2126,23 @@ class MetricsDisplay {
     name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
     name.textColor = new Color(palette.text);
     name.lineLimit = 1;
-    row.addSpacer();
     if (options.detail) {
-      let detailLabel = `${this.formatNumber(item.extracted)} · ${this.formatNumber(item.bear)} · ${this.formatNumber(item.upcoming)}`;
-      if (item.sinceLabel) detailLabel = `since ${item.sinceLabel}`;
-      else if (item.vanished > 0) detailLabel = `${item.vanished} gone`;
+      // "6 gone 🐻" for a lost host, "dead · Oct 5 23:27" for the rest.
+      let detailLabel = item.detail || (item.sinceLabel ? `since ${item.sinceLabel}` : `${this.formatNumber(item.extracted)} · ${this.formatNumber(item.bear)} · ${this.formatNumber(item.upcoming)}`);
+      if (options.shortDetail) detailLabel = detailLabel.replace(/ \d\d:\d\d$/, '');
       const detail = row.addText(detailLabel);
       detail.font = Font.systemFont(10);
       detail.textColor = new Color(palette.textMuted);
       detail.lineLimit = 1;
     }
+    row.addSpacer();
+    if (options.spark && Array.isArray(item.spark) && item.spark.length > 1) {
+      const sparkImage = this.buildRowSparkImage(item.spark, options.spark);
+      const spark = row.addImage(sparkImage);
+      spark.imageSize = new Size(options.spark.width, options.spark.height);
+    }
     if (options.badge !== false) {
-      this.addWidgetBadge(row, item.label, item.verdict, { fontSize: 10 });
+      this.addWidgetBadge(row, item.label, item.verdict, { fontSize: 9 });
     }
     return row;
   }
@@ -2170,116 +2176,228 @@ class MetricsDisplay {
     }
 
     const health = sourceHealth.health;
-    const limit = family === 'small' ? 0 : (family === 'large' ? 5 : 2);
-    const summary = MetricsSections.buildSourceWidgetSummary(health, { limit: Math.max(1, limit) });
-    const ringImage = this.buildSourcesRingImage(health, sizes.ring);
-    const columns = this.buildHeatStripColumns(health, 14);
-    const headlineText = summary.troubled > 0
-      ? (family === 'small' ? (summary.troubled === 1 ? 'needs a look' : 'need a look') : summary.headline)
-      : (family === 'small' ? 'all ok' : summary.headline);
+    const summary = MetricsSections.buildSourceWidgetSummary(health, { limit: family === 'large' ? 5 : 3, sparkRuns: 8 });
+    const lost = summary.lost || { hosts: 0, series: 0, days: 0, bear: 0 };
+    const counts = health && health.counts ? health.counts : {};
+    const sitesWord = (count) => (count === 1 ? 'site' : 'sites');
+    // The one number that matters: bear events the sites listed and lost;
+    // without losses, the troubled count; without trouble, the ok count.
+    let leadNumber;
+    let leadLabel;
+    let leadColor = palette.text;
+    if (lost.days > 0) {
+      leadNumber = lost.bear > 0 ? lost.bear : lost.days;
+      leadLabel = `expected ${lost.bear > 0 ? 'bear ' : ''}events gone\n${lost.hosts} ${sitesWord(lost.hosts)}`;
+      leadColor = SOURCE_VERDICT_COLORS.lost;
+    } else if (summary.troubled > 0) {
+      leadNumber = summary.troubled;
+      leadLabel = `of ${summary.hosts} ${sitesWord(summary.hosts)}\nneed${summary.troubled === 1 ? 's' : ''} a look`;
+    } else {
+      leadNumber = summary.hosts;
+      leadLabel = `${sitesWord(summary.hosts)} answered,\nnothing to chase`;
+      leadColor = palette.ok;
+    }
+    const worstLine = summary.worst
+      ? `worst: ${this.truncateText(summary.worst.host, 18)} ${summary.worst.lost}`
+      : (summary.newestFinishedAt ? `newest run ${this.formatRelativeTime(summary.newestFinishedAt)}` : 'no runs yet');
+    const addLead = (container, numberSize, compact = false) => {
+      const number = container.addText(String(leadNumber));
+      number.font = this.widgetFont(numberSize, 'heavy');
+      number.textColor = new Color(leadColor);
+      number.lineLimit = 1;
+      number.minimumScaleFactor = 0.6;
+      const label = container.addText(compact ? leadLabel.split('\n')[0] : leadLabel);
+      label.font = Font.systemFont(FONT_SIZES.widget.small);
+      label.textColor = new Color(palette.text);
+      label.lineLimit = 2;
+      label.minimumScaleFactor = 0.8;
+    };
 
     if (family === 'small') {
+      widget.addSpacer(2);
+      addLead(widget, 34);
       widget.addSpacer();
-      const ringRow = widget.addStack();
-      ringRow.layoutHorizontally();
-      ringRow.addSpacer();
-      const ring = ringRow.addImage(ringImage);
-      ring.imageSize = new Size(sizes.ring, sizes.ring);
-      ringRow.addSpacer();
-      widget.addSpacer(4);
-      const headline = widget.addText(headlineText);
-      headline.font = Font.boldSystemFont(FONT_SIZES.widget.label);
-      headline.textColor = new Color(summary.troubled > 0 ? palette.text : palette.ok);
-      headline.centerAlignText();
-      headline.lineLimit = 1;
-      const strip = widget.addImage(this.buildHeatStripImage(columns, { ...sizes.strip, caption: false, slots: 14 }));
-      strip.imageSize = new Size(sizes.strip.width, sizes.strip.height);
-      strip.centerAlignImage();
-      widget.addSpacer();
+      const foot = widget.addText(worstLine);
+      foot.font = Font.systemFont(9);
+      foot.textColor = new Color(palette.textMuted);
+      foot.lineLimit = 1;
       return;
     }
 
-    const top = widget.addStack();
-    top.layoutHorizontally();
-    top.centerAlignContent();
-    top.spacing = 10;
-    const ring = top.addImage(ringImage);
-    ring.imageSize = new Size(sizes.ring, sizes.ring);
-    const column = top.addStack();
-    column.layoutVertically();
-    column.spacing = 3;
-    const headline = column.addText(headlineText);
+    // Rows: dead/stopped/shrunk first (verdict order), then the biggest
+    // losses — the digest already orders troubled rows that way.
+    const rows = summary.items;
+    const sparkSize = sizes.rowSpark;
+
+    if (family === 'medium') {
+      const body = widget.addStack();
+      body.layoutHorizontally();
+      body.spacing = 10;
+      const left = body.addStack();
+      left.layoutVertically();
+      left.size = new Size(86, 0);
+      addLead(left, 30, true);
+      left.addSpacer(4);
+      const tally = left.addText(`${lost.days > 0 ? `${lost.hosts} ${sitesWord(lost.hosts)} · ` : ''}${counts.dead || 0} dead · ${counts.shrunk || 0} shrunk · ${counts.ok || 0} ok`);
+      tally.font = Font.systemFont(9);
+      tally.textColor = new Color(palette.textMuted);
+      tally.lineLimit = 2;
+      left.addSpacer();
+      const right = body.addStack();
+      right.layoutVertically();
+      right.spacing = 3;
+      // 200pt of row: favicon, verdict dot, host, "6 gone 🐻" / "dead · Oct 5",
+      // the sparkline — the dot carries the verdict, no room for a badge.
+      for (const item of rows.slice(0, 3)) {
+        await this.addSourceHostRow(right, item, 'small', { nameLimit: 13, detail: true, shortDetail: true, spark: sparkSize, badge: false, icon: false });
+      }
+      if (rows.length === 0) {
+        const calm = right.addText(`All ${summary.hosts} ${sitesWord(summary.hosts)} answered — nothing to chase.`);
+        calm.font = Font.systemFont(FONT_SIZES.widget.small);
+        calm.textColor = new Color(palette.ok);
+        calm.lineLimit = 2;
+      }
+      right.addSpacer();
+      const foot = right.addText(worstLine);
+      foot.font = Font.systemFont(9);
+      foot.textColor = new Color(palette.textMuted);
+      foot.lineLimit = 1;
+      return;
+    }
+
+    // Large: one headline, five rows with sparklines, the lost-series list,
+    // then a 14-run strip with two bars a cell (troubled sites, new losses).
+    const headline = widget.addText(`${summary.troubled} of ${summary.hosts} need a look${lost.days > 0 ? ` · ${lost.days} expected gone${lost.bear ? ` (${lost.bear} bear)` : ''}` : ''}`);
     headline.font = Font.boldSystemFont(FONT_SIZES.widget.label);
     headline.textColor = new Color(palette.text);
     headline.lineLimit = 1;
-    if (family === 'large') {
-      const newestLabel = summary.newestFinishedAt
-        ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)} · ${columns.length} runs on the strip`
-        : 'No runs recorded yet';
-      const newest = column.addText(newestLabel);
-      newest.font = Font.systemFont(10);
-      newest.textColor = new Color(palette.textMuted);
-      newest.lineLimit = 1;
-    }
-    const stripImage = this.buildHeatStripImage(columns, { ...sizes.strip, slots: 14 });
-    const strip = column.addImage(stripImage);
-    strip.imageSize = new Size(sizes.strip.width, sizes.strip.height);
-
-    if (family === 'medium') {
-      const items = summary.items.slice(0, 2);
-      for (const item of items) {
-        await this.addSourceHostRow(column, item, 'small', { nameLimit: 20, badge: true });
-      }
-      if (items.length === 0) {
-        const newestLabel = summary.newestFinishedAt
-          ? `Newest run ${this.formatRelativeTime(summary.newestFinishedAt)}`
-          : 'No runs recorded yet';
-        const newest = column.addText(newestLabel);
-        newest.font = Font.systemFont(FONT_SIZES.widget.small);
-        newest.textColor = new Color(palette.textMuted);
-        newest.lineLimit = 1;
-      }
-      return;
-    }
-
-    widget.addSpacer(6);
-    for (let index = 0; index < summary.items.length; index += 1) {
+    headline.minimumScaleFactor = 0.8;
+    widget.addSpacer(5);
+    for (let index = 0; index < rows.length; index += 1) {
       if (index > 0) widget.addSpacer(3);
-      await this.addSourceHostRow(widget, summary.items[index], 'large', { nameLimit: 28, detail: true });
+      await this.addSourceHostRow(widget, rows[index], 'large', { nameLimit: 18, detail: true, shortDetail: true, spark: sparkSize });
     }
-    if (summary.items.length === 0) {
-      const calm = widget.addText(`All ${summary.hosts} sites answered — nothing to chase.`);
+    if (rows.length === 0) {
+      const calm = widget.addText(`All ${summary.hosts} ${sitesWord(summary.hosts)} answered — nothing to chase.`);
       calm.font = Font.systemFont(FONT_SIZES.widget.small);
       calm.textColor = new Color(palette.ok);
       calm.lineLimit = 1;
     }
 
-    widget.addSpacer();
-    const caption = widget.addStack();
-    caption.layoutHorizontally();
-    caption.centerAlignContent();
-    const captionText = caption.addText(`Extracted per run · last ${columns.length}`);
-    captionText.font = Font.systemFont(10);
-    captionText.textColor = new Color(palette.textMuted);
-    captionText.lineLimit = 1;
-    caption.addSpacer();
-    if (summary.more > 0) {
-      const more = caption.addText(`+${summary.more} more hosts`);
-      more.font = Font.systemFont(10);
-      more.textColor = new Color(palette.textMuted);
-      more.lineLimit = 1;
+    const lostItems = Array.isArray(summary.lostItems) ? summary.lostItems.slice(0, 4) : [];
+    if (lostItems.length) {
+      widget.addSpacer(6);
+      const title = widget.addText('EXPECTED FUTURE EVENTS GONE');
+      title.font = Font.systemFont(8);
+      title.textColor = new Color(palette.textMuted);
+      title.lineLimit = 1;
+      widget.addSpacer(2);
+      lostItems.forEach(item => {
+        const line = widget.addStack();
+        line.layoutHorizontally();
+        line.centerAlignContent();
+        line.spacing = 6;
+        line.url = this.buildHostUrl(item.host);
+        const what = line.addText(this.truncateText(item.lostTitle || `${item.lost} gone`, 30));
+        what.font = Font.boldSystemFont(10);
+        what.textColor = new Color(palette.text);
+        what.lineLimit = 1;
+        line.addSpacer();
+        const where = line.addText(`${this.truncateText(item.host, 18)} · ${item.lostDay ? String(item.lostDay).slice(5) : ''}${item.lostSince && MetricsSections.formatSourceRun ? ` · ${MetricsSections.formatSourceRun(item.lostSince).replace(/ \d\d:\d\d$/, '')}` : ''}`);
+        where.font = Font.systemFont(9);
+        where.textColor = new Color(palette.textMuted);
+        where.lineLimit = 1;
+      });
     }
+
+    widget.addSpacer();
+    const columns = this.buildLossStripColumns(health, 14);
+    const caption = widget.addText(`LAST ${columns.length} RUNS · ■ TROUBLED SITES · ■ NEW LOSSES`);
+    caption.font = Font.systemFont(8);
+    caption.textColor = new Color(palette.textMuted);
+    caption.lineLimit = 1;
     widget.addSpacer(2);
-    const sparkValues = columns.map(column => column.extracted);
-    const sparkImage = this.buildLineChartImage(sparkValues.length ? sparkValues : [0], sizes.spark, {
-      lineColor: new Color(CHART_STYLE.line),
-      fillColor: new Color(CHART_STYLE.line, 0.3),
+    const strip = widget.addImage(this.buildDualStripImage(columns, { ...sizes.dual, slots: 14 }));
+    strip.imageSize = new Size(sizes.dual.width, sizes.dual.height);
+  }
+
+  // Per run (last `runLimit`): troubled hosts (status/baseline, as the heat
+  // strip counted them) and the losses confirmed that run on venue sites.
+  buildLossStripColumns(health, runLimit) {
+    const columns = this.buildHeatStripColumns(health, runLimit);
+    const lostByRun = new Map();
+    const rows = health && Array.isArray(health.rows) ? health.rows : [];
+    rows.forEach(row => {
+      if (row?.aggregator) return;
+      (Array.isArray(row?.series) ? row.series : []).forEach(line => {
+        if (!line || !line.run_id) return;
+        const confirmed = (Number(line.lostNewBear) || 0) + (Number(line.lostNewOther) || 0) + (line.listingGone ? 1 : 0);
+        if (confirmed) lostByRun.set(line.run_id, (lostByRun.get(line.run_id) || 0) + confirmed);
+      });
+    });
+    return columns.map(column => ({ ...column, lost: lostByRun.get(column.runId) || 0 }));
+  }
+
+  // Two bars a cell over a faint track: troubled sites (amber) and new
+  // losses (lost pink), each against its own peak on the strip; the newest
+  // cell is outlined. Two numbers per run instead of one colour.
+  buildDualStripImage(columns, options = {}) {
+    const palette = this.getWidgetPalette();
+    const width = Number.isFinite(options.width) ? options.width : 280;
+    const height = Number.isFinite(options.height) ? options.height : 36;
+    const ctx = this.createWidgetContext(width, height);
+    const list = Array.isArray(columns) ? columns : [];
+    const slots = Math.max(list.length, Number.isFinite(options.slots) ? options.slots : 1);
+    const gap = 3;
+    const cellWidth = Math.min(24, (width - (gap * (slots - 1))) / slots);
+    const corner = Math.min(3, cellWidth / 3);
+    const inner = 2;
+    const barWidth = Math.max(2, (cellWidth - inner * 3) / 2);
+    const peakTroubled = list.reduce((max, column) => Math.max(max, column.troubled || 0), 0);
+    const peakLost = list.reduce((max, column) => Math.max(max, column.lost || 0), 0);
+    list.forEach((column, index) => {
+      const x = index * (cellWidth + gap);
+      const track = new Path();
+      track.addRoundedRect(new Rect(x, 0, cellWidth, height), corner, corner);
+      ctx.setFillColor(new Color('#ffffff', palette.track));
+      ctx.addPath(track);
+      ctx.fillPath();
+      const drawBar = (slot, value, peak, colorHex) => {
+        if (!(value > 0) || !(peak > 0)) return;
+        const barHeight = Math.max(3, (height - inner * 2) * (value / peak));
+        const bar = new Path();
+        bar.addRoundedRect(new Rect(x + inner + slot * (barWidth + inner), height - inner - barHeight, barWidth, barHeight), 1.5, 1.5);
+        ctx.setFillColor(new Color(colorHex, 0.95));
+        ctx.addPath(bar);
+        ctx.fillPath();
+      };
+      drawBar(0, column.troubled || 0, peakTroubled, SOURCE_VERDICT_COLORS.shrunk);
+      drawBar(1, column.lost || 0, peakLost, SOURCE_VERDICT_COLORS.lost);
+      if (index === list.length - 1) {
+        const outline = new Path();
+        outline.addRoundedRect(new Rect(x + 0.5, 0.5, cellWidth - 1, height - 1), corner, corner);
+        ctx.setStrokeColor(new Color('#ffffff', 0.85));
+        ctx.setLineWidth(1);
+        ctx.addPath(outline);
+        ctx.strokePath();
+      }
+    });
+    return ctx.getImage();
+  }
+
+  // Tiny white sparkline for a host row (the last eight runs of extracted).
+  buildRowSparkImage(values, size) {
+    return this.buildLineChartImage(values, size, {
+      lineColor: new Color('#ffffff', 0.95),
+      fillColor: new Color('#ffffff', 0.16),
       lineWidth: 1.5,
-      padding: 4,
+      padding: 2,
+      gradient: false,
+      gridlines: false,
+      emphasizeLast: true,
+      lastPointColor: new Color('#ffffff'),
       logPoints: false
     });
-    const spark = widget.addImage(sparkImage);
-    spark.imageSize = new Size(sizes.spark.width, sizes.spark.height);
   }
 
   addWidgetMetricTile(container, label, value, options = {}) {
@@ -2400,15 +2518,25 @@ class MetricsDisplay {
     tiles.addSpacer();
     if (family === 'small') return;
 
-    // Medium has no room for the meta row unless something vanished.
+    // Medium has no room for the meta row unless something is missing.
     const vanished = Array.isArray(row.vanished) ? row.vanished : [];
-    if (family === 'medium' && !vanished.length) return;
+    const lost = Array.isArray(row.lost) ? row.lost : [];
+    const lostDays = Number(row.lostDays) || 0;
+    if (family === 'medium' && !vanished.length && !lostDays) return;
     widget.addSpacer(4);
     const meta = widget.addStack();
     meta.layoutHorizontally();
     meta.centerAlignContent();
     meta.spacing = 6;
-    if (vanished.length) {
+    if (lostDays > 0) {
+      const dots = this.buildDotsImage(lostDays, new Color(SOURCE_VERDICT_COLORS.lost), { max: family === 'large' ? 16 : 10 });
+      const dotsImage = meta.addImage(dots.image);
+      dotsImage.imageSize = new Size(dots.width, dots.height);
+      const lostText = meta.addText(`${lostDays} expected gone${row.lostBear ? ' 🐻' : ''}${row.aggregator ? ' (aggregator)' : ''}`);
+      lostText.font = Font.boldSystemFont(10);
+      lostText.textColor = new Color(SOURCE_VERDICT_COLORS.lost);
+      lostText.lineLimit = 1;
+    } else if (vanished.length) {
       const dots = this.buildDotsImage(vanished.length, new Color(SOURCE_VERDICT_COLORS.vanished), { max: family === 'large' ? 16 : 10 });
       const dotsImage = meta.addImage(dots.image);
       dotsImage.imageSize = new Size(dots.width, dots.height);
@@ -2417,7 +2545,7 @@ class MetricsDisplay {
       vanishedText.textColor = new Color(SOURCE_VERDICT_COLORS.vanished);
       vanishedText.lineLimit = 1;
     } else {
-      const calm = meta.addText('nothing vanished');
+      const calm = meta.addText(row.suspected > 0 ? `${row.suspected} suspected — next run decides` : 'nothing missing');
       calm.font = Font.systemFont(10);
       calm.textColor = new Color(palette.textMuted);
       calm.lineLimit = 1;
@@ -2428,7 +2556,16 @@ class MetricsDisplay {
     runsText.textColor = new Color(palette.textMuted);
     runsText.lineLimit = 1;
 
-    if (family === 'large' && vanished.length) {
+    if (family === 'large' && lost.length) {
+      widget.addSpacer(3);
+      lost.slice(0, 3).forEach(item => {
+        const days = Array.isArray(item.days) ? item.days : [];
+        const line = widget.addText(`• ${this.truncateText(item.title || 'untitled', 30)}${days.length > 1 ? ` ×${days.length}` : ''}${days[0] ? ` · ${days[0]}` : ''}${item.bear ? ' 🐻' : ''}`);
+        line.font = Font.systemFont(10);
+        line.textColor = new Color(palette.textMuted);
+        line.lineLimit = 1;
+      });
+    } else if (family === 'large' && vanished.length) {
       widget.addSpacer(3);
       vanished.slice(0, 3).forEach(item => {
         const line = widget.addText(`• ${this.truncateText(item.title || item.key || 'untitled', 34)}${item.day ? ` · ${item.day}` : ''}`);
@@ -2962,17 +3099,30 @@ class MetricsDisplay {
           hostUrl: row => this.buildHostUrl(row.host),
           faviconUrl: row => this.getHostFaviconUrl(row)
         })}`;
-      // Overview: extracted per run stacked by site (troubled sites in their
-      // verdict colour), with the sites-answering strip following its range.
-      const overviewSpec = chartSpec('buildSourcesOverviewChartSpec', health, { verdictColors: SOURCE_VERDICT_COLORS });
-      const answeringSpec = chartSpec('buildSitesAnsweringChartSpec', health);
+      // Sites to look at: ranked small multiples (dead/stopped → shrunk →
+      // lost → empty → biggest change vs baseline), one sparkline each, the
+      // steady rest named with their counts — nothing folds into "other".
       const sourcesVisible = viewMode === 'sources';
-      const overviewCard = buildChartFigureCard('Extracted Per Run', [
-        buildFigure(overviewSpec, { render: sourcesVisible }),
-        buildFigure(answeringSpec, { render: sourcesVisible, follows: overviewSpec ? overviewSpec.id : null })
-      ], 'Rows each site yielded per run, troubled sites in their verdict colour; below, how many sites answered ok');
-      if (overviewCard) cards.push(overviewCard);
-      cards.push(buildSection('Sources', body, escapeHtml(`${digest.headline} • ${newestLabel}`)));
+      const moversSpec = chartSpec('buildSourcesMoversSpec', health, { runLimit: 14, maxCards: 12 });
+      const moversHtml = moversSpec && typeof MetricsSections.buildSourcesMoversHtml === 'function'
+        ? MetricsSections.buildSourcesMoversHtml(moversSpec, {
+          mode: chartMode,
+          hostUrl: row => this.buildHostUrl(row.host),
+          faviconUrl: row => this.getHostFaviconUrl(row)
+        })
+        : '';
+      if (moversHtml) {
+        cards.push(buildSection('Sites To Look At', moversHtml, escapeHtml(`${moversSpec.cards.length} of ${health.hosts} sites ranked worst first over the last ${moversSpec.labels.length} runs · dashed = baseline · red dots = runs that confirmed lost events · tint = no answer`)));
+      }
+      // Expected future events gone, per run: the content signal.
+      const lostSpec = chartSpec('buildLostPerRunChartSpec', health, { verdictColors: SOURCE_VERDICT_COLORS });
+      const lostCard = buildChartFigureCard(
+        'Expected Future Events Gone',
+        buildFigure(lostSpec, { render: sourcesVisible }),
+        'Events a site listed in ≥2 of its last 4 runs that stayed missing for 2 runs, confirmed per run: bear and other on venue sites, aggregators in grey (recorded, never alerted), dots = a listing that went to zero'
+      );
+      if (lostCard) cards.push(lostCard);
+      cards.push(buildSection('Sources', body, escapeHtml(`${digest.headline} • ${digest.lost && digest.lost.days ? `${digest.lost.days} expected events gone${digest.lost.bear ? ` (${digest.lost.bear} bear)` : ''} • ` : ''}${newestLabel}`)));
       return cards;
     };
 
@@ -3015,7 +3165,7 @@ class MetricsDisplay {
         cards.push(buildChartFigureCard(
           'Proposals & Vanished',
           buildFigure(chartSpec('buildHostProposalsChartSpec', row, hostChartOptions), { render: hostVisible }),
-          'New proposals up, merges down; dots are upcoming events that vanished in that run'
+          'New proposals up, merges down; dots are upcoming events that vanished in that run (the one-run blip — confirmed losses are the Expected Events Gone card)'
         ));
       }
 
@@ -3024,6 +3174,13 @@ class MetricsDisplay {
         limit: HOST_SERIES_ROW_LIMIT
       })));
       cards.push(buildSection('Latest Errors', MetricsSections.buildHostErrorsHtml(row)));
+      if (typeof MetricsSections.buildLostListHtml === 'function') {
+        cards.push(buildSection(
+          'Expected Events Gone',
+          MetricsSections.buildLostListHtml(row),
+          escapeHtml('Listed in at least 2 of the last 4 ok runs, missing for 2 ok runs in a row, still in the future — grouped per series; a same-day rename at the same place is a match, not a loss')
+        ));
+      }
       cards.push(buildSection(
         'Vanished Events',
         MetricsSections.buildVanishedListHtml(row),
@@ -3844,6 +4001,130 @@ ${verdictCss}
     }
     .sources-table td {
       vertical-align: middle;
+    }
+    .lost-cell .lost-count {
+      color: ${SOURCE_VERDICT_COLORS.lost};
+      font-weight: 700;
+    }
+    .lost-cell .muted {
+      opacity: 0.7;
+    }
+    .lost-notes {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .mover-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    .mover-card {
+      display: block;
+      padding: 8px 10px 7px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--background-light);
+      color: inherit;
+      text-decoration: none;
+      min-width: 0;
+    }
+    .mover-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .mover-host {
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-primary);
+    }
+    .mover-num {
+      flex: none;
+      font-weight: 700;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+    .mover-num small {
+      font-weight: 400;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-left: 3px;
+    }
+    .mover-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 4px 0 2px;
+    }
+    .mover-spark {
+      height: 44px;
+    }
+    .mover-spark .spark-svg {
+      display: block;
+      width: 100%;
+      height: 44px;
+    }
+    .mover-note {
+      font-size: 10.5px;
+      line-height: 1.3;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+    .mover-lost {
+      font-size: 10.5px;
+      line-height: 1.3;
+      color: ${SOURCE_VERDICT_COLORS.lost};
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mover-more,
+    .steady-head {
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .steady-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .steady-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--background-light);
+      font-size: 11px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+    .steady-chip small {
+      color: var(--text-secondary);
+    }
+    .steady-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+    .steady-chip.verdict-ok .steady-dot {
+      color: var(--color-success);
+    }
+    .steady-chip.verdict-companion .steady-dot {
+      color: var(--color-neutral);
     }
     .verdict-cell {
       white-space: nowrap;

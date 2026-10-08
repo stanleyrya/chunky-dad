@@ -75,12 +75,16 @@ const LOGO_CACHE_TTL_DAYS = 7;
 const WIDGET_TITLE = 'Stale Sources';
 const NO_LEDGER_TEXT = 'No source ledger yet';
 
-// Verdicts that put a host in the queue. "vanished" is deliberately absent.
-const TROUBLED_VERDICTS = ['dead', 'stopped', 'shrunk', 'empty', 'quiet'];
+// Verdicts that put a host in the queue. "lost" (expected future events
+// gone, confirmed over two runs) is trouble; "vanished" (the one-run blip)
+// is deliberately absent. A lost host's tap opens its listing page in
+// Safari — the question is "is it still on the site?", not "run it again".
+const TROUBLED_VERDICTS = ['dead', 'stopped', 'shrunk', 'lost', 'empty', 'quiet'];
 const VERDICT_COLORS = {
   dead: BRAND.danger,
   stopped: BRAND.danger,
   shrunk: BRAND.warning,
+  lost: '#ff7eb6',
   empty: BRAND.warning,
   quiet: BRAND.neutral,
   vanished: BRAND.neutral,
@@ -120,18 +124,35 @@ function isTroubledVerdict(verdict) {
   return TROUBLED_VERDICTS.includes(String(verdict || ''));
 }
 
+function listingUrlForHost(row) {
+  const configured = row && typeof row.url === 'string' ? row.url.trim() : '';
+  if (/^https?:\/\//i.test(configured)) return configured;
+  const host = String(row && row.host || '').trim();
+  return host ? `https://${host}/` : null;
+}
+
 function describeHostRow(row) {
   const parsers = Array.isArray(row.parsers) ? row.parsers.filter(Boolean).map(String) : [];
   const latest = row.latest || {};
+  const lost = Array.isArray(row.lost) ? row.lost : [];
+  const first = lost[0] || null;
   return {
     host: row.host,
     parsers,
     verdict: row.verdict,
+    flags: Array.isArray(row.flags) ? row.flags : [],
     since: row.since || null,
     ageDays: Number.isFinite(row.ageDays) ? row.ageDays : null,
     latestRunId: latest.run_id || null,
     latestFinishedAt: latest.finished_at || null,
     vanishedCount: Array.isArray(row.vanished) ? row.vanished.length : 0,
+    lostCount: Number(row.lostDays) || 0,
+    lostBear: Number(row.lostBear) || 0,
+    lostTitle: first ? `${String(first.title || '').slice(0, 60)}${Array.isArray(first.days) && first.days.length > 1 ? ` ×${first.days.length}` : ''}` : null,
+    lostDay: first && Array.isArray(first.days) && first.days.length ? first.days[0] : null,
+    listingGone: row.listingGone === true,
+    aggregator: row.aggregator === true,
+    url: listingUrlForHost(row),
     iconUrl: faviconUrlForHost(row.host)
   };
 }
@@ -145,6 +166,8 @@ function buildSourceStatus(health, options = {}) {
       total: 0,
       troubled: [],
       vanished: [],
+      lost: { hosts: 0, days: 0, bear: 0, listingGone: 0 },
+      worstLost: null,
       ok: 0,
       newestRunId: null,
       newestFinishedAt: null
@@ -162,11 +185,26 @@ function buildSourceStatus(health, options = {}) {
       newestRunId = row.latest?.run_id || null;
     }
   });
+  // Open losses on venue/promoter sites (aggregators record, never alert):
+  // the one number the small widgets lead with.
+  const lostRows = rows.filter(row => !row.aggregator && (Number(row.lostDays) || 0) > 0);
+  const lost = {
+    hosts: lostRows.length,
+    days: lostRows.reduce((sum, row) => sum + (Number(row.lostDays) || 0), 0),
+    bear: lostRows.reduce((sum, row) => sum + (Number(row.lostBear) || 0), 0),
+    listingGone: rows.filter(row => !row.aggregator && row.listingGone === true).length
+  };
+  const worstLost = lostRows
+    .slice()
+    .sort((a, b) => (b.lostBear || 0) - (a.lostBear || 0) || (b.lostDays || 0) - (a.lostDays || 0) || String(a.host).localeCompare(String(b.host)))
+    .map(describeHostRow)[0] || null;
   return {
     ledgerMissing: false,
     total: rows.length,
     troubled,
     vanished,
+    lost,
+    worstLost,
     // Everything that needs no look: ok, and a companion host whose parser
     // is fed by a sibling host (SOURCE_UNTROUBLED_VERDICTS).
     ok: rows.filter(row => !isTroubledVerdict(row.verdict) && row.verdict !== 'vanished').length,
@@ -246,7 +284,10 @@ function describeCurrentPick(state, entry) {
     parsers,
     parserName: parsers[cursor],
     parserIndex: cursor,
-    iconUrl: entry.iconUrl
+    iconUrl: entry.iconUrl,
+    url: entry.url || null,
+    lostCount: entry.lostCount || 0,
+    lostTitle: entry.lostTitle || null
   };
 }
 
@@ -350,7 +391,24 @@ function formatSummaryLine(status) {
 
 function formatHostDetail(entry) {
   if (!entry) return '';
-  return entry.since ? `${entry.verdict} since ${formatRunId(entry.since)}` : entry.verdict;
+  if (entry.verdict === 'lost') {
+    const gone = entry.lostCount > 0 ? `${entry.lostCount} gone${entry.lostBear ? ' 🐻' : ''}` : (entry.listingGone ? 'listing gone' : 'lost');
+    const what = entry.lostTitle ? ` — ${entry.lostTitle}` : '';
+    return entry.since ? `${gone} since ${formatRunId(entry.since)}${what}` : `${gone}${what}`;
+  }
+  const base = entry.since ? `${entry.verdict} since ${formatRunId(entry.since)}` : entry.verdict;
+  return entry.lostCount > 0 ? `${base} · ${entry.lostCount} gone` : base;
+}
+
+// "7 expected gone · 3 need a look" — the one line for lock screens.
+function formatLostLine(status) {
+  if (!status || status.ledgerMissing) return NO_LEDGER_TEXT;
+  const lost = status.lost || { bear: 0, days: 0 };
+  const parts = [];
+  if (lost.days > 0) parts.push(`${lost.bear > 0 ? '🐻 ' : ''}${lost.bear > 0 ? lost.bear : lost.days} expected gone`);
+  const count = status.troubled.length;
+  parts.push(count === 0 ? 'all answered' : `${count} need${count === 1 ? 's' : ''} a look`);
+  return parts.join(' · ');
 }
 
 // ─── StaleParsersChecker ──────────────────────────────────────────────────────
@@ -842,9 +900,9 @@ class StaleParsersChecker {
   addTapHint(container, queueStateInfo, maxLength) {
     const palette = this.getWidgetPalette();
     const current = queueStateInfo?.current || null;
-    const label = current
-      ? `Tap runs ${this.truncateText(current.parserName, maxLength)}${current.parsers.length > 1 ? ` (${current.parserIndex + 1}/${current.parsers.length})` : ''}`
-      : 'Tap: nothing to run right now';
+    let label = 'Tap: nothing to run right now';
+    if (current && current.verdict === 'lost') label = `Tap opens ${this.truncateText(current.host, maxLength)}`;
+    else if (current) label = `Tap runs ${this.truncateText(current.parserName, maxLength)}${current.parsers.length > 1 ? ` (${current.parserIndex + 1}/${current.parsers.length})` : ''}`;
     const hint = container.addText(label);
     hint.font = Font.systemFont(10);
     hint.textColor = new Color(palette.textMuted);
@@ -928,11 +986,16 @@ class StaleParsersChecker {
     nameText.lineLimit = 1;
 
     row.addSpacer();
-    if (entry.since && options.since !== false) {
-      const sinceText = row.addText(`since ${formatRunId(entry.since)}`);
-      sinceText.font = Font.systemFont(10);
-      sinceText.textColor = new Color(palette.textMuted);
-      sinceText.lineLimit = 1;
+    if (options.since !== false) {
+      let detailLabel = '';
+      if (entry.verdict === 'lost') detailLabel = entry.lostCount > 0 ? `${entry.lostCount} gone${entry.lostBear ? ' 🐻' : ''}` : (entry.listingGone ? 'listing gone' : '');
+      else if (entry.since) detailLabel = `since ${formatRunId(entry.since)}`;
+      if (detailLabel) {
+        const sinceText = row.addText(detailLabel);
+        sinceText.font = Font.systemFont(10);
+        sinceText.textColor = new Color(palette.textMuted);
+        sinceText.lineLimit = 1;
+      }
     }
     this.addWidgetBadge(row, entry.verdict, this.verdictColor(entry.verdict));
     return row;
@@ -998,9 +1061,13 @@ class StaleParsersChecker {
 
     let labelText;
     let labelColor;
+    const lost = status.lost || { days: 0, bear: 0 };
     if (status.ledgerMissing) {
       labelText = NO_LEDGER_TEXT;
       labelColor = palette.textMuted;
+    } else if (lost.days > 0) {
+      labelText = `${lost.bear > 0 ? `${lost.bear} bear` : lost.days} expected gone`;
+      labelColor = palette.text;
     } else if (status.troubled.length === 0) {
       labelText = 'all answered';
       labelColor = BRAND.success;
@@ -1016,7 +1083,9 @@ class StaleParsersChecker {
 
     if (!status.ledgerMissing && status.troubled.length > 0) {
       const current = queueStateInfo?.current || null;
-      const hint = widget.addText(current ? `tap runs ${this.truncateText(current.parserName, 16)}` : 'tap: nothing to run');
+      const hint = widget.addText(current
+        ? (current.verdict === 'lost' ? `tap opens ${this.truncateText(current.host, 16)}` : `tap runs ${this.truncateText(current.parserName, 16)}`)
+        : 'tap: nothing to run');
       hint.font = Font.systemFont(9);
       hint.textColor = new Color(palette.textMuted);
       hint.centerAlignText();
@@ -1054,6 +1123,12 @@ class StaleParsersChecker {
     summary.font = Font.boldSystemFont(FONT_SIZES.widget.label);
     summary.textColor = new Color(palette.text);
     summary.lineLimit = 1;
+    if (status.lost && status.lost.days > 0) {
+      const lostLine = column.addText(`${status.lost.days} expected events gone${status.lost.bear ? ` (${status.lost.bear} 🐻)` : ''}`);
+      lostLine.font = Font.systemFont(10);
+      lostLine.textColor = new Color(VERDICT_COLORS.lost);
+      lostLine.lineLimit = 1;
+    }
 
     const maxRows = 2;
     const items = status.troubled.slice(0, maxRows);
@@ -1139,7 +1214,14 @@ class StaleParsersChecker {
     okText.font = Font.systemFont(10);
     okText.textColor = new Color(BRAND.success);
     okText.lineLimit = 1;
-    if (status.vanished.length > 0) {
+    if (status.lost && status.lost.days > 0) {
+      const lostDot = footer.addImage(this.buildDotImage(this.verdictColor('lost'), 6));
+      lostDot.imageSize = new Size(6, 6);
+      const lostText = footer.addText(`${status.lost.days} expected gone${status.lost.bear ? ` (${status.lost.bear} 🐻)` : ''}`);
+      lostText.font = Font.systemFont(10);
+      lostText.textColor = new Color(palette.textMuted);
+      lostText.lineLimit = 1;
+    } else if (status.vanished.length > 0) {
       const vanishedDot = footer.addImage(this.buildDotImage(this.verdictColor('vanished'), 6));
       vanishedDot.imageSize = new Size(6, 6);
       const vanishedText = footer.addText(`${status.vanished.length} vanished`);
@@ -1161,6 +1243,17 @@ class StaleParsersChecker {
       dash.font = Font.boldSystemFont(20);
       dash.textColor = new Color(BRAND.neutral);
       dash.centerAlignText();
+    } else if (status.lost && status.lost.days > 0) {
+      // The one number that matters: expected (bear) events gone.
+      const count = widget.addText(String(status.lost.bear > 0 ? status.lost.bear : status.lost.days));
+      count.font = Font.boldSystemFont(24);
+      count.textColor = new Color(VERDICT_COLORS.lost);
+      count.centerAlignText();
+      widget.addSpacer(2);
+      const label = widget.addText('gone');
+      label.font = Font.systemFont(10);
+      label.textColor = new Color(BRAND.textMuted);
+      label.centerAlignText();
     } else if (status.troubled.length === 0) {
       const check = widget.addText('✓');
       check.font = Font.boldSystemFont(20);
@@ -1191,16 +1284,19 @@ class StaleParsersChecker {
 
     widget.addSpacer(2);
 
-    const label = widget.addText(status.ledgerMissing ? NO_LEDGER_TEXT : formatSummaryLine(status));
-    label.font = Font.systemFont(FONT_SIZES.widget.small);
+    const label = widget.addText(formatLostLine(status));
+    label.font = Font.boldSystemFont(FONT_SIZES.widget.small);
     label.lineLimit = 1;
 
-    if (!status.ledgerMissing && status.troubled.length > 0) {
+    if (!status.ledgerMissing && (status.troubled.length > 0 || status.worstLost)) {
       const current = queueStateInfo?.current || null;
       const firstEntry = current
         ? status.troubled.find(entry => entry.host === current.host) || status.troubled[0]
         : status.troubled[0];
-      const firstLabel = widget.addText(`${this.truncateText(firstEntry.host, 18)} · ${firstEntry.verdict}`);
+      const pieces = [];
+      if (status.worstLost) pieces.push(`${this.truncateText(status.worstLost.host, 18)} −${status.worstLost.lostCount}`);
+      if (firstEntry && (!status.worstLost || firstEntry.host !== status.worstLost.host)) pieces.push(`${this.truncateText(firstEntry.host, 18)} ${firstEntry.verdict}`);
+      const firstLabel = widget.addText(pieces.join(' · '));
       firstLabel.font = Font.systemFont(10);
       firstLabel.lineLimit = 1;
     }
@@ -1212,7 +1308,7 @@ class StaleParsersChecker {
     const widget = new ListWidget();
     widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
-    const label = widget.addText(`Sources: ${status.ledgerMissing ? 'no ledger yet' : formatSummaryLine(status)}`);
+    const label = widget.addText(`Sources: ${status.ledgerMissing ? 'no ledger yet' : formatLostLine(status)}`);
     label.font = Font.systemFont(FONT_SIZES.widget.small);
     label.lineLimit = 1;
 
@@ -1229,7 +1325,11 @@ class StaleParsersChecker {
     if (!current || !current.parserName) return false;
     const marked = this.markCurrentRun(queueStateInfo);
     if (!marked) return false;
-    const url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: current.parserName });
+    // A lost host: the question is whether the events are still on the
+    // site, so the tap opens its listing page instead of re-running it.
+    const url = current.verdict === 'lost' && current.url
+      ? current.url
+      : this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: current.parserName });
     Safari.open(url);
     return true;
   }
@@ -1287,6 +1387,7 @@ class StaleParsersChecker {
     const hostLines = status.troubled.map(entry => `• ${entry.host} — ${formatHostDetail(entry)}`);
     const current = queueStateInfo?.current || null;
     const footer = [
+      status.lost && status.lost.days > 0 ? `${status.lost.days} expected future events gone${status.lost.bear ? ` (${status.lost.bear} bear)` : ''} on ${status.lost.hosts} site${status.lost.hosts === 1 ? '' : 's'}.` : null,
       status.vanished.length > 0 ? `${status.vanished.length} vanished — see the dashboard.` : null,
       newest || null
     ].filter(Boolean);
@@ -1301,7 +1402,7 @@ class StaleParsersChecker {
 
     alert.addAction('Open Metrics');
     if (current) {
-      alert.addAction(`Run ${current.parserName}`);
+      alert.addAction(current.verdict === 'lost' && current.url ? `Open ${current.host}` : `Run ${current.parserName}`);
       alert.addAction(`Skip ${current.host} (${DEFAULT_SKIP_HOURS}${HOURS_SUFFIX})`);
     } else {
       alert.addAction('No site available');
@@ -1359,7 +1460,7 @@ async function runStaleSourcesWidget() {
     const status = await checker.loadSourceStatus(staleDays);
     const queueStateInfo = checker.resolveQueueState(status);
 
-    console.log(`StaleParsers: ${status.troubled.length} of ${status.total} hosts need a look, ${status.vanished.length} vanished`);
+    console.log(`StaleParsers: ${status.troubled.length} of ${status.total} hosts need a look, ${status.lost ? status.lost.days : 0} expected events gone, ${status.vanished.length} vanished`);
 
     if (checker.runtime.runsInWidget) {
       const widget = await checker.render(status, staleDays, queueStateInfo);
@@ -1412,7 +1513,9 @@ if (typeof module !== 'undefined' && module.exports) {
     parseStaleDays,
     formatRunId,
     formatSummaryLine,
-    formatHostDetail
+    formatHostDetail,
+    formatLostLine,
+    listingUrlForHost
   };
 }
 

@@ -178,10 +178,133 @@ test('assessSourceHealth: verdicts, trouble-first order, since, baseline', () =>
   assert.equal(verdictOf('lagsite.example').verdict, 'empty', 'a sibling that answered in an older run is no alibi for this run');
   assert.equal(verdictOf('lagfeed.example').verdict, 'ok');
   assert.deepEqual(health.rows.map((r) => r.verdict), ['dead', 'stopped', 'shrunk', 'empty', 'empty', 'vanished', 'quiet', 'companion', 'ok', 'ok', 'ok']);
-  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER);
+  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER.filter((verdict) => verdict !== 'lost'), 'no line in this fixture carries losses');
   assert.equal(health.troubled, 7, 'companion is not trouble');
   assert.equal(health.hosts, 11);
   assert.equal(verdictOf('steady.example').series.length, 5);
+});
+
+// ---------------------------------------------------------------------------
+// Lost: expected future events gone. Identity is title|day (place-insensitive),
+// expected = seen upcoming in ≥2 of the last 4 ok runs, confirmed = missing
+// from 2 consecutive ok runs, grouped per series; a rename on the same day +
+// place is a match; listing ≥3 → 0 while extracting is immediate.
+// ---------------------------------------------------------------------------
+
+const upcomingOf = (entries) => Object.fromEntries(entries.map(([title, day, extra]) => [
+  `${title.toLowerCase()}|${(extra && extra.place) || 'eagle la'}|${day}`,
+  { title, day, bear: !(extra && extra.notBear) }
+]));
+const pigDays = ['2026-10-11', '2026-10-18', '2026-10-25'];
+const okRun = (runId, entries, extra = {}) => ({ runId, status: 'ok', todayKey: '2026-10-07', extracted: 98, upcomingKeys: upcomingOf(entries), ...extra });
+const fullList = [...pigDays.map((day) => ['Bearded Pig Disco', day]), ['Club Chub', '2026-10-18'], ['Beer Bust', '2026-10-12', { notBear: true }]];
+
+test('advanceSourceLoss: first miss is suspected, the second confirms, grouped per series, bear first; a return clears it', () => {
+  let state = null;
+  ['r1', 'r2', 'r3'].forEach((runId) => { state = SharedCore.advanceSourceLoss(state, okRun(runId, fullList)).state; });
+  assert.equal(state.history.length, 3);
+  const without = fullList.filter(([title]) => title !== 'Bearded Pig Disco');
+  const miss1 = SharedCore.advanceSourceLoss(state, okRun('r4', without));
+  assert.equal(miss1.suspected, 3);
+  assert.deepEqual(miss1.lost, [], 'one miss is a suspicion, not a loss');
+  assert.equal(miss1.state.history.length, 4, 'the window keeps four ok runs');
+  const miss2 = SharedCore.advanceSourceLoss(miss1.state, okRun('r5', without));
+  assert.equal(miss2.suspected, 0);
+  assert.deepEqual(miss2.lost, [{ title: 'Bearded Pig Disco', bear: true, since: 'r5', seen: 3, days: pigDays, new: 3 }]);
+  assert.equal(miss2.lost_new, 3);
+  const still = SharedCore.advanceSourceLoss(miss2.state, okRun('r6', without));
+  assert.equal(still.lost[0].new, 0, 'already confirmed: not new again');
+  assert.equal(still.lost[0].since, 'r5');
+  const back = SharedCore.advanceSourceLoss(still.state, okRun('r7', fullList));
+  assert.deepEqual(back.lost, [], 'seen again → no longer lost');
+  // Expected needs ≥2 sightings: a one-run fragment that disappears is nothing.
+  const fragment = SharedCore.advanceSourceLoss(back.state, okRun('r8', [...fullList, ['View Event →', '2026-11-04']]));
+  const gone = SharedCore.advanceSourceLoss(fragment.state, okRun('r9', fullList));
+  const gone2 = SharedCore.advanceSourceLoss(gone.state, okRun('r10', fullList));
+  assert.equal(gone.suspected, 0);
+  assert.deepEqual(gone2.lost, []);
+});
+
+test('advanceSourceLoss: place changes and same-day renames are matches, not losses; a dead run neither confirms nor clears; past days drop out', () => {
+  let state = null;
+  ['r1', 'r2'].forEach((runId) => { state = SharedCore.advanceSourceLoss(state, okRun(runId, fullList)).state; });
+  // Bar enrichment moved the place token: identity is title|day, so nothing is missing.
+  const moved = fullList.map(([title, day, extra]) => [title, day, { ...(extra || {}), place: 'the yard 9 bob note' }]);
+  const afterMove = SharedCore.advanceSourceLoss(state, okRun('r3', moved));
+  assert.equal(afterMove.suspected, 0);
+  // A brand prefix on the same day + place overlaps ≥60% of the tokens: a rename.
+  const renamed = moved.map(([title, day, extra]) => [title === 'Club Chub' ? 'Club Chub Los Angeles' : title, day, extra]);
+  const afterRename = SharedCore.advanceSourceLoss(afterMove.state, okRun('r4', renamed));
+  assert.equal(afterRename.suspected, 0);
+  // Two misses, but the second run was dead: still only suspected.
+  const without = moved.filter(([title]) => title !== 'Club Chub');
+  const miss1 = SharedCore.advanceSourceLoss(afterRename.state, okRun('r5', without));
+  assert.equal(miss1.suspected, 1);
+  const dead = SharedCore.advanceSourceLoss(miss1.state, { runId: 'r6', status: 'dead', todayKey: '2026-10-07', extracted: 0, upcomingKeys: {} });
+  assert.deepEqual(dead.lost, []);
+  assert.equal(dead.suspected, 0);
+  assert.equal(dead.state.history.length, miss1.state.history.length, 'a dead run is not in the window');
+  const miss2 = SharedCore.advanceSourceLoss(dead.state, okRun('r7', without));
+  assert.equal(miss2.lost.length, 1);
+  assert.equal(miss2.lost[0].title, 'Club Chub');
+  // The day passes: the loss is no longer a future event.
+  const later = SharedCore.advanceSourceLoss(miss2.state, { ...okRun('r8', without), todayKey: '2026-10-19' });
+  assert.deepEqual(later.lost, []);
+});
+
+test('advanceSourceLoss: listing gone (upcoming ≥3 → 0 while still extracting) is immediate', () => {
+  let state = null;
+  ['r1', 'r2'].forEach((runId) => { state = SharedCore.advanceSourceLoss(state, okRun(runId, fullList)).state; });
+  const empty = SharedCore.advanceSourceLoss(state, okRun('r3', [], { extracted: 99 }));
+  assert.equal(empty.listing_gone, true);
+  assert.equal(empty.suspected, 5);
+  const back = SharedCore.advanceSourceLoss(empty.state, okRun('r4', fullList));
+  assert.equal(back.listing_gone, false);
+  assert.deepEqual(back.lost, [], 'a one-run page miss that came back');
+  const nothing = SharedCore.advanceSourceLoss(back.state, okRun('r5', [], { extracted: 0 }));
+  assert.equal(nothing.listing_gone, false, 'extracted 0 is stopped/empty, not a listing that vanished');
+});
+
+test('buildSourceLedger: lines carry aggregator, url, lost, suspected and listing_gone; the snapshot keeps the four-run window; aggregators from siteRole', () => {
+  const payloadAt = (runId, day, titles) => {
+    const payload = samplePayload({ summary: { runId, timestamp: `${day}T09:25:36.063Z` } });
+    payload.parserResults[0].events = payload.parserResults[0].events.filter((e) => titles.includes(e.title));
+    payload.parserResults[0].totalEvents = payload.parserResults[0].events.length;
+    payload.parserResults.push({ name: 'The Bear Calendar', totalEvents: 2, config: { urls: ['https://thebearcalendar.com/events/'], siteRole: 'aggregator' }, urlClassifications: {}, events: [
+      { title: 'Furry Friday', startDate: '2026-11-06T22:00:00.000Z', bar: 'Somewhere', website: 'https://thebearcalendar.com/event/furry', isBearEvent: true }
+    ] });
+    return payload;
+  };
+  const all = ['BLUF LA', 'Beer Bust', 'Old Night', 'Karaoke'];
+  let upcoming = null;
+  const days = ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05'];
+  const lists = [all, all, all.filter((t) => t !== 'BLUF LA'), all.filter((t) => t !== 'BLUF LA'), all];
+  const records = [];
+  days.forEach((day, index) => {
+    const built = SharedCore.buildSourceLedger(payloadAt(`${day.replace(/-/g, '')}-052536`, day, lists[index]), { now: new Date(`${day}T12:00:00Z`), previousUpcoming: upcoming });
+    upcoming = built.upcoming;
+    records.push(built.records.find((r) => r.host === 'eaglela.com'));
+  });
+  assert.equal(records[0].aggregator, false);
+  assert.equal(records[0].url, 'https://eaglela.com/events/');
+  assert.deepEqual(records[0].lost, []);
+  assert.equal(records[2].suspected, 1, 'first miss of BLUF LA');
+  assert.deepEqual(records[2].lost, []);
+  assert.deepEqual(records[3].lost, [{ title: 'BLUF LA', bear: true, since: '20261004-052536', seen: 2, days: ['2026-11-20'], new: 1 }]);
+  assert.equal(records[3].listing_gone, false);
+  assert.deepEqual(records[4].lost, [], 'back on the page');
+  assert.equal(upcoming.version, 2);
+  assert.equal(upcoming.hosts['eaglela.com'].history.length, 4);
+  assert.ok(upcoming.hosts['eaglela.com'].upcoming['bluf la|eagle la|2026-11-20'], 'the old upcoming map is still there for vanished');
+  const aggregatorLine = SharedCore.buildSourceLedger(payloadAt('20261006-052536', '2026-10-06', all), { now: new Date('2026-10-06T12:00:00Z'), previousUpcoming: upcoming }).records.find((r) => r.host === 'thebearcalendar.com');
+  assert.equal(aggregatorLine.aggregator, true);
+  // A version-1 snapshot (upcoming only) still feeds vanished and seeds the window.
+  const legacy = { version: 1, run_id: '20261006-052536', hosts: { 'eaglela.com': { run_id: '20261006-052536', finished_at: '2026-10-06T09:25:36.063Z', upcoming: upcoming.hosts['eaglela.com'].upcoming } } };
+  const fromLegacy = SharedCore.buildSourceLedger(payloadAt('20261007-052536', '2026-10-07', all.filter((t) => t !== 'BLUF LA')), { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: legacy });
+  const line = fromLegacy.records.find((r) => r.host === 'eaglela.com');
+  assert.equal(line.vanished.length, 1);
+  assert.equal(line.suspected, 0, 'one prior sighting is not yet an expectation');
+  assert.equal(fromLegacy.upcoming.hosts['eaglela.com'].history.length, 1);
 });
 
 test('parseSourceLedger tolerates torn lines', () => {
