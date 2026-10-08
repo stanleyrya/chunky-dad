@@ -84,6 +84,7 @@ const VERDICT_COLORS = {
   empty: BRAND.warning,
   quiet: BRAND.neutral,
   vanished: BRAND.neutral,
+  companion: BRAND.neutral,
   ok: BRAND.success
 };
 
@@ -166,7 +167,9 @@ function buildSourceStatus(health, options = {}) {
     total: rows.length,
     troubled,
     vanished,
-    ok: rows.filter(row => row.verdict === 'ok').length,
+    // Everything that needs no look: ok, and a companion host whose parser
+    // is fed by a sibling host (SOURCE_UNTROUBLED_VERDICTS).
+    ok: rows.filter(row => !isTroubledVerdict(row.verdict) && row.verdict !== 'vanished').length,
     newestRunId,
     newestFinishedAt
   };

@@ -53,6 +53,7 @@ const SOURCE_VERDICT_COLORS = {
   empty: '#9b8cff',
   vanished: '#e056a0',
   quiet: '#54a0ff',
+  companion: '#8395a7',
   ok: BRAND.neutral
 };
 
@@ -1869,6 +1870,9 @@ class MetricsDisplay {
     const runs = new Map();
     rows.forEach(row => {
       const baseline = Number.isFinite(row?.baseline) ? row.baseline : null;
+      // A companion host (its parser's events come from a sibling host)
+      // yields 0 on every run by design: never a troubled band.
+      const companion = Array.isArray(row?.companionOf) && row.companionOf.length > 0;
       (Array.isArray(row?.series) ? row.series : []).forEach(line => {
         if (!line || !line.run_id) return;
         let entry = runs.get(line.run_id);
@@ -1885,7 +1889,7 @@ class MetricsDisplay {
         const extracted = Number(line.extracted) || 0;
         let verdict = 'ok';
         if (line.status === 'dead') verdict = 'dead';
-        else if (extracted === 0) verdict = baseline > 0 ? 'stopped' : 'empty';
+        else if (extracted === 0) verdict = companion ? 'ok' : (baseline > 0 ? 'stopped' : 'empty');
         else if (baseline > 0 && extracted < baseline / 2) verdict = 'shrunk';
         entry.counts[verdict] += 1;
         entry.total += 1;
