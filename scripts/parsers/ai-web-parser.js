@@ -3476,6 +3476,10 @@ class AiWebParser {
             // single-time/range skips above — same standard as the dated-line
             // span path's isUsable: a time node is never a listing title.
             if (this.isTimeOnlyLineText(line)) continue;
+            // "10:30pm (Showtime 11:15pm)", "9pm (doors 8pm)": a time line
+            // with a parenthetical remark is still a time line.
+            const unparenthesised = this.normalizeWhitespace(line.replace(/\([^)]*\)/g, ' '));
+            if (unparenthesised && unparenthesised !== line && this.isTimeOnlyLineText(unparenthesised)) continue;
             // A bare weekday is the card's date tag, not its name: a
             // "06 / Sep / Sun / BEARS IN SPACE!!" card printed its day as
             // three lines, the month line is a date signal and skipped
@@ -3508,7 +3512,67 @@ class AiWebParser {
     // Segmentation keeps the page's own strings; what the model is TOLD the
     // event is called is the event's name.
     deriveSegmentEventName(segment, sourceUrl = null) {
-        return this.stripPageSiteNameTail(this.deriveSegmentListingTitle(segment), sourceUrl);
+        return this.stripPageSiteNameTail(
+            this.completeDanglingListingTitle(segment, this.deriveSegmentListingTitle(segment)),
+            sourceUrl
+        );
+    }
+
+    // A listing title that ENDS on a connective is a name cut mid-phrase by
+    // the page's own line break: "Pride 2026:" over "Dan Slater w/ VOLOS",
+    // "House of Goonz presents" over "Nightshift w/ Phox…", "… After Party
+    // w/" over "Abel" (hereticatlanta.com prints its card names across <br>
+    // lines). Told that fragment as the listing title, the model shipped
+    // "Pride 2026:" as three events' names (runs 20261002-183525 and on).
+    // The name continues on the next line while the title still dangles —
+    // a line that is itself a date, a time, a weekday tag, a call to action,
+    // the page's chrome, a URL or a bullet note ("– No Cover") ends the
+    // name, and a joined name past the title length keeps the fragment
+    // (nothing better is known). Applied to the EVENT NAME only: the
+    // listing title stays the window's identity (see deriveSegmentEventName).
+    completeDanglingListingTitle(segment, title) {
+        const name = this.normalizeWhitespace(String(title || ''));
+        if (!name) return title;
+        const lines = (segment && Array.isArray(segment.lines) ? segment.lines : [])
+            .map(line => this.normalizeWhitespace(String(line || '')))
+            .filter(Boolean);
+        const key = name.toLowerCase();
+        let index = lines.findIndex(line => line.toLowerCase() === key);
+        if (index < 0) index = lines.findIndex(line => line.toLowerCase().includes(key));
+        if (index < 0) return title;
+        let joined = name;
+        while (this.endsWithDanglingConnective(joined) && index + 1 < lines.length) {
+            const next = lines[index + 1];
+            if (!this.isListingNameContinuationLine(next)) break;
+            joined = `${joined} ${next}`;
+            index++;
+        }
+        if (joined === name) return title;
+        return joined.length <= this.extractionLimits.multiEventTitleMaxChars ? joined : title;
+    }
+
+    // Trailing connectives a name never ends on: a label colon, "w/",
+    // "with", "feat.", "ft.", "featuring", "presents", "x", "vs", "&", "+",
+    // "and".
+    endsWithDanglingConnective(text) {
+        return /(?::|\bw\/|\bwith|\bfeat\.?|\bft\.?|\bfeaturing|\bpresents?|\bpresenta|\bx|\bvs\.?|&|\+|\band)\s*$/i.test(String(text || ''));
+    }
+
+    // Can this line continue a dangling name? Not a marker, a date, a time,
+    // a weekday tag, a call to action, the page's chrome, a URL, or a bullet
+    // note.
+    isListingNameContinuationLine(line) {
+        const text = this.normalizeWhitespace(String(line || ''));
+        if (!text) return false;
+        if (/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(text)) return false;
+        if (/^https?:\/\//i.test(text)) return false;
+        if (/^[-–—•·*]/.test(text)) return false;
+        if (this.hasMultiEventDateSignal(text) && !this.isNameCarryingMonthWord(text)) return false;
+        if (this.isTimeOnlyLineText(text) || this.isClockLine(text)) return false;
+        if (this.isBareWeekdayLine(text)) return false;
+        if (this.isMultiEventCallToActionLine(text)) return false;
+        if (this.isPageChromeLine(text)) return false;
+        return true;
     }
 
     // 'late' when the model's own reading of this event says it runs "til
@@ -3550,6 +3614,59 @@ class AiWebParser {
     isBareWeekdayLine(line) {
         const text = this.normalizeWhitespace(String(line || ''));
         return /^(?:sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(?:day|sday|nesday|rsday|urday)?[.,]?$/i.test(text);
+    }
+
+    // The weekday a bare weekday line names, 0 = Sunday … 6 = Saturday; -1
+    // for any other line.
+    bareWeekdayLineIndex(line) {
+        if (!this.isBareWeekdayLine(line)) return -1;
+        const key = this.normalizeWhitespace(String(line || '')).slice(0, 3).toLowerCase();
+        return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(key);
+    }
+
+    // A line that states a clock time ("10pm-3am", "10:30pm (Showtime
+    // 11:15pm)", "20.30 h") — the schedule-time test the AI boundary pass
+    // already counts lines by.
+    isClockLine(line) {
+        return this.countScheduleTimeLines([String(line || '')]) === 1;
+    }
+
+    // A card's WEEKDAY TAG: a bare weekday line with a clock line right under
+    // it — "WEDNESDAY / 10pm-3am" — the way a venue's "this week" board
+    // prints its rows once the week has arrived. hereticatlanta.com/events
+    // printed "WEDNESDAY, OCT. 7 / 10pm-3am" on every Pride-week card until
+    // the week of Oct 7 and then dropped the date from the same cards (run
+    // 20261005-232729: 24 events → 8, the weekday-only cards had no date
+    // signal and were never windows). The tag is the card's date line: it
+    // opens a window exactly as a printed date does, and readCardWeekdayDate
+    // resolves it against the page's own date. Returns the index of the
+    // weekday line, or -1. Page-derived shape only — nothing per site.
+    findWeekdayTagIndex(lines) {
+        const list = Array.isArray(lines) ? lines : [];
+        for (let i = 0; i + 1 < list.length; i++) {
+            if (this.isBareWeekdayLine(list[i]) && this.isClockLine(list[i + 1])) return i;
+        }
+        return -1;
+    }
+
+    // A line that is nothing but a month name with an optional year —
+    // "October 2026", "Sept.", "NOVEMBER" — a listing's section heading.
+    isMonthHeadingLine(line) {
+        const text = this.normalizeWhitespace(String(line || ''));
+        return /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:,?\s+(?:19|20)\d{2})?$/i.test(text);
+    }
+
+    // The month heading a window is dated by when that is its ONLY date
+    // signal and it states no clock, else ''. Such a window is the heading's
+    // spillover (the previous card's tail under the next section's
+    // heading), never a listing of its own.
+    windowDatedOnlyByMonthHeading(lines) {
+        const list = (Array.isArray(lines) ? lines : []).map(line => this.normalizeWhitespace(String(line || ''))).filter(Boolean);
+        const dated = list.filter(line => this.hasMultiEventDateSignal(line));
+        if (dated.length === 0 || !dated.every(line => this.isMonthHeadingLine(line))) return '';
+        if (this.findWeekdayTagIndex(list) >= 0) return '';
+        if (list.some(line => this.isClockLine(line))) return '';
+        return dated[0];
     }
 
     // ── A CARD'S TITLE IS NOT ITS CHROME ────────────────────────────────
@@ -4676,6 +4793,16 @@ class AiWebParser {
             const keys = lines.map(lineKey).filter(Boolean);
             if (keys.length === 0) continue;
             if (!this.segmentHasDateSignal(lines)) continue;
+            // "Dan Slater w/ VOLOS / October 2026": the last card's name
+            // line with the NEXT section's month heading under it. A month
+            // heading dates nothing by itself, and a window that states no
+            // clock either is the heading's spillover, not a listing the
+            // cards missed (hereticatlanta.com/events, run 2026-10-07).
+            const monthHeading = this.windowDatedOnlyByMonthHeading(lines);
+            if (monthHeading) {
+                console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" is dated only by the section heading "${monthHeading}" and states no clock — a heading's spillover, not a listing`);
+                continue;
+            }
             const card = cardResolver.resolveWindow(window);
             if (!card && insideResolvedCard(cardResolver.locateWindow(window))) {
                 claimedCount++;
@@ -5122,13 +5249,18 @@ class AiWebParser {
             }
         };
 
-        for (const rawLine of bodyParts) {
-            const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
+        for (let lineIndex = 0; lineIndex < bodyParts.length; lineIndex++) {
+            const line = this.trimToMaxLength(this.normalizeWhitespace(bodyParts[lineIndex]), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
             // Compact event lines (date + event name in one line) can start a new segment
             // with just 1 prior line that has a date signal, rather than minSegmentLines.
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
-            const startsNewByDate = this.hasMultiEventDateSignal(line) &&
+            // A weekday tag ("WEDNESDAY" over "10pm-3am") is a card's date
+            // line too (see findWeekdayTagIndex): without it, a "this week"
+            // board whose rows print no month-day was cut every 24 lines.
+            const opensWeekdayTag = this.isBareWeekdayLine(line)
+                && this.isClockLine(this.normalizeWhitespace(bodyParts[lineIndex + 1] || ''));
+            const startsNewByDate = (this.hasMultiEventDateSignal(line) || opensWeekdayTag) &&
                 // "Start from: August 9, 2026 - 9:00 pm" / "End at: …" state
                 // WHEN the event named above happens. Every such line used to
                 // open a boundary, so each window straddled two listings
@@ -5147,8 +5279,11 @@ class AiWebParser {
                 // it are activity names ("VER Palauet…"), never the next
                 // event's head — splitting there orphans the rest of the day
                 // into a dateless segment that then swallows the next day's
-                // header (bearssitges run 20260728, VIERNES - 11).
-                !this.hasMultiEventDateSignal(currentLines[0]);
+                // header (bearssitges run 20260728, VIERNES - 11). A window
+                // headed by a weekday tag ("WEDNESDAY" over "10pm-3am") is
+                // date-headed the same way: its name follows its tag.
+                !this.hasMultiEventDateSignal(currentLines[0]) &&
+                this.findWeekdayTagIndex(currentLines) !== 0;
             if (startsNewByDate) {
                 const trailingStartIndex = this.findTrailingMultiEventStartIndex(currentLines);
                 if (trailingStartIndex > 0) {
@@ -7352,8 +7487,11 @@ class AiWebParser {
         // names — so peeling would drag the day's tail into the next day
         // (bearssitges run 20260728: "VER Palauet…" pulled half of
         // JUEVES - 10 into VIERNES - 11).
-        if (normalizedLines.length > 0 && this.hasMultiEventDateSignal(normalizedLines[0])) return -1;
-        const lastDateIndex = this.lastMultiEventDateSignalIndex(normalizedLines);
+        // A weekday tag ("WEDNESDAY" over "10pm-3am", see findWeekdayTagIndex)
+        // heads a card the same way a date line does.
+        const weekdayTagIndex = this.findWeekdayTagIndex(normalizedLines);
+        if (normalizedLines.length > 0 && (this.hasMultiEventDateSignal(normalizedLines[0]) || weekdayTagIndex === 0)) return -1;
+        const lastDateIndex = Math.max(this.lastMultiEventDateSignalIndex(normalizedLines), weekdayTagIndex);
         if (lastDateIndex < 0 || lastDateIndex >= normalizedLines.length - 1) return -1;
         for (let i = lastDateIndex + 1; i < normalizedLines.length; i++) {
             if (this.isStrongMultiEventTitleLine(normalizedLines[i])) {
@@ -7799,7 +7937,10 @@ class AiWebParser {
     }
 
     segmentHasDateSignal(lines) {
-        return (Array.isArray(lines) ? lines : []).some(line => this.hasMultiEventDateSignal(line));
+        const list = Array.isArray(lines) ? lines : [];
+        // A weekday tag (bare weekday line + clock line, see
+        // findWeekdayTagIndex) dates a card the way a printed date does.
+        return list.some(line => this.hasMultiEventDateSignal(line)) || this.findWeekdayTagIndex(list) >= 0;
     }
 
     segmentHasTitleSignal(lines) {
@@ -24422,6 +24563,83 @@ TEXT:
         return { date: `${year}-${pad(card.month)}-${pad(card.day)}`, line: dateLine, startTime, endTime };
     }
 
+    // A listing card that prints ONLY a weekday — "WEDNESDAY / 10pm-3am /
+    // Pride 2026: Pup Pride…" — read without the model: { date, line,
+    // weekday, weekdayIndex, reference, startTime, endTime,
+    // derivedFromWeekday: true } or null. A "this week" board names its
+    // nights by weekday alone once the week is current (hereticatlanta.com
+    // /events printed "WEDNESDAY, OCT. 7" on the same cards a week earlier),
+    // so the weekday is resolved to its next occurrence on or after the
+    // page's own date — the day the page was fetched, never a hand-kept
+    // festival calendar — and the record is STAMPED as derived
+    // (_weekdayDerivedDate → the report-only flag channel) so the review
+    // deck shows what was inferred. Flag, don't drop.
+    //
+    // Fails closed: the card must carry exactly ONE weekday tag (see
+    // findWeekdayTagIndex) and no other weekday line, no printed month-day
+    // (readCardPrintedDate reads those) and no other date signal (a month
+    // heading inside the window makes it ambiguous); a reference date that
+    // cannot be read resolves nothing.
+    readCardWeekdayDate(lines, referenceDate = new Date()) {
+        const cardLines = (Array.isArray(lines) ? lines : []).map(line => this.normalizeWhitespace(String(line || ''))).filter(Boolean);
+        if (cardLines.length === 0 || cardLines.length > 12) return null;
+        if (this.collectCardStatedDates(cardLines).length > 0) return null;
+        if (cardLines.some(line => this.hasMultiEventDateSignal(line))) return null;
+        if (cardLines.filter(line => this.isBareWeekdayLine(line)).length !== 1) return null;
+        const tagIndex = this.findWeekdayTagIndex(cardLines);
+        if (tagIndex < 0) return null;
+        const weekdayIndex = this.bareWeekdayLineIndex(cardLines[tagIndex]);
+        if (weekdayIndex < 0) return null;
+        const referenceMs = referenceDate instanceof Date
+            ? referenceDate.getTime()
+            : Date.parse(String(referenceDate || ''));
+        if (!Number.isFinite(referenceMs)) return null;
+        const reference = new Date(referenceMs);
+        const baseMs = Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate());
+        const dayMs = 24 * 60 * 60 * 1000;
+        const delta = (weekdayIndex - new Date(baseMs).getUTCDay() + 7) % 7;
+        const resolved = new Date(baseMs + delta * dayMs);
+        const clock = this.readCardClockRange(cardLines);
+        return {
+            date: resolved.toISOString().slice(0, 10),
+            line: cardLines[tagIndex],
+            weekday: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekdayIndex],
+            weekdayIndex,
+            reference: new Date(baseMs).toISOString().slice(0, 10),
+            startTime: clock.startTime,
+            endTime: clock.endTime,
+            derivedFromWeekday: true
+        };
+    }
+
+    // A card line that is nothing but a clock range — "6 PM - 9 PM",
+    // "2pm-8pm" — as { startTime, endTime } ('' when none).
+    readCardClockRange(lines) {
+        const pad = (value) => String(value).padStart(2, '0');
+        const clock = (hour, minute, meridiem) => { let h = Number(hour) % 12; if (/p/i.test(meridiem)) h += 12; return `${pad(h)}:${minute || '00'}`; };
+        for (const line of (Array.isArray(lines) ? lines : [])) {
+            const range = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?\s*(?:-|–|—|to)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i.exec(this.normalizeWhitespace(String(line || '')));
+            if (!range) continue;
+            return { startTime: clock(range[1], range[2], range[3]), endTime: clock(range[4], range[5], range[6]) };
+        }
+        return { startTime: '', endTime: '' };
+    }
+
+    // The page's own date, for resolving what it says relative to "now":
+    // when it was fetched (the page cache records it), else the server's
+    // Date header, else the run's clock.
+    resolvePageReferenceDate(htmlData) {
+        const candidates = [
+            htmlData && htmlData.fetchedAt,
+            htmlData && htmlData.headers && (htmlData.headers.date || htmlData.headers.Date)
+        ];
+        for (const candidate of candidates) {
+            const ms = Date.parse(String(candidate || ''));
+            if (Number.isFinite(ms)) return new Date(ms);
+        }
+        return this.now();
+    }
+
     // A page that prints a date for its card has said when the event is. The
     // flyer beside it is artwork, and artwork is routinely LAST YEAR's:
     // beefdip.com/planned-events runs its 2027 programme under 21 flyers
@@ -25067,18 +25285,40 @@ TEXT:
         // listing card with a line that is nothing but a date, that line is
         // the date — see readCardPrintedDate. Never overrides a date the
         // model did return.
+        // A card that prints only a WEEKDAY ("WEDNESDAY / 10pm-3am") is read
+        // the same way, resolved against the page's own date and stamped as
+        // derived (readCardWeekdayDate) — flag, don't drop.
+        let weekdayDerivedDate = null;
+        let cardWeekdayConflict = null;
         if (!this.firstNonEmpty(aiEvent.startDate, aiEvent.start, '') && htmlData && Array.isArray(htmlData.segmentCardLines)) {
-            const printed = this.readCardPrintedDate(htmlData.segmentCardLines, htmlData.segmentPageDateContext);
+            const printed = this.readCardPrintedDate(htmlData.segmentCardLines, htmlData.segmentPageDateContext)
+                || this.readCardWeekdayDate(htmlData.segmentCardLines, this.resolvePageReferenceDate(htmlData));
             if (printed) {
                 aiEvent.startDate = printed.date;
                 if (!this.firstNonEmpty(aiEvent.startTime, '') && printed.startTime) {
                     aiEvent.startTime = printed.startTime;
                     if (!this.firstNonEmpty(aiEvent.endTime, aiEvent.end, '') && printed.endTime) aiEvent.endTime = printed.endTime;
                 }
-                console.log(`📅 AI Web: "${title || 'Unknown'}" — the model's date did not survive; the card itself prints "${printed.line}" → ${printed.date}${printed.startTime && aiEvent.startTime === printed.startTime ? ` ${printed.startTime}` : ''}`);
+                if (printed.derivedFromWeekday) {
+                    weekdayDerivedDate = printed;
+                    console.log(`📅 AI Web: "${title || 'Unknown'}" — the model's date did not survive and the card prints only "${printed.line}"; dated to the next ${printed.weekday} on/after the page's own date ${printed.reference} → ${printed.date}${printed.startTime && aiEvent.startTime === printed.startTime ? ` ${printed.startTime}` : ''} (flagged as derived)`);
+                } else {
+                    console.log(`📅 AI Web: "${title || 'Unknown'}" — the model's date did not survive; the card itself prints "${printed.line}" → ${printed.date}${printed.startTime && aiEvent.startTime === printed.startTime ? ` ${printed.startTime}` : ''}`);
+                }
             }
         }
         this.preferCardPrintedDateOverModelDate(aiEvent, htmlData, title);
+        // The model DID date a weekday-only card (its flyer, usually): a date
+        // that is not that weekday is shown, not picked over — the model's
+        // date ships and the disagreement is stamped for the deck.
+        if (!weekdayDerivedDate && htmlData && Array.isArray(htmlData.segmentCardLines)) {
+            const modelDay = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, '') || ''));
+            const tag = modelDay ? this.readCardWeekdayDate(htmlData.segmentCardLines, this.resolvePageReferenceDate(htmlData)) : null;
+            if (tag && new Date(Date.UTC(Number(modelDay[1]), Number(modelDay[2]) - 1, Number(modelDay[3]))).getUTCDay() !== tag.weekdayIndex) {
+                cardWeekdayConflict = { line: tag.line, weekday: tag.weekday, modelDate: modelDay[0], weekdayDate: tag.date };
+                console.log(`📅 AI Web: "${title || 'Unknown'}" — the card prints "${tag.line}" but the record read ${modelDay[0]}, which is not a ${tag.weekday} (the next ${tag.weekday} on/after ${tag.reference} is ${tag.date}); the record's date ships, the disagreement is flagged`);
+            }
+        }
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
         let startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
@@ -25471,8 +25711,12 @@ TEXT:
         // states this one, this segment had no structured data to check
         // against, its dates came from OCR, and the year was neither pinned
         // nor stated — so there is no evidence left for this date at all.
+        // A date resolved from the card's own weekday tag is the PAGE's
+        // statement, not a flyer's (readCardWeekdayDate) — it ships, flagged
+        // as derived, and is never dropped here.
         if (startDateIsOrphan
             && !startDateFromStatedRecurrence
+            && !weekdayDerivedDate
             && !startYearIsStated
             && !this.dateCarriesExplicitYear(startDate, explicitSourceYears.start)
             && !hasStructuredData
@@ -25623,6 +25867,21 @@ TEXT:
         // reader can see WHY the event ships date-only.
         if (oddMinuteRejected) {
             event._impossibleClockRejected = oddMinuteRejected;
+        }
+        // Flag, don't drop: a date resolved from a weekday-only card, or a
+        // model date that is not the card's weekday, stays on the record
+        // (underscore fields — internal, never notes) and SharedCore's
+        // sanity flags surface them on the deck.
+        if (weekdayDerivedDate) {
+            event._weekdayDerivedDate = {
+                line: weekdayDerivedDate.line,
+                weekday: weekdayDerivedDate.weekday,
+                reference: weekdayDerivedDate.reference,
+                date: weekdayDerivedDate.date
+            };
+        }
+        if (cardWeekdayConflict) {
+            event._cardWeekdayConflict = cardWeekdayConflict;
         }
 
         // A DATE AND NO TIME IS A DAY. Nothing on the page (and nothing the

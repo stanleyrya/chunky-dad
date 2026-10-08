@@ -4231,6 +4231,33 @@ class SharedCore {
             }
         }
 
+        // 10b. weekday-derived-date / card-weekday-conflict — a listing card
+        //      that prints only a weekday ("WEDNESDAY / 10pm-3am", a venue's
+        //      "this week" board) was dated by the parser to that weekday's
+        //      next occurrence on/after the page's own date
+        //      (readCardWeekdayDate), or the model's date for such a card is
+        //      not that weekday at all. Report-only: the value ships, the
+        //      inference is shown so the deck can judge it. Fails closed on a
+        //      malformed stamp.
+        const weekdayDerived = event._weekdayDerivedDate;
+        if (weekdayDerived && typeof weekdayDerived === 'object'
+            && typeof weekdayDerived.line === 'string' && weekdayDerived.line
+            && typeof weekdayDerived.date === 'string' && weekdayDerived.date) {
+            flags.push({
+                code: 'weekday-derived-date',
+                detail: `the page prints only "${weekdayDerived.line}"; dated to the next ${weekdayDerived.weekday || 'such weekday'} on/after the page's own date${weekdayDerived.reference ? ` ${weekdayDerived.reference}` : ''} → ${weekdayDerived.date}`
+            });
+        }
+        const weekdayConflict = event._cardWeekdayConflict;
+        if (weekdayConflict && typeof weekdayConflict === 'object'
+            && typeof weekdayConflict.line === 'string' && weekdayConflict.line
+            && typeof weekdayConflict.modelDate === 'string' && weekdayConflict.modelDate) {
+            flags.push({
+                code: 'card-weekday-conflict',
+                detail: `the page prints "${weekdayConflict.line}" but the record is dated ${weekdayConflict.modelDate}, not a ${weekdayConflict.weekday || 'matching weekday'}${weekdayConflict.weekdayDate ? ` (the next one is ${weekdayConflict.weekdayDate})` : ''}`
+            });
+        }
+
         // 11. improbable-overnight-span — two mirrored shapes of the same
         //     AM/PM entry error at the source, both report-only:
         //     (a) a start in the small hours (00:00-05:59 local) whose span
@@ -16590,6 +16617,13 @@ class SharedCore {
         // it off the FINAL analyzed event, so a merge must not shed it.
         if (newEvent._flyerTimeConflict && typeof newEvent._flyerTimeConflict === 'object') {
             finalEvent._flyerTimeConflict = newEvent._flyerTimeConflict;
+        }
+        // …and for the weekday-only card stamps (readCardWeekdayDate).
+        if (newEvent._weekdayDerivedDate && typeof newEvent._weekdayDerivedDate === 'object') {
+            finalEvent._weekdayDerivedDate = newEvent._weekdayDerivedDate;
+        }
+        if (newEvent._cardWeekdayConflict && typeof newEvent._cardWeekdayConflict === 'object') {
+            finalEvent._cardWeekdayConflict = newEvent._cardWeekdayConflict;
         }
 
         // STEP 6: Pass all three objects to rich display for comparison

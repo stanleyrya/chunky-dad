@@ -21939,3 +21939,190 @@ test('JSON-LD: an offers.url that is another event page under the same listing r
   assert.equal(parser.isSiblingEventPage('https://eaglela.com/tickets/bluf/', 'https://eaglela.com/events/bluf/'), false, 'a different root on the same site');
   assert.equal(parser.isSiblingEventPage('https://eaglela.com/', 'https://eaglela.com/events/bluf/'), false);
 });
+
+// ---------------------------------------------------------------------------
+// A "this week" board prints its rows by WEEKDAY alone. hereticatlanta.com
+// /events printed "WEDNESDAY, OCT. 7 / 10pm-3am / Pride 2026: …" on every
+// Pride-week card through 2026-10-02 (24 events per run) and, once the week
+// was current, the same cards read "WEDNESDAY / 10pm-3am / …" — no date
+// signal, so no window: runs from 2026-10-05 extracted 8. The weekday tag
+// (bare weekday line + clock line) is the card's date line; it opens a
+// window, is resolved to the weekday's next occurrence on/after the page's
+// own date, and the record is stamped as derived (flag, don't drop). The
+// "Pride 2026:" line the card breaks its name on is completed from the next
+// line for the model-facing name, so the fragment never names an event.
+// ---------------------------------------------------------------------------
+function heretikShapedCard(dateLine, timeLine, titleHtml, image, ticket = true) {
+  return `<div><figure><img src="${image}" alt="" /></figure><div><div><div><p>${dateLine}<br>${timeLine}</p>
+<h5>${titleHtml}</h5></div>${ticket ? '<div><a href="/tickets"><span>TICKETS</span></a></div>' : ''}</div></div></div>`;
+}
+const WEEK_BOARD_PAGE_URL = 'https://venue.example/events/';
+const WEEK_BOARD_FETCHED_AT = '2026-10-06T02:52:55.564Z'; // Tuesday (UTC)
+const WEEK_BOARD_HTML = `<html><head><title>Events – Venue</title></head><body>
+<div class="root"><div><figure><img src="https://venue.example/img/this_weeks_events.png" alt="" /></figure></div>
+${heretikShapedCard('MONDAY', '10:30pm (Showtime 11:15pm)', 'Stars of the Century', 'https://venue.example/img/stars.jpg', false)}
+${heretikShapedCard('WEDNESDAY', '10pm-3am', 'Pride 2026:<br>Pup Pride &amp; Warpzone w/ <br>DJ Tracy Levine<br>&#8211; No Cover', 'https://venue.example/img/wed.jpg', false)}
+${heretikShapedCard('THURSDAY', '8pm-3am', 'Pride 2026: Country Pride<br>&#8211; No Cover<br>&#8211; Free Lessons', 'https://venue.example/img/thu.jpg', false)}
+${heretikShapedCard('FRIDAY', '7pm-11pm', 'Atlanta Pride Official Kickoff at Georgia Aquarium', 'https://venue.example/img/fri1.png')}
+${heretikShapedCard('FRIDAY', '9pm-3am', 'Pride 2026: Atlanta Pride Official Kickoff After Party w/<br>Abel', 'https://venue.example/img/fri2.jpg')}
+${heretikShapedCard('SATURDAY', '2pm-8pm', 'Queen Butch presents Bootea w/ The Carry Nation, Mister Wallace &amp; NSA', 'https://venue.example/img/sat1.jpg')}
+${heretikShapedCard('SATURDAY', '9pm-3am', 'Pride 2026:<br>DJ Alex Ramos w/ DJ Mike Pope', 'https://venue.example/img/sat2.jpg')}
+${heretikShapedCard('SUNDAY', '3pm-8pm', 'Pride 2026: Randy Outdoor Tea Dance w/ Sam Gee', 'https://venue.example/img/sun1.jpg')}
+${heretikShapedCard('SUNDAY', '9pm-3am', 'Pride 2026: <br>Dan Slater w/ VOLOS', 'https://venue.example/img/sun2.jpg')}
+<div><div><div><figure><img src="https://venue.example/img/special_events.png" alt="" /></figure></div></div>
+<div><div><h4>October 2026</h4><div></div></div></div>
+<div id="feb">${heretikShapedCard('SATURDAY, OCT. 17', '10pm-3am', 'House of Goonz presents<br>Nightshift w/ Phox, Goonz &amp; Mike Bradley', 'https://venue.example/img/oct17.jpg').replace(/^<div>|<\/div>$/g, '')}</div>
+${heretikShapedCard('FRIDAY, OCT. 23', '10pm-3am', 'Ritual&#8217;s <br>18th Annual Vampire Ball', 'https://venue.example/img/oct23.png', false)}
+${heretikShapedCard('SATURDAY, OCT. 24', '10pm-3am', 'Wolftones presents<br>Witch Please', 'https://venue.example/img/oct24.jpg', false)}
+</div></body></html>`;
+
+test('weekday tag: a bare weekday line over a clock line is a card\'s date line', () => {
+  const parser = createParser();
+  assert.equal(parser.findWeekdayTagIndex(['WEDNESDAY', '10pm-3am', 'Pride 2026:']), 0);
+  assert.equal(parser.findWeekdayTagIndex(['MONDAY', '10:30pm (Showtime 11:15pm)', 'Stars of the Century']), 0);
+  assert.equal(parser.findWeekdayTagIndex(['Karaoke', 'Sun', '21:00h']), 1);
+  assert.equal(parser.findWeekdayTagIndex(['WEDNESDAY', 'Karaoke', '9pm']), -1, 'the clock must sit right under the weekday');
+  assert.equal(parser.findWeekdayTagIndex(['Sunday Funday', '2pm-8pm']), -1, 'a weekday inside a name is not a tag');
+  assert.equal(parser.findWeekdayTagIndex(['10pm-3am', 'WEDNESDAY']), -1);
+  assert.ok(parser.segmentHasDateSignal(['WEDNESDAY', '10pm-3am', 'Pride 2026: Country Pride']));
+  assert.ok(!parser.segmentHasDateSignal(['WEDNESDAY', 'Pride 2026: Country Pride']), 'a weekday with no clock dates nothing');
+  assert.equal(parser.bareWeekdayLineIndex('Thurs.'), 4);
+  assert.equal(parser.bareWeekdayLineIndex('Thursday Social'), -1);
+});
+
+test('weekday-only cards are windows: the structured tier keeps every card, and the month heading\'s spillover is no listing', () => {
+  const parser = createParser();
+  const segments = parser.buildMultiEventSegments(WEEK_BOARD_HTML, WEEK_BOARD_PAGE_URL);
+  const names = segments.map(segment => parser.deriveSegmentEventName(segment, WEEK_BOARD_PAGE_URL));
+  assert.equal(segments.length, 12, `one window per card, got: ${names.join(' | ')}`);
+  const dateLines = ['MONDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'FRIDAY', 'SATURDAY', 'SATURDAY', 'SUNDAY', 'SUNDAY', 'SATURDAY, OCT. 17', 'FRIDAY, OCT. 23', 'SATURDAY, OCT. 24'];
+  dateLines.forEach((dateLine, index) => assert.ok(segments[index].lines.includes(dateLine), `window ${index + 1} holds "${dateLine}": ${segments[index].lines.join(' | ')}`));
+  assert.deepEqual(segments.slice(0, 9).map(segment => segment.lines[0]), dateLines.slice(0, 9), 'a weekday-only card opens on its weekday tag');
+  // Every weekday-only card dates itself by its tag; the dated cards keep
+  // their printed date line (readCardPrintedDate's business, not the tag's).
+  for (const segment of segments.slice(0, 9)) assert.equal(parser.findWeekdayTagIndex(segment.lines), 0, segment.lines.join(' | '));
+  assert.equal(parser.readCardWeekdayDate(segments[2].lines, WEEK_BOARD_FETCHED_AT).date, '2026-10-08', 'THURSDAY → Oct 8 for a page fetched Tue Oct 6');
+  for (const segment of segments.slice(9)) assert.equal(parser.readCardWeekdayDate(segment.lines, WEEK_BOARD_FETCHED_AT), null, segment.lines.join(' | '));
+  // The "October 2026" heading never becomes a window of its own, and no
+  // window is named by the heading.
+  assert.ok(!segments.some(segment => segment.lines.every(line => !/[a-z]/i.test(line) || /^october 2026$/i.test(line))));
+  assert.ok(!names.some(name => /^october 2026$/i.test(name)));
+  // The fragment "Pride 2026:" is never a window's event name: the name is
+  // completed from the card's next line.
+  assert.ok(!names.some(name => /^Pride 2026:\s*$/.test(name)), names.join(' | '));
+  assert.ok(names.includes('Pride 2026: Pup Pride &amp; Warpzone w/ DJ Tracy Levine'), names.join(' | '));
+  assert.ok(names.includes('Pride 2026: DJ Alex Ramos w/ DJ Mike Pope'));
+  assert.ok(names.includes('Pride 2026: Dan Slater w/ VOLOS'));
+  assert.ok(names.includes('Pride 2026: Atlanta Pride Official Kickoff After Party w/ Abel'));
+  assert.ok(names.includes('House of Goonz presents Nightshift w/ Phox, Goonz &amp; Mike Bradley'));
+  assert.ok(names.includes('Wolftones presents Witch Please'));
+  assert.ok(names.includes('Stars of the Century'), 'the time line with its showtime remark is not the name');
+  // The window's IDENTITY (listing title) stays the page's own line.
+  assert.equal(parser.deriveSegmentListingTitle(segments[1]), 'Pride 2026:');
+  assert.equal(parser.deriveSegmentListingTitle(segments[0]), 'Stars of the Century');
+  // The flat text tier (the second opinion) cuts at the weekday tags as
+  // well: each of its windows opens on a tag or a printed date, and the
+  // board is no longer cut every 24 lines into windows that carried no date
+  // at all. (The flat tier reads the page's text once, so a repeated line —
+  // the second "FRIDAY", every "10pm-3am" after the first — is gone from it
+  // and two same-weekday cards share one text window; the structured tier
+  // above reads each card's own element and keeps them apart.)
+  const flat = parser.buildFlatTextMultiEventSegments(WEEK_BOARD_HTML);
+  assert.ok(flat.length >= 9, `flat windows: ${flat.length}`);
+  assert.ok(flat.every(segment => parser.segmentHasDateSignal(segment.lines)));
+  assert.deepEqual(flat.slice(0, 6).map(segment => segment.lines[0]), ['MONDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']);
+  assert.ok(flat.slice(6).every(segment => segment.lines.some(line => /OCT\. (?:17|23|24)/.test(line))));
+});
+
+test('readCardWeekdayDate resolves a weekday-only card to the weekday\'s next occurrence on/after the page\'s own date — and nothing looser', () => {
+  const parser = createParser();
+  const read = (lines, reference = WEEK_BOARD_FETCHED_AT) => parser.readCardWeekdayDate(lines, reference);
+  assert.deepEqual(read(['WEDNESDAY', '10pm-3am', 'Pride 2026:', 'Pup Pride & Warpzone w/', 'DJ Tracy Levine', '– No Cover']),
+    { date: '2026-10-07', line: 'WEDNESDAY', weekday: 'Wednesday', weekdayIndex: 3, reference: '2026-10-06', startTime: '22:00', endTime: '03:00', derivedFromWeekday: true });
+  assert.equal(read(['THURSDAY', '8pm-3am', 'Pride 2026: Country Pride']).date, '2026-10-08');
+  assert.equal(read(['SUNDAY', '3pm-8pm', 'Pride 2026: Randy Outdoor Tea Dance w/ Sam Gee']).date, '2026-10-11');
+  assert.equal(read(['SUNDAY', '9pm-3am', 'Pride 2026:', 'Dan Slater w/ VOLOS']).date, '2026-10-11');
+  // The page's own weekday counts as "on or after"; a weekday just gone is
+  // next week's.
+  assert.equal(read(['TUESDAY', '9pm', 'Trivia']).date, '2026-10-06');
+  assert.equal(read(['MONDAY', '10:30pm (Showtime 11:15pm)', 'Stars of the Century']).date, '2026-10-12');
+  assert.equal(read(['MONDAY', '10:30pm (Showtime 11:15pm)', 'Stars of the Century']).startTime, '', 'no bare clock range, no clock');
+  assert.equal(read(['MONDAY', '10:30pm', 'Stars of the Century'], new Date('2026-10-05T12:00:00Z')).date, '2026-10-05');
+  // A printed month-day outranks the tag (readCardPrintedDate's case); a
+  // month heading inside the window, a second weekday, a weekday with no
+  // clock, or an unreadable reference date resolve nothing.
+  assert.equal(read(['SATURDAY, OCT. 17', '10pm-3am', 'House of Goonz presents']), null);
+  assert.equal(read(['SUNDAY', '9pm-3am', 'Pride 2026:', 'Dan Slater w/ VOLOS', 'October 2026']), null);
+  assert.equal(read(['WEDNESDAY', '9pm', 'Karaoke', 'THURSDAY', '9pm', 'Trivia']), null);
+  assert.equal(read(['WEDNESDAY', 'Karaoke']), null);
+  assert.equal(read(['WEDNESDAY', '10pm-3am', 'Pup Pride'], 'not a date'), null);
+  assert.equal(read([]), null);
+  // The page's own date: when it was fetched, else the server's Date
+  // header, else the run's clock.
+  assert.equal(parser.resolvePageReferenceDate({ fetchedAt: WEEK_BOARD_FETCHED_AT }).toISOString(), WEEK_BOARD_FETCHED_AT);
+  assert.equal(parser.resolvePageReferenceDate({ headers: { date: 'Tue, 06 Oct 2026 02:52:55 GMT' } }).toISOString(), '2026-10-06T02:52:55.000Z');
+  parser.now = FROZEN_NOW;
+  assert.equal(parser.resolvePageReferenceDate({ fetchedAt: 'garbage' }).toISOString(), FROZEN_NOW().toISOString());
+});
+
+test('normalizeAiEvent dates a weekday-only card the model left undated, and stamps the record as derived; a model date that is not that weekday is flagged, not replaced', () => {
+  const parser = createParser();
+  parser.now = () => new Date('2026-10-07T12:00:00Z');
+  const cityConfig = { atlanta: { timezone: 'America/New_York', patterns: ['atlanta'] } };
+  const card = {
+    url: WEEK_BOARD_PAGE_URL,
+    html: 'THURSDAY\n8pm-3am\nPride 2026: Country Pride',
+    fetchedAt: WEEK_BOARD_FETCHED_AT,
+    segmentCardLines: ['THURSDAY', '8pm-3am', 'Pride 2026: Country Pride', '– No Cover', '– Free Lessons'],
+    segmentPageDateContext: null,
+    segmentListingTitle: 'Pride 2026: Country Pride'
+  };
+  const undated = parser.normalizeAiEvent({ title: 'Pride 2026: Country Pride', city: 'atlanta', bar: 'The Heretic' }, {}, card, cityConfig, null);
+  assert.ok(undated, 'the card is kept');
+  assert.equal(undated.startDate.toISOString(), '2026-10-09T00:00:00.000Z', '8pm Thursday Oct 8 in Atlanta');
+  assert.equal(undated.endDate.toISOString(), '2026-10-09T07:00:00.000Z', 'the card\'s 3am end');
+  assert.deepEqual(undated._weekdayDerivedDate, { line: 'THURSDAY', weekday: 'Thursday', reference: '2026-10-06', date: '2026-10-08' });
+  assert.equal(undated._cardWeekdayConflict, undefined);
+  // The model (its flyer) dated the Thursday card: agreement leaves no stamp…
+  const agreed = parser.normalizeAiEvent({ title: 'Pride 2026: Country Pride', city: 'atlanta', startDate: '2026-10-08', startTime: '20:00' }, {}, card, cityConfig, null);
+  assert.equal(agreed._weekdayDerivedDate, undefined);
+  assert.equal(agreed._cardWeekdayConflict, undefined);
+  // …and a Saturday for a THURSDAY card ships as read, flagged.
+  const disagreed = parser.normalizeAiEvent({ title: 'Pride 2026: Country Pride', city: 'atlanta', startDate: '2026-10-10', startTime: '20:00' }, {}, card, cityConfig, null);
+  assert.equal(disagreed.startDate.toISOString(), '2026-10-11T00:00:00.000Z', 'the record\'s own date ships');
+  assert.deepEqual(disagreed._cardWeekdayConflict, { line: 'THURSDAY', weekday: 'Thursday', modelDate: '2026-10-10', weekdayDate: '2026-10-08' });
+  // A card with a printed date is readCardPrintedDate's: no weekday stamp.
+  const printed = parser.normalizeAiEvent({ title: 'Nightshift', city: 'atlanta' }, {}, { ...card, segmentCardLines: ['SATURDAY, OCT. 17', '10pm-3am', 'House of Goonz presents', 'Nightshift w/ Phox'] }, cityConfig, null);
+  assert.equal(printed.startDate.toISOString(), '2026-10-18T02:00:00.000Z');
+  assert.equal(printed._weekdayDerivedDate, undefined);
+});
+
+test('a listing title that ends on a connective is completed from the card\'s next line for the event name — never for the window\'s identity', () => {
+  const parser = createParser();
+  const name = (lines) => parser.deriveSegmentEventName({ lines });
+  assert.equal(name(['SUNDAY', '9pm-3am', 'Pride 2026:', 'Dan Slater w/ VOLOS']), 'Pride 2026: Dan Slater w/ VOLOS');
+  assert.equal(name(['WEDNESDAY', '10pm-3am', 'Pride 2026:', 'Pup Pride & Warpzone w/', 'DJ Tracy Levine', '– No Cover']), 'Pride 2026: Pup Pride & Warpzone w/ DJ Tracy Levine', 'joins while the name still dangles; a bullet note ends it');
+  assert.equal(name(['SATURDAY, OCT. 17', '10pm-3am', 'House of Goonz presents', 'Nightshift w/ Phox, Goonz & Mike Bradley']), 'House of Goonz presents Nightshift w/ Phox, Goonz & Mike Bradley');
+  assert.equal(name(['FRIDAY', '9pm-3am', 'Pride 2026: Atlanta Pride Official Kickoff After Party w/', 'Abel', 'TICKETS']), 'Pride 2026: Atlanta Pride Official Kickoff After Party w/ Abel');
+  assert.equal(name(['Bear Night feat.', 'DJ Cub']), 'Bear Night feat. DJ Cub');
+  // The next line cannot continue the name: a date, a time, a weekday tag,
+  // a call to action, a URL, a bullet — the fragment stays (nothing better
+  // is known) rather than swallowing the neighbour.
+  assert.equal(name(['Pride 2026:', 'SATURDAY, OCT. 17', '10pm-3am']), 'Pride 2026:');
+  assert.equal(name(['Pride 2026:', '10pm-3am']), 'Pride 2026:');
+  assert.equal(name(['Pride 2026:', 'TICKETS']), 'Pride 2026:');
+  assert.equal(name(['Pride 2026:', 'https://venue.example/tickets']), 'Pride 2026:');
+  assert.equal(name(['Pride 2026:', '– No Cover']), 'Pride 2026:');
+  assert.equal(name(['Pride 2026:', 'SUNDAY', '9pm-3am']), 'Pride 2026:');
+  // A complete name is never extended, and a joined name past the title
+  // length keeps the page's own line.
+  assert.equal(name(['Pride 2026: Country Pride', '– No Cover']), 'Pride 2026: Country Pride');
+  assert.equal(name(['Country Pride', 'Free lessons at 8pm']), 'Country Pride');
+  assert.equal(name(['Pride 2026:', 'x'.repeat(139)]), 'Pride 2026:');
+  // Identity is untouched.
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['SUNDAY', '9pm-3am', 'Pride 2026:', 'Dan Slater w/ VOLOS'] }), 'Pride 2026:');
+  // "10:30pm (Showtime 11:15pm)" is a time line with a remark, never a title.
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['MONDAY', '10:30pm (Showtime 11:15pm)', 'Stars of the Century'] }), 'Stars of the Century');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['9pm (doors 8pm)', 'Bear Night'] }), 'Bear Night');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Late Night (After Hours)', 'Bear Night'] }), 'Late Night (After Hours)');
+});
