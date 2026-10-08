@@ -295,6 +295,89 @@ test('browser fetch: a GET answered 429 is tried once more in a real browser; wh
   }
 });
 
+test('browser fetch: a 403 bot wall is the same refusal as a 429 — Chrome without the word Headless gets the page, a feed comes back raw, a cached 403 note is a miss, and the inbox hears what the browser cannot get', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  const originalLog = console.log;
+  try {
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 }, politeness: {}, browserFetch: { executablePath: process.execPath } });
+    // The note the Mac wrote on 2026-10-05 for eaglebarwm.com/calendar2/:
+    // served from the cache for two days while browsers saw the calendar.
+    const noteUrl = 'https://wall.example/calendar2/';
+    const parts = adapter.getPageCachePathParts(noteUrl);
+    const dir = path.join(shared.dir, 'storage', 'pages', parts.hostDir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, parts.fileName), JSON.stringify({
+      url: noteUrl, fetchedAt: '2026-10-06T02:23:27.422Z', statusCode: 403, headers: {}, fetchState: 'failed',
+      failure: { nonRetryable: true, context: 'root-page', error: 'HTTP request failed for https://wall.example/calendar2/: HTTP 403: ' }
+    }));
+    console.log = () => {};
+    assert.equal(await adapter.readCachedPage(noteUrl, adapter.getPageCacheConfig()), null, 'a refusal note is a miss');
+    console.log = originalLog;
+
+    global.fetch = async () => ({ ok: false, status: 403, statusText: 'Forbidden', headers: new Headers(), body: null });
+    const agents = [];
+    adapter.loadPuppeteer = async () => ({
+      launch: async () => ({
+        userAgent: async () => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36',
+        newPage: async () => ({
+          setUserAgent: async (agent) => { agents.push(agent); },
+          goto: async (url) => ({
+            status: () => 200,
+            headers: () => ({ 'content-type': /wp-json/.test(url) ? 'application/json; charset=UTF-8' : 'text/html; charset=UTF-8' }),
+            text: async () => JSON.stringify({ events: [{ id: 1, title: 'HONEY POT' }], total: 1 })
+          }),
+          content: async () => `<html><body><pre>${'calendar '.repeat(40)}</pre></body></html>`
+        }),
+        close: async () => {}
+      })
+    });
+    console.log = () => {};
+    let page; let door;
+    try {
+      page = await adapter.fetchData(noteUrl);
+      // The host is parked for the run after its 403; the feed probe is
+      // refused by the gate and goes straight to the browser.
+      door = await adapter.fetchData('https://wall.example/wp-json/tribe/events/v1/events?per_page=50', { headers: { Accept: 'application/json, */*' } });
+    } finally { console.log = originalLog; }
+    assert.ok(page && page.html.includes('calendar'), 'the page the browser rendered');
+    assert.equal(page.headers['x-fetched-by'], 'mac-browser');
+    assert.ok(door && JSON.parse(door.html).events[0].title === 'HONEY POT', 'a feed comes back as the server sent it, not as Chrome displays it');
+    assert.equal(door.headers['content-type'], 'application/json; charset=UTF-8');
+    assert.equal(agents.length, 2);
+    assert.ok(agents.every((agent) => !/Headless/.test(agent) && /Chrome\/155/.test(agent) && /chunky-dad-scraper/.test(agent)), agents.join('\n'));
+    assert.equal(adapter.hasFreshCachedPage(noteUrl), true, 'the browser\'s page replaced the note');
+    assert.ok(!fs.existsSync(path.join(shared.dir, 'inbox', 'requests.json')), 'nothing for the phone while the browser serves');
+
+    // A page the browser cannot get either: the inbox hears about the 403
+    // exactly as it hears about a 429.
+    adapter.loadPuppeteer = async () => ({
+      launch: async () => ({ userAgent: async () => 'x', newPage: async () => ({ setUserAgent: async () => {}, goto: async () => ({ status: () => 403 }), content: async () => '' }), close: async () => {} })
+    });
+    console.log = () => {};
+    await assert.rejects(() => adapter.fetchData('https://wall.example/pride/'));
+    console.log = originalLog;
+    const store = JSON.parse(fs.readFileSync(path.join(shared.dir, 'inbox', 'requests.json'), 'utf8'));
+    assert.deepEqual(store.requests.map((r) => [r.url, r.reason]), [['https://wall.example/pride/', 'the host answers the Mac 403']]);
+
+    // A 404 to a real browser is a 404: the page's own answer, reported
+    // with that status, and nothing for the phone (the live replay of
+    // 2026-10-07 had asked the phone for a feed path that does not exist).
+    adapter.loadPuppeteer = async () => ({
+      launch: async () => ({ userAgent: async () => 'x', newPage: async () => ({ setUserAgent: async () => {}, goto: async () => ({ status: () => 404 }), content: async () => '' }), close: async () => {} })
+    });
+    console.log = () => {};
+    await assert.rejects(() => adapter.fetchData('https://wall.example/wp-json/wp/v2/events?per_page=100'), (error) => error.statusCode === 404 && error.retryable === false && /HTTP 404/.test(error.message));
+    console.log = originalLog;
+    const after = JSON.parse(fs.readFileSync(path.join(shared.dir, 'inbox', 'requests.json'), 'utf8'));
+    assert.deepEqual(after.requests.map((r) => r.url), ['https://wall.example/pride/'], 'the 404 was not asked of the phone');
+  } finally {
+    console.log = originalLog;
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();

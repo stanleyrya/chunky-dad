@@ -9265,6 +9265,39 @@ test('outage: a note that records "nothing answered" is recognised, a note with 
   assert.equal(SharedCore.isTransportFailureNote({ fetchState: 'downloaded', html: '<p>fetch failed</p>' }), false, 'a page is not a note');
 });
 
+test('refusal: a 403 or 429 is about the client that minute — never written as a note, and one already written is a miss', async () => {
+  assert.equal(SharedCore.isClientRefusalStatus(403), true);
+  assert.equal(SharedCore.isClientRefusalStatus('429'), true);
+  assert.equal(SharedCore.isClientRefusalStatus(404), false);
+  assert.equal(SharedCore.isClientRefusalStatus(null), false);
+  // The note the Mac wrote for eaglebarwm.com/calendar2/ on 2026-10-05 and
+  // then honoured for two days while the site served browsers normally.
+  const wall = {
+    url: 'https://eaglebarwm.com/calendar2/', fetchedAt: '2026-10-06T02:23:27.422Z', statusCode: 403, headers: {}, fetchState: 'failed',
+    failure: { nonRetryable: true, context: 'root-page', error: 'HTTP request failed for https://eaglebarwm.com/calendar2/: HTTP 403: ' }
+  };
+  assert.equal(SharedCore.isClientRefusalNote(wall), true, 'the real note');
+  assert.equal(SharedCore.isClientRefusalNote({ ...wall, statusCode: null }), true, 'the status kept only in the message');
+  assert.equal(SharedCore.isClientRefusalNote({ ...wall, statusCode: 429, failure: { ...wall.failure, error: 'HTTP request failed for https://dilf.uk/events: HTTP 429: Too Many Requests' } }), true);
+  assert.equal(SharedCore.isClientRefusalNote({ ...wall, statusCode: 404, failure: { ...wall.failure, error: 'HTTP request failed for https://a.example/x: HTTP 404: ' } }), false, '404 is the page speaking');
+  assert.equal(SharedCore.isClientRefusalNote({ ...wall, fetchState: 'downloaded', html: '<p>HTTP 403</p>' }), false, 'a page is not a note');
+  assert.equal(SharedCore.isClientRefusalNote(null), false);
+  assert.equal(SharedCore.isTransportFailureNote(wall), false, 'and it is not an outage note either');
+
+  const core = createCore();
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+  const forbidden = new Error('HTTP request failed for https://eaglebarwm.com/calendar2/: HTTP 403: ');
+  forbidden.statusCode = 403; forbidden.retryable = false;
+  assert.equal(core.isRetryableFailure(forbidden), false, 'not retried inside the run');
+  assert.equal(await core.saveNonRetryableFailureNote(httpAdapter, 'https://eaglebarwm.com/calendar2/', forbidden, 'root-page'), false);
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://dilf.uk/events', new Error('HTTP request failed for https://dilf.uk/events: HTTP 429: Too Many Requests'), 'root-page');
+  assert.deepEqual(saved, [], 'a refusal writes nothing into the no-retry cache — tomorrow the site is asked again');
+  const gone = new Error('HTTP request failed for https://a.example/x: HTTP 410: Gone');
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', gone, 'crawl-page');
+  assert.deepEqual(saved, ['https://a.example/x'], 'what the page said is still noted');
+});
+
 test('outage: a replayed failure note is never the second strike', async () => {
   const cityUrl = 'https://dead-domain.example/in/sydney';
   const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);

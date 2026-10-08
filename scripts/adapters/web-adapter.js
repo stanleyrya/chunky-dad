@@ -542,6 +542,13 @@ class WebAdapter {
                     console.log(`🟢 Node.js: Ignoring a cached connection failure for ${normalizedUrl} (noted ${cached.fetchedAt || 'earlier'}) — nothing answered then, asking again`);
                     return null;
                 }
+                // A refusal (403/429) was about the request the server saw
+                // that minute, not the page (SharedCore.isClientRefusalNote):
+                // a miss, and the browser route below gets its turn.
+                if (core && typeof core.isClientRefusalNote === 'function' && core.isClientRefusalNote(cached)) {
+                    console.log(`🟢 Node.js: Ignoring a cached refusal${Number.isFinite(cached.statusCode) ? ` (HTTP ${cached.statusCode})` : ''} for ${normalizedUrl} (noted ${cached.fetchedAt || 'earlier'}) — that was about the client, asking again`);
+                    return null;
+                }
                 const failureMessage = typeof cached.failure.error === 'string'
                     ? cached.failure.error
                     : (cached.failure.error && typeof cached.failure.error.message === 'string'
@@ -649,8 +656,9 @@ class WebAdapter {
 
     // A REAL BROWSER FOR A HOST THAT REFUSES A PLAIN REQUEST. dilf.uk answers
     // curl 429 whatever the User-Agent and headless Chrome 200 (2026-10-01,
-    // one request each): the refusal is about the client's shape, not the
-    // machine. So a GET that came back 429 is tried once more in Chrome —
+    // one request each); eaglebarwm.com answers 403 to everything that is
+    // not a browser (2026-10-07): the refusal is about the client's shape,
+    // not the machine. So a GET that came back 429 or 403 is tried once more in Chrome —
     // the installed one (config.browserFetch.executablePath or the macOS
     // default), headless, one page per launch, closed in finally — and the
     // rendered document is the page. Pacing of its own: BROWSER_FETCH_GAP_MS
@@ -714,21 +722,39 @@ class WebAdapter {
                 // dilf.uk: our plain UA in Chrome → 429; Chrome's UA + the
                 // token → 200 (one request each, 2026-10-01).
                 const token = this.config.userAgent || 'chunky-dad-scraper/1.0 (+https://chunky.dad)';
-                const browserAgent = typeof browser.userAgent === 'function' ? await browser.userAgent() : '';
+                // Headless Chrome calls itself "HeadlessChrome", and a bot
+                // wall reads the word: eaglebarwm.com 403 with it, 200
+                // without (2026-10-07, one request each). The browser is
+                // the same browser either way, and the token still says
+                // who is asking.
+                const browserAgent = String(typeof browser.userAgent === 'function' ? await browser.userAgent() : '').replace(/HeadlessChrome/g, 'Chrome');
                 await page.setUserAgent(browserAgent ? `${browserAgent} ${token}` : token);
                 const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: WebAdapter.BROWSER_FETCH_TIMEOUT_MS });
                 const status = response ? response.status() : 0;
                 if (status >= 400 || status === 0) {
                     console.log(`🧭 BROWSER: ${url} answered HTTP ${status || 'nothing'} to a real browser too`);
-                    return null;
+                    // Refused again (403/429, or nothing): the phone may
+                    // still get it. Any other status is the server's answer
+                    // about the PAGE — a 404 to a real browser is a 404 —
+                    // and the caller reports it as such (no inbox).
+                    const core = this.getSharedCoreRef();
+                    const refusedAgain = status === 0 || (core && typeof core.isClientRefusalStatus === 'function' ? core.isClientRefusalStatus(status) : (status === 403 || status === 429));
+                    return refusedAgain ? null : { answered: status };
                 }
-                const html = await page.content();
-                if (!html || html.length < 200) {
+                // A document is what the browser rendered (scripts run, as
+                // for any shell page). Anything else — a Tribe feed, an ICS,
+                // a JSON API behind the same wall — is the body as the server
+                // sent it, not the viewer Chrome wraps it in.
+                const responseHeaders = response && typeof response.headers === 'function' ? (response.headers() || {}) : {};
+                const contentType = String(responseHeaders['content-type'] || '');
+                const isDocument = !contentType || /html|xhtml/i.test(contentType);
+                const html = isDocument ? await page.content() : (response && typeof response.text === 'function' ? await response.text() : await page.content());
+                if (!html || (isDocument && html.length < 200)) {
                     console.log(`🧭 BROWSER: ${url} rendered ${html ? html.length : 0} chars — not a page`);
                     return null;
                 }
-                console.log(`🧭 BROWSER: ${url} refused a plain request but served a real browser — ${html.length} chars in ${Date.now() - startedAt} ms (${state.count}/${settings.cap} this run)`);
-                return { html, url, statusCode: status, headers: { 'x-fetched-by': 'mac-browser', 'content-type': 'text/html' } };
+                console.log(`🧭 BROWSER: ${url} refused a plain request but served a real browser — ${html.length} chars${isDocument ? '' : ` of ${contentType.split(';')[0]}`} in ${Date.now() - startedAt} ms (${state.count}/${settings.cap} this run)`);
+                return { html, url, statusCode: status, headers: { 'x-fetched-by': 'mac-browser', 'content-type': isDocument ? 'text/html' : contentType } };
             } finally {
                 await browser.close().catch(() => {});
             }
@@ -1595,28 +1621,41 @@ class WebAdapter {
             // A refusal by the politeness gate (parked host, budget, robots)
             // never left the machine: it is a skip, reported as one, and it
             // keeps its non-retryable stamp through the rewrap below.
-            // A 429 to a plain request is, on the hosts seen so far, "you are
-            // not a browser" (dilf.uk: curl with a Safari UA 429, headless
-            // Chrome 200 in 2.2 s) — so a real browser is asked next, through
-            // its own pacing; the phone's inbox is the fallback when the
-            // browser fails too. A page the browser brought back is a page.
-            const rateLimited = Number(error && error.statusCode) === 429
-                || (error && error.politeness && /429/.test(String(error.message || '')));
+            // A 429 or a 403 to a plain request is, on the hosts seen so far,
+            // "you are not a browser" (dilf.uk: curl with a Safari UA 429,
+            // headless Chrome 200 in 2.2 s; eaglebarwm.com: 403 to curl, Node
+            // and Chrome announcing itself Headless, 200 to Chrome plain,
+            // 2026-10-07) — so a real browser is asked next, through its own
+            // pacing; the phone's inbox is the fallback when the browser
+            // fails too. A page the browser brought back is a page.
+            const refusalStatus = Number(error && error.statusCode) || Number((error && error.politeness && String(error.message || '').match(/\b(429|403)\b/) || [])[1]) || 0;
+            const refused = refusalStatus === 429 || refusalStatus === 403;
             // Pages only: never robots.txt, never an API call, never a POST.
-            if (rateLimited && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
+            if (refused && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
                 const browserPage = await this.fetchWithBrowser(url, options);
-                if (browserPage) {
+                if (browserPage && browserPage.html) {
                     if (canUseCache && isCacheableResponse(browserPage)) await this.writeCachedPage(url, browserPage, pageCacheConfig);
                     this.writeRunPageMemo(memoKey, browserPage);
                     return browserPage;
                 }
+                if (browserPage && browserPage.answered) {
+                    // The server answered a real browser with a status about
+                    // the page (404, 410, 500): that is the page's answer.
+                    // Nothing for the phone; the dead-end store hears the
+                    // real status, not the wall's 403.
+                    console.log(`🌐 Web: ✗ HTTP request failed for ${url}: HTTP ${browserPage.answered} (to a real browser)`);
+                    const answered = new Error(`HTTP request failed for ${url}: HTTP ${browserPage.answered}: answered to a real browser`);
+                    answered.statusCode = browserPage.answered;
+                    if (browserPage.answered < 500) answered.retryable = false;
+                    throw answered;
+                }
             }
             if (error && error.politeness) {
                 console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
-                if (/429/.test(String(error.message || '')) && !options.apiCall) this.noteInboxRequest(url, 'the host answers the Mac 429');
+                if (refused && !options.apiCall) this.noteInboxRequest(url, `the host answers the Mac ${refusalStatus}`);
             } else {
                 console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
-                if (Number(error && error.statusCode) === 429 && !options.apiCall) this.noteInboxRequest(url, 'HTTP 429');
+                if (refused && !options.apiCall) this.noteInboxRequest(url, `HTTP ${refusalStatus}`);
             }
             const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
             if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;
