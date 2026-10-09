@@ -10,7 +10,7 @@
       "page-cache"
     ],
     "parserUrlsAtRecon": [
-      "https://www.eaglemanchester.com/eventlist"
+      "https://www.eaglemanchester.com/"
     ],
     "doors": [
       {
@@ -148,6 +148,14 @@
         "rowsReturned": 1,
         "truthFlag": null,
         "note": "Page cache 2026-09-12. JSON-LD 2026-10-03T19:00:00+01:00 – 2026-10-03T23:00:00+01:00; 'Other dates Sat 07 Nov, 19:00 Sat 05 Dec, 19:00'."
+      },
+      {
+        "url": "https://www.eaglemanchester.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 57,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached /eventlist from the home page and read it through the Wix Events widget read on that page with its own pager (🟪 WIX EVENTS, 27 rows): 57 events, 4 bear in 23 s — the https://www.eaglemanchester.com/eventlist config read 58/4 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-12."
       }
     ]
   },

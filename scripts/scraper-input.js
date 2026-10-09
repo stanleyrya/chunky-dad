@@ -89,7 +89,14 @@ const scraperConfig = {
       // Squarespace, server-rendered listing, JSON-LD Event on event pages.
       // Heavy queer programming, bear events (Bear Tea) are a subset —
       // bear check filters, not alwaysBear.
-      urls: ["https://www.3dollarbillbk.com/rsvp"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its /rsvp
+      // collection and reads it through the Squarespace ?format=json twin of
+      // that page, read one hop down as first-party (🟦 SQUARESPACE, 68 dated
+      // items) — 70 events (1 bear) in 2 s; the /rsvp config read 69/1 the same
+      // day. The listing is found by the site's own nav and the door by the
+      // page, nothing per site.
+      urls: ["https://www.3dollarbillbk.com/"],
       alwaysBear: false,
       metadata: {
         website: { value: "https://www.3dollarbillbk.com" },
@@ -111,7 +118,14 @@ const scraperConfig = {
       // longer depend on the Thotyssey aggregator entry below merging in.
       // Kink/pup nights are on the same calendar — bear check filters, not
       // alwaysBear.
-      urls: ["https://www.rockbarnyc.com/calendar"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // calendar and reads it through the Elfsight embed that rides on every
+      // page — read once on the home page (148 published, 33 current), /calendar
+      // skipped as already read — 90 events (14 bear) in 3 s; the /calendar
+      // config read 90/14 the same day. The listing is found by the site's own
+      // nav and the door by the page, nothing per site.
+      urls: ["https://www.rockbarnyc.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: {
@@ -171,7 +185,15 @@ const scraperConfig = {
     // via the parser picker and review before including it in bigger runs. ──
     {
       name: "The Lumberyard",
-      urls: ["https://www.thelumberyardbar.com/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events, /upcoming-events and /mothly-events pages (the
+      // listing-vocabulary ranking puts them first) and reads it through the
+      // pages themselves (static Wix HTML, no feed or widget: the AI reads the
+      // cards) — 13 events (0 bear) in 1 s; the /events config read 13/0 the
+      // same day. The listing is found by the site's own nav and the door by the
+      // page, nothing per site.
+      urls: ["https://www.thelumberyardbar.com/"],
       // Seattle bear-friendly bar (9630 16th Ave SW) with general weekly
       // programming — bear check filters, not alwaysBear.
       alwaysBear: false,
@@ -208,19 +230,41 @@ const scraperConfig = {
       // (run 20260811-132948 dropped MEAT RACK, ONYX, SUNDAY BEER BUST as
       // "no bear-specific vocabulary") — the intended remedy is persistent
       // manual bear verdicts, not alwaysBear.
-      urls: ["https://eaglela.com/events/", "https://eaglela.com/calendar/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /calendar/ month grid (and /home/, which carries the same MEC frame) and
+      // reads it through the MEC month grids and the plugin's own month feed
+      // replayed to the horizon (📆 MEC GRID, 132 occurrences from 4 grids) —
+      // 339 events (75 bear) in 5 s; the /events/ + /calendar/ config read
+      // 339/75 the same day. The listing is found by the site's own nav and the
+      // door by the page, nothing per site.
+      urls: ["https://eaglela.com/"],
     },
     {
       name: "BEEFMINCE",
       // Multi-city UK (London/Brighton/Manchester/Birmingham + Sitges);
       // per-event city comes from event text; tickets link out to dice.fm.
-      urls: ["https://beefmince.com/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events page and reads it through the DICE event-list widget, which
+      // rides on the home page as well and is read there (🎟️ DICE, 9 rows incl.
+      // a linkout) — 36 events (13 bear) in 14 s; the /events config read 36/13
+      // the same day. The listing is found by the site's own nav and the door by
+      // the page, nothing per site.
+      urls: ["https://beefmince.com/"],
     },
     {
       name: "BeefDip",
       // Puerto Vallarta bear week; single schedule page, venues appear as
       // Google Maps links (maps-link address harvesting applies).
-      urls: ["https://beefdip.com/planned-events/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /planned-events/ schedule page and reads it through the page itself (one
+      // WordPress page with the whole programme, Google Maps links as venues; no
+      // feed answered) — 29 events (27 bear) in 139 s; the /planned-events/
+      // config read 29/27 the same day. The listing is found by the site's own
+      // nav and the door by the page, nothing per site.
+      urls: ["https://beefdip.com/"],
     },
     {
       name: "Bear it MTL",
@@ -233,7 +277,14 @@ const scraperConfig = {
       // Touring chub/chaser series; Eventbrite links sit in the site's own
       // static HTML. Do NOT use the Eventbrite org page — it's CCBC Resort's
       // venue account and would pull non-Club-Chub events.
-      urls: ["https://www.clubchubusa.com/event-list"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /event-list page and reads it through the Wix Events widget, which rides
+      // on the home page as well and is read there (🟪 WIX EVENTS, 5 rows);
+      // /event-list is reached and read as a page — 20 events (5 bear) in 67 s;
+      // the /event-list config read 15/5 the same day. The listing is found by
+      // the site's own nav and the door by the page, nothing per site.
+      urls: ["https://www.clubchubusa.com/"],
     },
     {
       name: "The Bear Calendar",
@@ -305,7 +356,15 @@ const scraperConfig = {
       // Boston bear club (Squarespace). /events?format=json is the whole
       // collection: Bear Tea 3rd Sun, Alley Bears 4th Sat, Trivia 3rd Thu,
       // Belly Party. A bear club: everything it lists is a bear event.
-      urls: ["https://www.massbearsandcubs.org/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events collection and reads it through the Squarespace ?format=json
+      // twin of that page, read one hop down (🟦 SQUARESPACE, 48 dated items;
+      // the home page's own twin answers no items and releases the claim) — 113
+      // events (53 bear) in 38 s; the /events config read 64/48 the same day.
+      // The listing is found by the site's own nav and the door by the page,
+      // nothing per site.
+      urls: ["https://www.massbearsandcubs.org/"],
       alwaysBear: true,
       metadata: { website: { value: "https://www.massbearsandcubs.org" } },
     },
@@ -314,7 +373,14 @@ const scraperConfig = {
       // SF leather/cruise bar (WordPress + The Events Calendar). The Tribe
       // REST door answers the whole calendar (57 rows / 2 pages); Chub Rub
       // 3rd Sat is the bear night, the rest goes through the bear check.
-      urls: ["https://powerhousebar.com/events/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events/ listing and reads it through the Tribe REST door
+      // (/wp-json/tribe/events/v1/events, a well-known route the home page's
+      // WordPress markers point at — 34 rows) — 34 events (1 bear) in 12 s; the
+      // /events/ config read 34/1 the same day. The listing is found by the
+      // site's own nav and the door by the page, nothing per site.
+      urls: ["https://powerhousebar.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://powerhousebar.com" } },
@@ -334,7 +400,13 @@ const scraperConfig = {
       // Brooklyn venue (Squarespace shell + DICE widget; the partner key is
       // origin-scoped, so the feed is fetched with the site's own Origin).
       // Bear Belly and GRUNT are the bear nights among ~30 shows a month.
-      urls: ["https://www.cmoneverybody.com/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches /events
+      // and reads it through the DICE event-list widget read on that page (🎟️
+      // DICE, 31 rows) — 43 events (0 bear) in 7 s; the /events config read 43/0
+      // the same day. The listing is found by the site's own nav and the door by
+      // the page, nothing per site.
+      urls: ["https://www.cmoneverybody.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://www.cmoneverybody.com" } },
@@ -352,7 +424,13 @@ const scraperConfig = {
       name: "Eagle Manchester",
       // Wix Events (/eventlist warmup blob, first page of the widget —
       // Manbears Social 2nd Sat, Beareoke weekly).
-      urls: ["https://www.eaglemanchester.com/eventlist"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches
+      // /eventlist and reads it through the Wix Events widget read on that page
+      // with its own pager (🟪 WIX EVENTS, 27 rows) — 57 events (4 bear) in 23
+      // s; the /eventlist config read 58/4 the same day. The listing is found by
+      // the site's own nav and the door by the page, nothing per site.
+      urls: ["https://www.eaglemanchester.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://www.eaglemanchester.com" } },
@@ -365,7 +443,14 @@ const scraperConfig = {
       // the /events listing is static HTML carrying every dated occurrence
       // (14 recurring nights, ~90 dated links a quarter, each linking its own
       // /events/<slug>?date= page). No widget, no feed.
-      urls: ["https://www.eagleportland.com/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events listing and reads it through the page itself (Next.js
+      // server-rendered: every dated occurrence with its own
+      // /events/<slug>?date= page; no feed) — 118 events (6 bear) in 2 s; the
+      // /events config read 104/6 the same day. The listing is found by the
+      // site's own nav and the door by the page, nothing per site.
+      urls: ["https://www.eagleportland.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://www.eagleportland.com" } },
@@ -447,7 +532,14 @@ const scraperConfig = {
       // its Tribe REST route (wp-json/tribe/events/v1/events), which the crawler
       // adopts itself (🚪 MACHINE DOOR) — 453 upcoming rows on 2026-09-19, the
       // bar posts every DJ night. Read to the feed horizon.
-      urls: ["https://eagle-ny.com/calendarofevents/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /calendarofevents/ listing and reads it through the Tribe REST door
+      // (/wp-json/tribe/events/v1/events, 50 of 454 rows per page, paged to the
+      // horizon) — 98 events (10 bear) in 15 s; the /calendarofevents/ config
+      // read 98/10 the same day. The listing is found by the site's own nav and
+      // the door by the page, nothing per site.
+      urls: ["https://eagle-ny.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://eagle-ny.com" } },
@@ -457,7 +549,14 @@ const scraperConfig = {
       // 398 12th St. WordPress, static: /events/ lists every dated night with
       // times and a /events/<slug>/ page each (60 on 2026-09-19), plus a Google
       // Calendar / .ics link the crawler can adopt.
-      urls: ["https://www.sf-eagle.com/events/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events/ listing and reads it through the page itself (server-rendered
+      // rows, 60 on the day; no feed on this host — the webcal export lives on
+      // wp.sf-eagle.com, another host, and is not probed) — 91 events (19 bear)
+      // in 170 s; the /events/ config read 75/18 the same day. The listing is
+      // found by the site's own nav and the door by the page, nothing per site.
+      urls: ["https://www.sf-eagle.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://www.sf-eagle.com" } },
@@ -479,7 +578,14 @@ const scraperConfig = {
       // (Bear Happy Hour SF, GRUNT, Bark Before Dark were on its calendar in
       // September 2026). Squarespace events collection (/calendar/<slug>, 38
       // cards on 2026-09-30, 8 upcoming) — same door shape as Lone Star.
-      urls: ["https://www.studsf.com/calendar"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /calendar collection and reads it through the Squarespace ?format=json
+      // twin of that page, read one hop down as first-party (🟦 SQUARESPACE, 45
+      // dated items) — 82 events (3 bear) in 39 s; the /calendar config read
+      // 63/2 the same day. The listing is found by the site's own nav and the
+      // door by the page, nothing per site.
+      urls: ["https://www.studsf.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://www.studsf.com" } },
@@ -488,7 +594,14 @@ const scraperConfig = {
       name: "The Cuff Complex",
       // 1533 13th Ave, Seattle. Squarespace events collection (/events/<slug>,
       // 42 dated pages on 2026-09-19) — same door shape as Lone Star.
-      urls: ["https://cuffcomplex.com/events"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /events collection and reads it through the Squarespace ?format=json
+      // twin of that page, read one hop down as first-party (🟦 SQUARESPACE, 46
+      // dated items) — 81 events (0 bear) in 9 s; the /events config read 62/0
+      // the same day. The listing is found by the site's own nav and the door by
+      // the page, nothing per site.
+      urls: ["https://cuffcomplex.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://cuffcomplex.com" } },
@@ -498,7 +611,14 @@ const scraperConfig = {
       // 4356 Sunset Blvd, Silver Lake. WordPress: /upcoming-events/ lists the
       // month's parties with an /event/<slug>/ page each (18 on 2026-09-19,
       // Bears in Space's lot parties among them).
-      urls: ["https://akbarsilverlake.com/upcoming-events/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /upcoming-events/ listing and reads it through the page itself (18
+      // server-rendered cards and their /event/<slug>/ pages; no feed on this
+      // host) — 38 events (0 bear) in 16 s; the /upcoming-events/ config read
+      // 31/0 the same day. The listing is found by the site's own nav and the
+      // door by the page, nothing per site.
+      urls: ["https://akbarsilverlake.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://akbarsilverlake.com" } },
@@ -536,7 +656,13 @@ const scraperConfig = {
       name: "Camp Out Poconos",
       // LGBTQ+ campground, East Stroudsburg PA: theme weekends on an Elfsight
       // calendar widget at /calendar/.
-      urls: ["https://campoutpoconos.com/calendar/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches
+      // /calendar/ and reads it through the Elfsight calendar widget read on
+      // that page one hop down (🗓️ ELFSIGHT, 11 published) — 35 events (4 bear)
+      // in 12 s; the /calendar/ config read 35/4 the same day. The listing is
+      // found by the site's own nav and the door by the page, nothing per site.
+      urls: ["https://campoutpoconos.com/"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: { website: { value: "https://campoutpoconos.com" } },
@@ -587,7 +713,13 @@ const scraperConfig = {
       // months and later months are walked to the usual horizon. Each card
       // carries its own page, flyer and wall-clock times. Hosts Club Chub,
       // Bearded Pig Disco and plenty that is not bear: the bear check decides.
-      urls: ["https://precinctdtla.com/calendar/"],
+      // Root since 2026-10-08 (proven that day, dry run on the scratch copy,
+      // branch crawl-from-roots): from the home page the crawl reaches its
+      // /calendar/ page and reads it through the EventON calendar (📅 EVENTON,
+      // 92 cards — the home page carries the same frame) — 190 events (7 bear)
+      // in 15 s; the /calendar/ config read 190/7 the same day. The listing is
+      // found by the site's own nav and the door by the page, nothing per site.
+      urls: ["https://precinctdtla.com/"],
       metadata: { website: { value: "https://precinctdtla.com" } },
     },
     {

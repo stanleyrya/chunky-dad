@@ -11,7 +11,7 @@
       "page-cache"
     ],
     "parserUrlsAtRecon": [
-      "https://www.massbearsandcubs.org/events"
+      "https://www.massbearsandcubs.org/"
     ],
     "doors": [
       {
@@ -45,6 +45,14 @@
         "rowsReturned": 6,
         "truthFlag": null,
         "note": "Six item pages in the scraper page cache (same six slugs). Each page carries the item's body HTML and a \"Back to All Events\"-style stacked layout; nothing beyond what the feed row already holds."
+      },
+      {
+        "url": "https://www.massbearsandcubs.org/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 113,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events collection from the home page and read it through the Squarespace ?format=json twin of that page, read one hop down (🟦 SQUARESPACE, 48 dated items; the home page's own twin answers no items and releases the claim): 113 events, 53 bear in 38 s — the https://www.massbearsandcubs.org/events config read 64/48 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-12."
       }
     ],
     "notes": "Squarespace events collection (collection.typeName events-stacked), confirmed by the working ?format=json door. The org publishes a fresh item for every month of each recurring social — Monthly Trivia, Bear Tea, Alley Bears, the virtual membership meeting, Bears Brews & Boys — so the 22 upcoming rows are 5 series + 5 one-offs, not 22 events. Cadence words live in the item body/excerpt (\"Always the 3rd Thursday of the month\", \"every third Sunday\"); where the site says only \"monthly\" the day-of-month rule is proven from the listed dates and the past[] instances and said so in the event note. Venues are all third-party (The Alley Bar, Club Cafe, Jacques' Cabaret, Dorchester Brewing Company, Red Room in Provincetown) — Mass Bears and Cubs is an organization, not a bar, so defaults carry no bar. The feed's markerLat/markerLng is the Squarespace default marker on 19 of 22 rows and must not be used as coordinates."

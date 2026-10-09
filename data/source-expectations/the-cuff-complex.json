@@ -11,7 +11,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://cuffcomplex.com/events"
+      "https://cuffcomplex.com/"
     ],
     "doors": [
       {
@@ -29,6 +29,14 @@
         "rowsReturned": 11,
         "truthFlag": "upcoming: 11; past: 30 (the past list is the collection's most recent 30 — a cap, not the archive size); website.timeZone: America/Los_Angeles",
         "note": "The collection's ?format=json twin: $.upcoming[] and $.past[] items with title, startDate/endDate (epoch ms), location { addressTitle, addressLine1, addressLine2, markerLat/markerLng }, fullUrl (the event page), assetUrl (the flyer), excerpt/body (HTML). No recurrence fields — a weekly night is a separate item per date."
+      },
+      {
+        "url": "https://cuffcomplex.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 81,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events collection from the home page and read it through the Squarespace ?format=json twin of that page, read one hop down as first-party (🟦 SQUARESPACE, 46 dated items): 81 events, 0 bear in 9 s — the https://cuffcomplex.com/events config read 62/0 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 11 upcoming items (2026-09-19 → 2026-11-14) and 30 past items in the feed's past list."

@@ -11,7 +11,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://eagle-ny.com/calendarofevents/"
+      "https://eagle-ny.com/"
     ],
     "doors": [
       {
@@ -101,6 +101,14 @@
         "rowsReturned": 3,
         "truthFlag": "total: 453; total_pages: 10; next_rest_url: absent",
         "note": "Page 10 of 10."
+      },
+      {
+        "url": "https://eagle-ny.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 98,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendarofevents/ listing from the home page and read it through the Tribe REST door (/wp-json/tribe/events/v1/events, 50 of 454 rows per page, paged to the horizon): 98 events, 10 bear in 15 s — the https://eagle-ny.com/calendarofevents/ config read 98/10 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 453 rows across 10 REST pages, 47 distinct titles, 2026-09-18 → 2028-09-19. The bar posts every DJ night as a dated row two years ahead."

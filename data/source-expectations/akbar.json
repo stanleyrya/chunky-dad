@@ -10,7 +10,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://akbarsilverlake.com/upcoming-events/"
+      "https://akbarsilverlake.com/"
     ],
     "doors": [
       {
@@ -36,6 +36,14 @@
         "rowsReturned": 4,
         "truthFlag": null,
         "note": "Home page (cached 2026-09-19, probe/bars/akbar-la.html), NOT a parser URL — read only for venue facts. Footer: \"AKBAR Silverlake 4356 W Sunset Blvd Los Angeles, CA 90029\", \"Open Daily: 4 PM to 2 AM\". A \"Coming Up — DJs, Parties & Stuff.\" section says \"Every day is an event at Akbar.\" and links 4 of the listing's pages as \"Special Events:\" (sebastiane, the-plastics, laces, crazy-disco-underground); a \"Recurring Events:\" blurb reads \"Tuesdays: Drunk on Stage / Wednesdays: CraftNight\" with no dates, times or pages (see traps)."
+      },
+      {
+        "url": "https://akbarsilverlake.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 38,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /upcoming-events/ listing from the home page and read it through the page itself (18 server-rendered cards and their /event/<slug>/ pages; no feed on this host): 38 events, 0 bear in 16 s — the https://akbarsilverlake.com/upcoming-events/ config read 31/0 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "WordPress with the Offbeat theme's event post type (body class offbeat-event-template-default, offbeat-core-1.4 / offbeat-ver-1.8); WPBakery builds the listing. There is no events feed of any kind: no wp-json event route, no ICS, no JSON-LD. The listing is \"This Month's EVENTS.\" — the venue posts one page per party for the current month (a monthly poster PDF twin sits in the archive gallery) and the list is not filtered to upcoming, so on 2026-09-19 it links 13 past pages, 1 page dated today and 4 future pages. Nothing for October 2026 is published anywhere on the site at recon, so the crawl horizon is at most the rest of the current month. Every page states exactly one date; only Broadway Sing-Along states a repeat in text (\"Our monthly Showtunes Sing-Along\"). Several posters are reused from earlier months (Funk That! from 2025/01, Crazy, Disco Underground from the 2026-02 run), which hints at recurrence but is not a statement of one. Address per the site is \"4356 W Sunset Blvd\"; defaults use the config spelling without the W."

@@ -11,7 +11,7 @@
       "page-cache"
     ],
     "parserUrlsAtRecon": [
-      "https://powerhousebar.com/events/"
+      "https://powerhousebar.com/"
     ],
     "doors": [
       {
@@ -61,6 +61,14 @@
         "rowsReturned": 1,
         "truthFlag": null,
         "note": "Single occurrence page from the scraper page cache: one Event JSON-LD (name \"T &#8211; Dance\", startDate 2026-09-11T17:00:00-07:00), links to /event/t-dance/all/. Nothing beyond the REST row."
+      },
+      {
+        "url": "https://powerhousebar.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 34,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events/ listing from the home page and read it through the Tribe REST door (/wp-json/tribe/events/v1/events, a well-known route the home page's WordPress markers point at — 34 rows): 34 events, 1 bear in 12 s — the https://powerhousebar.com/events/ config read 34/1 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-12."
       }
     ],
     "notes": "WordPress + The Events Calendar (Tribe) 6.17.3, confirmed by the working /wp-json/tribe/events/v1/events endpoint and the ICS PRODID. REST rows carry no series key and no recurrence field, yet 20 titles repeat on a fixed cadence and each recurring title has a Tribe /all/ index (Chub Rub verified) — the site runs Tribe recurrence with per-occurrence rows. Weekly titles (Shirts Off Sundays, PILLOWS) are only pre-expanded ~6 weeks ahead (last row 2026-10-26); monthly titles 2–3 months ahead. Cadence text, where the site publishes it, is in the description (\"Every Third Saturday\", \"Every 4th Friday\", \"Every First Saturday\", \"Every first Sunday!\", \"every second Wednesday\", \"every third Wednesday\", \"Every FIRST WEDNESDAY\", \"The Monday drag party\"); nine repeating titles publish no cadence text and are grouped from their dates with the occurrence-URL quoted as the structural statement. All 57 rows are at the bar itself (1347 Folsom St) with real coordinates. The 2026-09-12 trial run kept 3 records (Chub Rub ×2, FLEX) and bear-dropped 54."

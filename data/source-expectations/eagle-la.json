@@ -11,8 +11,7 @@
       "flyer"
     ],
     "parserUrlsAtRecon": [
-      "https://eaglela.com/events/",
-      "https://eaglela.com/calendar/"
+      "https://eaglela.com/"
     ],
     "doors": [
       {
@@ -102,6 +101,14 @@
         "rowsReturned": 26,
         "truthFlag": null,
         "note": "26 distinct posters downloaded and read (flyers/). They carry the times, cadences and covers the pages do not; 21 of the 56 posts use the generic \"CHECK BACK FOR MORE DETAILS!\" stand-in check-back art."
+      },
+      {
+        "url": "https://eaglela.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 339,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendar/ month grid (and /home/, which carries the same MEC frame) from the home page and read it through the MEC month grids and the plugin's own month feed replayed to the horizon (📆 MEC GRID, 132 occurrences from 4 grids): 339 events, 75 bear in 5 s — the https://eaglela.com/events/ + https://eaglela.com/calendar/ config read 339/75 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "WordPress + Modern Events Calendar (MEC), confirmed by the working admin-ajax mec_monthly_view_load_month and mec_list_load_more endpoints. Recurring events are one post with many ?occurrence= dates; the site never states a rule in text — cadence words live only in poster img alt text or on the poster itself."

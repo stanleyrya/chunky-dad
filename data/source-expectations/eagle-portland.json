@@ -10,7 +10,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://www.eagleportland.com/events"
+      "https://www.eagleportland.com/"
     ],
     "doors": [
       {
@@ -28,6 +28,14 @@
         "rowsReturned": 4,
         "truthFlag": "\"UPCOMING\" strip of the next 4 cards with an \"All Events →\" link to /events",
         "note": "Fetched once with curl on 2026-09-19 (78 KB). Shows SEP 19 UNDERGEAR (Sat, Doors 9PM), SEP 20 SLUTTY BBQ COOKOUT (Sun, Doors 3PM), SEP 21 BRIEF ENCOUNTERS (Mon, Doors 8PM), SEP 21 Growth (Mon, Doors 5PM) — the first four cards of /events, same ?date= links. \"Find Us: 835 N Lombard St, Portland, OR 97217, 5032839734, Today's Hours 2pm -2am\", \"Door Policy: 21+ with valid ID\". Not in the parser's urls; read only as the second door confirming the listing's first rows and the address."
+      },
+      {
+        "url": "https://www.eagleportland.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 118,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events listing from the home page and read it through the page itself (Next.js server-rendered: every dated occurrence with its own /events/<slug>?date= page; no feed): 118 events, 6 bear in 2 s — the https://www.eagleportland.com/events config read 104/6 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "Platform: Next.js + Sanity CMS (image CDN cdn.sanity.io/images/5h0axiqb/production/…), server-rendered, so a static fetch sees the whole listing. Nothing on the site is a one-off right now: all 14 listed nights are isRecurring:true with a recurrence object (5 weekly, 9 monthly-by-ordinal-weekday), and the page materializes each into dated cards for roughly the next 90 days (weekly nights get 13 cards, monthly nights 3). The ?date= value on each card link is the occurrence date at the anchor document's time-of-day in UTC (e.g. undergear ?date=2026-09-19T14:46:00.000Z = 07:46 Pacific), NOT the door time — it shifts by one hour after the 2026-11-01 DST change (14:46Z → 15:46Z) and the calendar date in America/Los_Angeles is always the card's date. Door times are only in the \"Doors 9PM\" text / doorsTime field; end times only in the endTime field and description (\"MIDNIGHT\", \"12AM\", \"2AM\", \"11:59pm\"). ticketingUrl is null on every document, so no ticket links exist. Only the listing page was read; the 92 /events/<slug>?date= detail pages were not fetched."

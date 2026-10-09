@@ -5,8 +5,14 @@
   "status": "complete",
   "recon": {
     "date": "2026-09-10",
-    "method": ["static", "rendered", "flyer"],
-    "parserUrlsAtRecon": ["https://www.clubchubusa.com/event-list"],
+    "method": [
+      "static",
+      "rendered",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.clubchubusa.com/"
+    ],
     "doors": [
       {
         "url": "https://www.clubchubusa.com/event-list",
@@ -111,6 +117,14 @@
         "rowsReturned": 0,
         "truthFlag": "HTTP 404",
         "note": "Guessed past-listing URL does not exist; pages-sitemap.xml lists only /, /event-list, /privacy-policy, /accessibility-statement."
+      },
+      {
+        "url": "https://www.clubchubusa.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 20,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /event-list page from the home page and read it through the Wix Events widget, which rides on the home page as well and is read there (🟪 WIX EVENTS, 5 rows); /event-list is reached and read as a page: 20 events, 5 bear in 67 s — the https://www.clubchubusa.com/event-list config read 15/5 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "Platform confirmed by a working endpoint: the Wix Events warmup JSON (app 140603ad-af8d-84a5-2c80-a0f60cb47351) inline in /event-list and /, plus Wix's event-pages-sitemap.xml. The widget is upcoming-only (filterType 2) and hasMore=false, so 4 rows is the complete upcoming set; the homepage widget agrees. Run 20260909-072307 reported totalEvents 8, duplicatesRemoved 4, 4 kept: Weekend, Monster Ball, QUENCHD, Meat Market — the site lists Virgo Party II instead of QUENCHD, and QUENCHD is not linked from any configured page (see traps). Porky's sub-brand: 15 porkys-* slugs plus club-chub-porkys-presents-trick-or-trick-a-slutoween-party in the sitemap, all past; no Porky's event is upcoming. The Weekend page body contains the stale line 'September 11–13 2025' under a 2026 JSON-LD date (a copy-paste typo, see the event note). The Eventbrite organizer page is out of scope per the config comment and was not read."
@@ -120,7 +134,10 @@
     "basis": "4 upcoming events from the /event-list Wix Events warmup JSON (hasMore=false), confirmed by the identical homepage widget and the rendered DOM. Second door: event-pages-sitemap.xml lists 60 event pages all-time; all 60 were fetched and their JSON-LD dates read: 54 ended before 2026-09-10 (past, counted not enumerated; 16 of them are Porky's sub-brand pages), 4 are the widget's upcoming rows, and 2 are future-dated pages the widget hides — the-wig-out-party (renamed to Meat Market, same date/venue) and quenchd-a-mean-girls-pool-party (registration closed on Wix, unlisted) — both recorded as traps. Delta between sitemap and widget is therefore fully explained. Each of the 4 events was also read from its own /event-details page (JSON-LD + body text) and its flyer image was opened.",
     "publishedEventCount": 4,
     "documentedEventCount": 4,
-    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
     "pastListingsPresent": false,
     "knownGaps": []
   },
@@ -155,7 +172,9 @@
         "quote": "Sep 11, 2026, 11:00 AM – Sep 14, 2026, 12:00 AM CCBC Resort, 68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
         "imageUrl": "https://static.wixstatic.com/media/f91121_262bf60c764e4ad6ace0e12deac03202~mv2.jpg"
       },
-      "expect": { "extracted": true },
+      "expect": {
+        "extracted": true
+      },
       "bearVerdict": null,
       "note": "Widget row $.events[0] in warmup-events.json (startDate 2026-09-11T18:00:00.000Z, timeZoneId America/Los_Angeles). Flyer reads 'SEPTEMBER 11-13, 2026 CLUB CHUB WEEKEND 2026'. The page body also contains the stale line 'September 11–13 2025' — a copy-paste typo; JSON-LD, widget, flyer and Eventbrite all say 2026. Cathedral City is mapped to palm-springs. The site's ticket href carries utm/aff query params; ticketUrl here is the bare Eventbrite event URL. Prices come from the Eventbrite event page text: 'Tickets: • 3-Day Weekend Pass: $139 advance / $160 at the door • Single Day Pass: $50 advance / $60 at the door'."
     },
@@ -186,7 +205,9 @@
         "quote": "Sep 20, 2026, 3:00 PM – 9:00 PM Precinct Los Angeles, 357 S Broadway, Los Angeles, CA 90013, USA",
         "imageUrl": "https://static.wixstatic.com/media/f91121_54f347bfe478402195162ecd347d7909~mv2.jpg"
       },
-      "expect": { "extracted": true },
+      "expect": {
+        "extracted": true
+      },
       "bearVerdict": null,
       "note": "Widget row $.events[1]. Title carries the Virgo emoji on both the widget and the page. The 'Buy Tickets' button links to a Facebook event, not a ticketing platform; body text: 'NO COVER. No excuses.' Flyer reads 'SUNDAY SEPTEMBER 20TH 3-9PM / NO COVER / DJ SOMOS SANTO / PRECINCT DTLA / GREGG'S BIRTHDAY'. Absent from run 20260909-072307's 4 kept events."
     },
@@ -215,7 +236,9 @@
         "quote": "Oct 31, 2026, 9:00 PM – Nov 01, 2026, 2:00 AM Falcon North, 2020 E Artesia Blvd, Long Beach, CA 90805, USA",
         "imageUrl": "https://static.wixstatic.com/media/f91121_2e3a414edf2e4e9e8309603ec5313c34~mv2.jpg"
       },
-      "expect": { "extracted": true },
+      "expect": {
+        "extracted": true
+      },
       "bearVerdict": null,
       "note": "Widget row $.events[2]. Long Beach is mapped to la. Body text says '9 PM - Close'; JSON-LD end is 2026-11-01T02:00:00-08:00 (DST ends that night). Flyer reads 'THE MONSTER BALL AT THE FALCON NORTH LONG BEACH SATURDAY OCTOBER 31ST 9PM'. Run 20260909-072307 titled it 'Club Chub Presents The Monster Ball Long Beach' (the Sickening page title) and stored the ticketUrl with a /tickets suffix on www.sickening.events."
     },
@@ -244,7 +267,9 @@
         "quote": "Nov 01, 2026, 4:00 PM – 9:00 PM Eagle Wilton Manors, 2209 Wilton Dr, Wilton Manors, FL 33305, USA",
         "imageUrl": "https://static.wixstatic.com/media/f91121_7e91a2d6daf44a8da7e48aaf7068a175~mv2.jpg"
       },
-      "expect": { "extracted": true },
+      "expect": {
+        "extracted": true
+      },
       "bearVerdict": null,
       "note": "Widget row $.events[3] (timeZoneId America/New_York; JSON-LD -05:00 because DST ends 2026-11-01). Wilton Manors is mapped to fort-lauderdale. This is the renamed 'The Wig Out Party' (same date, venue, hours) — the old page still resolves and is a duplicate-listing trap. Flyer reads 'CLUB CHUB CANNONBALL WEEKEND MEAT MARKET SUNDAY NOVEMBER 1ST 4 TO 9PM THE EAGLE WILTON MANORS'. Run 20260909-072307 titled it 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors' (the Sickening page title)."
     }
@@ -259,7 +284,9 @@
         "url": "https://www.clubchubusa.com/event-details/the-wig-out-party",
         "quote": "The Wig Out Party Sun, Nov 01 | Eagle Wilton Manors"
       },
-      "expect": { "extracted": false },
+      "expect": {
+        "extracted": false
+      },
       "seenInRun": null
     },
     {
@@ -271,7 +298,10 @@
         "url": "https://www.clubchubusa.com/event-details/quenchd-a-mean-girls-pool-party",
         "quote": "QUENCHD: A MEAN GIRLS POOL PARTY Sat, Oct 03 | The Godfrey Rooftop"
       },
-      "expect": { "extracted": "unknown", "note": "A real upcoming Club Chub event that the site itself hides; whether the scraper should carry it depends on whether following the Eventbrite ticket link into other Eventbrite events is wanted (the config comment warns against exactly that for the org page). Left to the owner — see openQuestions." },
+      "expect": {
+        "extracted": "unknown",
+        "note": "A real upcoming Club Chub event that the site itself hides; whether the scraper should carry it depends on whether following the Eventbrite ticket link into other Eventbrite events is wanted (the config comment warns against exactly that for the org page). Left to the owner — see openQuestions."
+      },
       "seenInRun": "20260909-072307"
     },
     {
@@ -283,7 +313,9 @@
         "url": "https://www.clubchubusa.com/event-details/quenchd",
         "quote": "QUENCHD Sat, Aug 22 | The Godfrey Rooftop"
       },
-      "expect": { "extracted": false },
+      "expect": {
+        "extracted": false
+      },
       "seenInRun": null
     },
     {
@@ -295,7 +327,9 @@
         "url": "https://www.clubchubusa.com/",
         "quote": "CLUB CHUB Upcoming Events Past Events Gallery Merch Store"
       },
-      "expect": { "extracted": false },
+      "expect": {
+        "extracted": false
+      },
       "seenInRun": null
     }
   ],

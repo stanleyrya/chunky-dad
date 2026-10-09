@@ -10,7 +10,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://www.studsf.com/calendar"
+      "https://www.studsf.com/"
     ],
     "doors": [
       {
@@ -28,6 +28,14 @@
         "rowsReturned": 0,
         "truthFlag": "/calendar allowed; Disallow: /*?format=json for crawlers",
         "note": "Squarespace's stock robots.txt. The listing page is allowed. The JSON twin is disallowed for crawlers and is read inside the first-party window of a configured source, as on the other Squarespace venues."
+      },
+      {
+        "url": "https://www.studsf.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 82,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendar collection from the home page and read it through the Squarespace ?format=json twin of that page, read one hop down as first-party (🟦 SQUARESPACE, 45 dated items): 82 events, 3 bear in 39 s — the https://www.studsf.com/calendar config read 63/2 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-30."
       }
     ],
     "notes": "Added 2026-09-30 at the owner's request. 1123 Folsom Street, San Francisco (curated bar \"The Stud\"). A general queer venue that hosts bear parties: its past listings on the recon date include GRUNT (2026-09-26), BARK BEFORE DARK (2026-09-25), Bear Happy Hour SF (2026-09-10). None of the 8 upcoming events is a bear party by its title; the bear check decides per event. \"TRUCK\" is a party here, not a second bar at this address."

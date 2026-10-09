@@ -22353,3 +22353,12 @@ test('Squarespace: a home page whose twin answers no dated items releases the cl
   const full = { fetchData: async () => ({ html: elfsightBootPayload([{ name: 'BEAR TEA', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' }]) }) };
   assert.equal((await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://www.massbears.example/calendar' }, config, full)).length, 1);
 });
+
+test('WordPress infrastructure paths are never crawl candidates — /wp-includes/ included', () => {
+  const parser = createParser();
+  for (const path of ['/wp-includes/', '/wp-includes/blocks/', '/wp-json/wp/v2/pages/1', '/feed/', '/xmlrpc.php']) {
+    assert.equal(parser.validateEventUrl(`https://venue.example${path}`, 'https://venue.example/', {}).reason, 'wordpress-infrastructure', path);
+  }
+  assert.equal(parser.validateEventUrl('https://venue.example/wp-includes/js/jquery.js', 'https://venue.example/', {}).valid, false, 'a script under it is rejected too (as the asset it is)');
+  assert.equal(parser.validateEventUrl('https://venue.example/events/wp-includes-night/', 'https://venue.example/', {}).valid, true, 'a slug that merely contains the words is a page');
+});
