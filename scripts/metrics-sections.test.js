@@ -397,7 +397,9 @@ test('module exposes the Sources builders on both export surfaces', () => {
     assert.equal(typeof MetricsSections[name], 'function', name);
     assert.equal(typeof exported[name], 'function', name);
   });
-  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'empty', 'vanished', 'quiet', 'companion', 'ok']);
+  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok']);
+  assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.lost, 'Lost');
+  ['buildLostListHtml', 'buildSourcesMoversSpec', 'buildSourcesMoversHtml', 'buildLostPerRunChartSpec'].forEach(name => assert.equal(typeof exported[name], 'function', name));
   assert.deepEqual(exported.SOURCE_UNTROUBLED_VERDICTS, ['ok', 'companion']);
   assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.shrunk, 'Shrunk');
 });
@@ -644,4 +646,215 @@ test('chart figure embeds the spec, renders the default range, and can stay pend
     assert.equal(typeof MetricsSections[name], 'function', name);
     assert.equal(typeof require('./metrics-sections')[name], 'function', name);
   });
+});
+
+
+// ---------------------------------------------------------------------------
+// Lost: expected future events gone (content), independent of shrunk (volume).
+// ---------------------------------------------------------------------------
+
+// Six runs, five hosts: a venue that lost a series (lines carry `lost`), a
+// venue shrinking slowly (never under half the median), an aggregator with
+// recorded losses, a shrunk host that also lost events, and a steady one.
+function buildLostLedger() {
+  const runs = ['20261002-050000', '20261003-050000', '20261004-050000', '20261005-050000', '20261006-050000', '20261007-050000'];
+  const line = (host, index, extra) => buildLedgerLine(Object.assign({
+    run_id: runs[index], finished_at: `2026-10-0${index + 2}T09:00:00.000Z`, host, parsers: [host], extracted: 100, events: 20, bear: 18, upcoming: 9,
+    lost: [], suspected: 0, listing_gone: false, aggregator: false, url: `https://${host}/events/`
+  }, extra));
+  const pig = (since, extra = {}) => Object.assign({ title: 'Bearded Pig Disco', bear: true, since, seen: 4, days: ['2026-10-11', '2026-10-18', '2026-10-25'], new: 0 }, extra);
+  const lines = [];
+  runs.forEach((_, index) => {
+    lines.push(line('steady.example', index));
+    lines.push(line('precinct.example', index, index === 4
+      ? { suspected: 3 }
+      : (index === 5 ? { lost: [pig('20261007-050000', { new: 3 }), { title: 'Disco Brunch', bear: false, since: '20261007-050000', seen: 2, days: ['2026-11-01'], new: 1 }] } : {})));
+    // 160 for three runs, then 98, 98, 98: never under half the median.
+    lines.push(line('slow.example', index, { extracted: index < 3 ? 160 : 98 }));
+    lines.push(line('agg.example', index, { aggregator: true, lost: index >= 3 ? [pig('20261005-050000')] : [] }));
+    lines.push(line('both.example', index, index >= 4 ? { extracted: 12, lost: [pig('20261006-050000', { new: index === 4 ? 3 : 0 })] } : {}));
+    lines.push(line('listing.example', index, index === 5 ? { upcoming: 0, listing_gone: true } : {}));
+  });
+  return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-07T12:00:00.000Z') });
+}
+
+test('lost verdict: open losses on the latest line, below shrunk and above empty; aggregators never alert; shrunk hosts wear lost as a flag', () => {
+  const health = buildLostLedger();
+  const rowOf = host => health.rows.find(row => row.host === host);
+  const precinct = rowOf('precinct.example');
+  assert.equal(precinct.verdict, 'lost');
+  assert.equal(precinct.since, '20261007-050000');
+  assert.equal(precinct.lostDays, 4);
+  assert.equal(precinct.lostBear, 3);
+  assert.deepEqual(precinct.flags, []);
+  assert.equal(precinct.url, 'https://precinct.example/events/');
+  assert.equal(precinct.series[5].lostNewBear, 3);
+  assert.equal(precinct.series[5].lostNewOther, 1);
+  assert.equal(precinct.series[4].suspected, 3, 'the first miss is logged on the previous line, not alerted');
+  const agg = rowOf('agg.example');
+  assert.equal(agg.verdict, 'ok', 'an aggregator with losses is not trouble');
+  assert.deepEqual(agg.flags, ['lost'], 'but the loss is on the row');
+  assert.equal(agg.aggregator, true);
+  const both = rowOf('both.example');
+  assert.equal(both.verdict, 'shrunk', 'volume wins the verdict');
+  assert.deepEqual(both.flags, ['lost'], 'content rides as a flag');
+  assert.equal(rowOf('listing.example').verdict, 'lost', 'listing gone is an immediate alert');
+  assert.equal(rowOf('listing.example').listingGone, true);
+  assert.equal(rowOf('steady.example').verdict, 'ok');
+  assert.deepEqual(health.rows.map(row => row.verdict), ['shrunk', 'shrunk', 'lost', 'lost', 'ok', 'ok']);
+  assert.deepEqual(health.lost, { hosts: 3, series: 3, days: 7, bear: 6, listingGone: 1 });
+  assert.deepEqual(health.lostAggregator, { hosts: 1, series: 1, days: 3, bear: 3, listingGone: 0 });
+  assert.equal(health.troubled, 4);
+});
+
+test('shrunk slow-decline clause: three ok runs under 70% of the window peak (160 → 98) without ever crossing half the median', () => {
+  const health = buildLostLedger();
+  const slow = health.rows.find(row => row.host === 'slow.example');
+  assert.equal(slow.verdict, 'shrunk');
+  assert.equal(slow.since, '20261005-050000', 'trouble began the first run under 70% of the peak');
+  // Two runs under the line are not enough.
+  const lines = [0, 1, 2, 3, 4].map(index => buildLedgerLine({ run_id: `2026100${index + 2}-050000`, finished_at: `2026-10-0${index + 2}T09:00:00.000Z`, host: 'dip.example', extracted: index < 3 ? 160 : 98, lost: [] }));
+  const dip = MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-06T12:00:00.000Z') }).rows[0];
+  assert.equal(dip.verdict, 'ok');
+});
+
+test('lines written before the lost field parse and assess as before', () => {
+  const { health } = buildLedgerHealth();
+  health.rows.forEach(row => {
+    assert.deepEqual(row.lost, []);
+    assert.equal(row.lostDays, 0);
+    assert.deepEqual(row.flags, []);
+    assert.equal(row.aggregator, false);
+  });
+  assert.equal(health.rows.find(row => row.host === 'bearitmtl.com').verdict, 'vanished');
+});
+
+test('Sources table and counters carry the lost column, flag chips and the lost-events chip; host summary and lost list render the series', () => {
+  const health = buildLostLedger();
+  const table = MetricsSections.buildSourcesTableHtml(health, { hostUrl: row => `#host/${row.host}` });
+  assert.match(table, /data-source-lost="4"/);
+  assert.match(table, /4 gone \(3 bear\) · Bearded Pig Disco ×3 · since Oct 7 05:00/);
+  assert.match(table, /verdict-chip verdict-shrunk">Shrunk<\/span><span class="verdict-chip verdict-lost">Lost<\/span>/, 'shrunk + lost flag on both.example');
+  assert.match(table, /Lost · aggregator/);
+  assert.match(table, /listing gone/);
+  assert.match(table, /data-sort-key="lost"/);
+  const sorted = MetricsSections.sortSourceRows(health.rows, { key: 'lost', direction: 'desc' });
+  assert.equal(sorted[0].host, 'precinct.example');
+  const counters = MetricsSections.buildSourceCountersHtml(health);
+  assert.match(counters, /Expected events gone<\/span><span class="metric-chip-value">7 \(6 bear\)/);
+  assert.match(counters, /verdict-lost/);
+  const precinct = health.rows.find(row => row.host === 'precinct.example');
+  const summary = MetricsSections.buildHostSummaryHtml(precinct);
+  assert.match(summary, /4<span class="metric-subvalue">2 series<\/span>/);
+  const list = MetricsSections.buildLostListHtml(precinct);
+  assert.match(list, /Bearded Pig Disco <span class="cell-subtitle">×3<\/span>/);
+  assert.match(list, /2026-10-11, 2026-10-18, 2026-10-25/);
+  assert.match(list, /🐻/);
+  assert.match(list, /Oct 7 05:00/);
+  const suspectedRow = Object.assign({}, precinct, { lost: [], suspected: 2, listingGone: true });
+  const notes = MetricsSections.buildLostListHtml(suspectedRow);
+  assert.match(notes, /No expected future events are missing/);
+  assert.match(notes, /2 expected events missing for the first time/);
+  assert.match(notes, /upcoming list went to zero/);
+  const seriesTable = MetricsSections.buildHostSeriesTableHtml(precinct);
+  assert.match(seriesTable, /<th class="num tight">Lost<\/th>/);
+  const listing = health.rows.find(row => row.host === 'listing.example');
+  assert.match(MetricsSections.buildHostSeriesTableHtml(listing), /0↓/);
+});
+
+test('widget digest: lost totals, lost items bear-first with sparklines, companions are not trouble', () => {
+  const health = buildLostLedger();
+  const digest = MetricsSections.buildSourceWidgetSummary(health, { limit: 3, sparkRuns: 4 });
+  assert.equal(digest.troubled, 4);
+  assert.deepEqual(digest.lost, { hosts: 3, series: 3, days: 7, bear: 6, listingGone: 1 });
+  assert.equal(digest.worst.host, 'precinct.example');
+  assert.deepEqual(digest.lostItems.map(item => item.host), ['precinct.example', 'both.example']);
+  const precinct = digest.lostItems[0];
+  assert.equal(precinct.detail, '4 gone 🐻');
+  assert.equal(precinct.lostTitle, 'Bearded Pig Disco ×3');
+  assert.equal(precinct.lostDay, '2026-10-11');
+  assert.deepEqual(precinct.spark, [100, 100, 100, 100]);
+  assert.equal(digest.items[0].host, 'slow.example');
+  assert.match(digest.items[0].detail, /^shrunk · Oct 5/);
+  assert.equal(digest.items.find(item => item.host === 'both.example').detail, 'shrunk · Oct 6 05:00');
+  assert.deepEqual(digest.items.find(item => item.host === 'both.example').flags, ['lost']);
+  const companion = buildLedgerHealth().health;
+  companion.rows.push(Object.assign({}, companion.rows[0], { host: 'twin.example', verdict: 'companion', companionOf: ['eaglela.com'], lost: [], lostDays: 0 }));
+  const withCompanion = MetricsSections.buildSourceWidgetSummary(companion, { limit: 5 });
+  assert.ok(!withCompanion.items.some(item => item.verdict === 'companion'), 'a companion never takes a troubled row');
+});
+
+test('movers spec: ranked small multiples (dead/stopped → shrunk → lost → empty), marks on loss-confirmation runs, tints on dead runs, the steady rest listed', () => {
+  const health = buildLostLedger();
+  const spec = MetricsSections.buildSourcesMoversSpec(health, { runLimit: 4 });
+  assert.equal(spec.kind, 'multiples');
+  assert.deepEqual(spec.labels, ['20261004-050000', '20261005-050000', '20261006-050000', '20261007-050000']);
+  assert.deepEqual(spec.cards.map(card => card.host), ['both.example', 'slow.example', 'precinct.example', 'listing.example', 'agg.example']);
+  const precinct = spec.cards.find(card => card.host === 'precinct.example');
+  assert.deepEqual(precinct.spec.marks.map(mark => mark.index), [3]);
+  assert.equal(precinct.spec.marks[0].count, 4);
+  assert.deepEqual(precinct.firstLost, { title: 'Bearded Pig Disco', day: '2026-10-11', count: 3, bear: true });
+  assert.match(precinct.note, /4 expected future events gone \(3 bear\) · since Oct 7 05:00/);
+  assert.equal(precinct.spec.series[0].values.length, 4);
+  const both = spec.cards.find(card => card.host === 'both.example');
+  assert.deepEqual(both.flags, ['lost']);
+  assert.match(both.note, /^shrunk since Oct 6 05:00 · 3 expected future events gone/);
+  assert.equal(spec.cards.find(card => card.host === 'listing.example').spec.marks[0].label, 'listing gone');
+  assert.deepEqual(spec.cards.find(card => card.host === 'agg.example').spec.series[0].color, { hex: '#a7b0cc' });
+  assert.deepEqual(spec.steady.map(item => item.host), ['steady.example']);
+  assert.equal(spec.more, 0);
+  const capped = MetricsSections.buildSourcesMoversSpec(health, { maxCards: 2 });
+  assert.equal(capped.cards.length, 2);
+  assert.equal(capped.more, 3);
+  // A dead run tints its index.
+  const chart = chartHealth();
+  const deadSpec = MetricsSections.buildSourcesMoversSpec(chart);
+  const dead = deadSpec.cards.find(card => card.host === 'dead.example');
+  assert.deepEqual(dead.spec.tints, [2, 3]);
+  assert.equal(dead.note, 'dead since Sep 28 05:00');
+  assert.equal(MetricsSections.buildSourcesMoversSpec({ rows: [] }), null);
+});
+
+test('movers HTML: one card per mover with chips, sparkline, note and first lost series; steady chips with counts; nothing folds into "other"', () => {
+  const health = buildLostLedger();
+  const spec = MetricsSections.buildSourcesMoversSpec(health);
+  const html = MetricsSections.buildSourcesMoversHtml(spec, { hostUrl: row => `#host/${row.host}`, faviconUrl: () => null });
+  assert.equal((html.match(/class="mover-card/g) || []).length, 5);
+  assert.match(html, /data-nav-key="precinct.example"/);
+  assert.match(html, /<svg class="spark-svg"/);
+  assert.match(html, /spark-mark/);
+  assert.match(html, /spark-baseline/);
+  assert.match(html, /↳ Bearded Pig Disco · 10-11 ×3 🐻/);
+  assert.match(html, /steady-chip verdict-ok[^>]*>.*steady\.example <small>100<\/small>/);
+  assert.doesNotMatch(html, /other site/);
+  assert.equal(MetricsSections.buildSourcesMoversHtml(null), '');
+});
+
+test('spark renderer: area, line, baseline, tints, marks, newest point; empty spec draws nothing', () => {
+  const renderer = MetricsSections.createChartRenderer();
+  const svg = renderer.buildSparkSvg({ id: 'x', labels: ['a', 'b', 'c'], series: [{ key: 'e', values: [10, 0, 12], color: { slot: 0 } }], baseline: { value: 11 }, marks: [{ index: 2, label: 'lost' }], tints: [1] }, { mode: 'dark' });
+  assert.match(svg, /spark-area/);
+  assert.match(svg, /spark-line/);
+  assert.match(svg, /spark-baseline/);
+  assert.match(svg, /spark-mark/);
+  assert.match(svg, /spark-last/);
+  assert.match(svg, /fill-opacity="0.12"/);
+  assert.equal(renderer.buildSparkSvg({ labels: [], series: [] }), '');
+});
+
+test('lost-per-run spec: bear / other / aggregator bars with listing-gone dots', () => {
+  const health = buildLostLedger();
+  const spec = MetricsSections.buildLostPerRunChartSpec(health, { verdictColors: { lost: '#ff7eb6', stopped: '#ff9f43' } });
+  assert.equal(spec.kind, 'bars');
+  assert.deepEqual(spec.series.map(item => item.key), ['bear', 'other', 'aggregator', 'listing']);
+  assert.deepEqual(spec.series[0].values, [0, 0, 0, 0, 3, 3], 'both.example confirmed 3 on Oct 6, precinct 3 on Oct 7');
+  assert.deepEqual(spec.series[1].values, [0, 0, 0, 0, 0, 1]);
+  assert.deepEqual(spec.series[2].values, [0, 0, 0, 0, 0, 0], 'the aggregator fixture never stamps new');
+  assert.deepEqual(spec.series[3].values, [0, 0, 0, 0, 0, 1]);
+  assert.equal(spec.series[3].role, 'dots');
+  assert.deepEqual(spec.series[0].color, { hex: '#ff7eb6' });
+  const svg = MetricsSections.chartRenderer.buildChartSvg(spec, { mode: 'light' });
+  assert.match(svg, /chart-bar/);
+  assert.match(svg, /chart-dot/);
+  assert.equal(MetricsSections.buildLostPerRunChartSpec({ rows: [] }), null);
 });
