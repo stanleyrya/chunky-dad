@@ -2,12 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-07",
+ "generatedAt": "2026-10-09",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-07",
-    "2026-10-08",
     "2026-10-09",
     "2026-10-11",
     "2026-10-13",
@@ -77,7 +75,8 @@ window.CITY_ACTIVITY = {
     "2026-12-31",
     "2027-01-01",
     "2027-01-02",
-    "2027-01-03"
+    "2027-01-03",
+    "2027-01-05"
    ],
    "recurring": 6,
    "festivalUntil": null
@@ -96,7 +95,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-08",
     "2026-10-10",
     "2026-10-11",
     "2026-10-15",
@@ -194,8 +192,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-10-07",
-    "2026-10-08",
     "2026-10-09",
     "2026-10-10",
     "2026-10-11",
@@ -237,6 +233,7 @@ window.CITY_ACTIVITY = {
   "palm-springs": {
    "dates": [
     "2026-10-15",
+    "2026-11-06",
     "2026-12-24"
    ],
    "recurring": 0,
@@ -336,7 +333,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-10-07",
     "2026-10-09",
     "2026-10-10",
     "2026-10-15",
@@ -541,7 +537,8 @@ window.CITY_ACTIVITY = {
   "madrid": {
    "dates": [
     "2026-12-03",
-    "2026-12-05"
+    "2026-12-05",
+    "2026-12-07"
    ],
    "recurring": 0,
    "festivalUntil": "2026-12-09"
@@ -612,9 +609,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "ottawa": {
-   "dates": [
-    "2026-10-08"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
