@@ -420,6 +420,52 @@ test('browser fetch: a browser that never answers cannot hold the run — the at
   }
 });
 
+test('browser fetch: the browser and the inbox are for the sites we read — a refused outbound link (a sponsor page an aggregator carries) is neither tried in Chrome nor asked of the phone', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  const originalLog = console.log;
+  try {
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 }, politeness: {}, browserFetch: { executablePath: process.execPath } });
+    adapter.getFetchPoliteness().setConfiguredSiteTest((url) => /(^|\.)eagle\.example$/.test((url.match(/^https?:\/\/([^/?#]+)/) || ['', ''])[1]));
+    global.fetch = async () => ({ ok: false, status: 403, statusText: 'Forbidden', headers: new Headers(), body: null });
+    const launches = [];
+    adapter.loadPuppeteer = async () => ({
+      launch: async () => {
+        launches.push(1);
+        return {
+          userAgent: async () => 'Mozilla/5.0 Chrome/155.0.0.0',
+          newPage: async () => ({ setUserAgent: async () => {}, goto: async () => ({ status: () => 200, headers: () => ({ 'content-type': 'text/html' }) }), content: async () => `<html><body>${'calendar '.repeat(40)}</body></html>` }),
+          close: async () => {}
+        };
+      }
+    });
+    const lines = [];
+    console.log = (line) => lines.push(String(line));
+    // jlab.com, thezeroproof.com, denloungewear.com: five of the twenty
+    // browser launches of the 2026-10-09 run went to sponsor links.
+    await assert.rejects(() => adapter.fetchData('https://www.jlab.com/'), (error) => error.statusCode === 403);
+    // The host is parked after its first 403; the refusal still stands.
+    await assert.rejects(() => adapter.fetchData('https://www.jlab.com/headphones'), (error) => /403/.test(String(error.message)));
+    console.log = originalLog;
+    assert.equal(launches.length, 0, 'no Chrome for a site we do not read');
+    assert.ok(!fs.existsSync(path.join(shared.dir, 'inbox', 'requests.json')), 'nothing for the phone either');
+    assert.equal(lines.filter((line) => /not a site we read/.test(line)).length, 1, 'said once per host');
+    // The configured site still gets the browser.
+    console.log = () => {};
+    const page = await adapter.fetchData('https://www.eagle.example/calendar2/');
+    console.log = originalLog;
+    assert.ok(page && page.html.includes('calendar'));
+    assert.equal(launches.length, 1);
+    // No run has set a test (a bare adapter): every site passes, as before.
+    const bare = new WebAdapter({ cities: CITIES, politeness: {} });
+    assert.equal(bare.getFetchPoliteness().isConfiguredSiteRequest('https://www.jlab.com/'), true);
+  } finally {
+    console.log = originalLog;
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();

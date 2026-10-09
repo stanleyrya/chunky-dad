@@ -3471,6 +3471,23 @@ class SharedCore {
             }
         }
         this._configuredListingUrlKeys = keys;
+        const domains = new Set();
+        for (const parserConfig of Array.isArray(parserConfigs) ? parserConfigs : []) {
+            for (const url of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) {
+                const domain = this.getRegistrableDomainFromUrl(String(url || '').trim());
+                if (domain) domains.add(domain);
+            }
+        }
+        this._configuredSiteDomains = domains;
+    }
+
+    // Is this URL on a site we read — the registrable domain of any
+    // configured URL of this run? (FetchPoliteness.isConfiguredSiteRequest)
+    isConfiguredSiteDomainUrl(value) {
+        const domains = this._configuredSiteDomains;
+        if (!(domains instanceof Set) || domains.size === 0) return false;
+        const domain = this.getRegistrableDomainFromUrl(String(value || '').trim());
+        return Boolean(domain) && domains.has(domain);
     }
 
     isConfiguredListingUrl(value) {
@@ -7836,6 +7853,7 @@ class SharedCore {
         if (httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function') {
             const gate = httpAdapter.getFetchPoliteness();
             if (gate && typeof gate.setConfiguredRootTest === 'function') gate.setConfiguredRootTest((url) => this.isConfiguredListingUrl(url));
+            if (gate && typeof gate.setConfiguredSiteTest === 'function') gate.setConfiguredSiteTest((url) => this.isConfiguredSiteDomainUrl(url));
         }
         // Which source reads which configured page IN THIS RUN — only a
         // source that will actually run owns its page (a one-parser run, or a
@@ -28254,12 +28272,24 @@ class FetchPoliteness {
         // The core registers its configured-root test at run start
         // (setConfiguredRootTest) — the adapters need not know the core.
         this.isConfiguredRoot = typeof options.isConfiguredRoot === 'function' ? options.isConfiguredRoot : (() => false);
+        this.isConfiguredSite = typeof options.isConfiguredSite === 'function' ? options.isConfiguredSite : null;
         this.openingRoot = '';
     }
 
     // The crawl calls this around a configured root's door chain (fetch,
     // gate, SPA door, machine door): requests inside it are first-party.
     setConfiguredRootTest(test) { if (typeof test === 'function') this.isConfiguredRoot = test; }
+    // A SITE WE READ: any page on the registrable domain of a configured
+    // URL. The real browser and the phone's inbox are for those sites
+    // only — an aggregator's outbound sponsor link (jlab.com,
+    // thezeroproof.com, denloungewear.com on 2026-10-09) answered 403 to
+    // a plain request and took a Chrome launch each, five of the run's
+    // twenty. Without a test (no run started), every request passes.
+    setConfiguredSiteTest(test) { if (typeof test === 'function') this.isConfiguredSite = test; }
+    isConfiguredSiteRequest(url) {
+        if (typeof this.isConfiguredSite !== 'function') return true;
+        try { return Boolean(this.isConfiguredSite(url)); } catch (_) { return false; }
+    }
     beginOpeningRoot(url) { this.openingRoot = String(url || ''); }
     endOpeningRoot() { this.openingRoot = ''; }
 
