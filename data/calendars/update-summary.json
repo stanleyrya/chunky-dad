@@ -201,8 +201,8 @@
     "madrid": {
       "name": "Madrid",
       "status": "success",
-      "dataLength": 2193,
-      "eventCount": 2
+      "dataLength": 3490,
+      "eventCount": 3
     },
     "manchester": {
       "name": "Manchester",
@@ -243,14 +243,14 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 15717,
-      "eventCount": 13
+      "dataLength": 17429,
+      "eventCount": 14
     },
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 201300,
-      "eventCount": 179
+      "dataLength": 204881,
+      "eventCount": 182
     },
     "orlando": {
       "name": "Orlando",
@@ -273,8 +273,8 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 9241,
-      "eventCount": 6
+      "dataLength": 10339,
+      "eventCount": 7
     },
     "paris": {
       "name": "Paris",

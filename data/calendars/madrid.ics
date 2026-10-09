@@ -6,23 +6,27 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-madrid
 X-WR-TIMEZONE:Europe/Madrid
 BEGIN:VEVENT
-DTSTART:20261204T235900Z
-DTEND:20261205T060000Z
-DTSTAMP:20260927T220619Z
-UID:7F7555CA-D6F6-436B-A7A2-AFD193AAE60D
-CREATED:20260927T214727Z
-DESCRIPTION:bar: Changó\naddress: Madrid\nwebsite: https://madbear.org/en\n
- ticketUrl: https://site.fourvenues.com/es/matrix-events/events/macho-party-
- -04-12-2026-0U83\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v
- 1/object/public/event-images/4f5742321ef5f184.jpg\nimageSource: json-api\nt
- imezone: Europe/Madrid\nimageVertical: https://acqvlhciredwtlbpisso.supabas
- e.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg\naddressSou
- rce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Chang%C3%
- B3%2C%20Madrid\nkey: macho-party|2026-12-04|changó\nbearSource: ai
-LAST-MODIFIED:20260927T214727Z
+DTSTART:20261207T104500Z
+DTEND:20261208T050000Z
+DTSTAMP:20261009T140835Z
+UID:2FDCA0A6-C40F-4614-850A-05BAB00D403F
+CREATED:20261009T134031Z
+DESCRIPTION:description: 26TH INTERNATIONAL BEARS & FRIENDAS MEETINF MADRID
+ \nbar: SALA yasta\naddress: C. Valverde\, 10\nticketUrl: https://www.ticket
+ tailor.com/events/asociacionmadbear/2409132\nimage: https://static.wixstati
+ c.com/media/238fae_e0e1e1a9c3cd473185a8398b71722b0c~mv2.jpg\ncover: 22 EUR\
+ ntimezone: Europe/Madrid\nimageHorizontal: https://uploads.tickettailorasse
+ ts.com/c_scale\,w_1920/v1/production/userfiles/urcpq1qpknn58kbc6ysq.jpg?_a=
+ BAAHWXDQ\naddressSource: page\nwebsite: https://www.furball.nyc\ngmaps: htt
+ ps://www.google.com/maps/search/?api=1&query=SALA%20yasta%2C%20C.%20Valverd
+ e%2C%2010\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc
+ /\nfavicon: https://linktr.ee/furballnyc\nkey: furball-mad-bear|2026-12-07|
+ sala yasta\nimageVertical: https://static.wixstatic.com/media/238fae_e0e1e1
+ a9c3cd473185a8398b71722b0c~mv2.jpg\nimageSource: page\nbearSource: keyword
+LAST-MODIFIED:20261009T134031Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MACHO PARTY
+SUMMARY:FURBALL MAD.BEAR
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -30,7 +34,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261203T104500Z
 DTEND:20261209T050000Z
-DTSTAMP:20260927T220619Z
+DTSTAMP:20261009T140835Z
 UID:61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6
 CREATED:20260919T161240Z
 DESCRIPTION:bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett
@@ -46,6 +50,28 @@ LAST-MODIFIED:20260919T161241Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MADBEAR PARTY 2026 - MADRID
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261204T235900Z
+DTEND:20261205T060000Z
+DTSTAMP:20261009T140835Z
+UID:7F7555CA-D6F6-436B-A7A2-AFD193AAE60D
+CREATED:20260927T214727Z
+DESCRIPTION:bar: Changó\naddress: Madrid\nwebsite: https://madbear.org/en\n
+ ticketUrl: https://site.fourvenues.com/es/matrix-events/events/macho-party-
+ -04-12-2026-0U83\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v
+ 1/object/public/event-images/4f5742321ef5f184.jpg\nimageSource: json-api\nt
+ imezone: Europe/Madrid\nimageVertical: https://acqvlhciredwtlbpisso.supabas
+ e.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg\naddressSou
+ rce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Chang%C3%
+ B3%2C%20Madrid\nkey: macho-party|2026-12-04|changó\nbearSource: ai
+LAST-MODIFIED:20260927T214727Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MACHO PARTY
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

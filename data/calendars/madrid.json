@@ -5,6 +5,107 @@
   },
   "events": [
     {
+      "name": "FURBALL MAD.BEAR",
+      "day": "Monday",
+      "time": "11:45AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-07T11:45:00",
+      "endDate": "2026-12-08T06:00:00",
+      "unprocessedDescription": "description: 26TH INTERNATIONAL BEARS & FRIENDAS MEETINF MADRID\r\nbar: SALA yasta\naddress: C. Valverde, 10\nticketUrl: https://www.tickettailor.com/events/asociacionmadbear/2409132\nimage: https://static.wixstatic.com/media/238fae_e0e1e1a9c3cd473185a8398b71722b0c~mv2.jpg\ncover: 22 EUR\ntimezone: Europe/Madrid\nimageHorizontal: https://uploads.tickettailorassets.com/c_scale,w_1920/v1/production/userfiles/urcpq1qpknn58kbc6ysq.jpg?_a=BAAHWXDQ\naddressSource: page\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=SALA%20yasta%2C%20C.%20Valverde%2C%2010\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-mad-bear|2026-12-07|sala yasta\nimageVertical: https://static.wixstatic.com/media/238fae_e0e1e1a9c3cd473185a8398b71722b0c~mv2.jpg\nimageSource: page\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "2FDCA0A6-C40F-4614-850A-05BAB00D403F",
+      "uid": "2FDCA0A6-C40F-4614-850A-05BAB00D403F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "SALA yasta",
+      "cover": "22 EUR",
+      "image": "https://static.wixstatic.com/media/238fae_e0e1e1a9c3cd473185a8398b71722b0c~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_e0e1e1a9c3cd473185a8398b71722b0c~mv2.jpg",
+      "imageHorizontal": "https://uploads.tickettailorassets.com/c_scale,w_1920/v1/production/userfiles/urcpq1qpknn58kbc6ysq.jpg?_a=BAAHWXDQ",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "26TH INTERNATIONAL BEARS & FRIENDAS MEETINF MADRID",
+      "cadence": null,
+      "address": "C. Valverde, 10",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=SALA%20yasta%2C%20C.%20Valverde%2C%2010",
+      "ticketUrl": "https://www.tickettailor.com/events/asociacionmadbear/2409132",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=SALA%20yasta%2C%20C.%20Valverde%2C%2010",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tickettailor.com/events/asociacionmadbear/2409132",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-madbear-21275b04"
+    },
+    {
+      "name": "MADBEAR PARTY 2026 - MADRID",
+      "day": "Thursday",
+      "time": "11:45AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-03T11:45:00",
+      "endDate": "2026-12-09T06:00:00",
+      "unprocessedDescription": "bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett\railor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\nimageSource: json-api\ntimezone: Europe/Madrid\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid\nkey: madbear-party-2026-madrid|2026-12-03|bears bar\nbearSource: keyword\nshortName: MADBEAR PARTY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
+      "uid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "BEARS BAR",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+      "cadence": null,
+      "address": "Madrid",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
+      "ticketUrl": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
+      "shortName": "MADBEAR PARTY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "madbear-party-2026-madrid-620cefcf"
+    },
+    {
       "name": "MACHO PARTY",
       "day": "Saturday",
       "time": "12:59AM-7AM",
@@ -50,49 +151,6 @@
         }
       ],
       "slug": "macho-party-1de2bda2"
-    },
-    {
-      "name": "MADBEAR PARTY 2026 - MADRID",
-      "day": "Thursday",
-      "time": "11:45AM-6AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-12-03T11:45:00",
-      "endDate": "2026-12-09T06:00:00",
-      "unprocessedDescription": "bar: BEARS BAR\naddress: Madrid\nticketUrl: https://www.tickett\railor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\nimageSource: json-api\ntimezone: Europe/Madrid\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid\nkey: madbear-party-2026-madrid|2026-12-03|bears bar\nbearSource: keyword\nshortName: MADBEAR PARTY",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Madrid",
-      "wasUTC": true,
-      "sourceUid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
-      "uid": "61F3F1A0-EB5C-4ABB-95A0-B18C3F9DF6F6",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "BEARS BAR",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
-      "cadence": null,
-      "address": "Madrid",
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
-      "ticketUrl": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
-      "shortName": "MADBEAR PARTY",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=BEARS%20BAR%2C%20Madrid",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "madbear-party-2026-madrid-620cefcf"
     }
   ]
 }

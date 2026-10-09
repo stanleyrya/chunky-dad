@@ -5,6 +5,67 @@
   },
   "events": [
     {
+      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
+      "day": "Friday",
+      "time": "11AM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-09-11T11:00:00",
+      "endDate": "2026-09-14T00:00:00",
+      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort",
+      "cover": "$55.20-$150.16",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "The Ultimate Celebration!",
+      "cadence": null,
+      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+    },
+    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-12PM",
@@ -166,65 +227,56 @@
       "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6"
     },
     {
-      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
+      "name": "FURBALL Palm Springs PRIDE",
       "day": "Friday",
-      "time": "11AM-12AM",
+      "time": "10PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
+        "lat": 33.848691,
+        "lng": -116.548096
       },
-      "startDate": "2026-09-11T11:00:00",
-      "endDate": "2026-09-14T00:00:00",
-      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "startDate": "2026-11-06T22:00:00",
+      "endDate": "2026-11-07T02:00:00",
+      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageSource: page\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nbarSource: page-adjacent\naddressSource: page\nwebsite: https://www.tickettailor.com/events/toucanstikilounge\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE\npinSource: geocoded-exact",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "sourceUid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
+      "uid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "CCBC Resort",
-      "cover": "$55.20-$150.16",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "favicon": "https://www.clubchubusa.com",
-      "tea": "The Ultimate Celebration!",
+      "bar": "Toucans Tiki Lounge",
+      "image": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
+      "tea": "SAM GEE marcos moreno",
       "cadence": null,
-      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
-      "website": "https://www.clubchubusa.com",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-      "shortName": "CLUB CHUB",
+      "address": "2100 PALM CANYON DRIVE",
+      "website": "https://www.tickettailor.com/events/toucanstikilounge",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
+      "ticketUrl": "https://www.tickettailor.com/events/toucanstikilounge",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.clubchubusa.com",
+          "url": "https://www.tickettailor.com/events/toucanstikilounge",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
-          "label": "📷 Instagram"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+          "url": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+          "url": "https://www.tickettailor.com/events/toucanstikilounge",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+      "slug": "furball-palm-springs-pride-719921a0"
     },
     {
       "name": "Western Xposure's XXL",
