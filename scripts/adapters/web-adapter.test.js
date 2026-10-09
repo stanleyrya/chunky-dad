@@ -378,6 +378,48 @@ test('browser fetch: a 403 bot wall is the same refusal as a 429 — Chrome with
   }
 });
 
+test('browser fetch: a browser that never answers cannot hold the run — the attempt is abandoned at the hard deadline, the browser is closed or killed, and the refusal is reported as before', async () => {
+  const shared = withSharedRoot();
+  const originalFetch = global.fetch;
+  const originalLog = console.log;
+  const originalHard = WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS;
+  const originalClose = WebAdapter.BROWSER_CLOSE_TIMEOUT_MS;
+  try {
+    WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS = 80;
+    WebAdapter.BROWSER_CLOSE_TIMEOUT_MS = 20;
+    const adapter = new WebAdapter({ cities: CITIES, pageCache: { enabled: true, ttlDays: 3 }, politeness: {}, browserFetch: { executablePath: process.execPath } });
+    global.fetch = async () => ({ ok: false, status: 403, statusText: 'Forbidden', headers: new Headers(), body: null });
+    const killed = [];
+    adapter.loadPuppeteer = async () => ({
+      launch: async () => ({
+        userAgent: async () => 'Mozilla/5.0 Chrome/155.0.0.0',
+        newPage: async () => ({
+          setUserAgent: async () => {},
+          goto: () => new Promise(() => {}), // never answers (eaglebarwm.com, 2026-10-08)
+          content: async () => ''
+        }),
+        close: () => new Promise(() => {}), // will not close either
+        process: () => ({ killed: false, kill: (signal) => { killed.push(signal); } })
+      })
+    });
+    const lines = [];
+    console.log = (line) => lines.push(String(line));
+    const startedAt = Date.now();
+    await assert.rejects(() => adapter.fetchData('https://wall.example/calendar2/'), (error) => error.statusCode === 403);
+    console.log = originalLog;
+    assert.ok(Date.now() - startedAt < 2000, 'gave up at the deadline, not at the browser\'s pace');
+    assert.deepEqual(killed, ['SIGKILL'], 'a browser that will not close is killed');
+    assert.ok(lines.some((line) => /BROWSER: .*gave up after/.test(line)), lines.join('\n'));
+    assert.equal(adapter._browserFetch.count, 1, 'the attempt still counts against the cap');
+  } finally {
+    WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS = originalHard;
+    WebAdapter.BROWSER_CLOSE_TIMEOUT_MS = originalClose;
+    console.log = originalLog;
+    global.fetch = originalFetch;
+    shared.restore();
+  }
+});
+
 test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
   await withFetchStub(LA_ICS_FIXTURE, async () => {
     const adapter = makeAdapter();
