@@ -754,6 +754,18 @@ async function main() {
     if (sharedRoot) {
         const adapter = new WebAdapter({});
         await adapter.saveRunToSharedStorage(results, { logText: logLines.join('\n') });
+        // The automated source audit (tools/source-audit.js): three hosts a
+        // run get their listing page read beside what we extracted, every
+        // loss confirmed this run is looked for on its site. Report only,
+        // budgeted, never a reason for the run to fail. CHUNKY_SOURCE_AUDIT=0 skips it.
+        try {
+            const { runSourceAudit } = require(path.join(__dirname, 'source-audit'));
+            const runConfig = results && results.config && results.config.config ? results.config.config : {};
+            const auditAdapter = new WebAdapter({ pageCache: runConfig.pageCache || { enabled: true, ttlDays: 3 }, politeness: runConfig.politeness });
+            await runSourceAudit({ results, sharedRoot, adapter: auditAdapter, aiConfig: runConfig.ai || null, env: process.env, log: console.log });
+        } catch (error) {
+            console.log(`run-once: source audit skipped — ${error && error.message ? error.message : error}`);
+        }
     }
 
     const outPath = process.env.CHUNKY_RUN_OUT ||

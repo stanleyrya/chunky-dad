@@ -307,6 +307,64 @@ test('buildSourceLedger: lines carry aggregator, url, lost, suspected and listin
   assert.equal(fromLegacy.upcoming.hosts['eaglela.com'].history.length, 1);
 });
 
+test('buildSourceLedger: the quality block — completeness of the kept set, flags by code, the bear funnel with its top reason, dedup, stability vs the previous ok run, horizon incl. dropped, runs since new, errors by class, merge churn', () => {
+  const payload = samplePayload();
+  const eagle = payload.parserResults[0];
+  eagle.duplicatesRemoved = 2;
+  eagle.events = [
+    { title: 'BLUF LA', startDate: '2026-11-20T22:00:00.000Z', bar: 'Eagle LA', location: '34.1, -118.2', website: 'https://eaglela.com/events/bluf/', image: 'https://x/1.jpg', description: 'leather', timezone: 'America/Los_Angeles', isBearEvent: true },
+    { title: 'Beer Bust', startDate: '2026-10-11T22:00:00.000Z', bar: 'Eagle LA', website: 'https://eaglela.com/events/bust/', timezone: 'America/Los_Angeles', isBearEvent: true, timeUnknown: true },
+    { title: 'Karaoke', startDate: '2026-10-12T22:00:00.000Z', website: 'https://eaglela.com/events/karaoke/', timezone: 'America/Los_Angeles', isBearEvent: false, allDay: true },
+    { title: 'Old Night', startDate: '2026-09-01T22:00:00.000Z', bar: 'Eagle LA', website: 'https://eaglela.com/events/old/', timezone: 'America/Los_Angeles', isBearEvent: true }
+  ];
+  eagle.totalEvents = 6;
+  payload.bearDroppedEvents = [
+    { title: 'Trivia', startDate: '2027-01-15T03:00:00.000Z', host: 'www.eaglela.com', reason: 'ai: nothing bear about trivia', event: { title: 'Trivia', startDate: '2027-01-15T03:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/events/trivia/' } },
+    { title: 'Drag', startDate: '2026-10-20T03:00:00.000Z', host: 'eaglela.com', reason: 'manual store: not_bear (verdict stamped 2026-10-06)', event: { title: 'Drag', startDate: '2026-10-20T03:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/events/drag/' } },
+    { title: 'Elsewhere', startDate: '2026-10-20T03:00:00.000Z', host: 'nowhere.example', reason: 'ai: x', event: { title: 'Elsewhere', website: 'https://nowhere.example/a' } }
+  ];
+  payload.analyzedEvents = [
+    { title: 'BLUF LA', startDate: '2026-11-20T22:00:00.000Z', bar: 'Eagle LA', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/events/bluf/', _action: 'merge', _changes: ['title', 'notes'], _sanityFlags: [{ code: 'flyer-time-conflict', detail: 'x' }] },
+    { title: 'Beer Bust', startDate: '2026-10-11T22:00:00.000Z', bar: 'Eagle LA', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/events/bust/', _action: 'merge', _changes: ['notes'], _sanityFlags: ['weekday-derived-date'] },
+    { title: 'Karaoke', startDate: '2026-10-12T22:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/events/karaoke/', _action: 'new', _sanityFlags: [{ code: 'flyer-time-conflict' }] }
+  ];
+  payload.errors = ['SYSTEM: Failed to process URL https://eaglela.com/events/: HTTP request failed: HTTP 522: ', 'SYSTEM: Failed to process URL https://eaglela.com/calendar/: fetch failed', 'SYSTEM: Failed to process URL https://deadbar.example/calendar/: HTTP request failed: HTTP 403: '];
+  const first = SharedCore.buildSourceLedger(payload, { now: new Date('2026-10-06T12:00:00Z') });
+  const q = first.records.find((r) => r.host === 'eaglela.com').quality;
+  assert.equal(q.n, 4);
+  assert.equal(q.time, 50, 'timeUnknown and allDay are not a time');
+  assert.equal(q.place, 75);
+  assert.equal(q.coords, 25);
+  assert.equal(q.url, 100);
+  assert.equal(q.image, 25);
+  assert.equal(q.desc, 25);
+  assert.deepEqual(q.flags, { 'flyer-time-conflict': 2, 'weekday-derived-date': 1 });
+  assert.deepEqual(q.bear, { extracted: 6, kept: 3, ai_dropped: 1, manual_dropped: 1, top_reason: 'ai: nothing bear about trivia' });
+  assert.deepEqual(q.dedup, { removed: 2, pct: 25 });
+  assert.equal(q.stability, null, 'no previous run yet');
+  assert.equal(q.horizon_days, 100, 'the AI-dropped trivia on 2027-01-14 local is the furthest extracted event');
+  assert.equal(q.runs_since_new, 0, 'a NEW proposal this run');
+  assert.deepEqual(q.errors, { 'http-5xx': 1, transport: 1 }, 'the dead bar’s 403 is not this host’s');
+  assert.deepEqual(q.churn, { merges: 2, changed: 1, fields: { title: 1 } });
+  const deadQ = first.records.find((r) => r.host === 'deadbar.example').quality;
+  assert.deepEqual(deadQ.errors, { 'http-4xx': 1 });
+  assert.equal(deadQ.n, 0);
+  assert.equal(deadQ.time, null, 'no kept events → no share');
+  // Next run: the same kept set minus one → stability 75%, nothing new → runs since new climbs.
+  const second = samplePayload({ summary: { runId: '20261007-052536', timestamp: '2026-10-07T09:25:36.063Z' } });
+  second.parserResults[0].events = eagle.events.filter((e) => e.title !== 'Karaoke');
+  second.analyzedEvents = [];
+  second.bearDroppedEvents = [];
+  second.errors = [];
+  const next = SharedCore.buildSourceLedger(second, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: first.upcoming });
+  const q2 = next.records.find((r) => r.host === 'eaglela.com').quality;
+  assert.equal(q2.stability, 75);
+  assert.equal(q2.runs_since_new, 1);
+  assert.deepEqual(q2.errors, {});
+  assert.equal(next.upcoming.hosts['eaglela.com'].keys.length, 3, 'the kept identities ride in the snapshot');
+  assert.equal(next.upcoming.hosts['eaglela.com'].runs_since_new, 1);
+});
+
 test('parseSourceLedger tolerates torn lines', () => {
   const records = parseSourceLedger('{"host":"a.example","run_id":"1"}\n{"host":"b.exam\n\n{"nohost":true}\n{"host":"c.example"}\n');
   assert.deepEqual(records.map((r) => r.host), ['a.example', 'c.example']);

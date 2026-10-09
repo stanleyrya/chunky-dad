@@ -1948,6 +1948,9 @@ class SharedCore {
         Object.keys(prev.lost && typeof prev.lost === 'object' ? prev.lost : {}).forEach((series) => {
             const entry = prev.lost[series] || {};
             lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
+            // The audit's "still on the site?" verdict rides with the series
+            // (tools/source-audit.js stamps it into the state).
+            if (entry.still && typeof entry.still === 'object' && entry.still.verdict) lost[series].still = { verdict: String(entry.still.verdict), at: String(entry.still.at || '') };
         });
         const todayKey = String(current.todayKey || '');
         const runId = String(current.runId || '');
@@ -2020,7 +2023,9 @@ class SharedCore {
             const entry = lost[series];
             const days = Object.keys(entry.days).sort();
             const since = days.map((day) => entry.days[day]).sort()[0] || '';
-            return { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
+            const item = { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
+            if (entry.still && entry.still.verdict) { item.still = entry.still.verdict; item.still_at = entry.still.at || ''; }
+            return item;
         }).sort((a, b) => (b.bear ? 1 : 0) - (a.bear ? 1 : 0) || b.days.length - a.days.length || a.since.localeCompare(b.since) || a.title.localeCompare(b.title));
         return {
             state: { history, misses, lost },
@@ -2028,6 +2033,64 @@ class SharedCore {
             suspected,
             listing_gone: listingGone,
             lost_new: list.reduce((sum, entry) => sum + entry.new, 0)
+        };
+    }
+
+    // Error text → class for the per-host quality block.
+    static sourceLedgerErrorClass(text) {
+        const value = String(text || '');
+        const http = /HTTP (\d{3})/.exec(value);
+        if (http) return http[1][0] === '4' ? 'http-4xx' : (http[1][0] === '5' ? 'http-5xx' : 'http-other');
+        if (/robots/i.test(value)) return 'robots';
+        if (/fetch failed|ECONN|ENOTFOUND|EAI_AGAIN|timeout|timed out|socket|TLS|certificate/i.test(value)) return 'transport';
+        return 'other';
+    }
+
+    // Per-host quality block for a ledger line — the cheap signals that
+    // caught something in the 2026-09 review: completeness of the kept
+    // events, sanity flags by code, the bear funnel, the dedup fold, the
+    // run-to-run stability of the kept set, the horizon, runs since the
+    // host last proposed something new, page errors by class, merge churn.
+    static buildSourceQuality(row, options = {}) {
+        const pct = (part, whole) => (whole > 0 ? Math.round((100 * part) / whole) : null);
+        const q = row.quality;
+        const n = q.n;
+        const prevKeys = Array.isArray(options.previousKeys) ? options.previousKeys : null;
+        let stability = null;
+        if (prevKeys && prevKeys.length >= 3 && q.keys.size >= 3) {
+            const previous = new Set(prevKeys);
+            let shared = 0;
+            q.keys.forEach((key) => { if (previous.has(key)) shared += 1; });
+            const union = new Set([...previous, ...q.keys]).size;
+            stability = union > 0 ? Math.round((100 * shared) / union) : null;
+        }
+        const todayKey = String(options.todayKey || '');
+        const horizonDays = q.maxDay && q.maxDay >= todayKey
+            ? Math.round((Date.parse(`${q.maxDay}T00:00:00Z`) - Date.parse(`${todayKey}T00:00:00Z`)) / 86400000)
+            : 0;
+        const reasons = [...q.dropReasons.entries()].sort((a, b) => b[1] - a[1]);
+        const errors = {};
+        Object.keys(q.errors).forEach((key) => { if (q.errors[key] > 0) errors[key] = q.errors[key]; });
+        const flags = {};
+        Object.keys(q.flags).sort().forEach((key) => { flags[key] = q.flags[key]; });
+        const fields = {};
+        Object.keys(q.churnFields).sort().forEach((key) => { fields[key] = q.churnFields[key]; });
+        return {
+            n,
+            time: pct(q.time, n),
+            place: pct(q.place, n),
+            coords: pct(q.coords, n),
+            url: pct(q.url, n),
+            image: pct(q.image, n),
+            desc: pct(q.desc, n),
+            flags,
+            bear: { extracted: row.extracted, kept: row.bear, ai_dropped: q.aiDropped, manual_dropped: q.manualDropped, top_reason: reasons.length ? reasons[0][0] : '' },
+            dedup: { removed: q.dedupRemoved, pct: pct(q.dedupRemoved, q.dedupRemoved + (row.extracted || 0)) },
+            stability,
+            horizon_days: horizonDays,
+            runs_since_new: Number.isFinite(options.runsSinceNew) ? options.runsSinceNew : null,
+            errors,
+            churn: { merges: q.merges, changed: q.changed, fields }
         };
     }
 
@@ -2058,7 +2121,8 @@ class SharedCore {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
-                    roles: [], url: ''
+                    roles: [], url: '',
+                    quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {} }
                 });
             }
             return byHost.get(host);
@@ -2108,6 +2172,7 @@ class SharedCore {
             // gate; events[] = what it kept. A site that yields plenty but
             // nothing bear is working, not broken.
             primaryRow.extracted += Number.isFinite(parser.totalEvents) ? parser.totalEvents : events.length;
+            primaryRow.quality.dedupRemoved += Number.isFinite(parser.duplicatesRemoved) ? parser.duplicatesRemoved : 0;
 
             const classifications = parser.urlClassifications && typeof parser.urlClassifications === 'object' ? parser.urlClassifications : {};
             Object.keys(classifications).forEach((url) => {
@@ -2123,9 +2188,21 @@ class SharedCore {
                 const row = hostOf(host);
                 row.events += 1;
                 if (event.isBearEvent === true) row.bear += 1;
+                const q = row.quality;
+                q.n += 1;
+                if (!(event.timeUnknown === true || event.allDay === true)) q.time += 1;
+                if (String(event.bar || event.venue || '').trim()) q.place += 1;
+                if (String(event.location || '').trim()) q.coords += 1;
+                if (String(event.website || event.url || event.ticketUrl || '').trim()) q.url += 1;
+                if (String(event.image || '').trim()) q.image += 1;
+                if (String(event.description || '').trim()) q.desc += 1;
                 const key = SharedCore.sourceLedgerEventKey(event);
                 if (!key) return;
                 row.eventKeyIndex.add(key);
+                const identity = SharedCore.sourceLedgerIdentity(key);
+                q.keys.add(identity);
+                const eventDay = identity.slice(identity.lastIndexOf('|') + 1);
+                if (eventDay >= todayKey && eventDay > q.maxDay) q.maxDay = eventDay;
                 if (!eventKeyToHost.has(key)) eventKeyToHost.set(key, host);
                 const day = key.slice(key.lastIndexOf('|') + 1);
                 if (day >= todayKey) {
@@ -2135,6 +2212,24 @@ class SharedCore {
                     }
                 }
             });
+        });
+
+        // Dropped-as-not-bear events: the bear funnel and the horizon count
+        // them (they were extracted), attributed by the drop's own host.
+        const bearDropped = Array.isArray(run.bearDroppedEvents) ? run.bearDroppedEvents : [];
+        bearDropped.forEach((drop) => {
+            if (!drop || typeof drop !== 'object') return;
+            const event = drop.event && typeof drop.event === 'object' ? drop.event : {};
+            let host = String(drop.host || '').toLowerCase().replace(/^www\./, '');
+            if (!allHomeHosts.has(host)) host = SharedCore.hostOfUrl(event.website || event.url);
+            if (!allHomeHosts.has(host)) return;
+            const q = hostOf(host).quality;
+            const reason = String(drop.reason || '').replace(/\s+/g, ' ').trim();
+            if (/^manual/i.test(reason)) q.manualDropped += 1; else q.aiDropped += 1;
+            const shortReason = reason.replace(/\(verdict stamped [^)]*\)/, '').trim().slice(0, 120);
+            if (shortReason) q.dropReasons.set(shortReason, (q.dropReasons.get(shortReason) || 0) + 1);
+            const day = SharedCore.sourceLedgerLocalDay(event.startDate || drop.startDate, event.timezone);
+            if (day && day >= todayKey && day > q.maxDay) q.maxDay = day;
         });
 
         analyzedEvents.forEach((event) => {
@@ -2148,7 +2243,23 @@ class SharedCore {
                 host = allHomeHosts.has(eventHost) ? eventHost : '';
             }
             if (!host) return;
-            hostOf(host).proposals[action] += 1;
+            const row = hostOf(host);
+            row.proposals[action] += 1;
+            const q = row.quality;
+            (Array.isArray(event._sanityFlags) ? event._sanityFlags : []).forEach((flag) => {
+                const code = typeof flag === 'string' ? flag : (flag && flag.code);
+                if (!code) return;
+                q.flags[code] = (q.flags[code] || 0) + 1;
+            });
+            if (action === 'merge') {
+                q.merges += 1;
+                const changes = Array.isArray(event._changes) ? event._changes : Object.keys(event._changes || {});
+                const real = changes.filter((field) => field && field !== 'notes');
+                if (real.length) {
+                    q.changed += 1;
+                    real.forEach((field) => { q.churnFields[field] = (q.churnFields[field] || 0) + 1; });
+                }
+            }
         });
 
         errors.forEach((error) => {
@@ -2160,6 +2271,8 @@ class SharedCore {
                 const row = hostOf(host);
                 row.page_errors += 1;
                 if (row.errors.length < 3) row.errors.push(text);
+                const errorClass = SharedCore.sourceLedgerErrorClass(text);
+                row.quality.errors[errorClass] = (row.quality.errors[errorClass] || 0) + 1;
             });
         });
 
@@ -2185,6 +2298,20 @@ class SharedCore {
             const loss = SharedCore.advanceSourceLoss(prev, {
                 runId, status, todayKey, extracted: row.extracted, upcomingKeys: row.upcomingKeys
             });
+            // Runs since the host last proposed a NEW event (ok runs only);
+            // the kept-set identities ride in the snapshot for the next
+            // run's stability figure.
+            const previousRunsSinceNew = prev && Number.isFinite(prev.runs_since_new) ? prev.runs_since_new : null;
+            let runsSinceNew = previousRunsSinceNew;
+            if (status === 'ok') runsSinceNew = row.proposals.new > 0 ? 0 : (previousRunsSinceNew === null ? 1 : previousRunsSinceNew + 1);
+            const quality = SharedCore.buildSourceQuality(row, {
+                todayKey,
+                previousKeys: prev && Array.isArray(prev.keys) ? prev.keys : null,
+                runsSinceNew
+            });
+            const qualityState = status === 'ok'
+                ? { keys: [...row.quality.keys], runs_since_new: runsSinceNew }
+                : { keys: prev && Array.isArray(prev.keys) ? prev.keys : [], runs_since_new: runsSinceNew };
             records.push({
                 v: 1,
                 run_id: runId,
@@ -2209,11 +2336,12 @@ class SharedCore {
                 url: row.url,
                 lost: loss.lost,
                 suspected: loss.suspected,
-                listing_gone: loss.listing_gone
+                listing_gone: loss.listing_gone,
+                quality
             });
             hosts[row.host] = status === 'dead' && prev
-                ? Object.assign({}, prev, loss.state)
-                : Object.assign({ run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys }, loss.state);
+                ? Object.assign({}, prev, loss.state, qualityState)
+                : Object.assign({ run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys }, loss.state, qualityState);
         });
 
         // Hosts that did not run this time keep their last snapshot.

@@ -38,6 +38,7 @@
 //   notes-only housekeeping merges). This server still never writes a
 //   calendar. Endpoints: GET /review · GET /review/deck.json ·
 //   POST /review/decide · GET /review/decisions.json · GET /review/rejections
+//   GET /review/source-audit (+ .json: the automated audit's findings, tools/source-audit.js)
 //   · GET /inbox/file/<name> (a picture from the shared inbox, for the deck)
 //
 // House style: no `new URL` / URLSearchParams anywhere (matches the iOS-shared
@@ -1056,6 +1057,102 @@ function renderReviewPictureRow(entry = {}) {
     return `<div class="line muted">🖼️ picture from your inbox — shown here only; approving sends it to the website through a PR</div>`;
 }
 
+// The Source audit page: read-only findings of the Mac's automated audit
+// (tools/source-audit.js) — per audited host the date, its badges, what the
+// page lists that we did not extract, what we extracted that is not an
+// event, and how each lost series fared on the site. The deck's look, no
+// buttons: the answers are the fix queue (/review/source-audit.json).
+function renderSourceAuditPage(store, options = {}) {
+    const esc = escapeHtmlText;
+    const sourceAudit = require(path.join(__dirname, 'source-audit'));
+    const state = sourceAudit.normalizeSourceAuditStore(store);
+    const hosts = Object.keys(state.hosts).map((host) => Object.assign({ host }, state.hosts[host]));
+    const open = hosts.filter(sourceAudit.hostHasOpenFindings).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
+    const quiet = hosts.filter((entry) => !sourceAudit.hostHasOpenFindings(entry)).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
+    const stillChip = (item) => item.verdict === 'still-listed'
+        ? `<span class="badge still-listed">still listed — our miss</span>`
+        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>' : '<span class="badge">unknown</span>');
+    const card = (entry) => `
+<div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">
+  <h2><img src="https://chunky.dad/img/favicons/favicon-${esc(entry.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico" alt="" onerror="this.remove()">${esc(entry.host)}<span class="when">${esc(entry.date)}${entry.run_id ? ` · run ${esc(entry.run_id)}` : ''}</span></h2>
+  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}</span>` : ''}</div>
+  ${entry.page && entry.page.url ? `<p class="page-meta"><a href="${esc(entry.page.url)}" target="_blank" rel="noopener">${esc(entry.page.url)}</a>${entry.page.fetchedAt ? ` · fetched ${esc(String(entry.page.fetchedAt).slice(0, 16).replace('T', ' '))}Z` : ''}${entry.page.chars ? ` · ${esc(String(entry.page.chars))} chars` : ''}</p>` : '<p class="page-meta">no listing page could be read</p>'}
+  <div class="cols">
+    <div><h3>On the page, not extracted (${entry.missing.length})</h3>${entry.missing.length ? `<ul class="findings">${entry.missing.map((item) => `<li><b>${esc(item.title)}</b>${item.date ? ` <span class="muted">${esc(item.date)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Extracted, not an event (${entry.fake.length})</h3>${entry.fake.length ? `<ul class="findings">${entry.fake.map((item) => `<li><b>${esc(item.title)}</b>${item.reason ? ` <span class="muted">— ${esc(item.reason)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Extracted, wrong date or place (${entry.wrong.length})</h3>${entry.wrong.length ? `<ul class="findings">${entry.wrong.map((item) => `<li><b>${esc(item.title)}</b>${item.issue ? ` <span class="muted">— ${esc(item.issue)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Lost series on the site (${entry.still.length})</h3>${entry.still.length ? `<ul class="findings">${entry.still.map((item) => `<li>${stillChip(item)} <b>${esc(item.title)}</b>${item.line && item.verdict === 'still-listed' ? ` <span class="muted">“${esc(String(item.line).slice(0, 90))}”</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none open</p>'}</div>
+  </div>
+  ${entry.note ? `<p class="note">${esc(entry.note)}</p>` : ''}
+</div>`;
+    const lastRun = state.runs.length ? state.runs[state.runs.length - 1] : null;
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Source audit · chunky.dad (on your Mac)</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<meta name="theme-color" content="#151412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --panel:#141826; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --ok:#2f9e5f; --no:#d0453c; --lost:#ff7eb6; --shadow:0 14px 32px rgba(0,0,0,0.45); }
+* { box-sizing:border-box; }
+html { background:var(--bg); }
+body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; margin:0; color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
+a { color:var(--accent); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 12px 26px rgba(0,0,0,.35); }
+.top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; min-width:0; }
+.top .brand-name { font:700 21px/1.1 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; }
+.top .tool-page-label { font:600 11px/1 Poppins, -apple-system, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.88); white-space:nowrap; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.14); }
+.top h1 { margin:0; min-width:0; }
+.top h1 .logo { width:34px; height:34px; }
+.top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto; }
+.action-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; font:600 13px/1 Poppins, -apple-system, system-ui, sans-serif; padding:9px 13px; min-height:36px; border-radius:12px; text-decoration:none; cursor:pointer; white-space:nowrap; border:none; }
+.action-button i { font-size:15px; line-height:1; }
+.secondary-button { color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
+@media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
+.wrap { max-width:1100px; margin:14px auto 40px; padding:0 14px; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 12px; }
+.card { background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:14px 16px 16px; margin-bottom:14px; }
+.card.open { border:1px solid rgba(255,126,182,.35); }
+.card h2 { margin:0 0 6px; font:700 18px/1.2 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.card h2 img { width:20px; height:20px; border-radius:4px; }
+.card h2 .when { font:400 12px/1 -apple-system, system-ui, sans-serif; color:var(--muted); }
+.card h3 { margin:8px 0 6px; font:600 12px/1.2 Poppins, -apple-system, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.muted { color:var(--muted); }
+.badges { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
+.badge.verdict { font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.badge.v-dead, .badge.v-stopped { color:var(--no); border-color:var(--no); }
+.badge.v-shrunk, .badge.v-empty { color:var(--accent-soft); border-color:var(--accent-soft); }
+.badge.v-lost { color:var(--lost); border-color:var(--lost); }
+.badge.v-ok { color:var(--ok); border-color:var(--ok); }
+.badge.quality { color:var(--accent-soft); }
+.badge.still-listed { color:var(--no); border-color:var(--no); font-weight:700; }
+.badge.still-removed { color:var(--muted); }
+.page-meta { font-size:12px; color:var(--muted); margin:0 0 4px; word-break:break-all; }
+.cols { display:grid; grid-template-columns:1fr; gap:4px 14px; }
+@media (min-width: 820px) { .cols { grid-template-columns:1fr 1fr; align-items:start; } }
+.findings { margin:0; padding-left:18px; font-size:13px; line-height:1.45; }
+.findings li { margin:2px 0; }
+.note { margin:10px 0 0; font-size:13px; font-style:italic; color:var(--ink); opacity:.85; }
+</style></head>
+<body>
+<header class="top">
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label">Source audit</span></a></h1>
+  <div class="tool-buttons">
+    <a class="action-button secondary-button" href="/review"><i class="bi bi-layers" aria-hidden="true"></i><span>Review</span></a>
+    <a class="action-button secondary-button" href="/review/source-audit.json"><i class="bi bi-braces" aria-hidden="true"></i><span>JSON</span></a>
+    <a class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+  </div>
+</header>
+<div class="wrap">
+<p class="intro">The Mac audits three sites after every run (troubled and lost ones first, every site about every two weeks): the listing page's own text beside what the run extracted, read by the local model; every lost series is looked for on its site. Findings are a report for the fix queue — nothing here writes to the calendar.${lastRun ? ` Last audit ${esc(lastRun.date)} (run ${esc(lastRun.run_id)}): ${esc(String(lastRun.audited.length))} site${lastRun.audited.length === 1 ? '' : 's'} audited${lastRun.losses.length ? `, ${esc(String(lastRun.losses.length))} loss check${lastRun.losses.length === 1 ? '' : 's'}` : ''}.` : ' No audit has run yet.'}</p>
+${open.length ? `<h3 class="muted" style="margin:0 0 8px;">${open.length} site${open.length === 1 ? '' : 's'} with open findings</h3>${open.map(card).join('')}` : '<div class="card"><h2>Nothing open</h2><p class="muted">No site has findings waiting on a fix.</p></div>'}
+${quiet.length ? `<h3 class="muted" style="margin:14px 0 8px;">${quiet.length} site${quiet.length === 1 ? '' : 's'} audited, nothing open</h3>${quiet.map(card).join('')}` : ''}
+</div></body></html>`;
+}
+
 function renderReviewEmptyPage(message, options = {}) {
     return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1436,7 +1533,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>`}
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
@@ -2973,6 +3070,16 @@ function resolveAdvicePageBase() {
 
 // Pending-card count for the header bar on /: cheap when the run is cached
 // (readRunFile keys on mtime), and never fatal.
+// Hosts with open audit findings, for the deck header. Never fails the deck.
+function countSourceAuditOpen(sharedRoot) {
+    try {
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
+        return sourceAudit.findingsQueue(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot))).length;
+    } catch (_) {
+        return 0;
+    }
+}
+
 function countReviewPending() {
     try {
         const { sharedRoot, run } = resolveReviewRun({});
@@ -3183,7 +3290,7 @@ async function handleRequest(state, req, res) {
         }
         try {
             const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run);
-            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot) }));
+            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot), sourceAuditOpen: countSourceAuditOpen(sharedRoot) }));
         } catch (error) {
             console.error(`Review render failed: ${error.stack || error}`);
             return sendText(res, 500, `Review render failed: ${error.message}`);
@@ -3417,6 +3524,25 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // Source audit: the Mac's automated findings (read only) and the fix queue.
+    if (pathname === '/review/source-audit' && req.method === 'GET') {
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        try {
+            return sendHtml(res, 200, renderSourceAuditPage(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot))));
+        } catch (error) {
+            console.error(`Source audit render failed: ${error.stack || error}`);
+            return sendText(res, 500, `Source audit render failed: ${error.message}`);
+        }
+    }
+
+    if (pathname === '/review/source-audit.json' && req.method === 'GET') {
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const store = sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot));
+        return sendJson(res, 200, { ok: true, updatedAt: store.updatedAt, queue: sourceAudit.findingsQueue(store), hosts: store.hosts, runs: store.runs });
+    }
+
     if (pathname === '/review/decisions.json' && req.method === 'GET') {
         const sharedRoot = reviewQueue.resolveSharedRoot();
         return sendJson(res, 200, reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot)));
@@ -3443,7 +3569,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
@@ -3500,6 +3626,8 @@ module.exports = {
     buildBatchIcs,
     tailLines,
     renderRunFormPage,
+    renderSourceAuditPage,
+    countSourceAuditOpen,
     renderConfirmRunPage,
     parsePortFromArgv,
     lookupIcsEvent,

@@ -1896,6 +1896,154 @@ function buildDeck(runPayload, store, options = {}) {
 // the nights. Updates fold only when they are the same update: one source,
 // the same change table (getSameChangeSignature) and the same reason — the
 // note swiped onto a folded same-change card.
+// ---------------------------------------------------------------------------
+// Source audit helpers shared with tools/source-audit.js: the ledger assessed
+// the way the dashboard does, a cached page as readable text, the events the
+// run extracted from one host.
+// ---------------------------------------------------------------------------
+const DEEP_CHECK_PAGE_TEXT_CAP = 6000;
+
+// The source ledger assessed the way the dashboard does (with the owner's
+// decisions joined for the rejections signal). null when there is no ledger.
+function loadSourceHealth(sharedRoot, options = {}) {
+    const fsLike = options.fs || fs;
+    const ledgerPath = path.join(sharedRoot, 'metrics', 'sources.ndjson');
+    let text = '';
+    try { text = fsLike.readFileSync(ledgerPath, 'utf8'); } catch (_) { return null; }
+    const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+    const records = MetricsSections.parseSourceLedger(text);
+    if (!records.length) return null;
+    const decisions = options.decisions || loadDecisions(getDecisionsPath(sharedRoot));
+    let audit = options.audit || null;
+    if (!audit) {
+        try { audit = JSON.parse(fsLike.readFileSync(path.join(sharedRoot, 'source-audit.json'), 'utf8')); } catch (_) { audit = null; }
+    }
+    return { records, health: MetricsSections.assessSourceHealth(records, { now: options.now || new Date(), decisions, audit }) };
+}
+
+// Cached HTML → readable text: no scripts, styles or markup, block tags as
+// line breaks, entities decoded, whitespace folded, capped.
+function readableTextFromHtml(html, cap = DEEP_CHECK_PAGE_TEXT_CAP) {
+    let text = String(html || '');
+    text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+    text = text.replace(/<(script|style|noscript|svg|template|iframe)\b[\s\S]*?<\/\1>/gi, ' ');
+    text = text.replace(/<head\b[\s\S]*?<\/head>/gi, ' ');
+    text = text.replace(/<\/(p|div|li|tr|h[1-6]|section|article|header|footer|nav|main|aside|ul|ol|table|form|td|th|dd|dt|blockquote|figcaption|summary|option)\s*>/gi, '\n');
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<[^>]+>/g, ' ');
+    const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: String.fromCharCode(39), nbsp: ' ', ndash: '\u2013', mdash: '\u2014', hellip: '\u2026', rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c' };
+    text = text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, code) => {
+        if (code[0] === '#') {
+            const value = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+            return Number.isFinite(value) && value > 0 && value < 0x110000 ? String.fromCodePoint(value) : ' ';
+        }
+        return Object.prototype.hasOwnProperty.call(entities, code.toLowerCase()) ? entities[code.toLowerCase()] : match;
+    });
+    text = text.replace(/[ \t\f\v]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{2,}/g, '\n').trim();
+    const full = text.length;
+    if (cap > 0 && text.length > cap) text = `${text.slice(0, cap)}\u2026`;
+    return { text, chars: full, truncated: cap > 0 && full > cap };
+}
+
+function normalizeListingUrl(url) {
+    return String(url || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
+// The host's listing page from the scraper's page cache
+// (<sharedRoot>/storage/pages/<host>/*.json, each {url, fetchedAt, html}).
+// The file whose url is one of the parser's configured urls wins, else the
+// one with the fewest path segments (the landing/listing page), newest first.
+// Files are sniffed by their first bytes so a 400 KB cache is not parsed
+// just to learn its url.
+function findCachedListingPage(sharedRoot, host, preferredUrls = [], fsLike = fs) {
+    const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
+    if (!hostKey) return null;
+    const dirs = [hostKey, `www.${hostKey}`].map((name) => path.join(sharedRoot, 'storage', 'pages', name));
+    const wanted = new Set((Array.isArray(preferredUrls) ? preferredUrls : []).map(normalizeListingUrl).filter(Boolean));
+    const candidates = [];
+    dirs.forEach((dir) => {
+        let names = [];
+        try { names = fsLike.readdirSync(dir); } catch (_) { return; }
+        names.filter((name) => name.endsWith('.json') && !name.startsWith('.')).forEach((name) => {
+            const file = path.join(dir, name);
+            let head = '';
+            try {
+                const fd = fsLike.openSync(file, 'r');
+                const buffer = Buffer.alloc(600);
+                const read = fsLike.readSync(fd, buffer, 0, 600, 0);
+                fsLike.closeSync(fd);
+                head = buffer.slice(0, read).toString('utf8');
+            } catch (_) { return; }
+            const urlMatch = /"url"\s*:\s*"([^"]+)"/.exec(head);
+            const fetchedMatch = /"fetchedAt"\s*:\s*"([^"]+)"/.exec(head);
+            if (!urlMatch) return;
+            const url = urlMatch[1];
+            const normalized = normalizeListingUrl(url);
+            const pathPart = normalized.slice(normalized.indexOf('/') >= 0 ? normalized.indexOf('/') : normalized.length);
+            candidates.push({ file, url, fetchedAt: fetchedMatch ? fetchedMatch[1] : '', preferred: wanted.has(normalized), depth: pathPart.split('/').filter(Boolean).length, pathLength: pathPart.length });
+        });
+    });
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0) || a.depth - b.depth || String(b.fetchedAt).localeCompare(String(a.fetchedAt)) || a.pathLength - b.pathLength);
+    const best = candidates[0];
+    try {
+        const parsed = JSON.parse(fsLike.readFileSync(best.file, 'utf8'));
+        return { url: parsed.url || best.url, fetchedAt: parsed.fetchedAt || best.fetchedAt, html: typeof parsed.html === 'string' ? parsed.html : '', statusCode: parsed.statusCode || null, file: best.file, preferred: best.preferred };
+    } catch (_) {
+        return null;
+    }
+}
+
+// Events the latest run extracted from one host (attributed the way the
+// ledger attributes them: the event's own page host when it is one of the
+// parser's hosts, else the parser's first host), as plain rows.
+function eventsForHost(payload, host) {
+    const SharedCore = loadSharedCore();
+    const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
+    const rows = [];
+    const parsers = payload && Array.isArray(payload.parserResults) ? payload.parserResults : [];
+    parsers.forEach((parser) => {
+        if (!parser || typeof parser !== 'object') return;
+        const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
+        const urls = Array.isArray(config.urls) ? config.urls : [];
+        const home = [];
+        urls.forEach((url) => { const h = SharedCore.hostOfUrl(url); if (h && !home.includes(h)) home.push(h); });
+        const events = Array.isArray(parser.events) ? parser.events : [];
+        if (!home.length) {
+            const counts = new Map();
+            events.forEach((event) => { const h = SharedCore.hostOfUrl(event && (event.website || event.url)); if (h) counts.set(h, (counts.get(h) || 0) + 1); });
+            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+            home.push(top ? top[0] : String(parser.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+        }
+        const primary = home[0];
+        events.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+            const owner = home.includes(eventHost) ? eventHost : primary;
+            if (owner !== hostKey) return;
+            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+            let time = '';
+            if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
+                try {
+                    time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
+                } catch (_) { time = ''; }
+            }
+            rows.push({
+                title: String(event.title || ''),
+                day: day || '',
+                time,
+                place: String(event.bar || event.venue || event.city || ''),
+                url: String(event.website || event.url || event.ticketUrl || ''),
+                bear: event.isBearEvent === true,
+                source: String(event.source || ''),
+                parser: String(parser.name || '')
+            });
+        });
+    });
+    rows.sort((a, b) => a.day.localeCompare(b.day) || a.title.localeCompare(b.title));
+    return rows;
+}
+
 function formatRejectionsText(store) {
     const lines = [];
     const SharedCore = loadSharedCore();
@@ -2031,5 +2179,9 @@ module.exports = {
     describeChangeRows,
     driftCoveredByNoteTags,
     stampSameChange,
-    formatRejectionsText
+    formatRejectionsText,
+    loadSourceHealth,
+    readableTextFromHtml,
+    findCachedListingPage,
+    eventsForHost
 };

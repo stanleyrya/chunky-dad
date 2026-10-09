@@ -1096,3 +1096,206 @@ test('same-change fold: events that become a whole day fold under their kind; a 
     [{ field: 'allDay', from: 'a time the page never stated', to: 'all day' }]);
   assert.equal(rq.getSameChangeSignature({ changes: { endDate: { from: 'a', to: 'b' } } }), '', 'a timed end change still never folds');
 });
+
+
+// ---------------------------------------------------------------------------
+// Source audit helpers (tools/source-audit.js uses them) and the audit itself.
+// ---------------------------------------------------------------------------
+
+function ledgerLineForAudit(host, extra = {}) {
+  return Object.assign({
+    v: 1, run_id: '20261008-052207', finished_at: '2026-10-08T09:22:07.543Z', environment: 'node', trigger: 'scheduled', host, parsers: [host],
+    pages: 1, outbound_pages: 0, page_errors: 0, errors: [], extracted: 40, events: 8, bear: 8, upcoming: 6, proposals: { new: 0, merge: 2 }, duration_ms: 100,
+    status: 'ok', vanished: [], aggregator: false, url: `https://${host}/events/`, lost: [], suspected: 0, listing_gone: false,
+    quality: { n: 8, time: 100, place: 100, coords: 100, url: 100, image: 100, desc: 100, flags: {}, bear: { extracted: 40, kept: 8, ai_dropped: 0, manual_dropped: 0, top_reason: '' }, dedup: { removed: 0, pct: 0 }, stability: 100, horizon_days: 30, runs_since_new: 1, errors: {}, churn: { merges: 2, changed: 0, fields: {} } }
+  }, extra);
+}
+
+function auditHealth(lines) {
+  const MetricsSections = require('../scripts/metrics-sections');
+  return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-08T12:00:00.000Z') });
+}
+
+test('readableTextFromHtml strips scripts, styles, head and markup, keeps block breaks, decodes entities, caps', () => {
+  const html = '<html><head><title>T</title><style>.a{}</style></head><body><nav><a href="/">Home</a></nav><h1>Eagle &amp; Friends</h1><script>var x = "<p>no</p>";</script><div class="card"><p>Fri, Oct 10 &middot; 9&nbsp;PM</p><p>Bear Night &#8211; Beer Bust</p></div><!-- hidden --><ul><li>one</li><li>two</li></ul></body></html>';
+  const out = rq.readableTextFromHtml(html);
+  assert.equal(out.text, 'Home\nEagle & Friends\nFri, Oct 10 &middot; 9 PM\nBear Night – Beer Bust\none\ntwo');
+  assert.equal(out.truncated, false);
+  const capped = rq.readableTextFromHtml(html, 12);
+  assert.equal(capped.text, 'Home\nEagle &…');
+  assert.equal(capped.truncated, true);
+  assert.equal(capped.chars, out.chars);
+  assert.deepEqual(rq.readableTextFromHtml(''), { text: '', chars: 0, truncated: false });
+});
+
+test('findCachedListingPage: the configured listing url wins, else the shortest path; sniffed from the file head, read in full only once', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deep-pages-'));
+  const pages = path.join(dir, 'storage', 'pages', 'eaglela.com');
+  fs.mkdirSync(pages, { recursive: true });
+  const write = (name, url, fetchedAt, html) => fs.writeFileSync(path.join(pages, name), JSON.stringify({ url, fetchedAt, statusCode: 200, headers: {}, html }, null, 2));
+  write('events__bluf.json', 'https://eaglela.com/events/bluf/', '2026-10-08T01:00:00.000Z', '<p>BLUF</p>');
+  write('calendar.json', 'https://eaglela.com/calendar/', '2026-10-06T01:00:00.000Z', '<p>calendar</p>');
+  write('events.json', 'https://eaglela.com/events/', '2026-10-07T01:00:00.000Z', '<p>events</p>');
+  fs.writeFileSync(path.join(pages, 'junk.json'), '{not json');
+  const preferred = rq.findCachedListingPage(dir, 'www.eaglela.com', ['https://www.eaglela.com/calendar']);
+  assert.equal(preferred.url, 'https://eaglela.com/calendar/');
+  assert.equal(preferred.preferred, true);
+  assert.equal(preferred.html, '<p>calendar</p>');
+  const shortest = rq.findCachedListingPage(dir, 'eaglela.com', ['https://eaglela.com/nowhere/']);
+  assert.equal(shortest.url, 'https://eaglela.com/events/', 'one segment, newest among equals is the listing-ish page');
+  assert.equal(shortest.preferred, false);
+  assert.equal(rq.findCachedListingPage(dir, 'nothing.example', []), null);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('eventsForHost: the latest run’s events for one host (attributed like the ledger), sorted by day, with local time and place', () => {
+  const payload = {
+    parserResults: [
+      { name: 'Eagle LA', config: { urls: ['https://eaglela.com/events/'] }, events: [
+        { title: 'Beer Bust', startDate: '2026-10-11T22:00:00.000Z', timezone: 'America/Los_Angeles', bar: 'Eagle LA', website: 'https://eaglela.com/events/bust/', isBearEvent: true },
+        { title: 'BLUF', startDate: '2026-10-10T04:00:00.000Z', timezone: 'America/Los_Angeles', bar: 'Eagle LA', website: 'https://www.eventbrite.com/e/1', isBearEvent: true },
+        { title: 'Brunch', startDate: '2026-10-12T17:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://eaglela.com/brunch', isBearEvent: false, timeUnknown: true, city: 'la' }
+      ] },
+      { name: 'Other', config: { urls: ['https://other.example/'] }, events: [{ title: 'Nope', startDate: '2026-10-11T22:00:00.000Z', website: 'https://other.example/x' }] }
+    ]
+  };
+  const rows = rq.eventsForHost(payload, 'eaglela.com');
+  assert.deepEqual(rows.map(row => [row.title, row.day, row.time, row.place, row.bear]), [
+    ['BLUF', '2026-10-09', '9:00 PM', 'Eagle LA', true],
+    ['Beer Bust', '2026-10-11', '3:00 PM', 'Eagle LA', true],
+    ['Brunch', '2026-10-12', '', 'la', false]
+  ]);
+  assert.equal(rows[0].url, 'https://www.eventbrite.com/e/1', 'an outbound page stays the parser’s event');
+  assert.deepEqual(rq.eventsForHost(payload, 'nowhere.example'), []);
+});
+
+
+const sourceAudit = require('../tools/source-audit');
+
+test('pickAuditHosts: troubled/lost first, then two-plus quality badges, then the host audited longest ago (never first); cap per run; a host audited today waits; companions skipped; forced hosts win', () => {
+  const health = auditHealth([
+    ledgerLineForAudit('a.example'),
+    ledgerLineForAudit('b.example'),
+    ledgerLineForAudit('lost.example', { lost: [{ title: 'Bear Night', bear: true, since: '20261007-052319', seen: 5, days: ['2026-10-18'], new: 0 }] }),
+    ledgerLineForAudit('dead.example', { status: 'dead', extracted: 0, events: 0, bear: 0, upcoming: 0, page_errors: 1, errors: ['HTTP 403'] }),
+    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10, desc: 0 }) }),
+    ledgerLineForAudit('feed.example', { parsers: ['Club'] }),
+    ledgerLineForAudit('site.example', { parsers: ['Club'], extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' })
+  ]);
+  const empty = sourceAudit.emptySourceAuditStore();
+  const picks = sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 3 });
+  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'messy.example']);
+  assert.match(picks[0].reason, /^dead since/);
+  assert.equal(picks[2].reason, '2 quality signals off');
+  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
+  const next = sourceAudit.pickAuditHosts(health, audited, { today: '2026-10-08', cap: 3 });
+  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s host waits; within the rest, never audited beats audited a week ago');
+  assert.equal(next[2].reason, 'never audited');
+  assert.ok(!sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 10 }).some(pick => pick.host === 'site.example'), 'a companion is never picked');
+  assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 1 }).length, 1);
+  assert.deepEqual(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', hosts: ['B.EXAMPLE', 'nowhere'] }).map(pick => pick.host), ['b.example']);
+  assert.deepEqual(sourceAudit.pickAuditHosts({ rows: [] }, empty, { today: '2026-10-08' }), []);
+});
+
+test('stillOnSite: the series title against the page text line by line — found, not found, one-token titles, accents and case, nothing to compare', () => {
+  const page = 'Upcoming\nSat, Oct 11 · 9PM\nBEARDED PIG DISCO\nat Precinct DTLA\nSunday Beer Bust 3pm\nThe Hunt — Gear House Events\nÉvènement: La Cabane à sucre des OURS\n';
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', page).verdict, 'still-listed');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', page).line, 'bearded pig disco');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco at Precinct', page).verdict, 'still-listed', 'two adjacent lines together');
+  assert.equal(sourceAudit.stillOnSite('la cabane a sucre des ours', page).verdict, 'still-listed', 'accents folded');
+  assert.equal(sourceAudit.stillOnSite('ONYX', page).verdict, 'site-removed');
+  assert.equal(sourceAudit.stillOnSite('Beer', page).verdict, 'still-listed', 'a one-token title needs its token on a line');
+  assert.equal(sourceAudit.stillOnSite('Furry Friday Underwear Party', page).verdict, 'site-removed', 'a stray shared word is not a match');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', '').verdict, 'unknown');
+  assert.equal(sourceAudit.stillOnSite('', page).verdict, 'unknown');
+});
+
+test('parseAuditAnswer: JSON inside chatter, strings as items, junk dropped, caps; buildAuditPrompt names the host, the page and every extracted event', () => {
+  const parsed = sourceAudit.parseAuditAnswer('Here you go:\n{"missing":[{"title":"Sunday Beer Bust","date":"Sun Oct 11"},"Pup Night", {"nope": 1}],"fake":[{"title":"View Event →","reason":"a button"}],"note":"Mostly matches."} thanks');
+  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', reason: 'a button' }], wrong: [], note: 'Mostly matches.' });
+  assert.deepEqual(sourceAudit.parseAuditAnswer('{"missing":[],"fake":[],"wrong":[{"title":"The Hunt","issue":"page says Bar Le Diamant"}],"note":""}').wrong, [{ title: 'The Hunt', issue: 'page says Bar Le Diamant' }]);
+  assert.equal(sourceAudit.parseAuditAnswer('no json here'), null);
+  assert.equal(sourceAudit.parseAuditAnswer('[1,2]'), null);
+  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }], { today: '2026-10-09' });
+  assert.match(prompt, /events from eaglela\.com for a gay bear community calendar\. Today is 2026-10-09\./);
+  assert.match(prompt, /anything dated before 2026-10-09/);
+  assert.match(prompt, /PAGE TEXT HERE/);
+  assert.match(prompt, /1\. 2026-10-11 3:00 PM — Beer Bust @ Eagle LA/);
+  assert.match(prompt, /"missing":\[\{"title":"","date":""\}\].*"wrong":\[\{"title":"","issue":""\}\]/);
+});
+
+test('source-audit store: normalize, save atomically, load; the queue is every host with open findings, newest first', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-store-'));
+  const file = sourceAudit.getSourceAuditPath(dir);
+  assert.equal(path.basename(file), 'source-audit.json');
+  const store = sourceAudit.emptySourceAuditStore();
+  store.hosts['a.example'] = { date: '2026-10-08', run_id: 'r1', verdict: 'lost', badges: ['flags 2'], page: { url: 'https://a.example/', fetchedAt: '2026-10-08T01:00:00Z', chars: 100 }, still: [{ title: 'ONYX', verdict: 'still-listed', checked_at: 'x', line: 'onyx' }, { title: 'Junk', verdict: 'nope' }], missing: [{ title: 'Beer Bust', date: 'Sun' }], fake: [], note: 'n', ai: 'ok' };
+  store.hosts['b.example'] = { date: '2026-10-09', run_id: 'r2', verdict: 'ok', badges: [], page: null, still: [{ title: 'X', verdict: 'site-removed' }], missing: [], fake: [], note: '', ai: 'ok' };
+  store.hosts['c.example'] = { date: '2026-10-09', run_id: 'r2', verdict: 'ok', badges: [], page: null, still: [], missing: [], fake: [{ title: 'Menu', reason: 'a heading' }], note: '', ai: 'ok' };
+  store.runs.push({ run_id: 'r2', date: '2026-10-09', audited: ['b.example', 'c.example'], losses: [], ms: 1200 });
+  const saved = sourceAudit.saveSourceAudit(file, store);
+  assert.equal(saved.hosts['a.example'].still.length, 1, 'a verdict outside the three is dropped');
+  assert.ok(saved.updatedAt);
+  assert.deepEqual(sourceAudit.loadSourceAudit(file), saved);
+  assert.ok(!fs.readdirSync(dir).some(name => name.includes('.tmp-')));
+  assert.deepEqual(sourceAudit.findingsQueue(saved).map(entry => entry.host), ['c.example', 'a.example'], 'b has only a site-removed series: nothing open');
+  assert.equal(sourceAudit.hostHasOpenFindings(saved.hosts['b.example']), false);
+  fs.writeFileSync(file, '{broken');
+  assert.deepEqual(sourceAudit.loadSourceAudit(file).hosts, {});
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('runSourceAudit: fetches each host’s listing page through the adapter, checks every lost series, asks the mocked AI for the rotation only, stamps the verdicts into the loss state so the next ledger line carries lost[].still, writes the store, never throws', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-run-'));
+  fs.mkdirSync(path.join(dir, 'metrics'), { recursive: true });
+  const SharedCore = require('../scripts/shared-core').SharedCore;
+  const payloadAt = (runId, day, titles) => ({
+    summary: { runId, timestamp: `${day}T09:00:00.000Z` }, runContext: { environment: 'node' },
+    parserResults: [{ name: 'Eagle LA', totalEvents: titles.length, config: { urls: ['https://eaglela.com/events/'] }, urlClassifications: {}, events: titles.map(title => ({ title, startDate: '2026-11-20T22:00:00.000Z', bar: 'Eagle LA', timezone: 'America/Los_Angeles', website: `https://eaglela.com/events/${title.toLowerCase()}/`, isBearEvent: true })) },
+      { name: 'Quiet', totalEvents: 2, config: { urls: ['https://quiet.example/'] }, urlClassifications: {}, events: [{ title: 'Trivia', startDate: '2026-11-21T22:00:00.000Z', bar: 'Quiet', timezone: 'America/Los_Angeles', website: 'https://quiet.example/trivia', isBearEvent: true }] }],
+    analyzedEvents: [], bearDroppedEvents: [], errors: []
+  });
+  let upcoming = null; let lines = [];
+  [['20261001-050000', '2026-10-01', ['ONYX', 'JUNGLE']], ['20261002-050000', '2026-10-02', ['ONYX', 'JUNGLE']], ['20261003-050000', '2026-10-03', ['JUNGLE']], ['20261004-050000', '2026-10-04', ['JUNGLE']]].forEach(([runId, day, titles]) => {
+    const built = SharedCore.buildSourceLedger(payloadAt(runId, day, titles), { runId, previousUpcoming: upcoming, now: new Date(`${day}T12:00:00Z`) });
+    upcoming = built.upcoming; lines = lines.concat(built.records);
+  });
+  assert.equal(lines[lines.length - 2].lost.length, 1, 'ONYX confirmed lost on the fourth run');
+  fs.writeFileSync(path.join(dir, 'metrics', 'sources.ndjson'), lines.map(line => JSON.stringify(line)).join('\n') + '\n');
+  fs.writeFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), JSON.stringify(upcoming));
+  const fetched = [];
+  const adapter = { fetchData: async (url, options) => { fetched.push([url, options && options.fresh === true]); if (url.includes('quiet')) throw new Error('HTTP request failed for https://quiet.example/: HTTP 403: '); return { url, fetchedAt: '2026-10-04T01:00:00.000Z', statusCode: 200, html: '<h1>Eagle LA</h1><div><p>Fri Nov 20 · ONYX · 9PM</p><p>Sat Nov 21 · JUNGLE</p><p>Sun Nov 22 · Beer Bust 3PM</p></div>' }; } };
+  const prompts = [];
+  const ai = { generate: async (prompt) => { prompts.push(prompt); return '{"missing":[{"title":"Beer Bust","date":"Sun Nov 22"}],"fake":[],"note":"ONYX is still on the page."}'; } };
+  const logs = [];
+  const summary = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', ['JUNGLE']), runId: '20261004-050000', adapter, ai, today: '2026-10-04', now: new Date('2026-10-04T12:00:00Z'), cap: 1, hosts: ['eaglela.com'], log: line => logs.push(line) });
+  assert.deepEqual(summary.audited, ['eaglela.com']);
+  assert.deepEqual(summary.errors, []);
+  assert.equal(prompts.length, 1, 'the AI is asked once, for the rotation host');
+  assert.match(prompts[0], /Fri Nov 20 · ONYX/);
+  assert.match(prompts[0], /2026-11-20 .*JUNGLE/);
+  assert.deepEqual(fetched.map(f => f[0]), ['https://eaglela.com/events/']);
+  const store = sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir));
+  const eagle = store.hosts['eaglela.com'];
+  assert.equal(eagle.ai, 'ok');
+  assert.deepEqual(eagle.missing, [{ title: 'Beer Bust', date: 'Sun Nov 22' }]);
+  assert.equal(eagle.still[0].title, 'ONYX');
+  assert.equal(eagle.still[0].verdict, 'still-listed', 'the page still lists ONYX: our miss');
+  assert.equal(eagle.page.url, 'https://eaglela.com/events/');
+  assert.equal(store.runs.length, 1);
+  assert.deepEqual(sourceAudit.findingsQueue(store).map(entry => entry.host), ['eaglela.com']);
+  const state = JSON.parse(fs.readFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), 'utf8'));
+  assert.equal(state.hosts['eaglela.com'].lost.onyx.still.verdict, 'still-listed');
+  const next = SharedCore.buildSourceLedger(payloadAt('20261005-050000', '2026-10-05', ['JUNGLE']), { runId: '20261005-050000', previousUpcoming: state, now: new Date('2026-10-05T12:00:00Z') });
+  const line = next.records.find(record => record.host === 'eaglela.com');
+  assert.equal(line.lost[0].still, 'still-listed');
+  assert.ok(line.lost[0].still_at);
+  const quiet = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', []), runId: '20261004-050000', adapter, ai, today: '2026-10-04', hosts: ['quiet.example'], log: () => {} });
+  assert.deepEqual(quiet.audited, ['quiet.example']);
+  assert.equal(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir)).hosts['quiet.example'].ai, 'no-page');
+  const off = await sourceAudit.runSourceAudit({ sharedRoot: dir, env: { CHUNKY_SOURCE_AUDIT: '0' }, log: () => {} });
+  assert.equal(off.enabled, false);
+  const none = await sourceAudit.runSourceAudit({ sharedRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-none-')), log: () => {} });
+  assert.deepEqual(none.skipped, ['no source ledger']);
+  fs.rmSync(dir, { recursive: true, force: true });
+});

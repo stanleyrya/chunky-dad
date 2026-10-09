@@ -276,6 +276,122 @@ function medianOf(values) {
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+// Per-host quality (the `quality` block on a ledger line, written by
+// SharedCore.buildSourceQuality) judged against fixed thresholds. A badge
+// is raised only when something is off; every signal is still listed as a
+// tile so the host page shows the number next to the line it did not cross.
+const QUALITY_THRESHOLDS = {
+    minEvents: 5,        // completeness shares are judged only with ≥5 kept events
+    time: 60,            // % of kept events with a real start time (not timeUnknown / allDay)
+    place: 60,           // % with a bar/venue name
+    coords: 50,          // % with coordinates
+    url: 50,             // % with a page, website or ticket link
+    image: 30,           // % with an image
+    desc: 30,            // % with a description
+    aiDropped: 20,       // events the AI dropped as not-bear with no human verdict
+    dedupPct: 40,        // % of extracted rows folded as duplicates
+    stability: 60,       // Jaccard % of the kept set vs the previous ok run (sets ≥3)
+    runsSinceNew: 15,    // ok runs since the host last proposed a NEW event
+    churnChanged: 3,     // merges that rewrote a field other than notes in one run
+    rejectMin: 3,        // owner rejections on this host …
+    rejectShare: 30      // … and the rejected share of its decisions, both needed
+};
+
+function assessSourceQuality(row, options = {}) {
+    const thresholds = Object.assign({}, QUALITY_THRESHOLDS, options.thresholds || {});
+    const latest = row && row.latest ? row.latest : {};
+    const q = latest.quality && typeof latest.quality === 'object' ? latest.quality : null;
+    const rejections = row && row.rejections && typeof row.rejections === 'object' ? row.rejections : null;
+    const signals = [];
+    const add = (signal) => { signals.push(Object.assign({ off: false, detail: '' }, signal)); };
+    if (q) {
+        const n = Number(q.n) || 0;
+        const judged = n >= thresholds.minEvents;
+        [['time', 'With a time'], ['place', 'With a place'], ['coords', 'With coordinates'], ['url', 'With a link'], ['image', 'With an image'], ['desc', 'With a description']].forEach(([key, label]) => {
+            const value = Number.isFinite(Number(q[key])) && q[key] !== null ? Number(q[key]) : null;
+            const off = judged && value !== null && value < thresholds[key];
+            add({ key, label, value: value === null ? '—' : `${value}%`, chip: `${key} ${value}%`, off, detail: off ? `under ${thresholds[key]}% of ${n} kept` : `${n} kept` });
+        });
+        const flags = q.flags && typeof q.flags === 'object' ? q.flags : {};
+        const flagTotal = Object.keys(flags).reduce((sum, code) => sum + (Number(flags[code]) || 0), 0);
+        const topFlags = Object.keys(flags).sort((a, b) => (flags[b] || 0) - (flags[a] || 0)).slice(0, 3).map((code) => `${code} ×${flags[code]}`);
+        add({ key: 'flags', label: 'Sanity flags', value: String(flagTotal), chip: `flags ${flagTotal}`, off: flagTotal >= 1, detail: topFlags.join(' · ') || 'none' });
+        const bear = q.bear && typeof q.bear === 'object' ? q.bear : {};
+        const aiDropped = Number(bear.ai_dropped) || 0;
+        add({ key: 'bear', label: 'Bear funnel', value: `${Number(bear.kept) || 0} of ${Number(bear.extracted) || 0}`, chip: `AI-drop ${aiDropped}`, off: aiDropped >= thresholds.aiDropped, detail: `${aiDropped} AI-dropped unreviewed · ${Number(bear.manual_dropped) || 0} by your verdicts${bear.top_reason ? ` · ${String(bear.top_reason).slice(0, 80)}` : ''}` });
+        const dedup = q.dedup && typeof q.dedup === 'object' ? q.dedup : {};
+        const dedupPct = Number.isFinite(Number(dedup.pct)) && dedup.pct !== null ? Number(dedup.pct) : 0;
+        add({ key: 'dedup', label: 'Dedup fold', value: `${dedupPct}%`, chip: `dedup ${dedupPct}%`, off: dedupPct >= thresholds.dedupPct, detail: `${Number(dedup.removed) || 0} rows folded as duplicates` });
+        const stability = Number.isFinite(Number(q.stability)) && q.stability !== null ? Number(q.stability) : null;
+        add({ key: 'stability', label: 'Stability', value: stability === null ? '—' : `${stability}%`, chip: `unstable ${stability}%`, off: stability !== null && stability < thresholds.stability, detail: stability === null ? 'needs 3+ kept events on two ok runs' : 'kept set shared with the previous ok run' });
+        const horizon = Number(q.horizon_days) || 0;
+        add({ key: 'horizon', label: 'Horizon', value: `${horizon}d`, chip: 'no upcoming', off: judged && horizon === 0, detail: horizon === 0 ? 'nothing dated today or later' : 'days to the furthest upcoming (extracted incl. dropped)' });
+        const runsSinceNew = Number.isFinite(Number(q.runs_since_new)) && q.runs_since_new !== null ? Number(q.runs_since_new) : null;
+        add({ key: 'new', label: 'Since last new', value: runsSinceNew === null ? '—' : `${runsSinceNew} runs`, chip: `no new ${runsSinceNew}r`, off: runsSinceNew !== null && runsSinceNew >= thresholds.runsSinceNew, detail: 'ok runs since a NEW proposal' });
+        const errors = q.errors && typeof q.errors === 'object' ? q.errors : {};
+        const errorTotal = Object.keys(errors).reduce((sum, key) => sum + (Number(errors[key]) || 0), 0);
+        add({ key: 'errors', label: 'Page errors', value: String(errorTotal), chip: `errors ${errorTotal}`, off: errorTotal >= 1, detail: Object.keys(errors).map((key) => `${key} ×${errors[key]}`).join(' · ') || 'none' });
+        const churn = q.churn && typeof q.churn === 'object' ? q.churn : {};
+        const changed = Number(churn.changed) || 0;
+        const fields = churn.fields && typeof churn.fields === 'object' ? churn.fields : {};
+        add({ key: 'churn', label: 'Merge churn', value: `${changed}/${Number(churn.merges) || 0}`, chip: `churn ${changed}`, off: changed >= thresholds.churnChanged, detail: Object.keys(fields).map((key) => `${key} ×${fields[key]}`).join(' · ') || 'no field rewritten' });
+    }
+    if (rejections) {
+        const reject = Number(rejections.reject) || 0;
+        const total = Number(rejections.total) || 0;
+        const share = total > 0 ? Math.round((100 * reject) / total) : 0;
+        add({ key: 'rejections', label: 'Your rejections', value: `${reject}/${total}`, chip: `rejected ${reject}`, off: reject >= thresholds.rejectMin && share >= thresholds.rejectShare, detail: rejections.top ? `${rejections.top} ×${rejections.tags[rejections.top]}` : 'none' });
+    }
+    const badges = signals.filter((signal) => signal.off);
+    return { available: !!q, signals, badges, offCount: badges.length };
+}
+
+// Owner decisions (owner-decisions.json) per host: approve / reject counts
+// and the reject reason tags. A decision names its parser (snapshot.source)
+// and its page; the host comes from the row that carries that parser, else
+// from the page's host.
+function summarizeOwnerDecisions(store, rows) {
+    const decisions = Array.isArray(store) ? store : (store && Array.isArray(store.decisions) ? store.decisions : []);
+    const hosts = new Set((Array.isArray(rows) ? rows : []).map((row) => String(row.host || '').toLowerCase()).filter(Boolean));
+    const byParser = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        (Array.isArray(row.parsers) ? row.parsers : []).forEach((name) => {
+            const key = String(name || '').toLowerCase();
+            if (key && !byParser.has(key)) byParser.set(key, row.host);
+        });
+    });
+    const hostOfUrl = (value) => {
+        const match = /^https?:\/\/([^/?#]+)/i.exec(String(value || ''));
+        return match ? match[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '') : '';
+    };
+    const out = {};
+    decisions.forEach((decision) => {
+        if (!decision || typeof decision !== 'object') return;
+        const snap = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : {};
+        let host = byParser.get(String(snap.source || '').toLowerCase()) || '';
+        if (!host) {
+            const fromUrl = hostOfUrl(snap.url || snap.website || snap.ticketUrl);
+            if (hosts.has(fromUrl)) host = fromUrl;
+        }
+        if (!host) return;
+        const entry = out[host] || (out[host] = { approve: 0, reject: 0, total: 0, tags: {}, top: '' });
+        entry.total += 1;
+        if (decision.verdict === 'reject') {
+            entry.reject += 1;
+            const reason = decision.reason && typeof decision.reason === 'object' ? decision.reason : {};
+            const tag = Array.isArray(reason.tags) && reason.tags.length ? String(reason.tags[0]) : (reason.text ? 'note' : (reason.mode || 'untagged'));
+            entry.tags[tag] = (entry.tags[tag] || 0) + 1;
+        } else if (decision.verdict === 'approve') {
+            entry.approve += 1;
+        }
+    });
+    Object.keys(out).forEach((host) => {
+        const entry = out[host];
+        entry.top = Object.keys(entry.tags).sort((a, b) => entry.tags[b] - entry.tags[a])[0] || '';
+    });
+    return out;
+}
+
 function assessSourceHealth(records, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
     const staleAfterDays = Number.isFinite(options.staleAfterDays) ? options.staleAfterDays : 3;
@@ -297,14 +413,29 @@ function assessSourceHealth(records, options = {}) {
         const ageMs = now.getTime() - new Date(latest.finished_at || 0).getTime();
         const ageDays = Number.isFinite(ageMs) ? ageMs / 86400000 : Infinity;
         // Lost = open "expected future events gone" series on the latest line
-        // (lines written before the field existed simply have none).
-        const lost = (Array.isArray(latest.lost) ? latest.lost : []).filter((entry) => entry && Array.isArray(entry.days) && entry.days.length);
-        const lostDays = lost.reduce((sum, entry) => sum + entry.days.length, 0);
-        const lostBear = lost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + entry.days.length, 0);
+        // (lines written before the field existed simply have none). The
+        // audit's "still on the site?" verdict rides on each series — from
+        // the line (next run) or the audit file (today, options.audit); a
+        // series the SITE removed is not our miss: it stays listed as a
+        // note and never counts toward the lost numbers or the verdict.
+        const auditHosts = options.audit && options.audit.hosts && typeof options.audit.hosts === 'object' ? options.audit.hosts : null;
+        const audit = auditHosts && auditHosts[host] && typeof auditHosts[host] === 'object' ? auditHosts[host] : null;
+        const stillByTitle = new Map((audit && Array.isArray(audit.still) ? audit.still : []).map((item) => [String(item.title || '').toLowerCase(), item]));
+        const lost = (Array.isArray(latest.lost) ? latest.lost : []).filter((entry) => entry && Array.isArray(entry.days) && entry.days.length).map((entry) => {
+            const fromAudit = stillByTitle.get(String(entry.title || '').toLowerCase());
+            const still = fromAudit && fromAudit.verdict ? fromAudit.verdict : (entry.still || '');
+            const stillAt = fromAudit && fromAudit.checked_at ? fromAudit.checked_at : (entry.still_at || '');
+            return Object.assign({}, entry, still ? { still, still_at: stillAt } : {});
+        });
+        const openLost = lost.filter((entry) => entry.still !== 'site-removed');
+        const lostRemoved = lost.length - openLost.length;
+        const lostStillListed = lost.filter((entry) => entry.still === 'still-listed').length;
+        const lostDays = openLost.reduce((sum, entry) => sum + entry.days.length, 0);
+        const lostBear = openLost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + entry.days.length, 0);
         const aggregator = latest.aggregator === true;
         const listingGone = latest.listing_gone === true;
         const suspected = Number(latest.suspected) || 0;
-        const hasLoss = lost.length > 0 || listingGone;
+        const hasLoss = openLost.length > 0 || listingGone;
         // Slow decline: the last few ok runs all well under the window's peak.
         const okLines = lines.filter((line) => line.status === 'ok');
         const recentOk = okLines.slice(-SLOW_DECLINE_RUNS);
@@ -339,7 +470,7 @@ function assessSourceHealth(records, options = {}) {
                 since = line.run_id || line.finished_at || since;
             }
         } else if (verdict === 'lost') {
-            since = lost.map((entry) => entry.since).filter(Boolean).sort()[0] || latest.run_id || null;
+            since = openLost.map((entry) => entry.since).filter(Boolean).sort()[0] || latest.run_id || null;
         }
         // The other axis as a flag chip: a shrunk/dead host that also lost
         // expected events, or an aggregator whose losses are recorded only.
@@ -358,6 +489,10 @@ function assessSourceHealth(records, options = {}) {
             lost,
             lostDays,
             lostBear,
+            lostRemoved,
+            lostStillListed,
+            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', page: audit.page || null } : null,
+            auditOpen: !!audit && ((Array.isArray(audit.missing) && audit.missing.length > 0) || (Array.isArray(audit.fake) && audit.fake.length > 0) || (Array.isArray(audit.wrong) && audit.wrong.length > 0) || lostStillListed > 0),
             suspected,
             listingGone,
             aggregator,
@@ -410,6 +545,13 @@ function assessSourceHealth(records, options = {}) {
         row.verdict = 'companion';
         row.since = null;
         row.companionOf = siblings;
+    });
+    // Quality per row (badges only when something is off); owner rejections
+    // joined in when the caller hands over owner-decisions.json.
+    const rejections = options.decisions ? summarizeOwnerDecisions(options.decisions, rows) : null;
+    rows.forEach((row) => {
+        row.rejections = rejections ? (rejections[row.host] || null) : null;
+        row.quality = assessSourceQuality(row, options);
     });
     rows.sort((a, b) => SOURCE_VERDICT_ORDER.indexOf(a.verdict) - SOURCE_VERDICT_ORDER.indexOf(b.verdict)
         || (Number(b.latest.extracted) || 0) - (Number(a.latest.extracted) || 0)
@@ -620,10 +762,11 @@ function formatLostNote(row) {
     const parts = [];
     if (row.listingGone) parts.push('listing gone');
     if (row.lostDays > 0) {
-        const first = Array.isArray(row.lost) && row.lost[0] ? row.lost[0] : null;
-        const headline = `${row.lostDays} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}`;
+        const first = (Array.isArray(row.lost) ? row.lost : []).find((entry) => entry.still !== 'site-removed') || null;
+        const headline = `${row.lostDays} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}${row.lostStillListed ? ` · ${row.lostStillListed} still listed — our miss` : ''}`;
         parts.push(first ? `${headline} · ${String(first.title || '').slice(0, 40)}${first.days.length > 1 ? ` ×${first.days.length}` : ''}` : headline);
     }
+    if (row.lostRemoved > 0) parts.push(`${row.lostRemoved} series removed by the site`);
     return parts.join(' · ');
 }
 
@@ -685,6 +828,7 @@ function buildSourcesTableHtml(health, options = {}) {
             </td>
             <td class="num trio-cell"><div class="cell-title">${extracted} · ${bear} · ${upcoming}</div></td>
             <td class="num lost-cell">${row.lostDays > 0 ? `<div class="cell-title${row.aggregator ? ' muted' : ' lost-count'}">${Number(row.lostDays) || 0}${row.lostBear ? ' 🐻' : ''}</div>` : '<div class="cell-subtitle">—</div>'}</td>
+            <td class="quality-cell">${buildQualityChipsHtml(row, { limit: 3 })}</td>
             <td class="trend-cell">${buildSparklineSvg(series, { title: `${series.length} runs` })}</td>
             <td class="age-cell"><div class="cell-subtitle">${escapeHtml(formatSourceAge(ageDays))}</div></td>
           </tr>`;
@@ -698,6 +842,7 @@ function buildSourcesTableHtml(health, options = {}) {
                 ${buildSourceSortHeader('Verdict', 'verdict', options.sortState, 'asc', 'verdict-cell')}
                 ${buildSourceSortHeader('Extr · Bear · Up', 'extracted', options.sortState, 'desc', 'num trio-cell')}
                 ${buildSourceSortHeader('Lost', 'lost', options.sortState, 'desc', 'num lost-cell')}
+                <th class="quality-cell">Quality</th>
                 <th class="trend-cell">Trend</th>
                 ${buildSourceSortHeader('Seen', 'age', options.sortState, 'desc', 'age-cell')}
               </tr>
@@ -870,6 +1015,8 @@ function buildLostListHtml(row) {
     if (row && row.listingGone) notes.push('The whole upcoming list went to zero in the latest run while the site still yielded rows — a page-shape miss or a cleared calendar; the next run tells which.');
     if (row && row.suspected > 0) notes.push(`${row.suspected} expected event${row.suspected === 1 ? '' : 's'} missing for the first time — waiting for the next ok run before calling ${row.suspected === 1 ? 'it' : 'them'} lost.`);
     if (row && row.aggregator && lost.length) notes.push('Aggregator: losses are recorded for the record and never raise the verdict.');
+    if (row && row.lostRemoved > 0) notes.push(`${row.lostRemoved} series the site itself no longer lists (the audit looked): not our miss, kept here for the record.`);
+    if (row && row.lostStillListed > 0) notes.push(`${row.lostStillListed} series the site STILL lists: our extraction misses them.`);
     const noteHtml = notes.length ? `<div class="muted lost-notes">${notes.map((note) => escapeHtml(note)).join('<br>')}</div>` : '';
     if (!lost.length) {
         return `<div class="muted">No expected future events are missing.</div>${noteHtml}`;
@@ -878,12 +1025,13 @@ function buildLostListHtml(row) {
         const days = Array.isArray(item.days) ? item.days : [];
         const shownDays = days.slice(0, 4).join(', ') + (days.length > 4 ? ` +${days.length - 4}` : '');
         return `
-          <tr>
+          <tr class="${item.still === 'site-removed' ? 'lost-removed' : ''}">
             <td><div class="cell-title">${escapeHtml(item.title || 'Untitled')}${days.length > 1 ? ` <span class="cell-subtitle">×${days.length}</span>` : ''}</div></td>
             <td><div class="cell-subtitle">${escapeHtml(shownDays || '—')}</div></td>
             <td class="status-cell">${item.bear ? '🐻' : ''}</td>
             <td><div class="cell-subtitle">${escapeHtml(item.since ? formatSourceRun(item.since) : '—')}</div></td>
             <td class="num tight"><div class="cell-subtitle">${Number(item.seen) || 0}</div></td>
+            <td>${formatStillHtml(item.still)}</td>
           </tr>`;
     }).join('');
     return `
@@ -896,12 +1044,92 @@ function buildLostListHtml(row) {
                 <th class="status-cell">Bear</th>
                 <th>Lost since</th>
                 <th class="num tight">Runs seen</th>
+                <th>Site</th>
               </tr>
             </thead>
             <tbody>${rows}
             </tbody>
           </table>
         </div>${noteHtml}`;
+}
+
+// Quality chips for a Sources row: the off signals only, short, capped.
+function buildQualityChipsHtml(row, options = {}) {
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? options.limit : 3;
+    const quality = row && row.quality ? row.quality : null;
+    const badges = quality && quality.available && Array.isArray(quality.badges) ? quality.badges : [];
+    const auditChip = row && row.auditOpen
+        ? `<span class="quality-chip quality-audit" title="${escapeHtml(formatAuditSummary(row.audit, row))}">audit ${(row.audit.missing || []).length + (row.audit.fake || []).length + (row.audit.wrong || []).length + (Number(row.lostStillListed) || 0)}</span>`
+        : '';
+    if (!quality || !quality.available) return auditChip ? `<div class="quality-chips">${auditChip}</div>` : '<span class="cell-subtitle">—</span>';
+    if (!badges.length && !auditChip) return '<span class="quality-chip quality-ok">clean</span>';
+    const shown = badges.slice(0, limit).map((badge) => `<span class="quality-chip" title="${escapeHtml(badge.detail || '')}">${escapeHtml(badge.chip || badge.label)}</span>`).join('');
+    const more = badges.length > limit ? `<span class="quality-chip quality-more">+${badges.length - limit}</span>` : '';
+    return `<div class="quality-chips">${auditChip}${shown}${more}</div>`;
+}
+
+// Quality tiles for the host page: every signal with its value, the ones
+// over a threshold marked, the threshold named in the tile's detail line.
+function buildHostQualityHtml(row) {
+    const quality = row && row.quality ? row.quality : null;
+    if (!quality || !quality.available) {
+        return '<div class="muted">No quality block on this host\u2019s latest line yet \u2014 runs from 2026-10-09 write it (backfill history on the Mac to see it for older runs).</div>';
+    }
+    const tiles = quality.signals.map((signal) => `
+          <div class="metric quality-tile${signal.off ? ' quality-off' : ''}">
+            <div class="metric-value">${escapeHtml(signal.value)}${signal.off ? '<span class="quality-badge">off</span>' : ''}</div>
+            <div class="metric-label">${escapeHtml(signal.label)}</div>
+            ${signal.detail ? `<div class="metric-detail">${escapeHtml(signal.detail)}</div>` : ''}
+          </div>`).join('');
+    const summary = quality.offCount
+        ? `${quality.offCount} signal${quality.offCount === 1 ? '' : 's'} over a threshold: ${quality.badges.map((badge) => badge.chip || badge.label).join(', ')}`
+        : 'Every signal inside its threshold.';
+    return `
+        <div class="muted quality-summary">${escapeHtml(summary)}</div>
+        <div class="metrics-grid quality-grid">${tiles}
+        </div>`;
+}
+
+// "site removed" (grey, not our miss) / "still listed — our miss" (red) / "unknown".
+function formatStillHtml(still) {
+    if (still === 'still-listed') return '<span class="still-chip still-listed">still listed — our miss</span>';
+    if (still === 'site-removed') return '<span class="still-chip still-removed">site removed</span>';
+    if (still === 'unknown') return '<span class="still-chip still-unknown">unknown</span>';
+    return '<span class="cell-subtitle">not checked</span>';
+}
+
+function formatAuditSummary(audit, row) {
+    if (!audit) return '';
+    const parts = [];
+    if ((audit.missing || []).length) parts.push(`${audit.missing.length} on the page we did not extract`);
+    if ((audit.fake || []).length) parts.push(`${audit.fake.length} extracted that are not events`);
+    if ((audit.wrong || []).length) parts.push(`${audit.wrong.length} extracted with the wrong date or place`);
+    if (row && row.lostStillListed) parts.push(`${row.lostStillListed} lost series still on the site`);
+    return `${parts.join(' · ')}${audit.date ? ` (audit ${audit.date})` : ''}`;
+}
+
+// The latest automated audit of one host (source-audit.json, read only on
+// the phone): what the page lists that we missed, what we extracted that is
+// not an event, how each lost series fared on the site, the model's note.
+function buildHostAuditHtml(row) {
+    const audit = row && row.audit ? row.audit : null;
+    if (!audit) return '<div class="muted">No audit of this host yet — the Mac audits three hosts after every run (troubled and lost ones first), every host about every two weeks.</div>';
+    const list = (items, render) => (items.length ? `<ul class="audit-list">${items.map(render).join('')}</ul>` : '<div class="muted">none</div>');
+    const missing = list(Array.isArray(audit.missing) ? audit.missing : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.date ? ` <span class="cell-subtitle">${escapeHtml(item.date)}</span>` : ''}</li>`);
+    const fake = list(Array.isArray(audit.fake) ? audit.fake : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.reason ? ` <span class="cell-subtitle">— ${escapeHtml(item.reason)}</span>` : ''}</li>`);
+    const wrong = list(Array.isArray(audit.wrong) ? audit.wrong : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.issue ? ` <span class="cell-subtitle">— ${escapeHtml(item.issue)}</span>` : ''}</li>`);
+    const still = list(Array.isArray(audit.still) ? audit.still : [], (item) => `<li>${formatStillHtml(item.verdict)} <b>${escapeHtml(item.title)}</b>${item.line && item.verdict === 'still-listed' ? ` <span class="cell-subtitle">“${escapeHtml(String(item.line).slice(0, 80))}”</span>` : ''}</li>`);
+    const aiNote = audit.ai === 'ok' ? '' : (audit.ai === 'no-page' ? 'The listing page could not be fetched; nothing to compare.' : (audit.ai === 'failed' ? 'The model gave no usable answer; the still-on-site checks above did not need it.' : 'Only the lost series were checked (loss confirmed outside the rotation).'));
+    return `
+        <div class="muted audit-meta">Audit ${escapeHtml(audit.date || '—')}${audit.run_id ? ` · run ${escapeHtml(formatSourceRun(audit.run_id))}` : ''}${audit.page && audit.page.url ? ` · <a href="${escapeHtml(audit.page.url)}" target="_blank" rel="noopener">the page</a>${audit.page.fetchedAt ? ` fetched ${escapeHtml(String(audit.page.fetchedAt).slice(0, 10))}` : ''}` : ''}</div>
+        <div class="audit-grid">
+          <div class="audit-block"><div class="audit-title">On the page, not extracted</div>${missing}</div>
+          <div class="audit-block"><div class="audit-title">Extracted, not an event</div>${fake}</div>
+          <div class="audit-block"><div class="audit-title">Extracted, wrong date or place</div>${wrong}</div>
+          <div class="audit-block"><div class="audit-title">Lost series on the site</div>${still}</div>
+        </div>
+        ${audit.note ? `<div class="audit-note">${escapeHtml(audit.note)}</div>` : ''}
+        ${aiNote ? `<div class="muted">${escapeHtml(aiNote)}</div>` : ''}`;
 }
 
 function buildSourceWidgetSummary(health, options = {}) {
@@ -1943,6 +2171,14 @@ const MetricsSections = {
     buildVanishedListHtml,
     buildLostListHtml,
     formatLostNote,
+    QUALITY_THRESHOLDS,
+    assessSourceQuality,
+    summarizeOwnerDecisions,
+    buildQualityChipsHtml,
+    buildHostQualityHtml,
+    buildHostAuditHtml,
+    formatStillHtml,
+    formatAuditSummary,
     buildSourceWidgetSummary,
     createChartRenderer,
     chartRenderer,
@@ -1995,6 +2231,14 @@ if (typeof module !== 'undefined' && module.exports) {
         buildVanishedListHtml,
         buildLostListHtml,
         formatLostNote,
+        QUALITY_THRESHOLDS,
+        assessSourceQuality,
+        summarizeOwnerDecisions,
+        buildQualityChipsHtml,
+        buildHostQualityHtml,
+        buildHostAuditHtml,
+        formatStillHtml,
+        formatAuditSummary,
         buildSourceWidgetSummary,
         createChartRenderer,
         chartRenderer,

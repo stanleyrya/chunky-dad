@@ -46,6 +46,7 @@ const {
   buildBatchIcs,
   tailLines,
   renderRunFormPage,
+  renderSourceAuditPage,
   parsePortFromArgv,
   lookupIcsEvent,
   BRIDGE_SHIM_MARKER,
@@ -1411,6 +1412,51 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('source-audit routes: the findings page lists hosts with open findings first (missing, not-events, still-listed losses), the JSON is the fix queue, the deck header links it with the open count', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-route-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  fs.writeFileSync(path.join(dir, 'source-audit.json'), JSON.stringify({ version: 1, updatedAt: '2030-01-01T06:00:00Z', hosts: {
+    'furball.nyc': { date: '2030-01-01', run_id: '20300101-051500', verdict: 'lost', badges: ['flags 2'], page: { url: 'https://furball.nyc/', fetchedAt: '2030-01-01T05:00:00Z', chars: 900 }, still: [{ title: 'FURBALL XL', verdict: 'still-listed', checked_at: '2030-01-01T06:00:00Z', line: 'furball xl nov 1' }], missing: [{ title: 'Furball Brunch', date: 'Sun Nov 2' }], fake: [{ title: 'Buy tickets', reason: 'a button' }], note: 'Two misses.', ai: 'ok' },
+    'quiet.example': { date: '2029-12-31', run_id: '20291231-051500', verdict: 'ok', badges: [], page: null, still: [{ title: 'Old Night', verdict: 'site-removed', checked_at: 'x', line: '' }], missing: [], fake: [], note: '', ai: 'ok' }
+  }, runs: [{ run_id: '20300101-051500', date: '2030-01-01', audited: ['furball.nyc'], losses: [], ms: 800 }] }));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review/source-audit');
+    assert.equal(page.status, 200, page.body);
+    assert.ok(page.body.includes('Source audit'), 'the page label');
+    assert.ok(page.body.includes('1 site with open findings'));
+    assert.ok(page.body.indexOf('furball.nyc') < page.body.indexOf('quiet.example'), 'open findings first');
+    assert.ok(page.body.includes('Furball Brunch') && page.body.includes('Sun Nov 2'), 'missing event with its date text');
+    assert.ok(page.body.includes('Buy tickets') && page.body.includes('a button'), 'not-an-event with its reason');
+    assert.ok(page.body.includes('still listed — our miss') && page.body.includes('FURBALL XL'), 'a still-listed loss in red words');
+    assert.ok(page.body.includes('site removed') && page.body.includes('Old Night'), 'a site-removed loss in grey words');
+    assert.ok(page.body.includes('Two misses.'));
+    assert.ok(!page.body.includes('<button') && !page.body.includes('answer('), 'read only: no buttons, no answers');
+    assert.ok(!/stanley/i.test(page.body), 'no name on the page');
+    const json = JSON.parse((await request(state, 'GET', '/review/source-audit.json')).body);
+    assert.equal(json.ok, true);
+    assert.deepEqual(json.queue.map(entry => entry.host), ['furball.nyc']);
+    assert.equal(json.hosts['quiet.example'].still[0].verdict, 'site-removed');
+    assert.equal(json.runs.length, 1);
+    const deck = await request(state, 'GET', '/review');
+    assert.ok(deck.body.includes('href="/review/source-audit"') && deck.body.includes('Source audit (1)'), 'the deck header links the audit with its open count');
+    assert.equal((await request(state, 'GET', '/review/deep-check')).status, 404, 'the human-answer routes are gone');
+    assert.equal((await request(state, 'POST', '/review/deep-check', '{}')).status, 404);
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('source-audit page without any audit says so', () => {
+  const html = renderSourceAuditPage({ version: 1, hosts: {}, runs: [] });
+  assert.ok(html.includes('Nothing open') && html.includes('No audit has run yet'));
 });
 
 test('review page without any saved run explains where runs come from', async () => {
