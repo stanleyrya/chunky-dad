@@ -714,8 +714,28 @@ class WebAdapter {
                 console.log(`🧭 BROWSER: ${state.unavailable} — plain requests only`);
                 return null;
             }
-            const browser = await puppeteer.launch({ executablePath: settings.executablePath, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
-            try {
+            // THE WATCHDOG. A proof run on 2026-10-08 sat more than ten
+            // minutes at 0% CPU inside this route — Chrome alive, no cache
+            // write, page.goto's own 45 s timeout never firing. Nothing in
+            // here may hold a run: the whole attempt (launch, navigation,
+            // body) races a hard deadline, and on the deadline the browser
+            // is closed and, when it will not close, killed.
+            let browser = null;
+            const closeBrowser = async () => {
+                if (!browser) return;
+                const target = browser;
+                browser = null;
+                await Promise.race([
+                    target.close().catch(() => {}),
+                    new Promise(resolve => setTimeout(resolve, WebAdapter.BROWSER_CLOSE_TIMEOUT_MS))
+                ]);
+                try {
+                    const proc = typeof target.process === 'function' ? target.process() : null;
+                    if (proc && !proc.killed && typeof proc.kill === 'function') proc.kill('SIGKILL');
+                } catch (_) { /* already gone */ }
+            };
+            const attempt = async () => {
+                browser = await puppeteer.launch({ executablePath: settings.executablePath, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
                 const page = await browser.newPage();
                 // The browser's own User-Agent with the scraper's token on
                 // the end: a real browser, and it still says who it is.
@@ -755,8 +775,22 @@ class WebAdapter {
                 }
                 console.log(`🧭 BROWSER: ${url} refused a plain request but served a real browser — ${html.length} chars${isDocument ? '' : ` of ${contentType.split(';')[0]}`} in ${Date.now() - startedAt} ms (${state.count}/${settings.cap} this run)`);
                 return { html, url, statusCode: status, headers: { 'x-fetched-by': 'mac-browser', 'content-type': isDocument ? 'text/html' : contentType } };
+            };
+            let timer = null;
+            const deadline = new Promise(resolve => {
+                timer = setTimeout(() => resolve({ timedOut: true }), WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS);
+            });
+            try {
+                const outcome = await Promise.race([attempt().then(result => ({ result }), error => ({ error })), deadline]);
+                if (outcome && outcome.timedOut) {
+                    console.log(`🧭 BROWSER: ${url} — gave up after ${Math.round(WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS / 1000)} s, the browser never answered; closing it`);
+                    return null;
+                }
+                if (outcome && outcome.error) throw outcome.error;
+                return outcome ? outcome.result : null;
             } finally {
-                await browser.close().catch(() => {});
+                clearTimeout(timer);
+                await closeBrowser();
             }
         } catch (error) {
             console.log(`🧭 BROWSER: ${url} — ${error && error.message ? error.message : error}`);
@@ -3136,6 +3170,10 @@ async saveFailureNote(url, error, metadata = {}) {
 WebAdapter.BROWSER_FETCH_CAP = 20;
 WebAdapter.BROWSER_FETCH_GAP_MS = 3000;
 WebAdapter.BROWSER_FETCH_TIMEOUT_MS = 45000;
+// Hard deadline for one browser attempt (launch + navigation + body) and
+// for closing the browser afterwards — see the watchdog in fetchWithBrowser.
+WebAdapter.BROWSER_FETCH_HARD_TIMEOUT_MS = 90000;
+WebAdapter.BROWSER_CLOSE_TIMEOUT_MS = 5000;
 WebAdapter.INBOX_REQUEST_DAYS = 7;
 WebAdapter.INBOX_REQUEST_CAP = 200;
 
