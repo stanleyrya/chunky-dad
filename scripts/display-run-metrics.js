@@ -701,6 +701,26 @@ class MetricsDisplay {
     return root ? this.fm.joinPath(root, 'owner-decisions.json') : null;
   }
 
+  // source-audit.json (the Mac's automated audit of the sources) sits next
+  // to the decisions; read only, for the findings on the host page.
+  async loadSourceAudit() {
+    const root = this.baseDir || (typeof this.resolveDataRoot === 'function' ? this.resolveDataRoot(this.fm) : null);
+    const path = root ? this.fm.joinPath(root, 'source-audit.json') : null;
+    if (!path || !this.fm.fileExists(path)) return null;
+    try {
+      await this.fm.downloadFileFromiCloud(path);
+    } catch (error) {
+      console.log(`Metrics: source audit iCloud download failed: ${error.message}`);
+    }
+    try {
+      const parsed = JSON.parse(this.fm.readString(path) || 'null');
+      return parsed && parsed.hosts && typeof parsed.hosts === 'object' ? parsed : null;
+    } catch (error) {
+      console.log(`Metrics: source audit unreadable: ${error.message}`);
+      return null;
+    }
+  }
+
   async loadOwnerDecisions() {
     const path = this.getOwnerDecisionsPath();
     if (!path || !this.fm.fileExists(path)) return null;
@@ -748,8 +768,9 @@ class MetricsDisplay {
       return { available: false, reason: null, health: null, records: [] };
     }
     const decisions = await this.loadOwnerDecisions();
-    const health = MetricsSections.assessSourceHealth(records, { now: new Date(), decisions });
-    console.log(`Metrics: Source ledger — ${records.length} lines, ${health.hosts} hosts, ${health.troubled} troubled${decisions ? `, ${decisions.decisions.length} owner decisions joined` : ''}`);
+    const audit = await this.loadSourceAudit();
+    const health = MetricsSections.assessSourceHealth(records, { now: new Date(), decisions, audit });
+    console.log(`Metrics: Source ledger — ${records.length} lines, ${health.hosts} hosts, ${health.troubled} troubled${decisions ? `, ${decisions.decisions.length} owner decisions joined` : ''}${audit ? `, audit of ${Object.keys(audit.hosts).length} hosts joined` : ''}`);
     return { available: true, reason: null, health, records };
   }
 
@@ -3170,6 +3191,13 @@ class MetricsDisplay {
       cards.push(buildSection('Latest Run', MetricsSections.buildHostSummaryHtml(row, {
         faviconUrl: item => this.getHostFaviconUrl(item)
       })));
+      if (typeof MetricsSections.buildHostAuditHtml === 'function') {
+        cards.push(buildSection(
+          'Source Audit',
+          MetricsSections.buildHostAuditHtml(row),
+          escapeHtml(row.audit ? (row.auditOpen ? 'Open findings — the fix queue is /review/source-audit.json on the Mac' : 'Nothing open from the latest audit') : 'The Mac audits every site about every two weeks, troubled and lost ones first')
+        ));
+      }
       if (typeof MetricsSections.buildHostQualityHtml === 'function') {
         const offCount = row.quality && row.quality.offCount ? row.quality.offCount : 0;
         cards.push(buildSection(
@@ -4048,6 +4076,62 @@ ${verdictCss}
       border: 1px solid ${SOURCE_VERDICT_COLORS.shrunk};
       color: ${SOURCE_VERDICT_COLORS.shrunk};
       white-space: nowrap;
+    }
+    .quality-chip.quality-audit {
+      border-color: ${SOURCE_VERDICT_COLORS.lost};
+      color: ${SOURCE_VERDICT_COLORS.lost};
+      font-weight: 700;
+    }
+    .still-chip {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      white-space: nowrap;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+    .still-chip.still-listed {
+      border-color: ${BRAND.danger};
+      color: ${BRAND.danger};
+      font-weight: 700;
+    }
+    .still-chip.still-removed {
+      opacity: 0.8;
+    }
+    tr.lost-removed .cell-title {
+      color: var(--text-secondary);
+    }
+    .audit-meta {
+      margin-bottom: 8px;
+    }
+    .audit-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .audit-block {
+      background: var(--background-light);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .audit-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .audit-list {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .audit-note {
+      margin-top: 8px;
+      font-size: 12px;
+      font-style: italic;
     }
     .quality-chip.quality-ok {
       border-color: var(--color-success);

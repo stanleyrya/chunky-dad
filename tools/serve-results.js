@@ -38,6 +38,7 @@
 //   notes-only housekeeping merges). This server still never writes a
 //   calendar. Endpoints: GET /review · GET /review/deck.json ·
 //   POST /review/decide · GET /review/decisions.json · GET /review/rejections
+//   GET /review/source-audit (+ .json: the automated audit's findings, tools/source-audit.js)
 //   · GET /inbox/file/<name> (a picture from the shared inbox, for the deck)
 //
 // House style: no `new URL` / URLSearchParams anywhere (matches the iOS-shared
@@ -1056,15 +1057,38 @@ function renderReviewPictureRow(entry = {}) {
     return `<div class="line muted">🖼️ picture from your inbox — shown here only; approving sends it to the website through a PR</div>`;
 }
 
-// The deep-check page: today's host, what its listing page says beside
-// what the latest run extracted from it, its open lost series, and three
-// one-tap answers. The deck's look (same tokens, header and buttons), one
-// column on a phone, two on a wide screen, nothing stretched.
-function renderDeepCheckPage(card, options = {}) {
+// The Source audit page: read-only findings of the Mac's automated audit
+// (tools/source-audit.js) — per audited host the date, its badges, what the
+// page lists that we did not extract, what we extracted that is not an
+// event, and how each lost series fared on the site. The deck's look, no
+// buttons: the answers are the fix queue (/review/source-audit.json).
+function renderSourceAuditPage(store, options = {}) {
     const esc = escapeHtmlText;
-    const head = `<!DOCTYPE html>
+    const sourceAudit = require(path.join(__dirname, 'source-audit'));
+    const state = sourceAudit.normalizeSourceAuditStore(store);
+    const hosts = Object.keys(state.hosts).map((host) => Object.assign({ host }, state.hosts[host]));
+    const open = hosts.filter(sourceAudit.hostHasOpenFindings).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
+    const quiet = hosts.filter((entry) => !sourceAudit.hostHasOpenFindings(entry)).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
+    const stillChip = (item) => item.verdict === 'still-listed'
+        ? `<span class="badge still-listed">still listed — our miss</span>`
+        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>' : '<span class="badge">unknown</span>');
+    const card = (entry) => `
+<div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">
+  <h2><img src="https://chunky.dad/img/favicons/favicon-${esc(entry.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico" alt="" onerror="this.remove()">${esc(entry.host)}<span class="when">${esc(entry.date)}${entry.run_id ? ` · run ${esc(entry.run_id)}` : ''}</span></h2>
+  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}</span>` : ''}</div>
+  ${entry.page && entry.page.url ? `<p class="page-meta"><a href="${esc(entry.page.url)}" target="_blank" rel="noopener">${esc(entry.page.url)}</a>${entry.page.fetchedAt ? ` · fetched ${esc(String(entry.page.fetchedAt).slice(0, 16).replace('T', ' '))}Z` : ''}${entry.page.chars ? ` · ${esc(String(entry.page.chars))} chars` : ''}</p>` : '<p class="page-meta">no listing page could be read</p>'}
+  <div class="cols">
+    <div><h3>On the page, not extracted (${entry.missing.length})</h3>${entry.missing.length ? `<ul class="findings">${entry.missing.map((item) => `<li><b>${esc(item.title)}</b>${item.date ? ` <span class="muted">${esc(item.date)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Extracted, not an event (${entry.fake.length})</h3>${entry.fake.length ? `<ul class="findings">${entry.fake.map((item) => `<li><b>${esc(item.title)}</b>${item.reason ? ` <span class="muted">— ${esc(item.reason)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Extracted, wrong date or place (${entry.wrong.length})</h3>${entry.wrong.length ? `<ul class="findings">${entry.wrong.map((item) => `<li><b>${esc(item.title)}</b>${item.issue ? ` <span class="muted">— ${esc(item.issue)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
+    <div><h3>Lost series on the site (${entry.still.length})</h3>${entry.still.length ? `<ul class="findings">${entry.still.map((item) => `<li>${stillChip(item)} <b>${esc(item.title)}</b>${item.line && item.verdict === 'still-listed' ? ` <span class="muted">“${esc(String(item.line).slice(0, 90))}”</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none open</p>'}</div>
+  </div>
+  ${entry.note ? `<p class="note">${esc(entry.note)}</p>` : ''}
+</div>`;
+    const lastRun = state.runs.length ? state.runs[state.runs.length - 1] : null;
+    return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Deep check · chunky.dad (on your Mac)</title>
+<title>Source audit · chunky.dad (on your Mac)</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
 <meta name="theme-color" content="#151412">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1075,8 +1099,6 @@ function renderDeepCheckPage(card, options = {}) {
 * { box-sizing:border-box; }
 html { background:var(--bg); }
 body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; margin:0; color:var(--ink); font:15px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-text-size-adjust:100%; }
-html, body, button, a { touch-action:manipulation; }
-select, textarea, input { font-size:16px; }
 a { color:var(--accent); }
 .top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 12px 26px rgba(0,0,0,.35); }
 .top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; min-width:0; }
@@ -1087,18 +1109,17 @@ a { color:var(--accent); }
 .top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto; }
 .action-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; font:600 13px/1 Poppins, -apple-system, system-ui, sans-serif; padding:9px 13px; min-height:36px; border-radius:12px; text-decoration:none; cursor:pointer; white-space:nowrap; border:none; }
 .action-button i { font-size:15px; line-height:1; }
-.primary-button { color:#1b1308; background:linear-gradient(135deg, var(--accent-soft), var(--accent)); box-shadow:0 10px 24px rgba(0,0,0,.35); }
 .secondary-button { color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
-.ok-button { color:#fff; background:var(--ok); }
-.no-button { color:#fff; background:var(--no); }
 @media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
 .wrap { max-width:1100px; margin:14px auto 40px; padding:0 14px; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 12px; }
 .card { background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:14px 16px 16px; margin-bottom:14px; }
+.card.open { border:1px solid rgba(255,126,182,.35); }
 .card h2 { margin:0 0 6px; font:700 18px/1.2 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .card h2 img { width:20px; height:20px; border-radius:4px; }
-.card h3 { margin:0 0 8px; font:600 13px/1.2 Poppins, -apple-system, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.card h2 .when { font:400 12px/1 -apple-system, system-ui, sans-serif; color:var(--muted); }
+.card h3 { margin:8px 0 6px; font:600 12px/1.2 Poppins, -apple-system, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
 .muted { color:var(--muted); }
-.why { font-size:13px; color:var(--muted); margin:0 0 8px; }
 .badges { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
 .badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
 .badge.verdict { font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
@@ -1107,114 +1128,29 @@ a { color:var(--accent); }
 .badge.v-lost { color:var(--lost); border-color:var(--lost); }
 .badge.v-ok { color:var(--ok); border-color:var(--ok); }
 .badge.quality { color:var(--accent-soft); }
-.cols { display:grid; grid-template-columns:1fr; gap:14px; }
+.badge.still-listed { color:var(--no); border-color:var(--no); font-weight:700; }
+.badge.still-removed { color:var(--muted); }
+.page-meta { font-size:12px; color:var(--muted); margin:0 0 4px; word-break:break-all; }
+.cols { display:grid; grid-template-columns:1fr; gap:4px 14px; }
 @media (min-width: 820px) { .cols { grid-template-columns:1fr 1fr; align-items:start; } }
-.page-text { white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.45; max-height:60vh; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
-.page-meta { font-size:12px; color:var(--muted); margin:0 0 8px; word-break:break-all; }
-.events { list-style:none; margin:0; padding:0; max-height:60vh; overflow:auto; }
-.events li { display:grid; grid-template-columns:auto 1fr; gap:4px 10px; padding:7px 0; border-top:1px solid var(--line); font-size:13px; align-items:start; }
-.events li:first-child { border-top:none; }
-.events .when { color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
-.events .what { min-width:0; }
-.events .what b { display:block; }
-.events .what a { color:var(--muted); font-size:12px; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; word-break:break-all; }
-.events label { display:flex; gap:6px; align-items:flex-start; cursor:pointer; }
-.events input[type=checkbox] { margin-top:3px; }
-.lost-list { list-style:none; margin:0; padding:0; }
-.lost-list li { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; padding:7px 0; border-top:1px solid var(--line); font-size:13px; }
-.lost-list li:first-child { border-top:none; }
-.lost-list .title { flex:1 1 180px; min-width:0; }
-.lost-list .title b { color:var(--lost); }
-.seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
-.seg button { background:transparent; border:none; color:var(--muted); font:600 12px Poppins, -apple-system, sans-serif; padding:6px 10px; cursor:pointer; }
-.seg button.on { background:var(--panel); color:var(--ink); }
-.answers { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
-.answers .action-button { flex:1 1 150px; }
-textarea { width:100%; min-height:72px; margin:8px 0; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); resize:vertical; }
-.done { padding:10px 12px; border:1px solid var(--ok); border-radius:10px; font-size:13px; margin-bottom:10px; background:rgba(47,158,95,.12); }
-.toast { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:30; }
-.toast.show { opacity:1; }
+.findings { margin:0; padding-left:18px; font-size:13px; line-height:1.45; }
+.findings li { margin:2px 0; }
+.note { margin:10px 0 0; font-size:13px; font-style:italic; color:var(--ink); opacity:.85; }
 </style></head>
 <body>
 <header class="top">
-  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label">Deep check</span></a></h1>
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label">Source audit</span></a></h1>
   <div class="tool-buttons">
     <a class="action-button secondary-button" href="/review"><i class="bi bi-layers" aria-hidden="true"></i><span>Review</span></a>
+    <a class="action-button secondary-button" href="/review/source-audit.json"><i class="bi bi-braces" aria-hidden="true"></i><span>JSON</span></a>
     <a class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
   </div>
 </header>
-<div class="wrap">`;
-    const foot = `</div><div class="toast" id="toast"></div></body></html>`;
-    if (!card || !card.available) {
-        return `${head}<div class="card"><h2>Nothing to check yet</h2><p class="muted">${esc(card && card.reason ? card.reason : 'no source ledger')} — the ledger (metrics/sources.ndjson) comes with the first scrape that writes it; backfill history on the Mac with npm run backfill-source-ledger.</p></div>${foot}`;
-    }
-    const favicon = `https://chunky.dad/img/favicons/favicon-${esc(card.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico`;
-    const verdictBadge = `<span class="badge verdict v-${esc(card.verdict)}">${esc(card.verdict)}${card.since ? ` since ${esc(reviewQueue.describeRunShapeLabel ? String(card.since).slice(0, 8) : card.since)}` : ''}</span>`;
-    const flagBadges = card.flags.map((flag) => `<span class="badge verdict v-${esc(flag)}">${esc(flag)}</span>`).join('');
-    const qualityBadges = card.badges.map((badge) => `<span class="badge quality" title="${esc(badge.detail || '')}">${esc(badge.chip || badge.label)}</span>`).join('');
-    const page = card.page;
-    const pageAge = page && page.fetchedAt ? `fetched ${esc(String(page.fetchedAt).slice(0, 16).replace('T', ' '))}Z` : '';
-    const pageBlock = page
-        ? `<p class="page-meta"><a href="${esc(page.url)}" target="_blank" rel="noopener">${esc(page.url)}</a> · ${pageAge}${page.statusCode ? ` · HTTP ${esc(page.statusCode)}` : ''}${page.preferred ? '' : ' · not the configured listing url — the nearest cached page'}${page.truncated ? ` · first ${esc(String(page.text.length))} of ${esc(String(page.chars))} characters` : ''}</p><div class="page-text">${esc(page.text || '(the cached page has no readable text)')}</div>`
-        : `<p class="muted">No cached page for this host in storage/pages — the scraper keeps one after a run that fetched it. <a href="${esc(card.url)}" target="_blank" rel="noopener">Open ${esc(card.url)}</a> instead.</p>`;
-    const eventRows = card.events.length
-        ? card.events.map((event, index) => `<li><span class="when">${esc(event.day || '—')}${event.time ? `<br>${esc(event.time)}` : ''}</span><span class="what"><label><input type="checkbox" class="fake-pick" value="${esc(event.title)}" data-index="${index}"><span><b>${esc(event.title || 'Untitled')}${event.bear ? ' 🐻' : ''}</b>${esc(event.place || '')}${event.url ? ` · <a href="${esc(event.url)}" target="_blank" rel="noopener">${esc(event.url.replace(/^https?:\/\//, '').slice(0, 60))}</a>` : ''}</span></label></span></li>`).join('')
-        : `<li><span class="when">—</span><span class="what muted">The latest run kept nothing from this host${card.latest.extracted ? ` (${esc(String(card.latest.extracted))} rows extracted, none bear)` : ''}.</span></li>`;
-    const lostRows = card.lost.length
-        ? `<ul class="lost-list">${card.lost.map((series) => `<li><span class="title"><b>${esc(series.title)}</b>${series.days.length > 1 ? ` ×${series.days.length}` : ''} · ${esc(series.days.slice(0, 3).join(', '))}${series.days.length > 3 ? ` +${series.days.length - 3}` : ''}${series.bear ? ' 🐻' : ''}<br><span class="muted">still on the site?</span></span><span class="seg" data-lost="${esc(series.title)}"><button type="button" data-v="yes">yes</button><button type="button" data-v="no">no</button></span></li>`).join('')}</ul>`
-        : '<p class="muted">No open lost series on this host.</p>';
-    const done = card.todayAnswer
-        ? `<div class="done">✓ Checked today: <b>${esc(card.todayAnswer.answer)}</b>${card.todayAnswer.text ? ` — ${esc(card.todayAnswer.text)}` : ''}${card.todayAnswer.fakes.length ? ` — ${esc(card.todayAnswer.fakes.join(', '))}` : ''}. Answer again to replace it; tomorrow brings the next host.</div>`
-        : '';
-    const previous = card.previous && card.previous.lastCheckedAt
-        ? `last checked ${esc(String(card.previous.lastCheckedAt).slice(0, 10))} (${esc(card.previous.lastAnswer)})`
-        : 'never checked before';
-    const body = `
-<div class="card">
-  <h2><img src="${favicon}" alt="" onerror="this.remove()">${esc(card.host)}<span class="muted" style="font-weight:400;font-size:13px;">${esc(card.parsers.join(', '))}</span></h2>
-  <p class="why">Today because: ${esc(card.reason)} · ${previous} · latest run ${esc(card.latest.run_id || '')}: ${esc(String(card.latest.extracted))} extracted, ${esc(String(card.latest.bear))} bear, ${esc(String(card.latest.upcoming))} upcoming${card.aggregator ? ' · aggregator (discovery only)' : ''}</p>
-  <div class="badges">${verdictBadge}${flagBadges}${qualityBadges || '<span class="badge v-ok">quality clean</span>'}</div>
-  ${done}
-</div>
-<div class="cols">
-  <div class="card"><h3>What the page says</h3>${pageBlock}</div>
-  <div class="card"><h3>What we extracted (${card.events.length})</h3><p class="muted" style="font-size:12px;margin:0 0 6px;">Tick the ones that are not real events, then "Fake / not real".</p><ul class="events">${eventRows}</ul></div>
-</div>
-<div class="card"><h3>Open lost series</h3>${lostRows}</div>
-<div class="card">
-  <h3>Your answer</h3>
-  <textarea id="note" placeholder="Missing events? Name them (optional)."></textarea>
-  <div class="answers">
-    <button type="button" class="action-button no-button" onclick="answer('missing')"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><span>Missing events</span></button>
-    <button type="button" class="action-button secondary-button" onclick="answer('fake')"><i class="bi bi-x-octagon" aria-hidden="true"></i><span>Fake / not real</span></button>
-    <button type="button" class="action-button ok-button" onclick="answer('ok')"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Looks right</span></button>
-  </div>
-  <p class="muted" style="font-size:12px;margin:8px 0 0;">Answers land in deep-check.json next to your decisions (<a href="/review/deep-check.json">the queue</a>) — ${esc(String(card.queue))} so far.</p>
-</div>
-<script>
-var HOST = ${jsonForInlineScript(card.host)};
-var lostStill = {};
-document.querySelectorAll('.seg').forEach(function (seg) {
-  seg.querySelectorAll('button').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      seg.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
-      btn.classList.add('on');
-      lostStill[seg.getAttribute('data-lost')] = btn.getAttribute('data-v');
-    });
-  });
-});
-function toast(text) { var t = document.getElementById('toast'); t.textContent = text; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 1800); }
-function answer(kind) {
-  var fakes = Array.prototype.map.call(document.querySelectorAll('.fake-pick:checked'), function (el) { return el.value; });
-  if (kind === 'fake' && fakes.length === 0) { toast('Tick the events that are not real first'); return; }
-  var body = { host: HOST, answer: kind, text: document.getElementById('note').value, fakes: fakes, lostStill: lostStill };
-  fetch('/review/deep-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(function (r) { return r.json(); })
-    .then(function (j) { if (!j.ok) { toast('Not saved: ' + (j.error || 'unknown')); return; } toast('Saved'); setTimeout(function () { location.reload(); }, 600); })
-    .catch(function (e) { toast('Not saved: ' + e.message); });
-}
-</script>`;
-    return `${head}${body}${foot}`;
+<div class="wrap">
+<p class="intro">The Mac audits three sites after every run (troubled and lost ones first, every site about every two weeks): the listing page's own text beside what the run extracted, read by the local model; every lost series is looked for on its site. Findings are a report for the fix queue — nothing here writes to the calendar.${lastRun ? ` Last audit ${esc(lastRun.date)} (run ${esc(lastRun.run_id)}): ${esc(String(lastRun.audited.length))} site${lastRun.audited.length === 1 ? '' : 's'} audited${lastRun.losses.length ? `, ${esc(String(lastRun.losses.length))} loss check${lastRun.losses.length === 1 ? '' : 's'}` : ''}.` : ' No audit has run yet.'}</p>
+${open.length ? `<h3 class="muted" style="margin:0 0 8px;">${open.length} site${open.length === 1 ? '' : 's'} with open findings</h3>${open.map(card).join('')}` : '<div class="card"><h2>Nothing open</h2><p class="muted">No site has findings waiting on a fix.</p></div>'}
+${quiet.length ? `<h3 class="muted" style="margin:14px 0 8px;">${quiet.length} site${quiet.length === 1 ? '' : 's'} audited, nothing open</h3>${quiet.map(card).join('')}` : ''}
+</div></body></html>`;
 }
 
 function renderReviewEmptyPage(message, options = {}) {
@@ -1597,7 +1533,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true || !options.deepCheckHost ? '' : `\n    <a id="deep-check-link" class="action-button secondary-button" href="/review/deep-check" title="${escapeHtmlText(options.deepCheckReason || '')}"><i class="bi bi-search" aria-hidden="true"></i><span>Deep check: ${escapeHtmlText(options.deepCheckHost)}</span></a>`}
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>`}
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
@@ -3134,24 +3070,13 @@ function resolveAdvicePageBase() {
 
 // Pending-card count for the header bar on /: cheap when the run is cached
 // (readRunFile keys on mtime), and never fatal.
-// Today's deep-check host for the deck header (the pick is saved so the
-// page and the link agree for the day). Never fails the deck.
-function resolveDeepCheckPick(sharedRoot) {
+// Hosts with open audit findings, for the deck header. Never fails the deck.
+function countSourceAuditOpen(sharedRoot) {
     try {
-        const loaded = reviewQueue.loadSourceHealth(sharedRoot);
-        if (!loaded) return { host: null, reason: '' };
-        const file = reviewQueue.getDeepCheckPath(sharedRoot);
-        const store = reviewQueue.loadDeepCheck(file);
-        const today = new Date().toISOString().slice(0, 10);
-        const pick = reviewQueue.pickDeepCheckHost(loaded.health, store, today);
-        if (pick.host && pick.changed) {
-            store.current = { host: pick.host, date: today, reason: pick.reason };
-            reviewQueue.saveDeepCheck(file, store);
-        }
-        return { host: pick.host, reason: pick.reason || '' };
-    } catch (error) {
-        console.log(`Deep check pick failed: ${error.message}`);
-        return { host: null, reason: '' };
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
+        return sourceAudit.findingsQueue(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot))).length;
+    } catch (_) {
+        return 0;
     }
 }
 
@@ -3365,8 +3290,7 @@ async function handleRequest(state, req, res) {
         }
         try {
             const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run);
-            const deepCheck = resolveDeepCheckPick(sharedRoot);
-            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot), deepCheckHost: deepCheck.host, deepCheckReason: deepCheck.reason }));
+            return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot), sourceAuditOpen: countSourceAuditOpen(sharedRoot) }));
         } catch (error) {
             console.error(`Review render failed: ${error.stack || error}`);
             return sendText(res, 500, `Review render failed: ${error.message}`);
@@ -3600,35 +3524,23 @@ async function handleRequest(state, req, res) {
         }
     }
 
-    // Deep check: one host a day, its page beside its events, three answers.
-    if (pathname === '/review/deep-check' && req.method === 'GET') {
-        const { sharedRoot, run } = resolveReviewRun(query);
+    // Source audit: the Mac's automated findings (read only) and the fix queue.
+    if (pathname === '/review/source-audit' && req.method === 'GET') {
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
+        const sharedRoot = reviewQueue.resolveSharedRoot();
         try {
-            const card = reviewQueue.buildDeepCheckCard(sharedRoot, run, {});
-            return sendHtml(res, 200, renderDeepCheckPage(card));
+            return sendHtml(res, 200, renderSourceAuditPage(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot))));
         } catch (error) {
-            console.error(`Deep check render failed: ${error.stack || error}`);
-            return sendText(res, 500, `Deep check render failed: ${error.message}`);
+            console.error(`Source audit render failed: ${error.stack || error}`);
+            return sendText(res, 500, `Source audit render failed: ${error.message}`);
         }
     }
 
-    if (pathname === '/review/deep-check' && req.method === 'POST') {
-        const raw = await readRequestBody(req);
-        let body;
-        try { body = JSON.parse(raw); } catch (_) { return sendJson(res, 400, { ok: false, error: 'bad json' }); }
+    if (pathname === '/review/source-audit.json' && req.method === 'GET') {
+        const sourceAudit = require(path.join(__dirname, 'source-audit'));
         const sharedRoot = reviewQueue.resolveSharedRoot();
-        const file = reviewQueue.getDeepCheckPath(sharedRoot);
-        const result = reviewQueue.recordDeepCheckAnswer(reviewQueue.loadDeepCheck(file), body);
-        if (!result) return sendJson(res, 400, { ok: false, error: 'host and an answer (missing | fake | ok) are required' });
-        const saved = reviewQueue.saveDeepCheck(file, result.store);
-        console.log(`Deep check: ${result.entry.host} → ${result.entry.answer}${result.entry.fakes.length ? ` (${result.entry.fakes.length} fake)` : ''}${result.entry.text ? ` — ${result.entry.text.slice(0, 80)}` : ''}`);
-        return sendJson(res, 200, { ok: true, answer: result.entry, answers: saved.answers.length });
-    }
-
-    if (pathname === '/review/deep-check.json' && req.method === 'GET') {
-        const sharedRoot = reviewQueue.resolveSharedRoot();
-        const store = reviewQueue.loadDeepCheck(reviewQueue.getDeepCheckPath(sharedRoot));
-        return sendJson(res, 200, { ok: true, current: store.current, queue: reviewQueue.deepCheckQueue(store), checks: store.checks });
+        const store = sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(sharedRoot));
+        return sendJson(res, 200, { ok: true, updatedAt: store.updatedAt, queue: sourceAudit.findingsQueue(store), hosts: store.hosts, runs: store.runs });
     }
 
     if (pathname === '/review/decisions.json' && req.method === 'GET') {
@@ -3657,7 +3569,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/deep-check /review/deep-check.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
@@ -3714,8 +3626,8 @@ module.exports = {
     buildBatchIcs,
     tailLines,
     renderRunFormPage,
-    renderDeepCheckPage,
-    resolveDeepCheckPick,
+    renderSourceAuditPage,
+    countSourceAuditOpen,
     renderConfirmRunPage,
     parsePortFromArgv,
     lookupIcsEvent,

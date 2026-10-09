@@ -1948,6 +1948,9 @@ class SharedCore {
         Object.keys(prev.lost && typeof prev.lost === 'object' ? prev.lost : {}).forEach((series) => {
             const entry = prev.lost[series] || {};
             lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
+            // The audit's "still on the site?" verdict rides with the series
+            // (tools/source-audit.js stamps it into the state).
+            if (entry.still && typeof entry.still === 'object' && entry.still.verdict) lost[series].still = { verdict: String(entry.still.verdict), at: String(entry.still.at || '') };
         });
         const todayKey = String(current.todayKey || '');
         const runId = String(current.runId || '');
@@ -2020,7 +2023,9 @@ class SharedCore {
             const entry = lost[series];
             const days = Object.keys(entry.days).sort();
             const since = days.map((day) => entry.days[day]).sort()[0] || '';
-            return { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
+            const item = { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
+            if (entry.still && entry.still.verdict) { item.still = entry.still.verdict; item.still_at = entry.still.at || ''; }
+            return item;
         }).sort((a, b) => (b.bear ? 1 : 0) - (a.bear ? 1 : 0) || b.days.length - a.days.length || a.since.localeCompare(b.since) || a.title.localeCompare(b.title));
         return {
             state: { history, misses, lost },

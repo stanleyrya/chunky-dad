@@ -1099,10 +1099,10 @@ test('same-change fold: events that become a whole day fold under their kind; a 
 
 
 // ---------------------------------------------------------------------------
-// Deep check: one host a day — rotation, page text, events, answers.
+// Source audit helpers (tools/source-audit.js uses them) and the audit itself.
 // ---------------------------------------------------------------------------
 
-function ledgerLineForDeepCheck(host, extra = {}) {
+function ledgerLineForAudit(host, extra = {}) {
   return Object.assign({
     v: 1, run_id: '20261008-052207', finished_at: '2026-10-08T09:22:07.543Z', environment: 'node', trigger: 'scheduled', host, parsers: [host],
     pages: 1, outbound_pages: 0, page_errors: 0, errors: [], extracted: 40, events: 8, bear: 8, upcoming: 6, proposals: { new: 0, merge: 2 }, duration_ms: 100,
@@ -1111,39 +1111,10 @@ function ledgerLineForDeepCheck(host, extra = {}) {
   }, extra);
 }
 
-function deepCheckHealth(lines) {
+function auditHealth(lines) {
   const MetricsSections = require('../scripts/metrics-sections');
   return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-08T12:00:00.000Z') });
 }
-
-test('pickDeepCheckHost: troubled and lost hosts first, then two-plus quality badges, then the one checked longest ago; the day’s pick is sticky; companions are skipped', () => {
-  const health = deepCheckHealth([
-    ledgerLineForDeepCheck('a.example'),
-    ledgerLineForDeepCheck('b.example'),
-    ledgerLineForDeepCheck('lost.example', { lost: [{ title: 'Bear Night', bear: true, since: '20261007-052319', seen: 5, days: ['2026-10-18'], new: 0 }] }),
-    ledgerLineForDeepCheck('messy.example', { quality: Object.assign(ledgerLineForDeepCheck('x').quality, { time: 10, desc: 0 }) }),
-    ledgerLineForDeepCheck('feed.example', { parsers: ['Club'] }),
-    ledgerLineForDeepCheck('site.example', { parsers: ['Club'], extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' })
-  ]);
-  assert.equal(health.rows.find(row => row.host === 'site.example').verdict, 'companion');
-  const empty = rq.emptyDeepCheckStore();
-  const first = rq.pickDeepCheckHost(health, empty, '2026-10-08');
-  assert.equal(first.host, 'lost.example');
-  assert.match(first.reason, /^lost since 20261007-052319/);
-  assert.equal(first.changed, true);
-  // Checked today → the next band; a.example before b.example (never checked, alphabetical).
-  const checked = { ...empty, checks: { 'lost.example': { lastCheckedAt: '2026-10-08T10:00:00.000Z', lastAnswer: 'ok' } } };
-  assert.equal(rq.pickDeepCheckHost(health, checked, '2026-10-08').host, 'messy.example');
-  assert.equal(rq.pickDeepCheckHost(health, checked, '2026-10-08').reason, '2 quality signals off');
-  const later = { ...empty, checks: { 'lost.example': { lastCheckedAt: '2026-10-08T10:00:00.000Z' }, 'messy.example': { lastCheckedAt: '2026-10-08T11:00:00.000Z' }, 'a.example': { lastCheckedAt: '2026-10-01T10:00:00.000Z' } } };
-  assert.equal(rq.pickDeepCheckHost(health, later, '2026-10-08').host, 'b.example', 'never checked before checked a week ago');
-  assert.equal(rq.pickDeepCheckHost(health, later, '2026-10-08').reason, 'never checked');
-  const sticky = { ...empty, current: { host: 'b.example', date: '2026-10-08', reason: 'never checked' } };
-  assert.deepEqual(rq.pickDeepCheckHost(health, sticky, '2026-10-08'), { host: 'b.example', reason: 'never checked', changed: false });
-  assert.equal(rq.pickDeepCheckHost(health, sticky, '2026-10-09').host, 'lost.example', 'a new day picks again');
-  assert.ok(!['site.example'].includes(rq.pickDeepCheckHost(health, { ...empty, checks: Object.fromEntries(['a.example', 'b.example', 'lost.example', 'messy.example', 'feed.example'].map(host => [host, { lastCheckedAt: '2026-10-08T01:00:00.000Z' }])) }, '2026-10-08').host), 'a companion is never the pick');
-  assert.equal(rq.pickDeepCheckHost({ rows: [] }, empty, '2026-10-08').host, null);
-});
 
 test('readableTextFromHtml strips scripts, styles, head and markup, keeps block breaks, decodes entities, caps', () => {
   const html = '<html><head><title>T</title><style>.a{}</style></head><body><nav><a href="/">Home</a></nav><h1>Eagle &amp; Friends</h1><script>var x = "<p>no</p>";</script><div class="card"><p>Fri, Oct 10 &middot; 9&nbsp;PM</p><p>Bear Night &#8211; Beer Bust</p></div><!-- hidden --><ul><li>one</li><li>two</li></ul></body></html>';
@@ -1198,71 +1169,133 @@ test('eventsForHost: the latest run’s events for one host (attributed like the
   assert.deepEqual(rq.eventsForHost(payload, 'nowhere.example'), []);
 });
 
-test('deep-check store: answers replace per host and day, checks remember the last look, the queue is the work (newest first), atomic save', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deep-store-'));
-  const file = rq.getDeepCheckPath(dir);
-  assert.equal(path.basename(file), 'deep-check.json');
-  assert.equal(rq.loadDeepCheck(file).answers.length, 0);
-  assert.equal(rq.recordDeepCheckAnswer(rq.emptyDeepCheckStore(), { host: 'x', answer: 'maybe' }), null);
-  assert.equal(rq.recordDeepCheckAnswer(rq.emptyDeepCheckStore(), { answer: 'ok' }), null);
-  const t1 = new Date('2026-10-08T10:00:00.000Z');
-  let result = rq.recordDeepCheckAnswer(rq.emptyDeepCheckStore(), { host: 'Eaglela.com', answer: 'ok', text: '', lostStill: { 'ONYX': 'no', 'JUNGLE': 'maybe' } }, t1);
-  assert.deepEqual(result.entry, { date: '2026-10-08', stampedAt: t1.toISOString(), host: 'eaglela.com', answer: 'ok', text: '', fakes: [], lostStill: { ONYX: 'no' } });
-  result = rq.recordDeepCheckAnswer(result.store, { host: 'eaglela.com', answer: 'fake', fakes: ['View Event →', ''], text: 'the first row is a button' }, new Date('2026-10-08T11:00:00.000Z'));
-  assert.equal(result.store.answers.length, 1, 'same host, same day → replaced');
-  assert.deepEqual(result.store.answers[0].fakes, ['View Event →']);
-  assert.equal(result.store.checks['eaglela.com'].lastAnswer, 'fake');
-  result = rq.recordDeepCheckAnswer(result.store, { host: 'b.example', answer: 'ok' }, new Date('2026-10-09T10:00:00.000Z'));
-  result = rq.recordDeepCheckAnswer(result.store, { host: 'c.example', answer: 'missing', text: 'Sunday beer bust is on the page' }, new Date('2026-10-10T10:00:00.000Z'));
-  const saved = rq.saveDeepCheck(file, result.store);
-  assert.equal(saved.answers.length, 3);
-  assert.deepEqual(rq.loadDeepCheck(file), saved);
-  assert.ok(!fs.readdirSync(dir).some(name => name.includes('.tmp-')), 'no temp file left behind');
-  const queue = rq.deepCheckQueue(saved);
-  assert.deepEqual(queue.map(entry => [entry.host, entry.answer]), [['c.example', 'missing'], ['eaglela.com', 'fake']], 'a plain "looks right" is not work');
+
+const sourceAudit = require('../tools/source-audit');
+
+test('pickAuditHosts: troubled/lost first, then two-plus quality badges, then the host audited longest ago (never first); cap per run; a host audited today waits; companions skipped; forced hosts win', () => {
+  const health = auditHealth([
+    ledgerLineForAudit('a.example'),
+    ledgerLineForAudit('b.example'),
+    ledgerLineForAudit('lost.example', { lost: [{ title: 'Bear Night', bear: true, since: '20261007-052319', seen: 5, days: ['2026-10-18'], new: 0 }] }),
+    ledgerLineForAudit('dead.example', { status: 'dead', extracted: 0, events: 0, bear: 0, upcoming: 0, page_errors: 1, errors: ['HTTP 403'] }),
+    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10, desc: 0 }) }),
+    ledgerLineForAudit('feed.example', { parsers: ['Club'] }),
+    ledgerLineForAudit('site.example', { parsers: ['Club'], extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' })
+  ]);
+  const empty = sourceAudit.emptySourceAuditStore();
+  const picks = sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 3 });
+  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'messy.example']);
+  assert.match(picks[0].reason, /^dead since/);
+  assert.equal(picks[2].reason, '2 quality signals off');
+  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
+  const next = sourceAudit.pickAuditHosts(health, audited, { today: '2026-10-08', cap: 3 });
+  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s host waits; within the rest, never audited beats audited a week ago');
+  assert.equal(next[2].reason, 'never audited');
+  assert.ok(!sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 10 }).some(pick => pick.host === 'site.example'), 'a companion is never picked');
+  assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 1 }).length, 1);
+  assert.deepEqual(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', hosts: ['B.EXAMPLE', 'nowhere'] }).map(pick => pick.host), ['b.example']);
+  assert.deepEqual(sourceAudit.pickAuditHosts({ rows: [] }, empty, { today: '2026-10-08' }), []);
+});
+
+test('stillOnSite: the series title against the page text line by line — found, not found, one-token titles, accents and case, nothing to compare', () => {
+  const page = 'Upcoming\nSat, Oct 11 · 9PM\nBEARDED PIG DISCO\nat Precinct DTLA\nSunday Beer Bust 3pm\nThe Hunt — Gear House Events\nÉvènement: La Cabane à sucre des OURS\n';
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', page).verdict, 'still-listed');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', page).line, 'bearded pig disco');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco at Precinct', page).verdict, 'still-listed', 'two adjacent lines together');
+  assert.equal(sourceAudit.stillOnSite('la cabane a sucre des ours', page).verdict, 'still-listed', 'accents folded');
+  assert.equal(sourceAudit.stillOnSite('ONYX', page).verdict, 'site-removed');
+  assert.equal(sourceAudit.stillOnSite('Beer', page).verdict, 'still-listed', 'a one-token title needs its token on a line');
+  assert.equal(sourceAudit.stillOnSite('Furry Friday Underwear Party', page).verdict, 'site-removed', 'a stray shared word is not a match');
+  assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', '').verdict, 'unknown');
+  assert.equal(sourceAudit.stillOnSite('', page).verdict, 'unknown');
+});
+
+test('parseAuditAnswer: JSON inside chatter, strings as items, junk dropped, caps; buildAuditPrompt names the host, the page and every extracted event', () => {
+  const parsed = sourceAudit.parseAuditAnswer('Here you go:\n{"missing":[{"title":"Sunday Beer Bust","date":"Sun Oct 11"},"Pup Night", {"nope": 1}],"fake":[{"title":"View Event →","reason":"a button"}],"note":"Mostly matches."} thanks');
+  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', reason: 'a button' }], wrong: [], note: 'Mostly matches.' });
+  assert.deepEqual(sourceAudit.parseAuditAnswer('{"missing":[],"fake":[],"wrong":[{"title":"The Hunt","issue":"page says Bar Le Diamant"}],"note":""}').wrong, [{ title: 'The Hunt', issue: 'page says Bar Le Diamant' }]);
+  assert.equal(sourceAudit.parseAuditAnswer('no json here'), null);
+  assert.equal(sourceAudit.parseAuditAnswer('[1,2]'), null);
+  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }], { today: '2026-10-09' });
+  assert.match(prompt, /events from eaglela\.com for a gay bear community calendar\. Today is 2026-10-09\./);
+  assert.match(prompt, /anything dated before 2026-10-09/);
+  assert.match(prompt, /PAGE TEXT HERE/);
+  assert.match(prompt, /1\. 2026-10-11 3:00 PM — Beer Bust @ Eagle LA/);
+  assert.match(prompt, /"missing":\[\{"title":"","date":""\}\].*"wrong":\[\{"title":"","issue":""\}\]/);
+});
+
+test('source-audit store: normalize, save atomically, load; the queue is every host with open findings, newest first', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-store-'));
+  const file = sourceAudit.getSourceAuditPath(dir);
+  assert.equal(path.basename(file), 'source-audit.json');
+  const store = sourceAudit.emptySourceAuditStore();
+  store.hosts['a.example'] = { date: '2026-10-08', run_id: 'r1', verdict: 'lost', badges: ['flags 2'], page: { url: 'https://a.example/', fetchedAt: '2026-10-08T01:00:00Z', chars: 100 }, still: [{ title: 'ONYX', verdict: 'still-listed', checked_at: 'x', line: 'onyx' }, { title: 'Junk', verdict: 'nope' }], missing: [{ title: 'Beer Bust', date: 'Sun' }], fake: [], note: 'n', ai: 'ok' };
+  store.hosts['b.example'] = { date: '2026-10-09', run_id: 'r2', verdict: 'ok', badges: [], page: null, still: [{ title: 'X', verdict: 'site-removed' }], missing: [], fake: [], note: '', ai: 'ok' };
+  store.hosts['c.example'] = { date: '2026-10-09', run_id: 'r2', verdict: 'ok', badges: [], page: null, still: [], missing: [], fake: [{ title: 'Menu', reason: 'a heading' }], note: '', ai: 'ok' };
+  store.runs.push({ run_id: 'r2', date: '2026-10-09', audited: ['b.example', 'c.example'], losses: [], ms: 1200 });
+  const saved = sourceAudit.saveSourceAudit(file, store);
+  assert.equal(saved.hosts['a.example'].still.length, 1, 'a verdict outside the three is dropped');
+  assert.ok(saved.updatedAt);
+  assert.deepEqual(sourceAudit.loadSourceAudit(file), saved);
+  assert.ok(!fs.readdirSync(dir).some(name => name.includes('.tmp-')));
+  assert.deepEqual(sourceAudit.findingsQueue(saved).map(entry => entry.host), ['c.example', 'a.example'], 'b has only a site-removed series: nothing open');
+  assert.equal(sourceAudit.hostHasOpenFindings(saved.hosts['b.example']), false);
   fs.writeFileSync(file, '{broken');
-  assert.equal(rq.loadDeepCheck(file).answers.length, 0, 'a corrupt store reads as empty');
+  assert.deepEqual(sourceAudit.loadSourceAudit(file).hosts, {});
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('buildDeepCheckCard: today’s host with its page text, events, lost series, badges and the day’s answer, persisted as the day’s pick', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deep-card-'));
+test('runSourceAudit: fetches each host’s listing page through the adapter, checks every lost series, asks the mocked AI for the rotation only, stamps the verdicts into the loss state so the next ledger line carries lost[].still, writes the store, never throws', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-run-'));
   fs.mkdirSync(path.join(dir, 'metrics'), { recursive: true });
-  fs.mkdirSync(path.join(dir, 'storage', 'pages', 'eaglela.com'), { recursive: true });
-  const lines = [
-    ledgerLineForDeepCheck('eaglela.com', { parsers: ['Eagle LA'], lost: [{ title: 'ONYX', bear: true, since: '20260930-180648', seen: 22, days: ['2026-10-11', '2026-10-23'], new: 0 }], quality: Object.assign(ledgerLineForDeepCheck('x').quality, { desc: 13 }) }),
-    ledgerLineForDeepCheck('steady.example')
-  ];
+  const SharedCore = require('../scripts/shared-core').SharedCore;
+  const payloadAt = (runId, day, titles) => ({
+    summary: { runId, timestamp: `${day}T09:00:00.000Z` }, runContext: { environment: 'node' },
+    parserResults: [{ name: 'Eagle LA', totalEvents: titles.length, config: { urls: ['https://eaglela.com/events/'] }, urlClassifications: {}, events: titles.map(title => ({ title, startDate: '2026-11-20T22:00:00.000Z', bar: 'Eagle LA', timezone: 'America/Los_Angeles', website: `https://eaglela.com/events/${title.toLowerCase()}/`, isBearEvent: true })) },
+      { name: 'Quiet', totalEvents: 2, config: { urls: ['https://quiet.example/'] }, urlClassifications: {}, events: [{ title: 'Trivia', startDate: '2026-11-21T22:00:00.000Z', bar: 'Quiet', timezone: 'America/Los_Angeles', website: 'https://quiet.example/trivia', isBearEvent: true }] }],
+    analyzedEvents: [], bearDroppedEvents: [], errors: []
+  });
+  let upcoming = null; let lines = [];
+  [['20261001-050000', '2026-10-01', ['ONYX', 'JUNGLE']], ['20261002-050000', '2026-10-02', ['ONYX', 'JUNGLE']], ['20261003-050000', '2026-10-03', ['JUNGLE']], ['20261004-050000', '2026-10-04', ['JUNGLE']]].forEach(([runId, day, titles]) => {
+    const built = SharedCore.buildSourceLedger(payloadAt(runId, day, titles), { runId, previousUpcoming: upcoming, now: new Date(`${day}T12:00:00Z`) });
+    upcoming = built.upcoming; lines = lines.concat(built.records);
+  });
+  assert.equal(lines[lines.length - 2].lost.length, 1, 'ONYX confirmed lost on the fourth run');
   fs.writeFileSync(path.join(dir, 'metrics', 'sources.ndjson'), lines.map(line => JSON.stringify(line)).join('\n') + '\n');
-  fs.writeFileSync(path.join(dir, 'storage', 'pages', 'eaglela.com', 'events.json'), JSON.stringify({ url: 'https://eaglela.com/events/', fetchedAt: '2026-10-08T01:00:00.000Z', statusCode: 200, html: '<h1>Upcoming</h1><p>Sun Oct 11 · Beer Bust 3PM</p>' }));
-  const run = { runId: '20261008-052207', payload: { parserResults: [{ name: 'Eagle LA', config: { urls: ['https://eaglela.com/events/'] }, events: [{ title: 'Beer Bust', startDate: '2026-10-11T22:00:00.000Z', timezone: 'America/Los_Angeles', bar: 'Eagle LA', website: 'https://eaglela.com/events/bust/', isBearEvent: true }] }] } };
-  const card = rq.buildDeepCheckCard(dir, run, { today: '2026-10-08', now: new Date('2026-10-08T12:00:00.000Z') });
-  assert.equal(card.available, true);
-  assert.equal(card.host, 'eaglela.com');
-  assert.equal(card.verdict, 'lost');
-  assert.match(card.reason, /^lost since/);
-  assert.equal(card.page.url, 'https://eaglela.com/events/');
-  assert.equal(card.page.preferred, true);
-  assert.equal(card.page.text, 'Upcoming\nSun Oct 11 · Beer Bust 3PM');
-  assert.deepEqual(card.events.map(event => event.title), ['Beer Bust']);
-  assert.equal(card.lost[0].title, 'ONYX');
-  assert.deepEqual(card.badges.map(badge => badge.chip), ['desc 13%']);
-  assert.equal(card.todayAnswer, null);
-  const store = rq.loadDeepCheck(rq.getDeepCheckPath(dir));
-  assert.deepEqual(store.current, { host: 'eaglela.com', date: '2026-10-08', reason: card.reason });
-  // An answer today shows on the card; the pick stays.
-  rq.saveDeepCheck(rq.getDeepCheckPath(dir), rq.recordDeepCheckAnswer(store, { host: 'eaglela.com', answer: 'missing', text: 'the Sunday bust' }, new Date('2026-10-08T13:00:00.000Z')).store);
-  const again = rq.buildDeepCheckCard(dir, run, { today: '2026-10-08', now: new Date('2026-10-08T13:30:00.000Z') });
-  assert.equal(again.host, 'eaglela.com');
-  assert.equal(again.todayAnswer.answer, 'missing');
-  assert.equal(again.previous.lastAnswer, 'missing');
-  // No ledger → not available; no cached page → page null, events still listed.
-  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deep-bare-'));
-  assert.equal(rq.buildDeepCheckCard(bare, run, { today: '2026-10-08' }).available, false);
-  fs.rmSync(path.join(dir, 'storage'), { recursive: true, force: true });
-  const noPage = rq.buildDeepCheckCard(dir, run, { today: '2026-10-08' });
-  assert.equal(noPage.page, null);
-  assert.equal(noPage.events.length, 1);
+  fs.writeFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), JSON.stringify(upcoming));
+  const fetched = [];
+  const adapter = { fetchData: async (url, options) => { fetched.push([url, options && options.fresh === true]); if (url.includes('quiet')) throw new Error('HTTP request failed for https://quiet.example/: HTTP 403: '); return { url, fetchedAt: '2026-10-04T01:00:00.000Z', statusCode: 200, html: '<h1>Eagle LA</h1><div><p>Fri Nov 20 · ONYX · 9PM</p><p>Sat Nov 21 · JUNGLE</p><p>Sun Nov 22 · Beer Bust 3PM</p></div>' }; } };
+  const prompts = [];
+  const ai = { generate: async (prompt) => { prompts.push(prompt); return '{"missing":[{"title":"Beer Bust","date":"Sun Nov 22"}],"fake":[],"note":"ONYX is still on the page."}'; } };
+  const logs = [];
+  const summary = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', ['JUNGLE']), runId: '20261004-050000', adapter, ai, today: '2026-10-04', now: new Date('2026-10-04T12:00:00Z'), cap: 1, hosts: ['eaglela.com'], log: line => logs.push(line) });
+  assert.deepEqual(summary.audited, ['eaglela.com']);
+  assert.deepEqual(summary.errors, []);
+  assert.equal(prompts.length, 1, 'the AI is asked once, for the rotation host');
+  assert.match(prompts[0], /Fri Nov 20 · ONYX/);
+  assert.match(prompts[0], /2026-11-20 .*JUNGLE/);
+  assert.deepEqual(fetched.map(f => f[0]), ['https://eaglela.com/events/']);
+  const store = sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir));
+  const eagle = store.hosts['eaglela.com'];
+  assert.equal(eagle.ai, 'ok');
+  assert.deepEqual(eagle.missing, [{ title: 'Beer Bust', date: 'Sun Nov 22' }]);
+  assert.equal(eagle.still[0].title, 'ONYX');
+  assert.equal(eagle.still[0].verdict, 'still-listed', 'the page still lists ONYX: our miss');
+  assert.equal(eagle.page.url, 'https://eaglela.com/events/');
+  assert.equal(store.runs.length, 1);
+  assert.deepEqual(sourceAudit.findingsQueue(store).map(entry => entry.host), ['eaglela.com']);
+  const state = JSON.parse(fs.readFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), 'utf8'));
+  assert.equal(state.hosts['eaglela.com'].lost.onyx.still.verdict, 'still-listed');
+  const next = SharedCore.buildSourceLedger(payloadAt('20261005-050000', '2026-10-05', ['JUNGLE']), { runId: '20261005-050000', previousUpcoming: state, now: new Date('2026-10-05T12:00:00Z') });
+  const line = next.records.find(record => record.host === 'eaglela.com');
+  assert.equal(line.lost[0].still, 'still-listed');
+  assert.ok(line.lost[0].still_at);
+  const quiet = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', []), runId: '20261004-050000', adapter, ai, today: '2026-10-04', hosts: ['quiet.example'], log: () => {} });
+  assert.deepEqual(quiet.audited, ['quiet.example']);
+  assert.equal(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir)).hosts['quiet.example'].ai, 'no-page');
+  const off = await sourceAudit.runSourceAudit({ sharedRoot: dir, env: { CHUNKY_SOURCE_AUDIT: '0' }, log: () => {} });
+  assert.equal(off.enabled, false);
+  const none = await sourceAudit.runSourceAudit({ sharedRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-none-')), log: () => {} });
+  assert.deepEqual(none.skipped, ['no source ledger']);
   fs.rmSync(dir, { recursive: true, force: true });
-  fs.rmSync(bare, { recursive: true, force: true });
 });

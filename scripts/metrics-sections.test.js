@@ -945,3 +945,74 @@ test('quality chips on the Sources table and tiles on the host page', () => {
   assert.equal(MetricsSections.buildQualityChipsHtml(old), '<span class="cell-subtitle">—</span>');
   assert.equal(typeof require('./metrics-sections').buildHostQualityHtml, 'function');
 });
+
+
+// ---------------------------------------------------------------------------
+// The audit's verdicts on the dashboard: a lost series the site removed is a
+// note, not trouble; a still-listed one stays lost (our miss); findings
+// become a chip on the table and a card on the host page.
+// ---------------------------------------------------------------------------
+
+function auditLedger() {
+  const pig = (extra = {}) => Object.assign({ title: 'Bearded Pig Disco', bear: true, since: '20261007-050000', seen: 4, days: ['2026-10-11', '2026-10-18'], new: 0 }, extra);
+  return [
+    buildLedgerLine({ host: 'removed.example', parsers: ['Removed'], lost: [pig({ still: 'site-removed', still_at: '2026-10-08T06:00:00Z' })] }),
+    buildLedgerLine({ host: 'ours.example', parsers: ['Ours'], lost: [pig({ still: 'still-listed', still_at: '2026-10-08T06:00:00Z' }), { title: 'Gone Party', bear: false, since: '20261007-050000', seen: 3, days: ['2026-11-01'], new: 0, still: 'site-removed' }] }),
+    buildLedgerLine({ host: 'overlay.example', parsers: ['Overlay'], lost: [pig()] }),
+    buildLedgerLine({ host: 'unchecked.example', parsers: ['Unchecked'], lost: [pig()] })
+  ];
+}
+
+const AUDIT = { version: 1, hosts: {
+  'overlay.example': { date: '2026-10-08', run_id: '20261008-050000', verdict: 'lost', badges: [], page: { url: 'https://overlay.example/events/', fetchedAt: '2026-10-08T05:00:00Z', chars: 1200 }, still: [{ title: 'bearded pig disco', verdict: 'site-removed', checked_at: '2026-10-08T06:00:00Z', line: '' }], missing: [{ title: 'Sunday Beer Bust', date: 'Oct 12' }], fake: [{ title: 'View Event →', reason: 'a button' }], note: 'One miss.', ai: 'ok' }
+} };
+
+test('assessSourceHealth with the audit: site-removed series drop out of the lost numbers and the verdict; still-listed stays lost; the audit file overlays the line for today', () => {
+  const health = MetricsSections.assessSourceHealth(auditLedger(), { now: new Date('2026-09-21T23:00:00.000Z'), audit: AUDIT });
+  const rowOf = host => health.rows.find(row => row.host === host);
+  const removed = rowOf('removed.example');
+  assert.equal(removed.verdict, 'ok', 'the site itself dropped the series: not our miss');
+  assert.equal(removed.lostDays, 0);
+  assert.equal(removed.lostRemoved, 1);
+  assert.equal(removed.lost.length, 1, 'kept for the record');
+  const ours = rowOf('ours.example');
+  assert.equal(ours.verdict, 'lost');
+  assert.equal(ours.lostDays, 2, 'only the still-listed series counts');
+  assert.equal(ours.lostStillListed, 1);
+  assert.equal(ours.lostRemoved, 1);
+  const overlay = rowOf('overlay.example');
+  assert.equal(overlay.lost[0].still, 'site-removed', 'the audit file supplies what the line does not have yet');
+  assert.equal(overlay.verdict, 'ok');
+  assert.equal(overlay.auditOpen, true, 'missing + fake findings are open');
+  assert.equal(overlay.audit.missing[0].title, 'Sunday Beer Bust');
+  const unchecked = rowOf('unchecked.example');
+  assert.equal(unchecked.verdict, 'lost');
+  assert.equal(unchecked.lost[0].still, undefined);
+  assert.equal(unchecked.audit, null);
+  assert.equal(health.lost.days, 4, 'two hosts × two days still counted');
+  const digest = MetricsSections.buildSourceWidgetSummary(health);
+  assert.deepEqual(digest.lostItems.map(item => item.host), ['ours.example', 'unchecked.example']);
+});
+
+test('audit on the page: the Lost column note, the lost list’s Site column, the audit chip and the host audit card', () => {
+  const health = MetricsSections.assessSourceHealth(auditLedger(), { now: new Date('2026-09-21T23:00:00.000Z'), audit: AUDIT });
+  const table = MetricsSections.buildSourcesTableHtml(health);
+  assert.match(table, /2 gone \(2 bear\) · 1 still listed — our miss · Bearded Pig Disco ×2 · 1 series removed by the site · since Oct 7 05:00/);
+  assert.match(table, /quality-chip quality-audit" title="1 on the page we did not extract · 1 extracted that are not events \(audit 2026-10-08\)">audit 2</);
+  const ours = health.rows.find(row => row.host === 'ours.example');
+  const list = MetricsSections.buildLostListHtml(ours);
+  assert.match(list, /<th>Site<\/th>/);
+  assert.match(list, /still-chip still-listed">still listed — our miss/);
+  assert.match(list, /tr class="lost-removed"/);
+  assert.match(list, /1 series the site itself no longer lists/);
+  assert.match(list, /1 series the site STILL lists/);
+  const overlay = health.rows.find(row => row.host === 'overlay.example');
+  const card = MetricsSections.buildHostAuditHtml(overlay);
+  assert.match(card, /Audit 2026-10-08 · run Oct 8 05:00/);
+  assert.match(card, /Sunday Beer Bust/);
+  assert.match(card, /View Event →.*a button/);
+  assert.match(card, /still-removed">site removed<\/span> <b>bearded pig disco/);
+  assert.match(card, /One miss\./);
+  assert.match(MetricsSections.buildHostAuditHtml(health.rows.find(row => row.host === 'unchecked.example')), /No audit of this host yet/);
+  assert.equal(MetricsSections.formatStillHtml('unknown'), '<span class="still-chip still-unknown">unknown</span>');
+});

@@ -1897,72 +1897,11 @@ function buildDeck(runPayload, store, options = {}) {
 // the same change table (getSameChangeSignature) and the same reason — the
 // note swiped onto a folded same-change card.
 // ---------------------------------------------------------------------------
-// Deep check: one host a day gets a real look — its listing page's text
-// (from the page cache the scraper already keeps) beside the events the
-// latest run extracted from it, its open lost series, and three one-tap
-// answers. State lives in <sharedRoot>/deep-check.json (Mac-only writer):
-//   { version, current: { host, date, reason }, checks: { host: { lastCheckedAt, lastAnswer } },
-//     answers: [{ date, host, answer: missing|fake|ok, text, fakes: [titles], lostStill: { title: yes|no } }] }
-// The answers are the fix queue (GET /review/deep-check.json).
+// Source audit helpers shared with tools/source-audit.js: the ledger assessed
+// the way the dashboard does, a cached page as readable text, the events the
+// run extracted from one host.
 // ---------------------------------------------------------------------------
-const DEEP_CHECK_FILE_NAME = 'deep-check.json';
-const DEEP_CHECK_ANSWERS = ['missing', 'fake', 'ok'];
 const DEEP_CHECK_PAGE_TEXT_CAP = 6000;
-
-function getDeepCheckPath(sharedRoot) {
-    return path.join(sharedRoot, DEEP_CHECK_FILE_NAME);
-}
-
-function emptyDeepCheckStore() {
-    return { version: 1, current: null, checks: {}, answers: [] };
-}
-
-function normalizeDeepCheckStore(parsed) {
-    const store = emptyDeepCheckStore();
-    if (!parsed || typeof parsed !== 'object') return store;
-    if (parsed.current && typeof parsed.current === 'object' && parsed.current.host) {
-        store.current = { host: String(parsed.current.host), date: String(parsed.current.date || ''), reason: String(parsed.current.reason || '') };
-    }
-    if (parsed.checks && typeof parsed.checks === 'object') {
-        Object.keys(parsed.checks).forEach((host) => {
-            const entry = parsed.checks[host];
-            if (!entry || typeof entry !== 'object') return;
-            store.checks[host] = { lastCheckedAt: String(entry.lastCheckedAt || ''), lastAnswer: String(entry.lastAnswer || '') };
-        });
-    }
-    if (Array.isArray(parsed.answers)) {
-        store.answers = parsed.answers.filter((entry) => entry && typeof entry === 'object' && entry.host && DEEP_CHECK_ANSWERS.includes(entry.answer))
-            .map((entry) => ({
-                date: String(entry.date || ''),
-                stampedAt: String(entry.stampedAt || ''),
-                host: String(entry.host),
-                answer: String(entry.answer),
-                text: String(entry.text || ''),
-                fakes: Array.isArray(entry.fakes) ? entry.fakes.map(String) : [],
-                lostStill: entry.lostStill && typeof entry.lostStill === 'object' ? entry.lostStill : {}
-            }));
-    }
-    return store;
-}
-
-function loadDeepCheck(file, fsLike = fs) {
-    try {
-        if (!fsLike.existsSync(file)) return emptyDeepCheckStore();
-        return normalizeDeepCheckStore(JSON.parse(fsLike.readFileSync(file, 'utf8')));
-    } catch (error) {
-        console.warn(`review-queue: deep-check store unreadable (${error.message}) — treating as empty`);
-        return emptyDeepCheckStore();
-    }
-}
-
-function saveDeepCheck(file, store, fsLike = fs) {
-    const normalized = normalizeDeepCheckStore(store);
-    fsLike.mkdirSync(path.dirname(file), { recursive: true });
-    const tmpPath = `${file}.tmp-${process.pid}`;
-    fsLike.writeFileSync(tmpPath, JSON.stringify(normalized, null, 2));
-    fsLike.renameSync(tmpPath, file);
-    return normalized;
-}
 
 // The source ledger assessed the way the dashboard does (with the owner's
 // decisions joined for the rejections signal). null when there is no ledger.
@@ -1975,36 +1914,11 @@ function loadSourceHealth(sharedRoot, options = {}) {
     const records = MetricsSections.parseSourceLedger(text);
     if (!records.length) return null;
     const decisions = options.decisions || loadDecisions(getDecisionsPath(sharedRoot));
-    return { records, health: MetricsSections.assessSourceHealth(records, { now: options.now || new Date(), decisions }) };
-}
-
-function deepCheckBand(row) {
-    if (['dead', 'stopped', 'shrunk', 'lost'].includes(row.verdict)) return 0;
-    if (row.quality && row.quality.offCount >= 2) return 1;
-    return 2;
-}
-
-// Today's host: the one already picked today stays (a reload is not a new
-// day); otherwise troubled/lost hosts first, then hosts with two or more
-// quality badges, then the rest — within a band the one checked longest
-// ago (never first). Companions (fed by a sibling host) are skipped.
-function pickDeepCheckHost(health, store, today) {
-    const rows = health && Array.isArray(health.rows) ? health.rows.filter((row) => row.verdict !== 'companion') : [];
-    const state = normalizeDeepCheckStore(store);
-    if (!rows.length) return { host: null, reason: 'no ledger', changed: false };
-    const current = state.current;
-    if (current && current.date === today && rows.some((row) => row.host === current.host)) {
-        return { host: current.host, reason: current.reason, changed: false };
+    let audit = options.audit || null;
+    if (!audit) {
+        try { audit = JSON.parse(fsLike.readFileSync(path.join(sharedRoot, 'source-audit.json'), 'utf8')); } catch (_) { audit = null; }
     }
-    const checkedAt = (host) => (state.checks[host] && state.checks[host].lastCheckedAt) || '';
-    const ordered = rows.slice().sort((a, b) => deepCheckBand(a) - deepCheckBand(b)
-        || checkedAt(a.host).localeCompare(checkedAt(b.host))
-        || String(a.host).localeCompare(String(b.host)));
-    const pick = ordered.find((row) => checkedAt(row.host).slice(0, 10) !== today) || ordered[0];
-    const band = deepCheckBand(pick);
-    const reason = band === 0 ? `${pick.verdict}${pick.since ? ` since ${pick.since}` : ''}`
-        : (band === 1 ? `${pick.quality.offCount} quality signals off` : (checkedAt(pick.host) ? `last checked ${checkedAt(pick.host).slice(0, 10)}` : 'never checked'));
-    return { host: pick.host, reason, changed: true };
+    return { records, health: MetricsSections.assessSourceHealth(records, { now: options.now || new Date(), decisions, audit }) };
 }
 
 // Cached HTML → readable text: no scripts, styles or markup, block tags as
@@ -2128,101 +2042,6 @@ function eventsForHost(payload, host) {
     });
     rows.sort((a, b) => a.day.localeCompare(b.day) || a.title.localeCompare(b.title));
     return rows;
-}
-
-// Everything the deep-check page shows for today's host.
-function buildDeepCheckCard(sharedRoot, run, options = {}) {
-    const fsLike = options.fs || fs;
-    const today = options.today || new Date().toISOString().slice(0, 10);
-    const loaded = options.sourceHealth || loadSourceHealth(sharedRoot, { fs: fsLike, now: options.now });
-    if (!loaded) return { available: false, reason: 'no source ledger', today };
-    const storePath = getDeepCheckPath(sharedRoot);
-    let store = loadDeepCheck(storePath, fsLike);
-    const pick = pickDeepCheckHost(loaded.health, store, today);
-    if (!pick.host) return { available: false, reason: pick.reason, today };
-    if (pick.changed && options.persist !== false) {
-        store.current = { host: pick.host, date: today, reason: pick.reason };
-        store = saveDeepCheck(storePath, store, fsLike);
-    }
-    const row = loaded.health.rows.find((entry) => entry.host === pick.host);
-    const latest = row.latest || {};
-    const preferred = [latest.url].filter(Boolean);
-    const page = findCachedListingPage(sharedRoot, row.host, preferred, fsLike);
-    const readable = page ? readableTextFromHtml(page.html, options.pageTextCap) : null;
-    // The events come from the newest run that actually ran this host (the
-    // ledger's latest line names it) — a hand-run of one other parser is
-    // the newest run file but holds nothing of this host.
-    let eventsRun = run && run.payload ? run : null;
-    if (latest.run_id && (!eventsRun || eventsRun.runId !== latest.run_id)) {
-        try {
-            const own = loadRun(sharedRoot, latest.run_id);
-            if (own && own.payload) eventsRun = own;
-        } catch (_) { /* fall back to the deck's run */ }
-    }
-    const payload = eventsRun ? eventsRun.payload : null;
-    const events = payload ? eventsForHost(payload, row.host) : [];
-    const todayAnswer = store.answers.find((entry) => entry.host === row.host && entry.date === today) || null;
-    return {
-        available: true,
-        today,
-        runId: eventsRun ? eventsRun.runId : (run ? run.runId : null),
-        host: row.host,
-        parsers: Array.isArray(row.parsers) ? row.parsers : [],
-        verdict: row.verdict,
-        flags: Array.isArray(row.flags) ? row.flags : [],
-        since: row.since || null,
-        aggregator: row.aggregator === true,
-        reason: pick.reason,
-        latest: { run_id: latest.run_id || null, extracted: Number(latest.extracted) || 0, bear: Number(latest.bear) || 0, upcoming: Number(latest.upcoming) || 0 },
-        url: latest.url || `https://${row.host}/`,
-        badges: row.quality && Array.isArray(row.quality.badges) ? row.quality.badges.map((badge) => ({ key: badge.key, chip: badge.chip, label: badge.label, detail: badge.detail })) : [],
-        lost: Array.isArray(row.lost) ? row.lost : [],
-        page: page ? { url: page.url, fetchedAt: page.fetchedAt, statusCode: page.statusCode, text: readable.text, chars: readable.chars, truncated: readable.truncated, preferred: page.preferred } : null,
-        events,
-        previous: store.checks[row.host] || null,
-        todayAnswer,
-        queue: store.answers.length
-    };
-}
-
-// One answer for one host on one day; a second answer the same day replaces
-// the first. Returns the store to save.
-function recordDeepCheckAnswer(store, input, now = new Date()) {
-    const state = normalizeDeepCheckStore(store);
-    const host = input && typeof input.host === 'string' ? input.host.trim().toLowerCase() : '';
-    const answer = input && typeof input.answer === 'string' ? input.answer.trim().toLowerCase() : '';
-    if (!host || !DEEP_CHECK_ANSWERS.includes(answer)) return null;
-    const stampedAt = now.toISOString();
-    const date = stampedAt.slice(0, 10);
-    const lostStill = {};
-    if (input.lostStill && typeof input.lostStill === 'object') {
-        Object.keys(input.lostStill).forEach((title) => {
-            const value = String(input.lostStill[title] || '').toLowerCase();
-            if (value === 'yes' || value === 'no') lostStill[String(title).slice(0, 120)] = value;
-        });
-    }
-    const entry = {
-        date,
-        stampedAt,
-        host,
-        answer,
-        text: String(input.text || '').trim().slice(0, 2000),
-        fakes: answer === 'fake' ? (Array.isArray(input.fakes) ? input.fakes.map((value) => String(value).slice(0, 160)).filter(Boolean).slice(0, 50) : []) : [],
-        lostStill
-    };
-    state.answers = state.answers.filter((existing) => !(existing.host === host && existing.date === date));
-    state.answers.push(entry);
-    state.checks[host] = { lastCheckedAt: stampedAt, lastAnswer: answer };
-    return { store: state, entry };
-}
-
-// The fix queue: every answer that asks for work, newest first; a "looks
-// right" with a note counts too (the note is the work).
-function deepCheckQueue(store) {
-    const state = normalizeDeepCheckStore(store);
-    return state.answers
-        .filter((entry) => entry.answer !== 'ok' || entry.text || Object.values(entry.lostStill || {}).includes('no') || Object.values(entry.lostStill || {}).includes('yes'))
-        .sort((a, b) => String(b.stampedAt).localeCompare(String(a.stampedAt)));
 }
 
 function formatRejectionsText(store) {
@@ -2361,19 +2180,8 @@ module.exports = {
     driftCoveredByNoteTags,
     stampSameChange,
     formatRejectionsText,
-    DEEP_CHECK_FILE_NAME,
-    DEEP_CHECK_ANSWERS,
-    getDeepCheckPath,
-    emptyDeepCheckStore,
-    normalizeDeepCheckStore,
-    loadDeepCheck,
-    saveDeepCheck,
     loadSourceHealth,
-    pickDeepCheckHost,
     readableTextFromHtml,
     findCachedListingPage,
-    eventsForHost,
-    buildDeepCheckCard,
-    recordDeepCheckAnswer,
-    deepCheckQueue
+    eventsForHost
 };
