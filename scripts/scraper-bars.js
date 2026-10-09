@@ -881,6 +881,12 @@ const scraperBars = {
       "city": "palm-springs",
       "address": "North Calle Encilia, Palm Springs, California",
       "coordinates": "33.8239380, -116.5432028"
+    },
+    {
+      "name": "Toucans Tiki Lounge",
+      "city": "palm-springs",
+      "address": "2100 PALM CANYON DRIVE",
+      "coordinates": "33.8486910, -116.5480960"
     }
   ],
   "paris": [
