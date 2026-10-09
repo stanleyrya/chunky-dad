@@ -38,6 +38,21 @@ const DISCOVERY_CRAWL_MAX_URLS = 12;
 // Still bounded: a listing that links hundreds of rows must not turn one page
 // into hundreds of fetches.
 const LISTING_ROW_PAGE_CRAWL_MAX = 40;
+// The words a site uses to name its own listing page in a nav link's last
+// path segment (/events/, /whats-on/, /calendar2/, /new-events-1). A
+// configured ROOT follows the links that carry one whatever its home page
+// classifies as (see selectRootListingLinks) — an 'unknown' home page used
+// to follow nothing, so a parser configured at the bare domain never opened
+// the listing its own nav pointed at. Page vocabulary, never sites.
+// Duplicated in parsers/ai-web-parser.js (parsers are standalone and cannot
+// import shared code) — keep the two in sync.
+const LISTING_LINK_VOCABULARY = Object.freeze([
+    'events', 'event-list', 'eventlist', 'upcoming-events', 'whats-on', 'shows', 'tickets',
+    'schedule', 'programme', 'program', 'rsvp', 'calendar', 'agenda', 'lineup', 'line-up', 'parties'
+]);
+// How many listing-vocabulary links a root opens on its own authority: a
+// menu names its listing page once or twice; more than this is a sitemap.
+const ROOT_LISTING_LINKS_MAX = 5;
 // Learned dead ends record the extraction CAPABILITY they were confirmed
 // under. When a new capability lands — a page shape that used to yield
 // nothing now can — every inferred dead end confirmed before it is retried
@@ -49,7 +64,11 @@ const LISTING_ROW_PAGE_CRAWL_MAX = 40;
 // host away for the 30-day window. Those entries carry no mark of their own
 // (a statusless miss is a statusless miss), so every inferred dead end gets
 // its one retry.
-const DEAD_END_CAPABILITY = 'outage-aware-2026-09';
+// 'doors-on-crawled-pages-2026-10': until then a widget or feed door was
+// opened only on a CONFIGURED page, so a listing reached one hop from a
+// root (rockbarnyc.com/calendar — an Elfsight placeholder in the HTML) read
+// as empty and was learned as a dead end. Those pages can be read now.
+const DEAD_END_CAPABILITY = 'doors-on-crawled-pages-2026-10';
 // The one retry a capability bump grants is spread out: no more than this
 // many forgiven URLs are asked for on one host in one run; the rest stay
 // skipped and take their turn on a later run. A bump forgives every inferred
@@ -10498,9 +10517,14 @@ class SharedCore {
                 // feed is the site's own complete statement of its events
                 // (see resolveMachineDoor). Nothing per site: what the page
                 // links to, plus a short well-known list, scored by content.
-                const htmlData = shouldUseInlineInput || currentDepth !== 0
-                    ? spaResolvedHtmlData
-                    : await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter);
+                // A page of the configured site one hop from its root (the
+                // listing the home page's nav names) is probed the same way,
+                // once per host (see shouldProbeMachineDoorOnCrawlPage).
+                const probeMachineDoor = !shouldUseInlineInput
+                    && (currentDepth === 0 || this.shouldProbeMachineDoorOnCrawlPage(url, currentDepth, parserConfig, enrichOnlyByUrl));
+                const htmlData = probeMachineDoor
+                    ? await this.resolveMachineDoor(spaResolvedHtmlData, url, httpAdapter, displayAdapter)
+                    : spaResolvedHtmlData;
                 // The window stays open through the PARSE of the root page:
                 // the parser opens doors of its own there — a Squarespace
                 // collection's ?format=json twin, an EventON or MEC month
@@ -10794,6 +10818,31 @@ class SharedCore {
                             const offSite = linksToConsider.filter(link => !frontDoorSiblingKeys.has(this.getUrlDedupeKey(link)));
                             linksToConsider = offSite.concat(siblingLinks);
                             await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: ${url} is a configured page that reads as one event — reading the ${siblingLinks.length} other page(s) of its own site it links as pages of their own (${siblingLinks.slice(0, 3).join(', ')}${siblingLinks.length > 3 ? ', …' : ''}): a site that gives each party a page names the next one there`);
+                        }
+                    }
+                    // A configured root whose home page reads as nothing
+                    // ('unknown': no structured data, fewer than three month
+                    // names) follows nothing, and one that reads as a single
+                    // event follows only event-shaped links — so the site's
+                    // own menu, which names its listing page in the site's
+                    // words (/events/, /whats-on/, /calendar2/), was never
+                    // opened, and a parser configured at the bare domain
+                    // read 0 (audit 2026-10-07). A root always opens those:
+                    // few, same site, logged, read as discovery like a
+                    // listing's links (never as the root's enrichment).
+                    if (currentDepth === 0 && !enrichContext
+                        && pageClassification !== 'multi-event-page' && pageClassification !== 'link-aggregator') {
+                        const queued = new Set(linksToConsider.map(link => this.getUrlDedupeKey(link)).filter(Boolean));
+                        const listingLinks = this.selectRootListingLinks(url, additionalLinks, parserConfig)
+                            .filter(link => !queued.has(this.getUrlDedupeKey(link)));
+                        if (listingLinks.length > 0) {
+                            if (!frontDoorSiblingKeys) frontDoorSiblingKeys = new Set();
+                            for (const link of listingLinks) {
+                                const key = this.getUrlDedupeKey(link);
+                                if (key) frontDoorSiblingKeys.add(key);
+                            }
+                            linksToConsider = linksToConsider.concat(listingLinks);
+                            await displayAdapter.logInfo(`SYSTEM: 🧭 ROOT: following ${listingLinks.length} listing link(s) from ${pageClassification === 'unknown' ? 'an unknown' : `a${/^[aeiou]/i.test(pageClassification) ? 'n' : ''} ${pageClassification}`} home page: ${listingLinks.join(', ')} — the site's own menu names its listing page in the site's words, whatever the home page reads as`);
                         }
                     }
                     if (enrichContext) {
@@ -11272,6 +11321,17 @@ class SharedCore {
     // which learns the pages that yield nothing exactly as it does for a
     // listing's links.
     selectFrontDoorSiblingLinks(pageUrl, additionalLinks, parserConfig) {
+        return this.selectSameSitePageLinks(pageUrl, additionalLinks, parserConfig);
+    }
+
+    // The links a configured root makes to OTHER PAGES of its own site: same
+    // registrable domain, not the root itself, not another configured page
+    // (it gets its own turn), not an API endpoint, no query (a query selects
+    // a view of a page — ?ical=1, ?eventDisplay=past — while a site's menu
+    // names pages; bearitmtl.com/events/ on a week with one party: 5 of its
+    // 15 links were such views). Shared by the single-event root rule above
+    // and the listing-link rule below.
+    selectSameSitePageLinks(pageUrl, additionalLinks, parserConfig) {
         const links = Array.isArray(additionalLinks) ? additionalLinks : [];
         const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
         if (!pageDomain || links.length === 0) return [];
@@ -11285,17 +11345,92 @@ class SharedCore {
             const key = this.getUrlDedupeKey(normalized);
             if (!key || key === pageKey || taken.has(key)) continue;
             if (this.getRegistrableDomainFromUrl(normalized) !== pageDomain) continue;
-            // The source's other configured pages get their own turn.
             if (this.isConfiguredParserUrlForCrawl(normalized, parserConfig)) continue;
             if (this.isApiEndpointUrl(normalized)) continue;
-            // A query selects a view of a page (?ical=1, ?eventDisplay=past);
-            // a site's menu names pages. bearitmtl.com/events/ on a week
-            // with one party: 5 of its 15 links were such views.
             if (normalized.indexOf('?') >= 0) continue;
             taken.add(key);
             siblings.push(normalized);
         }
         return siblings;
+    }
+
+    // "What’s On" → "whats-on", "/new-events-1" → "new-events", "/calendar2/"
+    // → "calendar": lowercase, apostrophes dropped, runs of space/underscore/
+    // hyphen → one hyphen, a trailing numeric suffix removed. Mirrors the
+    // parser's normalizeListingWords — keep the two in sync.
+    normalizeListingWords(text) {
+        return String(text || '')
+            .toLowerCase()
+            .replace(/[’'`]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-?\d+$/, '');
+    }
+
+    // A path segment names a listing when it IS a vocabulary word or ends in
+    // one (/upcoming-events/, /planned-events/, /new-events-1).
+    segmentNamesListing(segment) {
+        const words = this.normalizeListingWords(segment);
+        return Boolean(words) && LISTING_LINK_VOCABULARY.some(term => words === term || words.endsWith(`-${term}`));
+    }
+
+    // A configured root's same-site links whose LAST path segment names a
+    // listing in the site's own words (see LISTING_LINK_VOCABULARY): the
+    // links the root opens whatever its home page classifies as. Only the
+    // path speaks here — the crawl frontier carries URLs, not anchor text
+    // (anchor text counts in the parser's ranking, scoreAdditionalUrl). In
+    // page order, capped at ROOT_LISTING_LINKS_MAX.
+    selectRootListingLinks(pageUrl, additionalLinks, parserConfig) {
+        const listing = [];
+        for (const link of this.selectSameSitePageLinks(pageUrl, additionalLinks, parserConfig)) {
+            const match = String(link).match(/^https?:\/\/[^/?#]+(\/[^?#]*)?/i);
+            const segments = String(match && match[1] ? match[1] : '').split('/').filter(Boolean);
+            if (segments.length === 0) continue;
+            // /api/events is a program's address, not a page a person visits
+            // (isApiEndpointUrl fails closed on a bare /api/ path by design).
+            if (segments.some(segment => /^(?:api|_api|wp-json)$/i.test(segment))) continue;
+            if (!this.segmentNamesListing(segments[segments.length - 1])) continue;
+            listing.push(link);
+            if (listing.length >= ROOT_LISTING_LINKS_MAX) break;
+        }
+        return listing;
+    }
+
+    // Is this URL on the registrable domain of one of the parser's
+    // configured URLs — a page of the configured SITE, if not a configured
+    // page?
+    isConfiguredSiteUrl(url, parserConfig) {
+        const pageDomain = this.getRegistrableDomainFromUrl(url);
+        if (!pageDomain) return false;
+        const configured = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        return configured.some(root => this.getRegistrableDomainFromUrl(root) === pageDomain);
+    }
+
+    // Does a crawled page get the machine-door probe a configured root gets?
+    // Only one hop down, only on the configured site (the listing a root's
+    // nav names), never on an enrich-only child (a ticket page may confirm
+    // its event, not open a feed of its own), and never on a host whose
+    // door was already adopted — the root was read through that feed, the
+    // feed is the site's complete statement, and reading it again from the
+    // listing page would publish every event twice. Candidates a probe on
+    // this host already tried are not tried again (see resolveMachineDoor).
+    shouldProbeMachineDoorOnCrawlPage(url, currentDepth, parserConfig, enrichOnlyByUrl = null) {
+        if (currentDepth !== 1) return false;
+        if (!this.isConfiguredSiteUrl(url, parserConfig)) return false;
+        const key = this.getUrlDedupeKey(url);
+        if (enrichOnlyByUrl && key && enrichOnlyByUrl[key]) return false;
+        const parts = this.parseUrl(url);
+        const hostKey = parts ? String(parts.host || '').toLowerCase().replace(/^www\./, '') : '';
+        if (hostKey && this.machineDoorsByHost instanceof Map && this.machineDoorsByHost.has(hostKey)) return false;
+        // ONE page per host gets the hop-down probe — the first, which the
+        // listing-vocabulary ranking puts at the head of the root's links.
+        // WordPress advertises a per-page REST link on every page
+        // (akbarsilverlake.com from its root, 2026-10-08: each event page
+        // one hop down offered wp/v2/pages/<id> and cost a request).
+        if (!this.machineDoorProbedHopHosts) this.machineDoorProbedHopHosts = new Set();
+        if (hostKey && this.machineDoorProbedHopHosts.has(hostKey)) return false;
+        if (hostKey) this.machineDoorProbedHopHosts.add(hostKey);
+        return true;
     }
 
     // ------------------------------------------------------------------
@@ -18359,9 +18494,17 @@ class SharedCore {
         const hostKey = parts ? String(parts.host || '').toLowerCase().replace(/^www\./, '') : '';
         if (!this.machineDoorsByHost) this.machineDoorsByHost = new Map();
         const remembered = hostKey ? this.machineDoorsByHost.get(hostKey) : null;
+        // A candidate this run already tried on this host is not tried again
+        // from another page of it (the root tried the well-known paths; the
+        // listing one hop down advertises an .ics the root did not — only
+        // that one is new). Per host, per run, like the adopted door.
+        if (!this.machineDoorTriedByHost) this.machineDoorTriedByHost = new Map();
+        if (hostKey && !this.machineDoorTriedByHost.has(hostKey)) this.machineDoorTriedByHost.set(hostKey, new Set());
+        const triedOnHost = hostKey ? this.machineDoorTriedByHost.get(hostKey) : new Set();
         const candidates = remembered
             ? [remembered]
-            : this.filterKnownDeadEndUrls(this.collectMachineDoorCandidates(html, pageUrl));
+            : this.filterKnownDeadEndUrls(this.collectMachineDoorCandidates(html, pageUrl))
+                .filter(candidate => !triedOnHost.has(this.getUrlDedupeKey(candidate)));
         if (candidates.length === 0) return htmlData;
         const pageEventCount = this.extractJsonLdEventNodes(html).length;
         const tried = [];
@@ -18370,6 +18513,7 @@ class SharedCore {
         for (const candidate of candidates.slice(0, MACHINE_DOOR_MAX_PROBES)) {
             let body = '';
             let statusCode = null;
+            if (!remembered) triedOnHost.add(this.getUrlDedupeKey(candidate));
             try {
                 const response = await httpAdapter.fetchData(candidate, { headers: { Accept: 'application/json, text/calendar, application/feed+json, */*' } });
                 body = response && typeof response.html === 'string' ? response.html : '';

@@ -239,6 +239,50 @@ const JSON_API_SERIES_MAX_OCCURRENCES = Math.ceil(JSON_API_FEED_HORIZON_DAYS / 7
 const ELFSIGHT_ARCHIVE_DAYS = 30;
 // Distinct MEC event pages read per grid for their wall-clock times.
 const MEC_EVENT_PAGE_ENRICH_CAP = 60;
+// The words a site uses to name its own listing page — in a nav link's last
+// path segment (/events/, /whats-on/, /calendar2/, /new-events-1) or its
+// anchor text ("What's On", "Upcoming Events"). Page vocabulary, never
+// sites: scoreAdditionalUrl lifts a ROOT page's links that carry one of
+// these to the listing band, and SharedCore.selectRootListingLinks follows
+// them from a configured root whatever the home page classifies as.
+// Duplicated in shared-core.js (parsers are standalone and cannot import
+// shared code) — keep the two in sync.
+const LISTING_LINK_VOCABULARY = Object.freeze([
+    'events', 'event-list', 'eventlist', 'upcoming-events', 'whats-on', 'shows', 'tickets',
+    'schedule', 'programme', 'program', 'rsvp', 'calendar', 'agenda', 'lineup', 'line-up', 'parties'
+]);
+// The score a root page's listing-vocabulary link is lifted TO (a floor, not
+// a bonus): above the event-link band (an event-detail link with an anchor
+// keyword and a dated path reaches 190), below an explicit same-site
+// calendar hub (205 = 10 − 45 + 240) and the rich ticketing links (~240).
+const LISTING_LINK_FLOOR_SCORE = 200;
+
+// "What’s On" → "whats-on", "Upcoming Events" → "upcoming-events",
+// "/new-events-1" → "new-events", "/calendar2/" → "calendar": lowercase,
+// apostrophes dropped, runs of space/underscore/hyphen → one hyphen, a
+// trailing numeric suffix removed. Mirrored in SharedCore.normalizeListingWords.
+function normalizeListingWords(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/[’'`]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/-?\d+$/, '');
+}
+
+// A path segment names a listing when it IS a vocabulary word or ends in one
+// (/upcoming-events/, /planned-events/, /new-events-1). Anchor text names one
+// when a vocabulary word stands whole inside it ("See all events", "What's
+// On"). Both are page words; neither is a site.
+function segmentNamesListing(segment) {
+    const words = normalizeListingWords(segment);
+    return Boolean(words) && LISTING_LINK_VOCABULARY.some(term => words === term || words.endsWith(`-${term}`));
+}
+function textNamesListing(text) {
+    const words = normalizeListingWords(text);
+    return Boolean(words) && LISTING_LINK_VOCABULARY.some(term => words === term
+        || words.startsWith(`${term}-`) || words.endsWith(`-${term}`) || words.includes(`-${term}-`));
+}
 
 // deriveListingTitleSpanFromDatedLine handed the bare LABEL back as the
 // page's own listing title, so "Start from" (x3) and "End at" (x2) shipped as
@@ -1408,8 +1452,17 @@ class AiWebParser {
                             : (structuredSource === 'page-data'
                                 ? pageDataEvents
                             : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))))));
+            // A link hub's own JSON-LD / page data is not read (bearracuda.com
+            // marks up a partial set on its hub; the detail pages are read
+            // instead) — but a calendar DOOR the page itself opened (a widget
+            // boot, a collection twin, a month grid) is the site's complete
+            // calendar whatever the HTML shell around it reads as. Rockbar's
+            // home page is a link hub with the Elfsight embed in a shared
+            // block (crawl from the root, 2026-10-08): the widget published
+            // 92 nights and the hub route returned none of them.
+            const doorReadSources = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
             const useStructuredEvents = parserConfig.discoveryOnly !== true
-                && pageClassification !== 'link-aggregator'
+                && (pageClassification !== 'link-aggregator' || doorReadSources.has(structuredSource))
                 && structuredEvents.length > 0
                 // A multi-event page with a single structured node likely marks up only its
                 // featured event — fall through to segment extraction for full coverage.
@@ -9181,12 +9234,15 @@ class AiWebParser {
         if (widgetIds.length === 0) return [];
         // The embed usually sits in a shared block, so EVERY page of the site
         // carries the same widget and would re-publish the same full calendar.
-        // Read it only on the page the parser was pointed at: one read per
-        // crawl, and the events keep the URL the config chose for them.
-        // (Rockbar's first attempt built 150 events on /calendar and another
-        // 150 on the homepage before the run ran out of time merging them.)
-        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
-            console.log(`🗓️ ELFSIGHT: widget present on ${sourceUrl} but this is not the configured entry page — already read there, skipping`);
+        // Read it on the first page of the host that carries it (see
+        // claimHostDoor): one read per crawl, and the events keep that page's
+        // URL. (Rockbar's first attempt built 150 events on /calendar and
+        // another 150 on the homepage before the run ran out of time merging
+        // them.)
+        const elfsightDoorId = widgetIds.slice().sort().join(',');
+        const elfsightReadOn = this.claimHostDoor('elfsight', sourceUrl, parserConfig, elfsightDoorId);
+        if (elfsightReadOn) {
+            console.log(`🗓️ ELFSIGHT: widget present on ${sourceUrl} — already read on ${elfsightReadOn} (the embed rides on every page of the site), skipping`);
             return [];
         }
 
@@ -9216,6 +9272,7 @@ class AiWebParser {
             if (rows.length === 0) continue;
             events.push(...rows);
         }
+        if (events.length === 0) this.releaseHostDoor('elfsight', sourceUrl, elfsightDoorId);
         return events;
     }
 
@@ -9242,6 +9299,60 @@ class AiWebParser {
         const key = this.getUrlDedupeKey(this.stripTrackingParams(String(url || '')));
         if (!key) return false;
         return configured.some(candidate => this.getUrlDedupeKey(this.stripTrackingParams(String(candidate || ''))) === key);
+    }
+
+    // A widget/collection door is read ONCE per host per run: the embed sits
+    // in a shared block (Elfsight, DICE), the warmup blob rides on every page
+    // (Wix), the ?format=json twin exists for every page (Squarespace), so a
+    // second page of the same host would republish the whole calendar
+    // (Rockbar's first attempt: 150 events on /calendar and 150 more on the
+    // homepage). Until 2026-10 the gate was "the configured page", which
+    // meant a parser configured at the bare domain root never read the door
+    // the site's own nav led to (/calendar one hop away). Now the FIRST page
+    // of the host that carries the door reads it — a configured page always
+    // may (two configured pages of one host keep their own turns, as
+    // before). Per host, like SharedCore.machineDoorsByHost; per instance,
+    // like it too (a run builds its own parser). `doorId` names the door
+    // itself when the markup states it (an Elfsight widget id, a DICE key
+    // and filter): the same door on another host of the site — a
+    // Squarespace site's builder host (mandolin-pelican-….squarespace.com
+    // mirrors rockbarnyc.com, widget and all) — is the same calendar, read
+    // once. Returns '' when this page may read, else the page that already
+    // did.
+    claimHostDoor(kind, sourceUrl, parserConfig, doorId = '') {
+        if (!this.hostDoorReads) this.hostDoorReads = new Map();
+        const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#:@]+)/i);
+        const host = hostMatch ? hostMatch[1].toLowerCase().replace(/^www\./, '') : '';
+        if (!host) return '';
+        const claimKeys = [`${String(kind || '')}|host:${host}`];
+        if (doorId) claimKeys.push(`${String(kind || '')}|door:${String(doorId).toLowerCase()}`);
+        const readOn = claimKeys.map(key => this.hostDoorReads.get(key) || '').find(Boolean) || '';
+        if (readOn) {
+            const samePage = this.getUrlDedupeKey(readOn) === this.getUrlDedupeKey(String(sourceUrl || ''));
+            if (!samePage && !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return readOn;
+        }
+        for (const key of claimKeys) {
+            if (!this.hostDoorReads.has(key)) this.hostDoorReads.set(key, String(sourceUrl || ''));
+        }
+        return '';
+    }
+
+    // A door that answered nothing was not the site's calendar — the claim
+    // goes back so the next page carrying the door reads it. The home page
+    // of a Squarespace site carries the events-list block (an "upcoming"
+    // summary) and so the collection marker, but its own ?format=json twin
+    // is the home page's, with no dated items; with the claim held, the
+    // real /events collection one hop down was skipped as already read and
+    // read by the AI instead (massbearsandcubs.org from its root, 2026-10-08:
+    // 26 minutes, 91 events for 10 series).
+    releaseHostDoor(kind, sourceUrl, doorId = '') {
+        if (!this.hostDoorReads) return;
+        const page = String(sourceUrl || '');
+        for (const [key, readOn] of Array.from(this.hostDoorReads.entries())) {
+            if (!key.startsWith(`${String(kind || '')}|`)) continue;
+            if (doorId && key.includes('|door:') && !key.endsWith(`|door:${String(doorId).toLowerCase()}`)) continue;
+            if (readOn === page) this.hostDoorReads.delete(key);
+        }
     }
 
     // Widget ids as the embed markup writes them: class="elfsight-app-<uuid>".
@@ -9496,16 +9607,18 @@ class AiWebParser {
     // page itself publishes; the API base comes from the widget bundle the
     // page references (its first line sets RUNTIME_API_URL), so no DICE host
     // is named in source. Same one-page rule as Elfsight: the embed sits in
-    // a shared block on every page of the site, so it is read only on the
-    // configured entry page.
+    // a shared block on every page of the site, so it is read once per host,
+    // on the first page that carries it (see claimHostDoor).
     async collectDiceWidgetEvents(htmlData, parserConfig, httpAdapter) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
         if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
         const widget = this.extractDiceWidgetConfig(html);
         if (!widget) return [];
-        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
-            console.log(`🎟️ DICE: widget present on ${sourceUrl} but this is not the configured entry page — already read there, skipping`);
+        const diceDoorId = `${widget.apiKey || ''}|${widget.filterLabel || ''}`;
+        const diceReadOn = this.claimHostDoor('dice', sourceUrl, parserConfig, diceDoorId);
+        if (diceReadOn) {
+            console.log(`🎟️ DICE: widget present on ${sourceUrl} — already read on ${diceReadOn} (the embed rides on every page of the site), skipping`);
             return [];
         }
         let apiBase = '';
@@ -9516,10 +9629,12 @@ class AiWebParser {
             apiBase = match ? match[1].replace(/\/+$/, '') : '';
         } catch (error) {
             console.warn(`🎟️ DICE: widget bundle ${widget.scriptUrl} could not be read (${error.message}) — page left unchanged`);
+            this.releaseHostDoor('dice', sourceUrl, diceDoorId);
             return [];
         }
         if (!apiBase) {
             console.warn(`🎟️ DICE: widget bundle ${widget.scriptUrl} names no API base — page left unchanged`);
+            this.releaseHostDoor('dice', sourceUrl, diceDoorId);
             return [];
         }
         const rows = [];
@@ -9545,6 +9660,8 @@ class AiWebParser {
         if (rows.length > 0) {
             const linkouts = rows.filter(row => row.type === 'linkout').length;
             console.log(`🎟️ DICE: widget on ${sourceUrl} (${widget.filterLabel}) published ${rows.length} row(s), ${linkouts} ticketed elsewhere`);
+        } else {
+            this.releaseHostDoor('dice', sourceUrl, diceDoorId);
         }
         return rows;
     }
@@ -9557,8 +9674,9 @@ class AiWebParser {
     // segmentation tiers (www.3dollarbillbk.com/rsvp: 30 structured / 87 text
     // windows for 52 upcoming cards, six events titled "View Event →"), so the
     // twin is read instead. Platform-shaped, not site-shaped: the platform's
-    // own context marker and events-collection class gate it, and only the
-    // configured entry page is read (the twin exists for every page). The
+    // own context marker and events-collection class gate it, and one
+    // collection page per host is read — the first the crawl meets (the twin
+    // exists for every page; see claimHostDoor). The
     // past[] block is the page-1 archive the listing renders beneath the
     // upcoming cards — it is read exactly as the page shows it; the archive's
     // further pages are not followed.
@@ -9567,10 +9685,14 @@ class AiWebParser {
         const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
         if (!html || !sourceUrl || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
         if (!this.isSquarespaceEventCollectionPage(html)) return [];
-        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
-            console.log(`🟦 SQUARESPACE: ${sourceUrl} is an event collection but not the configured entry page — already read there, skipping`);
+        const squarespaceReadOn = this.claimHostDoor('squarespace-collection', sourceUrl, parserConfig);
+        if (squarespaceReadOn) {
+            console.log(`🟦 SQUARESPACE: ${sourceUrl} is an event collection — its twin was already read on ${squarespaceReadOn} (one collection read per site), skipping`);
             return [];
         }
+        // The twin is the carrying page's own URL plus ?format=json — the
+        // page the crawl is on, whether that is the configured page or the
+        // listing a root's nav led to.
         const twinUrl = this.buildSquarespaceJsonTwinUrl(sourceUrl);
         if (!twinUrl) return [];
         let payload = null;
@@ -9580,11 +9702,13 @@ class AiWebParser {
             payload = body && body[0] === '{' ? JSON.parse(body) : null;
         } catch (error) {
             console.warn(`🟦 SQUARESPACE: ${twinUrl} could not be read (${error.message}) — page left unchanged`);
+            this.releaseHostDoor('squarespace-collection', sourceUrl);
             return [];
         }
         const rows = this.collectSquarespaceCollectionItems(payload);
         if (rows.length === 0) {
-            console.log(`🟦 SQUARESPACE: ${twinUrl} answered with no dated collection items — page left unchanged`);
+            console.log(`🟦 SQUARESPACE: ${twinUrl} answered with no dated collection items — page left unchanged (the next page of the site that carries the collection may read its own twin)`);
+            this.releaseHostDoor('squarespace-collection', sourceUrl);
             return [];
         }
         const upcoming = Array.isArray(payload.upcoming) ? payload.upcoming.length : 0;
@@ -13414,13 +13538,20 @@ class AiWebParser {
     // carries every upcoming event with exact UTC instants, IANA zone,
     // address, pin, artwork and slug (chunk-party.com: 15 rows; the AI
     // segmented 16 windows and enriched afterwards — 5 timezone alarms and
-    // 13 merges for 3 events, audit 2026-09-12). Only on the configured
-    // entry page (the blob rides on every page), and only when the page's
-    // own links show where event pages live, is the slug made a link.
+    // 13 merges for 3 events, audit 2026-09-12). Read once per host, on the
+    // first page that carries it (the blob rides on every page; see
+    // claimHostDoor), and only when the page's own links show where event
+    // pages live is the slug made a link.
     async collectWixEventListEvents(html, sourceUrl, parserConfig, httpAdapter) {
-        if (!html || !sourceUrl || !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return [];
+        if (!html || !sourceUrl) return [];
         const sections = this.findWixEventListSections(this.parseWixWarmupBlob(html));
         if (sections.length === 0) return [];
+        // The blob rides on every page: one read per host (see claimHostDoor).
+        const wixReadOn = this.claimHostDoor('wix-events', sourceUrl, parserConfig);
+        if (wixReadOn) {
+            console.log(`🟪 WIX EVENTS: the events widget on ${sourceUrl} was already read on ${wixReadOn} (the blob rides on every page of the site), skipping`);
+            return [];
+        }
         // The blob is page one; the widget knows whether there is more.
         for (const section of sections) {
             await this.continueWixEventList(section, sourceUrl, httpAdapter);
@@ -13429,7 +13560,10 @@ class AiWebParser {
             .reduce((rows, section) => rows.concat(section.rows), [])
             .map(node => this.buildWixServerEventRecord(node, []))
             .filter(record => record && record.title && record.startDateUtc instanceof Date);
-        if (records.length === 0) return [];
+        if (records.length === 0) {
+            this.releaseHostDoor('wix-events', sourceUrl);
+            return [];
+        }
         const origin = (String(sourceUrl).match(/^https?:\/\/[^/?#]+/i) || [''])[0];
         const route = this.deriveWixEventRouteFromSlugs(html, records.map(record => record.slug));
         const events = [];
@@ -18095,7 +18229,8 @@ class AiWebParser {
         if (/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]20\d{2})\b/.test(haystack)) score += 25;
         if (/[?&](?:event|event_id|eventid|eid|id|ticket|ticket_id)=/i.test(search)) score += 20;
         if (/^\/(?:events?|calendar|tickets?|shows?)\/?$/i.test(path) && !search) score -= 45;
-        if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
+        const isDemotedSection = /\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path);
+        if (isDemotedSection) score -= 35;
         // Eventbrite /l/ paths are marketing/landing pages, not event detail or listing pages
         if (/eventbrite\./i.test(parsedUrl.hostname) && /^\/l\//i.test(path)) score -= 100;
         // Same-site events-calendar HUB links (a /calendar/ or /schedule/ path
@@ -18115,21 +18250,50 @@ class AiWebParser {
         // filters drop (.ics / ?ical=1 calendar exports, blocked hosts) never
         // reach scoring at all, so this cannot resurrect them.
         const isDetailShapedPath = /\/e\/[^/?#]+/i.test(path) || /\/events?\/[^/?#]+/i.test(path);
+        // Slash-normalized path segments, compared against the source page's
+        // own so slash-variant self-references (//calendar// on the
+        // /calendar/ page) never count as another page.
+        const linkSegments = path.split('/').filter(Boolean);
+        const sourceSegmentsKey = parsedSource
+            ? String(parsedSource.pathname || '').toLowerCase().split('/').filter(Boolean).join('/')
+            : '';
+        const isSourcePathVariant = Boolean(parsedSource) && linkSegments.join('/') === sourceSegmentsKey;
+        const linkDomain = parsedSource ? this.getRegistrableDomainFromUrl(url) : '';
+        const sameRegistrableDomain = Boolean(parsedSource) && Boolean(linkDomain)
+            && linkDomain === this.getRegistrableDomainFromUrl(sourceUrl);
         if (parsedSource && !isDetailShapedPath) {
-            const linkDomain = this.getRegistrableDomainFromUrl(url);
-            const sameRegistrableDomain = linkDomain && linkDomain === this.getRegistrableDomainFromUrl(sourceUrl);
             // Hub-shaped = the path ENDS at the hub word (/calendar/,
             // /events/schedule/). A hub word mid-path (/calendar/<junk>) is
-            // some sub-resource, not the hub. Slash-variant self-references
-            // (//calendar// on the /calendar/ page) are excluded by comparing
-            // slash-normalized path segments against the source page's own.
-            const linkSegments = path.split('/').filter(Boolean);
+            // some sub-resource, not the hub.
             const hasCalendarHubSegment = linkSegments.length > 0
                 && /^(?:calendar|calendars|schedule|events?-calendar)$/.test(linkSegments[linkSegments.length - 1]);
             const contextNamesCalendar = /\bcalendar\b/.test(contextText);
-            const sourceSegmentsKey = String(parsedSource.pathname || '').toLowerCase().split('/').filter(Boolean).join('/');
-            const isSourcePathVariant = linkSegments.join('/') === sourceSegmentsKey;
             if (sameRegistrableDomain && !isSourcePathVariant && (hasCalendarHubSegment || contextNamesCalendar)) score += 240;
+        }
+        // A ROOT page's own navigation names the site's listing page in the
+        // site's words — "Events", "What's On", /calendar2/, /new-events-1 —
+        // and nothing above knows them: /events/ "Events" nets 35, below a
+        // menu item with a party word in it (80) and below every
+        // event-detail link (135–190), so a parser configured at the bare
+        // domain root never opened the listing the nav pointed at (audit
+        // 2026-10-07: 13 of 32 subpath configs were there only because of
+        // this). Such a link is LIFTED to the listing band, not given a
+        // bonus: the explicit calendar hub above keeps outranking it (205 >
+        // 200) and the band stays below the rich ticketing links. Root pages
+        // only — the site-wide menu is harvested once, at the root; on
+        // deeper pages the same links are already queued and would only
+        // spend budget slots. Same registrable domain, not the page itself,
+        // not a detail page (a party page whose anchor says "Tickets" is a
+        // party page), not a section the demotion above already named.
+        const sourceIsSiteRoot = Boolean(parsedSource) && /^\/?$/.test(String(parsedSource.pathname || ''));
+        if (sourceIsSiteRoot && sameRegistrableDomain && !isSourcePathVariant && !isDemotedSection
+            && score < LISTING_LINK_FLOOR_SCORE) {
+            const isBroadDetailShapedPath = isDetailShapedPath
+                || /^\/(?:party|parties|shows?|tickets?|calendar|rsvp)\/[^/?#]+/i.test(path);
+            const lastSegment = linkSegments.length > 0 ? linkSegments[linkSegments.length - 1] : '';
+            const namesListing = (lastSegment && segmentNamesListing(lastSegment))
+                || (!isBroadDetailShapedPath && textNamesListing(contextText));
+            if (namesListing) score = LISTING_LINK_FLOOR_SCORE;
         }
         return score;
     }

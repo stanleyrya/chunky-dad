@@ -22126,3 +22126,230 @@ test('a listing title that ends on a connective is completed from the card\'s ne
   assert.equal(parser.deriveSegmentListingTitle({ lines: ['9pm (doors 8pm)', 'Bear Night'] }), 'Bear Night');
   assert.equal(parser.deriveSegmentListingTitle({ lines: ['Late Night (After Hours)', 'Bear Night'] }), 'Late Night (After Hours)');
 });
+
+// ---------------------------------------------------------------------------
+// Crawling from the bare domain root (audit 2026-10-07). A root page's own
+// navigation names the listing in the site's words ("Events", "What's On",
+// /calendar2/, /new-events-1) and the ranking knew only "calendar": on
+// origin/main /events/ "Events" scored 35 and /whats-on/ 10 — level with
+// /menu/ (10) and below every event-detail link (135–190) — so a parser
+// configured at the root never opened the listing. The lift is a FLOOR of
+// 200: above the detail band, below the explicit calendar hub (205).
+// ---------------------------------------------------------------------------
+test('a root page\'s listing-vocabulary nav links outrank menu items and event-detail links, but not the explicit calendar hub', () => {
+  const parser = createParser();
+  const root = 'https://venue.example/';
+  const score = (url, text) => parser.scoreAdditionalUrl(url, root, `<a>${text}</a>`);
+  const events = score('https://venue.example/events/', 'Events');
+  const whatsOn = score('https://venue.example/whats-on/', 'What’s On');
+  const newEvents = score('https://venue.example/new-events-1', 'Events');
+  const eventList = score('https://venue.example/event-list', 'Our Events');
+  const anchorOnly = score('https://venue.example/whats-happening/', 'What’s On');
+  const programme = score('https://venue.example/bears-week/', 'Programme');
+  const menu = score('https://venue.example/menu/', 'Menu');
+  const detail = score('https://venue.example/event/bear-night/', 'Bear Night');
+  const datedDetail = score('https://venue.example/events/night-1/?occurrence=2026-08-01', 'Party Night 1');
+  const hub = score('https://venue.example/calendar/', 'Calendar');
+  const numberedHub = score('https://venue.example/calendar2/', 'Calendar');
+  for (const [name, value] of Object.entries({ events, whatsOn, newEvents, eventList, anchorOnly, programme })) {
+    assert.equal(value, 200, `${name} is lifted to the listing band`);
+  }
+  assert.equal(menu, 10);
+  assert.equal(detail, 165);
+  assert.equal(datedDetail, 190, 'the top of the event-detail band');
+  assert.equal(hub, 205, 'the explicit calendar hub keeps its bonus (10 − 45 + 240)');
+  assert.equal(numberedHub, 250);
+  assert.ok(events > menu && events > detail && events > datedDetail, 'a nav "/events/" link now outranks a menu item and every event-detail link');
+  assert.ok(events < hub && events < numberedHub, 'but not an explicit calendar hub');
+});
+
+test('the listing lift is root-only, same-site, never a detail page, never a demoted section', () => {
+  const parser = createParser();
+  // From a deeper page the site-wide menu is already queued: no lift.
+  assert.equal(parser.scoreAdditionalUrl('https://venue.example/shows/', 'https://venue.example/events/', '<a>Shows</a>'), 35);
+  // Another site's listing is not this site's.
+  assert.equal(parser.scoreAdditionalUrl('https://other.example/events/', 'https://venue.example/', '<a>Events</a>'), 25);
+  // A party page whose anchor says "Tickets" is a party page (detail-shaped).
+  assert.equal(parser.scoreAdditionalUrl('https://venue.example/tickets/bear-night', 'https://venue.example/', '<a>Tickets</a>'), 140);
+  assert.equal(parser.scoreAdditionalUrl('https://venue.example/events/bear-night/', 'https://venue.example/', '<a>All events</a>'), 165);
+  // A section the demotion already named stays demoted whatever its anchor says.
+  assert.equal(parser.scoreAdditionalUrl('https://venue.example/blog/', 'https://venue.example/', '<a>News &amp; Events</a>'), 5);
+  // The page itself, in another spelling, is not another page.
+  assert.ok(parser.scoreAdditionalUrl('https://venue.example//', 'https://venue.example/', '<a>Events</a>') < 200);
+  // A link already above the band keeps its own score.
+  assert.equal(parser.scoreAdditionalUrl('https://venue.example/calendarofevents/', 'https://venue.example/', '<a>Calendar of Events</a>'), 320);
+});
+
+test('from a root page the nav listing link survives the ranking cut ahead of sixteen event links; from the listing page it does not displace them', () => {
+  const parser = createParser();
+  const html = `
+    <html><body>
+      ${buildEventListingLinks(16)}
+      <a href="https://venue.example/shows/">Shows</a>
+      <a href="https://venue.example/menu/">Menu</a>
+    </body></html>
+  `;
+  const fromRoot = parser.extractAdditionalUrls(html, 'https://venue.example/', {});
+  assert.equal(fromRoot[0], 'https://venue.example/shows/', `the listing link leads the root's links, got: ${JSON.stringify(fromRoot.slice(0, 3))}`);
+  assert.ok(!fromRoot.includes('https://venue.example/menu/'), 'the menu item is cut as before');
+  const fromListing = parser.extractAdditionalUrls(html, 'https://venue.example/events/', {});
+  assert.ok(!fromListing.includes('https://venue.example/shows/'), 'on the listing page the event rows keep their slots');
+});
+
+// Doors open on the FIRST page of the host that carries them (claimHostDoor):
+// a root without the widget, then the listing one hop down reads it; a third
+// page carrying the same widget skips and says where it was read. The
+// configured-page case (one read, see the tests above) is unchanged.
+test('Elfsight: read on the first page of the host that carries the widget, skipped with the page named on the next', async () => {
+  const parser = createParser();
+  const parserConfig = { urls: ['https://bar.example/'] };
+  let fetches = 0;
+  const httpAdapter = {
+    fetchData: async () => {
+      fetches++;
+      return { html: elfsightBootPayload([{ name: 'MEGA BEAR BLAST!', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' }]) };
+    }
+  };
+  const root = await parser.collectElfsightCalendarEvents({ html: '<html><body><a href="/calendar">Calendar</a></body></html>', url: 'https://bar.example/' }, parserConfig, httpAdapter);
+  assert.deepEqual(root, []);
+  assert.equal(fetches, 0, 'no widget on the root: nothing read, nothing claimed');
+  const listing = await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://bar.example/calendar' }, parserConfig, httpAdapter);
+  assert.equal(listing.length, 1, 'the listing one hop down carries the widget: read there');
+  assert.equal(fetches, 1);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let third;
+  try {
+    third = await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://www.bar.example/about' }, parserConfig, httpAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(third, []);
+  assert.equal(fetches, 1, 'no second boot request for the host (www. is the same host)');
+  assert.ok(logs.some(line => line.includes('🗓️ ELFSIGHT') && line.includes('already read on https://bar.example/calendar')), logs.join('\n'));
+  // Another run builds its own parser: the claim does not outlive the instance.
+  assert.equal((await createParser().collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://bar.example/about' }, parserConfig, httpAdapter)).length, 1);
+});
+
+test('DICE, Squarespace and Wix doors: the same once-per-host rule', async () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    // DICE: root without the embed, listing with it, a third page with it.
+    const dice = diceStubAdapter();
+    const diceHtml = `<html><body>${DICE_EMBED_HTML}</body></html>`;
+    const config = { urls: ['https://beefmince.example/'] };
+    assert.deepEqual(await parser.collectDiceWidgetEvents({ html: '<html><body>home</body></html>', url: 'https://beefmince.example/' }, config, dice.httpAdapter), []);
+    assert.equal((await parser.collectDiceWidgetEvents({ html: diceHtml, url: 'https://beefmince.example/events' }, config, dice.httpAdapter)).length, 3, 'read on the listing the root led to');
+    const diceFetches = dice.fetched.length;
+    assert.deepEqual(await parser.collectDiceWidgetEvents({ html: diceHtml, url: 'https://beefmince.example/about' }, config, dice.httpAdapter), []);
+    assert.equal(dice.fetched.length, diceFetches, 'nothing fetched for the third page');
+    assert.ok(logs.some(line => line.includes('🎟️ DICE') && line.includes('already read on https://beefmince.example/events')), logs.join('\n'));
+
+    // Squarespace: the twin is built from the page that carries the collection.
+    const squarespace = squarespaceStubAdapter();
+    const sqConfig = { urls: ['https://www.3dollarbillbk.example/'] };
+    const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, sqConfig, squarespace.httpAdapter);
+    assert.equal(rows.length, 3);
+    assert.equal(squarespace.fetched[0].url, 'https://www.3dollarbillbk.example/rsvp?format=json', 'the twin of the carrying page, not of the configured root');
+    const again = squarespaceStubAdapter();
+    assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/events' }, sqConfig, again.httpAdapter), []);
+    assert.deepEqual(again.fetched, [], 'one collection read per host');
+    assert.ok(logs.some(line => line.includes('🟦 SQUARESPACE') && line.includes('already read on https://www.3dollarbillbk.example/rsvp')), logs.join('\n'));
+
+    // Wix: the blob rides on every page; read where first met, never again.
+    const settled = WIX_PAGED_LISTING_HTML.replace('"hasMore":true', '"hasMore":false');
+    const never = { async fetchData(url) { throw new Error(`must not fetch ${url}`); } };
+    const wixConfig = { urls: ['https://www.venue.example/'] };
+    assert.equal((await parser.collectWixEventListEvents(settled, WIX_PAGED_LISTING_URL, wixConfig, never)).length, 2, 'read on the listing the root led to');
+    assert.deepEqual(await parser.collectWixEventListEvents(settled, 'https://www.venue.example/about', wixConfig, never), []);
+    assert.ok(logs.some(line => line.includes('🟪 WIX EVENTS') && line.includes(`already read on ${WIX_PAGED_LISTING_URL}`)), logs.join('\n'));
+    // A configured page always keeps its own turn.
+    assert.equal((await parser.collectWixEventListEvents(settled, 'https://www.venue.example/', wixConfig, never)).length, 2);
+  } finally {
+    console.log = originalLog;
+  }
+});
+
+// The same door on another host of the site (a Squarespace site's builder
+// host mirrors the page, widget and all — crawl from rockbarnyc.com's root,
+// 2026-10-08: mandolin-pelican-….squarespace.com republished the 92 nights)
+// is the same calendar: claimed by the door's own id, read once.
+test('Elfsight: the same widget on another host of the site is the same door — read once', async () => {
+  const parser = createParser();
+  const parserConfig = { urls: ['https://bar.example/'] };
+  let fetches = 0;
+  const httpAdapter = {
+    fetchData: async () => {
+      fetches++;
+      return { html: elfsightBootPayload([{ name: 'MEGA BEAR BLAST!', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' }]) };
+    }
+  };
+  assert.equal((await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://bar.example/calendar' }, parserConfig, httpAdapter)).length, 1);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let mirror;
+  try {
+    mirror = await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://mirror-abcd.squarespace.example/' }, parserConfig, httpAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(mirror, []);
+  assert.equal(fetches, 1, 'one boot request for one widget id, whatever host carries it');
+  assert.ok(logs.some(line => line.includes('🗓️ ELFSIGHT') && line.includes('already read on https://bar.example/calendar')), logs.join('\n'));
+});
+
+// A home page that reads as a link hub (nav, hours, a logo) with the
+// calendar widget in a shared block: the hub route returned no events while
+// the widget had published the whole season (Rockbar's root, 2026-10-08).
+// A door the page itself opened is read whatever the shell classifies as;
+// a hub's own JSON-LD still is not.
+test('a link-aggregator page keeps the events of the calendar door it opened', async () => {
+  const parser = createParser();
+  parser.callAi = async () => { throw new Error('AI must not be called: the widget is the listing'); };
+  const httpAdapter = {
+    fetchData: async () => ({ html: elfsightBootPayload([
+      { name: 'BEARS NIGHT OUT', visible: true, start: { date: '2037-09-20', time: '21:00' }, timeZone: 'America/New_York' },
+      { name: 'GORDITOS', visible: true, start: { date: '2037-09-27', time: '22:00' }, timeZone: 'America/New_York' }
+    ]) })
+  };
+  const result = await parser.parseEvents(
+    { url: 'https://bar.example/', html: ELFSIGHT_HTML },
+    { urls: ['https://bar.example/'] },
+    null,
+    'link-aggregator',
+    httpAdapter
+  );
+  assert.deepEqual(result.events.map(event => event.title).sort(), ['BEARS NIGHT OUT', 'GORDITOS']);
+});
+
+// A door that answered nothing was not the site's calendar: the claim goes
+// back. massbearsandcubs.org from its root (2026-10-08): the home page
+// carries the events-list summary block (so the collection marker), its own
+// twin has no dated items, and with the claim held the real /events
+// collection one hop down was skipped as "already read" and read by the AI
+// instead (26 minutes, 91 events for 10 series).
+test('Squarespace: a home page whose twin answers no dated items releases the claim, and the listing one hop down reads its own twin', async () => {
+  const parser = createParser();
+  const config = { urls: ['https://www.massbears.example/'] };
+  const home = squarespaceStubAdapter({ collection: { typeName: 'page' }, items: [] });
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.massbears.example/' }, config, home.httpAdapter), []);
+  assert.equal(home.fetched[0].url, 'https://www.massbears.example/?format=json', 'the home page tried its own twin');
+  const listing = squarespaceStubAdapter();
+  const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.massbears.example/events' }, config, listing.httpAdapter);
+  assert.equal(rows.length, 3, 'the listing reads its twin: the home page\'s empty answer held no claim');
+  assert.equal(listing.fetched[0].url, 'https://www.massbears.example/events?format=json');
+  const third = squarespaceStubAdapter();
+  assert.deepEqual(await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.massbears.example/rsvp' }, config, third.httpAdapter), []);
+  assert.deepEqual(third.fetched, [], 'a door that answered holds its claim');
+
+  // Same for a widget boot that publishes nothing.
+  const empty = { fetchData: async () => ({ html: elfsightBootPayload([]) }) };
+  assert.deepEqual(await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://www.massbears.example/' }, config, empty), []);
+  const full = { fetchData: async () => ({ html: elfsightBootPayload([{ name: 'BEAR TEA', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' }]) }) };
+  assert.equal((await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://www.massbears.example/calendar' }, config, full)).length, 1);
+});
