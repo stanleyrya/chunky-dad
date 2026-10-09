@@ -1896,6 +1896,335 @@ function buildDeck(runPayload, store, options = {}) {
 // the nights. Updates fold only when they are the same update: one source,
 // the same change table (getSameChangeSignature) and the same reason — the
 // note swiped onto a folded same-change card.
+// ---------------------------------------------------------------------------
+// Deep check: one host a day gets a real look — its listing page's text
+// (from the page cache the scraper already keeps) beside the events the
+// latest run extracted from it, its open lost series, and three one-tap
+// answers. State lives in <sharedRoot>/deep-check.json (Mac-only writer):
+//   { version, current: { host, date, reason }, checks: { host: { lastCheckedAt, lastAnswer } },
+//     answers: [{ date, host, answer: missing|fake|ok, text, fakes: [titles], lostStill: { title: yes|no } }] }
+// The answers are the fix queue (GET /review/deep-check.json).
+// ---------------------------------------------------------------------------
+const DEEP_CHECK_FILE_NAME = 'deep-check.json';
+const DEEP_CHECK_ANSWERS = ['missing', 'fake', 'ok'];
+const DEEP_CHECK_PAGE_TEXT_CAP = 6000;
+
+function getDeepCheckPath(sharedRoot) {
+    return path.join(sharedRoot, DEEP_CHECK_FILE_NAME);
+}
+
+function emptyDeepCheckStore() {
+    return { version: 1, current: null, checks: {}, answers: [] };
+}
+
+function normalizeDeepCheckStore(parsed) {
+    const store = emptyDeepCheckStore();
+    if (!parsed || typeof parsed !== 'object') return store;
+    if (parsed.current && typeof parsed.current === 'object' && parsed.current.host) {
+        store.current = { host: String(parsed.current.host), date: String(parsed.current.date || ''), reason: String(parsed.current.reason || '') };
+    }
+    if (parsed.checks && typeof parsed.checks === 'object') {
+        Object.keys(parsed.checks).forEach((host) => {
+            const entry = parsed.checks[host];
+            if (!entry || typeof entry !== 'object') return;
+            store.checks[host] = { lastCheckedAt: String(entry.lastCheckedAt || ''), lastAnswer: String(entry.lastAnswer || '') };
+        });
+    }
+    if (Array.isArray(parsed.answers)) {
+        store.answers = parsed.answers.filter((entry) => entry && typeof entry === 'object' && entry.host && DEEP_CHECK_ANSWERS.includes(entry.answer))
+            .map((entry) => ({
+                date: String(entry.date || ''),
+                stampedAt: String(entry.stampedAt || ''),
+                host: String(entry.host),
+                answer: String(entry.answer),
+                text: String(entry.text || ''),
+                fakes: Array.isArray(entry.fakes) ? entry.fakes.map(String) : [],
+                lostStill: entry.lostStill && typeof entry.lostStill === 'object' ? entry.lostStill : {}
+            }));
+    }
+    return store;
+}
+
+function loadDeepCheck(file, fsLike = fs) {
+    try {
+        if (!fsLike.existsSync(file)) return emptyDeepCheckStore();
+        return normalizeDeepCheckStore(JSON.parse(fsLike.readFileSync(file, 'utf8')));
+    } catch (error) {
+        console.warn(`review-queue: deep-check store unreadable (${error.message}) — treating as empty`);
+        return emptyDeepCheckStore();
+    }
+}
+
+function saveDeepCheck(file, store, fsLike = fs) {
+    const normalized = normalizeDeepCheckStore(store);
+    fsLike.mkdirSync(path.dirname(file), { recursive: true });
+    const tmpPath = `${file}.tmp-${process.pid}`;
+    fsLike.writeFileSync(tmpPath, JSON.stringify(normalized, null, 2));
+    fsLike.renameSync(tmpPath, file);
+    return normalized;
+}
+
+// The source ledger assessed the way the dashboard does (with the owner's
+// decisions joined for the rejections signal). null when there is no ledger.
+function loadSourceHealth(sharedRoot, options = {}) {
+    const fsLike = options.fs || fs;
+    const ledgerPath = path.join(sharedRoot, 'metrics', 'sources.ndjson');
+    let text = '';
+    try { text = fsLike.readFileSync(ledgerPath, 'utf8'); } catch (_) { return null; }
+    const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+    const records = MetricsSections.parseSourceLedger(text);
+    if (!records.length) return null;
+    const decisions = options.decisions || loadDecisions(getDecisionsPath(sharedRoot));
+    return { records, health: MetricsSections.assessSourceHealth(records, { now: options.now || new Date(), decisions }) };
+}
+
+function deepCheckBand(row) {
+    if (['dead', 'stopped', 'shrunk', 'lost'].includes(row.verdict)) return 0;
+    if (row.quality && row.quality.offCount >= 2) return 1;
+    return 2;
+}
+
+// Today's host: the one already picked today stays (a reload is not a new
+// day); otherwise troubled/lost hosts first, then hosts with two or more
+// quality badges, then the rest — within a band the one checked longest
+// ago (never first). Companions (fed by a sibling host) are skipped.
+function pickDeepCheckHost(health, store, today) {
+    const rows = health && Array.isArray(health.rows) ? health.rows.filter((row) => row.verdict !== 'companion') : [];
+    const state = normalizeDeepCheckStore(store);
+    if (!rows.length) return { host: null, reason: 'no ledger', changed: false };
+    const current = state.current;
+    if (current && current.date === today && rows.some((row) => row.host === current.host)) {
+        return { host: current.host, reason: current.reason, changed: false };
+    }
+    const checkedAt = (host) => (state.checks[host] && state.checks[host].lastCheckedAt) || '';
+    const ordered = rows.slice().sort((a, b) => deepCheckBand(a) - deepCheckBand(b)
+        || checkedAt(a.host).localeCompare(checkedAt(b.host))
+        || String(a.host).localeCompare(String(b.host)));
+    const pick = ordered.find((row) => checkedAt(row.host).slice(0, 10) !== today) || ordered[0];
+    const band = deepCheckBand(pick);
+    const reason = band === 0 ? `${pick.verdict}${pick.since ? ` since ${pick.since}` : ''}`
+        : (band === 1 ? `${pick.quality.offCount} quality signals off` : (checkedAt(pick.host) ? `last checked ${checkedAt(pick.host).slice(0, 10)}` : 'never checked'));
+    return { host: pick.host, reason, changed: true };
+}
+
+// Cached HTML → readable text: no scripts, styles or markup, block tags as
+// line breaks, entities decoded, whitespace folded, capped.
+function readableTextFromHtml(html, cap = DEEP_CHECK_PAGE_TEXT_CAP) {
+    let text = String(html || '');
+    text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+    text = text.replace(/<(script|style|noscript|svg|template|iframe)\b[\s\S]*?<\/\1>/gi, ' ');
+    text = text.replace(/<head\b[\s\S]*?<\/head>/gi, ' ');
+    text = text.replace(/<\/(p|div|li|tr|h[1-6]|section|article|header|footer|nav|main|aside|ul|ol|table|form|td|th|dd|dt|blockquote|figcaption|summary|option)\s*>/gi, '\n');
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<[^>]+>/g, ' ');
+    const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: String.fromCharCode(39), nbsp: ' ', ndash: '\u2013', mdash: '\u2014', hellip: '\u2026', rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c' };
+    text = text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, code) => {
+        if (code[0] === '#') {
+            const value = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+            return Number.isFinite(value) && value > 0 && value < 0x110000 ? String.fromCodePoint(value) : ' ';
+        }
+        return Object.prototype.hasOwnProperty.call(entities, code.toLowerCase()) ? entities[code.toLowerCase()] : match;
+    });
+    text = text.replace(/[ \t\f\v]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{2,}/g, '\n').trim();
+    const full = text.length;
+    if (cap > 0 && text.length > cap) text = `${text.slice(0, cap)}\u2026`;
+    return { text, chars: full, truncated: cap > 0 && full > cap };
+}
+
+function normalizeListingUrl(url) {
+    return String(url || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
+// The host's listing page from the scraper's page cache
+// (<sharedRoot>/storage/pages/<host>/*.json, each {url, fetchedAt, html}).
+// The file whose url is one of the parser's configured urls wins, else the
+// one with the fewest path segments (the landing/listing page), newest first.
+// Files are sniffed by their first bytes so a 400 KB cache is not parsed
+// just to learn its url.
+function findCachedListingPage(sharedRoot, host, preferredUrls = [], fsLike = fs) {
+    const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
+    if (!hostKey) return null;
+    const dirs = [hostKey, `www.${hostKey}`].map((name) => path.join(sharedRoot, 'storage', 'pages', name));
+    const wanted = new Set((Array.isArray(preferredUrls) ? preferredUrls : []).map(normalizeListingUrl).filter(Boolean));
+    const candidates = [];
+    dirs.forEach((dir) => {
+        let names = [];
+        try { names = fsLike.readdirSync(dir); } catch (_) { return; }
+        names.filter((name) => name.endsWith('.json') && !name.startsWith('.')).forEach((name) => {
+            const file = path.join(dir, name);
+            let head = '';
+            try {
+                const fd = fsLike.openSync(file, 'r');
+                const buffer = Buffer.alloc(600);
+                const read = fsLike.readSync(fd, buffer, 0, 600, 0);
+                fsLike.closeSync(fd);
+                head = buffer.slice(0, read).toString('utf8');
+            } catch (_) { return; }
+            const urlMatch = /"url"\s*:\s*"([^"]+)"/.exec(head);
+            const fetchedMatch = /"fetchedAt"\s*:\s*"([^"]+)"/.exec(head);
+            if (!urlMatch) return;
+            const url = urlMatch[1];
+            const normalized = normalizeListingUrl(url);
+            const pathPart = normalized.slice(normalized.indexOf('/') >= 0 ? normalized.indexOf('/') : normalized.length);
+            candidates.push({ file, url, fetchedAt: fetchedMatch ? fetchedMatch[1] : '', preferred: wanted.has(normalized), depth: pathPart.split('/').filter(Boolean).length, pathLength: pathPart.length });
+        });
+    });
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0) || a.depth - b.depth || String(b.fetchedAt).localeCompare(String(a.fetchedAt)) || a.pathLength - b.pathLength);
+    const best = candidates[0];
+    try {
+        const parsed = JSON.parse(fsLike.readFileSync(best.file, 'utf8'));
+        return { url: parsed.url || best.url, fetchedAt: parsed.fetchedAt || best.fetchedAt, html: typeof parsed.html === 'string' ? parsed.html : '', statusCode: parsed.statusCode || null, file: best.file, preferred: best.preferred };
+    } catch (_) {
+        return null;
+    }
+}
+
+// Events the latest run extracted from one host (attributed the way the
+// ledger attributes them: the event's own page host when it is one of the
+// parser's hosts, else the parser's first host), as plain rows.
+function eventsForHost(payload, host) {
+    const SharedCore = loadSharedCore();
+    const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
+    const rows = [];
+    const parsers = payload && Array.isArray(payload.parserResults) ? payload.parserResults : [];
+    parsers.forEach((parser) => {
+        if (!parser || typeof parser !== 'object') return;
+        const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
+        const urls = Array.isArray(config.urls) ? config.urls : [];
+        const home = [];
+        urls.forEach((url) => { const h = SharedCore.hostOfUrl(url); if (h && !home.includes(h)) home.push(h); });
+        const events = Array.isArray(parser.events) ? parser.events : [];
+        if (!home.length) {
+            const counts = new Map();
+            events.forEach((event) => { const h = SharedCore.hostOfUrl(event && (event.website || event.url)); if (h) counts.set(h, (counts.get(h) || 0) + 1); });
+            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+            home.push(top ? top[0] : String(parser.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+        }
+        const primary = home[0];
+        events.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+            const owner = home.includes(eventHost) ? eventHost : primary;
+            if (owner !== hostKey) return;
+            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+            let time = '';
+            if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
+                try {
+                    time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
+                } catch (_) { time = ''; }
+            }
+            rows.push({
+                title: String(event.title || ''),
+                day: day || '',
+                time,
+                place: String(event.bar || event.venue || event.city || ''),
+                url: String(event.website || event.url || event.ticketUrl || ''),
+                bear: event.isBearEvent === true,
+                source: String(event.source || ''),
+                parser: String(parser.name || '')
+            });
+        });
+    });
+    rows.sort((a, b) => a.day.localeCompare(b.day) || a.title.localeCompare(b.title));
+    return rows;
+}
+
+// Everything the deep-check page shows for today's host.
+function buildDeepCheckCard(sharedRoot, run, options = {}) {
+    const fsLike = options.fs || fs;
+    const today = options.today || new Date().toISOString().slice(0, 10);
+    const loaded = options.sourceHealth || loadSourceHealth(sharedRoot, { fs: fsLike, now: options.now });
+    if (!loaded) return { available: false, reason: 'no source ledger', today };
+    const storePath = getDeepCheckPath(sharedRoot);
+    let store = loadDeepCheck(storePath, fsLike);
+    const pick = pickDeepCheckHost(loaded.health, store, today);
+    if (!pick.host) return { available: false, reason: pick.reason, today };
+    if (pick.changed && options.persist !== false) {
+        store.current = { host: pick.host, date: today, reason: pick.reason };
+        store = saveDeepCheck(storePath, store, fsLike);
+    }
+    const row = loaded.health.rows.find((entry) => entry.host === pick.host);
+    const latest = row.latest || {};
+    const preferred = [latest.url].filter(Boolean);
+    const page = findCachedListingPage(sharedRoot, row.host, preferred, fsLike);
+    const readable = page ? readableTextFromHtml(page.html, options.pageTextCap) : null;
+    // The events come from the newest run that actually ran this host (the
+    // ledger's latest line names it) — a hand-run of one other parser is
+    // the newest run file but holds nothing of this host.
+    let eventsRun = run && run.payload ? run : null;
+    if (latest.run_id && (!eventsRun || eventsRun.runId !== latest.run_id)) {
+        try {
+            const own = loadRun(sharedRoot, latest.run_id);
+            if (own && own.payload) eventsRun = own;
+        } catch (_) { /* fall back to the deck's run */ }
+    }
+    const payload = eventsRun ? eventsRun.payload : null;
+    const events = payload ? eventsForHost(payload, row.host) : [];
+    const todayAnswer = store.answers.find((entry) => entry.host === row.host && entry.date === today) || null;
+    return {
+        available: true,
+        today,
+        runId: eventsRun ? eventsRun.runId : (run ? run.runId : null),
+        host: row.host,
+        parsers: Array.isArray(row.parsers) ? row.parsers : [],
+        verdict: row.verdict,
+        flags: Array.isArray(row.flags) ? row.flags : [],
+        since: row.since || null,
+        aggregator: row.aggregator === true,
+        reason: pick.reason,
+        latest: { run_id: latest.run_id || null, extracted: Number(latest.extracted) || 0, bear: Number(latest.bear) || 0, upcoming: Number(latest.upcoming) || 0 },
+        url: latest.url || `https://${row.host}/`,
+        badges: row.quality && Array.isArray(row.quality.badges) ? row.quality.badges.map((badge) => ({ key: badge.key, chip: badge.chip, label: badge.label, detail: badge.detail })) : [],
+        lost: Array.isArray(row.lost) ? row.lost : [],
+        page: page ? { url: page.url, fetchedAt: page.fetchedAt, statusCode: page.statusCode, text: readable.text, chars: readable.chars, truncated: readable.truncated, preferred: page.preferred } : null,
+        events,
+        previous: store.checks[row.host] || null,
+        todayAnswer,
+        queue: store.answers.length
+    };
+}
+
+// One answer for one host on one day; a second answer the same day replaces
+// the first. Returns the store to save.
+function recordDeepCheckAnswer(store, input, now = new Date()) {
+    const state = normalizeDeepCheckStore(store);
+    const host = input && typeof input.host === 'string' ? input.host.trim().toLowerCase() : '';
+    const answer = input && typeof input.answer === 'string' ? input.answer.trim().toLowerCase() : '';
+    if (!host || !DEEP_CHECK_ANSWERS.includes(answer)) return null;
+    const stampedAt = now.toISOString();
+    const date = stampedAt.slice(0, 10);
+    const lostStill = {};
+    if (input.lostStill && typeof input.lostStill === 'object') {
+        Object.keys(input.lostStill).forEach((title) => {
+            const value = String(input.lostStill[title] || '').toLowerCase();
+            if (value === 'yes' || value === 'no') lostStill[String(title).slice(0, 120)] = value;
+        });
+    }
+    const entry = {
+        date,
+        stampedAt,
+        host,
+        answer,
+        text: String(input.text || '').trim().slice(0, 2000),
+        fakes: answer === 'fake' ? (Array.isArray(input.fakes) ? input.fakes.map((value) => String(value).slice(0, 160)).filter(Boolean).slice(0, 50) : []) : [],
+        lostStill
+    };
+    state.answers = state.answers.filter((existing) => !(existing.host === host && existing.date === date));
+    state.answers.push(entry);
+    state.checks[host] = { lastCheckedAt: stampedAt, lastAnswer: answer };
+    return { store: state, entry };
+}
+
+// The fix queue: every answer that asks for work, newest first; a "looks
+// right" with a note counts too (the note is the work).
+function deepCheckQueue(store) {
+    const state = normalizeDeepCheckStore(store);
+    return state.answers
+        .filter((entry) => entry.answer !== 'ok' || entry.text || Object.values(entry.lostStill || {}).includes('no') || Object.values(entry.lostStill || {}).includes('yes'))
+        .sort((a, b) => String(b.stampedAt).localeCompare(String(a.stampedAt)));
+}
+
 function formatRejectionsText(store) {
     const lines = [];
     const SharedCore = loadSharedCore();
@@ -2031,5 +2360,20 @@ module.exports = {
     describeChangeRows,
     driftCoveredByNoteTags,
     stampSameChange,
-    formatRejectionsText
+    formatRejectionsText,
+    DEEP_CHECK_FILE_NAME,
+    DEEP_CHECK_ANSWERS,
+    getDeepCheckPath,
+    emptyDeepCheckStore,
+    normalizeDeepCheckStore,
+    loadDeepCheck,
+    saveDeepCheck,
+    loadSourceHealth,
+    pickDeepCheckHost,
+    readableTextFromHtml,
+    findCachedListingPage,
+    eventsForHost,
+    buildDeepCheckCard,
+    recordDeepCheckAnswer,
+    deepCheckQueue
 };

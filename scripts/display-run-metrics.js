@@ -694,6 +694,30 @@ class MetricsDisplay {
     return this.fm.joinPath(this.metricsDir, 'sources.ndjson');
   }
 
+  // owner-decisions.json sits next to the metrics folder (the data root);
+  // the Mac writes it, the phone only reads it — for the rejections signal.
+  getOwnerDecisionsPath() {
+    const root = this.baseDir || (typeof this.resolveDataRoot === 'function' ? this.resolveDataRoot(this.fm) : null);
+    return root ? this.fm.joinPath(root, 'owner-decisions.json') : null;
+  }
+
+  async loadOwnerDecisions() {
+    const path = this.getOwnerDecisionsPath();
+    if (!path || !this.fm.fileExists(path)) return null;
+    try {
+      await this.fm.downloadFileFromiCloud(path);
+    } catch (error) {
+      console.log(`Metrics: owner decisions iCloud download failed: ${error.message}`);
+    }
+    try {
+      const parsed = JSON.parse(this.fm.readString(path) || 'null');
+      return parsed && Array.isArray(parsed.decisions) ? parsed : null;
+    } catch (error) {
+      console.log(`Metrics: owner decisions unreadable: ${error.message}`);
+      return null;
+    }
+  }
+
   // The source ledger (metrics/sources.ndjson): one line per run per website
   // host, written by every run on every machine — unlike metrics.ndjson, which
   // only the phone writes. Returns { available, reason, health, records }; a
@@ -723,8 +747,9 @@ class MetricsDisplay {
     if (!records.length) {
       return { available: false, reason: null, health: null, records: [] };
     }
-    const health = MetricsSections.assessSourceHealth(records, { now: new Date() });
-    console.log(`Metrics: Source ledger — ${records.length} lines, ${health.hosts} hosts, ${health.troubled} troubled`);
+    const decisions = await this.loadOwnerDecisions();
+    const health = MetricsSections.assessSourceHealth(records, { now: new Date(), decisions });
+    console.log(`Metrics: Source ledger — ${records.length} lines, ${health.hosts} hosts, ${health.troubled} troubled${decisions ? `, ${decisions.decisions.length} owner decisions joined` : ''}`);
     return { available: true, reason: null, health, records };
   }
 
@@ -3145,6 +3170,14 @@ class MetricsDisplay {
       cards.push(buildSection('Latest Run', MetricsSections.buildHostSummaryHtml(row, {
         faviconUrl: item => this.getHostFaviconUrl(item)
       })));
+      if (typeof MetricsSections.buildHostQualityHtml === 'function') {
+        const offCount = row.quality && row.quality.offCount ? row.quality.offCount : 0;
+        cards.push(buildSection(
+          'Quality',
+          MetricsSections.buildHostQualityHtml(row),
+          escapeHtml('Completeness, flags, bear funnel, dedup, stability, horizon, churn, your rejections — a badge only when a threshold (QUALITY_THRESHOLDS in metrics-sections) is crossed')
+        ));
+      }
 
       // Charts: extracted/bear/upcoming with the baseline and the troubled
       // stretch, a pages/page-errors strip that follows its range, then
@@ -4001,6 +4034,55 @@ ${verdictCss}
     }
     .sources-table td {
       vertical-align: middle;
+    }
+    .quality-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      max-width: 150px;
+    }
+    .quality-chip {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      border: 1px solid ${SOURCE_VERDICT_COLORS.shrunk};
+      color: ${SOURCE_VERDICT_COLORS.shrunk};
+      white-space: nowrap;
+    }
+    .quality-chip.quality-ok {
+      border-color: var(--color-success);
+      color: var(--color-success);
+    }
+    .quality-chip.quality-more {
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+    }
+    .quality-cell {
+      vertical-align: middle;
+    }
+    .quality-summary {
+      margin-bottom: 8px;
+    }
+    .quality-tile .metric-detail {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+    .quality-tile.quality-off {
+      border: 1px solid ${SOURCE_VERDICT_COLORS.shrunk};
+    }
+    .quality-badge {
+      display: inline-block;
+      margin-left: 6px;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 6px;
+      background: ${SOURCE_VERDICT_COLORS.shrunk};
+      color: #1f2544;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .lost-cell .lost-count {
       color: ${SOURCE_VERDICT_COLORS.lost};

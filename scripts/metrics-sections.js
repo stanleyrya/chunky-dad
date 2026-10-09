@@ -276,6 +276,122 @@ function medianOf(values) {
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+// Per-host quality (the `quality` block on a ledger line, written by
+// SharedCore.buildSourceQuality) judged against fixed thresholds. A badge
+// is raised only when something is off; every signal is still listed as a
+// tile so the host page shows the number next to the line it did not cross.
+const QUALITY_THRESHOLDS = {
+    minEvents: 5,        // completeness shares are judged only with ≥5 kept events
+    time: 60,            // % of kept events with a real start time (not timeUnknown / allDay)
+    place: 60,           // % with a bar/venue name
+    coords: 50,          // % with coordinates
+    url: 50,             // % with a page, website or ticket link
+    image: 30,           // % with an image
+    desc: 30,            // % with a description
+    aiDropped: 20,       // events the AI dropped as not-bear with no human verdict
+    dedupPct: 40,        // % of extracted rows folded as duplicates
+    stability: 60,       // Jaccard % of the kept set vs the previous ok run (sets ≥3)
+    runsSinceNew: 15,    // ok runs since the host last proposed a NEW event
+    churnChanged: 3,     // merges that rewrote a field other than notes in one run
+    rejectMin: 3,        // owner rejections on this host …
+    rejectShare: 30      // … and the rejected share of its decisions, both needed
+};
+
+function assessSourceQuality(row, options = {}) {
+    const thresholds = Object.assign({}, QUALITY_THRESHOLDS, options.thresholds || {});
+    const latest = row && row.latest ? row.latest : {};
+    const q = latest.quality && typeof latest.quality === 'object' ? latest.quality : null;
+    const rejections = row && row.rejections && typeof row.rejections === 'object' ? row.rejections : null;
+    const signals = [];
+    const add = (signal) => { signals.push(Object.assign({ off: false, detail: '' }, signal)); };
+    if (q) {
+        const n = Number(q.n) || 0;
+        const judged = n >= thresholds.minEvents;
+        [['time', 'With a time'], ['place', 'With a place'], ['coords', 'With coordinates'], ['url', 'With a link'], ['image', 'With an image'], ['desc', 'With a description']].forEach(([key, label]) => {
+            const value = Number.isFinite(Number(q[key])) && q[key] !== null ? Number(q[key]) : null;
+            const off = judged && value !== null && value < thresholds[key];
+            add({ key, label, value: value === null ? '—' : `${value}%`, chip: `${key} ${value}%`, off, detail: off ? `under ${thresholds[key]}% of ${n} kept` : `${n} kept` });
+        });
+        const flags = q.flags && typeof q.flags === 'object' ? q.flags : {};
+        const flagTotal = Object.keys(flags).reduce((sum, code) => sum + (Number(flags[code]) || 0), 0);
+        const topFlags = Object.keys(flags).sort((a, b) => (flags[b] || 0) - (flags[a] || 0)).slice(0, 3).map((code) => `${code} ×${flags[code]}`);
+        add({ key: 'flags', label: 'Sanity flags', value: String(flagTotal), chip: `flags ${flagTotal}`, off: flagTotal >= 1, detail: topFlags.join(' · ') || 'none' });
+        const bear = q.bear && typeof q.bear === 'object' ? q.bear : {};
+        const aiDropped = Number(bear.ai_dropped) || 0;
+        add({ key: 'bear', label: 'Bear funnel', value: `${Number(bear.kept) || 0} of ${Number(bear.extracted) || 0}`, chip: `AI-drop ${aiDropped}`, off: aiDropped >= thresholds.aiDropped, detail: `${aiDropped} AI-dropped unreviewed · ${Number(bear.manual_dropped) || 0} by your verdicts${bear.top_reason ? ` · ${String(bear.top_reason).slice(0, 80)}` : ''}` });
+        const dedup = q.dedup && typeof q.dedup === 'object' ? q.dedup : {};
+        const dedupPct = Number.isFinite(Number(dedup.pct)) && dedup.pct !== null ? Number(dedup.pct) : 0;
+        add({ key: 'dedup', label: 'Dedup fold', value: `${dedupPct}%`, chip: `dedup ${dedupPct}%`, off: dedupPct >= thresholds.dedupPct, detail: `${Number(dedup.removed) || 0} rows folded as duplicates` });
+        const stability = Number.isFinite(Number(q.stability)) && q.stability !== null ? Number(q.stability) : null;
+        add({ key: 'stability', label: 'Stability', value: stability === null ? '—' : `${stability}%`, chip: `unstable ${stability}%`, off: stability !== null && stability < thresholds.stability, detail: stability === null ? 'needs 3+ kept events on two ok runs' : 'kept set shared with the previous ok run' });
+        const horizon = Number(q.horizon_days) || 0;
+        add({ key: 'horizon', label: 'Horizon', value: `${horizon}d`, chip: 'no upcoming', off: judged && horizon === 0, detail: horizon === 0 ? 'nothing dated today or later' : 'days to the furthest upcoming (extracted incl. dropped)' });
+        const runsSinceNew = Number.isFinite(Number(q.runs_since_new)) && q.runs_since_new !== null ? Number(q.runs_since_new) : null;
+        add({ key: 'new', label: 'Since last new', value: runsSinceNew === null ? '—' : `${runsSinceNew} runs`, chip: `no new ${runsSinceNew}r`, off: runsSinceNew !== null && runsSinceNew >= thresholds.runsSinceNew, detail: 'ok runs since a NEW proposal' });
+        const errors = q.errors && typeof q.errors === 'object' ? q.errors : {};
+        const errorTotal = Object.keys(errors).reduce((sum, key) => sum + (Number(errors[key]) || 0), 0);
+        add({ key: 'errors', label: 'Page errors', value: String(errorTotal), chip: `errors ${errorTotal}`, off: errorTotal >= 1, detail: Object.keys(errors).map((key) => `${key} ×${errors[key]}`).join(' · ') || 'none' });
+        const churn = q.churn && typeof q.churn === 'object' ? q.churn : {};
+        const changed = Number(churn.changed) || 0;
+        const fields = churn.fields && typeof churn.fields === 'object' ? churn.fields : {};
+        add({ key: 'churn', label: 'Merge churn', value: `${changed}/${Number(churn.merges) || 0}`, chip: `churn ${changed}`, off: changed >= thresholds.churnChanged, detail: Object.keys(fields).map((key) => `${key} ×${fields[key]}`).join(' · ') || 'no field rewritten' });
+    }
+    if (rejections) {
+        const reject = Number(rejections.reject) || 0;
+        const total = Number(rejections.total) || 0;
+        const share = total > 0 ? Math.round((100 * reject) / total) : 0;
+        add({ key: 'rejections', label: 'Your rejections', value: `${reject}/${total}`, chip: `rejected ${reject}`, off: reject >= thresholds.rejectMin && share >= thresholds.rejectShare, detail: rejections.top ? `${rejections.top} ×${rejections.tags[rejections.top]}` : 'none' });
+    }
+    const badges = signals.filter((signal) => signal.off);
+    return { available: !!q, signals, badges, offCount: badges.length };
+}
+
+// Owner decisions (owner-decisions.json) per host: approve / reject counts
+// and the reject reason tags. A decision names its parser (snapshot.source)
+// and its page; the host comes from the row that carries that parser, else
+// from the page's host.
+function summarizeOwnerDecisions(store, rows) {
+    const decisions = Array.isArray(store) ? store : (store && Array.isArray(store.decisions) ? store.decisions : []);
+    const hosts = new Set((Array.isArray(rows) ? rows : []).map((row) => String(row.host || '').toLowerCase()).filter(Boolean));
+    const byParser = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        (Array.isArray(row.parsers) ? row.parsers : []).forEach((name) => {
+            const key = String(name || '').toLowerCase();
+            if (key && !byParser.has(key)) byParser.set(key, row.host);
+        });
+    });
+    const hostOfUrl = (value) => {
+        const match = /^https?:\/\/([^/?#]+)/i.exec(String(value || ''));
+        return match ? match[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '') : '';
+    };
+    const out = {};
+    decisions.forEach((decision) => {
+        if (!decision || typeof decision !== 'object') return;
+        const snap = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : {};
+        let host = byParser.get(String(snap.source || '').toLowerCase()) || '';
+        if (!host) {
+            const fromUrl = hostOfUrl(snap.url || snap.website || snap.ticketUrl);
+            if (hosts.has(fromUrl)) host = fromUrl;
+        }
+        if (!host) return;
+        const entry = out[host] || (out[host] = { approve: 0, reject: 0, total: 0, tags: {}, top: '' });
+        entry.total += 1;
+        if (decision.verdict === 'reject') {
+            entry.reject += 1;
+            const reason = decision.reason && typeof decision.reason === 'object' ? decision.reason : {};
+            const tag = Array.isArray(reason.tags) && reason.tags.length ? String(reason.tags[0]) : (reason.text ? 'note' : (reason.mode || 'untagged'));
+            entry.tags[tag] = (entry.tags[tag] || 0) + 1;
+        } else if (decision.verdict === 'approve') {
+            entry.approve += 1;
+        }
+    });
+    Object.keys(out).forEach((host) => {
+        const entry = out[host];
+        entry.top = Object.keys(entry.tags).sort((a, b) => entry.tags[b] - entry.tags[a])[0] || '';
+    });
+    return out;
+}
+
 function assessSourceHealth(records, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
     const staleAfterDays = Number.isFinite(options.staleAfterDays) ? options.staleAfterDays : 3;
@@ -410,6 +526,13 @@ function assessSourceHealth(records, options = {}) {
         row.verdict = 'companion';
         row.since = null;
         row.companionOf = siblings;
+    });
+    // Quality per row (badges only when something is off); owner rejections
+    // joined in when the caller hands over owner-decisions.json.
+    const rejections = options.decisions ? summarizeOwnerDecisions(options.decisions, rows) : null;
+    rows.forEach((row) => {
+        row.rejections = rejections ? (rejections[row.host] || null) : null;
+        row.quality = assessSourceQuality(row, options);
     });
     rows.sort((a, b) => SOURCE_VERDICT_ORDER.indexOf(a.verdict) - SOURCE_VERDICT_ORDER.indexOf(b.verdict)
         || (Number(b.latest.extracted) || 0) - (Number(a.latest.extracted) || 0)
@@ -685,6 +808,7 @@ function buildSourcesTableHtml(health, options = {}) {
             </td>
             <td class="num trio-cell"><div class="cell-title">${extracted} · ${bear} · ${upcoming}</div></td>
             <td class="num lost-cell">${row.lostDays > 0 ? `<div class="cell-title${row.aggregator ? ' muted' : ' lost-count'}">${Number(row.lostDays) || 0}${row.lostBear ? ' 🐻' : ''}</div>` : '<div class="cell-subtitle">—</div>'}</td>
+            <td class="quality-cell">${buildQualityChipsHtml(row, { limit: 3 })}</td>
             <td class="trend-cell">${buildSparklineSvg(series, { title: `${series.length} runs` })}</td>
             <td class="age-cell"><div class="cell-subtitle">${escapeHtml(formatSourceAge(ageDays))}</div></td>
           </tr>`;
@@ -698,6 +822,7 @@ function buildSourcesTableHtml(health, options = {}) {
                 ${buildSourceSortHeader('Verdict', 'verdict', options.sortState, 'asc', 'verdict-cell')}
                 ${buildSourceSortHeader('Extr · Bear · Up', 'extracted', options.sortState, 'desc', 'num trio-cell')}
                 ${buildSourceSortHeader('Lost', 'lost', options.sortState, 'desc', 'num lost-cell')}
+                <th class="quality-cell">Quality</th>
                 <th class="trend-cell">Trend</th>
                 ${buildSourceSortHeader('Seen', 'age', options.sortState, 'desc', 'age-cell')}
               </tr>
@@ -902,6 +1027,40 @@ function buildLostListHtml(row) {
             </tbody>
           </table>
         </div>${noteHtml}`;
+}
+
+// Quality chips for a Sources row: the off signals only, short, capped.
+function buildQualityChipsHtml(row, options = {}) {
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? options.limit : 3;
+    const quality = row && row.quality ? row.quality : null;
+    if (!quality || !quality.available) return '<span class="cell-subtitle">—</span>';
+    const badges = Array.isArray(quality.badges) ? quality.badges : [];
+    if (!badges.length) return '<span class="quality-chip quality-ok">clean</span>';
+    const shown = badges.slice(0, limit).map((badge) => `<span class="quality-chip" title="${escapeHtml(badge.detail || '')}">${escapeHtml(badge.chip || badge.label)}</span>`).join('');
+    const more = badges.length > limit ? `<span class="quality-chip quality-more">+${badges.length - limit}</span>` : '';
+    return `<div class="quality-chips">${shown}${more}</div>`;
+}
+
+// Quality tiles for the host page: every signal with its value, the ones
+// over a threshold marked, the threshold named in the tile's detail line.
+function buildHostQualityHtml(row) {
+    const quality = row && row.quality ? row.quality : null;
+    if (!quality || !quality.available) {
+        return '<div class="muted">No quality block on this host\u2019s latest line yet \u2014 runs from 2026-10-09 write it (backfill history on the Mac to see it for older runs).</div>';
+    }
+    const tiles = quality.signals.map((signal) => `
+          <div class="metric quality-tile${signal.off ? ' quality-off' : ''}">
+            <div class="metric-value">${escapeHtml(signal.value)}${signal.off ? '<span class="quality-badge">off</span>' : ''}</div>
+            <div class="metric-label">${escapeHtml(signal.label)}</div>
+            ${signal.detail ? `<div class="metric-detail">${escapeHtml(signal.detail)}</div>` : ''}
+          </div>`).join('');
+    const summary = quality.offCount
+        ? `${quality.offCount} signal${quality.offCount === 1 ? '' : 's'} over a threshold: ${quality.badges.map((badge) => badge.chip || badge.label).join(', ')}`
+        : 'Every signal inside its threshold.';
+    return `
+        <div class="muted quality-summary">${escapeHtml(summary)}</div>
+        <div class="metrics-grid quality-grid">${tiles}
+        </div>`;
 }
 
 function buildSourceWidgetSummary(health, options = {}) {
@@ -1943,6 +2102,11 @@ const MetricsSections = {
     buildVanishedListHtml,
     buildLostListHtml,
     formatLostNote,
+    QUALITY_THRESHOLDS,
+    assessSourceQuality,
+    summarizeOwnerDecisions,
+    buildQualityChipsHtml,
+    buildHostQualityHtml,
     buildSourceWidgetSummary,
     createChartRenderer,
     chartRenderer,
@@ -1995,6 +2159,11 @@ if (typeof module !== 'undefined' && module.exports) {
         buildVanishedListHtml,
         buildLostListHtml,
         formatLostNote,
+        QUALITY_THRESHOLDS,
+        assessSourceQuality,
+        summarizeOwnerDecisions,
+        buildQualityChipsHtml,
+        buildHostQualityHtml,
         buildSourceWidgetSummary,
         createChartRenderer,
         chartRenderer,

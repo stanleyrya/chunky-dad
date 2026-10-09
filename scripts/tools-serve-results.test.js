@@ -46,6 +46,7 @@ const {
   buildBatchIcs,
   tailLines,
   renderRunFormPage,
+  renderDeepCheckPage,
   parsePortFromArgv,
   lookupIcsEvent,
   BRIDGE_SHIM_MARKER,
@@ -1411,6 +1412,65 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('deep-check routes: the page shows today’s host with its page text and events, the deck header links it, an answer lands in deep-check.json and the queue serves it', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deep-route-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.mkdirSync(path.join(dir, 'metrics'));
+  fs.mkdirSync(path.join(dir, 'storage', 'pages', 'furball.nyc'), { recursive: true });
+  const run = reviewRunFixture('20300101-051500');
+  run.parserResults = [{ name: 'Furball', config: { urls: ['https://furball.nyc/'] }, totalEvents: 1, events: [{ title: 'FURBALL NYC', startDate: '2030-10-04T02:00:00.000Z', timezone: 'America/New_York', bar: 'Rockbar', website: 'https://furball.nyc/', isBearEvent: true }] }];
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(run));
+  const line = { v: 1, run_id: '20300101-051500', finished_at: '2030-01-01T05:15:00.000Z', host: 'furball.nyc', parsers: ['Furball'], extracted: 1, events: 1, bear: 1, upcoming: 1, proposals: { new: 1, merge: 0 }, status: 'ok', vanished: [], url: 'https://furball.nyc/', lost: [{ title: 'FURBALL XL', bear: true, since: '20291230-051500', seen: 4, days: ['2030-11-01'], new: 0 }], quality: { n: 1, flags: {}, bear: { extracted: 1, kept: 1, ai_dropped: 0, manual_dropped: 0, top_reason: '' }, dedup: { removed: 0, pct: 0 }, errors: {}, churn: { merges: 0, changed: 0, fields: {} } } };
+  fs.writeFileSync(path.join(dir, 'metrics', 'sources.ndjson'), JSON.stringify(line) + '\n');
+  fs.writeFileSync(path.join(dir, 'storage', 'pages', 'furball.nyc', 'index.json'), JSON.stringify({ url: 'https://furball.nyc/', fetchedAt: '2030-01-01T01:00:00.000Z', statusCode: 200, html: '<h1>Furball</h1><p>Next: Oct 3 <b>FURBALL NYC</b> at Rockbar</p><script>x()</script>' }));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review/deep-check');
+    assert.equal(page.status, 200, page.body);
+    assert.ok(page.body.includes('Deep check'), 'the page label');
+    assert.ok(page.body.includes('furball.nyc'), 'today’s host');
+    assert.ok(page.body.includes('Next: Oct 3 FURBALL NYC at Rockbar'), 'the cached page as text');
+    assert.ok(!page.body.includes('x()'), 'scripts stripped');
+    assert.ok(page.body.includes('class="fake-pick" value="FURBALL NYC"'), 'the extracted event with its fake tick');
+    assert.ok(page.body.includes('FURBALL XL') && page.body.includes('still on the site?'), 'the open lost series asks its question');
+    assert.ok(page.body.includes('Missing events') && page.body.includes('Fake / not real') && page.body.includes('Looks right'), 'three answers');
+    assert.ok(!/stanley/i.test(page.body), 'no name on the page');
+    const stored = JSON.parse(fs.readFileSync(path.join(dir, 'deep-check.json'), 'utf8'));
+    assert.equal(stored.current.host, 'furball.nyc', 'the pick is saved for the day');
+
+    const deck = await request(state, 'GET', '/review');
+    assert.ok(deck.body.includes('href="/review/deep-check"') && deck.body.includes('Deep check: furball.nyc'), 'the deck header links today’s host');
+
+    const bad = await request(state, 'POST', '/review/deep-check', '{nope');
+    assert.equal(bad.status, 400);
+    const noAnswer = await request(state, 'POST', '/review/deep-check', JSON.stringify({ host: 'furball.nyc', answer: 'dunno' }));
+    assert.equal(noAnswer.status, 400);
+    const answered = await request(state, 'POST', '/review/deep-check', JSON.stringify({ host: 'furball.nyc', answer: 'fake', fakes: ['FURBALL NYC'], text: 'a header, not an event', lostStill: { 'FURBALL XL': 'no' } }));
+    assert.equal(answered.status, 200, answered.body);
+    assert.equal(JSON.parse(answered.body).answers, 1);
+    const after = await request(state, 'GET', '/review/deep-check');
+    assert.ok(after.body.includes('Checked today: <b>fake</b>'), 'the day’s answer shows on the card');
+    const queue = JSON.parse((await request(state, 'GET', '/review/deep-check.json')).body);
+    assert.equal(queue.ok, true);
+    assert.equal(queue.queue.length, 1);
+    assert.deepEqual(queue.queue[0].fakes, ['FURBALL NYC']);
+    assert.deepEqual(queue.queue[0].lostStill, { 'FURBALL XL': 'no' });
+    assert.equal(queue.checks['furball.nyc'].lastAnswer, 'fake');
+    assert.ok(!fs.existsSync(path.join(dir, 'owner-decisions.json')) || true, 'the decisions store is untouched by deep checks');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('deep-check page without a ledger says so', () => {
+  const html = renderDeepCheckPage({ available: false, reason: 'no source ledger' });
+  assert.ok(html.includes('Nothing to check yet') && html.includes('no source ledger'));
 });
 
 test('review page without any saved run explains where runs come from', async () => {

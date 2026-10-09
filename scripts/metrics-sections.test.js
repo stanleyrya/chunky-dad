@@ -858,3 +858,90 @@ test('lost-per-run spec: bear / other / aggregator bars with listing-gone dots',
   assert.match(svg, /chart-dot/);
   assert.equal(MetricsSections.buildLostPerRunChartSpec({ rows: [] }), null);
 });
+
+
+// ---------------------------------------------------------------------------
+// Quality: the per-host block judged against QUALITY_THRESHOLDS, the owner's
+// decisions joined per host, chips on the table and tiles on the host page.
+// ---------------------------------------------------------------------------
+
+function qualityBlock(overrides = {}) {
+  return Object.assign({
+    n: 20, time: 95, place: 90, coords: 80, url: 100, image: 70, desc: 60,
+    flags: {}, bear: { extracted: 60, kept: 18, ai_dropped: 2, manual_dropped: 5, top_reason: 'manual store: not_bear' },
+    dedup: { removed: 3, pct: 5 }, stability: 95, horizon_days: 40, runs_since_new: 2, errors: {}, churn: { merges: 10, changed: 0, fields: {} }
+  }, overrides);
+}
+
+function qualityHealth(decisions) {
+  const lines = [
+    buildLedgerLine({ host: 'clean.example', parsers: ['Clean'], quality: qualityBlock() }),
+    buildLedgerLine({ host: 'messy.example', parsers: ['Messy'], quality: qualityBlock({ time: 51, desc: 10, flags: { 'festival-window-violation': 14, 'junk-title': 1 }, bear: { extracted: 300, kept: 20, ai_dropped: 212, manual_dropped: 0, top_reason: 'ai: nothing bear' }, dedup: { removed: 59, pct: 44 }, stability: 43, horizon_days: 0, runs_since_new: 35, errors: { 'http-5xx': 5 }, churn: { merges: 39, changed: 6, fields: { allDay: 6 } } }) }),
+    buildLedgerLine({ host: 'tiny.example', parsers: ['Tiny'], quality: qualityBlock({ n: 3, time: 0, place: 0, horizon_days: 0 }) }),
+    buildLedgerLine({ host: 'old.example', parsers: ['Old'] })
+  ];
+  return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-09-21T23:00:00.000Z'), decisions });
+}
+
+test('assessSourceQuality: badges only over a threshold, shares judged only with 5+ kept events, every signal still a tile', () => {
+  const health = qualityHealth();
+  const rowOf = host => health.rows.find(row => row.host === host);
+  const clean = rowOf('clean.example').quality;
+  assert.equal(clean.available, true);
+  assert.equal(clean.offCount, 0);
+  assert.equal(clean.signals.length, 14);
+  const messy = rowOf('messy.example').quality;
+  assert.deepEqual(messy.badges.map(badge => badge.key), ['time', 'desc', 'flags', 'bear', 'dedup', 'stability', 'horizon', 'new', 'errors', 'churn']);
+  assert.deepEqual(messy.badges.map(badge => badge.chip).slice(0, 4), ['time 51%', 'desc 10%', 'flags 15', 'AI-drop 212']);
+  assert.match(messy.signals.find(signal => signal.key === 'flags').detail, /festival-window-violation ×14 · junk-title ×1/);
+  assert.match(messy.signals.find(signal => signal.key === 'churn').detail, /allDay ×6/);
+  const tiny = rowOf('tiny.example').quality;
+  assert.deepEqual(tiny.badges.map(badge => badge.key), [], 'three kept events are not enough to judge shares or horizon');
+  const old = rowOf('old.example').quality;
+  assert.equal(old.available, false);
+  assert.deepEqual(old.signals, []);
+  assert.equal(MetricsSections.QUALITY_THRESHOLDS.aiDropped, 20);
+});
+
+test('summarizeOwnerDecisions joins decisions to hosts by parser name, then by page host; the rejections signal fires on count and share', () => {
+  const decisions = { version: 1, decisions: [
+    { key: 'a', kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: { source: 'Messy', url: 'https://messy.example/e/1' } },
+    { key: 'b', kind: 'new', verdict: 'reject', reason: { tags: ['not bear'], text: '' }, snapshot: { source: 'messy', url: '' } },
+    { key: 'c', kind: 'merge', verdict: 'reject', reason: { tags: [], text: 'wrong time', mode: 'fix' }, snapshot: { source: 'Unknown Parser', url: 'https://www.messy.example/e/3' } },
+    { key: 'd', kind: 'new', verdict: 'approve', reason: null, snapshot: { source: 'Messy' } },
+    { key: 'e', kind: 'new', verdict: 'approve', reason: null, snapshot: { source: 'Clean' } },
+    { key: 'f', kind: 'bar', verdict: 'approve', reason: null, snapshot: { name: 'Somewhere' } },
+    null
+  ] };
+  const health = qualityHealth(decisions);
+  const messy = health.rows.find(row => row.host === 'messy.example');
+  assert.deepEqual(messy.rejections, { approve: 1, reject: 3, total: 4, tags: { 'not bear': 2, note: 1 }, top: 'not bear' });
+  const rejections = messy.quality.badges.find(badge => badge.key === 'rejections');
+  assert.equal(rejections.chip, 'rejected 3');
+  assert.match(rejections.detail, /not bear ×2/);
+  const clean = health.rows.find(row => row.host === 'clean.example');
+  assert.deepEqual(clean.rejections, { approve: 1, reject: 0, total: 1, tags: {}, top: '' });
+  assert.ok(!clean.quality.badges.some(badge => badge.key === 'rejections'));
+  const bare = MetricsSections.summarizeOwnerDecisions([{ verdict: 'reject', reason: {}, snapshot: { source: 'Clean' } }], health.rows);
+  assert.equal(bare['clean.example'].tags.untagged, 1);
+  assert.equal(qualityHealth().rows[0].rejections, null, 'no decisions handed over → nothing joined');
+});
+
+test('quality chips on the Sources table and tiles on the host page', () => {
+  const health = qualityHealth();
+  const table = MetricsSections.buildSourcesTableHtml(health);
+  assert.match(table, /<th class="quality-cell">Quality<\/th>/);
+  assert.match(table, /quality-chip quality-ok">clean</);
+  assert.match(table, /<span class="quality-chip" title="under 60% of 20 kept">time 51%<\/span>/);
+  assert.match(table, /quality-more">\+7</, 'three chips, the rest counted');
+  const messy = health.rows.find(row => row.host === 'messy.example');
+  const tiles = MetricsSections.buildHostQualityHtml(messy);
+  assert.match(tiles, /10 signals over a threshold/);
+  assert.match(tiles, /quality-tile quality-off">\s*<div class="metric-value">51%<span class="quality-badge">off<\/span>/);
+  assert.match(tiles, /With a description/);
+  assert.match(tiles, /212 AI-dropped unreviewed/);
+  const old = health.rows.find(row => row.host === 'old.example');
+  assert.match(MetricsSections.buildHostQualityHtml(old), /No quality block/);
+  assert.equal(MetricsSections.buildQualityChipsHtml(old), '<span class="cell-subtitle">—</span>');
+  assert.equal(typeof require('./metrics-sections').buildHostQualityHtml, 'function');
+});
