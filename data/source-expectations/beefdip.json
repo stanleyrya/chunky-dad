@@ -11,7 +11,7 @@
       "flyer"
     ],
     "parserUrlsAtRecon": [
-      "https://beefdip.com/planned-events/"
+      "https://beefdip.com/"
     ],
     "doors": [
       {
@@ -93,6 +93,14 @@
         "rowsReturned": null,
         "truthFlag": null,
         "note": "All 24 flyer images downloaded and read: 22 dated 2026-edition posters plus Tryst-Flyer.webp and wildtreks.webp."
+      },
+      {
+        "url": "https://beefdip.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 29,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /planned-events/ schedule page from the home page and read it through the page itself (one WordPress page with the whole programme, Google Maps links as venues; no feed answered): 29 events, 27 bear in 139 s — the https://beefdip.com/planned-events/ config read 29/27 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "Year determination: the hero says \"BeefDip Bear Week 2026\" / \"Jan 23 – 31\" but the accordion headers say 2027 and the items say \"Saturday, Jan 23\", \"Sun Jan 24\" … \"Sun Jan 31\"; `cal` confirms Jan 23 2027 is a Saturday (Jan 23 2026 was a Friday) and Jan 31 2027 is a Sunday (Jan 31 2029, the last header's typo, is a Wednesday). Every event is therefore 2027 with high confidence from weekday arithmetic; homepage and tags page independently say 2027. Timezone: Puerto Vallarta is in Jalisco → America/Mexico_City (Nuevo Vallarta across the bay is America/Bahia_Banderas); both are fixed UTC-6 since Mexico abolished DST in 2022, so wall-clock is identical, and scraper-cities \"pv\" uses America/Mexico_City. The run of 2026-09-09 (20260909-072307) produced 45 events, 16 removed as duplicates, 29 kept: 16 dated 2026 (from the 2026 flyers), 6 non-events from the /tags/ page (welcome-center hours, pass products, Pride 2026), and titles rewritten from flyers (\"Welcome T-Dance\", \"THE BLOCK BALL\", \"Carnival Mardi Gras\"). No page-cache entry exists for /planned-events/ (cache holds /, /charity/, /discounts/, /gallery-*; fetchedAt 2026-08-27 and 2026-09-07)."

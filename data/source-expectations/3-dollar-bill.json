@@ -11,7 +11,7 @@
       "flyer"
     ],
     "parserUrlsAtRecon": [
-      "https://www.3dollarbillbk.com/rsvp"
+      "https://www.3dollarbillbk.com/"
     ],
     "doors": [
       {
@@ -85,6 +85,14 @@
         "rowsReturned": 9,
         "truthFlag": "parserResults[name=\"3 Dollar Bill\"]: totalEvents 34, bearEvents 9, duplicatesRemoved 3; 22 bearDroppedEvents",
         "note": "Read only to anchor traps. 6 of the 9 kept events are titled \"View Event →\" with dates that match no feed row; 2 kept events are past-section items (UNSPEAKABLE JOY Aug 29, Live Band Burlesque Aug 13); 1 is Bear Tea (correct). Summary saved as run-20260909-072307-3db.txt."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 70,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /rsvp collection from the home page and read it through the Squarespace ?format=json twin of that page, read one hop down as first-party (🟦 SQUARESPACE, 68 dated items): 70 events, 1 bear in 2 s — the https://www.3dollarbillbk.com/rsvp config read 69/1 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "Platform confirmed as a Squarespace events collection by a working endpoint (/rsvp?format=json → collection.typeName \"events\", upcoming[] / past[] / pagination{}). The venue runs two rooms with separate addresses published per event: \"3 Dollar Bill\" (also \"3 Dollar Bill YARD\") at 260 Meserole Street and \"9 Bob Note\" (also \"The Yard @ 9 Bob Note\") at 270 Meserole St[reet]. Epoch-ms feed times were converted to America/New_York; the rendered listing shows the same wall-clock times (e.g. \"7:00 PM\" / \"19:00\"). Squarespace URL date segments are creation dates, not event dates (5 rows differ). No row has an excerpt; 10 rows have body text, the rest are a flyer plus a ticket button."

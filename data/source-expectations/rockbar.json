@@ -12,7 +12,7 @@
       "flyer"
     ],
     "parserUrlsAtRecon": [
-      "https://www.rockbarnyc.com/calendar"
+      "https://www.rockbarnyc.com/"
     ],
     "doors": [
       {
@@ -62,6 +62,14 @@
         "rowsReturned": 1,
         "truthFlag": null,
         "note": "Read to settle the BEARS NIGHT OUT cadence: flyer says \"EVERY FIRST SATURDAY 9PM / $10\". Also read: Rockstrap-Sept-4.jpg (Friday Sept 4, 10PM, $10), Jock-Rock-Sept-IG.jpg (Friday Sept 11 2026), Poptimism-Sept-13.jpg (Sunday Sept 13, 4-8PM), Thee Black Hotties (Aug 20, 8PM)."
+      },
+      {
+        "url": "https://www.rockbarnyc.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 90,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its calendar from the home page and read it through the Elfsight embed that rides on every page — read once on the home page (148 published, 33 current), /calendar skipped as already read: 90 events, 14 bear in 3 s — the https://www.rockbarnyc.com/calendar config read 90/14 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "Platform: Squarespace shell + Elfsight Event Calendar widget, confirmed by the boot endpoint answering with app \"event-calendar\" for the id embedded in /calendar. The widget payload is the whole calendar: exact local times, IANA timeZone per row, and machine-readable repeat fields, so no AI/OCR is needed for dates. Elfsight repeat semantics used here: nthDayInMonth = the same ordinal weekday as the anchor start date (1st..4th); lastDayInMonth = the last anchor-weekday of each month; weeklyOn = repeatWeeklyOnDays; custom = repeatFrequency/repeatInterval/repeatEnds. Yesterday's run 20260909-072307 reported totalEvents 151 for this parser (29 kept + 121 bear-dropped after 1 duplicate removed) from urlCount 1: that is the 143 visible live-widget rows plus the 9 rows of the commented-out 2024 widget, i.e. every widget row emitted as a dated single (only BEARS NIGHT OUT, COMEDY HOUR and GORDITOS carried a recurrenceRule in the run output). This file, by contrast, folds the widget into 22 published things."

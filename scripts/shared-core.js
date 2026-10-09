@@ -10639,7 +10639,20 @@ class SharedCore {
                 }
             }
 
-            const politeGate = currentDepth === 0 && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
+            // The first-party window (FetchPoliteness.isFirstPartyRequest)
+            // opens around a configured root's fetch, door chain and parse.
+            // A page of the configured SITE one hop from its root — the
+            // listing the home page's nav names — gets the window for its
+            // door chain and parse too: its doors (a Squarespace
+            // ?format=json twin, a widget boot, a feed) are how the site
+            // serves that page, exactly as they are for the root. NOT for
+            // its own fetch (it was discovered, and discovered pages obey
+            // robots), never on another site, and never for an aggregator
+            // (its deeper pages are other people's events, not its own).
+            const siteRole = String((parserConfig && parserConfig.siteRole) || '').toLowerCase();
+            const rootSitePage = currentDepth === 0
+                || (currentDepth === 1 && siteRole !== 'aggregator' && this.isConfiguredSiteUrl(url, parserConfig));
+            const politeGate = rootSitePage && httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
             try {
                 const shouldUseInlineInput = includeInlineInput &&
                     currentDepth === 0 &&
@@ -10650,10 +10663,14 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
-                if (politeGate && typeof politeGate.beginOpeningRoot === 'function') politeGate.beginOpeningRoot(url);
+                if (politeGate && currentDepth === 0 && typeof politeGate.beginOpeningRoot === 'function') politeGate.beginOpeningRoot(url);
                 const fetchedHtmlData = shouldUseInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
                     : await httpAdapter.fetchData(url);
+                // A page of the configured site one hop down: the window
+                // opens AFTER its own, robots-governed fetch — for its doors
+                // and its parse.
+                if (politeGate && currentDepth !== 0 && typeof politeGate.beginOpeningRoot === 'function') politeGate.beginOpeningRoot(url);
                 // A JavaScript shell has its content behind the API its own
                 // bundle calls — find that door and read through it, or fall
                 // through with the shell untouched (see resolveSpaDataDoor).

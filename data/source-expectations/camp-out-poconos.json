@@ -11,7 +11,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://campoutpoconos.com/calendar/"
+      "https://campoutpoconos.com/"
     ],
     "doors": [
       {
@@ -29,6 +29,14 @@
         "rowsReturned": 112,
         "truthFlag": "the boot payload carries the widget's entire event list: 112 entries, past and future, no paging",
         "note": "Elfsight event-calendar app. Entries: name, start/end { date, time }, timeZone per entry, repeatPeriod (noRepeat 112), repeat* fields, description, coverImage, actions (link buttons), isAllDay. No venue field: the widget is the bar's own calendar."
+      },
+      {
+        "url": "https://campoutpoconos.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 35,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached /calendar/ from the home page and read it through the Elfsight calendar widget read on that page one hop down (🗓️ ELFSIGHT, 11 published): 35 events, 4 bear in 12 s — the https://campoutpoconos.com/calendar/ config read 35/4 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 112 widget entries: 6 future singles, 0 repeating entries with a window occurrence, 105 entries already over (counted, not enumerated), 0 repeating entries with nothing in the window."

@@ -11,7 +11,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://precinctdtla.com/calendar/"
+      "https://precinctdtla.com/"
     ],
     "doors": [
       {
@@ -29,6 +29,14 @@
         "rowsReturned": 153,
         "truthFlag": "2026-10: 120 cards; 2026-11: 15 cards; 2026-12: 18 cards",
         "note": "The plugin's own eventon_init_load call, replayed as a form POST (nonce + cals[<frame>][sc][…]) once for the page's own frames and once per later month (fixed_month / fixed_year / focus range stepped). The answer holds each calendar's rendered cards; every card carries a schema.org Event block with name, url, image, description and wall-clock start/end. The printed UTC offset is fixed and ignores daylight saving, so the wall clock is what is documented. The nonce lives about half a day: a stored page needs one fresh read first."
+      },
+      {
+        "url": "https://precinctdtla.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 190,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendar/ page from the home page and read it through the EventON calendar (📅 EVENTON, 92 cards — the home page carries the same frame): 190 events, 7 bear in 15 s — the https://precinctdtla.com/calendar/ config read 190/7 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-20."
       }
     ],
     "notes": "Recon from the scraper's own cached answers on 2026-09-20 (one page read, 3 POSTs). 153 cards across 2026-10, 2026-11, 2026-12: 109 on or after 2026-09-20 inside the window, 38 earlier this month, 6 past the window, 8 \"CLOSED\" day markers (notices, not events)."

@@ -18374,7 +18374,10 @@ class AiWebParser {
         if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
 
         // WordPress infrastructure paths — not event pages (feeds, REST API, XML-RPC, sitemaps)
-        const wordpressInfraPaths = ['/feed', '/comments/feed', '/wp-json', '/wp-sitemap', '/wp-sitemap.xml', '/xmlrpc.php'];
+        // /wp-includes is the core's own script/style directory, referenced
+        // from every page's <head> (eaglela.com from its root, 2026-10-08:
+        // the raw scan handed /wp-includes/ to the crawl and it answered 403).
+        const wordpressInfraPaths = ['/feed', '/comments/feed', '/wp-json', '/wp-includes', '/wp-sitemap', '/wp-sitemap.xml', '/xmlrpc.php'];
         const isWordPressInfra = wordpressInfraPaths.some(p => {
             const lp = p.toLowerCase();
             return lowerPath === lp || lowerPath.startsWith(lp + '/');

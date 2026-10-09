@@ -13,7 +13,7 @@
       "page-cache"
     ],
     "parserUrlsAtRecon": [
-      "https://www.thelumberyardbar.com/events"
+      "https://www.thelumberyardbar.com/"
     ],
     "doors": [
       {
@@ -183,6 +183,14 @@
         "rowsReturned": 0,
         "truthFlag": null,
         "note": "Homepage image as of the 2026-09-07 page cache, NOT on the live site 2026-09-10: \"LUMBER YARD BAR EVENTS\" dated strip TUE SEPT 1 Trivia Tuesday w/ Nathan 7:30PM + Taco Tuesday; WED SEPT 2 Queeraoke 8PM-MIDNIGHT; THU SEPT 3 Theatre Thursday w/ Dolly & the DJ 7PM; FRI SEPT 4 PAK Night Seattle Pups & Kin 9PM; SUN SEPT 6 South Seattle Bear Social Singlet Party 2PM-7PM; TUE SEPT 8; WED SEPT 9; THUR SEPT 10 Gay Bingo 7PM; FRI SEPT 11 Exposed Underwear (or less) Night 9PM-CL. No year printed. Kept as evidence of what the run saw; not a current listing."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 13,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events, /upcoming-events and /mothly-events pages (the listing-vocabulary ranking puts them first) from the home page and read it through the pages themselves (static Wix HTML, no feed or widget: the AI reads the cards): 13 events, 0 bear in 1 s — the https://www.thelumberyardbar.com/events config read 13/0 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
       }
     ],
     "notes": "Parser entry (scripts/scraper-input.js \"Onboarding batch 2026-07-27\"): urls [\"https://www.thelumberyardbar.com/events\"], alwaysBear false, metadata.website https://www.thelumberyardbar.com; no urlDiscoveryDepth (omitted = adaptive crawling), no discovery patterns, no siteRole, no automationEnabled. Platform: Wix (sitemap generatedBy=\"WIX\", x-wix-request-id on every response, and the Wix Events API answered with the app instance). The Wix Events & Tickets app is installed with ZERO events (total=0), so the site has NO dated event listings anywhere: /events is four undated weekly blurbs with three flyer images, /mothly-events is seven flyer images stating monthly rules with no text at all, /upcoming-events is the brunch menu. Every event on this site is therefore a recurring series with no listed instances; nothing has a year. The 2026-09-07 page cache (the copy run 20260909-072307 actually read) additionally held a homepage \"Happening This Week\" strip with a dated Sept 1-11 schedule flyer and two Sept one-offs (P.A.K. Night Sep 4, Singlet Social Sept 6th); that strip is absent from the live homepage on 2026-09-10 (static, forced cache-miss and rendered all agree), so those are not documented as published events. The run reached / and /mothly-events via nav discovery from /events and a ticketleap.events page via the homepage's \"Reserve Table\" link, so those pages ARE inside the configured knobs even though only /events is listed. The venue name on the site is \"Lumber Yard Bar\" / \"The Lumber Yard Bar\" (about-us) and data/bars/seattle.json curates it as \"The Lumber Yard Bar\"; that spelling is used in defaults rather than the parser label \"The Lumberyard\". Address confirmed in the page footer: 9630 16th Ave SW, Seattle, WA 98106 (the old homepage banner image still says 9619 16th Ave SW / (206) 695-2007 - stale). Bear verdicts are deliberately not judged here."

@@ -10,7 +10,7 @@
       "static"
     ],
     "parserUrlsAtRecon": [
-      "https://www.sf-eagle.com/events/"
+      "https://www.sf-eagle.com/"
     ],
     "doors": [
       {
@@ -36,6 +36,14 @@
         "rowsReturned": null,
         "truthFlag": null,
         "note": "SEEN, NOT READ. The listing footer links \"Google Calendar\" (https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwp.sf-eagle.com%2Fevents%2F%3Fical%3D1) and \".ics\" (webcal://wp.sf-eagle.com/events/?ical=1) — a WordPress ?ical=1 export on the wp.sf-eagle.com backend. Not fetched on 2026-09-19 (no request budget); it is the door that would settle whether the 60-row listing is capped and whether the residents carry RRULEs."
+      },
+      {
+        "url": "https://www.sf-eagle.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 91,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events/ listing from the home page and read it through the page itself (server-rendered rows, 60 on the day; no feed on this host — the webcal export lives on wp.sf-eagle.com, another host, and is not probed): 91 events, 19 bear in 170 s — the https://www.sf-eagle.com/events/ config read 75/18 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
       }
     ],
     "notes": "Platform: Astro static site (data-astro-cid attributes, /_astro/ assets) rendering posts from a WordPress backend at wp.sf-eagle.com; the events listing is fully static HTML, so the static rung is the scraper's door and no JS rendering is needed. The listing itself states no repeat for any row — the lede says only \"Live music, parties, contests and our weekly residents\" — and the four cadences come from the home page's residents strip. Read on 2026-09-19: 60 rows, all at the bar (no other venue is named anywhere), 12 titles repeat. Only the four residents the site names with a cadence are folded into series; the other eight repeating titles (Karaoke with Dana ×11, Knotty Bird ×3, Adonis ×3, WOOF! ×3, ScripTease ×3, BLUFSF:HARD ×2, AshHole ×2, KPOC and FOUNDATIONS Social Mixer ×2) have no stated repeat and are documented as singles. Times are printed as \"9 PM - 2 AM\"; a row whose end is not after its start ends on the following day. The listing has exactly 60 rows and ends with a 3 PM row on Dec 5 while a first-Saturday resident (Filth) would fall that night — treated as a probable row cap and recorded in knownGaps rather than asserted either way."

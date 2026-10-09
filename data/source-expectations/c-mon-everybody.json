@@ -11,7 +11,7 @@
       "page-cache"
     ],
     "parserUrlsAtRecon": [
-      "https://www.cmoneverybody.com/events"
+      "https://www.cmoneverybody.com/"
     ],
     "doors": [
       {
@@ -45,6 +45,14 @@
         "rowsReturned": 0,
         "truthFlag": null,
         "note": "Page cache, fetchedAt 2026-09-12T13:24:16Z. 'C’mon Everybody is a Queer owned and operated bar, music venue and live arts space located in Bed Stuy, Brooklyn. Founded in 2014'. No events."
+      },
+      {
+        "url": "https://www.cmoneverybody.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 43,
+        "truthFlag": null,
+        "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached /events from the home page and read it through the DICE event-list widget read on that page (🎟️ DICE, 31 rows): 43 events, 0 bear in 7 s — the https://www.cmoneverybody.com/events config read 43/0 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-12."
       }
     ]
   },

@@ -25650,7 +25650,7 @@ test('FetchPoliteness: under enforce, a configured root and the doors opened fro
   gate.endOpeningRoot();
 });
 
-test('crawl: a door the PARSER opens while a configured root is parsed (a ?format=json twin) is first-party under enforce; the same door under a discovered page is refused', async () => {
+test('crawl: a door the PARSER opens while a configured root is parsed (a ?format=json twin) is first-party under enforce; so is one opened on the configured SITE one hop down; on another site it is refused', async () => {
   const robotsBody = 'User-agent: *\nDisallow: /*?format=json\n';
   const { gate } = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
   const core = createCore();
@@ -25669,7 +25669,9 @@ test('crawl: a door the PARSER opens while a configured root is parsed (a ?forma
         try { await httpAdapter.fetchData(`${htmlData.url.replace(/\/$/, '')}?format=json`); } catch (_) { /* refused */ }
         return {
           events: [],
-          additionalLinks: htmlData.url === 'https://venue.example/rsvp' ? ['https://venue.example/rsvp/2026/9/12/bear-tea'] : []
+          additionalLinks: htmlData.url === 'https://venue.example/rsvp'
+            ? ['https://venue.example/rsvp/2026/9/12/bear-tea', 'https://friends.example/events']
+            : []
         };
       }
     }
@@ -25680,7 +25682,52 @@ test('crawl: a door the PARSER opens while a configured root is parsed (a ?forma
   );
   assert.ok(fetched.includes('https://venue.example/rsvp?format=json'), `the root's twin, opened from inside parseEvents, is requested: ${fetched.join(', ')}`);
   assert.ok(fetched.includes('https://venue.example/rsvp/2026/9/12/bear-tea'), 'the discovered event page itself is allowed by robots');
-  assert.ok(refused.includes('https://venue.example/rsvp/2026/9/12/bear-tea?format=json'), `a discovered page's twin is not first-party: refused ${refused.join(', ')}`);
+  // 2026-10-08 (crawl from the bare domain root): a page of the configured
+  // SITE one hop from its root is served through the same doors the root
+  // is — its twin is first-party. The page's OWN fetch stays robots-governed
+  // (the window opens after it).
+  assert.ok(fetched.includes('https://venue.example/rsvp/2026/9/12/bear-tea?format=json'), `the twin of a page of the configured site one hop down is first-party: fetched ${fetched.join(', ')}`);
+  // A discovered page on ANOTHER site is still nobody's configured source.
+  assert.ok(fetched.includes('https://friends.example/events'), 'the other site\'s page itself is allowed by robots');
+  assert.ok(refused.includes('https://friends.example/events?format=json'), `another site's twin is not first-party: refused ${refused.join(', ')}`);
+  assert.equal(gate.openingRoot, '', 'no window left open after the crawl');
+});
+
+test('crawl: a page of the configured site one hop down obeys robots for its OWN fetch, and an aggregator\'s deeper pages get no window at all', async () => {
+  const robotsBody = 'User-agent: *\nDisallow: /*?format=json\nDisallow: /members/\n';
+  const { gate } = makePoliteness({ robots: 'enforce', minHostGapMs: 0, fetchRobotsText: async () => robotsBody });
+  const display = createDisplayAdapterStub();
+  const fetched = [];
+  const refused = [];
+  const httpAdapter = {
+    getFetchPoliteness: () => gate,
+    fetchData: async (url) => gate.run(url, async () => { fetched.push(url); return { html: '<html><body></body></html>', url, statusCode: 200, headers: {} }; })
+      .catch((error) => { if (error && error.politeness) refused.push(url); throw error; })
+  };
+  const parsers = {
+    'ai-web': {
+      parseEvents: async (htmlData) => {
+        try { await httpAdapter.fetchData(`${htmlData.url.replace(/\/$/, '')}?format=json`); } catch (_) { /* refused */ }
+        return { events: [], additionalLinks: /\/$/.test(htmlData.url) ? [`${htmlData.url}members/`, `${htmlData.url}events`] : [] };
+      }
+    }
+  };
+  const venue = createCore();
+  await venue.processParser({ name: 'Venue', urls: ['https://venue.example/'], urlDiscoveryDepth: 1, ai: CRAWL_AI }, {}, httpAdapter, display, parsers);
+  assert.ok(refused.includes('https://venue.example/members/'), `a discovered page's own fetch is robots-governed even on the configured site: refused ${refused.join(', ')}`);
+  assert.ok(fetched.includes('https://venue.example/events?format=json'), 'the listing one hop down opens its door first-party');
+
+  fetched.length = 0; refused.length = 0;
+  const aggregator = createCore();
+  await aggregator.processParser({ name: 'Hub', siteRole: 'aggregator', urls: ['https://hub.example/'], urlDiscoveryDepth: 1, ai: CRAWL_AI }, {}, httpAdapter, display, parsers);
+  assert.ok(fetched.includes('https://hub.example?format=json'), `the configured aggregator root itself keeps its window: fetched ${fetched.join(', ')}`);
+  // An aggregator's deeper pages on its own host are not crawled at all
+  // (they repeat its cards — see the "Not crawling" rule in
+  // crawlUrlsForEvents), so no door of theirs is ever opened, first-party
+  // or not; the window's own siteRole guard is defence in depth.
+  assert.ok(!fetched.includes('https://hub.example/events') && !fetched.includes('https://hub.example/events?format=json'),
+    `an aggregator's deeper page is neither read nor given a window: fetched ${fetched.join(', ')}`);
+  assert.ok(display.logs.some(line => line.includes('Not crawling https://hub.example/events')), 'and the crawl says why');
   assert.equal(gate.openingRoot, '', 'no window left open after the crawl');
 });
 
