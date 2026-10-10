@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-09",
+ "generatedAt": "2026-10-10",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-09",
     "2026-10-11",
     "2026-10-13",
     "2026-10-14",
@@ -76,7 +75,10 @@ window.CITY_ACTIVITY = {
     "2027-01-01",
     "2027-01-02",
     "2027-01-03",
-    "2027-01-05"
+    "2027-01-05",
+    "2027-01-06",
+    "2027-01-07",
+    "2027-01-08"
    ],
    "recurring": 6,
    "festivalUntil": null
@@ -192,7 +194,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-10-09",
     "2026-10-10",
     "2026-10-11",
     "2026-10-14",
@@ -246,7 +247,6 @@ window.CITY_ACTIVITY = {
   },
   "dallas": {
    "dates": [
-    "2026-10-09",
     "2026-10-10",
     "2026-10-11"
    ],
@@ -284,7 +284,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-10-09",
     "2026-10-11",
     "2026-10-17",
     "2026-10-18",
@@ -305,7 +304,8 @@ window.CITY_ACTIVITY = {
     "2026-12-13",
     "2026-12-20",
     "2026-12-27",
-    "2027-01-01"
+    "2027-01-01",
+    "2027-01-03"
    ],
    "recurring": 1,
    "festivalUntil": null
@@ -333,7 +333,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-10-09",
     "2026-10-10",
     "2026-10-15",
     "2026-10-18",
@@ -362,7 +361,8 @@ window.CITY_ACTIVITY = {
   "ptown": {
    "dates": [
     "2026-10-29",
-    "2026-10-30"
+    "2026-10-30",
+    "2026-10-31"
    ],
    "recurring": 0,
    "festivalUntil": "2026-11-01"
@@ -376,7 +376,8 @@ window.CITY_ACTIVITY = {
   },
   "philly": {
    "dates": [
-    "2026-10-30"
+    "2026-10-30",
+    "2026-11-01"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -422,9 +423,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "poconos": {
-   "dates": [
-    "2026-10-09"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -440,7 +439,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-10-09",
     "2026-10-10",
     "2026-10-16",
     "2026-10-17",
@@ -469,6 +467,8 @@ window.CITY_ACTIVITY = {
     "2026-12-19",
     "2026-12-25",
     "2026-12-26",
+    "2027-01-01",
+    "2027-01-02",
     "2027-11-21"
    ],
    "recurring": 0,
@@ -575,7 +575,6 @@ window.CITY_ACTIVITY = {
   },
   "sydney": {
    "dates": [
-    "2026-10-09",
     "2026-11-13"
    ],
    "recurring": 0,
@@ -638,7 +637,6 @@ window.CITY_ACTIVITY = {
   },
   "leipzig": {
    "dates": [
-    "2026-10-09",
     "2026-10-10"
    ],
    "recurring": 0,
