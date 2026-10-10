@@ -1412,6 +1412,27 @@ test('runSourceAudit: fetches each host’s listing page through the adapter, ch
   const quiet = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', []), runId: '20261004-050000', adapter, ai, today: '2026-10-04', hosts: ['quiet.example'], log: () => {} });
   assert.deepEqual(quiet.audited, ['quiet.example']);
   assert.equal(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir)).hosts['quiet.example'].ai, 'no-page');
+  // As the runner calls it: in-memory results carry no run id (it is
+  // minted at save). The ledger's newest run id is this run's — every
+  // production audit until 2026-10-10 stored run_id "" and so never
+  // re-audited an open finding nor recorded a run.
+  const auditFile = sourceAudit.getSourceAuditPath(dir);
+  const seeded = sourceAudit.loadSourceAudit(auditFile);
+  seeded.hosts['eaglela.com'].run_id = '20261003-050000';
+  seeded.hosts['eaglela.com'].date = '2026-10-04';
+  seeded.runs = [];
+  sourceAudit.saveSourceAudit(auditFile, seeded);
+  const bare = payloadAt('20261004-050000', '2026-10-04', ['JUNGLE']);
+  delete bare.summary;
+  const runnerLogs = [];
+  const asRunner = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: bare, adapter, ai, today: '2026-10-04', log: line => runnerLogs.push(line) });
+  assert.ok(asRunner.audited.includes('eaglela.com'), 'audited again although the rotation had it today: its findings were open');
+  assert.ok(runnerLogs.some(line => /1 with open findings re-audited \(eaglela\.com\)/.test(line)), runnerLogs.join('\n'));
+  const after = sourceAudit.loadSourceAudit(auditFile);
+  assert.equal(after.hosts['eaglela.com'].run_id, '20261004-050000', 'the ledger named the run');
+  assert.deepEqual(after.runs.map(run => run.run_id), ['20261004-050000'], 'and the audit run is on record');
+  const sameRun = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: bare, adapter, ai, today: '2026-10-04', log: () => {} });
+  assert.ok(!sameRun.audited.includes('eaglela.com'), 'not twice for one run');
   const off = await sourceAudit.runSourceAudit({ sharedRoot: dir, env: { CHUNKY_SOURCE_AUDIT: '0' }, log: () => {} });
   assert.equal(off.enabled, false);
   const none = await sourceAudit.runSourceAudit({ sharedRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-none-')), log: () => {} });
