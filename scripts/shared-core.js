@@ -967,6 +967,16 @@ class SharedCore {
             const jsonApiEventCount = this.countJsonApiEventObjects(html);
             if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
             if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
+            // A JSON body of two or more rows that are not event-shaped (a
+            // WordPress posts feed, an article list) is still a LIST, read by
+            // the structured readers (the article-feed door, listing prose) —
+            // never one event. Classified structurally so the text model's
+            // second opinion never sees it: bearworldmag.com's posts feed
+            // was "multi-event-page via heuristic", the model called the ten
+            // articles "a single event", the verdict was cached, and the
+            // source read 1 instead of 129 on every run (20261010-152315).
+            const jsonRowCount = this.countJsonBodyRows(html);
+            if (jsonRowCount >= 2) return { classification: 'multi-event-page', signal: 'json-rows' };
         }
 
         // 1. URL pattern rules (deterministic, no HTML needed)
@@ -1006,6 +1016,36 @@ class SharedCore {
         }
 
         return { classification: 'unknown', signal: 'none' };
+    }
+
+    // Rows in a raw JSON body, whatever their shape: a top-level array of
+    // plain objects, or the first wrapper key (data/items/results/posts/
+    // events/entries/rows) holding one. 0 for non-JSON, scalars, or objects
+    // with no such list. Structural: no key names an event here.
+    countJsonBodyRows(html) {
+        const text = String(html || '').trim();
+        if (!text || (text[0] !== '{' && text[0] !== '[')) return 0;
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        } catch (_) {
+            return 0;
+        }
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const rowsOf = (value) => (Array.isArray(value) && value.every(isPlainObject) ? value.length : 0);
+        if (Array.isArray(parsed)) return rowsOf(parsed);
+        if (!isPlainObject(parsed)) return 0;
+        for (const key of ['data', 'items', 'results', 'posts', 'events', 'entries', 'rows']) {
+            if (Array.isArray(parsed[key])) return rowsOf(parsed[key]);
+        }
+        return 0;
+    }
+
+    // Is this body a JSON document? The text model classifies prose; a JSON
+    // body is never sent for a second opinion.
+    isJsonBody(html) {
+        const head = String(html || '').trim().slice(0, 1);
+        return head === '{' || head === '[';
     }
 
     // Count event-shaped objects in a raw JSON API response body (non-JSON or
@@ -1242,7 +1282,7 @@ class SharedCore {
     // parser detects the zero-yield outcome and calls this; persistence stays
     // behind the injected cache provider (this file never touches the
     // filesystem). Returns true when an entry was deleted.
-    async invalidateAiClassificationCacheEntry(url, html, aiConfig, cache) {
+    async invalidateAiClassificationCacheEntry(url, html, aiConfig, cache, reason = 'cached verdict yielded zero segments and zero events') {
         if (!cache || typeof cache.invalidate !== 'function') return false;
         const cacheSignature = this.buildAiClassificationCacheSignature(aiConfig, html);
         // Forget the in-run hit marker so the follow-up fresh classification
@@ -1253,7 +1293,7 @@ class SharedCore {
         try {
             const removed = await cache.invalidate(url, cacheSignature);
             if (removed) {
-                console.log(`🗂️ SharedCore: Invalidated AI classification cache entry for ${url} (cached verdict yielded zero segments and zero events)`);
+                console.log(`🗂️ SharedCore: Invalidated AI classification cache entry for ${url} (${reason})`);
             }
             return Boolean(removed);
         } catch (error) {
@@ -2183,7 +2223,11 @@ class SharedCore {
 
             events.forEach((event) => {
                 if (!event || typeof event !== 'object') return;
-                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+                // The page the record was read off outranks the links it
+                // carries: a widget row's own link is a ticketing host
+                // (dice.fm), the page it sat on is the venue's.
+                const pageHost = SharedCore.hostOfUrl(event._sourcePageUrl);
+                const eventHost = homeHosts.includes(pageHost) ? pageHost : SharedCore.hostOfUrl(event.website || event.url);
                 const host = homeHosts.includes(eventHost) ? eventHost : primary;
                 const row = hostOf(host);
                 row.events += 1;
@@ -2239,7 +2283,8 @@ class SharedCore {
             const key = SharedCore.sourceLedgerEventKey(event);
             let host = key ? eventKeyToHost.get(key) : '';
             if (!host) {
-                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+                const pageHost = SharedCore.hostOfUrl(event._sourcePageUrl);
+                const eventHost = allHomeHosts.has(pageHost) ? pageHost : SharedCore.hostOfUrl(event.website || event.url);
                 host = allHomeHosts.has(eventHost) ? eventHost : '';
             }
             if (!host) return;
@@ -7845,6 +7890,10 @@ class SharedCore {
 
         // Global URL tracking across all parsers to prevent duplicate processing
         const globalProcessedUrls = new Set();
+        // Which parser processed each of those URLs — a page on a parser's
+        // OWN configured site is read for that parser even when another
+        // parser crawled it first (see crawlUrlsForEvents).
+        this._processedUrlOwners = new Map();
         // Parsers never started because the network gave up part-way through.
         const networkTruncatedParsers = [];
         this.noteConfiguredListingUrls(config.parsers);
@@ -10732,13 +10781,27 @@ class SharedCore {
                 }
             }
             if (this.hasProcessedUrl(processedUrls, url)) {
-                if (currentDepth === 0) {
-                    await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                // A page of THIS parser's own site that ANOTHER parser crawled
+                // first is still this parser's to read: cmoneverybody.com's
+                // /events was discovered and read by Thotyssey (parser 22),
+                // its 42 widget rows folded away under the aggregator, and
+                // the venue's own crawl (parser 27, configured at the root)
+                // then skipped /events as "already processed" — 43 → 0 (run
+                // 20261010-152315). Before the root switch the configured
+                // URL was /events itself, which is never skipped. The same
+                // page read twice yields twins that dedup folds.
+                const processedBy = this.getProcessedUrlOwner(url);
+                if (this.isOwnSitePageProcessedByAnother(url, parserConfig)) {
+                    await displayAdapter.logInfo(`SYSTEM: 🏠 OWN SITE: ${url} read for its own site although "${processedBy}" already crawled it — a page of a source's own site is that source's to read; twins fold in dedup`);
+                } else {
+                    if (currentDepth === 0) {
+                        await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                    }
+                    continue;
                 }
-                continue;
             }
 
-            this.markProcessedUrl(processedUrls, url);
+            this.markProcessedUrl(processedUrls, url, parserConfig && parserConfig.name);
 
             // Processing-time hygiene for DISCOVERED URLs (configured roots are
             // left alone): both checks run against the normalized URL that is
@@ -11310,7 +11373,7 @@ class SharedCore {
                     continue;
                 }
 
-                const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls);
+                const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls, parserConfig);
 
                 if (shouldFollowLinks) {
                     if (discoveryTreeCollector) {
@@ -12897,15 +12960,32 @@ class SharedCore {
         // are relying on the crude month-count heuristic. Costs one small text-model
         // request per weak-signal page.
         const aiClassifyEnabled = !(parserConfig && parserConfig.ai && parserConfig.ai.classifyPages === false);
-        const weakSignal = classificationSignal === 'heuristic' || classificationSignal === 'none';
+        // Weak = the month-count heuristic or nothing at all — AND prose: a
+        // JSON body (a feed the structural tiers could not read as events)
+        // is never handed to the text model, which reads ten posts as one.
+        const weakSignal = (classificationSignal === 'heuristic' || classificationSignal === 'none')
+            && !this.isJsonBody(htmlData.html);
+        // A structural signal with two or more rows (JSON-LD, a JSON API or
+        // feed body, a machine door's rows) is final: the model never
+        // downgrades it, and a verdict it cached for this page earlier is
+        // stale — forgotten, so no later weak read can inherit it.
+        const structuralRows = (classificationSignal === 'json-api' || classificationSignal === 'json-ld' || classificationSignal === 'json-rows')
+            && pageClassification === 'multi-event-page';
+        const aiParser = parsers && parsers['ai-web'];
+        const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
+            ? aiParser.getAiConfig(parserConfig)
+            : null;
+        const classificationCache = aiParser && typeof aiParser.getAiClassificationCache === 'function'
+            ? aiParser.getAiClassificationCache()
+            : null;
+        if (structuralRows && classificationCache) {
+            const removed = await this.invalidateAiClassificationCacheEntry(url, htmlData.html, aiConfig, classificationCache,
+                `a ${classificationSignal} signal with two or more rows classifies this page structurally; the model's cached verdict is stale`);
+            if (removed) {
+                await displayAdapter.logInfo(`SYSTEM: 🗂️ Forgot a cached AI verdict for ${url} — the page classifies structurally (${classificationSignal}, ${pageClassification}) and the model's opinion never applies to it`);
+            }
+        }
         if (aiClassifyEnabled && weakSignal) {
-            const aiParser = parsers && parsers['ai-web'];
-            const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
-                ? aiParser.getAiConfig(parserConfig)
-                : null;
-            const classificationCache = aiParser && typeof aiParser.getAiClassificationCache === 'function'
-                ? aiParser.getAiClassificationCache()
-                : null;
             try {
                 const aiResult = await this.classifyPageWithAi(url, htmlData.html, aiConfig, httpAdapter, classificationCache);
                 if (aiResult && aiResult.classification && aiResult.classification !== pageClassification) {
@@ -13030,14 +13110,14 @@ class SharedCore {
     }
 
     // Generic URL deduplication utility
-    deduplicateUrls(urls, processedUrls = new Set()) {
+    deduplicateUrls(urls, processedUrls = new Set(), parserConfig = null) {
         if (!urls || !Array.isArray(urls)) {
             return [];
         }
-        
+
         const uniqueUrls = new Set();
         const result = [];
-        
+
         for (const url of urls) {
             if (!url || typeof url !== 'string') {
                 continue;
@@ -13046,9 +13126,12 @@ class SharedCore {
             if (!key) {
                 continue;
             }
-            
-            // Skip if already processed globally
-            if (processedUrls.has(key)) {
+
+            // Skip if already processed globally — unless it is a page of
+            // this parser's own site that another parser read (see the
+            // 🏠 OWN SITE rule in crawlUrlsForEvents, which lets it through
+            // again at processing time).
+            if (processedUrls.has(key) && !this.isOwnSitePageProcessedByAnother(url, parserConfig)) {
                 continue;
             }
             
@@ -13109,11 +13192,39 @@ class SharedCore {
         return !!key && processedUrls.has(key);
     }
 
-    markProcessedUrl(processedUrls, url) {
+    markProcessedUrl(processedUrls, url, ownerName = '') {
         const key = this.getUrlDedupeKey(url);
         if (key) {
             processedUrls.add(key);
+            // Every parser that read the page, in order: the first names
+            // who crawled it, the rest keep a parser from reading its own
+            // page twice in one run.
+            if (ownerName && this._processedUrlOwners instanceof Map) {
+                if (!this._processedUrlOwners.has(key)) this._processedUrlOwners.set(key, []);
+                const readers = this._processedUrlOwners.get(key);
+                if (!readers.includes(String(ownerName))) readers.push(String(ownerName));
+            }
         }
+    }
+
+    // The parser that first processed this URL in the run ('' when unknown).
+    getProcessedUrlOwner(url) {
+        const key = this.getUrlDedupeKey(url);
+        const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
+        return Array.isArray(readers) && readers.length > 0 ? readers[0] : '';
+    }
+
+    // A page of this parser's own configured site that OTHER parsers
+    // processed and this one has not — the one case a globally-processed
+    // URL is read again (once).
+    isOwnSitePageProcessedByAnother(url, parserConfig) {
+        if (!parserConfig) return false;
+        const key = this.getUrlDedupeKey(url);
+        const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
+        if (!Array.isArray(readers) || readers.length === 0) return false;
+        const ownName = typeof parserConfig.name === 'string' ? parserConfig.name : '';
+        if (readers.includes(ownName)) return false;
+        return this.isConfiguredSiteUrl(url, parserConfig);
     }
 
     getUrlDedupeKey(url) {

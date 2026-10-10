@@ -441,3 +441,21 @@ test('ScriptableAdapter.appendSourceLedger writes through the file manager and i
   assert.equal(await adapter.appendSourceLedger(payload, '20261006-052536'), null);
   assert.equal(parseSourceLedger(files.get('/docs/chunky-dad-data/metrics/sources.ndjson')).length, 3);
 });
+
+// Door rows (DICE, Elfsight, Wix …) carry a ticketing host as their link; the
+// page they were read off says whose they are.
+test('buildSourceLedger: an event is attributed to the page it was read off when that page is one of the parser\'s hosts', () => {
+  const payload = samplePayload({
+    parserResults: [{
+      name: 'Venue', totalEvents: 2, durationMs: 100, config: { urls: ['https://venue.example/'] }, urlClassifications: { 'https://venue.example/': 'multi-event-page', 'https://venue.example/events': 'multi-event-page' },
+      events: [
+        { title: 'Bear Belly', startDate: '2026-10-20T00:00:00.000Z', website: 'https://link.dice.fm/abc', ticketUrl: 'https://link.dice.fm/abc', _sourcePageUrl: 'https://venue.example/events', isBearEvent: true },
+        { title: 'Elsewhere', startDate: '2026-10-21T00:00:00.000Z', website: 'https://other.example/x', isBearEvent: true }
+      ]
+    }],
+    analyzedEvents: []
+  });
+  const built = SharedCore.buildSourceLedger(payload, { now: new Date('2026-10-06T12:00:00Z') });
+  const venue = built.records.find((r) => r.host === 'venue.example');
+  assert.equal(venue.events, 2, 'both rows land on the venue: one by the page it was read off, one by the parser\'s primary host');
+});

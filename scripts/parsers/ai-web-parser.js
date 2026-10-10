@@ -9324,8 +9324,14 @@ class AiWebParser {
         const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#:@]+)/i);
         const host = hostMatch ? hostMatch[1].toLowerCase().replace(/^www\./, '') : '';
         if (!host) return '';
-        const claimKeys = [`${String(kind || '')}|host:${host}`];
-        if (doorId) claimKeys.push(`${String(kind || '')}|door:${String(doorId).toLowerCase()}`);
+        // Per parser: a different parser is a different source. Thotyssey
+        // read cmoneverybody.com/events' DICE widget first (run
+        // 20261010-152315) and the venue's own parser, sharing this instance,
+        // found the door "already read" — its 43 events went to 0. Twins
+        // fold in dedup; the claim only stops ONE source re-reading ONE door.
+        const owner = String((parserConfig && parserConfig.name) || '').toLowerCase();
+        const claimKeys = [`${String(kind || '')}|owner:${owner}|host:${host}`];
+        if (doorId) claimKeys.push(`${String(kind || '')}|owner:${owner}|door:${String(doorId).toLowerCase()}`);
         const readOn = claimKeys.map(key => this.hostDoorReads.get(key) || '').find(Boolean) || '';
         if (readOn) {
             const samePage = this.getUrlDedupeKey(readOn) === this.getUrlDedupeKey(String(sourceUrl || ''));
