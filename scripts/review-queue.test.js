@@ -1212,11 +1212,24 @@ test('stillOnSite: the series title against the page text line by line — found
 
 test('parseAuditAnswer: JSON inside chatter, strings as items, junk dropped, caps; buildAuditPrompt names the host, the page and every extracted event', () => {
   const parsed = sourceAudit.parseAuditAnswer('Here you go:\n{"missing":[{"title":"Sunday Beer Bust","date":"Sun Oct 11"},"Pup Night", {"nope": 1}],"fake":[{"title":"View Event →","reason":"a button"}],"note":"Mostly matches."} thanks');
-  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', reason: 'a button' }], wrong: [], note: 'Mostly matches.' });
+  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', kind: 'button', reason: 'a button' }], wrong: [], note: 'Mostly matches.' });
+  const kinds = sourceAudit.parseAuditAnswer('{"missing":[],"fake":[{"title":"Book →","kind":"button","reason":"link label"},{"title":"Happening Now","kind":"label","reason":"status"},{"title":"Final Girl","kind":"other","reason":"generic title"},{"title":"Dark Matter","reason":"not an event title — promotional phrasing, not a named event"},{"title":"Select a reservation slot above","reason":"UI prompt/instruction"},{"title":"FALLEN ANGELS: A NIGHT OF PLEASURE, DANCE & VENGEANCE","kind":"heading","reason":"generic"},{"title":"Réserver mon hotel (Disponible BIENTÔT)","kind":"booking","reason":"hotel link"}],"wrong":[],"note":""}');
+  assert.deepEqual(kinds.fake.map(item => [item.title, item.kind]), [['Book →', 'button'], ['Happening Now', 'label'], ['Select a reservation slot above', 'prompt'], ['Réserver mon hotel (Disponible BIENTÔT)', 'booking']], 'opinions about naming are not findings; a long title is a heading only in the model\u2019s eyes');
   assert.deepEqual(sourceAudit.parseAuditAnswer('{"missing":[],"fake":[],"wrong":[{"title":"The Hunt","issue":"page says Bar Le Diamant"}],"note":""}').wrong, [{ title: 'The Hunt', issue: 'page says Bar Le Diamant' }]);
+  // Checked against what we extracted: a "missing" we have is not missing, a "fake"/"wrong" we never extracted is about nothing, an empty issue is nothing, duplicates collapse.
+  const checked = sourceAudit.parseAuditAnswer('{"missing":[{"title":"KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder","date":"Oct 10"},{"title":"Decade Dance","date":"Oct 24"},{"title":"Decade Dance","date":"Oct 24"}],"fake":[{"title":"Book →","kind":"button","reason":"link"},{"title":"Pride Friday","kind":"label","reason":"a day label"},{"title":"Book →","kind":"button","reason":"again"}],"wrong":[{"title":"Latin Night","issue":"page says 9 pm – 3 am"},{"title":"Pride Saturday","issue":""},{"title":"Nowhere Night","issue":"page says 8 pm"}],"note":"n"}', { extracted: ['Decade Dance', 'Book →', 'Latin Night', 'Beer Bust'] });
+  assert.deepEqual(checked.missing, [{ title: 'KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder', date: 'Oct 10' }], 'Decade Dance was extracted: not missing');
+  assert.deepEqual(checked.fake.map(item => item.title), ['Book →'], 'a label we never extracted is not our fake; once only');
+  const dated = sourceAudit.parseAuditAnswer('{"missing":[{"title":"Pride Passes","date":"Oct 08"},{"title":"Show Tables","date":"October 8, 2026"},{"title":"Latin Night","date":"2026-10-17"},{"title":"Trivia","date":"every Thursday"}],"fake":[{"title":"Pride Saturday","kind":"label","reason":"a day label"}],"wrong":[],"note":""}', { extracted: ['Pride 2026 Saturday Afternoon Show'], today: '2026-10-10' });
+  assert.deepEqual(dated.missing.map(item => item.title), ['Latin Night', 'Trivia'], 'a printed date before today is not a miss; no date stays');
+  assert.deepEqual(dated.fake, [], 'a fake must name an extracted title, not overlap one');
+  assert.equal(sourceAudit.auditDateKey('Sat, Oct 11 · 9PM', '2026'), '2026-10-11');
+  assert.equal(sourceAudit.auditDateKey('Vendredi 10 Avril 2026', '2026'), '', 'unknown wording is no date');
+  assert.deepEqual(checked.wrong, [{ title: 'Latin Night', issue: 'page says 9 pm – 3 am' }], 'empty issue and a title we never extracted are dropped');
   assert.equal(sourceAudit.parseAuditAnswer('no json here'), null);
   assert.equal(sourceAudit.parseAuditAnswer('[1,2]'), null);
-  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }], { today: '2026-10-09' });
+  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }, { title: 'Drag Night', day: '2026-10-12', time: '', place: 'Eagle LA', dropped: true }], { today: '2026-10-09' });
+  assert.match(prompt, /2\. 2026-10-12 — Drag Night @ Eagle LA\n/, 'a dropped event is listed like any other — the bear verdict is not the audit\u2019s business');
   assert.match(prompt, /events from eaglela\.com for a gay bear community calendar\. Today is 2026-10-09\./);
   assert.match(prompt, /anything dated before 2026-10-09/);
   assert.match(prompt, /PAGE TEXT HERE/);
