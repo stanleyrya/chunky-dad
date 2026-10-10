@@ -1885,11 +1885,82 @@ class SharedCore {
         return date.toISOString().slice(0, 10);
     }
 
+    // Title-only junk detection shared by the sanity flags (rule 9 / 9c:
+    // link/CTA text ending in an arrow, ticketing fine-print) and the source
+    // ledger, whose event identities must never be a caption like
+    // "View Event →" (run 20261010-152315: it became an "expected" series,
+    // then a "lost" one, and the audit found its words on the page). The
+    // address-shaped / venue-name / date-phrase families need the event's
+    // other fields and stay in getEventSanityFlags.
+    static junkTitleReason(rawTitle) {
+        const title = String(rawTitle || '').trim();
+        if (!title) return null;
+        const arrowTail = title.match(/(?:\s*(?:→|⇒|⟶|➔|➜|›|»|≫|>|▶|►)+)+$/u);
+        if (arrowTail) {
+            const preArrow = title.slice(0, title.length - arrowTail[0].length).trim();
+            const tokens = preArrow ? preArrow.split(/\s+/) : [];
+            if (tokens.length > 0 && tokens.length <= 3 && tokens.every(token => /^\p{L}+$/u.test(token))) {
+                return `title reads as link/CTA text (${tokens.length} plain word${tokens.length === 1 ? '' : 's'} ending in an arrow/chevron)`;
+            }
+        }
+        if (/\p{L}/u.test(title)) {
+            const folded = title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+            const paddedTitle = ` ${folded} `;
+            const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
+            if (legalese) return `title is ticketing fine-print ("${legalese}")`;
+        }
+        return null;
+    }
+
+    // Which website a parser's events belong to — THE attribution the ledger
+    // uses for its per-host counts, shared with the audit so both sides
+    // count the same events: the parser's configured urls name its home
+    // hosts (a shared-pages/inbox parser without urls takes the majority
+    // host of its events, else its name); an event belongs to its own page's
+    // host when that is one of the home hosts, else to the first home host —
+    // a ticket page or the organiser's site in `website` never moves it.
+    static sourceLedgerParserHosts(parser) {
+        const name = String(parser && parser.name || '').trim() || 'unnamed';
+        const config = parser && parser.config && typeof parser.config === 'object' ? parser.config : {};
+        const configUrls = Array.isArray(config.urls) ? config.urls : (parser && Array.isArray(parser.urls) ? parser.urls : []);
+        const events = parser && Array.isArray(parser.events) ? parser.events : [];
+        const homeHosts = [];
+        configUrls.forEach((url) => {
+            const host = SharedCore.hostOfUrl(url);
+            if (host && !homeHosts.includes(host)) homeHosts.push(host);
+        });
+        if (homeHosts.length === 0) {
+            const counts = new Map();
+            events.forEach((event) => {
+                const host = SharedCore.hostOfUrl(event && (event.website || event.url));
+                if (host) counts.set(host, (counts.get(host) || 0) + 1);
+            });
+            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+            homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+        }
+        return { name, config, configUrls, events, homeHosts, primary: homeHosts[0] };
+    }
+
+    static sourceLedgerEventHost(event, hosts) {
+        const eventHost = SharedCore.hostOfUrl(event && (event.website || event.url));
+        return hosts.homeHosts.includes(eventHost) ? eventHost : hosts.primary;
+    }
+
+    // A dropped-as-not-bear record names its host; failing that, its page.
+    static sourceLedgerDroppedHost(drop, allHomeHosts) {
+        const event = drop && drop.event && typeof drop.event === 'object' ? drop.event : {};
+        let host = String(drop && drop.host || '').toLowerCase().replace(/^www\./, '');
+        if (!allHomeHosts.has(host)) host = SharedCore.hostOfUrl(event.website || event.url);
+        return allHomeHosts.has(host) ? host : '';
+    }
+
     // 'title tokens|place|local day' — stable across runs, independent of
-    // the merge (no calendar identity needed).
+    // the merge (no calendar identity needed). A junk title (link text,
+    // fine-print) has no key: it is never upcoming, expected or lost.
     static sourceLedgerEventKey(event) {
         if (!event || typeof event !== 'object') return '';
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+        if (SharedCore.junkTitleReason(event.title || event.name)) return '';
         const title = fold(event.title || event.name);
         if (!title) return '';
         const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
@@ -1947,6 +2018,9 @@ class SharedCore {
         const lost = {};
         Object.keys(prev.lost && typeof prev.lost === 'object' ? prev.lost : {}).forEach((series) => {
             const entry = prev.lost[series] || {};
+            // A series whose title is junk (a key written before the rule)
+            // is dropped here, never reported again.
+            if (SharedCore.junkTitleReason(entry.title || series)) return;
             lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
             // The audit's "still on the site?" verdict rides with the series
             // (tools/source-audit.js stamps it into the state).
@@ -1982,6 +2056,8 @@ class SharedCore {
             const expected = new Set();
             counts.forEach((count, id) => {
                 const day = id.slice(id.lastIndexOf('|') + 1);
+                const last = lastSeen.get(id);
+                if (last && SharedCore.junkTitleReason(last.title)) { delete misses[id]; return; }
                 if (count >= minSeen && day >= todayKey) expected.add(id);
             });
             // Anything seen again is no longer missing, confirmed or not.
@@ -2132,27 +2208,8 @@ class SharedCore {
 
         parserResults.forEach((parser) => {
             if (!parser || typeof parser !== 'object') return;
-            const name = String(parser.name || '').trim() || 'unnamed';
-            const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
-            const configUrls = Array.isArray(config.urls) ? config.urls : (Array.isArray(parser.urls) ? parser.urls : []);
-            const homeHosts = [];
-            configUrls.forEach((url) => {
-                const host = SharedCore.hostOfUrl(url);
-                if (host && !homeHosts.includes(host)) homeHosts.push(host);
-            });
-            const events = Array.isArray(parser.events) ? parser.events : [];
-            if (homeHosts.length === 0) {
-                // No configured urls (shared pages, inbox, local imports): the
-                // majority host of its events, else the parser's name.
-                const counts = new Map();
-                events.forEach((event) => {
-                    const host = SharedCore.hostOfUrl(event && (event.website || event.url));
-                    if (host) counts.set(host, (counts.get(host) || 0) + 1);
-                });
-                const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-                homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-            }
-            const primary = homeHosts[0];
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            const { name, config, configUrls, events, homeHosts, primary } = hosts;
             const siteRole = String(config.siteRole || '').trim().toLowerCase();
             homeHosts.forEach((host) => {
                 allHomeHosts.add(host);
@@ -2183,8 +2240,7 @@ class SharedCore {
 
             events.forEach((event) => {
                 if (!event || typeof event !== 'object') return;
-                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
-                const host = homeHosts.includes(eventHost) ? eventHost : primary;
+                const host = SharedCore.sourceLedgerEventHost(event, hosts);
                 const row = hostOf(host);
                 row.events += 1;
                 if (event.isBearEvent === true) row.bear += 1;
@@ -2220,9 +2276,8 @@ class SharedCore {
         bearDropped.forEach((drop) => {
             if (!drop || typeof drop !== 'object') return;
             const event = drop.event && typeof drop.event === 'object' ? drop.event : {};
-            let host = String(drop.host || '').toLowerCase().replace(/^www\./, '');
-            if (!allHomeHosts.has(host)) host = SharedCore.hostOfUrl(event.website || event.url);
-            if (!allHomeHosts.has(host)) return;
+            const host = SharedCore.sourceLedgerDroppedHost(drop, allHomeHosts);
+            if (!host) return;
             const q = hostOf(host).quality;
             const reason = String(drop.reason || '').replace(/\s+/g, ' ').trim();
             if (/^manual/i.test(reason)) q.manualDropped += 1; else q.aiDropped += 1;
@@ -4363,17 +4418,9 @@ class SharedCore {
         //    records (the card still shows them — flag, don't drop; the
         //    withhold lives at the write site, not here).
         if (title) {
-            const arrowTail = title.match(/(?:\s*(?:→|⇒|⟶|➔|➜|›|»|≫|>|▶|►)+)+$/u);
-            if (arrowTail) {
-                const preArrow = title.slice(0, title.length - arrowTail[0].length).trim();
-                const tokens = preArrow ? preArrow.split(/\s+/) : [];
-                if (tokens.length > 0 && tokens.length <= 3
-                    && tokens.every(token => /^\p{L}+$/u.test(token))) {
-                    flags.push({
-                        code: 'junk-title',
-                        detail: `title reads as link/CTA text (${tokens.length} plain word${tokens.length === 1 ? '' : 's'} ending in an arrow/chevron)`
-                    });
-                }
+            const ctaReason = SharedCore.junkTitleReason(title);
+            if (ctaReason && ctaReason.startsWith('title reads as link/CTA text')) {
+                flags.push({ code: 'junk-title', detail: ctaReason });
             }
         }
 
@@ -4486,14 +4533,10 @@ class SharedCore {
         //     name, so the report-only boilerplate flag gains the enforced
         //     junk-title sibling. The letterless branch of rule 3 stays
         //     report-only (no letters ≠ fine-print).
-        if (title && !hasJunkTitleFlag() && /\p{L}/u.test(title)) {
-            const paddedTitle = ` ${foldForCompare(title)} `;
-            const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
-            if (legalese) {
-                flags.push({
-                    code: 'junk-title',
-                    detail: `title is ticketing fine-print ("${legalese}")`
-                });
+        if (title && !hasJunkTitleFlag()) {
+            const legaleseReason = SharedCore.junkTitleReason(title);
+            if (legaleseReason && legaleseReason.startsWith('title is ticketing fine-print')) {
+                flags.push({ code: 'junk-title', detail: legaleseReason });
             }
         }
 
