@@ -27917,3 +27917,103 @@ test('machine door: one page per host gets the hop-down probe — the second sam
   assert.ok(fetched.includes('https://wp.example/wp-json/wp/v2/pages/10'), 'the first page one hop down is probed');
   assert.ok(!fetched.includes('https://wp.example/wp-json/wp/v2/pages/11'), 'the second is not: one hop-down probe per host');
 });
+
+// ---------------------------------------------------------------------------
+// Run 20261010-152315, first run with root configs: two generic regressions.
+// ---------------------------------------------------------------------------
+// (1) A venue's own listing consumed by an earlier parser: Thotyssey (22/56)
+// discovered and crawled cmoneverybody.com/events, read its 42 widget rows
+// under the aggregator, and the venue's own parser (27/56, root config)
+// skipped /events as "already processed globally" → 43 → 0.
+test('crawl: a page of a parser\'s OWN site is read for that parser although another parser crawled it first', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /hub\.example\/$/i, classification: 'link-aggregator' },
+      { pattern: /venue\.example\/$/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://venue.example/events'] },
+    'https://venue.example/events': {
+      events: [{ title: 'Bear Belly', startDate: soon(5), bar: 'The Venue' }, { title: 'GRUNT', startDate: soon(12), bar: 'The Venue' }],
+      additionalLinks: []
+    },
+    'https://venue.example/': { additionalLinks: ['https://venue.example/events', 'https://venue.example/ourstory'] },
+    'https://venue.example/ourstory': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const shared = new Set();
+  core._processedUrlOwners = new Map();
+  const hub = await core.processParser({ name: 'Hub', urls: ['https://hub.example/'], alwaysBear: true, ai: CRAWL_AI }, {}, httpAdapter, display, parsers, shared);
+  assert.equal(hub.totalEvents, 2, 'the hub read the venue\'s listing first');
+  const venue = await core.processParser({ name: 'The Venue', urls: ['https://venue.example/'], alwaysBear: true, ai: CRAWL_AI }, {}, httpAdapter, display, parsers, shared);
+  assert.equal(fetched.filter(url => url === 'https://venue.example/events').length, 2, 'the venue\'s own parser reads its listing again');
+  assert.equal(venue.totalEvents, 2, 'and gets its door events');
+  assert.ok(display.logs.some(line => line.includes('🏠 OWN SITE: https://venue.example/events read for its own site although "Hub" already crawled it')), display.logs.filter(l => l.includes('OWN SITE') || l.includes('duplicate')).join('\n'));
+  // A page of ANOTHER site that the hub read is still skipped for the venue.
+  assert.equal(fetched.filter(url => url === 'https://hub.example/').length, 1);
+  // The same parser never re-reads its own page.
+  assert.equal(core.isOwnSitePageProcessedByAnother('https://venue.example/events', { name: 'The Venue', urls: ['https://venue.example/'] }), false, 'the venue has read it now: not again this run — but the first reader is remembered');
+  assert.equal(core.getProcessedUrlOwner('https://venue.example/events'), 'Hub');
+  assert.equal(core.isOwnSitePageProcessedByAnother('https://venue.example/events', { name: 'Hub', urls: ['https://hub.example/'] }), false, 'not the hub\'s site');
+});
+
+// (2) The text model overrode a structural classification: bearworldmag.com's
+// WordPress posts feed (ten rows, not event-shaped, so "multi-event-page via
+// heuristic") was called "a single event", cached, and the source read 1
+// instead of 129 on every run.
+test('classifyPageWithSignal: a JSON body of two or more rows classifies structurally (json-rows), never by the month heuristic', () => {
+  const core = createCore();
+  const posts = JSON.stringify([
+    { id: 1, date: '2026-10-01T10:00:00', title: { rendered: 'Bear nights this October' }, content: { rendered: '<p>October 11 … November 1 … December 5</p>' } },
+    { id: 2, date: '2026-09-01T10:00:00', title: { rendered: 'Leather Pride Night' }, content: { rendered: '<p>November 1</p>' } }
+  ]);
+  assert.deepEqual(core.classifyPageWithSignal('https://mag.example/wp-json/wp/v2/posts?per_page=10', posts), { classification: 'multi-event-page', signal: 'json-rows' });
+  assert.deepEqual(core.classifyPageWithSignal('https://mag.example/api', JSON.stringify({ data: [{ a: 1 }, { a: 2 }, { a: 3 }] })), { classification: 'multi-event-page', signal: 'json-rows' });
+  assert.equal(core.countJsonBodyRows(JSON.stringify([{ a: 1 }])), 1, 'one row is not a list');
+  assert.equal(core.countJsonBodyRows(JSON.stringify({ ok: true })), 0);
+  assert.equal(core.countJsonBodyRows('[1, 2, 3]'), 0, 'scalars are not rows');
+  assert.equal(core.countJsonBodyRows('<html>March April May</html>'), 0);
+  // Event-shaped rows keep their own, earlier signal.
+  const feed = JSON.stringify({ events: [{ title: 'A', start: '2037-09-12T21:00:00' }, { title: 'B', start: '2037-09-19T21:00:00' }] });
+  assert.deepEqual(core.classifyPageWithSignal('https://x.example/feed.json', feed), { classification: 'multi-event-page', signal: 'json-api' });
+});
+
+test('parsePageForCrawl: a structural ≥2-rows signal is never downgraded by the model, and a stale cached verdict for the page is forgotten', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const posts = JSON.stringify([
+    { id: 1, date: '2026-10-01T10:00:00', title: { rendered: 'Bear nights this October' }, content: { rendered: '<p>October 11 … November 1 … December 5</p>' } },
+    { id: 2, date: '2026-09-01T10:00:00', title: { rendered: 'Leather Pride Night' }, content: { rendered: '<p>November 1 at the Bike Stop</p>' } }
+  ]);
+  const url = 'https://mag.example/wp-json/wp/v2/posts?per_page=10';
+  const store = new Map([[url, { classification: 'event-page', confidence: 95, reason: 'stale' }]]);
+  const invalidated = [];
+  const cache = {
+    read: async (u) => store.get(u) || null,
+    write: async (u, _sig, outcome) => { store.set(u, outcome); },
+    invalidate: async (u) => { invalidated.push(u); return store.delete(u); }
+  };
+  let aiCalls = 0;
+  const parsers = {
+    'ai-web': {
+      getAiConfig: () => ({ enabled: true, model: 'test-model', provider: 'openai', endpoint: 'http://ai.example/v1/chat/completions' }),
+      getAiClassificationCache: () => cache,
+      parseEvents: async () => ({ events: [], additionalLinks: [] })
+    }
+  };
+  const httpAdapter = { postJson: async () => { aiCalls++; return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: '{"classification":"event-page","confidence":95,"reason":"one event"}' } }] }) }; } };
+  const result = await core.parsePageForCrawl({ url, htmlData: { url, html: posts }, parsers, parserConfig: {}, displayAdapter: display, httpAdapter });
+  assert.equal(result.pageClassification, 'multi-event-page', 'the structural verdict stands');
+  assert.equal(aiCalls, 0, 'the model is not asked about a JSON body');
+  assert.deepEqual(invalidated, [url], 'the stale cached verdict is forgotten');
+  assert.ok(!store.has(url));
+  assert.ok(display.logs.some(line => line.includes('Forgot a cached AI verdict') && line.includes('json-rows')), display.logs.join('\n'));
+  // A JSON body the structural tiers cannot read as rows is still not the model's to judge.
+  const scalar = await core.parsePageForCrawl({ url: 'https://mag.example/one', htmlData: { url: 'https://mag.example/one', html: '{"note":"March April May June"}' }, parsers, parserConfig: {}, displayAdapter: display, httpAdapter });
+  assert.equal(aiCalls, 0, 'no second opinion on JSON');
+  assert.equal(scalar.pageClassification, 'multi-event-page', 'the month heuristic still reads the text as it did');
+});

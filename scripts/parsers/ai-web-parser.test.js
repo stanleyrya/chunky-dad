@@ -22362,3 +22362,19 @@ test('WordPress infrastructure paths are never crawl candidates — /wp-includes
   assert.equal(parser.validateEventUrl('https://venue.example/wp-includes/js/jquery.js', 'https://venue.example/', {}).valid, false, 'a script under it is rejected too (as the asset it is)');
   assert.equal(parser.validateEventUrl('https://venue.example/events/wp-includes-night/', 'https://venue.example/', {}).valid, true, 'a slug that merely contains the words is a page');
 });
+
+// Run 20261010-152315: Thotyssey read cmoneverybody.com/events' DICE widget
+// first; the venue's own parser, sharing this instance, found the door
+// "already read" and its 43 events went to 0. A different parser is a
+// different source: the claim is per parser.
+test('a widget door is claimed per parser — another source reading the same host\'s door reads it again', async () => {
+  const parser = createParser();
+  let fetches = 0;
+  const httpAdapter = { fetchData: async () => { fetches++; return { html: elfsightBootPayload([{ name: 'BEAR TEA', visible: true, start: { date: '2037-09-20', time: '18:00' }, timeZone: 'America/New_York' }]) }; } };
+  const page = { html: ELFSIGHT_HTML, url: 'https://venue.example/calendar' };
+  assert.equal((await parser.collectElfsightCalendarEvents(page, { name: 'Hub', urls: ['https://hub.example/'] }, httpAdapter)).length, 1, 'the hub reads the venue\'s door');
+  assert.equal((await parser.collectElfsightCalendarEvents(page, { name: 'The Venue', urls: ['https://venue.example/'] }, httpAdapter)).length, 1, 'the venue\'s own parser reads it too');
+  assert.equal(fetches, 2);
+  assert.deepEqual(await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://venue.example/about' }, { name: 'The Venue', urls: ['https://venue.example/'] }, httpAdapter), [], 'and once only per parser');
+  assert.equal(fetches, 2);
+});
