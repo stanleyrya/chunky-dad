@@ -1997,48 +1997,53 @@ function findCachedListingPage(sharedRoot, host, preferredUrls = [], fsLike = fs
 // Events the latest run extracted from one host (attributed the way the
 // ledger attributes them: the event's own page host when it is one of the
 // parser's hosts, else the parser's first host), as plain rows.
+// Everything the run extracted from one host — the events it kept AND the
+// ones the bear gate dropped (the page lists those too) — attributed exactly
+// as the ledger attributes its counts (SharedCore.sourceLedgerParserHosts /
+// sourceLedgerEventHost / sourceLedgerDroppedHost), as plain rows.
 function eventsForHost(payload, host) {
     const SharedCore = loadSharedCore();
     const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
     const rows = [];
+    const allHomeHosts = new Set();
+    const describe = (event, extra) => {
+        const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+        let time = '';
+        if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
+            try {
+                time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
+            } catch (_) { time = ''; }
+        }
+        return Object.assign({
+            title: String(event.title || ''),
+            day: day || '',
+            time,
+            place: String(event.bar || event.venue || event.city || ''),
+            url: String(event.website || event.url || event.ticketUrl || ''),
+            bear: event.isBearEvent === true,
+            dropped: false,
+            reason: '',
+            source: String(event.source || ''),
+            parser: ''
+        }, extra);
+    };
     const parsers = payload && Array.isArray(payload.parserResults) ? payload.parserResults : [];
     parsers.forEach((parser) => {
         if (!parser || typeof parser !== 'object') return;
-        const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
-        const urls = Array.isArray(config.urls) ? config.urls : [];
-        const home = [];
-        urls.forEach((url) => { const h = SharedCore.hostOfUrl(url); if (h && !home.includes(h)) home.push(h); });
-        const events = Array.isArray(parser.events) ? parser.events : [];
-        if (!home.length) {
-            const counts = new Map();
-            events.forEach((event) => { const h = SharedCore.hostOfUrl(event && (event.website || event.url)); if (h) counts.set(h, (counts.get(h) || 0) + 1); });
-            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-            home.push(top ? top[0] : String(parser.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-        }
-        const primary = home[0];
-        events.forEach((event) => {
+        const hosts = SharedCore.sourceLedgerParserHosts(parser);
+        hosts.homeHosts.forEach((home) => allHomeHosts.add(home));
+        hosts.events.forEach((event) => {
             if (!event || typeof event !== 'object') return;
-            const eventHost = SharedCore.hostOfUrl(event.website || event.url);
-            const owner = home.includes(eventHost) ? eventHost : primary;
-            if (owner !== hostKey) return;
-            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
-            let time = '';
-            if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
-                try {
-                    time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
-                } catch (_) { time = ''; }
-            }
-            rows.push({
-                title: String(event.title || ''),
-                day: day || '',
-                time,
-                place: String(event.bar || event.venue || event.city || ''),
-                url: String(event.website || event.url || event.ticketUrl || ''),
-                bear: event.isBearEvent === true,
-                source: String(event.source || ''),
-                parser: String(parser.name || '')
-            });
+            if (SharedCore.sourceLedgerEventHost(event, hosts) !== hostKey) return;
+            rows.push(describe(event, { parser: hosts.name }));
         });
+    });
+    const dropped = payload && Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : [];
+    dropped.forEach((drop) => {
+        if (!drop || typeof drop !== 'object') return;
+        if (SharedCore.sourceLedgerDroppedHost(drop, allHomeHosts) !== hostKey) return;
+        const event = drop.event && typeof drop.event === 'object' ? drop.event : { title: drop.title, startDate: drop.startDate, bar: drop.venue };
+        rows.push(describe(event, { title: String(event.title || drop.title || ''), bear: false, dropped: true, reason: String(drop.reason || '').replace(/\s+/g, ' ').trim().slice(0, 120) }));
     });
     rows.sort((a, b) => a.day.localeCompare(b.day) || a.title.localeCompare(b.title));
     return rows;
