@@ -78,7 +78,7 @@ function normalizeSourceAuditStore(parsed) {
             page: entry.page && typeof entry.page === 'object' ? { url: String(entry.page.url || ''), fetchedAt: String(entry.page.fetchedAt || ''), chars: Number(entry.page.chars) || 0 } : null,
             still: Array.isArray(entry.still) ? entry.still.filter((item) => item && item.title && STILL_VERDICTS.includes(item.verdict)).map((item) => ({ title: String(item.title), verdict: String(item.verdict), checked_at: String(item.checked_at || ''), line: String(item.line || '') })) : [],
             missing: Array.isArray(entry.missing) ? entry.missing.filter((item) => item && item.title).map((item) => ({ title: String(item.title), date: String(item.date || '') })) : [],
-            fake: Array.isArray(entry.fake) ? entry.fake.filter((item) => item && item.title).map((item) => ({ title: String(item.title), reason: String(item.reason || '') })) : [],
+            fake: Array.isArray(entry.fake) ? entry.fake.filter((item) => item && item.title).map((item) => ({ title: String(item.title), kind: String(item.kind || ''), reason: String(item.reason || '') })) : [],
             wrong: Array.isArray(entry.wrong) ? entry.wrong.filter((item) => item && item.title).map((item) => ({ title: String(item.title), issue: String(item.issue || '') })) : [],
             note: String(entry.note || ''),
             ai: String(entry.ai || 'skipped')
@@ -207,16 +207,16 @@ function buildAuditPrompt(host, pageText, events, options = {}) {
     const cap = Number.isFinite(options.pageTextCap) ? options.pageTextCap : PAGE_TEXT_CAP;
     const today = String(options.today || new Date().toISOString().slice(0, 10));
     const text = String(pageText || '').slice(0, cap);
-    const list = (Array.isArray(events) ? events : []).slice(0, 80).map((event, index) => `${index + 1}. ${event.day || '????-??-??'}${event.time ? ` ${event.time}` : ''} — ${event.title || 'Untitled'}${event.place ? ` @ ${event.place}` : ''}`).join('\n');
+    const list = (Array.isArray(events) ? events : []).slice(0, 120).map((event, index) => `${index + 1}. ${event.day || '????-??-??'}${event.time ? ` ${event.time}` : ''} — ${event.title || 'Untitled'}${event.place ? ` @ ${event.place}` : ''}`).join('\n');
     return [
         `You audit a scraper that collects events from ${host} for a gay bear community calendar. Today is ${today}.`,
-        'Below is the readable text of the site’s listing page, then the events the scraper extracted from this site in its latest run.',
+        'Below is the readable text of the site\u2019s listing page(s), then everything the scraper extracted from this site in its latest run (one per line: date, time, title, place).',
         'Answer from the page text ONLY. Do not invent events; quote titles and date text as printed on the page. Use the event TITLE alone as "title" (never the whole extracted line).',
         `1. missing: events announced on the page for today or later (a dated party, show, night, bust, social, festival day) that are NOT in the extracted list. Ignore navigation, menus, shop items, generic headings, and anything dated before ${today}.`,
-        '2. fake: extracted items that are not events at all (a button, a menu entry, a heading, a hotel booking link, a newsletter, a category name, a duplicate of another item). Give the reason in a few words.',
+        '2. fake: extracted items whose TITLE is plainly not an event at all. Give each a kind: button (a link/CTA label like "Book", "View Event"), label (a status like "Happening Now", "Free"), menu (navigation), heading (a section or category heading), prompt (UI instructions), booking (hotel/ticket links), newsletter, duplicate (the same event twice), other. A real party, show, night, social or festival day is NEVER fake however it is named; an item simply absent from this page text is NOT fake either \u2014 the scraper read more pages than are shown.',
         '3. wrong: extracted items that ARE events on the page but whose date, time or place disagrees with the page. Say what the page says.',
         '4. note: one line on how well the extraction matches the page (or an empty string).',
-        'Respond with JSON only, exactly this shape: {"missing":[{"title":"","date":""}],"fake":[{"title":"","reason":""}],"wrong":[{"title":"","issue":""}],"note":""}',
+        'Respond with JSON only, exactly this shape: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","issue":""}],"note":""}',
         '',
         '=== PAGE TEXT ===',
         text,
@@ -226,7 +226,8 @@ function buildAuditPrompt(host, pageText, events, options = {}) {
         list || '(nothing extracted)',
         '=== END EXTRACTED ===',
         '',
-        'JSON:'
+        `Now answer as the auditor, from the page text above only, for ${today} or later: which page events are missing from the extracted list, which extracted titles are not events, which extracted items have the wrong date/time/place, one note.`,
+        'Reply with ONLY the JSON object, no prose: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","issue":""}],"note":""}'
     ].join('\n');
 }
 
@@ -253,19 +254,103 @@ function extractFirstJsonObject(text) {
     return null;
 }
 
-function parseAuditAnswer(text) {
+const FAKE_KINDS = ['button', 'label', 'menu', 'heading', 'prompt', 'booking', 'newsletter', 'duplicate', 'category', 'link'];
+
+function fakeKind(item) {
+    const kind = String(item && item.kind || '').toLowerCase().trim();
+    if (FAKE_KINDS.includes(kind)) return kind;
+    if (kind === 'other') return 'other';
+    // No kind given (an older or a terse answer): read the reason.
+    const reason = String(item && item.reason || '').toLowerCase();
+    const found = FAKE_KINDS.find((name) => reason.includes(name)) || (/\bui\b|instruction|navigation|cta|status/.test(reason) ? 'label' : null);
+    if (found) return found;
+    return /generic|promo|descriptive|series name|performer|phras|named event|not a clean|mismatch|not fake|wrong/.test(reason) ? 'other' : 'label';
+}
+
+// A button, label, menu entry or heading is a few words; a real party name
+// the model dislikes ("FALLEN ANGELS: A NIGHT OF PLEASURE, DANCE &
+// VENGEANCE [heading]") is not. Four or more word tokens pass only as a
+// UI prompt, a booking/newsletter link or a duplicate.
+function looksLikeNonEvent(item) {
+    const SharedCore = loadSharedCore();
+    const title = String(item && item.title || '');
+    if (SharedCore.junkTitleReason(title)) return true;
+    if (!/\p{L}/u.test(title)) return true;
+    if (['prompt', 'booking', 'newsletter', 'duplicate'].includes(item.kind)) return true;
+    const tokens = title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+    return tokens.length <= 3;
+}
+
+// The model's answer checked against what we hold: a "missing" title that
+// matches an extracted title is not missing; a "fake" or "wrong" title that
+// matches no extracted title is about nothing we did; an empty issue is no
+// finding; duplicates collapse. options.extracted = the extracted titles.
+// The date text as printed ("Oct 08", "October 8, 2026", "2026-10-08",
+// "Sat, Oct 11 · 9PM") → YYYY-MM-DD, this year unless the text says one.
+const MONTH_INDEX = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+function auditDateKey(text, year) {
+    const value = String(text || '');
+    const iso = /(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const named = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/i.exec(value);
+    if (!named) return '';
+    const month = MONTH_INDEX[named[1].toLowerCase()];
+    const day = Number(named[2]);
+    if (!month || !(day >= 1 && day <= 31)) return '';
+    return `${named[3] || year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function parseAuditAnswer(text, options = {}) {
     const candidate = extractFirstJsonObject(text);
     if (!candidate) return null;
     let parsed;
     try { parsed = JSON.parse(candidate); } catch (_) { return null; }
     if (!parsed || typeof parsed !== 'object') return null;
     const clean = (value, max) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, max);
+    const extractedFolds = (Array.isArray(options.extracted) ? options.extracted : []).map(foldAuditText).filter(Boolean);
+    const SharedCore = loadSharedCore();
+    // "missing" is suppressed generously (anything we hold that overlaps
+    // the title); "fake"/"wrong" must name an extracted title exactly or by
+    // containment — "Pride Saturday" is not "Pride 2026 Saturday Afternoon Show".
+    const matchesExtracted = (title) => {
+        const fold = foldAuditText(title);
+        if (!fold) return false;
+        return extractedFolds.some((known) => known === fold || known.includes(fold) || fold.includes(known) || SharedCore.sourceLedgerTitleOverlap(fold, known) >= 0.6);
+    };
+    const namesExtracted = (title) => {
+        const fold = foldAuditText(title);
+        if (!fold) return false;
+        return extractedFolds.some((known) => known === fold || known.includes(fold) || fold.includes(known));
+    };
+    const checkAgainstExtracted = extractedFolds.length > 0;
+    const today = String(options.today || '');
+    const dateBeforeToday = (text) => {
+        if (!today) return false;
+        const day = auditDateKey(text, today.slice(0, 4));
+        return !!day && day < today;
+    };
+    const seen = new Set();
+    const once = (item) => { const key = foldAuditText(item.title); if (!key || seen.has(key)) return false; seen.add(key); return true; };
     const missing = (Array.isArray(parsed.missing) ? parsed.missing : []).map((item) => (typeof item === 'string' ? { title: item } : item))
-        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), date: clean(item.date, 80) })).slice(0, 40);
+        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), date: clean(item.date, 80) }))
+        .filter((item) => !(checkAgainstExtracted && matchesExtracted(item.title))).filter((item) => !dateBeforeToday(item.date)).filter(once).slice(0, 40);
+    seen.clear();
+    // A "fake" is kept only when the model names a concrete kind of
+    // non-event (a button, a status label, a menu entry, a heading, a UI
+    // prompt, a booking link, a newsletter, a duplicate); an opinion about
+    // how an event is named ("generic phrasing", "promo", "series name") is
+    // not a finding and is dropped — the first live audit called 32 real
+    // 3 Dollar Bill parties "not an event title".
     const fake = (Array.isArray(parsed.fake) ? parsed.fake : []).map((item) => (typeof item === 'string' ? { title: item } : item))
-        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), reason: clean(item.reason, 160) })).slice(0, 40);
+        .filter((item) => item && typeof item === 'object' && clean(item.title, 160))
+        .map((item) => ({ title: clean(item.title, 160), kind: fakeKind(item), reason: clean(item.reason, 160) }))
+        .filter((item) => item.kind !== 'other' && looksLikeNonEvent(item))
+        .filter((item) => !checkAgainstExtracted || namesExtracted(item.title)).filter(once)
+        .slice(0, 40);
+    seen.clear();
     const wrong = (Array.isArray(parsed.wrong) ? parsed.wrong : []).map((item) => (typeof item === 'string' ? { title: item } : item))
-        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), issue: clean(item.issue || item.reason, 200) })).slice(0, 40);
+        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), issue: clean(item.issue || item.reason, 200) }))
+        .filter((item) => item.issue && (!checkAgainstExtracted || namesExtracted(item.title))).filter(once).slice(0, 40);
     return { missing, fake, wrong, note: clean(parsed.note, 300) };
 }
 
@@ -440,7 +525,14 @@ async function runSourceAudit(options = {}) {
                     const prompt = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: options.pageTextCap, today });
                     let answer = null;
                     try { answer = await askAi(options, prompt); } catch (error) { summary.errors.push(`${row.host}: ai ${error.message}`); }
-                    const parsed = parseAuditAnswer(answer);
+                    const extractedTitles = events.map((event) => event.title);
+                    let parsed = parseAuditAnswer(answer, { extracted: extractedTitles, today });
+                    if (!parsed && answer) {
+                        // Prose instead of JSON: once more with half the page.
+                        const shorter = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: Math.floor((Number.isFinite(options.pageTextCap) ? options.pageTextCap : PAGE_TEXT_CAP) / 2), today });
+                        try { answer = await askAi(options, shorter); } catch (error) { summary.errors.push(`${row.host}: ai retry ${error.message}`); }
+                        parsed = parseAuditAnswer(answer, { extracted: extractedTitles, today });
+                    }
                     if (parsed) {
                         entry.missing = parsed.missing;
                         entry.fake = parsed.fake;
@@ -490,6 +582,7 @@ module.exports = {
     stillOnSite,
     buildAuditPrompt,
     parseAuditAnswer,
+    auditDateKey,
     stampStillIntoLossState,
     fetchListingText,
     listingUrlsForHost,
