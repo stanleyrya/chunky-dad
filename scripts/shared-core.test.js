@@ -9298,6 +9298,17 @@ test('refusal: a 403 or 429 is about the client that minute — never written as
   assert.deepEqual(saved, ['https://a.example/x'], 'what the page said is still noted');
 });
 
+test('a site we read = the registrable domain of a configured URL (the politeness gate carries the test; see the web adapter tests)', () => {
+  const core = createCore();
+  core.noteConfiguredListingUrls([{ urls: ['https://www.eagle.example/calendar2/'] }, { urls: ['https://events.ticketleap.com/api/organization-listing/club/upcoming', 'https://club.example/'] }]);
+  assert.equal(core.isConfiguredSiteDomainUrl('https://eagle.example/wp-json/tribe/events/v1/events?per_page=50'), true);
+  assert.equal(core.isConfiguredSiteDomainUrl('https://www.eagle.example/event/x/'), true);
+  assert.equal(core.isConfiguredSiteDomainUrl('https://ticketleap.com/other'), true, 'the platform host is a site we read too');
+  assert.equal(core.isConfiguredSiteDomainUrl('https://www.jlab.com/'), false);
+  assert.equal(core.isConfiguredSiteDomainUrl('not a url'), false);
+  assert.equal(createCore().isConfiguredSiteDomainUrl('https://eagle.example/'), false, 'no run noted its configs: nothing is a site we read');
+});
+
 test('outage: a replayed failure note is never the second strike', async () => {
   const cityUrl = 'https://dead-domain.example/in/sydney';
   const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);

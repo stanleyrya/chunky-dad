@@ -1664,8 +1664,22 @@ class WebAdapter {
             // fails too. A page the browser brought back is a page.
             const refusalStatus = Number(error && error.statusCode) || Number((error && error.politeness && String(error.message || '').match(/\b(429|403)\b/) || [])[1]) || 0;
             const refused = refusalStatus === 429 || refusalStatus === 403;
+            // The browser and the phone are for the sites we read (the
+            // registrable domain of a configured URL), never for an
+            // outbound link a page happens to carry — see
+            // FetchPoliteness.isConfiguredSiteRequest.
+            const gate = typeof this.getFetchPoliteness === 'function' ? this.getFetchPoliteness() : null;
+            const ownSite = !gate || typeof gate.isConfiguredSiteRequest !== 'function' || gate.isConfiguredSiteRequest(url);
+            if (refused && !ownSite) {
+                const hostKey = (String(url).match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+                if (!this._browserSkippedHosts) this._browserSkippedHosts = new Set();
+                if (hostKey && !this._browserSkippedHosts.has(hostKey)) {
+                    this._browserSkippedHosts.add(hostKey);
+                    console.log(`🧭 BROWSER: ${url} not tried — not a site we read (an outbound link); its refusal stands`);
+                }
+            }
             // Pages only: never robots.txt, never an API call, never a POST.
-            if (refused && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
+            if (refused && ownSite && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
                 const browserPage = await this.fetchWithBrowser(url, options);
                 if (browserPage && browserPage.html) {
                     if (canUseCache && isCacheableResponse(browserPage)) await this.writeCachedPage(url, browserPage, pageCacheConfig);
@@ -1686,10 +1700,10 @@ class WebAdapter {
             }
             if (error && error.politeness) {
                 console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
-                if (refused && !options.apiCall) this.noteInboxRequest(url, `the host answers the Mac ${refusalStatus}`);
+                if (refused && ownSite && !options.apiCall) this.noteInboxRequest(url, `the host answers the Mac ${refusalStatus}`);
             } else {
                 console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
-                if (refused && !options.apiCall) this.noteInboxRequest(url, `HTTP ${refusalStatus}`);
+                if (refused && ownSite && !options.apiCall) this.noteInboxRequest(url, `HTTP ${refusalStatus}`);
             }
             const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
             if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;
