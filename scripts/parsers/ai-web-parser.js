@@ -24826,8 +24826,17 @@ TEXT:
     // exactly one date (a description naming a second date decides nothing),
     // the year must come from the card itself or from the page's own
     // month-matching year anchor (never invented), and the correction must
-    // be a whole number of days inside a year — past that the two dates are
-    // not two readings of one event.
+    // be a whole number of days inside a year and a week — an annual
+    // edition lands up to a week off last year's calendar date ("BEEFDIP
+    // ON ALL 4's" on Thu Jan 28 2027 under a flyer for Jan 26 2026: 367
+    // days, refused by a 366 cap, and the event sat a year in the past).
+    // Past that the two dates are not two readings of one event.
+    //
+    // A flyer from ANOTHER EDITION (the correction is more than half a
+    // year) is no evidence for the rest of the record either: a span of
+    // days or a repeat the card's own lines do not state came off that
+    // flyer and goes with it — the end is cleared (no end stated = no
+    // end), the repeat dropped. A card that says "daily" keeps its repeat.
     applyCardStatedDateOverFlyerDate(event, segmentLines, pageDateContext) {
         if (!event || !event.startDate) return false;
         if (!this.core || typeof this.core.toEpochMillis !== 'function') return false;
@@ -24852,7 +24861,7 @@ TEXT:
         const dayMs = this.extractionLimits.millisPerDay;
         const shiftDays = Math.round(
             (Date.UTC(year, card.month - 1, card.day) - Date.UTC(actual.year, actual.month - 1, actual.day)) / dayMs);
-        if (shiftDays === 0 || Math.abs(shiftDays) > 366) return false;
+        if (shiftDays === 0 || Math.abs(shiftDays) > 366 + 7) return false;
 
         const shift = (value) => {
             if (!value) return value;
@@ -24866,6 +24875,25 @@ TEXT:
         event.endDate = shift(event.endDate);
         const iso = (value) => this.core.isDateLike(value) ? value.toISOString() : String(value);
         console.log(`📅 AI Web: Card date wins over artwork for "${event.title || 'Unknown'}" — the card states ${card.month}/${card.day}, the record read ${actual.month}/${actual.day}; moved ${iso(before)} → ${iso(event.startDate)}`);
+        if (Math.abs(shiftDays) > 183) {
+            const cardText = (Array.isArray(segmentLines) ? segmentLines : []).join(' \n ');
+            const cardStatesRepeat = /\b(daily|nightly|every|each|weekly|monthly|recurring|(?:mon|tues|wednes|thurs|fri|satur|sun)days)\b/i.test(cardText);
+            const dropped = [];
+            if (!cardStatesRepeat) {
+                for (const field of ['recurrence', 'recurrenceRule']) {
+                    if (event[field]) { delete event[field]; if (!dropped.includes('repeat')) dropped.push('repeat'); }
+                }
+            }
+            const startMs = this.core.toEpochMillis(event.startDate);
+            const endMs = event.endDate ? this.core.toEpochMillis(event.endDate) : null;
+            if (startMs !== null && endMs !== null && (endMs - startMs) > dayMs) {
+                delete event.endDate;
+                dropped.push('multi-day end');
+            }
+            if (dropped.length) {
+                console.log(`📅 AI Web: "${event.title || 'Unknown'}" — the artwork is another edition's; its ${dropped.join(' and ')} went with its date (the card states one date and neither)`);
+            }
+        }
         return true;
     }
 
