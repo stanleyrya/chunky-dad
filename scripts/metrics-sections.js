@@ -427,8 +427,12 @@ function assessSourceHealth(records, options = {}) {
             const stillAt = fromAudit && fromAudit.checked_at ? fromAudit.checked_at : (entry.still_at || '');
             return Object.assign({}, entry, still ? { still, still_at: stillAt } : {});
         });
-        const openLost = lost.filter((entry) => entry.still !== 'site-removed');
-        const lostRemoved = lost.length - openLost.length;
+        // Not our miss: the site removed it, or the run holds it under the
+        // bear check's verdict or another title ("set-aside" — the audit
+        // found its twin in the run). Neither counts toward the lost numbers.
+        const openLost = lost.filter((entry) => entry.still !== 'site-removed' && entry.still !== 'set-aside');
+        const lostRemoved = lost.filter((entry) => entry.still === 'site-removed').length;
+        const lostSetAside = lost.filter((entry) => entry.still === 'set-aside').length;
         const lostStillListed = lost.filter((entry) => entry.still === 'still-listed').length;
         const lostDays = openLost.reduce((sum, entry) => sum + entry.days.length, 0);
         const lostBear = openLost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + entry.days.length, 0);
@@ -490,6 +494,7 @@ function assessSourceHealth(records, options = {}) {
             lostDays,
             lostBear,
             lostRemoved,
+            lostSetAside,
             lostStillListed,
             audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', page: audit.page || null } : null,
             auditOpen: !!audit && ((Array.isArray(audit.missing) && audit.missing.length > 0) || (Array.isArray(audit.fake) && audit.fake.length > 0) || (Array.isArray(audit.wrong) && audit.wrong.length > 0) || lostStillListed > 0),
@@ -762,11 +767,12 @@ function formatLostNote(row) {
     const parts = [];
     if (row.listingGone) parts.push('listing gone');
     if (row.lostDays > 0) {
-        const first = (Array.isArray(row.lost) ? row.lost : []).find((entry) => entry.still !== 'site-removed') || null;
+        const first = (Array.isArray(row.lost) ? row.lost : []).find((entry) => entry.still !== 'site-removed' && entry.still !== 'set-aside') || null;
         const headline = `${row.lostDays} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}${row.lostStillListed ? ` · ${row.lostStillListed} still listed — our miss` : ''}`;
         parts.push(first ? `${headline} · ${String(first.title || '').slice(0, 40)}${first.days.length > 1 ? ` ×${first.days.length}` : ''}` : headline);
     }
     if (row.lostRemoved > 0) parts.push(`${row.lostRemoved} series removed by the site`);
+    if (row.lostSetAside > 0) parts.push(`${row.lostSetAside} held by the run (bear check or renamed)`);
     return parts.join(' · ');
 }
 
@@ -1016,6 +1022,7 @@ function buildLostListHtml(row) {
     if (row && row.suspected > 0) notes.push(`${row.suspected} expected event${row.suspected === 1 ? '' : 's'} missing for the first time — waiting for the next ok run before calling ${row.suspected === 1 ? 'it' : 'them'} lost.`);
     if (row && row.aggregator && lost.length) notes.push('Aggregator: losses are recorded for the record and never raise the verdict.');
     if (row && row.lostRemoved > 0) notes.push(`${row.lostRemoved} series the site itself no longer lists (the audit looked): not our miss, kept here for the record.`);
+    if (row && row.lostSetAside > 0) notes.push(`${row.lostSetAside} series the run still holds — set aside by the bear check, or under a new title: not an extraction miss.`);
     if (row && row.lostStillListed > 0) notes.push(`${row.lostStillListed} series the site STILL lists: our extraction misses them.`);
     const noteHtml = notes.length ? `<div class="muted lost-notes">${notes.map((note) => escapeHtml(note)).join('<br>')}</div>` : '';
     if (!lost.length) {
@@ -1025,7 +1032,7 @@ function buildLostListHtml(row) {
         const days = Array.isArray(item.days) ? item.days : [];
         const shownDays = days.slice(0, 4).join(', ') + (days.length > 4 ? ` +${days.length - 4}` : '');
         return `
-          <tr class="${item.still === 'site-removed' ? 'lost-removed' : ''}">
+          <tr class="${item.still === 'site-removed' || item.still === 'set-aside' ? 'lost-removed' : ''}">
             <td><div class="cell-title">${escapeHtml(item.title || 'Untitled')}${days.length > 1 ? ` <span class="cell-subtitle">×${days.length}</span>` : ''}</div></td>
             <td><div class="cell-subtitle">${escapeHtml(shownDays || '—')}</div></td>
             <td class="status-cell">${item.bear ? '🐻' : ''}</td>
@@ -1094,6 +1101,7 @@ function buildHostQualityHtml(row) {
 function formatStillHtml(still) {
     if (still === 'still-listed') return '<span class="still-chip still-listed">still listed — our miss</span>';
     if (still === 'site-removed') return '<span class="still-chip still-removed">site removed</span>';
+    if (still === 'set-aside') return '<span class="still-chip still-removed">held by the run</span>';
     if (still === 'unknown') return '<span class="still-chip still-unknown">unknown</span>';
     return '<span class="cell-subtitle">not checked</span>';
 }

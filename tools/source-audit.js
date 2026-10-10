@@ -48,7 +48,7 @@ const DEFAULT_CAP = 3;
 const DEFAULT_BUDGET_MS = 240000;
 const PAGE_TEXT_CAP = 6000;
 const MAX_RUNS_KEPT = 60;
-const STILL_VERDICTS = ['still-listed', 'site-removed', 'unknown'];
+const STILL_VERDICTS = ['still-listed', 'site-removed', 'set-aside', 'unknown'];
 
 function loadSharedCore() {
     return require(path.join(repoRoot, 'scripts', 'shared-core')).SharedCore;
@@ -76,10 +76,15 @@ function normalizeSourceAuditStore(parsed) {
             verdict: String(entry.verdict || ''),
             badges: Array.isArray(entry.badges) ? entry.badges.map(String) : [],
             page: entry.page && typeof entry.page === 'object' ? { url: String(entry.page.url || ''), fetchedAt: String(entry.page.fetchedAt || ''), chars: Number(entry.page.chars) || 0 } : null,
-            still: Array.isArray(entry.still) ? entry.still.filter((item) => item && item.title && STILL_VERDICTS.includes(item.verdict)).map((item) => ({ title: String(item.title), verdict: String(item.verdict), checked_at: String(item.checked_at || ''), line: String(item.line || '') })) : [],
+            still: Array.isArray(entry.still) ? entry.still.filter((item) => item && item.title && STILL_VERDICTS.includes(item.verdict)).map((item) => Object.assign(
+                { title: String(item.title), verdict: String(item.verdict), checked_at: String(item.checked_at || ''), line: String(item.line || '') },
+                item.how ? { how: String(item.how) } : {}, item.twin ? { twin: String(item.twin) } : {}, item.extracted_on ? { extracted_on: String(item.extracted_on) } : {})) : [],
             missing: Array.isArray(entry.missing) ? entry.missing.filter((item) => item && item.title).map((item) => ({ title: String(item.title), date: String(item.date || '') })) : [],
             fake: Array.isArray(entry.fake) ? entry.fake.filter((item) => item && item.title).map((item) => ({ title: String(item.title), kind: String(item.kind || ''), reason: String(item.reason || '') })) : [],
-            wrong: Array.isArray(entry.wrong) ? entry.wrong.filter((item) => item && item.title).map((item) => ({ title: String(item.title), issue: String(item.issue || '') })) : [],
+            // Only rows the record confirmed (they name their field); the
+            // narrated "issue" rows of the first audits are not findings.
+            wrong: Array.isArray(entry.wrong) ? entry.wrong.filter((item) => item && item.title && item.field).map((item) => ({ title: String(item.title), field: String(item.field), page: String(item.page || ''), extracted: String(item.extracted || ''), issue: String(item.issue || '') })) : [],
+            unverified: Number(entry.unverified) || 0,
             note: String(entry.note || ''),
             ai: String(entry.ai || 'skipped')
         };
@@ -201,6 +206,114 @@ function stillOnSite(title, pageText, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// "Still listed" is our miss only when the run does not hold the event.
+// The first live audits called two things misses that were not:
+//   - Atlanta Eagle "NEON THE GLOWGOBEAR – Atlanta Pride 2026…" (lost) was
+//     in the run the same day as "NEON – TEA DANCE", set aside by the bear
+//     check: a renamed event and a bear verdict, the owner's call.
+//   - BeefDip "ON ALL 4's – ATV ADVENTURE" WAS in the run, a year off
+//     (2026-01-26 for 2027-01-28): a real miss, and the day it was filed
+//     under is the lead.
+// So, for a series the page still names: a row of the run on one of the
+// lost days that carries the very title, or shares a word distinctive on
+// this host (4+ letters, in at most two of the host's titles), is its
+// twin → "set-aside" (bear-dropped or renamed, not our miss). A shared
+// festival suffix pairs nothing: "KYLE HOUSE – Atlanta Pride 2026…" is not
+// "BRADY PRINCE – Atlanta Pride 2026…" the same night. The very title on
+// ANOTHER day stays "still-listed" and says which day.
+// ---------------------------------------------------------------------------
+function refineStillVerdict(series, match, events) {
+    const out = { verdict: match.verdict, line: match.line };
+    if (match.verdict !== 'still-listed') return out;
+    const rows = (Array.isArray(events) ? events : []).filter((event) => event && event.title);
+    if (!rows.length) return out;
+    const lostFold = foldAuditText(series.title);
+    const days = new Set(Array.isArray(series.days) ? series.days.map(String) : []);
+    const sameTitle = (event) => foldAuditText(event.title) === lostFold;
+    const titleCount = new Map();
+    new Set(rows.map((event) => foldAuditText(event.title))).forEach((fold) => {
+        new Set(fold.split(' ').filter((word) => word.length >= 4)).forEach((word) => titleCount.set(word, (titleCount.get(word) || 0) + 1));
+    });
+    const distinctive = lostFold.split(' ').filter((word) => word.length >= 4 && (titleCount.get(word) || 0) >= 1 && (titleCount.get(word) || 0) <= 2);
+    const sharesDistinctive = (event) => {
+        const words = new Set(foldAuditText(event.title).split(' '));
+        return distinctive.some((word) => words.has(word));
+    };
+    const onLostDay = rows.filter((event) => days.has(String(event.day)));
+    const twin = onLostDay.find(sameTitle) || onLostDay.find(sharesDistinctive);
+    if (twin) {
+        out.verdict = 'set-aside';
+        out.how = twin.dropped ? 'bear-dropped' : 'renamed';
+        out.twin = String(twin.title).slice(0, 120);
+        return out;
+    }
+    const elsewhere = rows.find(sameTitle);
+    if (elsewhere) out.extracted_on = String(elsewhere.day || '');
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// "Wrong" is checked against the record, not taken from the model. The
+// model names the field and quotes the page; the comparison is ours:
+// dates by month and day (and year when the page prints one), clocks in
+// minutes ("18:00" is "6:00 PM"), places by shared words. A row that
+// compares equal is dropped; one that cannot be compared is counted as
+// unverified and never shown as a finding. BeefDip's first audit had 15
+// "wrong" rows, most of them the model reasoning its way to "so this is
+// not an error".
+// ---------------------------------------------------------------------------
+function auditClockMinutes(text) {
+    const value = String(text || '').toLowerCase();
+    if (!value.trim()) return null;
+    const twelve = /(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\b/.exec(value);
+    const word = /\b(noon|midnight)\b/.exec(value);
+    const twentyFour = /\b([01]?\d|2[0-3]):([0-5]\d)\b/.exec(value);
+    const firstIndex = (m) => (m ? m.index : Infinity);
+    const first = [twelve, word, twentyFour].sort((a, b) => firstIndex(a) - firstIndex(b))[0];
+    if (!first) return null;
+    if (first === word) return word[1] === 'noon' ? 720 : 0;
+    if (first === twelve) {
+        let hour = Number(twelve[1]) % 12;
+        if (twelve[3] === 'p') hour += 12;
+        return hour * 60 + Number(twelve[2] || 0);
+    }
+    return Number(twentyFour[1]) * 60 + Number(twentyFour[2]);
+}
+
+function auditWrongField(value) {
+    const field = String(value || '').toLowerCase().trim();
+    if (/^(date|day)$/.test(field)) return 'date';
+    if (/^(time|start|start time|clock)$/.test(field)) return 'time';
+    if (/^(place|venue|location|bar)$/.test(field)) return 'place';
+    return '';
+}
+
+// true = differs (a finding), false = agrees, null = cannot be compared.
+function auditFieldDiffers(field, pageText, event, year) {
+    if (field === 'date') {
+        const page = auditDateKey(pageText, year);
+        const day = String(event.day || '');
+        if (!page || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+        const printsYear = /\b(19|20)\d{2}\b/.test(String(pageText || ''));
+        return printsYear ? page !== day : page.slice(5) !== day.slice(5);
+    }
+    if (field === 'time') {
+        const page = auditClockMinutes(pageText);
+        const own = auditClockMinutes(event.time);
+        if (page === null || own === null) return null;
+        return page !== own;
+    }
+    if (field === 'place') {
+        const page = foldAuditText(pageText);
+        const own = foldAuditText(event.place);
+        if (!page || !own) return null;
+        if (page.includes(own) || own.includes(page)) return false;
+        return loadSharedCore().sourceLedgerTitleOverlap(page, own) < 0.5;
+    }
+    return null;
+}
+
+// ---------------------------------------------------------------------------
 // The AI report: the page's text beside what we extracted. JSON only.
 // ---------------------------------------------------------------------------
 function buildAuditPrompt(host, pageText, events, options = {}) {
@@ -214,9 +327,9 @@ function buildAuditPrompt(host, pageText, events, options = {}) {
         'Answer from the page text ONLY. Do not invent events; quote titles and date text as printed on the page. Use the event TITLE alone as "title" (never the whole extracted line).',
         `1. missing: events announced on the page for today or later (a dated party, show, night, bust, social, festival day) that are NOT in the extracted list. Ignore navigation, menus, shop items, generic headings, and anything dated before ${today}.`,
         '2. fake: extracted items whose TITLE is plainly not an event at all. Give each a kind: button (a link/CTA label like "Book", "View Event"), label (a status like "Happening Now", "Free"), menu (navigation), heading (a section or category heading), prompt (UI instructions), booking (hotel/ticket links), newsletter, duplicate (the same event twice), other. A real party, show, night, social or festival day is NEVER fake however it is named; an item simply absent from this page text is NOT fake either \u2014 the scraper read more pages than are shown.',
-        '3. wrong: extracted items that ARE events on the page but whose date, time or place disagrees with the page. Say what the page says.',
+        '3. wrong: extracted items that ARE events on the page but whose date, start time or place plainly disagrees with the page. One row per disagreement: "field" is date, time or place; "page" is the page\u2019s own words for that field, quoted exactly; "extracted" is what the extracted line shows. Do not explain, do not list items that agree, and "6:00 PM" agrees with "18:00".',
         '4. note: one line on how well the extraction matches the page (or an empty string).',
-        'Respond with JSON only, exactly this shape: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","issue":""}],"note":""}',
+        'Respond with JSON only, exactly this shape: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","field":"","page":"","extracted":""}],"note":""}',
         '',
         '=== PAGE TEXT ===',
         text,
@@ -227,7 +340,7 @@ function buildAuditPrompt(host, pageText, events, options = {}) {
         '=== END EXTRACTED ===',
         '',
         `Now answer as the auditor, from the page text above only, for ${today} or later: which page events are missing from the extracted list, which extracted titles are not events, which extracted items have the wrong date/time/place, one note.`,
-        'Reply with ONLY the JSON object, no prose: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","issue":""}],"note":""}'
+        'Reply with ONLY the JSON object, no prose: {"missing":[{"title":"","date":""}],"fake":[{"title":"","kind":"","reason":""}],"wrong":[{"title":"","field":"","page":"","extracted":""}],"note":""}'
     ].join('\n');
 }
 
@@ -292,12 +405,20 @@ function auditDateKey(text, year) {
     const value = String(text || '');
     const iso = /(\d{4})-(\d{2})-(\d{2})/.exec(value);
     if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-    const named = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/i.exec(value);
-    if (!named) return '';
-    const month = MONTH_INDEX[named[1].toLowerCase()];
-    const day = Number(named[2]);
+    // Day first ("10 October 2026", "30 octobre"), then month first
+    // ("Oct 08", "October 8, 2026"). A day is one or two digits standing
+    // alone — never the first two digits of the year in "October 2026".
+    const MONTH = '(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
+    const dayFirst = new RegExp(`(?<!\\d)(\\d{1,2})(?:st|nd|rd|th|er)?\\s+${MONTH}(?:,?\\s*(\\d{4}))?(?![a-z])`, 'i').exec(value);
+    const monthFirst = new RegExp(`\\b${MONTH}\\s+(\\d{1,2})(?!\\d)(?:st|nd|rd|th)?(?:,?\\s*(\\d{4}))?`, 'i').exec(value);
+    const pick = dayFirst && (!monthFirst || dayFirst.index <= monthFirst.index)
+        ? { month: dayFirst[2], day: dayFirst[1], year: dayFirst[3] }
+        : (monthFirst ? { month: monthFirst[1], day: monthFirst[2], year: monthFirst[3] } : null);
+    if (!pick) return '';
+    const month = MONTH_INDEX[pick.month.toLowerCase()];
+    const day = Number(pick.day);
     if (!month || !(day >= 1 && day <= 31)) return '';
-    return `${named[3] || year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return `${pick.year || year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function parseAuditAnswer(text, options = {}) {
@@ -329,6 +450,29 @@ function parseAuditAnswer(text, options = {}) {
         const day = auditDateKey(text, today.slice(0, 4));
         return !!day && day < today;
     };
+    // With the page in hand a "fake" has to be shown, not asserted: the
+    // model called twelve real 3 Dollar Bill parties "heading — no such
+    // event appears on the provided page text" (a heading that is not on
+    // the page). A heading, label, menu entry, button or link is page
+    // furniture, and furniture REPEATS: the title must be a line of the
+    // page at least twice ("En vedette Récurrent" under every card), or
+    // be junk by the shared title rule. A duplicate must be two records
+    // of one title on one day. Prompts, booking and newsletter links stay
+    // as the model's call.
+    const pageLineCounts = typeof options.pageText === 'string' && options.pageText.trim() ? new Map() : null;
+    if (pageLineCounts) String(options.pageText).split('\n').map(foldAuditText).filter(Boolean).forEach((line) => pageLineCounts.set(line, (pageLineCounts.get(line) || 0) + 1));
+    const auditRecords = (Array.isArray(options.events) ? options.events : []).filter((event) => event && event.title);
+    const provablyNotAnEvent = (item) => {
+        const title = String(item.title || '');
+        if (SharedCore.junkTitleReason(title) || !/\p{L}/u.test(title)) return true;
+        if (['prompt', 'booking', 'newsletter'].includes(item.kind)) return true;
+        const fold = foldAuditText(title);
+        if (item.kind === 'duplicate') {
+            const days = auditRecords.filter((event) => foldAuditText(event.title) === fold).map((event) => String(event.day || ''));
+            return days.some((day, index) => day && days.indexOf(day) !== index);
+        }
+        return (pageLineCounts.get(fold) || 0) >= 2;
+    };
     const seen = new Set();
     const once = (item) => { const key = foldAuditText(item.title); if (!key || seen.has(key)) return false; seen.add(key); return true; };
     const missing = (Array.isArray(parsed.missing) ? parsed.missing : []).map((item) => (typeof item === 'string' ? { title: item } : item))
@@ -344,14 +488,40 @@ function parseAuditAnswer(text, options = {}) {
     const fake = (Array.isArray(parsed.fake) ? parsed.fake : []).map((item) => (typeof item === 'string' ? { title: item } : item))
         .filter((item) => item && typeof item === 'object' && clean(item.title, 160))
         .map((item) => ({ title: clean(item.title, 160), kind: fakeKind(item), reason: clean(item.reason, 160) }))
-        .filter((item) => item.kind !== 'other' && looksLikeNonEvent(item))
+        .filter((item) => item.kind !== 'other' && (pageLineCounts ? provablyNotAnEvent(item) : looksLikeNonEvent(item)))
         .filter((item) => !checkAgainstExtracted || namesExtracted(item.title)).filter(once)
         .slice(0, 40);
     seen.clear();
-    const wrong = (Array.isArray(parsed.wrong) ? parsed.wrong : []).map((item) => (typeof item === 'string' ? { title: item } : item))
-        .filter((item) => item && typeof item === 'object' && clean(item.title, 160)).map((item) => ({ title: clean(item.title, 160), issue: clean(item.issue || item.reason, 200) }))
-        .filter((item) => item.issue && (!checkAgainstExtracted || namesExtracted(item.title))).filter(once).slice(0, 40);
-    return { missing, fake, wrong, note: clean(parsed.note, 300) };
+    // "wrong": the model names the field and quotes the page; the record
+    // decides (auditFieldDiffers). Every record carrying the title is
+    // asked — a title held on two nights is wrong only if the page's
+    // words fit none of them.
+    const records = (Array.isArray(options.events) ? options.events : []).filter((event) => event && event.title);
+    const recordsFor = (title) => {
+        const fold = foldAuditText(title);
+        return records.filter((event) => { const known = foldAuditText(event.title); return known === fold || known.includes(fold) || fold.includes(known); });
+    };
+    const wrong = [];
+    let unverified = 0;
+    const seenWrong = new Set();
+    (Array.isArray(parsed.wrong) ? parsed.wrong : []).forEach((raw) => {
+        if (!raw || typeof raw !== 'object' || !clean(raw.title, 160)) return;
+        const title = clean(raw.title, 160);
+        const field = auditWrongField(raw.field);
+        const page = clean(raw.page, 120);
+        const matches = recordsFor(title);
+        if (!field || !page || !matches.length) { unverified += 1; return; }
+        const verdicts = matches.map((event) => auditFieldDiffers(field, page, event, today.slice(0, 4)));
+        if (verdicts.some((differs) => differs === false)) return;
+        if (!verdicts.some((differs) => differs === true)) { unverified += 1; return; }
+        const key = `${foldAuditText(title)}|${field}`;
+        if (seenWrong.has(key)) return;
+        seenWrong.add(key);
+        const event = matches[verdicts.indexOf(true)];
+        const own = field === 'date' ? event.day : (field === 'time' ? event.time : event.place);
+        wrong.push({ title, field, page, extracted: String(own || ''), issue: `${field}: the page says “${page}”, the record has “${own || '—'}”` });
+    });
+    return { missing, fake, wrong: wrong.slice(0, 40), unverified, note: clean(parsed.note, 300) };
 }
 
 // ---------------------------------------------------------------------------
@@ -474,8 +644,21 @@ async function runSourceAudit(options = {}) {
     // Every host whose loss was confirmed in THIS run gets the still-on-site
     // check even outside the rotation.
     const lossHosts = loaded.health.rows.filter((row) => row.latest && row.latest.run_id === runId && Array.isArray(row.lost) && row.lost.some((series) => (Number(series.new) || 0) > 0)).map((row) => row.host);
-    const work = [...rotation.map((pick) => ({ host: pick.host, reason: pick.reason, full: true })), ...lossHosts.filter((host) => !rotationHosts.has(host)).map((host) => ({ host, reason: 'loss confirmed this run', full: false }))];
-    log(`source-audit: ${rotation.length} host(s) in the rotation (${rotation.map((pick) => `${pick.host}: ${pick.reason}`).join('; ') || 'none'})${lossHosts.length ? `, ${lossHosts.length} with a loss confirmed this run` : ''}`);
+    // A host with open findings is looked at again by the very next run,
+    // beyond the rotation's cap (the budget still rules): a finding is
+    // either confirmed while it is fresh or cleared, never left standing
+    // for the two weeks the rotation takes — Atlanta Eagle's 22 "missing"
+    // from the first audit were still on the page a run after the fix.
+    const forced = (options.hosts || forcedHosts(env) || []).length > 0;
+    const openHosts = forced ? [] : findingsQueue(store).filter((entry) => entry.run_id !== runId && !rotationHosts.has(entry.host)
+        && loaded.health.rows.some((row) => row.host === entry.host && row.verdict !== 'companion')).map((entry) => entry.host);
+    const fullHosts = new Set([...rotationHosts, ...openHosts]);
+    const work = [
+        ...rotation.map((pick) => ({ host: pick.host, reason: pick.reason, full: true })),
+        ...openHosts.map((host) => ({ host, reason: 'open findings from an earlier audit', full: true })),
+        ...lossHosts.filter((host) => !fullHosts.has(host)).map((host) => ({ host, reason: 'loss confirmed this run', full: false }))
+    ];
+    log(`source-audit: ${rotation.length} host(s) in the rotation (${rotation.map((pick) => `${pick.host}: ${pick.reason}`).join('; ') || 'none'})${openHosts.length ? `, ${openHosts.length} with open findings re-audited (${openHosts.join(', ')})` : ''}${lossHosts.length ? `, ${lossHosts.length} with a loss confirmed this run` : ''}`);
     const checkedAt = new Date().toISOString();
     for (const item of work) {
         if (Date.now() - started > budget) { summary.skipped.push(`${item.host} (budget)`); continue; }
@@ -488,6 +671,9 @@ async function runSourceAudit(options = {}) {
         };
         try {
             const url = row.url || `https://${row.host}/`;
+            // Everything this run holds for the host (kept and set aside,
+            // every date): the still-on-site verdict is checked against it.
+            const hostEvents = results ? reviewQueue.eventsForHost(results, row.host) : [];
             // A cached page older than the loss cannot say whether the loss is
             // still listed: ask for a fresh one then.
             const newestLoss = (row.lost || []).map((series) => String(series.since || '')).sort().pop() || '';
@@ -515,28 +701,29 @@ async function runSourceAudit(options = {}) {
             } else {
                 entry.page = { url: fetched.page.url, fetchedAt: fetched.page.fetchedAt, chars: fetched.page.chars };
                 entry.still = (row.lost || []).map((series) => {
-                    const match = stillOnSite(series.title, fetched.page.text);
-                    return { title: series.title, verdict: match.verdict, checked_at: checkedAt, line: match.line };
+                    const refined = refineStillVerdict(series, stillOnSite(series.title, fetched.page.text), hostEvents);
+                    return Object.assign({ title: series.title, checked_at: checkedAt }, refined);
                 });
                 if (item.full) {
                     // Only what is still ahead: a run a few days old carries nights
                     // that have passed, and the model would call them wrong.
-                    const events = (results ? reviewQueue.eventsForHost(results, row.host) : []).filter((event) => !event.day || event.day >= today);
+                    const events = hostEvents.filter((event) => !event.day || event.day >= today);
                     const prompt = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: options.pageTextCap, today });
                     let answer = null;
                     try { answer = await askAi(options, prompt); } catch (error) { summary.errors.push(`${row.host}: ai ${error.message}`); }
                     const extractedTitles = events.map((event) => event.title);
-                    let parsed = parseAuditAnswer(answer, { extracted: extractedTitles, today });
+                    let parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: fetched.page.text });
                     if (!parsed && answer) {
                         // Prose instead of JSON: once more with half the page.
                         const shorter = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: Math.floor((Number.isFinite(options.pageTextCap) ? options.pageTextCap : PAGE_TEXT_CAP) / 2), today });
                         try { answer = await askAi(options, shorter); } catch (error) { summary.errors.push(`${row.host}: ai retry ${error.message}`); }
-                        parsed = parseAuditAnswer(answer, { extracted: extractedTitles, today });
+                        parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: fetched.page.text });
                     }
                     if (parsed) {
                         entry.missing = parsed.missing;
                         entry.fake = parsed.fake;
                         entry.wrong = parsed.wrong;
+                        entry.unverified = parsed.unverified || 0;
                         entry.note = parsed.note;
                         entry.ai = 'ok';
                     } else {
@@ -553,7 +740,7 @@ async function runSourceAudit(options = {}) {
                 summary.losses.push(row.host);
             }
             const stillListed = entry.still.filter((check) => check.verdict === 'still-listed').length;
-            log(`source-audit: ${row.host} — ${item.full ? `${entry.missing.length} missing, ${entry.fake.length} not events, ${entry.wrong.length} wrong, ai ${entry.ai}` : 'loss check'}${entry.still.length ? `, lost series: ${stillListed} still listed, ${entry.still.filter((check) => check.verdict === 'site-removed').length} removed by the site, ${entry.still.filter((check) => check.verdict === 'unknown').length} unknown` : ''}${entry.note ? ` — ${entry.note.slice(0, 120)}` : ''}`);
+            log(`source-audit: ${row.host} — ${item.full ? `${entry.missing.length} missing, ${entry.fake.length} not events, ${entry.wrong.length} wrong${entry.unverified ? ` (+${entry.unverified} the record could not confirm)` : ''}, ai ${entry.ai}` : 'loss check'}${entry.still.length ? `, lost series: ${stillListed} still listed, ${entry.still.filter((check) => check.verdict === 'set-aside').length} held by the run (set aside or renamed), ${entry.still.filter((check) => check.verdict === 'site-removed').length} removed by the site, ${entry.still.filter((check) => check.verdict === 'unknown').length} unknown` : ''}${entry.note ? ` — ${entry.note.slice(0, 120)}` : ''}`);
         } catch (error) {
             summary.errors.push(`${row.host}: ${error.message}`);
             log(`source-audit: ${row.host} failed — ${error.message}`);
@@ -580,6 +767,9 @@ module.exports = {
     pickAuditHosts,
     foldAuditText,
     stillOnSite,
+    refineStillVerdict,
+    auditClockMinutes,
+    auditFieldDiffers,
     buildAuditPrompt,
     parseAuditAnswer,
     auditDateKey,

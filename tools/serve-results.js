@@ -1071,7 +1071,8 @@ function renderSourceAuditPage(store, options = {}) {
     const quiet = hosts.filter((entry) => !sourceAudit.hostHasOpenFindings(entry)).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
     const stillChip = (item) => item.verdict === 'still-listed'
         ? `<span class="badge still-listed">still listed — our miss</span>`
-        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>' : '<span class="badge">unknown</span>');
+        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>'
+            : (item.verdict === 'set-aside' ? `<span class="badge still-removed">held by the run${item.how === 'bear-dropped' ? ' — bear check' : (item.how === 'renamed' ? ' — renamed' : '')}</span>` : '<span class="badge">unknown</span>'));
     const card = (entry) => `
 <div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">
   <h2><img src="https://chunky.dad/img/favicons/favicon-${esc(entry.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico" alt="" onerror="this.remove()">${esc(entry.host)}<span class="when">${esc(entry.date)}${entry.run_id ? ` · run ${esc(entry.run_id)}` : ''}</span></h2>
