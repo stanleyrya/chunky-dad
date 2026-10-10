@@ -633,7 +633,15 @@ async function runSourceAudit(options = {}) {
     const loaded = reviewQueue.loadSourceHealth(sharedRoot, { fs: fsLike, now: options.now });
     if (!loaded) { summary.skipped.push('no source ledger'); log('source-audit: no source ledger yet — nothing to audit'); return summary; }
     const results = options.results || null;
-    const runId = String(options.runId || (results && results.summary && results.summary.runId) || '');
+    // The run this audit belongs to. The runner hands over its in-memory
+    // results, which carry no run id (the id is minted when the run is
+    // saved) — so every audit until 2026-10-10 stored run_id "" and
+    // nothing keyed on "this run" ever fired: no loss was checked outside
+    // the rotation, no open finding re-audited, no audit run recorded.
+    // The ledger was appended by that same save a moment ago: its newest
+    // run id is this run's.
+    const ledgerRunId = loaded.health.rows.map((row) => String((row.latest && row.latest.run_id) || '')).sort().pop() || '';
+    const runId = String(options.runId || (results && results.summary && results.summary.runId) || ledgerRunId);
     const today = String(options.today || new Date().toISOString().slice(0, 10));
     const storePath = getSourceAuditPath(sharedRoot);
     let store = loadSourceAudit(storePath, fsLike);
