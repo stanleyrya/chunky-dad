@@ -13379,6 +13379,50 @@ test('the card\'s own date beats its artwork\'s', () => {
   assert.equal(parser.applyCardStatedDateOverFlyerDate(
     ownYear, ['SPLASH!', 'Tuesday January 26, 2027 • 11AM'], pageDateContext), true);
   assert.equal(ownYear.startDate.toISOString(), '2027-01-26T12:00:00.000Z');
+
+  // A year and two days: an annual edition lands up to a week off last
+  // year's date. The real card (run 20261010-171250): the flyer printed
+  // last year's four daily tours, Jan 26–29 2026, 2–5PM; the card states
+  // one date. The record sat in January 2026 as a 368-day, four-day repeat.
+  const atvLines = [
+    'BEEFDIP ON ALL 4’s – ATV ADVENTURE',
+    'Thu Jan 28 • 10AM • Wild Trek ATV Tours',
+    'Rip through the Sierra Madre on a 3-hour off-road ride. Jungle, dirt, adrenaline.',
+    '💵 OPT-IN Event / Not Included with Tag'
+  ];
+  const atv = {
+    title: 'BEEFDIP ON ALL 4’s – ATV ADVENTURE',
+    startDate: new Date(Date.UTC(2026, 0, 26, 14, 0, 0)),
+    endDate: new Date(Date.UTC(2026, 0, 29, 17, 0, 0)),
+    recurrence: 'FREQ=DAILY;COUNT=4',
+    _timezoneUnresolved: true
+  };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(atv, atvLines, pageDateContext), true);
+  assert.equal(atv.startDate.toISOString(), '2027-01-28T14:00:00.000Z', 'on the card\'s date, 367 days on');
+  assert.equal(atv.endDate, undefined, 'the other edition\'s four-day span is not this card\'s end');
+  assert.equal(atv.recurrence, undefined, 'nor is its repeat');
+
+  // A card that states its repeat keeps it; a same-day end survives.
+  const daily = {
+    title: 'ATV', startDate: new Date(Date.UTC(2026, 0, 26, 14, 0, 0)), endDate: new Date(Date.UTC(2026, 0, 26, 17, 0, 0)),
+    recurrence: 'FREQ=DAILY;COUNT=4', _timezoneUnresolved: true
+  };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(daily, ['ATV', 'Thu Jan 28 • 2PM–5PM • daily tours'], pageDateContext), true);
+  assert.equal(daily.recurrence, 'FREQ=DAILY;COUNT=4');
+  assert.equal(daily.endDate.toISOString(), '2027-01-28T17:00:00.000Z');
+
+  // A one-day misread of THIS edition's flyer moves the date and nothing else.
+  const near = {
+    title: 'X', startDate: new Date(Date.UTC(2027, 0, 26, 12, 0, 0)), endDate: new Date(Date.UTC(2027, 0, 28, 12, 0, 0)),
+    recurrence: 'FREQ=DAILY;COUNT=2', _timezoneUnresolved: true
+  };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(near, cardLines, pageDateContext), true);
+  assert.equal(near.recurrence, 'FREQ=DAILY;COUNT=2');
+  assert.ok(near.endDate, 'its span stays');
+
+  // Still fails closed past a year and a week.
+  const far = { title: 'X', startDate: new Date(Date.UTC(2026, 0, 10, 12, 0, 0)), _timezoneUnresolved: true };
+  assert.equal(parser.applyCardStatedDateOverFlyerDate(far, cardLines, pageDateContext), false);
 });
 
 test('one card, one window: an entry naming itself once is never split at its own date line', () => {
