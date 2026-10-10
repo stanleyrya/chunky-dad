@@ -1999,3 +1999,25 @@ test('review date line: a whole-day event names its day (or days), says which ki
   assert.match(timed, /the page says: late$/);
   assert.ok(!/all day/.test(formatReviewDateLine('2037-10-02T04:00:00.000Z', '2037-10-02T09:00:00.000Z', 'America/Los_Angeles')));
 });
+
+test('run-once stall guard: a run that prints nothing for the quiet window is failed loudly with the last line and what the process waits on; a run that keeps talking is left alone', async () => {
+  const runOnce = require('../tools/run-once');
+  const pulse = { lastOutputAt: Date.now(), lastLine: '🤖 AI Web: Sending AI request (ocr-all pass)' };
+  // Stuck forever (the 2026-10-09 daily run: 9½ h after an OCR request).
+  const stuck = new Promise(() => {});
+  await assert.rejects(
+    () => runOnce.stallGuard(stuck, { afterMs: 60, everyMs: 10, pulse }),
+    (error) => error.stall === true && /STALL: no output for 0 min/.test(error.message) && /ocr-all pass/.test(error.message) && /waiting on: /.test(error.message)
+  );
+  // Talking (the pulse keeps moving): the work's own result comes back.
+  const talking = { lastOutputAt: Date.now(), lastLine: '' };
+  const ticker = setInterval(() => { talking.lastOutputAt = Date.now(); }, 5);
+  try {
+    const result = await runOnce.stallGuard(new Promise((resolve) => setTimeout(() => resolve('done'), 120)), { afterMs: 60, everyMs: 10, pulse: talking });
+    assert.equal(result, 'done');
+  } finally { clearInterval(ticker); }
+  // A failing run fails as itself, not as a stall.
+  await assert.rejects(() => runOnce.stallGuard(Promise.reject(new Error('boom')), { afterMs: 60, everyMs: 10, pulse }), (error) => error.message === 'boom' && !error.stall);
+  assert.match(runOnce.clockPrefix(new Date(2026, 9, 9, 5, 7, 9)), /^05:07:09$/);
+  assert.ok(typeof runOnce.describeActiveResources() === 'string');
+});
