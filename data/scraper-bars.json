@@ -872,6 +872,15 @@
       "city": "palm-springs",
       "address": "North Calle Encilia, Palm Springs, California",
       "coordinates": "33.8239380, -116.5432028"
+    },
+    {
+      "name": "Dick's on Arenas",
+      "city": "palm-springs",
+      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
+      "coordinates": "33.8210557, -116.5444345",
+      "website": "https://dicksps.com",
+      "instagram": "https://www.instagram.com/dicks.palmsprings",
+      "facebook": "https://www.facebook.com/dicks.palmsprings"
     }
   ],
   "paris": [
