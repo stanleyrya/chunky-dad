@@ -141,8 +141,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 50951,
-      "eventCount": 42
+      "dataLength": 52194,
+      "eventCount": 43
     },
     "gettysburg": {
       "name": "Gettysburg",
@@ -237,8 +237,8 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 19605,
-      "eventCount": 15
+      "dataLength": 20962,
+      "eventCount": 16
     },
     "nola": {
       "name": "New Orleans",
@@ -327,8 +327,8 @@
     "pv": {
       "name": "Puerto Vallarta",
       "status": "success",
-      "dataLength": 34509,
-      "eventCount": 30
+      "dataLength": 35551,
+      "eventCount": 31
     },
     "sacramento": {
       "name": "Sacramento",
