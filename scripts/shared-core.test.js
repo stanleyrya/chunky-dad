@@ -9309,6 +9309,20 @@ test('a site we read = the registrable domain of a configured URL (the politenes
   assert.equal(createCore().isConfiguredSiteDomainUrl('https://eagle.example/'), false, 'no run noted its configs: nothing is a site we read');
 });
 
+test('Eventbrite is one platform on every country domain: an organizer page on eventbrite.de or .co.uk is a listing, a ticket page an event page', () => {
+  const core = createCore();
+  const rules = core.getBuiltInPageClassificationRules();
+  const classify = (url) => { const rule = rules.find(r => r.pattern.test(url)); return rule ? rule.classification : null; };
+  // Bearhood Berlin's organizer page classified link-aggregator on 2026-10-10: the rules knew only .com.
+  assert.equal(classify('https://www.eventbrite.de/o/bearhood-berlin-46125221123'), 'multi-event-page');
+  assert.equal(classify('https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769'), 'event-page');
+  assert.equal(classify('https://www.eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913'), 'multi-event-page');
+  assert.equal(classify('https://www.eventbrite.com.au/e/some-night-tickets-1'), 'event-page');
+  assert.equal(classify('https://www.eventbrite.com/o/megawoof-america-18118978189'), 'multi-event-page');
+  assert.equal(classify('https://www.eventbrite.de/d/local/events/'), null, 'a directory page is neither');
+  assert.equal(classify('https://noteventbrite.example/o/x'), null);
+});
+
 test('outage: a replayed failure note is never the second strike', async () => {
   const cityUrl = 'https://dead-domain.example/in/sydney';
   const replayed = new Error(`HTTP request failed for ${cityUrl}: fetch failed`);

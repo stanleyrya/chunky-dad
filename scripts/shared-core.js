@@ -7786,8 +7786,12 @@ class SharedCore {
     // matching the same URL always wins.
     getBuiltInPageClassificationRules() {
         return [
-            { pattern: /eventbrite\.com\/e\//i, classification: 'event-page' },
-            { pattern: /eventbrite\.com\/o\//i, classification: 'multi-event-page' },
+            // Every Eventbrite storefront, not only .com: an organizer in
+            // Berlin lives at eventbrite.de/o/…, one in London at
+            // eventbrite.co.uk/o/… — the same pages on another country's
+            // domain (the hosts are listed together in TICKETING hosts above).
+            { pattern: /eventbrite\.(?:com|com\.au|co\.uk|co\.nz|[a-z]{2})\/e\//i, classification: 'event-page' },
+            { pattern: /eventbrite\.(?:com|com\.au|co\.uk|co\.nz|[a-z]{2})\/o\//i, classification: 'multi-event-page' },
             { pattern: /linktr\.ee/i, classification: 'link-aggregator' }
         ];
     }
