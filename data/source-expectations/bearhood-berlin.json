@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "source": "Bearhood Berlin",
+  "slug": "bearhood-berlin",
+  "status": "complete",
+  "recon": {
+    "date": "2026-10-10",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.de/o/bearhood-berlin-46125221123"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.de/o/bearhood-berlin-46125221123",
+        "kind": "eventbrite-organizer-next-data",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "hasMoreUpcoming: false; upcomingEventsTotal: 1; upcomingEventsFailed: false; organizer.metrics.totalEvents: 15 (lifetime)",
+        "note": "One static read by the scraper (HTTP 200, 157 KB, 2026-10-10). Payload is <script id=\"__NEXT_DATA__\"> -> props.pageProps: upcomingEvents 1 row, upcomingEventsTotal 1, hasMoreUpcoming false. organizer.name \"Bearhood Berlin\", metrics: followers 283, hostingYears \"4 years\", totalEvents 15, attendeesHosted 2.9k. The same dry run followed the row's ticket page and kept the event."
+      },
+      {
+        "url": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD Event: name \"Bearhood Monster Bash\", startDate 2026-10-31T22:00:00+01:00, endDate 2026-11-01, location mikropol, Nollendorfplatz 5, 10777 Berlin, organizer Bearhood Berlin. The dry run kept it: 2026-10-31T21:00Z, bar Mikropol, city berlin, Europe/Berlin, bear by keyword."
+      },
+      {
+        "url": "https://bearhood.de/en/events",
+        "kind": "static",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The brand's own listing (also /de/events). A Next.js app: one static read returns the page chrome and no event card or event link; the cards are loaded in the browser from the site's database (a hosted Supabase project named in its script files). Not read through that route."
+      },
+      {
+        "url": "https://bearhood.de/en/events/11226daf-d72d-4dd9-8fb3-b4f11cb5cce2",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "An event page of the brand's own site IS server-rendered: \"PLAY - Foam Party\", \"Sun. 4. Oct · 14:00\", \"Club Sauna by Boiler, Mehringdamm 32, 10961 Berlin\", \"€24.20\", capacity 100. No JSON-LD. Reached only from the link page below; the date had passed on the recon day."
+      },
+      {
+        "url": "https://lnk.bearhood.de/",
+        "kind": "static",
+        "role": "listing",
+        "rowsReturned": 3,
+        "truthFlag": null,
+        "note": "The brand's link page (LinkStack), named by the owner. Server-rendered buttons: \"All events: bearhood.de\", \"PLAY - Foam Party - Sunday, Oct 04\" → the bearhood.de event page above, \"Monster Bash - Halloween 2026\" → monster-bash.eventbrite.de, \"Recurring: Naughty! - club edition\" → club-culture-houze.de/Veranstaltung/b-2/. In a dry run as a configured url the crawl followed its venue links and read the venues' own programmes (Metropol concerts, sauna infusions)."
+      },
+      {
+        "url": "https://bearhood.de/robots.txt",
+        "kind": "static",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 404",
+        "note": "No robots file; /sitemap.xml is a 404 as well."
+      }
+    ],
+    "notes": "Added 2026-10-10 at the owner's request, who named lnk.bearhood.de and instagram.com/bearhoodberlin. Instagram is behind a login and was not requested. The scraper reads the Eventbrite organizer page only."
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "Feed door (__NEXT_DATA__.props.pageProps of the Eventbrite organizer page): upcomingEvents 1 row, upcomingEventsTotal 1, hasMoreUpcoming false — the feed's own completeness flag says there is nothing to page. The row's ticket page was opened and its JSON-LD agrees on title, date, start time and venue. Medium, not high: complete for the configured door only — the brand's own site lists nights that never reach Eventbrite and that listing could not be read (see knownGaps).",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-10-10",
+      "end": "2027-01-08"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "Nights sold on bearhood.de itself (PLAY - Foam Party, 2026-10-04, already past on the recon day) and the recurring Naughty! club edition at Club Culture Houze are not on Eventbrite and are not reached by the configured door.",
+      "The brand's own listing (bearhood.de/en/events) is filled in the browser from its database; whether to read it that way is an open owner decision."
+    ]
+  },
+  "defaults": {
+    "city": "berlin",
+    "timezone": "Europe/Berlin",
+    "instagram": "https://www.instagram.com/bearhoodberlin"
+  },
+  "events": [
+    {
+      "id": "bearhood-monster-bash-2026-10-31",
+      "kind": "single",
+      "title": "Bearhood Monster Bash",
+      "description": "Eine bärig-schaurige Halloween Party.",
+      "bar": "mikropol",
+      "address": "Nollendorfplatz 5, 10777 Berlin",
+      "location": "52.499015, 13.3529929",
+      "city": "berlin",
+      "timezone": "Europe/Berlin",
+      "startDate": "2026-10-31",
+      "startTime": "22:00",
+      "ticketUrl": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eventbrite.de/o/bearhood-berlin-46125221123",
+        "jsonPath": "$.props.pageProps.upcomingEvents[0]",
+        "quote": "Bearhood Monster Bash"
+      },
+      "note": "Feed row: start_date 2026-10-31, start_time 22:00:00, timezone Europe/Berlin, venue mikropol, lat/lng 52.499015/13.3529929. No end is stated: the feed row repeats the start as its end (end_time 22:00:00) and the ticket page's JSON-LD gives a date only (\"endDate\":\"2026-11-01\"). Ticket page JSON-LD startDate \"2026-10-31T22:00:00+01:00\" agrees with the feed.",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      }
+    }
+  ],
+  "traps": [],
+  "openQuestions": [
+    {
+      "q": "bearhood.de loads its events in the browser from a hosted database, with a public key carried in the page's script files. Reading the listing the way the browser does would reach every night, including those not on Eventbrite. Not done without the owner's say.",
+      "raisedOn": "2026-10-10",
+      "blocking": false
+    }
+  ]
+}

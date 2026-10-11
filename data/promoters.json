@@ -300,6 +300,23 @@
     ]
   },
   {
+    "name": "Bearhood Berlin",
+    "aliases": [
+      "Bearhood"
+    ],
+    "shortName": "BEAR­HOOD",
+    "instagram": "https://www.instagram.com/bearhoodberlin",
+    "website": "https://bearhood.de",
+    "facebook": "https://www.facebook.com/bearhoodberlin",
+    "urlPatterns": [
+      "eventbrite.de/o/bearhood-berlin-46125221123",
+      "eventbrite.com/o/bearhood-berlin-46125221123",
+      "bearhood.de",
+      "instagram.com/bearhoodberlin"
+    ],
+    "bearAffinity": "always"
+  },
+  {
     "name": "Bears of London",
     "aliases": [
       "Bears of London Network",
