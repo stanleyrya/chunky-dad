@@ -361,6 +361,54 @@ function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
 }
 
 /**
+ * An Instagram PROFILE address (instagram.com/<handle>, nothing deeper). The
+ * profile picture is the promoter's own mark, so — like a Linktree profile —
+ * it earns a per-handle icon slot instead of the platform's glyph. Only an
+ * explicitly curated `favicon:` reaches this: instagram.com stays in
+ * PLATFORM_FAVICON_HOSTNAMES, so a `website:` pointing at Instagram still
+ * yields no icon. The slot is filled BY HAND (img/favicons, source: manual):
+ * nothing in the pipeline ever requests a page from Instagram (owner ruling
+ * 2026-10-11 — his account and address are not to be risked).
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isInstagramProfileUrl(url) {
+    return getInstagramHandle(url) !== null;
+}
+
+/**
+ * The handle of an Instagram profile address, lower-cased, or null when the
+ * address is not a bare profile (posts, reels, explore, the login page…).
+ * @param {string} url
+ * @returns {string|null}
+ */
+function getInstagramHandle(url) {
+    try {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.toLowerCase().replace(/^www\./, '');
+        if (host !== 'instagram.com') return null;
+        const match = parsedUrl.pathname.match(/^\/([A-Za-z0-9._]{1,30})\/?$/);
+        if (!match) return null;
+        const handle = match[1].toLowerCase();
+        if (['p', 'reel', 'reels', 'explore', 'accounts', 'stories', 'direct', 'tv'].includes(handle)) return null;
+        return handle;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Generate the local favicon filename for an Instagram profile URL.
+ * @param {string} instagramUrl - The Instagram profile URL
+ * @param {string} size - Size suffix (default '32')
+ * @returns {string}
+ */
+function generateInstagramFaviconFilename(instagramUrl, size = '32') {
+    const handle = getInstagramHandle(instagramUrl);
+    return `favicon-instagram.com-${handle}-${size}px.png`;
+}
+
+/**
  * Generate the local favicon filename for a Wikipedia URL.
  * @param {string} wikipediaUrl - The Wikipedia URL
  * @param {string} size - Size suffix (default '32')
@@ -400,6 +448,9 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
         
         const filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
         return `${basePath}/${filename}`;
+    } else if (isInstagramProfileUrl(websiteUrl)) {
+        // Per-handle slot, curated by hand (see isInstagramProfileUrl)
+        return `${basePath}/${generateInstagramFaviconFilename(websiteUrl, '64')}`;
     } else {
         // Use regular favicon logic for other domains (prefer 64px for higher quality)
         const hostname = parsedUrl.hostname;
@@ -482,6 +533,9 @@ if (typeof module !== 'undefined' && module.exports) {
         isLinktreeUrl,
         isWikipediaUrl,
         isPlatformFaviconUrl,
+        isInstagramProfileUrl,
+        getInstagramHandle,
+        generateInstagramFaviconFilename,
         generateLinktreeFaviconFilename,
         generateWikipediaFaviconFilename,
         detectFileExtension,
@@ -506,6 +560,9 @@ if (typeof window !== 'undefined') {
         isLinktreeUrl,
         isWikipediaUrl,
         isPlatformFaviconUrl,
+        isInstagramProfileUrl,
+        getInstagramHandle,
+        generateInstagramFaviconFilename,
         generateLinktreeFaviconFilename,
         generateWikipediaFaviconFilename,
         detectFileExtension,

@@ -7,7 +7,7 @@ const http = require('http');
 const { URL } = require('url');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl, isPlatformFaviconUrl, isSiteHostedImageUrl } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, isInstagramProfileUrl, generateInstagramFaviconFilename, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl, isPlatformFaviconUrl, isSiteHostedImageUrl } = require('../js/filename-utils.js');
 
 /**
  * Adjust Eventbrite image URLs to get uncropped versions
@@ -1279,6 +1279,15 @@ function processWebsiteUrl(url, context = '') {
 
     const domain = new URL(url).hostname;
     
+    // An Instagram profile's icon slot is filled by hand (img/favicons,
+    // source: manual) — this bot never requests anything from Instagram, and
+    // Google's s2 service would only hand back Instagram's own glyph.
+    if (isInstagramProfileUrl(url)) {
+      const have = fs.existsSync(path.join(FAVICONS_DIR, generateInstagramFaviconFilename(url, '64')));
+      console.log(`📷 Instagram profile${context}: ${url} — curated slot ${have ? 'present' : 'EMPTY (add the picture by hand)'}, nothing fetched`);
+      return null;
+    }
+
     // Check if it's a Linktree URL
     if (isLinktreeUrl(url)) {
       console.log(`🔗 Found Linktree URL${context}: ${url}`);

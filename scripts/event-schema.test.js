@@ -347,6 +347,23 @@ test('isSiteHostedImageUrl: a picture under chunky.dad/img/ is the repo\'s own f
   assert.equal(isSiteHostedImageUrl(''), false);
 });
 
+test('Instagram profile favicon: a curated per-handle slot, never the platform glyph, never fetched', () => {
+  const f = require('../js/filename-utils.js');
+  assert.equal(f.getInstagramHandle('https://www.instagram.com/woof.ps?stkn=abc'), 'woof.ps');
+  assert.equal(f.getInstagramHandle('https://instagram.com/BearHoodBerlin/'), 'bearhoodberlin', 'handles are case-insensitive');
+  assert.equal(f.getInstagramHandle('https://www.instagram.com/p/C1abc/'), null, 'a post is not a profile');
+  assert.equal(f.getInstagramHandle('https://www.instagram.com/accounts/login/'), null);
+  assert.equal(f.getInstagramHandle('https://www.instagram.com/'), null);
+  assert.equal(f.getInstagramHandle('https://linktr.ee/woof.ps'), null, 'another host');
+  // An explicit favicon: resolves to the handle's own slot, like a Linktree profile…
+  assert.equal(f.convertWebsiteUrlToFaviconPath('https://www.instagram.com/woof.ps', '/img/favicons'),
+    '/img/favicons/favicon-instagram.com-woof.ps-64px.png');
+  assert.equal(f.generateInstagramFaviconFilename('https://www.instagram.com/woof.ps', '256'), 'favicon-instagram.com-woof.ps-256px.png');
+  // …while a website: pointing at Instagram is still a platform address the loader skips.
+  assert.equal(f.isPlatformFaviconUrl('https://www.instagram.com/woof.ps'), true);
+  assert.equal(f.isInstagramProfileUrl('https://www.instagram.com/explore/'), false);
+});
+
 test('getFlyerCandidates: local img/events paths still resolve via the stamped source URLs', () => {
   // parseEventData rewrites cached slots to img/events paths whose filename is a
   // hash of the FULL url, so the two delivery variants of one file land on two
