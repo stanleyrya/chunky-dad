@@ -2,7 +2,7 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-10",
+ "generatedAt": "2026-10-11",
  "cities": {
   "nyc": {
    "dates": [
@@ -97,7 +97,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-10",
     "2026-10-11",
     "2026-10-15",
     "2026-10-16",
@@ -164,7 +163,6 @@ window.CITY_ACTIVITY = {
   },
   "toronto": {
    "dates": [
-    "2026-10-10",
     "2026-10-18",
     "2026-10-23",
     "2026-10-31",
@@ -194,7 +192,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-10-10",
     "2026-10-11",
     "2026-10-14",
     "2026-10-16",
@@ -247,7 +244,6 @@ window.CITY_ACTIVITY = {
   },
   "dallas": {
    "dates": [
-    "2026-10-10",
     "2026-10-11"
    ],
    "recurring": 0,
@@ -312,7 +308,6 @@ window.CITY_ACTIVITY = {
   },
   "portland": {
    "dates": [
-    "2026-10-10",
     "2026-10-19",
     "2026-11-06",
     "2026-11-14",
@@ -333,7 +328,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-10-10",
     "2026-10-15",
     "2026-10-18",
     "2026-10-24",
@@ -352,9 +346,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "phoenix": {
-   "dates": [
-    "2026-10-10"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -439,7 +431,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-10-10",
     "2026-10-16",
     "2026-10-17",
     "2026-10-21",
@@ -504,7 +495,6 @@ window.CITY_ACTIVITY = {
   },
   "manchester": {
    "dates": [
-    "2026-10-10",
     "2026-11-14",
     "2026-12-12"
    ],
@@ -636,9 +626,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "leipzig": {
-   "dates": [
-    "2026-10-10"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
