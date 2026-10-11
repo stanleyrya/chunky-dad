@@ -273,8 +273,8 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 10506,
-      "eventCount": 7
+      "dataLength": 11602,
+      "eventCount": 8
     },
     "paris": {
       "name": "Paris",

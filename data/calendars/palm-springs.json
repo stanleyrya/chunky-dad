@@ -1,9 +1,182 @@
 {
   "metadata": {
     "calendarTimezone": "America/Los_Angeles",
-    "timezoneData": null
+    "timezoneData": {
+      "tzid": "America/Los_Angeles",
+      "location": "America/Los_Angeles",
+      "daylight": {
+        "offsetFrom": "-0800",
+        "offsetTo": "-0700",
+        "name": "PDT",
+        "dtstart": "19700308T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"
+      },
+      "standard": {
+        "offsetFrom": "-0700",
+        "offsetTo": "-0800",
+        "name": "PST",
+        "dtstart": "19701101T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"
+      }
+    }
   },
   "events": [
+    {
+      "name": "Western Xposure's XXL",
+      "day": "Thursday",
+      "time": "9AM-11:59PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-10-15T09:00:00",
+      "endDate": "2026-10-18T23:59:59",
+      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort Hotel",
+      "cover": "$1-$180",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
+      "cadence": null,
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "shortName": "WESTERN XPOSURE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.westernxposure.com/westernxposurexxl",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://xxl2026.eventbrite.com/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "western-xposures-xxl-27c8c346"
+    },
+    {
+      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
+      "day": "Friday",
+      "time": "11AM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-09-11T11:00:00",
+      "endDate": "2026-09-14T00:00:00",
+      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort",
+      "cover": "$55.20-$150.16",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "The Ultimate Celebration!",
+      "cadence": null,
+      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+    },
+    {
+      "name": "WOOF",
+      "day": "Wednesday",
+      "time": "7PM-10PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "coordinates": {
+        "lat": 33.8210557,
+        "lng": -116.5444345
+      },
+      "startDate": "2026-11-04T19:00:00",
+      "endDate": "2026-11-04T22:00:00",
+      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "woof-20261011T020000Z@chunky.dad",
+      "uid": "woof-20261011T020000Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dick's on Arenas",
+      "favicon": "https://www.instagram.com/woof.ps",
+      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
+      "cadence": null,
+      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
+      "website": null,
+      "instagram": "https://www.instagram.com/woof.ps",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/woof.ps",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "woof-080ebf02"
+    },
     {
       "name": "MEGAWOOF",
       "day": "Saturday",
@@ -62,6 +235,59 @@
         }
       ],
       "slug": "megawoof-22570191"
+    },
+    {
+      "name": "Sticky Rice",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.8147765,
+        "lng": -116.5376249
+      },
+      "startDate": "2026-09-25T00:00:00",
+      "endDate": "2026-09-27T23:59:59",
+      "unprocessedDescription": "bar: Casa Oliver\naddress: 535 South Warm Sands Drive, Palm Sp\rrings, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSource: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshortName: STICKY RICE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
+      "uid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Casa Oliver",
+      "cover": "$25",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+      "cadence": null,
+      "address": "535 South Warm Sands Drive, Palm Springs, California",
+      "website": "https://www.sticky-rice.org/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
+      "ticketUrl": "https://forms.gle/TCYs6qPPvVoQoPMD7",
+      "shortName": "STICKY RICE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.sticky-rice.org/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://forms.gle/TCYs6qPPvVoQoPMD7",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "sticky-rice-4f2be4aa"
     },
     {
       "name": "Western X-Mas: Holiday Bear Retreat 2026",
@@ -171,174 +397,6 @@
         }
       ],
       "slug": "furball-palm-springs-pride-719921a0"
-    },
-    {
-      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
-      "day": "Friday",
-      "time": "11AM-12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
-      },
-      "startDate": "2026-09-11T11:00:00",
-      "endDate": "2026-09-14T00:00:00",
-      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CCBC Resort",
-      "cover": "$55.20-$150.16",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "favicon": "https://www.clubchubusa.com",
-      "tea": "The Ultimate Celebration!",
-      "cadence": null,
-      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
-      "website": "https://www.clubchubusa.com",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-      "shortName": "CLUB CHUB",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.clubchubusa.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
-    },
-    {
-      "name": "Western Xposure's XXL",
-      "day": "Thursday",
-      "time": "9AM-11:59PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
-      },
-      "startDate": "2026-10-15T09:00:00",
-      "endDate": "2026-10-18T23:59:59",
-      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "CCBC Resort Hotel",
-      "cover": "$1-$180",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
-      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
-      "cadence": null,
-      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-      "website": "https://www.westernxposure.com/westernxposurexxl",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "ticketUrl": "https://xxl2026.eventbrite.com/",
-      "shortName": "WESTERN XPOSURE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.westernxposure.com/westernxposurexxl",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://xxl2026.eventbrite.com/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "western-xposures-xxl-27c8c346"
-    },
-    {
-      "name": "Sticky Rice",
-      "day": "Friday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.8147765,
-        "lng": -116.5376249
-      },
-      "startDate": "2026-09-25T00:00:00",
-      "endDate": "2026-09-27T23:59:59",
-      "unprocessedDescription": "bar: Casa Oliver\naddress: 535 South Warm Sands Drive, Palm Sp\rrings, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSource: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshortName: STICKY RICE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
-      "uid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Casa Oliver",
-      "cover": "$25",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
-      "cadence": null,
-      "address": "535 South Warm Sands Drive, Palm Springs, California",
-      "website": "https://www.sticky-rice.org/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
-      "ticketUrl": "https://forms.gle/TCYs6qPPvVoQoPMD7",
-      "shortName": "STICKY RICE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.sticky-rice.org/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://forms.gle/TCYs6qPPvVoQoPMD7",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "sticky-rice-4f2be4aa"
     }
   ]
 }
