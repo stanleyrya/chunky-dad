@@ -234,7 +234,7 @@ window.CITY_ACTIVITY = {
     "2026-11-06",
     "2026-12-24"
    ],
-   "recurring": 0,
+   "recurring": 1,
    "festivalUntil": "2027-02-22"
   },
   "denver": {
