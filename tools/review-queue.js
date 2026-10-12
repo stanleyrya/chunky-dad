@@ -679,8 +679,39 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         sourcePageUrl: String(drift.sourcePageUrl || ''),
         calendarUrl: String(drift.calendarUrl || '')
     } : null;
+    // An aggregator's copy the site it points at does not list (shared-core
+    // reconcileAggregatorPointers): both sides' facts for the card.
+    const unbacked = event._aggregatorUnbackedWithheld && typeof event._aggregatorUnbackedWithheld === 'object' ? event._aggregatorUnbackedWithheld : null;
+    const aggregatorUnbacked = unbacked ? {
+        aggregator: String(unbacked.aggregator || ''),
+        site: String(unbacked.site || ''),
+        source: String(unbacked.source || ''),
+        link: String(unbacked.link || ''),
+        siteEvents: Number(unbacked.siteEvents) || 0,
+        day: String(unbacked.day || ''),
+        reason: String(unbacked.reason || ''),
+        sameNight: (Array.isArray(unbacked.sameNight) ? unbacked.sameNight : []).filter((entry) => entry && typeof entry === 'object').map((entry) => ({
+            title: String(entry.title || ''), bar: String(entry.bar || ''), url: String(entry.url || '')
+        })),
+        nearest: unbacked.nearest && typeof unbacked.nearest === 'object' ? {
+            title: String(unbacked.nearest.title || ''),
+            day: String(unbacked.nearest.day || ''),
+            bar: String(unbacked.nearest.bar || ''),
+            url: String(unbacked.nearest.url || '')
+        } : null
+    } : null;
+    const reused = event._imageReusedFrom && typeof event._imageReusedFrom === 'object' ? event._imageReusedFrom : null;
+    const imageReusedFrom = reused ? {
+        image: String(reused.image || ''),
+        title: String(reused.title || ''),
+        day: String(reused.day || ''),
+        source: String(reused.source || ''),
+        url: String(reused.url || '')
+    } : null;
     return {
         bigDrift,
+        aggregatorUnbacked,
+        imageReusedFrom,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
         bearVerdictOn: storedMatch && storedMatch.matchedBy === 'party' ? String(storedVerdict.title || '') : '',

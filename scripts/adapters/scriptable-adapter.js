@@ -17556,6 +17556,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         reason: `🧬 assembled from two listings${reason ? ` — ${reason}` : ""}`,
       };
     }
+    // An aggregator's copy the site it points at does not list
+    // (SharedCore.reconcileAggregatorPointers): the deck decides.
+    if (SharedCore.isAggregatorUnbackedWithheld(event)) {
+      const reason = String(event._aggregatorUnbackedWithheld.reason || "").trim();
+      return {
+        section: "withheld",
+        reason: `🧭 aggregator's copy${reason ? ` — ${reason}` : ""} — decide on the deck`,
+      };
+    }
     if (SharedCore.hasJunkTitleSanityFlag(event)) {
       return {
         section: "withheld",

@@ -782,6 +782,8 @@ function renderReviewNotesChangeRows(display = {}, shown = {}) {
 function renderReviewBadges(display = {}) {
     const badges = [];
     if (display.bigDrift) badges.push(`<span class="badge warn drift">🧭 big drift — ${escapeHtmlText(display.bigDrift.reason || 'identity changed')} · withheld until you decide</span>`);
+    if (display.aggregatorUnbacked) badges.push(`<span class="badge warn drift">🧭 ${escapeHtmlText(display.aggregatorUnbacked.aggregator || 'aggregator')}'s copy — ${escapeHtmlText(display.aggregatorUnbacked.site || 'the site it points at')} lists no such night · withheld until you decide</span>`);
+    if (display.imageReusedFrom) badges.push(`<span class="badge warn">🖼️ picture cleared — it is the flyer of “${escapeHtmlText(display.imageReusedFrom.title || 'another event')}” (${escapeHtmlText(display.imageReusedFrom.day || 'another night')})</span>`);
     if (display.recurring) badges.push(display.seriesWrite ? '<span class="badge">🔁 recurring — the phone writes it once approved</span>' : '<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
     if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
@@ -810,6 +812,34 @@ function renderReviewDriftFacts(display = {}) {
         `<div class="fact"><span class="fact-k">calendar link</span><span class="fact-v">${drift.calendarUrl ? reviewAnchor(drift.calendarUrl, reviewUrlLabel(drift.calendarUrl, 60)) : '<span class="none">∅</span>'}</span></div>`
     ];
     return `<div class="drift"><div class="drift-head">🧭 Big drift — nothing is written until you decide</div>${rows.join('')}</div>`;
+}
+
+// An aggregator's copy that the site it points at does not list
+// (review-queue buildReviewDisplayContext → shared-core
+// reconcileAggregatorPointers): what the aggregator says, where it points,
+// what that site lists, the nearest event there — and, when the copy wore
+// another night's flyer, whose picture that was.
+function renderReviewPointerFacts(display = {}) {
+    const unbacked = display && display.aggregatorUnbacked && typeof display.aggregatorUnbacked === 'object' ? display.aggregatorUnbacked : null;
+    const reused = display && display.imageReusedFrom && typeof display.imageReusedFrom === 'object' ? display.imageReusedFrom : null;
+    if (!unbacked && !reused) return '';
+    const rows = [];
+    if (unbacked) {
+        rows.push(`<div class="fact"><span class="fact-k">${escapeHtmlText(unbacked.aggregator || 'aggregator')} says</span><span class="fact-v">${escapeHtmlText(unbacked.day || 'undated')}</span></div>`);
+        rows.push(`<div class="fact"><span class="fact-k">points at</span><span class="fact-v">${unbacked.link ? reviewAnchor(unbacked.link, reviewUrlLabel(unbacked.link, 60)) : escapeHtmlText(unbacked.site || '∅')}</span></div>`);
+        const sameNight = Array.isArray(unbacked.sameNight) ? unbacked.sameNight : [];
+        if (sameNight.length > 0) {
+            rows.push(`<div class="fact"><span class="fact-k">that night the site lists</span><span class="fact-v warn">${sameNight.map((entry) => `${entry.url ? reviewAnchor(entry.url, escapeHtmlText(entry.title || 'event')) : escapeHtmlText(entry.title || 'event')}${entry.bar ? ` · ${escapeHtmlText(entry.bar)}` : ''}`).join(' · ')} — not folded with this copy: one event or two?</span></div>`);
+        } else {
+            rows.push(`<div class="fact"><span class="fact-k">that site lists</span><span class="fact-v warn">${escapeHtmlText(`${unbacked.siteEvents} event${unbacked.siteEvents === 1 ? '' : 's'} (read by ${unbacked.source || 'its source'} this run) — none that night`)}</span></div>`);
+        }
+        const nearest = unbacked.nearest;
+        if (sameNight.length === 0) rows.push(`<div class="fact"><span class="fact-k">nearest there</span><span class="fact-v">${nearest ? `${nearest.url ? reviewAnchor(nearest.url, escapeHtmlText(nearest.title || 'event')) : escapeHtmlText(nearest.title || 'event')} · ${escapeHtmlText(nearest.day || '')}${nearest.bar ? ` · ${escapeHtmlText(nearest.bar)}` : ''}` : '<span class="none">nothing</span>'}</span></div>`);
+    }
+    if (reused) {
+        rows.push(`<div class="fact"><span class="fact-k">its picture</span><span class="fact-v warn">${reused.image ? reviewAnchor(reused.image, 'the flyer') : 'the flyer'} of ${reused.url ? reviewAnchor(reused.url, escapeHtmlText(reused.title || 'another event')) : escapeHtmlText(reused.title || 'another event')} (${escapeHtmlText(reused.day || 'another night')}, ${escapeHtmlText(reused.source || 'its source')}) — cleared</span></div>`);
+    }
+    return `<div class="drift"><div class="drift-head">🧭 An aggregator's copy — nothing is written until you decide</div>${rows.join('')}</div>`;
 }
 
 function renderReviewEvidence(lines) {
@@ -1030,6 +1060,7 @@ function renderReviewCard(entry, ctx = {}) {
   ${renderReviewPictureRow(entry)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display, changes)) : ''}
   ${isMerge ? renderReviewDriftFacts(display) : ''}
+  ${renderReviewPointerFacts(display)}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;

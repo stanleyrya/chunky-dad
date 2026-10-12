@@ -15715,6 +15715,243 @@ class SharedCore {
         return merged;
     }
 
+    // ── An aggregator's record is a pointer ─────────────────────────────
+    // Owner ruling 2026-10-11, after the deck's "CHUNK — Nov 11 @ C'mon
+    // Everybody" card: Gathr's entry was the July 4 lineup and flyer with
+    // a new date, linking the bare chunk-party.com root; chunk-party.com
+    // itself, read in the same run by the CHUNK source, listed thirteen
+    // events and none that night. An aggregator's record is worth exactly
+    // where it points. When it points into a site one of this run's
+    // FIRST-PARTY sources read in full, that site's own events are the
+    // complete statement and the copy must fold into one of them
+    // (deduplicateEvents — the aggregator loses every field). A copy still
+    // standing after the fold is a claim the site does not back: withheld
+    // from every automatic write and shown on the deck with both sides'
+    // facts, where an approval lets it through. A copy pointing at a site
+    // nobody reads, or nowhere, is proposed as found (discovery —
+    // unchanged). Nothing about dates or venues is hand-coded: the fold
+    // decided, this pass only reads the result.
+    //
+    // Fails closed: a first-party read with crawl errors or no events
+    // covers nothing; a configured url on a ticketing/social PLATFORM (an
+    // Eventbrite organizer page) covers that organizer's path, never the
+    // platform's whole host; a copy the site DID list that night but the
+    // bear check dropped is left as found (the site backs it).
+
+    // registrable domain → [{ source, segments, events, dropped }] for every
+    // first-party parser that ran and read cleanly.
+    buildFirstPartySiteCoverage(parserResults) {
+        const coverage = new Map();
+        for (const result of Array.isArray(parserResults) ? parserResults : []) {
+            const config = result && result.config && typeof result.config === 'object' ? result.config : null;
+            if (!config || String(config.siteRole || '').trim().toLowerCase() === 'aggregator') continue;
+            const events = Array.isArray(result.events) ? result.events.filter(Boolean) : [];
+            if (events.length === 0) continue;
+            if (Array.isArray(result.crawlErrors) && result.crawlErrors.length > 0) continue;
+            const dropped = (Array.isArray(result.bearDroppedEvents) ? result.bearDroppedEvents : [])
+                .map(entry => entry && typeof entry === 'object' ? entry.event : null)
+                .filter(Boolean);
+            for (const url of Array.isArray(config.urls) ? config.urls : []) {
+                const parts = this.getUrlRuleParts(url);
+                if (!parts || !parts.host) continue;
+                const platform = isPlatformIdentityHost(parts.host) || this.isKnownTicketingPlatformHost(parts.host);
+                // A platform root names the platform, not a site of ours.
+                if (platform && parts.segments.length === 0) continue;
+                const domain = this.getRegistrableDomainFromUrl(url);
+                if (!domain) continue;
+                if (!coverage.has(domain)) coverage.set(domain, []);
+                coverage.get(domain).push({
+                    source: String(config.name || result.name || ''),
+                    segments: platform ? parts.segments.map(segment => segment.toLowerCase()) : [],
+                    events,
+                    dropped
+                });
+            }
+        }
+        return coverage;
+    }
+
+    // The first-party coverage entry an aggregator record's links point
+    // into, or null. Links: url / website / ticketUrl on the record and in
+    // its notes.
+    getAggregatorPointerTarget(record, coverage) {
+        if (!record || !this.isAggregatorRecord(record) || !(coverage instanceof Map) || coverage.size === 0) return null;
+        const fields = typeof record.notes === 'string' && record.notes ? this.parseNotesIntoFields(record.notes) : {};
+        const links = [record.url, record.website, record.ticketUrl, fields.url, fields.website, fields.ticketUrl]
+            .map(value => (typeof value === 'string' ? value.trim() : ''))
+            .filter(value => /^https?:\/\//i.test(value));
+        for (const link of links) {
+            const domain = this.getRegistrableDomainFromUrl(link);
+            const entries = domain ? coverage.get(domain) : null;
+            if (!entries || entries.length === 0) continue;
+            const parts = this.getUrlRuleParts(link);
+            const segments = parts ? parts.segments.map(segment => segment.toLowerCase()) : [];
+            const entry = entries.find(candidate => candidate.segments.length === 0
+                || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
+            if (entry) return { link, site: domain, ...entry };
+        }
+        return null;
+    }
+
+    // The picture file behind an image URL: host + path, query dropped,
+    // a CDN's render recipe (Wix "/v1/fill/w_1240,h_699,…/") cut off. Two
+    // URLs with one key show one file.
+    static getImageMediaKey(url) {
+        const raw = typeof url === 'string' ? url.trim() : '';
+        if (!/^https?:\/\//i.test(raw)) return '';
+        let path = raw.split(/[?#]/)[0].replace(/^https?:\/\//i, '').replace(/^www\./i, '').toLowerCase();
+        const recipe = path.search(/\/v1\/(?:fill|fit|crop|crop_fill)\//);
+        if (recipe > 0) path = path.slice(0, recipe);
+        return path.replace(/\/+$/, '');
+    }
+
+    static getAggregatorImageFields() {
+        return ['image', 'imageHorizontal', 'imageVertical'];
+    }
+
+    // picture key → the first-party records that show it.
+    indexFirstPartyImages(events) {
+        const index = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object' || this.isAggregatorRecord(event)) continue;
+            for (const field of SharedCore.getAggregatorImageFields()) {
+                const key = SharedCore.getImageMediaKey(event[field]);
+                if (!key) continue;
+                if (!index.has(key)) index.set(key, []);
+                if (!index.get(key).includes(event)) index.get(key).push(event);
+            }
+        }
+        return index;
+    }
+
+    // The corollary: a picture a first-party source shows on one of ITS
+    // events belongs to that event. An aggregator's record wearing the same
+    // file on another night has reused a flyer — the fields are cleared and
+    // the card says whose picture it was. A same-night first-party record
+    // showing the file keeps the picture in play (it may be this event's).
+    clearReusedAggregatorImage(event, index, aggregatorName) {
+        if (!event || typeof event !== 'object' || !(index instanceof Map) || index.size === 0) return false;
+        const day = this.normalizeEventDateLocal(event.startDate, event.timezone || null);
+        if (!day) return false;
+        let owner = null;
+        let worn = '';
+        for (const field of SharedCore.getAggregatorImageFields()) {
+            const key = SharedCore.getImageMediaKey(event[field]);
+            if (!key) continue;
+            const owners = index.get(key);
+            if (!owners || owners.length === 0) continue;
+            const sameNight = owners.some(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            if (sameNight) return false;
+            owner = owners[0];
+            worn = String(event[field]).trim();
+            break;
+        }
+        if (!owner) return false;
+        const cleared = [];
+        for (const field of SharedCore.getAggregatorImageFields()) {
+            if (typeof event[field] === 'string' && event[field].trim()) {
+                cleared.push(field);
+                event[field] = '';
+            }
+        }
+        const ownerDay = this.normalizeEventDateLocal(owner.startDate, owner.timezone || event.timezone || null);
+        const ownerSource = String((owner._parserConfig && owner._parserConfig.name) || owner.source || 'its own source');
+        event._imageReusedFrom = {
+            image: worn,
+            title: String(owner.title || ''),
+            startDate: owner.startDate instanceof Date ? owner.startDate.toISOString() : String(owner.startDate || ''),
+            day: ownerDay,
+            source: ownerSource,
+            url: String(owner.url || owner.website || '')
+        };
+        console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregatorName || 'an aggregator'}, ${day}) wears the picture of "${owner.title || 'event'}" (${ownerDay || 'undated'}, ${ownerSource}) — another night's flyer; ${cleared.join(', ')} cleared`);
+        return true;
+    }
+
+    // The pass. Runs on the whole run AFTER the cross-parser fold, with
+    // the parser results it came from. Returns counts for the log.
+    reconcileAggregatorPointers(events, results = {}) {
+        const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
+        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0 };
+        if (list.length === 0) return summary;
+        const coverage = this.buildFirstPartySiteCoverage(results && results.parserResults);
+        const firstPartyImages = this.indexFirstPartyImages(list);
+        for (const event of list) {
+            if (!this.isAggregatorRecord(event)) continue;
+            const aggregator = String((event._parserConfig && event._parserConfig.name) || 'an aggregator');
+            if (this.clearReusedAggregatorImage(event, firstPartyImages, aggregator)) summary.imagesCleared++;
+            if (coverage.size === 0) continue;
+            const target = this.getAggregatorPointerTarget(event, coverage);
+            if (!target) continue;
+            const day = this.normalizeEventDateLocal(event.startDate, event.timezone || null);
+            if (!day) continue;
+            const backing = target.dropped.find(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            if (backing) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists "${backing.title || 'an event'}" that night but the bear check dropped it; the copy stands as found`);
+                summary.backedByDropped++;
+                continue;
+            }
+            // The site DOES list something that night and the fold still
+            // left the copy standing (Gathr's "CHUNK: San Francisco Folsom
+            // '26" at "F8 (1192 Folsom St)" beside the site's "CHUNK FOLSOM"
+            // at "F8 Nightclub & Bar", replay 2026-10-11): one event the
+            // fold missed, or two? The card shows both and says which night.
+            const sameNight = target.events.filter(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            let nearest = null;
+            let nearestGap = Infinity;
+            for (const candidate of target.events) {
+                const ms = SharedCore.toEpochMillis(candidate.startDate);
+                if (!Number.isFinite(ms) || !Number.isFinite(startMs)) continue;
+                const gap = Math.abs(ms - startMs);
+                if (gap < nearestGap) { nearestGap = gap; nearest = candidate; }
+            }
+            const nearestDay = nearest ? this.normalizeEventDateLocal(nearest.startDate, nearest.timezone || event.timezone || null) : '';
+            const describe = (candidate) => `"${candidate.title || 'event'}"${candidate.bar ? ` at ${candidate.bar}` : ''}`;
+            const reason = sameNight.length > 0
+                ? `${aggregator} points at ${target.site}, where ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night — the two did not fold as one event`
+                : `${aggregator} points at ${target.site}, which ${target.source} read this run (${target.events.length} event${target.events.length === 1 ? '' : 's'}) and lists no event that night`;
+            event._aggregatorUnbackedWithheld = {
+                aggregator,
+                site: target.site,
+                source: target.source,
+                link: target.link,
+                siteEvents: target.events.length,
+                day,
+                claim: {
+                    title: String(event.title || ''),
+                    startDate: event.startDate instanceof Date ? event.startDate.toISOString() : String(event.startDate || ''),
+                    bar: String(event.bar || '')
+                },
+                sameNight: sameNight.map(candidate => ({
+                    title: String(candidate.title || ''),
+                    startDate: candidate.startDate instanceof Date ? candidate.startDate.toISOString() : String(candidate.startDate || ''),
+                    bar: String(candidate.bar || ''),
+                    url: String(candidate.url || candidate.website || '')
+                })),
+                nearest: nearest ? {
+                    title: String(nearest.title || ''),
+                    startDate: nearest.startDate instanceof Date ? nearest.startDate.toISOString() : String(nearest.startDate || ''),
+                    day: nearestDay,
+                    bar: String(nearest.bar || ''),
+                    url: String(nearest.url || nearest.website || '')
+                } : null,
+                reason
+            };
+            if (sameNight.length > 0) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night and the fold left this copy standing; one event or two? Withheld to the deck.`);
+            } else {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} read it this run (${target.events.length} events) and lists nothing that night${nearest ? `; nearest there: "${nearest.title || 'event'}" ${nearestDay}` : ''}. Withheld to the deck.`);
+            }
+            summary.withheld++;
+        }
+        return summary;
+    }
+
+    static isAggregatorUnbackedWithheld(event) {
+        return Boolean(event && typeof event === 'object' && event._aggregatorUnbackedWithheld && !event._ownerReviewApproved);
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         // Exactly one side from an aggregator: no arbitration, no priorities —
         // the event's own source wins (see "Aggregators are for DISCOVERY").
@@ -21010,6 +21247,11 @@ class SharedCore {
             // the deck's approval (_ownerReviewApproved, stamped by
             // applyOwnerDecisions on the reviewed-run path) lets it write.
             (offeringToOwner || !SharedCore.isBigDriftWithheld(event)) &&
+            // An aggregator's copy that the site it points at does not list
+            // (reconcileAggregatorPointers, after the cross-parser fold):
+            // withheld from every automatic write; the deck shows it and
+            // its approval lets it through, like a big drift.
+            (offeringToOwner || !SharedCore.isAggregatorUnbackedWithheld(event)) &&
             // Fully-past spans are display-only: nothing left to attend, so
             // the write is withheld at analysis (buildAnalyzedCalendarEvent
             // stamps _pastSpanWithheld + the span-fully-past review flag)
@@ -21190,6 +21432,10 @@ class SharedCore {
                 return `WITHHELD (rejected by owner${reason ? ` — ${reason}` : ''})`;
             }
             return 'WITHHELD (awaiting owner review)';
+        }
+        if (SharedCore.isAggregatorUnbackedWithheld(event)) {
+            const reason = String(event._aggregatorUnbackedWithheld.reason || '').trim();
+            return `WITHHELD (aggregator's copy — ${reason || 'the site it points at does not list this night'}; decide on the deck)`;
         }
         if (SharedCore.isBigDriftWithheld(event)) {
             const reason = String(event._bigDriftWithheld.reason || '').trim();
@@ -23271,6 +23517,18 @@ class SharedCore {
         {
             // Create a new object with all properties to avoid readonly errors
             let analyzedEvent = { ...event };
+            // Parse-time withhold stamps travel as the analyzed record's OWN
+            // copy. The run file writes parserResults[].events before
+            // analyzedEvents through a circular-safe stringify that counts a
+            // second reference as a cycle, so a stamp object shared with the
+            // parsed record came out as "[Circular]" on the analyzed one
+            // (replay 2026-10-11: every aggregator-pointer card lost its
+            // facts). Cloned here, each copy is written in full.
+            for (const stampKey of ['_aggregatorUnbackedWithheld', '_imageReusedFrom', '_chimeraWithheld']) {
+                if (event[stampKey] && typeof event[stampKey] === 'object') {
+                    analyzedEvent[stampKey] = JSON.parse(JSON.stringify(event[stampKey]));
+                }
+            }
             
             // Add analysis to the new event object
             analyzedEvent._analysis = {

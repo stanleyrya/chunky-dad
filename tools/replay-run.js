@@ -220,6 +220,8 @@ async function replayRun(run) {
   //    skipped and every conflict takes its deterministic fallback.
   const globalConfig = run.config && run.config.config ? run.config.config : null;
   const deduplicated = await core.deduplicateEvents(scrapedEvents.map(event => ({ ...event })), null, globalConfig);
+  // The aggregator-pointer pass the orchestrator runs after the fold.
+  if (typeof core.reconcileAggregatorPointers === 'function') core.reconcileAggregatorPointers(deduplicated, run);
 
   // 2. Replay the calendar merge for events the run compared against an
   //    existing calendar event (saved snapshot in _original.calendar).
