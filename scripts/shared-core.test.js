@@ -28165,3 +28165,189 @@ test('bar: a party\'s own name in the venue slot yields to the venue the page\'s
   const curated = core.resolveConflictDeterministically('bar', 'SF Eagle', 'Lone Star Saloon', { records: { a: eagleNight, b: other }, sideLabels: { a: 'existing', b: 'incoming' }, cityKey: 'sf' });
   assert.ok(!curated || !String(curated.reason).includes('party\'s own name'), JSON.stringify(curated));
 });
+
+// ---------------------------------------------------------------------------
+// An aggregator's record is a pointer (reconcileAggregatorPointers). The
+// deck's "CHUNK — Nov 11 @ C'mon Everybody" card (2026-10-11): Gathr's entry
+// was the July 4 lineup and flyer re-dated, linking the bare chunk-party.com
+// root, while chunk-party.com — read in the same run — listed thirteen
+// events and none that night.
+// ---------------------------------------------------------------------------
+const CHUNK_SITE = { name: 'CHUNK', urls: ['https://www.chunk-party.com'] };
+const GATHR = { name: 'Gathr', siteRole: 'aggregator', urls: ['https://gathrparty.com/'] };
+const BEARRACUDA_EB = { name: 'Bearracuda Events', urls: ['https://www.eventbrite.com/o/bearracuda-21867032189'] };
+const JULY4_FLYER = 'https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg';
+const JULY4_FLYER_OG_CROP = 'https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_699,fp_0.50_0.50,q_85,enc_auto/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg';
+
+function chunkSiteEvent(overrides = {}) {
+  return {
+    title: 'CHUNK Brooklyn', bar: "C'mon Everybody", city: 'nyc', timezone: 'America/New_York', source: 'ai-web',
+    startDate: '2026-11-22T03:00:00.000Z', endDate: '2026-11-22T08:00:00.000Z',
+    url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-11-21',
+    image: 'https://static.wixstatic.com/media/42b6cb_b2e8333b7bf6479580449aff4832c93c~mv2.jpg',
+    _parserConfig: CHUNK_SITE,
+    ...overrides
+  };
+}
+
+function gathrCopy(overrides = {}) {
+  return {
+    title: 'CHUNK', bar: "C'mon Everybody", city: 'nyc', timezone: 'America/New_York', source: 'ai-web',
+    startDate: '2026-11-12T03:00:00.000Z', endDate: '2026-11-12T06:00:00.000Z',
+    url: 'https://www.chunk-party.com/',
+    image: JULY4_FLYER_OG_CROP, imageHorizontal: JULY4_FLYER_OG_CROP,
+    _parserConfig: GATHR,
+    ...overrides
+  };
+}
+
+function withLogs(fn) {
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try { return { result: fn(), logs }; } finally { console.log = original; }
+}
+
+test('aggregator pointers: first-party site coverage — clean reads of a source\'s own site cover its domain; aggregators, failed reads, empty reads and platform roots cover nothing; a platform organizer page covers its own path', () => {
+  const core = createCore();
+  const siteEvents = [chunkSiteEvent()];
+  const coverage = core.buildFirstPartySiteCoverage([
+    { name: 'CHUNK', config: CHUNK_SITE, events: siteEvents },
+    { name: 'Gathr', config: GATHR, events: [gathrCopy()] },
+    { name: 'Broken', config: { name: 'Broken', urls: ['https://broken.example/'] }, events: [chunkSiteEvent()], crawlErrors: ['timeout'] },
+    { name: 'Empty', config: { name: 'Empty', urls: ['https://empty.example/'] }, events: [] },
+    { name: 'Platform root', config: { name: 'Platform root', urls: ['https://www.eventbrite.com/'] }, events: [chunkSiteEvent()] },
+    { name: 'Bearracuda Events', config: BEARRACUDA_EB, events: [chunkSiteEvent({ title: 'Bearracuda' })] }
+  ]);
+  assert.deepEqual([...coverage.keys()].sort(), ['chunk-party.com', 'eventbrite.com']);
+  assert.equal(coverage.get('chunk-party.com')[0].source, 'CHUNK');
+  assert.deepEqual(coverage.get('chunk-party.com')[0].segments, [], 'a site of ours covers the whole domain');
+  assert.deepEqual(coverage.get('eventbrite.com')[0].segments, ['o', 'bearracuda-21867032189'], 'an organizer page on a platform covers only its path');
+
+  const pointer = (record) => core.getAggregatorPointerTarget(record, coverage);
+  assert.equal(pointer(gathrCopy()).source, 'CHUNK', 'the bare root points into the site');
+  assert.equal(pointer(gathrCopy({ url: '', website: 'https://www.chunk-party.com/event-details/chunk-brooklyn-11-21' })).source, 'CHUNK');
+  assert.equal(pointer(gathrCopy({ url: '', notes: 'website: https://chunk-party.com/' })).source, 'CHUNK', 'a link in the notes counts');
+  assert.equal(pointer(gathrCopy({ url: 'https://www.eventbrite.com/e/some-other-party-123' })), null, 'another organizer\'s Eventbrite page is not Bearracuda\'s');
+  assert.equal(pointer(gathrCopy({ url: 'https://www.eventbrite.com/o/bearracuda-21867032189/events' })).source, 'Bearracuda Events');
+  assert.equal(pointer(gathrCopy({ url: 'https://unread.example/party' })), null, 'a site nobody reads covers nothing');
+  assert.equal(pointer(chunkSiteEvent({ url: 'https://www.chunk-party.com/' })), null, 'only an aggregator\'s record is a pointer');
+});
+
+test('aggregator pointers: a copy the pointed-at site does not list is withheld to the deck with both sides\' facts; the gate, the disposition, the deck and an approval all agree', () => {
+  const core = createCore();
+  const site = [chunkSiteEvent(), chunkSiteEvent({ title: 'CHUNK Brooklyn 7/4', startDate: '2026-07-05T02:00:00.000Z', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4', image: JULY4_FLYER })];
+  const copy = gathrCopy();
+  const unread = gathrCopy({ title: 'Bear Milk', url: 'https://thedeependnyc.example/bear-milk', image: 'https://i.imgur.com/x.png', imageHorizontal: '' });
+  const events = [...site, copy, unread];
+  const { result: summary, logs } = withLogs(() => core.reconcileAggregatorPointers(events, {
+    parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: site }, { name: 'Gathr', config: GATHR, events: [copy, unread] }]
+  }));
+  assert.deepEqual(summary, { withheld: 1, backedByDropped: 0, imagesCleared: 1 });
+  const stamp = copy._aggregatorUnbackedWithheld;
+  assert.ok(stamp, 'the copy is stamped');
+  assert.equal(stamp.aggregator, 'Gathr');
+  assert.equal(stamp.site, 'chunk-party.com');
+  assert.equal(stamp.source, 'CHUNK');
+  assert.equal(stamp.link, 'https://www.chunk-party.com/');
+  assert.equal(stamp.siteEvents, 2);
+  assert.equal(stamp.day, '2026-11-11');
+  assert.deepEqual(stamp.claim, { title: 'CHUNK', startDate: '2026-11-12T03:00:00.000Z', bar: "C'mon Everybody" });
+  assert.deepEqual(stamp.sameNight, []);
+  assert.equal(stamp.nearest.title, 'CHUNK Brooklyn');
+  assert.equal(stamp.nearest.day, '2026-11-21');
+  assert.equal(stamp.nearest.url, 'https://www.chunk-party.com/event-details/chunk-brooklyn-11-21');
+  assert.equal(stamp.reason, 'Gathr points at chunk-party.com, which CHUNK read this run (2 events) and lists no event that night');
+  assert.ok(logs.some(line => line.startsWith('🧭 AGGREGATOR: "CHUNK" (Gathr, 2026-11-11) points at chunk-party.com — CHUNK read it this run (2 events) and lists nothing that night; nearest there: "CHUNK Brooklyn" 2026-11-21. Withheld to the deck.')), logs.join('\n'));
+  assert.equal(unread._aggregatorUnbackedWithheld, undefined, 'a copy pointing at a site nobody reads is proposed as found');
+  assert.equal(unread.image, 'https://i.imgur.com/x.png');
+  assert.equal(site[0]._aggregatorUnbackedWithheld, undefined, 'first-party records are never touched');
+
+  // The picture corollary: the copy wore the July 4 flyer (Wix og crop of the same file).
+  assert.equal(copy.image, '');
+  assert.equal(copy.imageHorizontal, '');
+  assert.equal(copy._imageReusedFrom.title, 'CHUNK Brooklyn 7/4');
+  assert.equal(copy._imageReusedFrom.day, '2026-07-04');
+  assert.equal(copy._imageReusedFrom.source, 'CHUNK');
+  assert.equal(copy._imageReusedFrom.image, JULY4_FLYER_OG_CROP);
+  assert.ok(logs.some(line => line.startsWith('🧭 AGGREGATOR: "CHUNK" (Gathr, 2026-11-11) wears the picture of "CHUNK Brooklyn 7/4" (2026-07-04, CHUNK)') && line.includes('image, imageHorizontal cleared')), logs.join('\n'));
+
+  // Gate, disposition, deck.
+  const analyzed = { ...copy, _action: 'new' };
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed, { ...unread, _action: 'new' }]).map(e => e.title), ['Bear Milk'], 'withheld from every automatic write');
+  assert.equal(SharedCore.filterEventsForExecution([analyzed], { offeringToOwner: true }).length, 1, 'the deck sees it');
+  assert.equal(core.isOwnerReviewCandidate(analyzed), true, 'and offers it as a card');
+  assert.equal(SharedCore.describeExecutionDisposition(analyzed), "WITHHELD (aggregator's copy — Gathr points at chunk-party.com, which CHUNK read this run (2 events) and lists no event that night; decide on the deck)");
+  assert.equal(SharedCore.filterEventsForExecution([{ ...analyzed, _ownerReviewApproved: { key: 'k' } }]).length, 1, 'an approval on the deck lets it write');
+  assert.equal(SharedCore.describeExecutionDisposition({ ...analyzed, _ownerReviewApproved: { key: 'k' } }), 'NEW');
+  // Parse-time provenance: a saved-run re-analysis keeps both stamps.
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_aggregatorUnbackedWithheld'));
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_imageReusedFrom'));
+  assert.deepEqual(SharedCore.stripCalendarAnalysisStamps(analyzed)._aggregatorUnbackedWithheld, stamp);
+});
+
+test('aggregator pointers: fail closed — no first-party coverage, a bear-dropped night on the site, a same-night picture, and a folded copy all leave the record alone', () => {
+  const core = createCore();
+  // No first-party source read the site this run: the copy stands as found.
+  const alone = gathrCopy();
+  let summary = withLogs(() => core.reconcileAggregatorPointers([alone], { parserResults: [{ name: 'Gathr', config: GATHR, events: [alone] }] })).result;
+  assert.deepEqual(summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0 });
+  assert.equal(alone._aggregatorUnbackedWithheld, undefined);
+  assert.equal(alone.image, JULY4_FLYER_OG_CROP);
+
+  // The site listed that night, the bear check dropped it: the site backs the copy.
+  const backed = gathrCopy({ image: '', imageHorizontal: '' });
+  const dropped = chunkSiteEvent({ title: 'Some Wednesday thing', startDate: '2026-11-12T02:00:00.000Z' });
+  const { result: backedSummary, logs } = withLogs(() => core.reconcileAggregatorPointers([chunkSiteEvent(), backed], {
+    parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [chunkSiteEvent()], bearDroppedEvents: [{ event: dropped, reason: 'not bear' }] }]
+  }));
+  assert.deepEqual(backedSummary, { withheld: 0, backedByDropped: 1, imagesCleared: 0 });
+  assert.equal(backed._aggregatorUnbackedWithheld, undefined);
+  assert.ok(logs.some(line => line.includes('lists "Some Wednesday thing" that night but the bear check dropped it; the copy stands as found')), logs.join('\n'));
+
+  // A same-night first-party record shows the same file: the picture may be this event's.
+  const sameNight = gathrCopy({ url: 'https://unread.example/' , startDate: '2026-07-05T02:00:00.000Z' });
+  const july4 = chunkSiteEvent({ title: 'CHUNK Brooklyn 7/4', startDate: '2026-07-05T02:00:00.000Z', image: JULY4_FLYER });
+  withLogs(() => core.reconcileAggregatorPointers([july4, sameNight], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [july4] }] }));
+  assert.equal(sameNight.image, JULY4_FLYER_OG_CROP, 'kept');
+  assert.equal(sameNight._imageReusedFrom, undefined);
+
+  // The site lists something that night and the fold still left the copy standing: shown as "one event or two?".
+  const folsomSite = chunkSiteEvent({ title: 'CHUNK FOLSOM - Bear Playground', bar: 'F8 Nightclub & Bar', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26', image: '' });
+  const folsomCopy = gathrCopy({ title: "CHUNK: San Francisco Folsom '26 - Bear Playground", bar: 'F8 (1192 Folsom St)', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com', image: '', imageHorizontal: '' });
+  const folsom = withLogs(() => core.reconcileAggregatorPointers([folsomSite, folsomCopy], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [folsomSite] }] }));
+  assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0 });
+  assert.deepEqual(folsomCopy._aggregatorUnbackedWithheld.sameNight, [{ title: 'CHUNK FOLSOM - Bear Playground', startDate: '2026-09-27T05:00:00.000Z', bar: 'F8 Nightclub & Bar', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26' }]);
+  assert.equal(folsomCopy._aggregatorUnbackedWithheld.reason, 'Gathr points at chunk-party.com, where CHUNK lists "CHUNK FOLSOM - Bear Playground" at F8 Nightclub & Bar that same night — the two did not fold as one event');
+  assert.ok(folsom.logs.some(line => line.includes('that same night and the fold left this copy standing; one event or two? Withheld to the deck.')), folsom.logs.join('\n'));
+
+  // The fold already made the copy part of the site's own record: no longer an aggregator record.
+  const own = chunkSiteEvent();
+  const folded = core.mergeAggregatorCopyIntoOwnRecord(own, gathrCopy({ startDate: own.startDate }));
+  assert.equal(core.isAggregatorRecord(folded), false);
+  withLogs(() => core.reconcileAggregatorPointers([folded], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [own] }] }));
+  assert.equal(folded._aggregatorUnbackedWithheld, undefined);
+
+  // The picture key: one file behind every Wix render recipe; different files differ.
+  assert.equal(SharedCore.getImageMediaKey(JULY4_FLYER), SharedCore.getImageMediaKey(JULY4_FLYER_OG_CROP));
+  assert.equal(SharedCore.getImageMediaKey(JULY4_FLYER), 'static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg');
+  assert.notEqual(SharedCore.getImageMediaKey(JULY4_FLYER), SharedCore.getImageMediaKey(chunkSiteEvent().image));
+  assert.equal(SharedCore.getImageMediaKey('https://cdn.example/a.jpg?w=300'), SharedCore.getImageMediaKey('https://cdn.example/a.jpg?w=1500'));
+  assert.equal(SharedCore.getImageMediaKey('not a url'), '');
+});
+
+test('aggregator pointers: the analyzed record owns its own copy of the parse-time stamps (the run file\'s circular-safe stringify would otherwise write the shared object as "[Circular]")', async () => {
+  const core = createFestivalCore([]);
+  const adapter = buildFestivalPrepAdapter([]);
+  const copy = gathrCopy({ startDate: '2037-11-12T03:00:00.000Z', endDate: '2037-11-12T06:00:00.000Z', isBearEvent: true });
+  copy._aggregatorUnbackedWithheld = { aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', reason: 'r', nearest: { title: 'CHUNK Brooklyn' } };
+  copy._imageReusedFrom = { title: 'CHUNK Brooklyn 7/4' };
+  const analyzed = await core.prepareEventsForCalendar([copy], adapter, {});
+  assert.equal(analyzed.length, 1);
+  assert.deepEqual(analyzed[0]._aggregatorUnbackedWithheld, copy._aggregatorUnbackedWithheld);
+  assert.notEqual(analyzed[0]._aggregatorUnbackedWithheld, copy._aggregatorUnbackedWithheld, 'a distinct object');
+  assert.notEqual(analyzed[0]._aggregatorUnbackedWithheld.nearest, copy._aggregatorUnbackedWithheld.nearest, 'deep');
+  assert.deepEqual(analyzed[0]._imageReusedFrom, copy._imageReusedFrom);
+  assert.notEqual(analyzed[0]._imageReusedFrom, copy._imageReusedFrom);
+  assert.equal(SharedCore.describeExecutionDisposition(analyzed[0]), "WITHHELD (aggregator's copy — r; decide on the deck)");
+});

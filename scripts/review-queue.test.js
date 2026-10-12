@@ -1439,3 +1439,30 @@ test('runSourceAudit: fetches each host’s listing page through the adapter, ch
   assert.deepEqual(none.skipped, ['no source ledger']);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('buildDeck: an aggregator\'s copy the pointed-at site does not list is a card carrying both sides\' facts (withheld from every automatic write until decided)', () => {
+  const copy = newEvent({
+    title: 'CHUNK',
+    bar: "C'mon Everybody",
+    url: 'https://www.chunk-party.com/',
+    image: '',
+    _aggregatorUnbackedWithheld: {
+      aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', link: 'https://www.chunk-party.com/', siteEvents: 13, day: '2030-10-03',
+      claim: { title: 'CHUNK', startDate: iso(FUTURE), bar: "C'mon Everybody" },
+      nearest: { title: 'CHUNK Brooklyn', startDate: iso(FUTURE + 10 * 86400000), day: '2030-10-13', bar: "C'mon Everybody", url: 'https://www.chunk-party.com/event-details/chunk-brooklyn' },
+      reason: 'Gathr points at chunk-party.com, which CHUNK read this run (13 events) and lists no event that night'
+    },
+    _imageReusedFrom: { image: 'https://static.wixstatic.com/media/x~mv2.jpg', title: 'CHUNK Brooklyn 7/4', startDate: '2026-07-05T02:00:00.000Z', day: '2026-07-04', source: 'CHUNK', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4' }
+  });
+  const deck = deckOf(runPayload({ analyzedEvents: [copy, newEvent()] }));
+  assert.deepEqual(deck.cards.map((card) => [card.kind, card.proposal.title]), [['new', 'CHUNK'], ['new', 'FURBALL NYC']]);
+  assert.deepEqual(deck.cards[0].display.aggregatorUnbacked, {
+    aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', link: 'https://www.chunk-party.com/', siteEvents: 13, day: '2030-10-03',
+    reason: 'Gathr points at chunk-party.com, which CHUNK read this run (13 events) and lists no event that night',
+    sameNight: [],
+    nearest: { title: 'CHUNK Brooklyn', day: '2030-10-13', bar: "C'mon Everybody", url: 'https://www.chunk-party.com/event-details/chunk-brooklyn' }
+  });
+  assert.deepEqual(deck.cards[0].display.imageReusedFrom, { image: 'https://static.wixstatic.com/media/x~mv2.jpg', title: 'CHUNK Brooklyn 7/4', day: '2026-07-04', source: 'CHUNK', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4' });
+  assert.equal(deck.cards[1].display.aggregatorUnbacked, null);
+  assert.equal(deck.cards[1].display.imageReusedFrom, null);
+});

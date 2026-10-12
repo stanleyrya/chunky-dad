@@ -438,6 +438,17 @@ class BearEventScraperOrchestrator {
                 // Perform cross-parser deduplication to merge events from different parsers
                 const deduplicatedEvents = await sharedCore.deduplicateEvents(results.allProcessedEvents, finalAdapter, config.config);
 
+                // An aggregator's record is a pointer (shared-core
+                // reconcileAggregatorPointers): a copy still standing after
+                // the fold while pointing into a site a first-party source
+                // read this run is withheld to the deck with both sides'
+                // facts; a picture it borrowed from another night's event
+                // on that source is cleared.
+                const pointerSummary = sharedCore.reconcileAggregatorPointers(deduplicatedEvents, results);
+                if (pointerSummary.withheld > 0 || pointerSummary.imagesCleared > 0 || pointerSummary.backedByDropped > 0) {
+                    console.log(`🧭 Orchestrator: aggregator pointers — ${pointerSummary.withheld} cop${pointerSummary.withheld === 1 ? 'y' : 'ies'} withheld (the site pointed at lists no such night), ${pointerSummary.backedByDropped} backed by a bear-dropped night, ${pointerSummary.imagesCleared} reused picture${pointerSummary.imagesCleared === 1 ? '' : 's'} cleared`);
+                }
+
                 // Manual bear/not-bear overrides stored on calendar records win
                 // over this run's automatic verdicts, in both directions.
                 const bearOverrideContext = {
