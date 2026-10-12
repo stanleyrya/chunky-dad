@@ -22422,3 +22422,22 @@ test('a widget door is claimed per parser — another source reading the same ho
   assert.deepEqual(await parser.collectElfsightCalendarEvents({ html: ELFSIGHT_HTML, url: 'https://venue.example/about' }, { name: 'The Venue', urls: ['https://venue.example/'] }, httpAdapter), [], 'and once only per parser');
   assert.equal(fetches, 2);
 });
+
+test('normalizeAiEvent rolls a past-midnight end to the next day\'s CLOCK in the event\'s zone, not 24 hours later (Paris fall-back night)', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const cityConfig = { paris: { timezone: 'Europe/Paris', patterns: ['paris'] } };
+  // Bears Paname — Bonbon, run 20261011-154844: "Sat, 24 October 2026 ·
+  // 23:00 – 06:00"; the clocks fall back at 03:00 that night, so 06:00 is
+  // 25 hours after 06:00 the day before — the +24h rollover landed at 05:00.
+  const bonbon = parser.normalizeAiEvent({
+    title: 'BEARS PANAME — BONBON', startDate: '2026-10-24', startTime: '23:00', endTime: '06:00',
+    address: '173 Rue Saint-Martin, 75003 Paris', city: 'paris'
+  }, {}, null, cityConfig, null);
+  assert.ok(bonbon);
+  assert.equal(bonbon.startDate.toISOString(), '2026-10-24T21:00:00.000Z');
+  assert.equal(bonbon.endDate.toISOString(), '2026-10-25T05:00:00.000Z', '06:00 CET, after the clocks fell back');
+  assert.equal(parser.rollWallClockToNextDay(new Date('2026-10-25T04:00:00.000Z'), '2026-10-24', '06:00', 'Europe/Paris').toISOString(), '2026-10-25T05:00:00.000Z');
+  assert.equal(parser.rollWallClockToNextDay(new Date('2026-10-25T04:00:00.000Z'), new Date('2026-10-24T00:00:00.000Z'), '06:00', 'Europe/Paris').toISOString(), '2026-10-25T05:00:00.000Z', 'a UTC-midnight Date names the day too');
+  assert.equal(parser.rollWallClockToNextDay(new Date('2026-10-25T04:00:00.000Z'), '2026-10-24', '06:00', null).toISOString(), '2026-10-26T04:00:00.000Z', 'no zone: the +24h fallback');
+});

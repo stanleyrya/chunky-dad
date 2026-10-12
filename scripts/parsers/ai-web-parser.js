@@ -9426,7 +9426,7 @@ class AiWebParser {
                 || combineDateAndTime(end.date, end.time || start.time || '00:00'))
             : null;
         if (endDate instanceof Date && endDate.getTime() < startDate.getTime()) {
-            endDate = new Date(endDate.getTime() + (24 * 60 * 60 * 1000));
+            endDate = this.rollWallClockToNextDay(endDate, end.date || start.date, end.time || start.time || '00:00', timezone);
         }
         const description = this.normalizeWhitespace(
             this.decodeEntitiesFully(this.stripTags(String(row.description || '')))
@@ -25650,7 +25650,11 @@ TEXT:
             && combinedEndDate instanceof Date && !Number.isNaN(combinedEndDate.getTime())
             && combinedEndDate.getTime() < combinedStartDate.getTime()
             && combinedStartDate.getTime() - combinedEndDate.getTime() < 24 * 60 * 60 * 1000) {
-            combinedEndDate = new Date(combinedEndDate.getTime() + 24 * 60 * 60 * 1000);
+            // The next day's clock, in the event's zone — not 24 hours
+            // later. Across a clock change the two differ by an hour
+            // (Bears Paname, run 20261011-154844: "23:00 – 06:00" on the
+            // night Paris falls back landed at 05:00).
+            combinedEndDate = this.rollWallClockToNextDay(combinedEndDate, endDateRaw || startDateRaw, endTimeRaw, timezone);
             console.log(`🤖 AI Web: End time precedes start — assuming past-midnight end (+1 day): ${combinedEndDate.toISOString()}`);
         }
 
@@ -26412,6 +26416,26 @@ TEXT:
         } catch (_) {
             return null;
         }
+    }
+
+    // A past-midnight end ("23:00 – 06:00") rolled to the NEXT local day: the
+    // same wall clock on the following date, converted in the event's zone.
+    // Adding 24 hours to the instant is wrong by an hour on the night the
+    // clocks change (Paris, 2026-10-25: 06:00 CET is 25 hours after 06:00
+    // CEST). `localDay` is the date the clock was first anchored to (a Date
+    // at UTC midnight or a "YYYY-MM-DD" string); without a zone or a usable
+    // day the +24h fallback stands.
+    rollWallClockToNextDay(instant, localDay, wallClock, timezone) {
+        const fallback = new Date(instant.getTime() + 24 * 60 * 60 * 1000);
+        const dayText = localDay instanceof Date && !Number.isNaN(localDay.getTime())
+            ? localDay.toISOString().split('T')[0]
+            : String(localDay || '').trim().slice(0, 10);
+        const dayMatch = dayText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const clock = String(wallClock || '').trim();
+        if (!dayMatch || !timezone || !/^\d{1,2}:\d{2}/.test(clock)) return fallback;
+        const nextDay = new Date(Date.UTC(Number(dayMatch[1]), Number(dayMatch[2]) - 1, Number(dayMatch[3]) + 1)).toISOString().split('T')[0];
+        const rolled = this.convertLocalDateTimeToUtc(`${nextDay} ${clock}`, timezone);
+        return rolled instanceof Date && !Number.isNaN(rolled.getTime()) && rolled.getTime() > instant.getTime() ? rolled : fallback;
     }
 
     convertLocalDateTimeToUtc(localDateTimeValue, timezone) {
