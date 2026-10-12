@@ -28031,3 +28031,137 @@ test('parsePageForCrawl: a structural ≥2-rows signal is never downgraded by th
   assert.equal(aiCalls, 0, 'no second opinion on JSON');
   assert.equal(scalar.pageClassification, 'multi-event-page', 'the month heuristic still reads the text as it did');
 });
+
+// ---------------------------------------------------------------------------
+// Owner deck notes, run 20261011-154844: two sibling event pages are two
+// events (CALF B&B vs the saved BLUF LA, matched by a stored key), a record
+// read from its own page names itself (Bad Boy vs the saved chimera "BLUF SF
+// HARD"), and a social-network name is not a title ("Facebook").
+// ---------------------------------------------------------------------------
+test('contradiction gate (c): two sibling event pages are two events — the dedup pass, the calendar match and a stored key all refuse the fold', async () => {
+  const core = createGateCore(GATE_BARS);
+  const night = new Date('2026-11-21T05:00:00.000Z');
+  const eagle = { bar: 'SF Eagle', address: '398 12th Street, San Francisco, CA 94103', city: 'sf', timezone: 'America/Los_Angeles', source: 'ai-web' };
+  const bluf = { ...eagle, title: 'BLUF SF', startDate: night, url: 'https://www.sf-eagle.com/events/bluf/?occurrence=2026-11-20' };
+  const calf = { ...eagle, title: 'CALF B&B EVENT', startDate: night, url: 'https://www.sf-eagle.com/events/calf-bb-event/' };
+  assert.equal(core.getIdentityContradiction(calf, bluf), 'event pages (sf-eagle.com/events/calf-bb-event vs sf-eagle.com/events/bluf)');
+  // One page under a query string is one page; a listing named in the
+  // site's own words is no page; an aggregator's link is no page; a bare
+  // root is no page.
+  assert.equal(core.getIdentityContradiction({ ...bluf, url: 'https://www.sf-eagle.com/events/bluf/' }, bluf), null);
+  assert.equal(core.getIdentityContradiction({ ...calf, url: 'https://www.sf-eagle.com/events/calendar/' }, bluf), null);
+  assert.equal(core.getIdentityContradiction({ ...calf, _parserConfig: { siteRole: 'aggregator' } }, bluf), null);
+  assert.equal(core.getIdentityContradiction({ ...calf, url: 'https://www.sf-eagle.com/' }, bluf), null);
+  // A venue site that mints a page per occurrence puts ONE party on two
+  // sibling slugs (Eagle LA's CUBSCOUT): the slugs spell the title.
+  assert.equal(core.getIdentityContradiction(
+    { ...calf, title: 'CUBSCOUT', url: 'https://www.sf-eagle.com/events/cubscout-51/' },
+    { ...bluf, title: 'CUBSCOUT', url: 'https://www.sf-eagle.com/events/cub-scout-3/' }), null);
+  assert.equal(core.getIdentityContradiction(
+    { ...calf, title: 'Cub Scout: Second Fridays', url: 'https://www.sf-eagle.com/events/cubscout-51/' },
+    { ...bluf, title: 'CUBSCOUT', url: 'https://www.sf-eagle.com/events/cub-scout-3/' }), null, 'the slug spells the other record\'s title');
+  const folded = await core.deduplicateEvents([{ ...bluf }, { ...calf }], null);
+  assert.equal(folded.length, 2, 'two pages in one section are two events');
+  // The saved BLUF record carries CALF's key (an earlier mis-merge wrote
+  // it): the stored key is a hint, the two pages are the fact.
+  const saved = (record, extraNotes) => ({
+    title: record.title, name: record.title, startDate: record.startDate, endDate: record.startDate,
+    location: '37.7699927, -122.4134077', calendarTimezone: 'America/Los_Angeles',
+    notes: [`bar: ${record.bar}`, `address: ${record.address}`, 'timezone: America/Los_Angeles', `website: ${record.url}`, ...extraNotes].join('\n')
+  });
+  const poisoned = saved(bluf, ['key: calf-b&b-event|2026-11-20|sf eagle']);
+  const lines = [];
+  const restore = captureGateLogs(lines);
+  let analysis;
+  try { analysis = core.analyzeEventAction({ ...calf, key: 'calf-b&b-event|2026-11-20|sf eagle' }, [poisoned]); } finally { restore(); }
+  assert.equal(analysis.action, 'new', `got ${JSON.stringify(analysis)}`);
+  assert.ok(lines.some(line => line.includes('by the stored key') && line.includes('event pages')), `got: ${lines.join(' | ')}`);
+  // A curated matchKey is the owner's instruction and stays ungated.
+  const instructed = core.analyzeEventAction({ ...calf, key: 'calf-b&b-event|2026-11-20|sf eagle' }, [saved(bluf, ['matchKey: calf-b&b-event|2026-11-20|sf eagle'])]);
+  assert.equal(instructed.action, 'merge');
+  // Without the contradiction the stored key still matches as before.
+  const plain = core.analyzeEventAction({ ...bluf, key: 'bluf-sf|2026-11-20|sf eagle' }, [saved(bluf, ['key: bluf-sf|2026-11-20|sf eagle'])]);
+  assert.equal(plain.action, 'merge');
+});
+
+test('title: a record read from its own event page names itself when the saved record links no page of its own', () => {
+  const core = createCore();
+  const page = 'https://www.sf-eagle.com/events/big-boy/';
+  const savedChimera = { title: 'BLUF SF HARD', website: 'https://www.sf-eagle.com', notes: 'website: https://www.sf-eagle.com' };
+  const badBoy = { title: 'Bad Boy', url: page, website: page, _sourcePageUrl: page, _titleFromListing: true, _venueSitePageHost: 'sf-eagle.com', _pageClassification: 'event-page', source: 'ai-web' };
+  const ctx = (a, b) => ({ records: { a, b }, sideLabels: { a: 'calendar', b: 'scraped' } });
+  const decision = core.resolveConflictDeterministically('title', 'BLUF SF HARD', 'Bad Boy', ctx(savedChimera, badBoy));
+  assert.ok(decision && decision.winner === 'b', JSON.stringify(decision));
+  assert.ok(decision.reason.includes('(big-boy) states this title'), decision.reason);
+  // A saved record with a page of its own keeps the ladder; so does a
+  // model-made title; so does a page whose slug spells the SAVED title.
+  const savedWithPage = { ...savedChimera, website: 'https://www.sf-eagle.com/events/blufsfhard/', notes: 'website: https://www.sf-eagle.com/events/blufsfhard/' };
+  const kept = core.resolveConflictDeterministically('title', 'BLUF SF HARD', 'Bad Boy', ctx(savedWithPage, badBoy));
+  assert.ok(!kept || !String(kept.reason).includes('states this title'), JSON.stringify(kept));
+  const modelTitle = core.resolveConflictDeterministically('title', 'BLUF SF HARD', 'Bad Boy', ctx(savedChimera, { ...badBoy, _titleFromListing: false }));
+  assert.ok(!modelTitle || !String(modelTitle.reason).includes('states this title'), JSON.stringify(modelTitle));
+  const slugNamesSaved = core.resolveConflictDeterministically('title', 'Hellbent', 'Where Fetish Meets Pop!', ctx(
+    { title: 'Hellbent', website: 'https://www.eaglemanchester.com', notes: 'website: https://www.eaglemanchester.com' },
+    { ...badBoy, title: 'Where Fetish Meets Pop!', url: 'https://www.eaglemanchester.com/event-details/hellbent-13', website: 'https://www.eaglemanchester.com/event-details/hellbent-13', _sourcePageUrl: 'https://www.eaglemanchester.com/event-details/hellbent-13', _venueSitePageHost: 'eaglemanchester.com' }));
+  assert.ok(!slugNamesSaved || !String(slugNamesSaved.reason).includes('states this title'), JSON.stringify(slugNamesSaved));
+});
+
+test('sanity: a title that is only a social-network name is enforced junk (rule 9f)', () => {
+  const core = createSanityCore();
+  assert.equal(SharedCore.junkTitleReason('Facebook'), 'title is a social-network name ("facebook")');
+  assert.equal(SharedCore.junkTitleReason('  INSTAGRAM '), 'title is a social-network name ("instagram")');
+  assert.equal(SharedCore.junkTitleReason('Facebook Live Party'), null);
+  assert.ok(sanityCodes(core, { title: 'Facebook' }).includes('junk-title'));
+  assert.ok(!sanityCodes(core, { title: 'Instagram Famous: Bear Night' }).includes('junk-title'));
+});
+
+test('mergeParsedEvents: a source\'s OWN detail page re-illustrates its listing thumbnail; another host still cannot', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+  // Mass Bears, run 20261011-154844: the root listing card carried the
+  // contest hero at 300w; the party's own page carried its flyer at 1500w.
+  const listing = {
+    title: 'The Belly Party - SPOOKY BEAR!', startDate: new Date('2026-10-31T01:00:00.000Z'), endDate: new Date('2026-10-31T05:00:00.000Z'),
+    image: 'https://images.squarespace-cdn.com/content/v1/6631a0e7/9ed46955/herocontest.jpg?format=300w', imageSource: 'page',
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'listing', _sourcePageUrl: 'https://www.massbearsandcubs.org/', _fieldPriorities: priorities
+  };
+  const ownPage = {
+    ...listing, image: 'http://static1.squarespace.com/static/6631a0e7/1790548182766/BELLY+INSTGRAM+SIZE.jpg?format=1500w', imageSource: 'jsonld',
+    _extractionSource: 'jsonld', _pageOrigin: 'crawl', _sourcePageUrl: 'https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h'
+  };
+  const merged = await core.mergeParsedEvents(listing, ownPage, { httpAdapter: adapter });
+  assert.equal(merged.image, ownPage.image, 'the page\'s full flyer replaces the card thumbnail');
+  const flipped = await core.mergeParsedEvents(ownPage, listing, { httpAdapter: adapter });
+  assert.equal(flipped.image, ownPage.image, 'order does not decide');
+  // A ticket page on another host is still refused, thumbnail or not.
+  const ticketPage = { ...ownPage, _sourcePageUrl: 'https://www.eventbrite.com/e/belly-party-tickets-1', image: 'https://img.evbuc.com/original.123?w=940' };
+  const refused = await core.mergeParsedEvents(listing, ticketPage, { httpAdapter: adapter });
+  assert.equal(refused.image, listing.image, 'another host never re-illustrates the listing');
+  // A listing whose picture states no size, or a large one, keeps its authority on its own site too.
+  const fullListing = { ...listing, image: 'https://images.squarespace-cdn.com/content/v1/6631a0e7/card.jpg' };
+  assert.equal((await core.mergeParsedEvents(fullListing, ownPage, { httpAdapter: adapter })).image, fullListing.image);
+  assert.equal(SharedCore.imageUrlWidthHint('https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_1240,h_699/a.jpg'), 1240);
+  assert.equal(SharedCore.imageUrlWidthHint('https://x.example/img/flyer-300x300.jpg'), 300);
+  assert.equal(SharedCore.imageUrlWidthHint('https://x.example/img/flyer.jpg'), null);
+});
+
+test('bar: a party\'s own name in the venue slot yields to the venue the page\'s structured data states', () => {
+  const core = createGateCore(GATE_BARS);
+  const title = 'The Belly Party - SPOOKY BEAR!';
+  const card = { title, bar: 'Belly', city: 'ptown' };
+  const page = { title, bar: 'Red Room', city: 'ptown', _barFromJsonLd: true };
+  const ctx = (a, b) => ({ records: { a, b }, sideLabels: { a: 'existing', b: 'incoming' }, cityKey: 'ptown' });
+  const decision = core.resolveConflictDeterministically('bar', 'Belly', 'Red Room', ctx(card, page));
+  assert.ok(decision && decision.winner === 'b' && decision.reason.includes('party\'s own name'), JSON.stringify(decision));
+  const flipped = core.resolveConflictDeterministically('bar', 'Red Room', 'Belly', ctx(page, card));
+  assert.ok(flipped && flipped.winner === 'a', JSON.stringify(flipped));
+  // Without structured data behind the other name, nothing is decided here.
+  const unstated = core.resolveConflictDeterministically('bar', 'Belly', 'Red Room', ctx(card, { ...page, _barFromJsonLd: false }));
+  assert.ok(!unstated || !String(unstated.reason).includes('party\'s own name'), JSON.stringify(unstated));
+  // A curated bar named in the title is a venue, never a party name.
+  const eagleNight = { title: 'SF Eagle Beer Bust', bar: 'SF Eagle', city: 'sf' };
+  const other = { title: 'SF Eagle Beer Bust', bar: 'Lone Star Saloon', city: 'sf', _barFromJsonLd: true };
+  const curated = core.resolveConflictDeterministically('bar', 'SF Eagle', 'Lone Star Saloon', { records: { a: eagleNight, b: other }, sideLabels: { a: 'existing', b: 'incoming' }, cityKey: 'sf' });
+  assert.ok(!curated || !String(curated.reason).includes('party\'s own name'), JSON.stringify(curated));
+});

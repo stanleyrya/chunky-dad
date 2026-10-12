@@ -324,6 +324,7 @@ const VENUE_CONTACT_MERGE_FIELDS = new Set(['instagram', 'facebook', 'website', 
 // mergeParsedEvents. Everything else (ticketUrl, cover, address, description,
 // bar…) still merges by the ordinary rules: that is what enrichment is for.
 const LISTING_AUTHORITY_FIELDS = new Set(['title', 'image', 'imageVertical', 'imageHorizontal', 'endDate']);
+const IMAGE_SLOT_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
 // Notes lines the scraper REGENERATES every run and the results UI refuses to
 // render as a diff row (owner review 2026-09-12: "save what is needed, just
@@ -491,6 +492,17 @@ const TITLE_LEGALESE_PHRASES = Object.freeze([
     'non transferable',
     'terms and conditions',
     'all sales final'
+]);
+
+// A title that is nothing but the name of a social network or media
+// platform is a page's "follow us" link read as an event (Woofs Atlanta,
+// run 20261011-154844: "Facebook", dated to the next Sunday, proposed as a
+// CREATE — owner: "Not an event"). Whole-title matches only, on the same
+// folded text as the fine-print table: "Facebook Live Party" is a title.
+const TITLE_SOCIAL_PLATFORM_NAMES = Object.freeze([
+    'facebook', 'instagram', 'twitter', 'tiktok', 'youtube', 'threads', 'bluesky',
+    'snapchat', 'linkedin', 'whatsapp', 'telegram', 'discord', 'linktree',
+    'spotify', 'soundcloud', 'mixcloud', 'twitch', 'tumblr', 'pinterest', 'reddit'
 ]);
 
 // start-long-past: a CREATE-shaped write whose start is further back than
@@ -1948,6 +1960,7 @@ class SharedCore {
             const paddedTitle = ` ${folded} `;
             const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
             if (legalese) return `title is ticketing fine-print ("${legalese}")`;
+            if (TITLE_SOCIAL_PLATFORM_NAMES.includes(folded)) return `title is a social-network name ("${folded}")`;
         }
         return null;
     }
@@ -3342,6 +3355,57 @@ class SharedCore {
     // A genuine conflict: both sides non-empty primitives whose serialized forms
     // differ. Same-instant Date vs ISO string is NOT a conflict, and neither are
     // whitespace-only cover formatting twins.
+    // Is this venue value a word of the event's own title and no curated bar
+    // of its city? "Belly" in "The Belly Party" is the party; "SF Eagle" in
+    // "SF Eagle Beer Bust" is the Eagle.
+    barIsPartyName(value, recordA, recordB, context) {
+        const fold = (text) => String(text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+        const bar = fold(value);
+        if (!bar || bar.length < 3) return false;
+        const titles = [recordA && recordA.title, recordB && recordB.title].map(fold).filter(Boolean);
+        if (!titles.some(title => ` ${title} `.includes(` ${bar} `))) return false;
+        const cityKey = (context && context.cityKey) || (recordA && recordA.city) || (recordB && recordB.city) || '';
+        const cityBars = this.getCuratedCityBars(cityKey);
+        return !(cityBars && this.findCuratedBarByName(cityBars, value));
+    }
+
+    // The pixel width an image URL states about itself — Squarespace's
+    // ?format=300w, Wix's /w_300, a ?w=300 or &width=300 query, a 300x300
+    // segment — or null when the URL says nothing.
+    static imageUrlWidthHint(value) {
+        const text = String(value || '');
+        if (!/^https?:\/\//i.test(text)) return null;
+        const patterns = [
+            /[?&]format=(\d{2,4})w\b/i,
+            /[?&](?:w|width)=(\d{2,4})\b/i,
+            /\/w_(\d{2,4})(?:[,/]|$)/i,
+            /[/_-](\d{2,4})x\d{2,4}(?:[./_-]|$)/i
+        ];
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match) return Number(match[1]);
+        }
+        return null;
+    }
+
+    // The listing-authority rung keeps a configured listing's OWN artwork
+    // against a ticket page's. A detail page of the SAME site is that source
+    // speaking at length: when the listing carried a card thumbnail (≤ 400 px
+    // by its own URL) and its own detail page a larger picture, the page
+    // re-illustrates the card (Mass Bears, run 20261011-154844: The Belly
+    // Party's card showed the contest hero at ?format=300w, the event page
+    // its flyer at 1500w — owner: "Is there a better image? This is low
+    // quality"). Another host keeps the rung as it was.
+    ownSiteDetailPageReIllustrates(listingRecord, crawlRecord, listingValue, crawlValue) {
+        const hostOf = (record) => this.getHostFromUrl((record && record._sourcePageUrl) || '').toLowerCase().replace(/^www\./, '');
+        const listingHost = hostOf(listingRecord);
+        if (!listingHost || listingHost !== hostOf(crawlRecord)) return false;
+        const listingWidth = SharedCore.imageUrlWidthHint(listingValue);
+        if (listingWidth === null || listingWidth > 400) return false;
+        const crawlWidth = SharedCore.imageUrlWidthHint(crawlValue);
+        return crawlWidth === null || crawlWidth > listingWidth;
+    }
+
     isGenuineFieldConflict(fieldName, valueA, valueB) {
         if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return false;
         const isPrimitive = (v) => this.isDateLike(v) || typeof v !== 'object';
@@ -4584,6 +4648,17 @@ class SharedCore {
             const legaleseReason = SharedCore.junkTitleReason(title);
             if (legaleseReason && legaleseReason.startsWith('title is ticketing fine-print')) {
                 flags.push({ code: 'junk-title', detail: legaleseReason });
+            }
+        }
+
+        // 9f. SOCIAL-NETWORK titles ("Facebook", run 20261011-154844,
+        //     woofsatlanta.com/calendar/: the page's follow link read as an
+        //     event, dated to the next Sunday) — the same enforced family,
+        //     the same whole-title table lookup (TITLE_SOCIAL_PLATFORM_NAMES).
+        if (title && !hasJunkTitleFlag()) {
+            const socialReason = SharedCore.junkTitleReason(title);
+            if (socialReason && socialReason.startsWith('title is a social-network name')) {
+                flags.push({ code: 'junk-title', detail: socialReason });
             }
         }
 
@@ -6471,11 +6546,52 @@ class SharedCore {
             }
         }
 
+        if (fieldName === 'title' && context && context.records && context.sideLabels
+            && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped'
+            && context.records.a && context.records.b) {
+            // A record read from its OWN event page, whose title is the
+            // page's stated one (JSON-LD / the site's listing, not the
+            // model's), names itself. A saved record that links no page of
+            // its own — a bare root, a listing, nothing — got its title from
+            // a card or an earlier merge and yields: a rename, which the
+            // drift guard holds for the deck. SF Eagle, run 20261011-154844:
+            // the saved "BLUF SF HARD" of Oct 24 (an earlier chimera — Big
+            // Boy's slot under BLUF's name, website = the site root) was
+            // matched by the real "Bad Boy" read from /events/big-boy/, and
+            // the AI kept the saved name as "more descriptive".
+            const scraped = context.records.b;
+            if (scraped._titleFromListing === true && this.scrapedRecordIsOwnPage(scraped)
+                && this.getOwnEventPageLinks(context.records.a).length === 0
+                && !this.haveContradictingIdentityEvidence(context.records.a, scraped)) {
+                const page = this.getOwnEventPageLinks(scraped)[0];
+                if (page && this.eventSlugNamesTitle(page.slug, valueA) && !this.eventSlugNamesTitle(page.slug, valueB)) {
+                    // The page's own slug spells the SAVED title — the page
+                    // is that event under another name; leave it to the ladder.
+                } else if (page) {
+                    return { winner: 'b', reason: `the event's own page (${page.slug}) states this title; the saved record links no page of its own` };
+                }
+            }
+        }
+
         if (fieldName === 'bar') {
             const placeholderA = SharedCore.isPlaceholderVenueText(valueA);
             const placeholderB = SharedCore.isPlaceholderVenueText(valueB);
             if (placeholderA && !placeholderB && String(valueB || '').trim()) return { winner: 'b', reason: 'a named venue beats a placeholder ("' + String(valueA).trim() + '")' };
             if (placeholderB && !placeholderA && String(valueA || '').trim()) return { winner: 'a', reason: 'a named venue beats a placeholder ("' + String(valueB).trim() + '")' };
+            // A party's own name in the venue slot ("Belly" for The Belly
+            // Party) yields to a venue the event's own page states in its
+            // structured data (Mass Bears, run 20261011-154844: the AI called
+            // "Belly" "the physical venue name" over the page's JSON-LD "Red
+            // Room"). A curated bar whose name sits in the title ("SF Eagle
+            // Beer Bust") is a venue, never a party name.
+            if (context && context.records && context.records.a && context.records.b) {
+                const partyNameA = this.barIsPartyName(valueA, context.records.a, context.records.b, context);
+                const partyNameB = this.barIsPartyName(valueB, context.records.a, context.records.b, context);
+                const structuredA = context.records.a._barFromJsonLd === true && this.normalizeBarNameKey(context.records.a.bar) === this.normalizeBarNameKey(valueA);
+                const structuredB = context.records.b._barFromJsonLd === true && this.normalizeBarNameKey(context.records.b.bar) === this.normalizeBarNameKey(valueB);
+                if (partyNameA && !partyNameB && structuredB) return { winner: 'b', reason: `the page's structured data names the venue — "${String(valueA).trim()}" is the party's own name` };
+                if (partyNameB && !partyNameA && structuredA) return { winner: 'a', reason: `the page's structured data names the venue — "${String(valueB).trim()}" is the party's own name` };
+            }
         }
 
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
@@ -15971,7 +16087,24 @@ class SharedCore {
                 const newIsListing = newEvent._pageOrigin === 'listing';
                 const existingIsCrawl = existingEvent._pageOrigin === 'crawl';
                 const newIsCrawl = newEvent._pageOrigin === 'crawl';
-                if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
+                const listingThumbnailReIllustrated = ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl))
+                    && IMAGE_SLOT_FIELDS.has(fieldName)
+                    && this.ownSiteDetailPageReIllustrates(
+                        existingIsListing ? existingEvent : newEvent, existingIsListing ? newEvent : existingEvent,
+                        existingIsListing ? existingValue : newValue, existingIsListing ? newValue : existingValue);
+                if (listingThumbnailReIllustrated) {
+                    const chosenValue = existingIsListing ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🖼️ MERGE: "${mergeEventTitle}" field=${fieldName} — the source's own detail page re-illustrates the listing's card thumbnail with its full picture`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: "own-site detail page: the source's full picture replaces its listing's card thumbnail"
+                    });
+                    return;
+                } else if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
                     const chosenValue = existingIsListing ? existingValue : newValue;
                     mergedEvent[fieldName] = chosenValue;
                     console.log(`🔒 MERGE: "${mergeEventTitle}" field=${fieldName} kept the configured listing's own value — an enrich/crawl page fills blanks, it never restates the listing`);
@@ -24535,8 +24668,26 @@ class SharedCore {
         }
         
         // Check for key-based merging first (exact or wildcard)
-        const keyMatch = this.findEventByKey(existingEventsData, event);
-        
+        let keyMatch = this.findEventByKey(existingEventsData, event);
+
+        // A key the SCRAPER wrote (`key:` in the notes, or the computed key)
+        // names a slot, not an event — the dedup pass already treats a key
+        // collision as a hint and lets a hard-fact contradiction veto it,
+        // and the calendar match now does the same. Eagle LA, run
+        // 20261011-154844: an earlier mis-merge had stored CALF B&B's key on
+        // the saved BLUF LA record, and every run since matched the real
+        // CALF record to BLUF by that key and proposed a rename — while the
+        // two records sat on two sibling event pages. A curated matchKey or a
+        // hand-written wildcard key is the owner's instruction and stays
+        // ungated.
+        if (keyMatch && keyMatch.via === 'key') {
+            const keyContradiction = this.getIdentityContradiction(event, keyMatch.event);
+            if (keyContradiction) {
+                console.log(`🛑 IDENTITY: "${event.title || 'event'}" would match "${keyMatch.event.title || keyMatch.event.name || 'event'}" by the stored key "${keyMatch.matchedKey}", but their ${keyContradiction} contradict — two events, not folded`);
+                keyMatch = null;
+            }
+        }
+
         if (keyMatch) {
             const existingEvent = keyMatch.event;
             const matchedKey = keyMatch.matchedKey || null;
@@ -25029,17 +25180,17 @@ class SharedCore {
             const eventKey = fields.key || null;
             const matchKey = fields.matchKey || null;
             if (targetKey && eventKey === targetKey) {
-                return { event, matchedKey: eventKey, matchType: 'exact' };
+                return { event, matchedKey: eventKey, matchType: 'exact', via: 'key' };
             }
             if (targetKey && matchKey === targetKey) {
-                return { event, matchedKey: matchKey, matchType: 'exact' };
+                return { event, matchedKey: matchKey, matchType: 'exact', via: 'matchKey' };
             }
         }
         
         // Second pass: exact match using computed key
         for (const { event, computedKey } of parsedEvents) {
             if (targetKey && computedKey && computedKey === targetKey) {
-                return { event, matchedKey: computedKey, matchType: 'exact' };
+                return { event, matchedKey: computedKey, matchType: 'exact', via: 'key' };
             }
         }
         
@@ -26075,6 +26226,23 @@ class SharedCore {
         // both carry …/rsvp/2026/9/12/bear-tea). A record that carries a
         // neighbour's page is a chimera, withheld before it gets here.
         const sharedPage = Boolean(this.getSharedEventLinkSlug(eventA, eventB));
+        // …and two records on two DIFFERENT pages of one section of one
+        // site are two events (Eagle LA, run 20261011-154844: CALF B&B at
+        // /events/calf-bb-event/ reached the saved BLUF LA at
+        // /events/bluf/?occurrence=… through a stored key an earlier
+        // mis-merge had written, same night, same bar, and proposed a
+        // rename). Sibling pages — same host, same path root, another slug
+        // (isSiblingEventPage) — are as hard a fact as a shared one.
+        // …unless the two pages name ONE party: a venue site that mints a
+        // page per occurrence (Eagle LA's CUBSCOUT at /events/cub-scout-3/
+        // and /events/cubscout-51/) puts one event on two sibling slugs,
+        // and either slug spells the other record's title.
+        if (!sharedPage) {
+            const siblings = this.getSiblingEventPages(eventA, eventB, options);
+            if (siblings && !this.siblingPagesNameOneEvent(eventA, eventB, siblings)) {
+                return `event pages (${siblings.a} vs ${siblings.b})`;
+            }
+        }
         // Free-text bar names are never a hard fact here: a flyer word in
         // the venue slot ("NERD SWEAT" for Dungeons & Doms at the Dallas
         // Eagle, "Looking" for Looking at Massive — run 20260925-110542
@@ -26103,6 +26271,65 @@ class SharedCore {
 
     haveContradictingIdentityEvidence(eventA, eventB, options = {}) {
         return this.getIdentityContradiction(eventA, eventB, options) !== null;
+    }
+
+    // The event pages a record carries as ITS OWN: `url` and `website` (one
+    // field; the notes copies too, for a calendar record), each parsed by
+    // eventPageParts (host, path root, slug — a bare root or a one-segment
+    // path is no page). Not pages: a statically stamped website (parser
+    // branding), a listing named in the site's own words (/events/calendar,
+    // /whats-on/upcoming-events — LISTING_LINK_VOCABULARY), a date-shaped
+    // slug (a month view), the batch's hub pages (3+ records on one path),
+    // and anything an AGGREGATOR record links. ticketUrl is deliberately
+    // left out: a pass page names a festival, not a night.
+    getOwnEventPageLinks(event, options = {}) {
+        if (!event || typeof event !== 'object' || this.isAggregatorRecord(event)) return [];
+        const fields = typeof event.notes === 'string' && event.notes ? this.parseNotesIntoFields(event.notes) : {};
+        const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+        const websiteIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'website');
+        const excludedHostPaths = options.excludedUrlIdentityHostPaths instanceof Set ? options.excludedUrlIdentityHostPaths : null;
+        const isListingSlug = (slug) => LISTING_LINK_VOCABULARY.some(term => slug === term || slug.endsWith(`-${term}`))
+            || /^\d{4}(?:-\d{1,2})?$/.test(slug) || /^\d{1,2}$/.test(slug);
+        const pages = [];
+        for (const candidate of [event.url, fields.url, websiteIsBranding ? '' : event.website, websiteIsBranding ? '' : fields.website]) {
+            const parts = SharedCore.eventPageParts(String(candidate || '').trim());
+            if (!parts || isListingSlug(parts.slug)) continue;
+            const hostPath = `${parts.host}/${parts.root}/${parts.slug}`;
+            if (excludedHostPaths && (excludedHostPaths.has(hostPath) || excludedHostPaths.has(`${hostPath}/`))) continue;
+            if (!pages.some(page => page.host === parts.host && page.root === parts.root && page.slug === parts.slug)) pages.push(parts);
+        }
+        return pages;
+    }
+
+    // Two sibling pages carry one event when the records' titles are
+    // similar, or when either page's slug spells the OTHER record's title
+    // (eventSlugNamesTitle: a title word of four letters or more).
+    siblingPagesNameOneEvent(eventA, eventB, siblings) {
+        const titleA = String((eventA && (eventA.title || eventA.name)) || '').trim();
+        const titleB = String((eventB && (eventB.title || eventB.name)) || '').trim();
+        if (titleA && titleB && this.areTitlesSimilar(titleA, titleB)) return true;
+        const slugOf = (hostPath) => String(hostPath || '').split('/').pop();
+        return this.eventSlugNamesTitle(slugOf(siblings.a), titleB) || this.eventSlugNamesTitle(slugOf(siblings.b), titleA);
+    }
+
+    // The first pair of sibling event pages the two records carry (same
+    // host, same path root, different slug), or null — including when any
+    // pair is the SAME page (then they share it and getIdentityContradiction
+    // has already settled identity the other way).
+    getSiblingEventPages(eventA, eventB, options = {}) {
+        const pagesA = this.getOwnEventPageLinks(eventA, options);
+        if (pagesA.length === 0) return null;
+        const pagesB = this.getOwnEventPageLinks(eventB, options);
+        if (pagesB.length === 0) return null;
+        let sibling = null;
+        for (const a of pagesA) {
+            for (const b of pagesB) {
+                if (a.host !== b.host || a.root !== b.root) continue;
+                if (a.slug === b.slug) return null;
+                if (!sibling) sibling = { a: `${a.host}/${a.root}/${a.slug}`, b: `${b.host}/${b.root}/${b.slug}` };
+            }
+        }
+        return sibling;
     }
 
     // The curated bar a record's place evidence names — its bar name
