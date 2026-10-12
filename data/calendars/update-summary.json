@@ -141,8 +141,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 52194,
-      "eventCount": 43
+      "dataLength": 53444,
+      "eventCount": 44
     },
     "gettysburg": {
       "name": "Gettysburg",
@@ -207,7 +207,7 @@
     "manchester": {
       "name": "Manchester",
       "status": "success",
-      "dataLength": 12106,
+      "dataLength": 12191,
       "eventCount": 9
     },
     "manila": {
