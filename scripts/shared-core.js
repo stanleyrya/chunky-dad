@@ -251,6 +251,25 @@ function isPlatformIdentityHost(host) {
         normalized === platform || normalized.endsWith(`.${platform}`));
 }
 
+// LINK HUBS: a host whose pages are the handle pages of many unrelated
+// parties (linktr.ee/cubhouse beside linktr.ee/megawoof_america). A source
+// configured on one covers only its own handle's path, never the host — the
+// scope a platform organizer page gets in buildFirstPartySiteCoverage. Run
+// 20261012-180543: The Bear Calendar's "MEGAWOOF - CHICAGO" (website
+// linktr.ee/megawoof_america) was read as pointing into Cubhouse's site and
+// "withheld" because Cubhouse lists no such night.
+// Data only — shared-core stays platform-pure.
+const LINK_HUB_HOSTS = [
+    'linktr.ee', 'linktree.com', 'beacons.ai', 'lnk.bio', 'bio.site', 'carrd.co',
+    'allmylinks.com', 'solo.to', 'campsite.bio', 'tap.bio', 'hoo.be', 'linkin.bio'
+];
+
+function isLinkHubHost(host) {
+    const normalized = String(host || '').toLowerCase();
+    if (!normalized) return false;
+    return LINK_HUB_HOSTS.some(hub => normalized === hub || normalized.endsWith(`.${hub}`));
+}
+
 // Social platform → the event field a PROFILE link on that platform belongs
 // in. Every host here is already named in PLATFORM_IDENTITY_HOSTS — this maps
 // existing classification to a destination field, it is not a new host list.
@@ -15751,10 +15770,27 @@ class SharedCore {
             const dropped = (Array.isArray(result.bearDroppedEvents) ? result.bearDroppedEvents : [])
                 .map(entry => entry && typeof entry === 'object' ? entry.event : null)
                 .filter(Boolean);
+            // The pages this read reached: its configured listings and every
+            // page a record (kept or bear-dropped) carries. The read vouches
+            // for these and for nothing beyond them — Atlanta Eagle's
+            // listing reached Nov 7 while The Bear Calendar pointed at
+            // atlantaeagle.com/event/southern-bears-bar-night/ (Nov 14), a
+            // page it never fetched (run 20261012-180543).
+            const pagesRead = new Set();
+            for (const url of Array.isArray(config.urls) ? config.urls : []) {
+                const key = SharedCore.getPointerPageKey(url);
+                if (key) pagesRead.add(key);
+            }
+            for (const record of [...events, ...dropped]) {
+                for (const field of ['url', 'website', 'ticketUrl']) {
+                    const key = SharedCore.getPointerPageKey(record && record[field]);
+                    if (key) pagesRead.add(key);
+                }
+            }
             for (const url of Array.isArray(config.urls) ? config.urls : []) {
                 const parts = this.getUrlRuleParts(url);
                 if (!parts || !parts.host) continue;
-                const platform = isPlatformIdentityHost(parts.host) || this.isKnownTicketingPlatformHost(parts.host);
+                const platform = isPlatformIdentityHost(parts.host) || this.isKnownTicketingPlatformHost(parts.host) || isLinkHubHost(parts.host);
                 // A platform root names the platform, not a site of ours.
                 if (platform && parts.segments.length === 0) continue;
                 const domain = this.getRegistrableDomainFromUrl(url);
@@ -15764,7 +15800,8 @@ class SharedCore {
                     source: String(config.name || result.name || ''),
                     segments: platform ? parts.segments.map(segment => segment.toLowerCase()) : [],
                     events,
-                    dropped
+                    dropped,
+                    pagesRead
                 });
             }
         }
@@ -15788,9 +15825,33 @@ class SharedCore {
             const segments = parts ? parts.segments.map(segment => segment.toLowerCase()) : [];
             const entry = entries.find(candidate => candidate.segments.length === 0
                 || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
-            if (entry) return { link, site: domain, ...entry };
+            if (entry) {
+                const pageKey = SharedCore.getPointerPageKey(link);
+                return {
+                    link,
+                    site: domain,
+                    ...entry,
+                    // A link deeper than the covered root names one page of
+                    // the site; `pageRead` says whether this run's read of
+                    // the site reached that page.
+                    namesPage: segments.length > entry.segments.length,
+                    pageRead: Boolean(pageKey && entry.pagesRead instanceof Set && entry.pagesRead.has(pageKey))
+                };
+            }
         }
         return null;
+    }
+
+    // One key per page: scheme dropped, host lowercased without "www.", the
+    // path without its trailing slash, the query kept (some sites address an
+    // event by it), the fragment dropped.
+    static getPointerPageKey(url) {
+        const raw = typeof url === 'string' ? url.trim() : '';
+        const match = raw.match(/^https?:\/\/(?:www\.)?([^/?#]+)([^?#]*)(\?[^#]*)?/i);
+        if (!match) return '';
+        const host = match[1].toLowerCase();
+        const path = (match[2] || '').replace(/\/+$/, '').toLowerCase();
+        return `${host}${path}${match[3] || ''}`;
     }
 
     // The picture file behind an image URL: host + path, query dropped,
@@ -15872,7 +15933,7 @@ class SharedCore {
     // the parser results it came from. Returns counts for the log.
     reconcileAggregatorPointers(events, results = {}) {
         const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
-        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0 };
+        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 };
         if (list.length === 0) return summary;
         const coverage = this.buildFirstPartySiteCoverage(results && results.parserResults);
         const firstPartyImages = this.indexFirstPartyImages(list);
@@ -15889,6 +15950,15 @@ class SharedCore {
             if (backing) {
                 console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists "${backing.title || 'an event'}" that night but the bear check dropped it; the copy stands as found`);
                 summary.backedByDropped++;
+                continue;
+            }
+            // The link names a page of the site that this run's read never
+            // reached (a listing's horizon ends before that night, a page
+            // only the aggregator links): the read cannot say the night is
+            // unlisted. The copy stands as found.
+            if (target.namesPage && !target.pageRead) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.link}, a page ${target.source} did not read this run — the copy stands as found`);
+                summary.pageUnread++;
                 continue;
             }
             // The site DOES list something that night and the fold still

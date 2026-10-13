@@ -28243,7 +28243,7 @@ test('aggregator pointers: a copy the pointed-at site does not list is withheld 
   const { result: summary, logs } = withLogs(() => core.reconcileAggregatorPointers(events, {
     parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: site }, { name: 'Gathr', config: GATHR, events: [copy, unread] }]
   }));
-  assert.deepEqual(summary, { withheld: 1, backedByDropped: 0, imagesCleared: 1 });
+  assert.deepEqual(summary, { withheld: 1, backedByDropped: 0, imagesCleared: 1, pageUnread: 0 });
   const stamp = copy._aggregatorUnbackedWithheld;
   assert.ok(stamp, 'the copy is stamped');
   assert.equal(stamp.aggregator, 'Gathr');
@@ -28291,7 +28291,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   // No first-party source read the site this run: the copy stands as found.
   const alone = gathrCopy();
   let summary = withLogs(() => core.reconcileAggregatorPointers([alone], { parserResults: [{ name: 'Gathr', config: GATHR, events: [alone] }] })).result;
-  assert.deepEqual(summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0 });
+  assert.deepEqual(summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
   assert.equal(alone._aggregatorUnbackedWithheld, undefined);
   assert.equal(alone.image, JULY4_FLYER_OG_CROP);
 
@@ -28301,7 +28301,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   const { result: backedSummary, logs } = withLogs(() => core.reconcileAggregatorPointers([chunkSiteEvent(), backed], {
     parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [chunkSiteEvent()], bearDroppedEvents: [{ event: dropped, reason: 'not bear' }] }]
   }));
-  assert.deepEqual(backedSummary, { withheld: 0, backedByDropped: 1, imagesCleared: 0 });
+  assert.deepEqual(backedSummary, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0 });
   assert.equal(backed._aggregatorUnbackedWithheld, undefined);
   assert.ok(logs.some(line => line.includes('lists "Some Wednesday thing" that night but the bear check dropped it; the copy stands as found')), logs.join('\n'));
 
@@ -28316,7 +28316,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   const folsomSite = chunkSiteEvent({ title: 'CHUNK FOLSOM - Bear Playground', bar: 'F8 Nightclub & Bar', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26', image: '' });
   const folsomCopy = gathrCopy({ title: "CHUNK: San Francisco Folsom '26 - Bear Playground", bar: 'F8 (1192 Folsom St)', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com', image: '', imageHorizontal: '' });
   const folsom = withLogs(() => core.reconcileAggregatorPointers([folsomSite, folsomCopy], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [folsomSite] }] }));
-  assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0 });
+  assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
   assert.deepEqual(folsomCopy._aggregatorUnbackedWithheld.sameNight, [{ title: 'CHUNK FOLSOM - Bear Playground', startDate: '2026-09-27T05:00:00.000Z', bar: 'F8 Nightclub & Bar', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26' }]);
   assert.equal(folsomCopy._aggregatorUnbackedWithheld.reason, 'Gathr points at chunk-party.com, where CHUNK lists "CHUNK FOLSOM - Bear Playground" at F8 Nightclub & Bar that same night — the two did not fold as one event');
   assert.ok(folsom.logs.some(line => line.includes('that same night and the fold left this copy standing; one event or two? Withheld to the deck.')), folsom.logs.join('\n'));
@@ -28350,4 +28350,103 @@ test('aggregator pointers: the analyzed record owns its own copy of the parse-ti
   assert.deepEqual(analyzed[0]._imageReusedFrom, copy._imageReusedFrom);
   assert.notEqual(analyzed[0]._imageReusedFrom, copy._imageReusedFrom);
   assert.equal(SharedCore.describeExecutionDisposition(analyzed[0]), "WITHHELD (aggregator's copy — r; decide on the deck)");
+});
+
+const ATLANTA_EAGLE = { name: 'Atlanta Eagle', urls: ['https://atlantaeagle.com/events/'] };
+const BEAR_CALENDAR = { name: 'The Bear Calendar', siteRole: 'aggregator', urls: ['https://thebearcalendar.com/events/'] };
+
+function eagleSiteEvent(overrides = {}) {
+  return {
+    title: 'Halloween – The Big Ball', bar: 'Atlanta Eagle', city: 'atlanta', timezone: 'America/New_York', source: 'ai-web',
+    startDate: '2026-11-01T02:00:00.000Z', endDate: '2026-11-01T07:00:00.000Z',
+    url: 'https://atlantaeagle.com/event/halloween/',
+    _parserConfig: ATLANTA_EAGLE,
+    ...overrides
+  };
+}
+
+function bearCalendarCopy(overrides = {}) {
+  return {
+    title: 'Southern Bears Bar Night', bar: 'Atlanta Eagle', city: 'atlanta', timezone: 'America/New_York', source: 'json-api',
+    startDate: '2026-11-15T02:00:00.000Z', endDate: '2026-11-15T07:00:00.000Z',
+    url: 'https://atlantaeagle.com/event/southern-bears-bar-night/',
+    _parserConfig: BEAR_CALENDAR,
+    ...overrides
+  };
+}
+
+test('aggregator pointers: a read vouches only for the pages it reached — a copy pointing at a page the source never read stands as found; the listing itself and a page a kept or dropped record carries count as read', () => {
+  const core = createCore();
+  // Run 20261012-180543: Atlanta Eagle's listing reached Nov 7; The Bear
+  // Calendar pointed at /event/southern-bears-bar-night/ (Nov 14), a page
+  // the Eagle read never fetched — and he had approved that series.
+  const eagle = [eagleSiteEvent(), eagleSiteEvent({ title: 'First Friday Express Lane', startDate: '2026-11-07T03:00:00.000Z', url: 'https://atlantaeagle.com/event/first-friday-express-lane/' })];
+  const dropped = eagleSiteEvent({ title: 'Trivia Night', startDate: '2026-10-15T01:00:00.000Z', url: 'https://atlantaeagle.com/event/trivia-night/' });
+  const results = { parserResults: [
+    { name: 'Atlanta Eagle', config: ATLANTA_EAGLE, events: eagle, bearDroppedEvents: [{ event: dropped, reason: 'not bear' }] },
+    { name: 'The Bear Calendar', config: BEAR_CALENDAR, events: [] }
+  ] };
+  const coverage = core.buildFirstPartySiteCoverage(results.parserResults);
+  assert.deepEqual([...coverage.get('atlantaeagle.com')[0].pagesRead].sort(), [
+    'atlantaeagle.com/event/first-friday-express-lane', 'atlantaeagle.com/event/halloween', 'atlantaeagle.com/event/trivia-night', 'atlantaeagle.com/events'
+  ]);
+
+  const southern = bearCalendarCopy();
+  const target = core.getAggregatorPointerTarget(southern, coverage);
+  assert.equal(target.source, 'Atlanta Eagle');
+  assert.equal(target.namesPage, true);
+  assert.equal(target.pageRead, false);
+  const unread = withLogs(() => core.reconcileAggregatorPointers([...eagle, southern], results));
+  assert.deepEqual(unread.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 1 });
+  assert.equal(southern._aggregatorUnbackedWithheld, undefined, 'the copy stands as found');
+  assert.ok(unread.logs.some(line => line === '🧭 AGGREGATOR: "Southern Bears Bar Night" (The Bear Calendar, 2026-11-14) points at https://atlantaeagle.com/event/southern-bears-bar-night/, a page Atlanta Eagle did not read this run — the copy stands as found'), unread.logs.join('\n'));
+
+  // The listing itself was read: a copy pointing at it for a night the listing lacks is withheld as before.
+  const listingCopy = bearCalendarCopy({ url: 'https://atlantaeagle.com/events/' });
+  assert.equal(core.getAggregatorPointerTarget(listingCopy, coverage).pageRead, true, 'the configured listing is a page the read reached');
+  const listing = withLogs(() => core.reconcileAggregatorPointers([...eagle, listingCopy], results));
+  assert.deepEqual(listing.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.equal(listingCopy._aggregatorUnbackedWithheld.nearest.title, 'First Friday Express Lane');
+
+  // A page a kept record carries was read: a copy pointing at it under another night is withheld.
+  const redated = bearCalendarCopy({ title: 'Halloween Ball', url: 'https://www.atlantaeagle.com/event/halloween' });
+  assert.equal(core.getAggregatorPointerTarget(redated, coverage).pageRead, true, 'www. and the trailing slash do not make another page');
+  const redatedRun = withLogs(() => core.reconcileAggregatorPointers([...eagle, redated], results));
+  assert.deepEqual(redatedRun.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.equal(redated._aggregatorUnbackedWithheld.nearest.title, 'First Friday Express Lane', 'nearest by time, not the page pointed at');
+
+  // A page the bear check dropped was read too; its own night backs the copy, another night is withheld.
+  const triviaCopy = bearCalendarCopy({ title: 'Trivia', url: 'https://atlantaeagle.com/event/trivia-night/', startDate: '2026-10-15T01:00:00.000Z' });
+  assert.equal(core.getAggregatorPointerTarget(triviaCopy, coverage).pageRead, true);
+  const trivia = withLogs(() => core.reconcileAggregatorPointers([...eagle, triviaCopy], results));
+  assert.deepEqual(trivia.result, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0 });
+
+  // The bare root never names a page: CHUNK's stale Nov 11 copy is still withheld.
+  const ghost = withLogs(() => core.reconcileAggregatorPointers([chunkSiteEvent(), gathrCopy({ image: '', imageHorizontal: '' })], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [chunkSiteEvent()] }] }));
+  assert.deepEqual(ghost.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+
+  assert.equal(SharedCore.getPointerPageKey('HTTPS://www.Example.com/Event/A-Night/?id=7#top'), 'example.com/event/a-night?id=7');
+  assert.equal(SharedCore.getPointerPageKey('https://example.com'), 'example.com');
+  assert.equal(SharedCore.getPointerPageKey('not a url'), '');
+});
+
+test('aggregator pointers: a link hub is a platform — a source on linktr.ee/<handle> covers its handle, never the host; a hub root covers nothing', () => {
+  const core = createCore();
+  const CUBHOUSE = { name: 'Cubhouse', urls: ['https://linktr.ee/cubhouse'] };
+  const cubhouse = { title: 'Halloween Cubhouse', bar: '254', city: 'chicago', timezone: 'America/Chicago', startDate: '2026-11-01T02:00:00.000Z', url: 'https://linktr.ee/cubhouse', _parserConfig: CUBHOUSE };
+  const coverage = core.buildFirstPartySiteCoverage([
+    { name: 'Cubhouse', config: CUBHOUSE, events: [cubhouse] },
+    { name: 'Hub root', config: { name: 'Hub root', urls: ['https://linktr.ee/'] }, events: [cubhouse] }
+  ]);
+  assert.equal(coverage.get('linktr.ee').length, 1, 'the hub root covers nothing');
+  assert.deepEqual(coverage.get('linktr.ee')[0].segments, ['cubhouse']);
+
+  // Run 20261012-180543: The Bear Calendar's MEGAWOOF Chicago (website
+  // linktr.ee/megawoof_america) read as pointing into Cubhouse's site.
+  const megawoof = { title: 'MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY', bar: 'Jackhammer', city: 'chicago', timezone: 'America/Chicago', startDate: '2026-10-11T02:00:00.000Z', website: 'https://linktr.ee/megawoof_america', _parserConfig: BEAR_CALENDAR };
+  assert.equal(core.getAggregatorPointerTarget(megawoof, coverage), null, 'another party\'s handle page is not Cubhouse\'s site');
+  assert.equal(core.getAggregatorPointerTarget({ ...megawoof, website: 'https://linktr.ee/cubhouse' }, coverage).source, 'Cubhouse');
+  const run = withLogs(() => core.reconcileAggregatorPointers([cubhouse, megawoof], { parserResults: [{ name: 'Cubhouse', config: CUBHOUSE, events: [cubhouse] }] }));
+  assert.deepEqual(run.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.equal(megawoof._aggregatorUnbackedWithheld, undefined);
 });

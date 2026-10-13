@@ -445,8 +445,8 @@ class BearEventScraperOrchestrator {
                 // facts; a picture it borrowed from another night's event
                 // on that source is cleared.
                 const pointerSummary = sharedCore.reconcileAggregatorPointers(deduplicatedEvents, results);
-                if (pointerSummary.withheld > 0 || pointerSummary.imagesCleared > 0 || pointerSummary.backedByDropped > 0) {
-                    console.log(`🧭 Orchestrator: aggregator pointers — ${pointerSummary.withheld} cop${pointerSummary.withheld === 1 ? 'y' : 'ies'} withheld (the site pointed at lists no such night), ${pointerSummary.backedByDropped} backed by a bear-dropped night, ${pointerSummary.imagesCleared} reused picture${pointerSummary.imagesCleared === 1 ? '' : 's'} cleared`);
+                if (pointerSummary.withheld > 0 || pointerSummary.imagesCleared > 0 || pointerSummary.backedByDropped > 0 || pointerSummary.pageUnread > 0) {
+                    console.log(`🧭 Orchestrator: aggregator pointers — ${pointerSummary.withheld} cop${pointerSummary.withheld === 1 ? 'y' : 'ies'} withheld (the site pointed at lists no such night), ${pointerSummary.backedByDropped} backed by a bear-dropped night, ${pointerSummary.imagesCleared} reused picture${pointerSummary.imagesCleared === 1 ? '' : 's'} cleared${pointerSummary.pageUnread > 0 ? `, ${pointerSummary.pageUnread} pointing at a page the source did not read (left as found)` : ''}`);
                 }
 
                 // Manual bear/not-bear overrides stored on calendar records win
