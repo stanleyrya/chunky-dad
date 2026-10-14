@@ -5,246 +5,6 @@
   },
   "events": [
     {
-      "name": "BOATMINCE",
-      "day": "Sunday",
-      "time": "12:15PM-5PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.5022544,
-        "lng": -0.1231736
-      },
-      "startDate": "2026-08-30T12:15:00",
-      "endDate": "2026-08-30T17:00:00",
-      "unprocessedDescription": "description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon\rdon 12\\:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear. On board is a superb sound system, perfect for those summer tunes ☀️☀️ During the four hours of cruising (on the boat!)\nbar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £30.06\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BOAT­MINCE\nfavicon: https://beefmince.com\nkey: boatmince|2026-08-30|westminster pier\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E",
-      "uid": "C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Westminster Pier",
-      "cover": "£30.06",
-      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEARS AND BUOYS AHOY! 👀 We board The Jewel of London 12:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear. On board is a superb sound system, perfect for those summer tunes ☀️☀️ During the four hours of cruising (on the boat!)",
-      "cadence": null,
-      "address": "Victoria Embankment, London SW1A 2JH",
-      "website": "https://beefmince.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
-      "ticketUrl": "https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets",
-      "shortName": "BOAT­MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefmince.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "boatmince-61f25b7e"
-    },
-    {
-      "name": "TWISTED BEAR LONDON - THE RETURN",
-      "day": "Friday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.5284734,
-        "lng": -0.0925783
-      },
-      "startDate": "2026-07-17T22:00:00",
-      "endDate": "2026-07-18T04:00:00",
-      "unprocessedDescription": "description: Super excited to be relaunching in London on July \r17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road, London, EC1V 1JN, London, England\nticketUrl: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11.55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
-      "uid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MA1: The Bunker",
-      "cover": "11.55-22.38 GBP",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175",
-      "tea": "Super excited to be relaunching in London on July 17th!!",
-      "cadence": null,
-      "address": "217-221 City Road, London, EC1V 1JN, London, England",
-      "website": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-      "instagram": "https://www.instagram.com/twistedbearparty",
-      "facebook": "https://www.facebook.com/twistedglobal/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-      "shortName": "TWIST-ED BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/twistedbearparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/twistedglobal/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "twisted-bear-london-the-return-5fafb1d5"
-    },
-    {
-      "name": "BEEFMINCE Brief Encounter",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.4863391,
-        "lng": -0.1217784
-      },
-      "startDate": "2026-09-19T22:00:00",
-      "endDate": "2026-09-20T04:00:00",
-      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUrl: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C0%2C1080%2C1080\ncover: £12\ntimezone: Europe/London\ninstagram: https://www.instagram.com/rvtofficial\ncadence: FREQ=MONTHLY;BYDAY=3SA\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-brief-encounter|2026-09-19|royal vauxhall tavern\nbearSource: keyword\nimageVertical: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=243%2C0%2C594%2C1080\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "04826FFC-6A1D-4636-AC9A-EECF52C24A31",
-      "uid": "04826FFC-6A1D-4636-AC9A-EECF52C24A31",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Royal Vauxhall Tavern",
-      "cover": "£12",
-      "image": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C0%2C1080%2C1080",
-      "imageVertical": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=243%2C0%2C594%2C1080",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*",
-      "cadence": "FREQ=MONTHLY;BYDAY=3SA",
-      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
-      "website": "https://beefmince.com/events",
-      "instagram": "https://www.instagram.com/rvtofficial",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
-      "ticketUrl": "https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets",
-      "shortName": "BEEF­MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefmince.com/events",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/rvtofficial",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "beefmince-brief-encounter-174c5642"
-    },
-    {
-      "name": "BEEFMINCE Welly Takeover x London Bear Pride",
-      "day": "Saturday",
-      "time": "6PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.512334,
-        "lng": -0.133008
-      },
-      "startDate": "2026-09-26T18:00:00",
-      "endDate": "2026-09-27T01:00:00",
-      "unprocessedDescription": "timezone: Europe/London\nbar: Duke of Wellington\naddress: 77 W\rardour Street, London, W1D 6QA\nwebsite: https://beefmince.com/events\nticketUrl: https://www.dukeofwellingtonsoho.co.uk/london/events\nimage: https://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e186408156.jpg?rect=0%2C0%2C1080%2C1080\nimageSource: json-api\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw\ninstagram: https://www.instagram.com/dukeofwellington_soho\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-welly-takeover-x-london-bear-pride|2026-09-26|duke of wellington\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "CFC7B434-180D-48FE-B68C-44C2A2C1685E",
-      "uid": "CFC7B434-180D-48FE-B68C-44C2A2C1685E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Duke of Wellington",
-      "image": "https://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e186408156.jpg?rect=0%2C0%2C1080%2C1080",
-      "favicon": "https://beefmince.com",
-      "cadence": null,
-      "address": "77 Wardour Street, London, W1D 6QA",
-      "website": "https://beefmince.com/events",
-      "instagram": "https://www.instagram.com/dukeofwellington_soho",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
-      "ticketUrl": "https://www.dukeofwellingtonsoho.co.uk/london/events",
-      "shortName": "BEEF­MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefmince.com/events",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/dukeofwellington_soho",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.dukeofwellingtonsoho.co.uk/london/events",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "beefmince-welly-takeover-x-london-bear-pride-4749ebf3"
-    },
-    {
       "name": "BEEFMINCE x RVT",
       "day": "Saturday",
       "time": "10PM-4AM",
@@ -369,6 +129,346 @@
       "slug": "beefmince-x-rvt-1d5ae452"
     },
     {
+      "name": "BEEFMINCE: BOATMINCE",
+      "day": "Sunday",
+      "time": "12:15PM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.5022544,
+        "lng": -0.1231736
+      },
+      "startDate": "2027-08-29T12:15:00",
+      "endDate": "2027-08-29T17:00:00",
+      "unprocessedDescription": "description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon\rdon 12\\:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.\nbar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461\ncover: £28\ntimezone: Europe/London\nimageVertical: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=173%2C0%2C422%2C768\nwebsite: https://beefmince.com\nshortName: BOAT­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-boatmince|2027-08-29|westminster pier\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "FDDFAB30-CB6A-41C7-A6D6-E6CCCED81AE0",
+      "uid": "FDDFAB30-CB6A-41C7-A6D6-E6CCCED81AE0",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Westminster Pier",
+      "cover": "£28",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461",
+      "imageVertical": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=173%2C0%2C422%2C768",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEARS AND BUOYS AHOY! 👀 We board The Jewel of London 12:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.",
+      "cadence": null,
+      "address": "Victoria Embankment, London SW1A 2JH",
+      "website": "https://beefmince.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "ticketUrl": "https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets",
+      "shortName": "BOAT­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefmince-boatmince-0cb7b5c0"
+    },
+    {
+      "name": "Bear Bash",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.4863306,
+        "lng": -0.1193328
+      },
+      "startDate": "2026-12-11T21:00:00",
+      "endDate": "2026-12-12T04:00:00",
+      "unprocessedDescription": "description: Merry Hairy Beary Christmas!\ntimezone: Europe/Lon\rdon\nbar: Eagle London\naddress: 349 Kennington Ln, London SE11 5QY, UK\nwebsite: https://www.eaglelondon.com/event-details/bear-bash-19\ncover: 6.15 GBP\nimage: https://static.wixstatic.com/media/54aaee_f8b7a42c658a4d2583ecbd5e38938755~mv2.png\nimageSource: json-api\nimageHorizontal: https://static.wixstatic.com/media/54aaee_f8b7a42c658a4d2583ecbd5e38938755~mv2.png\nbarSource: curated\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk\ninstagram: https://www.instagram.com/eagleldn\nkey: bear-bash|2026-12-11|eagle london\nbearSource: keyword\nshortName: BEAR BASH",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "126B0F69-F324-4C9A-B254-3E35F529E75A",
+      "uid": "126B0F69-F324-4C9A-B254-3E35F529E75A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle London",
+      "cover": "6.15 GBP",
+      "image": "https://static.wixstatic.com/media/54aaee_f8b7a42c658a4d2583ecbd5e38938755~mv2.png",
+      "imageHorizontal": "https://static.wixstatic.com/media/54aaee_f8b7a42c658a4d2583ecbd5e38938755~mv2.png",
+      "tea": "Merry Hairy Beary Christmas!",
+      "cadence": null,
+      "address": "349 Kennington Ln, London SE11 5QY, UK",
+      "website": "https://www.eaglelondon.com/event-details/bear-bash-19",
+      "instagram": "https://www.instagram.com/eagleldn",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
+      "shortName": "BEAR BASH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eaglelondon.com/event-details/bear-bash-19",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eagleldn",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-bash-5a15a0b9"
+    },
+    {
+      "name": "BEEFMINCE Brief Encounter",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.4863391,
+        "lng": -0.1217784
+      },
+      "startDate": "2026-09-19T22:00:00",
+      "endDate": "2026-09-20T04:00:00",
+      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nwebsite: https://beefmince.com/events\nticketUrl: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C0%2C1080%2C1080\ncover: £12\ntimezone: Europe/London\ninstagram: https://www.instagram.com/rvtofficial\ncadence: FREQ=MONTHLY;BYDAY=3SA\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-brief-encounter|2026-09-19|royal vauxhall tavern\nbearSource: keyword\nimageVertical: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=243%2C0%2C594%2C1080\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "04826FFC-6A1D-4636-AC9A-EECF52C24A31",
+      "uid": "04826FFC-6A1D-4636-AC9A-EECF52C24A31",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Royal Vauxhall Tavern",
+      "cover": "£12",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C0%2C1080%2C1080",
+      "imageVertical": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=243%2C0%2C594%2C1080",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*",
+      "cadence": "FREQ=MONTHLY;BYDAY=3SA",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "website": "https://beefmince.com/events",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
+      "ticketUrl": "https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets",
+      "shortName": "BEEF­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com/events",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rvtofficial",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefmince-brief-encounter-174c5642"
+    },
+    {
+      "name": "BEEFMINCE New Year's Eve - London",
+      "day": "Thursday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.510124,
+        "lng": -0.0903711
+      },
+      "startDate": "2026-12-31T22:00:00",
+      "endDate": "2027-01-01T05:00:00",
+      "unprocessedDescription": "description: BEEFMINCE New Year's Eve - full line up TBA soon!\\\rnbar: The Steel Yard\naddress: 13-16 Allhallows Ln, London EC4R 3UL\nticketUrl: https://dice.fm/event/6a6a1d29da64290001f21c79\nimage: https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg\ncover: From £20\ntimezone: Europe/London\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\naddressSource: page\nwebsite: https://beefmince.com\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL\npinSource: curated\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-new-year-s-eve-london|2026-12-31|the steel yard\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "A7D847F8-D55E-4113-9FB3-309E13673929",
+      "uid": "A7D847F8-D55E-4113-9FB3-309E13673929",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Steel Yard",
+      "cover": "From £20",
+      "image": "https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE New Year's Eve - full line up TBA soon!",
+      "cadence": null,
+      "address": "13-16 Allhallows Ln, London EC4R 3UL",
+      "website": "https://beefmince.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL",
+      "ticketUrl": "https://dice.fm/event/6a6a1d29da64290001f21c79",
+      "shortName": "BEEF­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/event/6a6a1d29da64290001f21c79",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefmince-new-years-eve-london-0d0a5028"
+    },
+    {
+      "name": "BEEFMINCE Welly Takeover x London Bear Pride",
+      "day": "Saturday",
+      "time": "6PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.512334,
+        "lng": -0.133008
+      },
+      "startDate": "2026-09-26T18:00:00",
+      "endDate": "2026-09-27T01:00:00",
+      "unprocessedDescription": "timezone: Europe/London\nbar: Duke of Wellington\naddress: 77 W\rardour Street, London, W1D 6QA\nwebsite: https://beefmince.com/events\nticketUrl: https://www.dukeofwellingtonsoho.co.uk/london/events\nimage: https://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e186408156.jpg?rect=0%2C0%2C1080%2C1080\nimageSource: json-api\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw\ninstagram: https://www.instagram.com/dukeofwellington_soho\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-welly-takeover-x-london-bear-pride|2026-09-26|duke of wellington\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "CFC7B434-180D-48FE-B68C-44C2A2C1685E",
+      "uid": "CFC7B434-180D-48FE-B68C-44C2A2C1685E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Duke of Wellington",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e186408156.jpg?rect=0%2C0%2C1080%2C1080",
+      "favicon": "https://beefmince.com",
+      "cadence": null,
+      "address": "77 Wardour Street, London, W1D 6QA",
+      "website": "https://beefmince.com/events",
+      "instagram": "https://www.instagram.com/dukeofwellington_soho",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
+      "ticketUrl": "https://www.dukeofwellingtonsoho.co.uk/london/events",
+      "shortName": "BEEF­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com/events",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/dukeofwellington_soho",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.dukeofwellingtonsoho.co.uk/london/events",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefmince-welly-takeover-x-london-bear-pride-4749ebf3"
+    },
+    {
+      "name": "BOATMINCE",
+      "day": "Sunday",
+      "time": "12:15PM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.5022544,
+        "lng": -0.1231736
+      },
+      "startDate": "2026-08-30T12:15:00",
+      "endDate": "2026-08-30T17:00:00",
+      "unprocessedDescription": "description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon\rdon 12\\:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear. On board is a superb sound system, perfect for those summer tunes ☀️☀️ During the four hours of cruising (on the boat!)\nbar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £30.06\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BOAT­MINCE\nfavicon: https://beefmince.com\nkey: boatmince|2026-08-30|westminster pier\nbearSource: ai\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E",
+      "uid": "C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Westminster Pier",
+      "cover": "£30.06",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEARS AND BUOYS AHOY! 👀 We board The Jewel of London 12:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear. On board is a superb sound system, perfect for those summer tunes ☀️☀️ During the four hours of cruising (on the boat!)",
+      "cadence": null,
+      "address": "Victoria Embankment, London SW1A 2JH",
+      "website": "https://beefmince.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "ticketUrl": "https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets",
+      "shortName": "BOAT­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "boatmince-61f25b7e"
+    },
+    {
       "name": "BEEFMINCE Trunk Den",
       "day": "Saturday",
       "time": "10PM-4AM",
@@ -430,60 +530,57 @@
       "slug": "beefmince-trunk-den-037f084d"
     },
     {
-      "name": "BEEFMINCE: BOATMINCE",
-      "day": "Sunday",
-      "time": "12:15PM-5PM",
+      "name": "Bear Bash",
+      "day": "Friday",
+      "time": "9PM-4AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 51.5022544,
-        "lng": -0.1231736
+        "lat": 51.4863306,
+        "lng": -0.1193328
       },
-      "startDate": "2027-08-29T12:15:00",
-      "endDate": "2027-08-29T17:00:00",
-      "unprocessedDescription": "description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon\rdon 12\\:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.\nbar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461\ncover: £28\ntimezone: Europe/London\nimageVertical: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=173%2C0%2C422%2C768\nwebsite: https://beefmince.com\nshortName: BOAT­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-boatmince|2027-08-29|westminster pier\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "startDate": "2026-11-13T21:00:00",
+      "endDate": "2026-11-14T04:00:00",
+      "unprocessedDescription": "bar: Eagle London\naddress: 349 Kennington Ln, London SE11 5QY\r, UK\nimage: https://static.wixstatic.com/media/54aaee_a7519483033746278db1a96c8e93e1f8~mv2.png\ncover: 6 GBP\ntimezone: Europe/London\nimageHorizontal: https://static.wixstatic.com/media/54aaee_a7519483033746278db1a96c8e93e1f8~mv2.png\npinSource: page\naddressSource: page\nwebsite: https://www.eaglelondon.com/event-details/bear-bash-18\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk\ninstagram: https://www.instagram.com/eagleldn\nkey: bear-bash|2026-11-13|eagle london\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nshortName: BEAR BASH",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
       "wasUTC": true,
-      "sourceUid": "FDDFAB30-CB6A-41C7-A6D6-E6CCCED81AE0",
-      "uid": "FDDFAB30-CB6A-41C7-A6D6-E6CCCED81AE0",
+      "sourceUid": "0204A4CA-5964-4596-AC9E-48D30E183AEC",
+      "uid": "0204A4CA-5964-4596-AC9E-48D30E183AEC",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Westminster Pier",
-      "cover": "£28",
-      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461",
-      "imageVertical": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=173%2C0%2C422%2C768",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEARS AND BUOYS AHOY! 👀 We board The Jewel of London 12:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.",
+      "bar": "Eagle London",
+      "cover": "6 GBP",
+      "image": "https://static.wixstatic.com/media/54aaee_a7519483033746278db1a96c8e93e1f8~mv2.png",
+      "imageHorizontal": "https://static.wixstatic.com/media/54aaee_a7519483033746278db1a96c8e93e1f8~mv2.png",
       "cadence": null,
-      "address": "Victoria Embankment, London SW1A 2JH",
-      "website": "https://beefmince.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
-      "ticketUrl": "https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets",
-      "shortName": "BOAT­MINCE",
+      "address": "349 Kennington Ln, London SE11 5QY, UK",
+      "website": "https://www.eaglelondon.com/event-details/bear-bash-18",
+      "instagram": "https://www.instagram.com/eagleldn",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
+      "shortName": "BEAR BASH",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://beefmince.com",
+          "url": "https://www.eaglelondon.com/event-details/bear-bash-18",
           "label": "🌐 Website"
         },
         {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
-          "label": "🗺️ Google Maps"
+          "type": "instagram",
+          "url": "https://www.instagram.com/eagleldn",
+          "label": "📷 Instagram"
         },
         {
-          "type": "tickets",
-          "url": "https://dice.fm/event/eonqnd-boatmince-29th-aug-westminster-pier-london-tickets",
-          "label": "🎫 Tickets"
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
+          "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "beefmince-boatmince-0cb7b5c0"
+      "slug": "bear-bash-79254960"
     },
     {
       "name": "BEEFMINCE New Year's Eve",
@@ -601,40 +698,105 @@
       "slug": "turkeymince-0d195b0b"
     },
     {
-      "name": "BEEFMINCE New Year's Eve - London",
-      "day": "Thursday",
-      "time": "10PM-5AM",
+      "name": "TWISTED BEAR LONDON - THE RETURN",
+      "day": "Friday",
+      "time": "10PM-4AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 51.510124,
-        "lng": -0.0903711
+        "lat": 51.5284734,
+        "lng": -0.0925783
       },
-      "startDate": "2026-12-31T22:00:00",
-      "endDate": "2027-01-01T05:00:00",
-      "unprocessedDescription": "description: BEEFMINCE New Year's Eve - full line up TBA soon!\\\rnbar: The Steel Yard\naddress: 13-16 Allhallows Ln, London EC4R 3UL\nticketUrl: https://dice.fm/event/6a6a1d29da64290001f21c79\nimage: https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg\ncover: From £20\ntimezone: Europe/London\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\naddressSource: page\nwebsite: https://beefmince.com\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL\npinSource: curated\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-new-year-s-eve-london|2026-12-31|the steel yard\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startDate": "2026-07-17T22:00:00",
+      "endDate": "2026-07-18T04:00:00",
+      "unprocessedDescription": "description: Super excited to be relaunching in London on July \r17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road, London, EC1V 1JN, London, England\nticketUrl: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11.55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
       "wasUTC": true,
-      "sourceUid": "A7D847F8-D55E-4113-9FB3-309E13673929",
-      "uid": "A7D847F8-D55E-4113-9FB3-309E13673929",
+      "sourceUid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
+      "uid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "The Steel Yard",
-      "cover": "From £20",
-      "image": "https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-09-28/181cadfe-6792-4755-a799-9bf1347bf58c.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE New Year's Eve - full line up TBA soon!",
+      "bar": "MA1: The Bunker",
+      "cover": "11.55-22.38 GBP",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175",
+      "tea": "Super excited to be relaunching in London on July 17th!!",
       "cadence": null,
-      "address": "13-16 Allhallows Ln, London EC4R 3UL",
+      "address": "217-221 City Road, London, EC1V 1JN, London, England",
+      "website": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "instagram": "https://www.instagram.com/twistedbearparty",
+      "facebook": "https://www.facebook.com/twistedglobal/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "shortName": "TWIST-ED BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/twistedbearparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/twistedglobal/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "twisted-bear-london-the-return-5fafb1d5"
+    },
+    {
+      "name": "BEEFMINCE: BOATMINCE",
+      "day": "Sunday",
+      "time": "12:15PM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.5022544,
+        "lng": -0.1231736
+      },
+      "startDate": "2027-08-29T12:15:00",
+      "endDate": "2027-08-29T17:00:00",
+      "unprocessedDescription": "description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon\rdon 12\\:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.\nbar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/6a9af4bf83ecd90001bda663\nimage: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg\ncover: £28\ntimezone: Europe/London\naddressSource: page\nwebsite: https://beefmince.com\ngmaps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH\npinSource: curated\nshortName: BOAT­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-boatmince|2027-08-29|westminster pier\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "E881029C-E4A9-4B33-A415-AB6E24E25127",
+      "uid": "E881029C-E4A9-4B33-A415-AB6E24E25127",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Westminster Pier",
+      "cover": "£28",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEARS AND BUOYS AHOY! 👀 We board The Jewel of London 12:15pm sharp from the Westminster Pier! Please don’t be late as the captain will not wait for late gays. We will disembark at 5pm. You know we love it when you make an effort to dress up so we STRONGLY encourage a nautical theme. Throw me a wave, sailor! 🏳️‍🌈 The Jewel of London is bespoke party boat with two large decks, open sunroof and viewing gallery. It has two outside decks one to the front and one to the rear.",
+      "cadence": null,
+      "address": "Victoria Embankment, London SW1A 2JH",
       "website": "https://beefmince.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL",
-      "ticketUrl": "https://dice.fm/event/6a6a1d29da64290001f21c79",
-      "shortName": "BEEF­MINCE",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
+      "ticketUrl": "https://dice.fm/event/6a9af4bf83ecd90001bda663",
+      "shortName": "BOAT­MINCE",
       "bearReview": null,
       "links": [
         {
@@ -644,16 +806,16 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Steel%20Yard%2C%2013-16%20Allhallows%20Ln%2C%20London%20EC4R%203UL",
+          "url": "https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%20SW1A%202JH",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://dice.fm/event/6a6a1d29da64290001f21c79",
+          "url": "https://dice.fm/event/6a9af4bf83ecd90001bda663",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "beefmince-new-years-eve-london-0d0a5028"
+      "slug": "beefmince-boatmince-7de59dd8"
     }
   ]
 }

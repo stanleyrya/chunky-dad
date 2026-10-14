@@ -3,5 +3,48 @@
     "calendarTimezone": "Europe/Paris",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BEARS PANAME — BONBON",
+      "day": "Saturday",
+      "time": "11PM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 48.862621,
+        "lng": 2.3520602
+      },
+      "startDate": "2026-10-24T23:00:00",
+      "endDate": "2026-10-25T06:00:00",
+      "unprocessedDescription": "description: FURRWOODS DJ JOSHET\nbar: AU WORKSHOP\naddress: 17\r3 Rue Saint-Martin, 75003 Paris\ntimezone: Europe/Paris\nimage: https://cdn.whereto.party/media/events/583791ce-4316-453b-8ddc-ac82b7db161f.jpeg\nimageSource: page\nimageVertical: https://cdn.whereto.party/media/events/583791ce-4316-453b-8ddc-ac82b7db161f.jpeg\nbarSource: page-adjacent\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=AU%20WORKSHOP%2C%20173%20Rue%20Saint-Martin%2C%2075003%20Paris\npinSource: geocoded-exact\nkey: bears-paname-—-bonbon|2026-10-24|au workshop\nbearSource: keyword\nshortName: BEARS PANAME",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Paris",
+      "wasUTC": true,
+      "sourceUid": "3730A615-721D-44A5-A458-E3D131C66D86",
+      "uid": "3730A615-721D-44A5-A458-E3D131C66D86",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "AU WORKSHOP",
+      "image": "https://cdn.whereto.party/media/events/583791ce-4316-453b-8ddc-ac82b7db161f.jpeg",
+      "imageVertical": "https://cdn.whereto.party/media/events/583791ce-4316-453b-8ddc-ac82b7db161f.jpeg",
+      "tea": "FURRWOODS DJ JOSHET",
+      "cadence": null,
+      "address": "173 Rue Saint-Martin, 75003 Paris",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=AU%20WORKSHOP%2C%20173%20Rue%20Saint-Martin%2C%2075003%20Paris",
+      "shortName": "BEARS PANAME",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=AU%20WORKSHOP%2C%20173%20Rue%20Saint-Martin%2C%2075003%20Paris",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-paname-bonbon-5638fa42"
+    }
+  ]
 }
