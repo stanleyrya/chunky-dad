@@ -1177,6 +1177,9 @@ class AiWebParser {
             // that came off this page (SharedCore.stampPageSiteRoleOnEvents).
             this.pageSiteRoleCallerHtmlData = htmlData;
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+            // Every page parsed reports the address it declares as its own
+            // (see noteSelfDeclaredAlias) before anything compares links.
+            this.noteSelfDeclaredAliases(htmlData && typeof htmlData.html === 'string' ? htmlData.html : '', sourceUrl);
 
             // JSON-API pathway: some parser targets are raw JSON endpoints
             // (api.redeyetickets.com), not HTML pages. Detect that ONCE here —
@@ -1466,7 +1469,11 @@ class AiWebParser {
                 && structuredEvents.length > 0
                 // A multi-event page with a single structured node likely marks up only its
                 // featured event — fall through to segment extraction for full coverage.
-                && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2);
+                // The page's OWN flight data is its whole listing however short
+                // (whereto.party's one-event city hubs: Paris, Toulouse — the
+                // fall-through read the hub's header as an event and the one
+                // card a second time, run 20261012-214806).
+                && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2 || structuredSource === 'page-data');
             if (useStructuredEvents) {
                 // "skipping OCR" was true when this route read no images at
                 // all; the events' own artwork is OCR'd below, so the line
@@ -3076,6 +3083,13 @@ class AiWebParser {
         // a schedule heading is not an event.
         if (this.isDayHeaderEchoTitle(event.title)) {
             console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
+            return null;
+        }
+        // Collection-name backstop (same class as the pass-level gate in
+        // rejectPageTitleEchoPassFields): a title that is the page's own
+        // JSON-LD CollectionPage/ItemList name is the listing, not a night.
+        if (this.titleIsPageCollectionName(event.title, htmlData)) {
+            console.log(`🤖 AI Web: Skipped collection-page name "${event.title}" — the page's own name (JSON-LD CollectionPage/ItemList), not an event`);
             return null;
         }
         // Site-chrome guard (run 20260803-141425: thelumberyardbar.com's
@@ -8811,6 +8825,28 @@ class AiWebParser {
      * Strict on rel: only a lone `canonical` token counts, so rel lists like
      * `rel="alternate canonical"` are left alone rather than guessed at.
      */
+    // Tell the core that the document fetched at sourceUrl declares
+    // declaredUrl as its own address (rel=canonical / og:url). The core
+    // decides, failing closed, whether that is one page under two spellings
+    // (SharedCore.noteUrlAlias); nothing is guessed from URL shape here.
+    noteSelfDeclaredAlias(sourceUrl, declaredUrl) {
+        if (!sourceUrl || !declaredUrl) return;
+        if (this.core && typeof this.core.noteUrlAlias === 'function') this.core.noteUrlAlias(sourceUrl, declaredUrl);
+    }
+
+    noteSelfDeclaredAliases(html, sourceUrl) {
+        if (!html || typeof html !== 'string' || !sourceUrl) return;
+        for (const rawDeclared of this.extractSelfDeclaredCanonicalUrls(html)) {
+            let resolved = '';
+            try {
+                resolved = this.stripTrackingParams(this.normalizeUrl(rawDeclared, sourceUrl));
+            } catch (_) {
+                resolved = '';
+            }
+            if (resolved) this.noteSelfDeclaredAlias(sourceUrl, resolved);
+        }
+    }
+
     extractSelfDeclaredCanonicalUrls(html) {
         const declared = [];
         if (!html || typeof html !== 'string') return declared;
@@ -11284,6 +11320,7 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
+            this.noteSelfDeclaredAlias(sourceUrl, resolved);
             const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
             // The declared address carries the fetched address's own
             // identifier (see getUrlIdAliasKey): the same document under its
@@ -13893,7 +13930,16 @@ class AiWebParser {
         const visit = (node, depth, holder) => {
             if (!node || typeof node !== 'object' || depth > 60) return;
             if (Array.isArray(node)) {
-                if (node.length >= 2 && node.every(isPlainObject) && node.every(item => this.jsonApiObjectLooksEventLike(item))) {
+                // A one-row set is still a row set when the row carries the
+                // feed's own identity (id/slug/uid): whereto.party's Paris
+                // and Toulouse hubs list one event each, fell past a
+                // two-row gate to the text splitter, and came back as a
+                // second copy of "BEARS PANAME — BONBON" under a venue the
+                // model rewrote and as "Where to party in Toulouse" (the
+                // hub's own header read as an event) — run 20261012-214806.
+                const rowSet = node.length >= 1 && node.every(isPlainObject) && node.every(item => this.jsonApiObjectLooksEventLike(item))
+                    && (node.length >= 2 || Boolean(node[0].id || node[0].slug || node[0].uid));
+                if (rowSet) {
                     for (const item of node) {
                         const key = String(item.id || item.slug || item.uid || `${item.name || item.title}|${item.start_date || item.startDate || item.start || ''}`);
                         if (seen.has(key)) continue;
@@ -15138,7 +15184,9 @@ class AiWebParser {
             let currency = '';
             let statedFree = false;
             let statedText = '';
-            const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
+            // `pricing` is a price key too (whereto.party rows: "A$29-59",
+            // "From 30 AUD", "Free before midnight / 5 AUD online").
+            const priceKeyPattern = /(^|_)(price|prices|pricing|cost|costs)(_|$)/;
             // `_fmt` / `_formatted` twins are the same price rendered for display
             // (TicketLeap min_price "10.00" beside min_price_fmt "$11.55" with
             // fees) — a second amount that reads as a range.
@@ -15174,6 +15222,16 @@ class AiWebParser {
                     // "$20 / $25 door") yields every amount it prints.
                     if (typeof value === 'string' && !/^\s*-?\d+(?:\.\d+)?\s*$/.test(value)) {
                         const decoded = this.decodeBasicEntities(value).replace(/&#0?36;/g, '$');
+                        // The string may name its own currency ("A$29-59",
+                        // "29-59 AUD") when the row carries no currency key.
+                        if (!currency) {
+                            const code = decoded.match(/(?:^|[\s(])([A-Z]{3})(?=$|[\s)/,.])/);
+                            const prefixed = decoded.match(/(?:^|\s|\/)(A\$|AU\$|C\$|CA\$|NZ\$|US\$|HK\$|S\$)/);
+                            const symbol = decoded.match(/[€£¥]/);
+                            if (code && /^(AUD|USD|EUR|GBP|CAD|NZD|MXN|JPY|CHF|SEK|NOK|DKK|PLN|CZK|HUF|BRL|ARS|THB|SGD|HKD|TWD|KRW|PHP|IDR|INR|ZAR|ILS|TRY|COP|CLP|PEN|MYR|VND)$/.test(code[1])) currency = code[1];
+                            else if (prefixed) currency = ({ 'A$': 'AUD', 'AU$': 'AUD', 'C$': 'CAD', 'CA$': 'CAD', 'NZ$': 'NZD', 'US$': 'USD', 'HK$': 'HKD', 'S$': 'SGD' })[prefixed[1]];
+                            else if (symbol) currency = symbol[0];
+                        }
                         // "Free" / "No cover" is a stated price too (Tribe cost
                         // text) — worth a cover of its own when no amount prints.
                         if (/^\s*(free|no cover|free entry|free admission)\s*[!.]?\s*$/i.test(decoded)) statedFree = true;
@@ -20201,12 +20259,27 @@ class AiWebParser {
     // onto a page-title echo.
     rejectPageTitleEchoPassFields(partial, htmlData) {
         if (!partial || typeof partial !== 'object') return partial;
-        if (!htmlData || htmlData._wholePageFallback !== true) return partial;
+        if (!htmlData) return partial;
         const titleKey = Object.keys(partial).find(key => !this.isInternalAiFieldKey(key)
             && this.normalizePromptFieldName(key) === 'title'
             && typeof partial[key] === 'string' && partial[key].trim());
         if (titleKey === undefined) return partial;
         const title = partial[titleKey].trim();
+        // A page that declares itself a COLLECTION (JSON-LD CollectionPage /
+        // ItemList with a name) never yields an event by that name: the
+        // name is the listing's, whatever date the splitter attached to it.
+        // whereto.party's one-event city hubs ("Where to party in Toulouse
+        // • Toulouse has 1 event coming up. It's at LE CUBE. • Saturday, 31
+        // October") reached the deck as events for Paris, Belgium, Madrid,
+        // Manila, Toulouse… (runs through 20261012-214806). Unconditional:
+        // every page, every pass, time evidence or not.
+        if (this.titleIsPageCollectionName(title, htmlData)) {
+            console.log(`🤖 AI Web: Skipped collection-page name "${title}" — the page's own name (JSON-LD CollectionPage/ItemList), not an event`);
+            const guarded = { ...partial };
+            delete guarded[titleKey];
+            return guarded;
+        }
+        if (htmlData._wholePageFallback !== true) return partial;
         if (!this.titleEchoesPageTitleSegment(title, htmlData)) return partial;
         const timeFieldNames = new Set(['startdate', 'starttime', 'enddate', 'endtime', 'start', 'end']);
         const passHasTimeEvidence = Object.keys(partial).some(key => !this.isInternalAiFieldKey(key)
@@ -20470,6 +20543,45 @@ class AiWebParser {
     // Padded-token containment of a candidate title in any '|'-separated
     // segment of the page's own og:title or <title> tag. Case-insensitive,
     // punctuation-collapsed; empty inputs never match.
+    // The names the page's JSON-LD gives its COLLECTION nodes (CollectionPage,
+    // ItemList, SearchResultsPage, Collection) — cached on htmlData like the
+    // brand names. A WebPage node is deliberately not read: an event page's
+    // WebPage is named after the event.
+    getPageCollectionNames(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData._collectionNames)) return htmlData._collectionNames;
+        const names = [];
+        const html = typeof htmlData.html === 'string' ? htmlData.html.slice(0, HTML_SCAN_MAX_CHARS) : '';
+        const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        const collectionTypes = /^(?:https?:\/\/schema\.org\/)?(?:CollectionPage|ItemList|SearchResultsPage|Collection)$/i;
+        const visit = (node, depth) => {
+            if (!node || typeof node !== 'object' || depth > 12) return;
+            if (Array.isArray(node)) { node.forEach(item => visit(item, depth + 1)); return; }
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            if (types.some(type => typeof type === 'string' && collectionTypes.test(type)) && typeof node.name === 'string' && node.name.trim()) {
+                names.push(node.name.trim());
+            }
+            for (const value of Object.values(node)) {
+                if (value && typeof value === 'object') visit(value, depth + 1);
+            }
+        };
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const text = this.normalizeJsonLdPayload(match[1] || '');
+            if (!text) continue;
+            try { visit(JSON.parse(text), 0); } catch (_) { /* not JSON — nothing declared */ }
+        }
+        if (Object.isExtensible(htmlData)) htmlData._collectionNames = names;
+        return names;
+    }
+
+    titleIsPageCollectionName(title, htmlData) {
+        const normalize = (value) => String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+        const normalizedTitle = normalize(title);
+        if (!normalizedTitle) return false;
+        return this.getPageCollectionNames(htmlData).some(name => normalize(name) === normalizedTitle);
+    }
+
     titleEchoesPageTitleSegment(title, htmlData) {
         const normalize = (value) => String(value || '')
             .toLowerCase()
