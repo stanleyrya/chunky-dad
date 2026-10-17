@@ -410,9 +410,7 @@
       "image": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "sameEventAs": [
-        "the-bear-calendar#beefmince-x-rvt-2026-09-19"
-      ],
+      "sameEventAs": [],
       "evidence": {
         "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
         "jsonPath": "$.data[4]",
@@ -471,9 +469,7 @@
       "image": "https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "sameEventAs": [
-        "the-bear-calendar#beefmince-x-bear-brum-2026-2026-09-26"
-      ],
+      "sameEventAs": [],
       "evidence": {
         "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
         "jsonPath": "$.data[6]",

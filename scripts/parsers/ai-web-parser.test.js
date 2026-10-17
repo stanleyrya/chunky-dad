@@ -22511,3 +22511,90 @@ test('a parsed page reports the address it declares as its own to the core, whic
   parser.core = null;
   parser.noteSelfDeclaredAliases('<link rel="canonical" href="https://x.example/a/b">', 'https://x.example/a/c');
 });
+
+// ── Recheck 2026-10-17 (aggregators) ─────────────────────────────────────────
+test("a feed's image-id template is learned from any of the owner's rendered URLs, not only the ids on today's board (tockify.com/thotyssey)", () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '..', 'fixtures', 'recheck-aggregators-2026-10-17');
+  const shell = fs.readFileSync(path.join(dir, 'tockify-thotyssey-shell-excerpt.html'), 'utf8');
+  const feed = JSON.parse(fs.readFileSync(path.join(dir, 'tockify-ngevent-rows-excerpt.json'), 'utf8'));
+  const parser = createParser();
+  const source = 'https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears';
+  const quiet = console.log; console.log = () => {};
+  let events;
+  try { events = feed.events.map((row) => parser.buildEventFromJsonApiObject(row, source, null)); } finally { console.log = quiet; }
+  const ids = new Map();
+  for (const event of events) for (const record of event._imageIdRecords || []) ids.set(record.id, record);
+  assert.ok(ids.size >= 3, 'the rows publish image ids and no URL');
+  // None of the feed's ids is on the day's board — the exact-id match fails…
+  for (const id of ids.keys()) assert.ok(!shell.includes(id), `${id} is not rendered on the page`);
+  // …yet every rendered URL is the same owner's, and the shape is one.
+  const learned = parser.readImageUrlTemplateFromPage(shell, ids);
+  assert.ok(learned, 'the owner id anchors the template');
+  assert.equal(learned.template, 'https://d3flpus5evl89n.cloudfront.net/{ownerId}/{id}/scaled_{size}.jpg', 'the host most of the owner\'s URLs share, not the one stray header image');
+  assert.ok(learned.sizes.includes(1024) && learned.sizes.includes(256), `sizes read off the page: ${learned.sizes.join(',')}`);
+  // A page of another owner teaches nothing (fail open).
+  assert.equal(parser.readImageUrlTemplateFromPage(shell.replace(/56b4c4fddf82fe40ce873cdc/g, 'ffffffffffffffffffffffff'), ids), null);
+});
+
+test('a record titled after a button label or a photo caption, and after nothing else on the page, is page furniture', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '..', 'fixtures', 'recheck-aggregators-2026-10-17');
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    // eaglemanchester.com home page: "Load More" is a gallery button.
+    const eagle = fs.readFileSync(path.join(dir, 'eaglemanchester-home-load-more-excerpt.html'), 'utf8');
+    const kept = parser.dropPageFurnitureTitledEvents([
+      { title: 'Load More', bar: 'Eagle Manchester', startDate: '2026-11-20T00:00:00.000Z' },
+      { title: 'EAGLE MANCHESTER', bar: 'Eagle Manchester', startDate: '2026-11-20T00:00:00.000Z' }
+    ], eagle, 'https://www.eaglemanchester.com/');
+    assert.deepEqual(kept.map((event) => event.title), ['EAGLE MANCHESTER'], 'the heading stays; the button label goes');
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "Load More" is the label of a button')), logs.join('\n'));
+
+    // bearworldmag.com recaps: three captions became dated "events".
+    const captions = fs.readFileSync(path.join(dir, 'bearworldmag-figcaptions-excerpt.html'), 'utf8');
+    const kept2 = parser.dropPageFurnitureTitledEvents([
+      { title: 'Robert Valin, photo by Catalin Stelian', startDate: '2026-09-17T04:00:00.000Z' },
+      { title: 'PLPN Flag', startDate: '2026-09-02T22:00:00.000Z' },
+      { title: 'Bears enjoying a cold pint in Halifax', startDate: '2026-07-04T00:00:00.000Z' },
+      { title: 'Urban Bear NYC', startDate: '2026-09-17T04:00:00.000Z' }
+    ], captions, 'https://bearworldmag.com/urban-bear-street-fair-2026/');
+    assert.deepEqual(kept2.map((event) => event.title), ['Urban Bear NYC'], 'a party the prose names survives; captions do not');
+    assert.equal(logs.filter((line) => line.includes('is the caption under a photo')).length, 3);
+
+    // A caption that repeats a name the prose carries is not furniture.
+    const named = '<html><body><p>BEEFMINCE x RVT returns Saturday 17 October, 11pm.</p><figure><img src="x.jpg"><figcaption>BEEFMINCE x RVT</figcaption></figure></body></html>';
+    assert.equal(parser.dropPageFurnitureTitledEvents([{ title: 'BEEFMINCE x RVT' }], named, 'https://x.example/').length, 1);
+    // No furniture on the page: nothing happens.
+    assert.equal(parser.dropPageFurnitureTitledEvents([{ title: 'Load More' }], '<html><body><p>Load More</p></body></html>', 'https://x.example/').length, 1);
+    assert.equal(parser.dropPageFurnitureTitledEvents([{ title: 'Anything' }], '', 'https://x.example/').length, 1);
+  } finally { console.log = quiet; }
+});
+
+test("an inline bundle row's grouping code is never read as the address region (gathrparty.com)", () => {
+  const fs = require('fs');
+  const path = require('path');
+  const fixture = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'recheck-aggregators-2026-10-17', 'gathr-bundle-excerpt.js'), 'utf8');
+  const { events, regions } = new Function(`${fixture}\nreturn { events, regions };`)();
+  const parser = createParser();
+  const now = new Date('2026-10-17T12:00:00Z');
+  const rows = [];
+  for (const obj of events) rows.push(...SharedCore.inlineEventObjectToFeedRows(obj, now, {}));
+  for (const row of rows) if (row.group && regions[row.group]) row.group_label = regions[row.group];
+  const quiet = console.log; console.log = () => {};
+  let built;
+  try { built = rows.map((row) => parser.buildEventFromJsonApiObject(row, 'https://gathrparty.com/', null)); } finally { console.log = quiet; }
+  const cannonball = built.find((event) => event.title === 'Cannon Ball Bear Week Pool Party');
+  assert.equal(cannonball.bar, 'Boatslip Resort');
+  assert.equal(cannonball.address, '161 Commercial St.', 'the street half is the address; the code "PT" is not');
+  const reddy = built.find((event) => event.title === 'Reddy Freddy Ptown Bear Week');
+  assert.equal(reddy.bar, 'Purgatory');
+  assert.equal(reddy.address, '9 Carver St');
+  for (const event of built) {
+    assert.ok(!/\bPT\b/.test(String(event.address || '')), `${event.title}: address "${event.address}" carries the grouping code`);
+  }
+});

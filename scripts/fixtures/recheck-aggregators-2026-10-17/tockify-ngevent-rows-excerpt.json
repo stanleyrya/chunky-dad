@@ -1,0 +1,232 @@
+{
+ "_source": "https://tockify.com/api/ngevent?calname=thotyssey&max=100&tags=bears&startms=1794438000001",
+ "_fetchedAt": "2026-10-17T09:23:37.390Z",
+ "_note": "three rows of the bears-tagged ngevent feed, trimmed to the keys the image reader uses",
+ "events": [
+  {
+   "eid": {
+    "uid": "17601",
+    "seq": 0,
+    "tid": 1794430800000,
+    "rid": 0
+   },
+   "when": {
+    "start": {
+     "millis": 1794430800000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "end": {
+     "millis": 1794474000000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "allDay": false
+   },
+   "kind": "repeat",
+   "content": {
+    "summary": {
+     "text": "Tonight at GYM Bar"
+    },
+    "place": "Gym Sportsbar",
+    "address": "167 8th Ave, New York, NY 10011, USA",
+    "location": {
+     "place_id": "ChIJX-P_qr5ZwokR7pssvk2V9b0",
+     "name": "Gym Sportsbar",
+     "latitude": 40.742662,
+     "longitude": -74.00082379999999,
+     "c_street": "167 8th Ave",
+     "c_locality": "New York",
+     "c_region": "NY",
+     "c_country": "US",
+     "c_postcode": "10011"
+    },
+    "imageId": "BWC_60cd8df5e9d13356a85540fe",
+    "imageIdNg": "60cd8df5e9d13356a85540fe",
+    "imageSets": [
+     {
+      "ownerId": "56b4c4fddf82fe40ce873cdc",
+      "ownerType": "user",
+      "id": "60cd8df5e9d13356a85540fe",
+      "name": "thotimage-DESKTOP-41EFVOR-DESKTOP-41EFVOR-3",
+      "altText": "thotimage-DESKTOP-41EFVOR-DESKTOP-41EFVOR-3",
+      "width": 807,
+      "height": 635,
+      "size": 64787,
+      "masterFormat": "jpg",
+      "variantFormat": "jpg",
+      "oldId": "BWC_60cd8df5e9d13356a85540fe",
+      "tags": []
+     }
+    ],
+    "tagset": {
+     "tags": {
+      "default": [
+       "chelsea",
+       "sportsbar",
+       "gymbar",
+       "dive",
+       "bears"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "eid": {
+    "uid": "22092",
+    "seq": 0,
+    "tid": 1794438000000,
+    "rid": 0
+   },
+   "when": {
+    "start": {
+     "millis": 1794438000000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "end": {
+     "millis": 1794474000000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "allDay": false
+   },
+   "kind": "repeat",
+   "content": {
+    "summary": {
+     "text": "Tonight at Ty's"
+    },
+    "place": "Ty's Bar NYC",
+    "address": "114 Christopher St, New York, NY 10014, USA",
+    "location": {
+     "place_id": "ChIJaVvpXJNZwokRT3p02KL_TrY",
+     "name": "Ty's Bar NYC",
+     "latitude": 40.7331349,
+     "longitude": -74.00535219999999,
+     "c_street": "114 Christopher St",
+     "c_locality": "New York",
+     "c_region": "NY",
+     "c_country": "US",
+     "c_postcode": "10014"
+    },
+    "imageId": "BWC_608b256fe9d13368cdf2c06e",
+    "imageIdNg": "608b256fe9d13368cdf2c06e",
+    "imageSets": [
+     {
+      "ownerId": "56b4c4fddf82fe40ce873cdc",
+      "ownerType": "user",
+      "id": "608b256fe9d13368cdf2c06e",
+      "name": "67492245_2807737082574759_5348047488332857344_n",
+      "altText": "67492245_2807737082574759_5348047488332857344_n",
+      "width": 1000,
+      "height": 1000,
+      "size": 91164,
+      "masterFormat": "jpg",
+      "variantFormat": "jpg",
+      "oldId": "BWC_608b256fe9d13368cdf2c06e",
+      "tags": []
+     }
+    ],
+    "tagset": {
+     "tags": {
+      "default": [
+       "westvillage",
+       "tys",
+       "bears",
+       "dive"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "eid": {
+    "uid": "19167",
+    "seq": 0,
+    "tid": 1794452400000,
+    "rid": 0
+   },
+   "when": {
+    "start": {
+     "millis": 1794452400000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "end": {
+     "millis": 1794474000000,
+     "tzid": "America/New_York",
+     "ltz": "EST",
+     "offset": -18000000
+    },
+    "allDay": false
+   },
+   "kind": "repeat",
+   "content": {
+    "summary": {
+     "text": "Jockstrap Wednesday at The Eagle NYC"
+    },
+    "place": "Eagle NYC",
+    "address": "554 W 28th St, New York, NY 10001, USA",
+    "location": {
+     "place_id": "ChIJmaM5RbZZwokRwpJUp-ClLKw",
+     "name": "Eagle NYC",
+     "latitude": 40.7516357,
+     "longitude": -74.004317,
+     "c_street": "554 W 28th St",
+     "c_locality": "New York",
+     "c_region": "NY",
+     "c_country": "US",
+     "c_postcode": "10001"
+    },
+    "imageId": "BWC_61e5b63ef21f4d1bd4adac52",
+    "imageIdNg": "61e5b63ef21f4d1bd4adac52",
+    "imageSets": [
+     {
+      "ownerId": "56b4c4fddf82fe40ce873cdc",
+      "ownerType": "user",
+      "id": "61e5b63ef21f4d1bd4adac52",
+      "name": "264367890_3075814965965941_8765580117988249999_n",
+      "altText": "264367890_3075814965965941_8765580117988249999_n",
+      "width": 900,
+      "height": 900,
+      "size": 69804,
+      "masterFormat": "jpg",
+      "variantFormat": "jpg",
+      "oldId": "BWC_61e5b63ef21f4d1bd4adac52",
+      "tags": []
+     }
+    ],
+    "tagset": {
+     "tags": {
+      "default": [
+       "chelsea",
+       "bdsm",
+       "eaglenyc",
+       "leather",
+       "bears",
+       "fetish",
+       "cruising",
+       "underwearparty",
+       "sexytime"
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "metaData": {
+  "to": 90814,
+  "isEmptyCalendar": false,
+  "from": 88671,
+  "end": 101,
+  "hasNext": true,
+  "start": 0,
+  "hasPrev": true
+ }
+}
