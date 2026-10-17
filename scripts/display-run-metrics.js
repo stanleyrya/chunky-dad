@@ -3171,6 +3171,19 @@ class MetricsDisplay {
       );
       if (lostCard) cards.push(lostCard);
       cards.push(buildSection('Sources', body, escapeHtml(`${digest.headline} • ${digest.lost && digest.lost.days ? `${digest.lost.days} expected events gone${digest.lost.bear ? ` (${digest.lost.bear} bear)` : ''} • ` : ''}${newestLabel}`)));
+      // Yield: bear kept / extracted per site over the last runs, with the
+      // share of kept events carrying each field — the sites that deliver
+      // events but not usable ones sort to the top (lowest field first).
+      if (typeof MetricsSections.buildSourceYieldRows === 'function' && typeof MetricsSections.buildSourceYieldTableHtml === 'function') {
+        const yieldData = MetricsSections.buildSourceYieldRows(sourceHealth.records, { runs: 7 });
+        if (yieldData.rows.length) {
+          cards.push(buildSection('Yield', MetricsSections.buildSourceYieldTableHtml(yieldData, {
+            sortState: MetricsSections.YIELD_DEFAULT_SORT,
+            hostUrl: row => this.buildHostUrl(row.host),
+            faviconUrl: row => this.getHostFaviconUrl(row)
+          }), escapeHtml(`bear kept / extracted (medians over the last ${yieldData.runs.length} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest field first; tap a header to sort`)));
+        }
+      }
       return cards;
     };
 
@@ -4151,6 +4164,52 @@ ${verdictCss}
     .quality-cell {
       vertical-align: middle;
     }
+    .yield-table .fields-cell,
+    .yield-table .lowest-cell {
+      vertical-align: middle;
+    }
+    .field-bars {
+      display: inline-flex;
+      gap: 2px;
+      align-items: flex-end;
+    }
+    .field-bar {
+      position: relative;
+      width: 11px;
+      height: 22px;
+      border-radius: 2px;
+      background: var(--background-light);
+      overflow: hidden;
+      color: var(--color-neutral);
+    }
+    .field-bar.low {
+      color: ${SOURCE_VERDICT_COLORS.sparse};
+    }
+    .field-bar.none {
+      border: 1px dashed var(--border-color);
+      background: transparent;
+    }
+    .field-bar-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: currentColor;
+      opacity: 0.75;
+    }
+    .field-bar-key {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      font-size: 7px;
+      line-height: 1;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    .lowest-low {
+      color: ${SOURCE_VERDICT_COLORS.sparse};
+    }
     .quality-summary {
       margin-bottom: 8px;
     }
@@ -4409,6 +4468,8 @@ ${verdictCss}
       const navTabs = navLinks.filter(link => link.hasAttribute('data-nav-tab'));
       const hostChip = document.querySelector('[data-host-chip]');
       const sourceSortButtons = Array.from(document.querySelectorAll('[data-sort-view="sources"]'));
+      const yieldSortButtons = Array.from(document.querySelectorAll('[data-sort-view="yield"]'));
+      const yieldList = document.querySelector('[data-list="yield"]');
       const runSortButtons = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
       const sourceList = document.querySelector('[data-list="sources"]');
@@ -4738,6 +4799,34 @@ ${verdictCss}
         rows.forEach(row => sourceList.appendChild(row));
       };
 
+      // Yield: lowest field first, then the lowest yield, then the host —
+      // the order buildSourceYieldRows produces; blanks (nothing kept) last.
+      const yieldSortState = { key: 'lowest', direction: 'asc' };
+      const yieldNumber = (value, missing) => (value === '' || value === undefined ? missing : parseNumber(value));
+      const yieldBaseOrder = (aData, bData) => (
+        (yieldNumber(aData.yieldLowest, 101) - yieldNumber(bData.yieldLowest, 101))
+        || (yieldNumber(aData.yieldYield, 101) - yieldNumber(bData.yieldYield, 101))
+        || String(aData.yieldHost || '').localeCompare(String(bData.yieldHost || ''))
+      );
+      const sortYieldRows = () => {
+        if (!yieldList) return;
+        const rows = Array.from(yieldList.querySelectorAll('[data-row="yield"]'));
+        const direction = yieldSortState.direction === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const aData = a.dataset;
+          const bData = b.dataset;
+          let diff = 0;
+          if (yieldSortState.key === 'host') diff = String(aData.yieldHost || '').localeCompare(String(bData.yieldHost || ''));
+          else if (yieldSortState.key === 'extracted') diff = yieldNumber(aData.yieldExtracted, -1) - yieldNumber(bData.yieldExtracted, -1);
+          else if (yieldSortState.key === 'bear') diff = yieldNumber(aData.yieldBear, -1) - yieldNumber(bData.yieldBear, -1);
+          else if (yieldSortState.key === 'yield') diff = yieldNumber(aData.yieldYield, 101) - yieldNumber(bData.yieldYield, 101);
+          else if (yieldSortState.key === 'lowest') diff = yieldNumber(aData.yieldLowest, 101) - yieldNumber(bData.yieldLowest, 101);
+          if (diff === 0) return yieldBaseOrder(aData, bData);
+          return diff * direction;
+        });
+        rows.forEach(row => yieldList.appendChild(row));
+      };
+
       const matchesRunFilters = row => {
         const data = row.dataset;
         if (runFilterState.status) {
@@ -4840,6 +4929,19 @@ ${verdictCss}
           sourceSortState.direction = normalizeDirection(dir);
           updateSortButtons(sourceSortButtons, sourceSortState);
           sortSourceRows();
+        });
+      });
+
+      yieldSortButtons.forEach(button => {
+        button.addEventListener('click', event => {
+          const key = button.getAttribute('data-sort-key');
+          const dir = button.getAttribute('data-sort-dir');
+          if (!key || !dir) return;
+          event.preventDefault();
+          yieldSortState.key = key;
+          yieldSortState.direction = normalizeDirection(dir);
+          updateSortButtons(yieldSortButtons, yieldSortState);
+          sortYieldRows();
         });
       });
 

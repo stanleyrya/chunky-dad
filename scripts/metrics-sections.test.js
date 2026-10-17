@@ -1029,6 +1029,10 @@ function qualityBlock(overrides = {}) {
 }
 
 function buildQualityLedger() {
+  return MetricsSections.assessSourceHealth(buildQualityLedgerLines(), { now: new Date('2026-10-08T12:00:00.000Z') });
+}
+
+function buildQualityLedgerLines() {
   const runs = [0, 1, 2, 3, 4, 5, 6, 7].map(index => [`2026100${index + 1}-050000`, `2026-10-0${index + 1}T09:00:00.000Z`]);
   const lines = [];
   runs.forEach(([run_id, finished_at], index) => {
@@ -1050,7 +1054,7 @@ function buildQualityLedger() {
     line('blip.example', { quality: qualityBlock({ flags: index >= 6 ? { 'junk-title': 20 } : {} }) });
     line('clean.example', { quality: qualityBlock() });
   });
-  return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-08T12:00:00.000Z') });
+  return lines;
 }
 
 test('sparse verdict: a core field under 50% of kept events over the window and on the latest line, kept ≥ 5; after shrunk, before drift; aggregators wear it as a flag; a fixed parser clears it at once', () => {
@@ -1115,4 +1119,82 @@ test('flagged chip: one sanity flag code on ≥ 50% of kept events in ≥ 3 of t
   assert.ok(['junk-title', 'weekday-derived-date'].includes(flagged.code));
   assert.equal(MetricsSections.assessFlaggedCode(one.slice(0, 2)), null);
   assert.equal(MetricsSections.assessFlaggedCode([]), null);
+});
+
+// ---------------------------------------------------------------------------
+// Yield: bear kept / extracted per host over the last runs, field bars,
+// lowest field — one table the phone and the Mac both render.
+// ---------------------------------------------------------------------------
+
+test('buildSourceYieldRows: the last N runs of the ledger per host — medians, yield %, weighted field shares, the lowest field, a gap for a run without a line; sorted lowest field first', () => {
+  const runs = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(index => [`2026100${index}-050000`, `2026-10-0${index}T09:00:00.000Z`]);
+  const lines = [];
+  runs.forEach(([run_id, finished_at], index) => {
+    const line = (host, extra) => lines.push(buildLedgerLine(Object.assign({ run_id, finished_at, host, parsers: [host], extracted: 100, events: 20, bear: 20, upcoming: 10, quality: qualityBlock() }, extra)));
+    line('lodge.example', { extracted: 300, bear: 74, events: 87, quality: qualityBlock({ n: 87, place: 10, image: 0 }) });
+    line('rock.example', { extracted: 104, bear: 13, events: 13, quality: qualityBlock({ n: 13, url: 0 }) });
+    if (index !== 7) line('gappy.example', { extracted: 50, bear: 25, events: 25, quality: qualityBlock({ n: 25 }) });
+    line('old.example', { extracted: 10, bear: 5, events: 5, quality: undefined });      // no quality block: fields not judged
+    line('dead.example', { status: index === 8 ? 'dead' : 'ok', extracted: index === 8 ? 0 : 40, bear: index === 8 ? 0 : 4, events: index === 8 ? 0 : 4, quality: index === 8 ? undefined : qualityBlock({ n: 4 }) });
+  });
+  const data = MetricsSections.buildSourceYieldRows(lines, { runs: 7 });
+  assert.deepEqual(data.runs, runs.slice(2).map(run => run[0]), 'the last seven runs of the ledger');
+  const rowOf = host => data.rows.find(row => row.host === host);
+  const lodge = rowOf('lodge.example');
+  assert.equal(lodge.extracted, 300);
+  assert.equal(lodge.bear, 74);
+  assert.equal(lodge.yield, 25);
+  assert.equal(lodge.kept, 87 * 7);
+  assert.deepEqual(lodge.fields, { time: 100, place: 10, coords: 90, url: 100, image: 0, desc: 60 });
+  assert.deepEqual(lodge.lowest, { key: 'image', pct: 0 });
+  assert.equal(lodge.series.length, 7);
+  assert.equal(rowOf('rock.example').yield, 13);
+  assert.deepEqual(rowOf('rock.example').lowest, { key: 'url', pct: 0 });
+  const gappy = rowOf('gappy.example');
+  assert.equal(gappy.runs, 6);
+  assert.equal(gappy.series[5].status, 'missing');
+  assert.equal(gappy.series[5].bear, null, 'a run without a line is a gap, not a zero');
+  assert.equal(gappy.yield, 50);
+  const old = rowOf('old.example');
+  assert.equal(old.lowest, null);
+  assert.equal(old.kept, 0);
+  assert.deepEqual(old.fields, { time: null, place: null, coords: null, url: null, image: null, desc: null });
+  const dead = rowOf('dead.example');
+  assert.equal(dead.okRuns, 6);
+  assert.equal(dead.latestStatus, 'dead');
+  assert.equal(dead.extracted, 40, 'medians over the ok runs only');
+  assert.deepEqual(data.rows.map(row => row.host).slice(0, 2), ['rock.example', 'lodge.example'], 'lowest field first (url 0 and image 0 tie), then the lower yield (13% before 25%)');
+  assert.equal(data.rows[data.rows.length - 1].host, 'old.example', 'nothing judged sorts last');
+  // Sort keys.
+  assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'yield', direction: 'asc' }).map(row => row.host).slice(0, 3), ['dead.example', 'rock.example', 'lodge.example'], '10%, 13%, 25%');
+  assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'extracted', direction: 'desc' }).map(row => row.host)[0], 'lodge.example');
+  assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'host', direction: 'asc' }).map(row => row.host)[0], 'dead.example');
+  assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'nonsense' }).map(row => row.host), data.rows.map(row => row.host), 'an unknown key keeps the default order');
+  assert.deepEqual(MetricsSections.buildSourceYieldRows([]), { runs: [], rows: [] });
+  assert.deepEqual(MetricsSections.buildSourceYieldRows(null), { runs: [], rows: [] });
+});
+
+test('buildSourceYieldTableHtml: one row per host with bear/extracted, yield %, a bear sparkline, six field bars (low ones marked) and the lowest field; sortable headers for the yield view; the flagged chip rides along', () => {
+  const data = MetricsSections.buildSourceYieldRows(buildQualityLedgerLines(), { runs: 7 });
+  const html = MetricsSections.buildSourceYieldTableHtml(data, {
+    sortState: { key: 'yield', direction: 'asc' },
+    hostUrl: row => `scriptable:///run?scriptName=display-run-metrics&host=${encodeURIComponent(row.host)}`,
+    faviconUrl: row => (row.host === 'thin.example' ? 'https://chunky.dad/img/favicons/favicon-thin.example-64px.ico' : null)
+  });
+  assert.equal((html.match(/data-row="yield"/g) || []).length, data.rows.length);
+  assert.ok(html.includes('data-sort-view="yield"') && html.includes('data-list="yield"'));
+  assert.ok(html.includes('data-sort-key="yield"') && html.includes('data-sort-key="lowest"') && html.includes('data-sort-key="host"'));
+  assert.ok(html.includes('74 / 300') && html.includes('25%'), 'bear / extracted medians and the yield');
+  assert.ok(html.includes('<div class="cell-title lowest-low">place 10%</div>'), 'the lowest field named and marked low');
+  assert.ok(html.includes('class="field-bar low" title="place 10%" data-field="place" data-pct="10"'), html.match(/field-bar[^>]*place[^>]*/));
+  assert.ok(html.includes('class="field-bar" title="time 100%"'));
+  assert.ok(html.includes('cover-self-contradictory on 67%'), 'the standing flag chip');
+  assert.ok(html.includes('favicon-thin.example-64px.ico') && html.includes('data-nav-view="host" data-nav-key="thin.example"'));
+  assert.ok(html.includes('data-yield-lowest="10"') && html.includes('data-yield-yield="25"'));
+  assert.ok((html.match(/<svg class="sparkline"/g) || []).length === data.rows.length);
+  const order = Array.from(html.matchAll(/data-yield-host="([^"]+)"/g)).map(match => match[1]);
+  assert.equal(order[0], 'thin.example', 'sorted by yield asc: the host that keeps 25% of what it extracts leads');
+  assert.ok(!html.includes('NaN') && !html.includes('undefined'));
+  assert.ok(MetricsSections.buildSourceYieldTableHtml({ runs: [], rows: [] }).includes('No source ledger yet'));
+  assert.ok(MetricsSections.buildFieldBarsHtml(null).includes('not judged'));
 });

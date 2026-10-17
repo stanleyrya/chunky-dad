@@ -1342,6 +1342,191 @@ function buildSourceWidgetSummary(health, options = {}) {
 }
 
 // ============================================================================
+// YIELD — bear kept / extracted per host, with field completeness
+// ============================================================================
+// The same numbers the per-host report reads off the ledger by hand: over
+// the last N runs of the ledger, what each host extracted, what it kept as
+// bear (the yield), and on what share of the kept events each field was
+// present. Computed from the raw records (not the health rows) so a host
+// with no line in a run shows the gap. Pure; the display and the Mac server
+// both render it through buildSourceYieldTableHtml.
+const YIELD_FIELDS = [['time', 't', 'time'], ['place', 'p', 'place'], ['coords', 'c', 'coordinates'], ['url', 'u', 'link'], ['image', 'i', 'image'], ['desc', 'd', 'description']];
+const YIELD_SORT_KEYS = ['host', 'extracted', 'bear', 'yield', 'lowest'];
+const YIELD_DEFAULT_SORT = { key: 'lowest', direction: 'asc' };
+const YIELD_RUNS = 7;
+
+function buildSourceYieldRows(records, options = {}) {
+    const runLimit = Number.isFinite(options.runs) && options.runs > 0 ? Math.floor(options.runs) : YIELD_RUNS;
+    const all = (Array.isArray(records) ? records : []).filter((record) => record && record.host && record.run_id);
+    const runIds = [...new Set(all.map((record) => String(record.run_id)))].sort().slice(-runLimit);
+    const runSet = new Set(runIds);
+    const byHost = new Map();
+    all.forEach((record) => {
+        if (!runSet.has(String(record.run_id))) return;
+        if (!byHost.has(record.host)) byHost.set(record.host, new Map());
+        byHost.get(record.host).set(String(record.run_id), record);
+    });
+    const rows = [];
+    byHost.forEach((byRun, host) => {
+        const lines = runIds.map((runId) => byRun.get(runId) || null);
+        const present = lines.filter(Boolean);
+        const latest = present[present.length - 1];
+        const okLines = present.filter((line) => line.status === 'ok');
+        const series = lines.map((line, index) => ({
+            run_id: runIds[index],
+            extracted: line ? Number(line.extracted) || 0 : null,
+            bear: line ? Number(line.bear) || 0 : null,
+            status: line ? (line.status || 'ok') : 'missing'
+        }));
+        const sumExtracted = okLines.reduce((sum, line) => sum + (Number(line.extracted) || 0), 0);
+        const sumBear = okLines.reduce((sum, line) => sum + (Number(line.bear) || 0), 0);
+        const yieldPct = sumExtracted > 0 ? Math.round((100 * sumBear) / sumExtracted) : null;
+        const qualityLines = qualityLinesOf(okLines);
+        const kept = qualityLines.reduce((sum, line) => sum + (Number(line.quality.n) || 0), 0);
+        const fields = {};
+        YIELD_FIELDS.forEach(([key]) => {
+            let withField = 0;
+            let judged = 0;
+            qualityLines.forEach((line) => {
+                const pct = Number(line.quality[key]);
+                if (!Number.isFinite(pct)) return;
+                const n = Number(line.quality.n) || 0;
+                judged += n;
+                withField += Math.round((n * pct) / 100);
+            });
+            fields[key] = judged > 0 ? Math.round((100 * withField) / judged) : null;
+        });
+        let lowest = null;
+        YIELD_FIELDS.forEach(([key]) => {
+            if (fields[key] === null) return;
+            if (!lowest || fields[key] < lowest.pct) lowest = { key, pct: fields[key] };
+        });
+        rows.push({
+            host,
+            parsers: Array.isArray(latest.parsers) ? latest.parsers : [],
+            aggregator: latest.aggregator === true,
+            url: latest.url || '',
+            runs: present.length,
+            okRuns: okLines.length,
+            latestStatus: latest.status || 'ok',
+            extracted: medianOf(okLines.map((line) => Number(line.extracted) || 0)),
+            bear: medianOf(okLines.map((line) => Number(line.bear) || 0)),
+            yield: yieldPct,
+            kept,
+            fields,
+            lowest,
+            flagged: assessFlaggedCode(present),
+            series
+        });
+    });
+    return { runs: runIds, rows: sortSourceYieldRows(rows, YIELD_DEFAULT_SORT) };
+}
+
+// Lowest field first by default (a null lowest — nothing kept — last);
+// yield asc puts the hosts that keep the least of what they extract first.
+function sortSourceYieldRows(rows, sortState) {
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const key = sortState && YIELD_SORT_KEYS.includes(sortState.key) ? sortState.key : YIELD_DEFAULT_SORT.key;
+    const direction = sortState && sortState.direction === 'desc' ? -1 : 1;
+    const num = (value, missing) => (Number.isFinite(Number(value)) && value !== null ? Number(value) : missing);
+    const lowestOf = (row) => (row.lowest ? row.lowest.pct : 101);
+    const baseOrder = (a, b) => lowestOf(a) - lowestOf(b) || num(a.yield, 101) - num(b.yield, 101) || String(a.host).localeCompare(String(b.host));
+    list.sort((a, b) => {
+        let diff = 0;
+        if (key === 'host') diff = String(a.host).localeCompare(String(b.host));
+        else if (key === 'extracted') diff = num(a.extracted, -1) - num(b.extracted, -1);
+        else if (key === 'bear') diff = num(a.bear, -1) - num(b.bear, -1);
+        else if (key === 'yield') diff = num(a.yield, 101) - num(b.yield, 101);
+        else if (key === 'lowest') diff = lowestOf(a) - lowestOf(b);
+        return diff !== 0 ? diff * direction : baseOrder(a, b);
+    });
+    return list;
+}
+
+// Six narrow bars, one per field, the share of kept events that carry it;
+// a bar under 50% is marked low. The letter under each bar is its key.
+function buildFieldBarsHtml(fields) {
+    const values = fields && typeof fields === 'object' ? fields : {};
+    return `<span class="field-bars">${YIELD_FIELDS.map(([key, letter, label]) => {
+        const pct = Number.isFinite(Number(values[key])) && values[key] !== null ? Number(values[key]) : null;
+        const title = pct === null ? `${label}: not judged` : `${label} ${pct}%`;
+        const low = pct !== null && pct < 50 ? ' low' : '';
+        return `<span class="field-bar${low}${pct === null ? ' none' : ''}" title="${escapeHtml(title)}" data-field="${key}" data-pct="${pct === null ? '' : pct}"><span class="field-bar-fill" style="height:${pct === null ? 0 : Math.max(2, pct)}%"></span><span class="field-bar-key">${letter}</span></span>`;
+    }).join('')}</span>`;
+}
+
+function buildYieldSortHeader(label, key, sortState, defaultDirection, extraClass = '') {
+    const state = sortState && YIELD_SORT_KEYS.includes(sortState.key) ? sortState : YIELD_DEFAULT_SORT;
+    const isActive = state.key === key;
+    const direction = isActive ? (state.direction === 'desc' ? 'desc' : 'asc') : defaultDirection;
+    const nextDirection = isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDirection;
+    const arrow = isActive ? (direction === 'asc' ? '▲' : '▼') : '';
+    return `
+                <th class="${['sortable', extraClass].filter(Boolean).join(' ')}">
+                  <button class="sort-button${isActive ? ' active' : ''}" type="button" data-sort-view="yield" data-sort-key="${key}" data-sort-dir="${nextDirection}" data-sort-default-dir="${defaultDirection}" data-sort-label="${escapeHtml(label)}">
+                    <span class="sort-label">${escapeHtml(label)}</span>
+                    <span class="sort-arrow">${arrow}</span>
+                  </button>
+                </th>`;
+}
+
+// One table: site · bear/extracted (medians, yield %) · 7-run bear sparkline ·
+// field bars · lowest field. options.sortState / hostUrl / faviconUrl as the
+// Sources table takes them.
+function buildSourceYieldTableHtml(yieldData, options = {}) {
+    const rows = sortSourceYieldRows(yieldData && yieldData.rows, options.sortState);
+    if (!rows.length) return `<div class="muted">${escapeHtml(SOURCE_LEDGER_EMPTY_MESSAGE)}</div>`;
+    const hostUrl = typeof options.hostUrl === 'function' ? options.hostUrl : () => '#';
+    const faviconUrl = typeof options.faviconUrl === 'function' ? options.faviconUrl : () => null;
+    const runCount = Array.isArray(yieldData.runs) ? yieldData.runs.length : 0;
+    const body = rows.map((row) => {
+        const parserLabel = parserLabelFor(row);
+        const bearSeries = row.series.map((point) => (point.bear === null ? 0 : point.bear));
+        const sparkTitle = row.series.map((point) => `${formatSourceRun(point.run_id)}: ${point.bear === null ? 'no line' : `${point.bear} of ${point.extracted}`}`).join(' · ');
+        const yieldLabel = row.yield === null ? '—' : `${row.yield}%`;
+        const lowestLabel = row.lowest ? `${row.lowest.key} ${row.lowest.pct}%` : (row.kept ? '—' : 'nothing kept');
+        const flaggedChip = row.flagged ? `<span class="quality-chip quality-flagged" title="${escapeHtml(`${row.flagged.code} on ≥50% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} runs`)}">${escapeHtml(`${row.flagged.code} on ${row.flagged.share}%`)}</span>` : '';
+        const attrs = [
+            `data-yield-host="${escapeHtml(row.host)}"`,
+            `data-yield-extracted="${row.extracted === null ? '' : row.extracted}"`,
+            `data-yield-bear="${row.bear === null ? '' : row.bear}"`,
+            `data-yield-yield="${row.yield === null ? '' : row.yield}"`,
+            `data-yield-lowest="${row.lowest ? row.lowest.pct : ''}"`
+        ].join(' ');
+        return `
+          <tr data-row="yield" ${attrs}>
+            <td>
+              <div class="cell-title source-site">
+                ${buildFaviconHtml(faviconUrl(row))}
+                <a class="row-link" href="${escapeHtml(hostUrl(row))}" data-nav-view="host" data-nav-key="${escapeHtml(row.host)}">${escapeHtml(row.host)}</a>
+              </div>
+              ${parserLabel || row.aggregator ? `<div class="cell-subtitle">${escapeHtml([parserLabel, row.aggregator ? 'aggregator' : ''].filter(Boolean).join(' · '))}</div>` : ''}
+            </td>
+            <td class="num yield-cell"><div class="cell-title">${row.bear === null ? '—' : row.bear} / ${row.extracted === null ? '—' : row.extracted}</div><div class="cell-subtitle">${escapeHtml(yieldLabel)}${row.okRuns < runCount ? ` · ${row.okRuns}/${runCount} ok` : ''}</div></td>
+            <td class="trend-cell">${buildSparklineSvg(bearSeries, { title: sparkTitle })}</td>
+            <td class="fields-cell">${buildFieldBarsHtml(row.fields)}</td>
+            <td class="lowest-cell"><div class="cell-title${row.lowest && row.lowest.pct < 50 ? ' lowest-low' : ''}">${escapeHtml(lowestLabel)}</div>${flaggedChip ? `<div class="quality-chips">${flaggedChip}</div>` : ''}</td>
+          </tr>`;
+    }).join('');
+    return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table yield-table">
+            <thead>
+              <tr>
+                ${buildYieldSortHeader('Site', 'host', options.sortState, 'asc')}
+                ${buildYieldSortHeader('Bear / Extr', 'yield', options.sortState, 'asc', 'num yield-cell')}
+                <th class="trend-cell">Bear ${runCount}r</th>
+                <th class="fields-cell">t p c u i d</th>
+                ${buildYieldSortHeader('Lowest', 'lowest', options.sortState, 'asc', 'lowest-cell')}
+              </tr>
+            </thead>
+            <tbody data-list="yield">${body}
+            </tbody>
+          </table>
+        </div>`;
+}
+
+// ============================================================================
 // CHARTS — SVG renderer, Chart.js config builder and chart specs
 // ============================================================================
 // Every dashboard chart is a plain "spec" (labels, dates, series, baseline,
@@ -2295,6 +2480,13 @@ const MetricsSections = {
     assessFlaggedCode,
     formatSparseLabel,
     formatFlaggedLabel,
+    YIELD_FIELDS,
+    YIELD_SORT_KEYS,
+    YIELD_DEFAULT_SORT,
+    buildSourceYieldRows,
+    sortSourceYieldRows,
+    buildFieldBarsHtml,
+    buildSourceYieldTableHtml,
     SOURCE_SORT_KEYS,
     sourceVerdictLabel,
     sourceVerdictRank,
@@ -2359,6 +2551,13 @@ if (typeof module !== 'undefined' && module.exports) {
         assessFlaggedCode,
         formatSparseLabel,
         formatFlaggedLabel,
+        YIELD_FIELDS,
+        YIELD_SORT_KEYS,
+        YIELD_DEFAULT_SORT,
+        buildSourceYieldRows,
+        sortSourceYieldRows,
+        buildFieldBarsHtml,
+        buildSourceYieldTableHtml,
         SOURCE_SORT_KEYS,
         sourceVerdictLabel,
         sourceVerdictRank,
