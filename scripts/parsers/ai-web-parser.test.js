@@ -22441,3 +22441,73 @@ test('normalizeAiEvent rolls a past-midnight end to the next day\'s CLOCK in the
   assert.equal(parser.rollWallClockToNextDay(new Date('2026-10-25T04:00:00.000Z'), new Date('2026-10-24T00:00:00.000Z'), '06:00', 'Europe/Paris').toISOString(), '2026-10-25T05:00:00.000Z', 'a UTC-midnight Date names the day too');
   assert.equal(parser.rollWallClockToNextDay(new Date('2026-10-25T04:00:00.000Z'), '2026-10-24', '06:00', null).toISOString(), '2026-10-26T04:00:00.000Z', 'no zone: the +24h fallback');
 });
+
+// ---------------------------------------------------------------------------
+// Deck notes of 2026-10-12/14 (run 20261012-214806)
+// ---------------------------------------------------------------------------
+
+test('page flight data: a one-row set is still a row set when the row carries the feed\'s identity; a lone object without one is not', () => {
+  const parser = createParser();
+  const row = { id: '1335e007-eb49-4a21-aa5d-c6c03aeb303e', slug: 'bears-paname-bonbon', name: 'BEARS PANAME — BONBON', start_date: '2026-10-24', start_time: '23:00:00', end_time: '06:00:00', city: { name: 'Paris' }, place: { name: 'WorkshoW PARIS' }, pricing: null, images: [] };
+  const tree = ['$', '$L25', null, { initialEvents: [row], initialHasMore: false, initialNextOffset: null, city: { name: 'Paris', slug: 'paris' } }];
+  const chunk = `13:${JSON.stringify(tree)}\n`;
+  const html = `<html><body><script>self.__next_f.push([1,${JSON.stringify(chunk)}])</script></body></html>`;
+  const data = parser.collectPageFlightData(html);
+  assert.equal(data.rows.length, 1, 'the Paris hub\'s single card is read as a row, never as text');
+  assert.equal(data.rows[0].slug, 'bears-paname-bonbon');
+
+  const anonymous = { name: 'Some night', start_date: '2026-10-24', start_time: '23:00:00' };
+  const treeAnon = ['$', '$L25', null, { featured: [anonymous] }];
+  const htmlAnon = `<html><body><script>self.__next_f.push([1,${JSON.stringify(`13:${JSON.stringify(treeAnon)}\n`)}])</script></body></html>`;
+  assert.equal(parser.collectPageFlightData(htmlAnon).rows.length, 0, 'one object with no id/slug/uid is not a row set');
+});
+
+test('a page\'s own collection name is never an event title: the JSON-LD CollectionPage/ItemList name is rejected on every pass, time evidence or not; a WebPage name and a real card are left alone', () => {
+  const parser = createParser();
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    const hub = { url: 'https://whereto.party/in/toulouse', html: '<html><head><title>Where to party in Toulouse</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Where to party in Toulouse","mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"url":"https://whereto.party/events/bears-tolosa/toulouse"}]}}</script></head><body><h1>Where to party in Toulouse</h1><p>Toulouse has 1 event coming up.</p></body></html>' };
+    assert.deepEqual(parser.getPageCollectionNames(hub), ['Where to party in Toulouse']);
+    const header = parser.rejectPageTitleEchoPassFields({ title: 'Where to party in Toulouse', startDate: '2026-10-31', bar: 'LE CUBE' }, hub);
+    assert.equal(header.title, undefined, 'the hub\'s header is the page, not an event');
+    assert.equal(header.bar, 'LE CUBE', 'only the title is withdrawn');
+    const card = parser.rejectPageTitleEchoPassFields({ title: 'BEARS TOLOSA', startDate: '2026-10-31', bar: 'LE CUBE' }, hub);
+    assert.equal(card.title, 'BEARS TOLOSA');
+    assert.ok(lines.some(line => line.includes('Skipped collection-page name "Where to party in Toulouse"')), lines.join('\n'));
+
+    const eventPage = { url: 'https://venue.example/events/bears-tolosa', html: '<html><head><script type="application/ld+json">{"@type":"WebPage","name":"BEARS TOLOSA"}</script></head><body></body></html>' };
+    assert.deepEqual(parser.getPageCollectionNames(eventPage), [], 'a WebPage is named after its event');
+    assert.equal(parser.rejectPageTitleEchoPassFields({ title: 'BEARS TOLOSA', startDate: '2026-10-31' }, eventPage).title, 'BEARS TOLOSA');
+  } finally { console.log = original; }
+});
+
+test('JSON API cover: a `pricing` string is a price, and the currency it names itself is read', () => {
+  const parser = createParser();
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: 'A$29-59' }), '29-59 AUD');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: '29-59 AUD' }), '29-59 AUD');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: 'From 30 AUD' }), '30 AUD');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: 'Free before midnight / 5 AUD online / 10 AUD door' }), '5-10 AUD');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: '€15' }), '15 €');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: null }), '', 'no price stated');
+  assert.equal(parser.formatJsonApiPriceCover({ pricing: '20', currency: 'GBP' }), '20 GBP', 'a sibling currency key still wins');
+});
+
+test('a parsed page reports the address it declares as its own to the core, which folds the two spellings', () => {
+  const parser = createParser();
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  parser.core = core;
+  const idUrl = 'https://dice.fm/event/6a5e399f126db80001fe9c5c';
+  const slugUrl = 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets';
+  const original = console.log;
+  console.log = () => {};
+  try {
+    parser.noteSelfDeclaredAliases(`<html><head><link rel="canonical" href="${slugUrl}"><meta property="og:url" content="${slugUrl}"></head><body></body></html>`, idUrl);
+  } finally { console.log = original; }
+  assert.equal(core.resolveUrlAlias(idUrl), slugUrl);
+  assert.equal(core.getUrlDedupeKey(idUrl), core.getUrlDedupeKey(slugUrl));
+  // Without a core nothing breaks.
+  parser.core = null;
+  parser.noteSelfDeclaredAliases('<link rel="canonical" href="https://x.example/a/b">', 'https://x.example/a/c');
+});

@@ -28450,3 +28450,189 @@ test('aggregator pointers: a link hub is a platform — a source on linktr.ee/<h
   assert.deepEqual(run.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
   assert.equal(megawoof._aggregatorUnbackedWithheld, undefined);
 });
+
+// ---------------------------------------------------------------------------
+// Deck notes of 2026-10-12/14 (run 20261012-214806)
+// ---------------------------------------------------------------------------
+
+const DICE_ID_URL = 'https://dice.fm/event/6a5e399f126db80001fe9c5c';
+const DICE_SLUG_URL = 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets';
+
+test('one page, two spellings: a declared self-address on the same host folds a DICE listing stub with its own page; ancestors, other directories and other hosts never alias', async () => {
+  const core = createCore();
+  // Fail closed.
+  assert.equal(core.noteUrlAlias(DICE_ID_URL, 'https://dice.fm/'), false, 'an ancestor is a hub, not this page');
+  assert.equal(core.noteUrlAlias(DICE_ID_URL, 'https://dice.fm/promoters/beefmince-3oorg'), false, 'another directory');
+  assert.equal(core.noteUrlAlias(DICE_ID_URL, 'https://other.example/event/6a5e399f126db80001fe9c5c'), false, 'another host');
+  assert.equal(core.noteUrlAlias(DICE_ID_URL, DICE_ID_URL), false, 'the same address');
+  assert.equal(core.resolveUrlAlias(DICE_ID_URL), DICE_ID_URL, 'nothing noted yet');
+
+  const stub = { title: 'SPOOKMINCE', bar: 'UNLOCKED', city: 'london', timezone: 'Europe/London', startDate: '2026-10-31T00:00:00.000Z', endDate: '2026-10-31T23:59:59.000Z', ticketUrl: DICE_ID_URL, source: 'ai-web', _parserConfig: { name: 'BEEFMINCE' } };
+  const page = { title: 'BEEFMINCE: SPOOKMINCE', bar: 'UNLOCKED (Shoreditch)', address: '118 Curtain Rd, London EC2A 3AY', city: 'london', timezone: 'Europe/London', startDate: '2026-10-31T22:00:00.000Z', endDate: '2026-11-01T04:00:00.000Z', ticketUrl: DICE_SLUG_URL, image: 'https://dice-media.imgix.net/attachments/2026-09-22/59901d11.jpg', imageSource: 'jsonld', source: 'ai-web', _parserConfig: { name: 'BEEFMINCE' } };
+  assert.ok(core.getContradictingDestinations(stub, page), 'before the page speaks, the two addresses contradict');
+
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    assert.equal(core.noteUrlAlias(DICE_ID_URL, DICE_SLUG_URL), true, 'a sibling leaf the page declares as itself');
+    assert.equal(core.noteUrlAlias(DICE_ID_URL, DICE_SLUG_URL), true, 'idempotent');
+  } finally { console.log = original; }
+  assert.equal(logs.filter(line => line.startsWith('🔗 ALIAS:')).length, 1, 'logged once');
+  assert.equal(core.resolveUrlAlias(DICE_ID_URL), DICE_SLUG_URL);
+  assert.equal(core.resolveUrlAlias(`${DICE_ID_URL}?utm=x`), DICE_SLUG_URL, 'the query does not make another page');
+  assert.equal(core.getUrlDedupeKey(DICE_ID_URL), core.getUrlDedupeKey(DICE_SLUG_URL), 'one dedup key');
+  assert.equal(core.parseIdentityDestination(DICE_ID_URL).key, core.parseIdentityDestination(DICE_SLUG_URL).key);
+  assert.equal(core.getContradictingDestinations(stub, page), null, 'one destination now');
+  assert.equal(core.destinationsAgree(stub, page), true);
+
+  const folded = await core.deduplicateEvents([stub, page], null);
+  assert.equal(folded.length, 1, 'the stub and its page are one record');
+  assert.equal(folded[0].image, page.image, 'the page\'s flyer is the record\'s');
+  assert.equal(new Date(folded[0].startDate).toISOString(), '2026-10-31T22:00:00.000Z', 'the clocked start wins over the all-day stub');
+});
+
+test('image provenance: structured-data artwork is one class whatever the parser spelled it, and the live page\'s artwork beats a saved stamp when both point at the same page — slots follow the primary', () => {
+  const core = createCore();
+  const oldLogo = 'https://dice-media.imgx.example/attachments/2024-12-17/5e10abb8-old.jpg';
+  const newFlyer = 'https://dice-media.imgx.example/attachments/2026-09-28/b357638f-neon.jpg';
+  const saved = { title: 'BEEFMINCE x RVT', image: oldLogo, imageSource: 'jsonld', imageVertical: `${oldLogo}?rect=0,154,768,461`, ticketUrl: 'https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets' };
+  const live = { title: 'BEEFMINCE Neon x RVT', image: newFlyer, imageSource: 'json-api', imageVertical: `${newFlyer}?rect=0,0,768,960`, ticketUrl: 'https://dice.fm/event/xednya-beefmince-neon-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets' };
+  const context = { records: { a: saved, b: live }, sideLabels: { a: 'calendar', b: 'scraped' } };
+  // DICE's id "xednya" is letters only: a word to the slug parser until the
+  // site's own pages show the shape (an opaque address declared as
+  // "<token>-<words>" — see noteUrlAlias).
+  assert.equal(core.destinationsAgree(saved, live), false, 'before the site shows its id shape');
+  core.noteUrlAlias('https://dice.fm/event/69eb2e36295a1a0001a33e75', live.ticketUrl);
+  assert.equal(core.parseIdentityDestination(saved.ticketUrl).id, 'xednya');
+  assert.equal(core.destinationsAgree(saved, live), true, 'the same id under a rewritten slug');
+  assert.equal(core.parseIdentityDestination('https://dice.fm/event/karaoke-night-tickets').id, '', 'a 7-letter word is not a 6-character id');
+
+  assert.equal(SharedCore.isPublisherSuppliedImageSource('json-api'), true);
+  assert.equal(SharedCore.isPublisherSuppliedImageSource('json-ld'), true);
+  assert.equal(SharedCore.isPublisherSuppliedImageSource('page'), false);
+  assert.equal(SharedCore.PROVENANCE_TRUST_TIERS.imageSource['json-api'], SharedCore.PROVENANCE_TRUST_TIERS.imageSource['jsonld']);
+
+  const primary = core.resolveConflictDeterministically('image', oldLogo, newFlyer, context);
+  assert.equal(primary && primary.winner, 'b', JSON.stringify(primary));
+  assert.match(primary.reason, /freshness wins over the saved stamp \(jsonld\)/);
+  const slot = core.resolveConflictDeterministically('imageVertical', saved.imageVertical, live.imageVertical, context);
+  assert.equal(slot && slot.winner, 'b', JSON.stringify(slot));
+  assert.match(slot.reason, /the slots follow the primary/);
+
+  // Another page: no freshness claim — both attributed, the rung falls through to the later ones.
+  const elsewhere = { ...live, ticketUrl: 'https://dice.fm/event/qq11zz-another-night-tickets' };
+  const other = core.resolveConflictDeterministically('image', oldLogo, newFlyer, { ...context, records: { a: saved, b: elsewhere } });
+  assert.ok(!other || !/freshness/.test(other.reason), JSON.stringify(other));
+
+  // The unified class: a json-api picture is the page's own artwork against a content-derived one.
+  const content = { ...saved, image: oldLogo, imageSource: 'page', ticketUrl: '' };
+  const oneSided = core.resolveConflictDeterministically('image', oldLogo, newFlyer, { ...context, records: { a: content, b: { ...live, ticketUrl: '' } } });
+  assert.equal(oneSided && oneSided.winner, 'b', JSON.stringify(oneSided));
+  assert.match(oneSided.reason, /own artwork \(json-api\)/);
+});
+
+test('a wall-clock record keeps its own day: a date-only card and the clocked page record of one night meet, and the calendar merge keeps the saved clock over a date-only read', async () => {
+  const core = createCore();
+  const midnightCard = { title: 'SPOOKY PLAYGROUND', bar: 'Au Bain Mathieu', startDate: new Date('2026-10-30T00:00:00.000Z'), _timezoneUnresolved: true, source: 'ai-web' };
+  const pageRecord = { title: 'SPOOKY PLAYGROUND', bar: 'Bain Mathieu', address: '2915 Rue Ontario E, Montréal', city: 'montreal', timezone: 'America/Toronto', startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'), source: 'ai-web' };
+  const shapeA = core.buildIdentityComparisonShape(midnightCard);
+  const shapeB = core.buildIdentityComparisonShape(pageRecord);
+  assert.equal(shapeA.timezoneUnresolved, true);
+  assert.equal(core.areIdentityDatesOnSameLocalDay(shapeA, shapeB), true, 'Oct 30 wall clock is Oct 30, not Oct 29 Toronto');
+  assert.equal(core.areIdentityDatesOnSameLocalDay(core.buildIdentityComparisonShape({ ...midnightCard, startDate: new Date('2026-10-29T00:00:00.000Z') }), shapeB), false);
+  assert.ok(core.getSameEventIdentitySignal(midnightCard, pageRecord, { requireCloseStartTimes: false }), 'the identity scan now sees one night');
+
+  // Calendar merge: the saved 22:00 stands against a scraped local-midnight start with no stated time.
+  const { scraped, existing } = buildArbitrationPair();
+  const scrapedMidnight = { ...scraped, title: 'SPOOKY PLAYGROUND', bar: 'Bain Mathieu', city: 'montreal', timezone: 'America/Toronto', startDate: new Date('2026-10-30T04:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'), ticketUrl: '' };
+  delete scrapedMidnight.startTime;
+  const saved = { ...existing, title: 'SPOOKY PLAYGROUND', startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'), notes: 'bar: Bain Mathieu\ntimezone: America/Toronto' };
+  const adapter = buildArbitrationAdapter({});
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let finalEvent;
+  try { finalEvent = await core.createFinalEventObject(saved, scrapedMidnight, { httpAdapter: adapter }); } finally { console.log = original; }
+  assert.equal(new Date(finalEvent.startDate).toISOString(), '2026-10-31T02:00:00.000Z', 'the saved clock stands');
+  assert.ok(logs.some(line => line.includes('field=startDate kept calendar value — the scraped start is a date-only read')), logs.join('\n'));
+  assert.ok(adapter.calls.every(call => !/field: startDate/.test(String(call.prompt || ''))), 'the start never reached the AI');
+});
+
+test('a pass page shared by many nights never dates one of them: the fill rule leaves an occurrence\'s blank end alone when the filling record was read from that page', async () => {
+  const core = createCore();
+  const registration = 'https://hcbears.com.au/event-6700980/Registration';
+  const occurrence = { title: 'Furry Friday', bar: 'Kings Cross Hotel', city: 'sydney', timezone: 'Australia/Sydney', startDate: new Date('2026-10-16T08:00:00.000Z'), endDate: null, ticketUrl: registration, source: 'ai-web' };
+  const enrich = { title: 'Furry Friday: Kilt', bar: 'Kings Cross Hotel', city: 'sydney', timezone: 'Australia/Sydney', startDate: new Date('2026-10-16T08:00:00.000Z'), endDate: new Date('2026-10-18T05:00:00.000Z'), description: 'Furry Friday: Kilt', ticketUrl: registration, _sourcePageUrl: registration, source: 'ai-web' };
+  const passPageKeys = new Set([core.getUrlDedupeKey(registration)]);
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let merged;
+  let unguarded;
+  try {
+    merged = await core.mergeParsedEvents(occurrence, { ...enrich }, { passPageKeys });
+    unguarded = await core.mergeParsedEvents(occurrence, { ...enrich }, {});
+  } finally { console.log = original; }
+  assert.ok(!merged.endDate, `the pass page's end is not this night's: ${merged.endDate}`);
+  assert.equal(merged.description, 'Furry Friday: Kilt', 'non-date blanks still fill');
+  assert.ok(logs.some(line => line.includes('endDate not filled from https://hcbears.com.au/event-6700980/Registration — a page shared by many nights describes none of them')), logs.join('\n'));
+  assert.equal(new Date(unguarded.endDate).toISOString(), '2026-10-18T05:00:00.000Z', 'without the batch finding the old fill stands (control)');
+});
+
+test('hub links: when the hub is cleared, the page the card was read from stands in before the curated front door', () => {
+  const core = createRegistryCore(HUB_REGISTRY);
+  const listing = 'https://beefdip.com/planned-events/';
+  const events = [
+    hubEvent('WET & WILD – POOL & BEACH PARTY', '2027-01-30T18:00:00.000Z', { website: HUB_PASS_PAGE, _sourcePageUrl: listing }),
+    hubEvent('MAD.BEAR RED BALL', '2027-01-27T04:00:00.000Z', { website: HUB_PASS_PAGE, _sourcePageUrl: listing }),
+    hubEvent('HYDRATE POOL PARTY', '2027-01-31T18:00:00.000Z', { website: HUB_PASS_PAGE, _sourcePageUrl: 'https://beefdip.com/tags/' })
+  ];
+  const lines = captureHubLogs(() => core.canonicalizeIdentityLinks(events));
+  assert.equal(events[0].website, listing, 'the listing that names the night, not the registry root');
+  assert.equal(events[1].website, listing);
+  assert.equal(events[2].website, 'https://beefdip.com', 'read from the hub itself: nothing to stand in, the curated identity fills the blank');
+  assert.ok(lines.some(line => line.includes('a hub page is a front door, not this event\'s page; the page it was read from stands in (https://beefdip.com/planned-events/)')), lines.join('\n'));
+});
+
+test('one saved event takes one proposal: two analyzed records merging into the same saved night fold to the fuller one; another night of the same saved record stays apart', async () => {
+  const core = createCore();
+  const night = new Date(Date.now() + 10 * 86400000); night.setUTCHours(2, 0, 0, 0); // 22:00 Toronto the evening before
+  const saved = { identifier: 'CAL:spooky', title: 'SPOOKY PLAYGROUND', startDate: night, endDate: new Date(night.getTime() + 5 * 3600000), location: '', notes: 'bar: Bain Mathieu\naddress: 2915 Rue Ontario E, Montréal\ntimezone: America/Toronto' };
+  const record = (overrides = {}) => ({ title: 'SPOOKY PLAYGROUND', bar: 'Bain Mathieu', address: '2915 Rue Ontario E, Montréal', city: 'montreal', timezone: 'America/Toronto', startDate: night, endDate: new Date(night.getTime() + 5 * 3600000), source: 'ai-web', ...overrides });
+  const page = record({ description: 'DJ JASON JAMES (WASHINGTON)', url: 'https://www.bearitmtl.com/event/spooky-playground/' });
+  const card = record({});
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try { analyzed = await core.prepareEventsForCalendar([card, page], buildWideWindowAdapter([saved]), {}); } finally { console.log = original; }
+  const merges = analyzed.filter(entry => entry._action === 'merge' && entry._existingEvent && entry._existingEvent.identifier === 'CAL:spooky');
+  assert.equal(merges.length, 1, `one proposal for the saved night: ${analyzed.map(e => `${e._action}:${e.title}`).join(', ')}`);
+  assert.equal(merges[0].description, 'DJ JASON JAMES (WASHINGTON)', 'the fuller proposal stands');
+  assert.ok(logs.some(line => line.startsWith('🪞 ANALYSIS: "SPOOKY PLAYGROUND" is a second proposal for the saved event "SPOOKY PLAYGROUND" (CAL:spooky,')), logs.join('\n'));
+
+  // Control: a second night that matches the same saved record by title-subset is another night, left alone.
+  const otherNight = record({ startDate: new Date(night.getTime() + 7 * 86400000), endDate: new Date(night.getTime() + 7 * 86400000 + 5 * 3600000) });
+  const two = await core.prepareEventsForCalendar([page, otherNight], buildWideWindowAdapter([saved]), {});
+  assert.equal(two.length, 2, 'two nights are two proposals');
+});
+
+test('a replaced primary picture takes its stale crop with it: the saved orientation slot cut from the old flyer is dropped when the live page shows a new one and states no slot', async () => {
+  const core = createCore();
+  const oldFlyer = 'https://dice-media.imgx.example/attachments/2024-12-17/5e10abb8-old.jpg';
+  const newFlyer = 'https://dice-media.imgx.example/attachments/2026-09-28/b357638f-neon.jpg';
+  const slug = 'https://dice.fm/event/xednya-beefmince-neon-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets';
+  const { scraped, existing } = buildArbitrationPair();
+  const live = { ...scraped, title: 'BEEFMINCE Neon x RVT', bar: 'Royal Vauxhall Tavern', city: 'london', timezone: 'Europe/London', image: newFlyer, imageSource: 'json-api', ticketUrl: slug };
+  delete live.imageVertical;
+  const saved = { ...existing, title: 'BEEFMINCE x RVT', notes: `bar: Royal Vauxhall Tavern\ntimezone: Europe/London\nticketUrl: ${slug}\nimage: ${oldFlyer}\nimageSource: jsonld\nimageVertical: ${oldFlyer}?rect=173,0,422,768` };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let finalEvent;
+  try { finalEvent = await core.createFinalEventObject(saved, live, { httpAdapter: buildArbitrationAdapter({}) }); } finally { console.log = original; }
+  assert.equal(finalEvent.image, newFlyer, logs.filter(line => /image/.test(line)).join('\n'));
+  assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
+  assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
+});
