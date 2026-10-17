@@ -4918,3 +4918,39 @@ test('BarDataNormalizer reads a bar named as a curated bar\'s own website host a
   assert.equal(BarDataNormalizer.barNameIsWebsiteHost('bar', 'https://bar.com'), false, 'a four-letter label is not a name');
   assert.equal(BarDataNormalizer.barNameIsWebsiteHost('eagle', ''), false);
 });
+
+// Venue recheck 2026-10-17 (fixtures under scripts/fixtures/recheck-venues-2026-10-17)
+
+test('site identity fills the venue even when the title already named the city', () => {
+  // blackeagletoronto.com, run 20261017-054812: "BLUF TORONTO" resolved its
+  // city from its own title one rung before the site-identity rung, which
+  // then never ran — so 6 of 15 kept events had no bar and no pin while
+  // "DADDY NEXT DOOR" on the same widget got all three from this record.
+  const row = require('./fixtures/recheck-venues-2026-10-17/black-eagle-toronto-elfsight-row.json');
+  const cities = { ...SITE_IDENTITY_CITIES, toronto: { timezone: 'America/Toronto', patterns: ['toronto'] } };
+  const bars = { toronto: [{ name: 'Black Eagle Toronto', city: 'toronto', website: 'https://www.blackeagletoronto.com', address: '457 Church St, Toronto, ON M4Y 2C5', coordinates: '43.6641525, -79.3801656' }] };
+  const normalizer = new LocationNormalizer(new SharedCore(cities, { eventSchema: EventSchema, bars }));
+
+  const event = { title: row.name, description: row.description, website: 'https://www.blackeagletoronto.com', source: 'elfsight', startDate: '2026-10-31T22:00:00.000Z', timezone: row.timeZone };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'toronto', 'the title named the city first');
+  assert.equal(event.bar, 'Black Eagle Toronto');
+  assert.equal(event.barSource, 'venue-site-identity');
+  assert.equal(event.address, '457 Church St, Toronto, ON M4Y 2C5');
+  assert.equal(event.location, '43.6641525, -79.3801656');
+  assert.ok(lines.some(line => line.includes('from curated bar "Black Eagle Toronto"')), lines.join('\n'));
+
+  // A venue site announcing a night in another city: the city stays and the
+  // venue is not borrowed.
+  const away = { title: 'Road Trip Social', city: 'nyc', website: 'https://www.blackeagletoronto.com', startDate: '2026-10-31T22:00:00.000Z' };
+  const awayLines = captureConsoleLog(() => { normalizer.normalize(away); });
+  assert.equal(away.city, 'nyc');
+  assert.equal(away.bar, undefined);
+  assert.ok(awayLines.some(line => line.includes('is a curated venue in toronto, the event is in nyc')), awayLines.join('\n'));
+
+  // An event that already names a bar is untouched, silently.
+  const named = { title: 'BLUF TORONTO', bar: 'Some Other Bar', website: 'https://www.blackeagletoronto.com', startDate: '2026-10-31T22:00:00.000Z' };
+  const namedLines = captureConsoleLog(() => { normalizer.normalize(named); });
+  assert.equal(named.bar, 'Some Other Bar');
+  assert.ok(!namedLines.some(line => line.includes('site identity') || line.includes('curated venue in')), namedLines.join('\n'));
+});

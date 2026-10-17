@@ -4,12 +4,14 @@
   "slug": "rockbar",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "feed",
       "rendered",
       "static",
-      "flyer"
+      "flyer",
+      "page-cache",
+      "classification-cache"
     ],
     "parserUrlsAtRecon": [
       "https://www.rockbarnyc.com/"
@@ -70,6 +72,22 @@
         "rowsReturned": 90,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its calendar from the home page and read it through the Elfsight embed that rides on every page — read once on the home page (148 published, 33 current), /calendar skipped as already read: 90 events, 14 bear in 3 s — the https://www.rockbarnyc.com/calendar config read 90/14 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
+      },
+      {
+        "rowsReturned": 154,
+        "truthFlag": "154 rows (149 visible:true/unset, 5 visible:false); 0 rows with actions[]; location [] on every row",
+        "note": "Live read 2026-10-17 (one curl). Upcoming noRepeat rows: HELL YEAH BROTHER! 10/17 22:00, MOLLYWOOD: GHOULS and GWORLS 10/18 17:00, MX. ROCKBAR: WEEK 4 10/19 21:00, BRAIN DAMAGE TRIVIA 10/21 19:00, FOOTLICKR 10/28 20:00, PERV: A NIGHT OF MISCHIEF 10/30 22:00. Repeating rows: 23 (the 17 live series of 2026-09-10 plus ARCADE weeklyOn, PEEP SHOW, GAYME CHAYNGER and BACK ON THE BLOCK now visible, plus the two documented traps CLOSED FOR A PRIVATE EVENT and Drag Race Viewing Party). No row carries a per-event link: the bear nights' only address is the page the embed rides on. One row saved as scripts/fixtures/recheck-venues-2026-10-17/rockbar-elfsight-row.json.",
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "kind": "json",
+        "role": "feed"
+      },
+      {
+        "rowsReturned": 0,
+        "truthFlag": "run log: \"AI classification cache hit for https://www.rockbarnyc.com/ → link-aggregator\"",
+        "note": "Page cache 2026-10-15 (run 20261017-054812 read it as the first page carrying the embed). The home page is a Squarespace socials/links hub whose shared block carries the Elfsight calendar; the run classified it link-aggregator and applyAggregatorWebsitePointers then cleared website/url on all 13 kept nights (\"cleared self-referential aggregator pointer … empty beats a copy of the source page\") — the url 0% of the ledger for 50 runs. Fixed on branch audit/recheck-venues: a calendar-door row (source elfsight/squarespace/wix/mec/eventon/dice) is the site's own calendar whatever the shell classified as.",
+        "url": "https://www.rockbarnyc.com/",
+        "kind": "html",
+        "role": "listing"
       }
     ],
     "notes": "Platform: Squarespace shell + Elfsight Event Calendar widget, confirmed by the boot endpoint answering with app \"event-calendar\" for the id embedded in /calendar. The widget payload is the whole calendar: exact local times, IANA timeZone per row, and machine-readable repeat fields, so no AI/OCR is needed for dates. Elfsight repeat semantics used here: nthDayInMonth = the same ordinal weekday as the anchor start date (1st..4th); lastDayInMonth = the last anchor-weekday of each month; weeklyOn = repeatWeeklyOnDays; custom = repeatFrequency/repeatInterval/repeatEnds. Yesterday's run 20260909-072307 reported totalEvents 151 for this parser (29 kept + 121 bear-dropped after 1 duplicate removed) from urlCount 1: that is the 143 visible live-widget rows plus the 9 rows of the commented-out 2024 widget, i.e. every widget row emitted as a dated single (only BEARS NIGHT OUT, COMEDY HOUR and GORDITOS carried a recurrenceRule in the run output). This file, by contrast, folds the widget into 22 published things."
@@ -86,14 +104,16 @@
   "coverage": {
     "confidence": "high",
     "basis": "All counts come from the Elfsight boot door (https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a): 148 rows = 143 visible+named + 5 hidden. The 143 visible rows split into 119 past noRepeat rows (dated 2024-06-24 to 2026-09-09, including yesterday's GAY CARD: JAWBREAKER and ~9 closure notices — counted, not enumerated), 5 noRepeat rows dated on/after 2026-09-10 (the 5 singles here), and 19 repeating rows. Of the 19 repeating rows, 17 are live event series documented here (13 nthDayInMonth, 2 weeklyOn, 2 lastDayInMonth), one is the CLOSED FOR A PRIVATE EVENT closure notice (trap), and one is the custom Drag Race Viewing Party series that ended 2024-05-01 (trap). Published = 5 singles + 17 series = 22. Second door: the headless-Chrome render of /calendar shows the September 2026 month grid with exactly the instances these RRULEs predict for 2026-09-11..2026-10-03 (22 cells, all accounted for, nothing extra), which is how the nthDayInMonth ordinal reading was verified. Third door: the Squarespace /events?format=json collection is frozen (0 upcoming / 7 past, all Aug 2024) and adds nothing. The commented-out second widget (9 rows, Jun-Jul 2024) is recorded as a trap, not counted. Occurrences are materialized for 2026-09-10..2026-12-09; instances the rendered grid displayed are origin \"listed\" with a quote from the rendered DOM, the rest are origin \"rule\".",
-    "publishedEventCount": 22,
-    "documentedEventCount": 22,
+    "publishedEventCount": 28,
+    "documentedEventCount": 28,
     "occurrenceWindow": {
       "start": "2026-09-10",
       "end": "2026-12-09"
     },
     "pastListingsPresent": true,
-    "knownGaps": []
+    "knownGaps": [
+      "2026-10-17: four repeating rows visible in the boot today are not enumerated as series — ARCADE (weeklyOn), PEEP SHOW, GAYME CHAYNGER and BACK ON THE BLOCK (nthDayInMonth); the last three were visible:false on 2026-09-10 and are documented as hidden-row traps, which no longer describes them. Their RRULEs need the rendered-grid check the other series got. The five singles of 2026-09-10 are past and stay documented."
+    ]
   },
   "events": [
     {
@@ -994,6 +1014,138 @@
       },
       "bearVerdict": null,
       "note": "Description: \"Come to Rockbar on Sept 30th at 10 PM\" while the widget row says 23:00 — the row time is what the calendar displays. Ends 02:00 next day. Rendered grid shows it on 30."
+    },
+    {
+      "id": "hell-yeah-brother-2026-10-17",
+      "kind": "single",
+      "title": "HELL YEAH BROTHER!",
+      "description": "This Saturday the bros are back! Come hang out at @rockbarnyc for Hell Yeah Brother! Wear your favorite jocks, crop tops, jerseys, singlets and any other sports gear and meet a new bro or two",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "02:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/15c64b36-7000-4c15-b565-ba6a057ec615/Hell-Yeah-Brother-OCT-Draft.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot). Kept by run 20261017-054812 (bear).",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mollywood-ghouls-and-gworls-2026-10-18",
+      "kind": "single",
+      "title": "MOLLYWOOD: GHOULS and GWORLS",
+      "description": "Mollywood presents GHOULS and GWORLS Hosted by The Big O and NOMI NATION A THEMED QUEER MONTHLY CHAOS SHOW! Burlesque Roller Skating Drag Performances No Cover!",
+      "startDate": "2026-10-18",
+      "startTime": "17:00",
+      "endDate": "2026-10-18",
+      "endTime": "19:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b53f9833-4fa5-4bd3-8412-5d572e8d8a9b/Mollywood-Oct-18.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot).",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[5]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mx-rockbar-week-4-2026-10-19",
+      "kind": "single",
+      "title": "MX. ROCKBAR: WEEK 4",
+      "description": "MX. ROCKBAR SEASON 10 — WEEK 4! The heat is ON, the competition is getting fierce, and four more performers are ready to take the stage!",
+      "startDate": "2026-10-19",
+      "startTime": "21:00",
+      "endDate": "2026-10-19",
+      "endTime": "23:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/f6bd112e-70e4-4648-bfd2-051d3871b056/MX-Rockbar-S10-WEEK-4-IG.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot). The description's own date line says \"MONDAY, OCTOBER 12TH\" while the row is dated 10-19 — the site's copy lags its row; the row is what the widget renders.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[6]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "brain-damage-trivia-2026-10-21",
+      "kind": "single",
+      "title": "BRAIN DAMAGE TRIVIA",
+      "description": "Join @comawhitenyc and @heylockwood for a spooktacular edition of Brain Damage Horror Trivia! Test your horror movie knowledge and compete for killer prizes! Plus snacks served by @cafehimbo !",
+      "startDate": "2026-10-21",
+      "startTime": "19:00",
+      "endDate": "2026-10-21",
+      "endTime": "23:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/b8c99fb2-ae98-447d-ad0f-55f750195e98/848293290_18635336167018177_6944773933275916430_n.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot).",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "footlickr-2026-10-28",
+      "kind": "single",
+      "title": "FOOTLICKR",
+      "description": "FOOTLICKR A Foot Fetish Focused Party! Every 4th Wednesday, 8pm - Late Rules: CONSENT FIRST Ask, Communicate & Respect Boundaries Always!",
+      "startDate": "2026-10-28",
+      "startTime": "20:00",
+      "endDate": "2026-10-28",
+      "endTime": "23:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/68f98d81-d4a5-4f29-95c6-041adcc516a6/IMG_20260925_231500.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot). The row states timeZone America/Los_Angeles on a New York bar's widget — a per-row zone artifact (see openQuestions); the copy says \"Every 4th Wednesday\" but the row is noRepeat, so documented as the single the widget publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[14]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "perv-a-night-of-mischief-2026-10-30",
+      "kind": "single",
+      "title": "𝗣𝗘𝗥𝗩: A NIGHT OF MISCHIEF",
+      "description": "PERV a Night of Mischief LOCKTOBER FINALE Friday, Oct 30, 10pm Rockbar @rockbar_nyc Vibe Wand BUZZ-A-THON Contest $100 cash to whoever ***** first! Hosted by Pete",
+      "startDate": "2026-10-30",
+      "startTime": "22:00",
+      "endDate": "2026-10-31",
+      "endTime": "02:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/466b2ab9-2c12-4432-822e-09e2ac1d7d0d/PERV-LOCKTOBER-FINALE_2-copy.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (live boot). The title is set in Unicode mathematical bold letters on the site (kept verbatim; NFKC folds it to \"PERV\").",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets[\"e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\"].data.settings.events[15]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
     }
   ],
   "traps": [
@@ -1143,6 +1295,16 @@
     {
       "q": "The BEARS NIGHT OUT description text says \"Every Second Saturday\" while the widget rule, the rendered grid (Oct 3) and the flyer say first Saturday. This file follows the rule + flyer; confirm with the venue if the calendar ever shows a 2nd-Saturday instance.",
       "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "\"Drag Race Viewing Party\" (repeatPeriod custom, dated 2024-02-02) is kept by every run as a 2024 event (sanity flags start-long-past + span-fully-past; run 20261017-054812). The trap drag-race-viewing-party-ended-custom-series says it should not be read as a night; the Elfsight reader still emits it. Should a custom repeat whose anchor date is >1 year past with no future occurrence be dropped at the reader?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "FOOTLICKR's row states timeZone \"America/Los_Angeles\" on a New York bar's widget (the same per-row zone artifact as Black Eagle Toronto's \"America/Miquelon\" rows). The reader trusts the row's zone; should a per-row widget zone that disagrees with the venue's curated city zone yield to the city?",
+      "raisedOn": "2026-10-17",
       "blocking": false
     }
   ],

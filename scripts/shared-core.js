@@ -438,6 +438,19 @@ const COVER_FREE_PHRASE_ANYWHERE_PATTERN = new RegExp(
     `(?:^|[^a-z])(?:${[...COVER_FREE_PHRASES].sort((a, b) => b.length - a.length).join('|')})(?:$|[^a-z])`,
     'i'
 );
+// A door policy that changes with the clock is ONE price stated in two
+// halves, not two claims: "No cover till 9PM, $20 cover at 9PM" (Eagle NYC's
+// Sunday Beer Blast, 13 of 21 kept events flagged every run through
+// 20261017-054812), "FREE before 10pm / $10 after". The tell is a clock
+// expression beside a time-conditional word; "$10, NO COVER" has neither
+// and stays the contradiction it is.
+const COVER_TIER_CLOCK_PATTERN = /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|h)\b|\b\d{1,2}:\d{2}\b|\bmidnight\b|\bnoon\b/i;
+const COVER_TIER_WORD_PATTERN = /\b(?:till|til|'til|until|before|b4|after|from|past|doors?|early|late)\b/i;
+// Calendar doors a page opens itself — widget boots, collection twins, month
+// grids. Their rows are the site's own calendar whatever the HTML shell
+// around the embed classified as (the same set ai-web-parser's structured
+// route calls doorReadSources).
+const CALENDAR_DOOR_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
 
 // The ONE calendar target an unrecognized city may produce. See
 // SharedCore.resolveCalendarTarget — the fallback must never be derived from
@@ -3454,6 +3467,15 @@ class SharedCore {
     // (𝐑𝐞𝐝 𝐰𝐫𝐢𝐬𝐭𝐛𝐚𝐧𝐝… — U+1D400 block, observed in a real run) cannot dodge
     // classification (String.prototype.normalize is available in iOS
     // JavaScriptCore). Platform-pure — no URL parsing, no network, no config.
+    // "No cover till 9PM, $20 cover at 9PM": a tiered door price — the free
+    // phrase and the amount are bound to different clocks. Needs BOTH a clock
+    // expression and a time-conditional word, so "$10, NO COVER" (no clock,
+    // no condition) is never read as a tier.
+    isTieredCoverText(value) {
+        const text = String(value === null || value === undefined ? '' : value).normalize('NFKC');
+        return COVER_TIER_CLOCK_PATTERN.test(text) && COVER_TIER_WORD_PATTERN.test(text);
+    }
+
     classifyCoverShape(value) {
         const text = String(value === null || value === undefined ? '' : value)
             .normalize('NFKC')
@@ -4591,7 +4613,8 @@ class SharedCore {
                     detail: `cover "${coverText}" is neither a price nor a free-admission phrase`
                 });
             } else if (coverShape === 'price'
-                && COVER_FREE_PHRASE_ANYWHERE_PATTERN.test(coverText.normalize('NFKC'))) {
+                && COVER_FREE_PHRASE_ANYWHERE_PATTERN.test(coverText.normalize('NFKC'))
+                && !this.isTieredCoverText(coverText)) {
                 flags.push({
                     code: 'cover-self-contradictory',
                     detail: `cover "${coverText}" states both a price and free admission`
@@ -8844,6 +8867,16 @@ class SharedCore {
                 && this.classifyUrlByRules(sourcePageUrl) !== 'link-aggregator') {
                 continue;
             }
+            // A row the page's OWN calendar door published is the site's
+            // calendar, not a copy of someone else's listing — the shell
+            // around the embed says nothing about it. Rockbar's home page
+            // (a Squarespace socials hub carrying the Elfsight embed) was
+            // classified link-aggregator and its 13 bear nights lost the only
+            // address they have (no widget row carries an actions[] link;
+            // run 20261017-054812, url 0% for 50 runs), while Black Eagle
+            // Toronto's identical embed on a multi-event-page kept it. The
+            // door decides, not the shell.
+            if (CALENDAR_DOOR_SOURCES.has(String(event.source || '').toLowerCase())) continue;
             const websiteIsOwnSourcePage = Boolean(website) && this.getUrlDedupeKey(website) === sourcePageKey;
             const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
             const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);

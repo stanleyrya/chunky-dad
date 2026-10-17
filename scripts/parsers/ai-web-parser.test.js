@@ -22519,3 +22519,74 @@ test('a parsed page reports the address it declares as its own to the core, whic
   parser.core = null;
   parser.noteSelfDeclaredAliases('<link rel="canonical" href="https://x.example/a/b">', 'https://x.example/a/c');
 });
+
+// ---------------------------------------------------------------------------
+// Venue recheck 2026-10-17 (fixtures under scripts/fixtures/recheck-venues-2026-10-17)
+
+test('buildEventFromJsonLdNode keeps a venue name the publisher also prefixes onto streetAddress', () => {
+  const parser = createParser();
+  // Outsavvy: location.name "The Hub @ Eden", streetAddress "The Hub @ Eden,
+  // 138 Gooch Street". The street-line twin rule read the name as an
+  // address and "Dandy : BEAR BRUM 2026" shipped with no place.
+  const node = require('../fixtures/recheck-venues-2026-10-17/outsavvy-dandy-jsonld.json');
+  const event = parser.buildEventFromJsonLdNode(node, node.url);
+  assert.equal(event.bar, 'The Hub @ Eden');
+  assert.match(event.address, /138 Gooch Street/);
+  // The twin rule still drops a name that IS the numbered street line.
+  assert.equal(parser.venueNameLooksLikeStreetAddress('10-90 Wyckoff', '10-90 Wyckoff, Queens, NY'), true);
+  assert.equal(parser.venueNameLooksLikeStreetAddress('The Hub @ Eden', 'The Hub @ Eden, 138 Gooch Street, Birmingham'), false);
+});
+
+test('readSingleStartClockFromFlyerText reads poster shorthand ranges like "8P-2A"', () => {
+  const parser = createParser();
+  // Eagle LA's MEAT RACK 10.10.26 poster is the only place that night's
+  // clock is stated, and it writes it without the M.
+  const ocr = require('../fixtures/recheck-venues-2026-10-17/eagle-la-meat-rack-poster-ocr.json');
+  assert.deepEqual(parser.readSingleStartClockFromFlyerText(ocr.text),
+    { start: { hour: 20, minute: 0 }, end: { hour: 2, minute: 0 }, text: '8pm – 2am' });
+  assert.deepEqual(parser.readSingleStartClockFromFlyerText('10P TO 4A'),
+    { start: { hour: 22, minute: 0 }, end: { hour: 4, minute: 0 }, text: '10pm – 4am' });
+  // A lone shorthand letter is not a clock; an ordinary clock reads as before.
+  assert.equal(parser.readSingleStartClockFromFlyerText('SIZE 8P SHIRTS $8'), null);
+  assert.deepEqual(parser.readSingleStartClockFromFlyerText('DOORS 9PM'),
+    { start: { hour: 21, minute: 0 }, end: null, text: '9PM' });
+});
+
+test('MEC side list: a poster pasted as the whole description keeps its caption, and the caption states the clock', () => {
+  const parser = createParser();
+  // eaglela.com month feed: each occurrence's JSON-LD description is one
+  // <img alt="…">. The caption is the only prose the site publishes for the
+  // night and the only place its clock is written; stripTags lost it.
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../fixtures/recheck-venues-2026-10-17/eagle-la-mec-month-feed-sections.html'), 'utf8');
+  const rows = parser.readMecGridSideList(html, 'https://eaglela.com/home/');
+  const byTitle = Object.fromEntries(rows.map(row => [row.title, row]));
+  // One JSON-LD node per day section in the fixture; the sibling nights are thumbnails only.
+  assert.deepEqual(Object.keys(byTitle).sort(), ['BEAR HAPPY HOUR', 'SUNDAY BEER BUST']);
+  // JSON-LD alt empty → the article thumbnail's alt (same attachment) is read.
+  assert.equal(byTitle['SUNDAY BEER BUST'].description, 'Sunday Beer Bust 2pm $5 domestic drafts');
+  // JSON-LD alt present → read from the node itself.
+  assert.equal(byTitle['BEAR HAPPY HOUR'].description, 'Bear Happy Hour First Thursdays 5pm');
+  for (const row of rows) assert.equal(row._descriptionFromImageCaption, true);
+  // The B BAR thumbnail caption is read straight from the markup too.
+  assert.equal(parser.imageCaptionFromMarkup('<img width="150" height="150" src="x-150x150.jpg" class="wp-post-image" alt="B BAR Every Thursday 10 Draft Special Bare Chest Contest">'), 'B BAR Every Thursday 10 Draft Special Bare Chest Contest');
+  // Real text in a description is never replaced by an alt.
+  assert.equal(parser.imageCaptionFromMarkup('<p>Beer &amp; bears</p><img alt="poster">'), '');
+  assert.equal(parser.imageCaptionFromMarkup('<img src="x.jpg" alt="">'), '');
+
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  try { parser.adoptTitleStatedClockForPlaceholderTimes(rows); } finally { console.log = originalLog; }
+  assert.equal(byTitle['SUNDAY BEER BUST'].startDate.toISOString(), '2026-11-01T14:00:00.000Z', 'caption clock 2pm as wall clock');
+  assert.equal(byTitle['SUNDAY BEER BUST']._startTimeFromCaption, true);
+  assert.equal(byTitle['BEAR HAPPY HOUR'].startDate.toISOString(), '2026-11-05T17:00:00.000Z');
+  // "10 Draft Special" is not a clock: B BAR stays a placeholder midnight.
+  const bBar = { title: 'B BAR', description: 'B BAR Every Thursday 10 Draft Special Bare Chest Contest', _descriptionFromImageCaption: true, startDate: new Date(Date.UTC(2026, 10, 5)), _timezoneUnresolved: true };
+  parser.adoptTitleStatedClockForPlaceholderTimes([bBar]);
+  assert.equal(bBar.startDate.toISOString(), '2026-11-05T00:00:00.000Z');
+  assert.ok(logs.some(line => line.startsWith('🕒 CAPTION CLOCK: "SUNDAY BEER BUST"')), logs.join('\n'));
+  // A description that is NOT a caption is never a clock source.
+  const prose = { title: 'Late Show', description: 'doors 9pm', startDate: new Date(Date.UTC(2026, 10, 1)), _timezoneUnresolved: true };
+  parser.adoptTitleStatedClockForPlaceholderTimes([prose]);
+  assert.equal(prose.startDate.toISOString(), '2026-11-01T00:00:00.000Z');
+});

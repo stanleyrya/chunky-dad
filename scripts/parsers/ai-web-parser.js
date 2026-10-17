@@ -8977,6 +8977,29 @@ class AiWebParser {
         return rows;
     }
 
+    // The alt text of the images in an HTML fragment whose visible text is
+    // EMPTY: a WordPress post whose whole body is one pasted poster carries
+    // the venue's copy in the attachment's alt ("Sunday Beer Bust 2pm $5
+    // domestic drafts", eaglela.com — the only prose the site publishes for
+    // the night, and the only place its clock is written). stripTags threw
+    // it away with the tag; 86% of the kept Eagle LA events shipped with no
+    // description (run 20261017-054812). '' when the fragment has text of
+    // its own (then that text is the description) or no captioned image.
+    imageCaptionFromMarkup(html) {
+        const markup = String(html || '');
+        if (!markup || !/<img\b/i.test(markup)) return '';
+        const visible = this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(markup)));
+        if (visible) return '';
+        const captions = [];
+        const altPattern = /<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+        let match;
+        while ((match = altPattern.exec(markup)) !== null) {
+            const caption = this.normalizeWhitespace(this.decodeEntitiesFully(match[1] !== undefined ? match[1] : match[2]));
+            if (caption && !captions.includes(caption)) captions.push(caption);
+        }
+        return captions.join(' ');
+    }
+
     readMecGridSideList(grid, sourceUrl, cityConfig) {
         const rows = [];
         const sectionPattern = /<div\b[^>]*class="[^"]*mec-calendar-events-sec[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*mec-calendar-events-sec\b|$)/gi;
@@ -8984,6 +9007,21 @@ class AiWebParser {
         while ((section = sectionPattern.exec(grid)) !== null) {
             const day = section[1];
             const body = section[2];
+            // The section's <article> rows repeat each occurrence as a
+            // thumbnail whose alt is the same attachment caption — read when
+            // the JSON-LD description carries none (the poster pasted with an
+            // empty alt). Keyed by the row's own link.
+            const articleCaptionByUrl = new Map();
+            const articlePattern = /<article\b[\s\S]*?<\/article>/gi;
+            let article;
+            while ((article = articlePattern.exec(body)) !== null) {
+                const hrefMatch = article[0].match(/\bhref="([^"]+)"/i);
+                const altMatch = article[0].match(/<img\b[^>]*\balt="([^"]+)"/i);
+                if (!hrefMatch || !altMatch) continue;
+                const key = this.normalizeHttpUrlValue(this.decodeBasicEntities(hrefMatch[1]).trim()) || '';
+                const caption = this.normalizeWhitespace(this.decodeEntitiesFully(altMatch[1]));
+                if (key && caption && !articleCaptionByUrl.has(key)) articleCaptionByUrl.set(key, caption);
+            }
             const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
             let block;
             while ((block = blockPattern.exec(body)) !== null) {
@@ -9002,12 +9040,20 @@ class AiWebParser {
                 const timeMatch = startText.match(/T(\d{2}:\d{2})/);
                 // The description arrives HTML-escaped inside the JSON
                 // ("&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;"): decode, strip, decode again.
+                const descriptionMarkup = this.decodeEntitiesFully(String(node.description || ''));
+                let description = cleanText(descriptionMarkup);
+                let descriptionIsCaption = false;
+                if (!description) {
+                    description = this.imageCaptionFromMarkup(descriptionMarkup) || articleCaptionByUrl.get(href) || '';
+                    descriptionIsCaption = Boolean(description);
+                }
                 const event = this.buildMecOccurrenceEvent({
                     title, href, day,
                     timeText: timeMatch ? timeMatch[1] : '',
-                    description: cleanText(this.decodeEntitiesFully(String(node.description || ''))),
+                    description,
                     image: this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || ''
                 }, sourceUrl);
+                if (event && descriptionIsCaption) event._descriptionFromImageCaption = true;
                 if (event) rows.push(event);
             }
         }
@@ -13169,6 +13215,13 @@ class AiWebParser {
             return true;
         }
         const streetLine = String(address || '').split(',')[0];
+        // The twin rule below catches a venue NAME that is the address's own
+        // street line ("10-90 Wyckoff" / "10-90 Wyckoff, Queens"). A first
+        // address part with no house number is the publisher repeating the
+        // venue's name inside its address ("The Hub @ Eden, 138 Gooch
+        // Street" — Outsavvy, run 20261017-054812: the bar was dropped and
+        // "Dandy : BEAR BRUM 2026" shipped with no place), not a street line.
+        if (!/^\s*\d{1,6}(?:-\d{1,6})?\s+/.test(streetLine)) return false;
         const expandAbbreviation = {
             st: 'street', ave: 'avenue', blvd: 'boulevard', rd: 'road',
             dr: 'drive', ln: 'lane', pl: 'place', ct: 'court',
@@ -27804,30 +27857,45 @@ TEXT:
         for (const event of events) {
             if (!event || !this.isMidnightWallClock(event.startDate, event)) continue;
             const title = this.decodeBasicEntities(String((event && event.title) || ''));
-            if (!title.trim()) continue;
-            const pattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
-            const clocks = [];
-            let match;
-            while ((match = pattern.exec(title)) !== null) {
-                let hour = parseInt(match[1], 10);
-                const minute = match[2] ? parseInt(match[2], 10) : 0;
-                if (hour > 12 || minute > 59) continue;
-                const meridiem = match[3].toLowerCase();
-                if (meridiem === 'pm' && hour < 12) hour += 12;
-                if (meridiem === 'am' && hour === 12) hour = 0;
-                clocks.push({ hour, minute, raw: match[0] });
+            // The caption of the event's own poster (readMecGridSideList: the
+            // site's prose for the night lives in the image's alt) is the
+            // site's own words too — second to the title, same rules: one
+            // meridiem clock, or nothing.
+            const sources = [{ kind: 'title', text: title, label: 'its own title' }];
+            if (event._descriptionFromImageCaption === true && typeof event.description === 'string' && event.description.trim()) {
+                sources.push({ kind: 'caption', text: this.decodeBasicEntities(event.description), label: 'its poster caption' });
             }
-            const distinct = new Set(clocks.map(clock => `${clock.hour}:${clock.minute}`));
-            if (clocks.length === 0 || distinct.size !== 1) continue;
+            let chosen = null;
+            for (const source of sources) {
+                if (!source.text.trim()) continue;
+                const pattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+                const clocks = [];
+                let match;
+                while ((match = pattern.exec(source.text)) !== null) {
+                    let hour = parseInt(match[1], 10);
+                    const minute = match[2] ? parseInt(match[2], 10) : 0;
+                    if (hour > 12 || minute > 59) continue;
+                    const meridiem = match[3].toLowerCase();
+                    if (meridiem === 'pm' && hour < 12) hour += 12;
+                    if (meridiem === 'am' && hour === 12) hour = 0;
+                    clocks.push({ hour, minute, raw: match[0] });
+                }
+                const distinct = new Set(clocks.map(clock => `${clock.hour}:${clock.minute}`));
+                if (clocks.length === 0 || distinct.size !== 1) continue;
+                chosen = { source, clock: clocks[0] };
+                break;
+            }
+            if (!chosen) continue;
             const day = event.startDate;
             event.startDate = new Date(Date.UTC(
-                day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), clocks[0].hour, clocks[0].minute));
+                day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), chosen.clock.hour, chosen.clock.minute));
             if (event.endDate instanceof Date && event.endDate.getTime() <= event.startDate.getTime()) {
                 event.endDate = new Date(event.startDate);
             }
-            event._startTimeFromTitle = true;
+            if (chosen.source.kind === 'title') event._startTimeFromTitle = true;
+            else event._startTimeFromCaption = true;
             adopted++;
-            console.log(`🕒 TITLE CLOCK: "${event.title}" listed with no time — its own title states ${clocks[0].raw}; start set to ${String(clocks[0].hour).padStart(2, '0')}:${String(clocks[0].minute).padStart(2, '0')} wall clock`);
+            console.log(`🕒 ${chosen.source.kind === 'title' ? 'TITLE' : 'CAPTION'} CLOCK: "${event.title}" listed with no time — ${chosen.source.label} states ${chosen.clock.raw}; start set to ${String(chosen.clock.hour).padStart(2, '0')}:${String(chosen.clock.minute).padStart(2, '0')} wall clock`);
         }
         return adopted;
     }
@@ -27927,7 +27995,14 @@ TEXT:
     // "9pm-2am", "doors 8pm"): the first clock of the first range; null
     // when the text states two different starts or none.
     readSingleStartClockFromFlyerText(text) {
-        const source = String(text || '');
+        // Poster shorthand drops the M: "8P-2A", "9P – 2A", "10P TO 4A"
+        // (Eagle LA's MEAT RACK 10.10.26 poster, run 20261017-054812 — the
+        // only place that night's clock is stated). Only ever read as a PAIR
+        // so a lone "8P" (a size, a code) never becomes a clock.
+        const source = String(text || '').replace(
+            /\b(\d{1,2})(?::(\d{2}))?\s*([ap])\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\b/gi,
+            (whole, h1, m1, a1, sep, h2, m2, a2) => `${h1}${m1 ? ':' + m1 : ''}${a1.toLowerCase()}m ${sep} ${h2}${m2 ? ':' + m2 : ''}${a2.toLowerCase()}m`
+        );
         const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
         const parse = (match) => {
             let hour = Number(match[1]);

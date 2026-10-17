@@ -1,0 +1,24 @@
+{
+  "_about": "One row of the Elfsight boot payload for widget e122bc50-bc4f-4cde-a6b9-ee6d4e31531a (rockbarnyc.com) as read 2026-10-17. No row of the widget carries an actions[] link; the only address an event has is the page the widget is embedded on.",
+  "id": "m9ay1nh9",
+  "name": "GORDITOS",
+  "start": {
+    "type": "datetime",
+    "date": "2026-08-29",
+    "time": "22:00"
+  },
+  "end": {
+    "type": "datetime",
+    "date": "2026-08-30",
+    "time": "02:00"
+  },
+  "timeZone": "America/New_York",
+  "repeatPeriod": "lastDayInMonth",
+  "repeatWeeklyOnDays": [
+    "sa"
+  ],
+  "location": [],
+  "actions": [],
+  "actionsCaption": "",
+  "description": "<div>THE LAST SATURDAY OF EVERY MONTH THE GORDITOS THEMSELVES <a class=\"caption-link \" href=\"https://fastdl.app/en5IW#\">@nobl3_b3ar</a> AND <a class=\"caption-link \" href=\"https://fastdl.app/en5IW#\">@goodbunnypg</a> TEAM UP TO BRING HOUSE HIP HOP LATIN VIBES TOP 40 AND MORE!!! <br><br>HOST : <a class=\"caption-link \" href=\"https://fastdl.app/en5IW#\">@realassdstach</a> <br>10 AT THE DOOR</div>"
+}
